@@ -821,7 +821,7 @@ fn cr_707_2_enters_as_a_copy_of_a_creature_card_in_a_graveyard() {
     assert_eq!(pt(&g, id), (2, 2));
 }
 
-/// CR 702.34d's rider on a plain graveyard grant — "Once during each of your
+/// CR 702.34a's rider on a plain graveyard grant — "Once during each of your
 /// turns, you may cast an instant or sorcery spell from your graveyard. If a
 /// spell cast this way would be put into your graveyard, exile it instead"
 /// (Kess, Dissident Mage). The second graveyard cast that turn is refused.

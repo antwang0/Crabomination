@@ -204,7 +204,7 @@ pub struct TargetingState {
     /// through `GameAction::CastSpellKicked`. Set by the right-click
     /// "Cast with kicker/Offspring" affordance.
     pub pending_kicked: bool,
-    /// CR 702.32b — the "and/or" kicker option indices this pending cast pays
+    /// CR 702.33b — the "and/or" kicker option indices this pending cast pays
     /// for. Empty for every other cast; set from `ClientView.kicker_option_sets`.
     pub pending_kicker_options: Vec<u8>,
     /// When `Some`, the pending cast is one of the alternative cast shapes

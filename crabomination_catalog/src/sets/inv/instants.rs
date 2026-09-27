@@ -4,7 +4,7 @@ use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{b, cost, r, u};
 
 /// Terminate — {B}{R}: destroy target creature. It can't be regenerated.
-/// (CR 701.15g — wired via `Effect::DestroyNoRegen`.)
+/// (CR 701.19 — wired via `Effect::DestroyNoRegen`.)
 pub fn terminate() -> CardDefinition {
     CardDefinition {
         name: "Terminate",

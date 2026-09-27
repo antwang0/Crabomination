@@ -1160,7 +1160,7 @@ pub struct HandAffordances {
     pub castable: Vec<CardId>,
     pub pitchable: Vec<CardId>,
     pub kickable: Vec<CardId>,
-    /// CR 702.32b — payable "and/or" kicker subsets per hand card.
+    /// CR 702.33b — payable "and/or" kicker subsets per hand card.
     pub kicker_option_sets: Vec<(CardId, Vec<Vec<u8>>)>,
     pub buyback: Vec<CardId>,
     pub bestowable: Vec<CardId>,
@@ -1585,7 +1585,7 @@ pub struct ColdState {
     /// otherwise changes; see `reveal_library_top_for`.
     #[serde(default)]
     pub(crate) library_tops_revealed: Vec<usize>,
-    /// CR 702.32b — the `kicker_options` indices the in-flight cast is paying
+    /// CR 702.33b — the `kicker_options` indices the in-flight cast is paying
     /// for, consumed by the cast pipeline (`GameAction::CastSpellKickers`).
     pub(crate) cast_kicker_options: Vec<u8>,
     /// Turn-scoped `(land type, extra color)` mana grants from
@@ -1887,7 +1887,7 @@ pub struct ColdState {
     /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
     #[serde(default)]
     pub(crate) damage_exiles_victim_eot: crate::game::types::IdSet<CardId>,
-    /// CR 701.15g — creatures whose damage this turn denies its victim
+    /// CR 701.19 — creatures whose damage this turn denies its victim
     /// regeneration (Runesword). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_denies_regen_eot: crate::game::types::IdSet<CardId>,
@@ -8232,7 +8232,7 @@ impl GameState {
     pub fn process_suspend(&mut self) -> Vec<crate::game::GameEvent> {
         let active = self.active_player_idx;
         let mut events = Vec::new();
-        // CR 702.62e — suspend printed or gained (the card "Suspend", Kang
+        // CR 702.62a — suspend printed or gained (the card "Suspend", Kang
         // Prime). One pass: a printed-suspend card that also gained suspend
         // (Kang Prime exiling Star Whale) ticked twice a turn when the two
         // were walked separately.
@@ -8608,7 +8608,7 @@ impl GameState {
     }
 
     /// Remove one time counter from a suspended card in exile; when the last
-    /// is removed, free-cast it from exile (CR 702.62e–f). Shared by the
+    /// is removed, free-cast it from exile (CR 702.62a–f). Shared by the
     /// upkeep tick (`process_suspend`) and accelerants (Deep-Sea Kraken).
     pub(crate) fn remove_suspend_time_counter(
         &mut self,
@@ -8642,7 +8642,7 @@ impl GameState {
         // "You may cast it" — passed up when the cast would carry the
         // battlefield past the engine's bound (a suspended Rousing Refrain
         // over a board of Leitmotif Composers); it stays exiled, as an
-        // uncastable one does (CR 702.62e).
+        // uncastable one does (CR 702.62a).
         if self.battlefield.len() as i64 + self.spell_token_estimate(id, owner)
             > crate::recommend::BOARD_GATE as i64
         {
@@ -8661,7 +8661,7 @@ impl GameState {
             false,
         );
         self.priority.player_with_priority = saved_priority;
-        // If it can't be cast (e.g. no legal target) CR 702.62e leaves it
+        // If it can't be cast (e.g. no legal target) CR 702.62a leaves it
         // exiled with 0 time counters.
         if let Ok(mut evs) = cast {
             events.append(&mut evs);
@@ -23982,7 +23982,7 @@ impl GameState {
         // triggers function from exile (Nihilith). Most exiled cards carry no
         // counter at all, so the bag test answers first.
         // A card whose last time counter this batch removed was cast off it
-        // already (CR 702.62e); its "whenever a time counter is removed"
+        // already (CR 702.62a); its "whenever a time counter is removed"
         // still saw that removal while it was exiled (Dinosaurs on a
         // Spaceship's token for the last counter).
         let last_counter_cast = self.stack.iter().filter_map(|si| match si {
@@ -28061,7 +28061,7 @@ impl GameState {
                 // A fizzled token copy ceases to exist (already off the
                 // stack); a real card is countered into its owner's
                 // graveyard — except a flashbacked/aftermath cast, whose
-                // CR 702.34d exile rider applies wherever it leaves the
+                // CR 702.34a exile rider applies wherever it leaves the
                 // stack, so a fizzle can't make it re-flashbackable.
                 let mut events = Vec::new();
                 if !card.is_token {
@@ -28105,7 +28105,7 @@ impl GameState {
                 let mut events = Vec::new();
                 if !card.is_token {
                     if card.cast_via_flashback {
-                        self.exile.push(card); // CR 702.34d
+                        self.exile.push(card); // CR 702.34a
                     } else {
                         self.route_to_graveyard(card, &mut events);
                     }
@@ -28364,7 +28364,7 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        // Flashback (CR 702.34d): a spell cast via its Flashback cost is
+        // Flashback (CR 702.34a): a spell cast via its Flashback cost is
         // exiled on resolution instead of going to the graveyard.
         // `cast_flashback` sets `cast_via_flashback = true`; the
         // resolver consults that flag (it used to overload `kicked`,

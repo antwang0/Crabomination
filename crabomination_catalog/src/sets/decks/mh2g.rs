@@ -1,5 +1,5 @@
 //! Modern Horizons 2 sweep, batch 8 — echo enforcement (CR 702.29),
-//! granted suspend (CR 702.62e), chosen-number coin flips, acorn anthem,
+//! granted suspend (CR 702.62a), chosen-number coin flips, acorn anthem,
 //! counter movement, snow/colorless land hate. Tests in `tests/mh2g.rs`.
 
 use crate::card::{
@@ -308,7 +308,7 @@ pub fn steel_dromedary() -> CardDefinition {
 }
 
 /// Suspend — {U} instant. Exile target creature with two time counters; if it
-/// doesn't have suspend, it gains suspend (CR 702.62e).
+/// doesn't have suspend, it gains suspend (CR 702.62a).
 pub fn suspend() -> CardDefinition {
     CardDefinition {
         name: "Suspend",

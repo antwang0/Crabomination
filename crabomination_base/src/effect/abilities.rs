@@ -2195,7 +2195,7 @@ pub enum StaticEffect {
     /// no-sacrifice sibling of `GraveyardCastBySacrificingOncePerTurn`,
     /// sharing its per-source tally. With `exile_after`, "if a spell cast
     /// this way would be put into your graveyard, exile it instead" (Kess,
-    /// Dissident Mage) — the flashback rider (CR 702.34d) on a plain grant.
+    /// Dissident Mage) — the flashback rider (CR 702.34a) on a plain grant.
     GraveyardCastOncePerTurn {
         filter: SelectionRequirement,
         #[serde(default)]

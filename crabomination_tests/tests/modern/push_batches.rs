@@ -66,7 +66,7 @@ fn snapcaster_mage_etb_grants_may_play_on_gy_is_card() {
     let bolt_gy = g.players[0].graveyard.iter().find(|c| c.id == bolt)
         .expect("Bolt still in graveyard");
     let perm = bolt_gy.may_play_until.expect("may_play stamped on Bolt");
-    assert!(perm.exile_after, "exile-on-resolve flag set (CR 702.34d)");
+    assert!(perm.exile_after, "exile-on-resolve flag set (CR 702.34a)");
     assert_eq!(perm.player, 0);
 }
 

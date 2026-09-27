@@ -580,7 +580,7 @@ pub enum GameAction {
     /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
     /// to the mana cost. The resolving spell is stamped `kicked` so
     /// `Predicate::SpellWasKicked` riders fire (Tear Asunder).
-    /// CR 702.32b — cast a spell paying any subset of its `kicker_options`
+    /// CR 702.33b — cast a spell paying any subset of its `kicker_options`
     /// ("Kicker {A} and/or {B}" — the Volver cycle). Each paid index is
     /// stamped on the spell for `Predicate::SpellWasKickedWith`.
     CastSpellKickers {
@@ -1077,7 +1077,7 @@ pub enum GameAction {
     /// caster controls). Used by Group Project ("Flashback—Tap three
     /// untapped creatures you control"). Mana cost is zero (the tap is
     /// the *entire* flashback cost); the resolved spell routes to exile
-    /// per CR 702.34d via the standard `cast_via_flashback` plumbing.
+    /// per CR 702.34a via the standard `cast_via_flashback` plumbing.
     CastFlashbackTap {
         card_id: CardId,
         tap_creatures: Vec<CardId>,

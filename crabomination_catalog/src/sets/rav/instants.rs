@@ -16,7 +16,7 @@ pub fn lightning_helix() -> CardDefinition {
 
 /// Putrefy — {1}{B}{G}: destroy target artifact or creature; it can't be regenerated.
 ///
-/// The "can't be regenerated" clause (CR 701.15g) is wired via
+/// The "can't be regenerated" clause (CR 701.19) is wired via
 /// `Effect::DestroyNoRegen`, so a regeneration shield won't save the
 /// target.
 pub fn putrefy() -> CardDefinition {

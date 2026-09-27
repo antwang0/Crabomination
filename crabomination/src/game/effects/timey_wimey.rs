@@ -2,7 +2,7 @@
 //!
 //! - cards that gain suspend with their own mana value in time counters
 //!   (The Parting of the Ways, The Eleventh Doctor, The Wedding of River
-//!   Song — CR 702.62e);
+//!   Song — CR 702.62a);
 //! - removing several time counters from one suspended card through the
 //!   suspend funnel, so the last one casts it (Amy Pond, CR 702.62);
 //! - damage to a creature and everything sharing a creature type with it

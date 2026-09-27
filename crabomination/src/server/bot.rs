@@ -8050,7 +8050,7 @@ pub(super) fn cast_candidates<'a>(
     }
     });
 
-    // CR 702.32b — "Kicker {A} and/or {B}": offer the largest affordable
+    // CR 702.33b — "Kicker {A} and/or {B}": offer the largest affordable
     // subset (both halves before either alone; each rider is pure upside).
     gated_block!(mask, spec::KICKERS, castable, {
     for c in state.players[seat]

@@ -7,7 +7,7 @@
 //!   (CR 702.16 — protection is D.E.B.T.; a non-targeted "destroy all"
 //!   is none of those), and neither does hexproof stop an edict
 //!   (CR 702.11 — hexproof only gates *targeting*).
-//! - Regeneration can't beat "can't be regenerated" (CR 701.15g).
+//! - Regeneration can't beat "can't be regenerated" (CR 701.19).
 //! - Multiple instances of lifelink are redundant (CR 702.15f).
 //! - Killing a blocker doesn't make the attacker unblocked: it stays
 //!   blocked and deals no combat damage without trample (CR 509.1h /
@@ -119,7 +119,7 @@ fn misconception_protection_does_not_stop_wrath_of_god() {
         "Wrath of God doesn't target and doesn't deal damage — protection is irrelevant");
 }
 
-// ── CR 701.15g — "can't be regenerated" ───────────────────────────────────────
+// ── CR 701.19 — "can't be regenerated" ───────────────────────────────────────
 
 /// "I regenerate in response to Wrath" — a stamped shield does nothing
 /// against destruction that forbids regeneration.

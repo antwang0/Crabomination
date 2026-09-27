@@ -309,7 +309,7 @@ fn ulamogs_dreadsire_makes_titans() {
     assert_eq!(pt(&g, tok), (10, 10));
 }
 
-/// CR 702.32b — Wastescape Battlemage's two kickers.
+/// CR 702.33b — Wastescape Battlemage's two kickers.
 #[test]
 fn wastescape_battlemage_kicks_twice() {
     let mut g = pod();

@@ -2703,7 +2703,7 @@ pub fn imperial_seal() -> CardDefinition {
 ///
 /// Black mirror of Wrath of God. Same `ForEach + Destroy` shape; the
 /// "can't be regenerated" rider is wired via `Effect::DestroyNoRegen`
-/// (CR 701.15g).
+/// (CR 701.19).
 pub fn damnation() -> CardDefinition {
     CardDefinition {
         name: "Damnation",

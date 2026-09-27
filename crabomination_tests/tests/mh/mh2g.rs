@@ -237,7 +237,7 @@ fn steel_dromedary_counter_lock() {
     assert!(!g.battlefield_find(camel).unwrap().tapped, "untaps once counterless");
 }
 
-/// CR 702.62e — Suspend exiles a creature that then returns via suspend.
+/// CR 702.62a — Suspend exiles a creature that then returns via suspend.
 #[test]
 fn cr_702_62e_suspend_grants_suspend() {
     let mut g = two_player_game();

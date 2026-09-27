@@ -528,7 +528,7 @@ fn flashback_instant_grants_flashback_on_gy_is_card() {
     assert_eq!(g.players[1].life, 17, "recast Bolt dealt 3 to player 1");
     assert!(
         g.exile.iter().any(|c| c.id == bolt),
-        "flashback cast exiles Bolt on resolve (CR 702.34d)",
+        "flashback cast exiles Bolt on resolve (CR 702.34a)",
     );
     assert!(
         !g.players[0].graveyard.iter().any(|c| c.id == bolt),

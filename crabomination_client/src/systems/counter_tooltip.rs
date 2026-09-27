@@ -570,7 +570,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(Flagbearer: opponents must target it if able)"));
     }
     if p.cant_regenerate {
-        // CR 701.15g — the shields are still on the permanent but inert, so
+        // CR 701.19 — the shields are still on the permanent but inert, so
         // say so rather than promising a save it can no longer make.
         lines.push(String::from("(can't be regenerated this turn)"));
     } else if p.regeneration_shields > 1 {
@@ -2276,7 +2276,7 @@ pub(crate) mod tests {
         assert!(body.contains("(regen ×3: absorbs 3 destructions this turn)"),
             "expected plural regen badge: {body}");
 
-        // CR 701.15g — a blanked shield must not promise a save.
+        // CR 701.19 — a blanked shield must not promise a save.
         p.cant_regenerate = true;
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(can't be regenerated this turn)") && !body.contains("(regen"),

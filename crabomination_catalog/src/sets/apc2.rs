@@ -830,7 +830,7 @@ fn volver_rider(option: u8, counters: i32, grant: Effect) -> TriggeredAbility {
     })
 }
 
-/// The Volver cycle (CR 702.32b) — "Kicker {A} and/or {B}", each half worth
+/// The Volver cycle (CR 702.33b) — "Kicker {A} and/or {B}", each half worth
 /// counters plus an ability.
 fn volver(
     name: &'static str,

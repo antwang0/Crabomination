@@ -2065,7 +2065,7 @@ fn regen_does_not_save_zero_toughness() {
     assert!(g.battlefield_find(skel).is_none(), "0-toughness death bypasses regeneration");
 }
 
-/// Regeneration shields expire at end of turn (CR 701.15g).
+/// Regeneration shields expire at end of turn (CR 701.19).
 #[test]
 fn regen_shield_expires_at_cleanup() {
     let mut g = two_player_game();
@@ -2085,11 +2085,11 @@ fn regen_shield_expires_at_cleanup() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Can't be regenerated (CR 701.15g) — DestroyNoRegen bypasses the shield.
+// Can't be regenerated (CR 701.19) — DestroyNoRegen bypasses the shield.
 // ─────────────────────────────────────────────────────────────────────────
 
 /// A regeneration shield does NOT save a creature from a "can't be
-/// regenerated" destroy effect like Terminate (CR 701.15g).
+/// regenerated" destroy effect like Terminate (CR 701.19).
 #[test]
 fn terminate_ignores_regeneration_shield() {
     let mut g = two_player_game();

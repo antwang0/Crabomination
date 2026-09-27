@@ -10516,7 +10516,7 @@ pub fn the_goose_mother() -> CardDefinition {
 }
 
 /// Archangel of Wrath — {2}{W}{W} 3/4 Angel. Flying, lifelink. Kicker {B}
-/// and/or {R} (CR 702.32b): when it enters, if it was kicked, 2 damage to any
+/// and/or {R} (CR 702.33b): when it enters, if it was kicked, 2 damage to any
 /// target; if it was kicked twice, 2 more.
 pub fn archangel_of_wrath() -> CardDefinition {
     CardDefinition {

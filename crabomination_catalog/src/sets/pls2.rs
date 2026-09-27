@@ -1350,7 +1350,7 @@ pub fn tahngarth_talruum_hero() -> CardDefinition {
     }
 }
 
-/// The Battlemage cycle (CR 702.32b) — "Kicker {A} and/or {B}", each half an
+/// The Battlemage cycle (CR 702.33b) — "Kicker {A} and/or {B}", each half an
 /// intervening-'if' ETB trigger.
 fn battlemage(
     name: &'static str,

@@ -2463,7 +2463,7 @@ pub enum Predicate {
     /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
     /// contexts default `kicked` to `false`.
     SpellWasKicked,
-    /// CR 702.32b — the resolving spell was kicked with option `n` of its
+    /// CR 702.33b — the resolving spell was kicked with option `n` of its
     /// `kicker_options` (Anavolver's "kicked with its {1}{U} kicker").
     SpellWasKickedWith(u8),
     /// "If the sacrificed permanent was an artifact" — reads the
@@ -6687,7 +6687,7 @@ pub enum Effect {
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
-    /// CR 701.15g — "Destroy ... It can't be regenerated." Behaves like
+    /// CR 701.19 — "Destroy ... It can't be regenerated." Behaves like
     /// `Destroy` but bypasses regeneration shields (Terminate, Putrefy,
     /// Day of Judgment, Vindicate, ...). Indestructible and Shield-counter
     /// replacements still apply — only regeneration is denied.
@@ -6733,7 +6733,7 @@ pub enum Effect {
     /// resolving controller in `CardInstance.regeneration_control_grant`; the
     /// control change happens when — and only when — the shield is consumed.
     RegenerateThenGainControl { what: Selector },
-    /// CR 701.15g — "it can't be regenerated this turn": existing shields stop
+    /// CR 701.19 — "it can't be regenerated this turn": existing shields stop
     /// applying and new ones do nothing for the rest of the turn. Rage of
     /// Purphoros, the Terror-style removal riders.
     CantBeRegeneratedThisTurn { what: Selector },
@@ -7988,7 +7988,7 @@ pub enum Effect {
     /// A `StaticEffect::ModularBonusCounters` (Zabaz) controlled by the
     /// recipient's controller adds its bonus.
     ModularCounters { what: Selector },
-    /// CR 702.62e-f — exile the selected creature with `time_counters` time
+    /// CR 702.62a-f — exile the selected creature with `time_counters` time
     /// counters; if it doesn't have suspend, it gains suspend (the card
     /// "Suspend"). Its owner's `process_suspend` ticks it down and free-casts
     /// it when the last counter is removed.
@@ -8994,7 +8994,7 @@ pub enum Effect {
     WaiveShroudForPlayerThisTurn { player: PlayerRef },
     /// "Destroy each [filter] unless its controller pays `life` life" — one
     /// pay-or-die decision per permanent, asked of its controller (Giant
-    /// Albatross). `no_regen` denies regeneration (CR 701.15g).
+    /// Albatross). `no_regen` denies regeneration (CR 701.19).
     DestroyEachUnlessPaysLife {
         filter: SelectionRequirement,
         life: u32,
@@ -10762,7 +10762,7 @@ pub enum Effect {
     /// damages this turn is exiled instead of dying (Runesword).
     GrantDamageExilesVictimThisTurn { what: Selector },
 
-    /// CR 701.15g — "if `what` deals damage to a creature this turn, that
+    /// CR 701.19 — "if `what` deals damage to a creature this turn, that
     /// creature can't be regenerated this turn" (Runesword).
     GrantDamageDeniesRegenerationThisTurn { what: Selector },
 

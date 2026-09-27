@@ -850,7 +850,7 @@ fn kragma_warcaller_hastes_and_pumps_minotaurs() {
     assert_eq!(g.computed_permanent(minotaur).unwrap().power, base + 2);
 }
 
-/// Rage of Purphoros burns through a regeneration shield (CR 701.15g).
+/// Rage of Purphoros burns through a regeneration shield (CR 701.19).
 #[test]
 fn rage_of_purphoros_blanks_regeneration() {
     let mut g = main_phase();

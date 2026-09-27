@@ -102,7 +102,7 @@ fn cr_702_62_amy_pond_finishes_a_suspended_card() {
     assert!(g.battlefield_find(bears).is_some(), "the last counter cast it");
 }
 
-/// CR 702.62e — The Tenth Doctor: attacking exiles from the top until a
+/// CR 702.62a — The Tenth Doctor: attacking exiles from the top until a
 /// nonland card, which gets three time counters and suspend.
 #[test]
 fn cr_702_62e_the_tenth_doctor_suspends_the_next_spell() {
@@ -120,7 +120,7 @@ fn cr_702_62e_the_tenth_doctor_suspends_the_next_spell() {
     assert!(exiled.has_suspend());
 }
 
-/// CR 702.62e — The Parting of the Ways I: each nonland card of the top five
+/// CR 702.62a — The Parting of the Ways I: each nonland card of the top five
 /// gets its mana value in time counters and suspend.
 #[test]
 fn cr_702_62e_parting_of_the_ways_counts_mana_value() {
@@ -202,7 +202,7 @@ fn cr_702_62_the_face_of_boe_pays_the_suspend_cost() {
     assert!(g.battlefield_find(whale).is_some(), "Star Whale for {{1}}{{U}}");
 }
 
-/// CR 702.62e — The Eleventh Doctor's damage exiles a card from hand with its
+/// CR 702.62a — The Eleventh Doctor's damage exiles a card from hand with its
 /// mana value in time counters and suspend.
 #[test]
 fn cr_702_62e_eleventh_doctor_suspends_from_hand() {
@@ -468,7 +468,7 @@ fn the_war_doctor_counts_an_exile_batch_once() {
     assert_eq!(time(&g, doc), 1);
 }
 
-/// CR 702.62e — Dinosaurs on a Spaceship's last time counter coming off
+/// CR 702.62a — Dinosaurs on a Spaceship's last time counter coming off
 /// casts it, and its exile trigger still saw that removal: a token for it.
 #[test]
 fn cr_702_62e_dinosaurs_on_a_spaceship_counts_its_last_counter() {

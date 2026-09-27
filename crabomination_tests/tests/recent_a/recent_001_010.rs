@@ -3882,7 +3882,7 @@ mod recent {
         assert_eq!(foods, 2, "half of 4 = 2 Food");
     }
 
-    /// CR 702.32b — Archangel of Wrath's kicker is {B} and/or {R}: kicked with
+    /// CR 702.33b — Archangel of Wrath's kicker is {B} and/or {R}: kicked with
     /// one it deals 2 on entering, with both 2 more.
     #[test]
     fn archangel_of_wrath_kicked_twice_burns_four() {

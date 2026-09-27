@@ -67,7 +67,7 @@ pub fn discard(who: Selector, n: i32, random: bool) -> Effect {
     Effect::Discard { who, amount: Value::Const(n), random }
 }
 pub fn destroy_target() -> Effect { Effect::Destroy { what: target() } }
-/// "Destroy target ... It can't be regenerated." (CR 701.15g)
+/// "Destroy target ... It can't be regenerated." (CR 701.19)
 pub fn destroy_target_no_regen() -> Effect {
     Effect::DestroyNoRegen { what: target() }
 }

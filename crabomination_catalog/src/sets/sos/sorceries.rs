@@ -308,7 +308,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
 /// "Create a 2/2 red and white Spirit creature token."
 /// Flashback—Tap three untapped creatures you control: via
 /// `Keyword::FlashbackTap(3)` + `GameAction::CastFlashbackTap` (taps the
-/// three as the whole cost, casts from gy, exiles after — CR 702.34d).
+/// three as the whole cost, casts from gy, exiles after — CR 702.34a).
 pub fn group_project() -> CardDefinition {
     CardDefinition {
         name: "Group Project",

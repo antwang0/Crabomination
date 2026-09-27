@@ -3403,7 +3403,7 @@ pub enum SelectionRequirement {
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
     /// CR 702.62 — the card has suspend: the printed keyword, or suspend it
-    /// gained (`CardInstance.granted_suspend`, CR 702.62e — Kang Prime, The
+    /// gained (`CardInstance.granted_suspend`, CR 702.62a — Kang Prime, The
     /// Tenth Doctor). "If it doesn't have suspend, it gains suspend."
     HasSuspend,
     /// CR 702.95 — the candidate is the source's soulbond partner ("a
@@ -4866,7 +4866,7 @@ pub struct CardDefinition {
     /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
     #[serde(default)]
     pub kicker_action_cost: Option<AdditionalCastCost>,
-    /// CR 702.32b — "Kicker {A} and/or {B}": two independently payable kicker
+    /// CR 702.33b — "Kicker {A} and/or {B}": two independently payable kicker
     /// costs (the Apocalypse Volver cycle, Illuminate). Cast via
     /// `GameAction::CastSpellKickers`; each paid index is stamped onto the
     /// spell and read back by `Predicate::SpellWasKickedWith`.
@@ -7616,7 +7616,7 @@ macro_rules! eot_wear_off_hot {
         $m!(empty damaged_by_this_turn);
         $m!(empty damage_by_source_name_this_turn);
         $m!(empty damage_by_source_this_turn);
-        // CR 701.15g — unused regeneration shields expire at end of turn,
+        // CR 701.19 — unused regeneration shields expire at end of turn,
         // and so does the "can't be regenerated this turn" lock.
         $m!(scalar regeneration_shields, 0);
         $m!(none regeneration_control_grant);
@@ -7769,7 +7769,7 @@ pub struct CardCold {
     /// CR 702.106b double agenda — the second of two secretly chosen names
     /// (Summoner's Bond). `None` for every single-name namer.
     pub named_card_2: Option<String>,
-    /// CR 702.32b — which of the definition's `kicker_options` were paid for
+    /// CR 702.33b — which of the definition's `kicker_options` were paid for
     /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
     /// spell.
     pub kicked_options: Vec<u8>,
@@ -9107,7 +9107,7 @@ pub struct CardData {
     /// a permanent without echo). `false` on battlefield entry; `process_echo`
     /// checks unpaid echoes at the controller's upkeep.
     pub echo_paid: bool,
-    /// CR 702.62e — this exiled card gained suspend from an effect (the card
+    /// CR 702.62a — this exiled card gained suspend from an effect (the card
     /// "Suspend"): `process_suspend` ticks it even though its definition
     /// carries no `Keyword::Suspend`.
     pub granted_suspend: bool,
@@ -9162,7 +9162,7 @@ pub struct CardData {
     /// `granted_keywords_eot`), so it's intentionally **not** serialized —
     /// a mid-turn snapshot reload defaults shields back to 0.
     pub regeneration_shields: u32,
-    /// CR 701.15g — "it can't be regenerated this turn": shields already on
+    /// CR 701.19 — "it can't be regenerated this turn": shields already on
     /// the permanent stop applying and new ones do nothing. Transient, cleared
     /// at cleanup like `regeneration_shields`, so it isn't serialized.
     pub cant_regenerate_this_turn: bool,
@@ -10334,7 +10334,7 @@ impl CardInstance {
         self.face_down = true;
     }
 
-    /// CR 702.62 — has suspend: printed, or gained (CR 702.62e).
+    /// CR 702.62 — has suspend: printed, or gained (CR 702.62a).
     pub fn has_suspend(&self) -> bool {
         self.granted_suspend || self.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..)))
     }
@@ -11280,7 +11280,7 @@ struct CardInstanceWire {
     chosen_color: Option<crate::mana::Color>,
     #[serde(default)]
     chosen_colors: Vec<crate::mana::Color>,
-    /// CR 702.32b — the paid "and/or" kicker indices.
+    /// CR 702.33b — the paid "and/or" kicker indices.
     #[serde(default)]
     kicked_options: Vec<u8>,
     /// CR 701.38 goad — players who have goaded this creature.

@@ -4254,7 +4254,7 @@ pub fn handle_game_input(
                     } else if let Some((_, sets)) =
                         cv.kicker_option_sets.iter().find(|(id, _)| *id == card_id)
                     {
-                        // CR 702.32b — right-click pays the largest affordable
+                        // CR 702.33b — right-click pays the largest affordable
                         // "and/or" kicker subset (each rider is pure upside).
                         let kickers = sets
                             .iter()
@@ -4778,7 +4778,7 @@ fn build_pending_cast(
             card_id, target, additional_targets: vec![], mode, x_value: None,
         };
     }
-    // CR 702.32b — an "and/or" kicker cast carries its chosen option indices.
+    // CR 702.33b — an "and/or" kicker cast carries its chosen option indices.
     if !kicker_options.is_empty() {
         return GameAction::CastSpellKickers {
             card_id, kickers: kicker_options, target,

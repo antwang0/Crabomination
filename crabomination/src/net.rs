@@ -433,7 +433,7 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kickable_hand: Vec<CardId>,
-    /// CR 702.32b — for each "Kicker {A} and/or {B}" hand card, the option
+    /// CR 702.33b — for each "Kicker {A} and/or {B}" hand card, the option
     /// subsets the viewer could pay for right now. One client menu entry each.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
@@ -2004,7 +2004,7 @@ pub struct PermanentView {
     /// client can badge a "regen-shielded" creature.
     #[serde(default)]
     pub regeneration_shields: u32,
-    /// CR 701.15g — this permanent can't be regenerated for the rest of the
+    /// CR 701.19 — this permanent can't be regenerated for the rest of the
     /// turn, so any shields it carries are inert (Rage of Purphoros). Surfaced
     /// so the client doesn't promise a save the shield can no longer make.
     #[serde(default)]

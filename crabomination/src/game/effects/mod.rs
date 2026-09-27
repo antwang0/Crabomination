@@ -351,7 +351,7 @@ pub struct EffectContext {
     /// `Predicate::SpellWasKicked`. Defaults to `false` for non-spell
     /// contexts.
     pub kicked: bool,
-    /// CR 702.32b — which `kicker_options` indices this cast paid for, stamped
+    /// CR 702.33b — which `kicker_options` indices this cast paid for, stamped
     /// from the resolving `CardInstance.kicked_options`. Read by
     /// `Predicate::SpellWasKickedWith` (the Volver cycle).
     pub kicked_options: Vec<u8>,
@@ -3194,7 +3194,7 @@ impl GameState {
             return false;
         }
         // CR 701.15 — regeneration shield replaces destruction (skipped for
-        // `DestroyNoRegen`, CR 701.15g).
+        // `DestroyNoRegen`, CR 701.19).
         if !no_regen
             && self
                 .battlefield_find(cid)
@@ -13407,7 +13407,7 @@ impl GameState {
             }
 
             Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
-                // CR 701.15g — `DestroyNoRegen` ("can't be regenerated")
+                // CR 701.19 — `DestroyNoRegen` ("can't be regenerated")
                 // bypasses regeneration shields; everything else (the
                 // Indestructible check, Shield-counter replacement) is
                 // identical to plain `Destroy`.

@@ -4923,7 +4923,7 @@ fn cr_702_34_lier_grants_graveyard_flashback_and_exiles() {
     }).expect("flashback castable via Lier");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17, "Bolt resolved for 3");
-    assert!(g.exile.iter().any(|c| c.id == bolt), "CR 702.34d — exiled off the stack");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "CR 702.34a — exiled off the stack");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt));
 }
 
@@ -7634,11 +7634,11 @@ fn cr_500_9_paradox_haze_grants_second_upkeep() {
     assert_eq!(g.step, TurnStep::Draw, "no third upkeep");
 }
 
-// ── CR 702.62e — suspend's eventual cast respects cast-zone locks ────────────
+// ── CR 702.62a — suspend's eventual cast respects cast-zone locks ────────────
 
 /// Drannith Magistrate ("opponents can't cast from anywhere but their hands")
 /// blocks the suspended card's free cast when the last time counter comes off;
-/// it stays exiled (CR 702.62e).
+/// it stays exiled (CR 702.62a).
 #[test]
 fn cr_702_62e_suspend_final_cast_blocked_by_drannith() {
     let mut g = two_player_game();

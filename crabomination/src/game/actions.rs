@@ -6275,7 +6275,7 @@ impl GameState {
         })
     }
 
-    /// CR 702.34d's rider on a spell just cast: stamp it so the resolver
+    /// CR 702.34a's rider on a spell just cast: stamp it so the resolver
     /// exiles it rather than putting it into its owner's graveyard.
     fn mark_spell_exiles_on_resolve(&mut self, card_id: CardId) {
         for si in self.stack.iter_mut() {
@@ -6604,7 +6604,7 @@ impl GameState {
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
     /// mana is added to the spell's cost and the resolving spell is stamped
     /// `kicked`, which `Predicate::SpellWasKicked` reads.
-    /// CR 702.32b — cast a spell paying the chosen subset of its
+    /// CR 702.33b — cast a spell paying the chosen subset of its
     /// `kicker_options`. The picks are stamped onto the spell so
     /// `Predicate::SpellWasKickedWith` riders fire per option (the Volvers).
     pub(crate) fn cast_spell_kickers(
@@ -9038,7 +9038,7 @@ impl GameState {
         // actually has a kicker cost (mana or action); a mana kicker is
         // folded into the spell's mana cost below, an action kicker joins
         // the additional-cast-cost payment.
-        // CR 702.32b — an "and/or" kicker cast carries its chosen option
+        // CR 702.33b — an "and/or" kicker cast carries its chosen option
         // indices instead of a single kicker cost.
         // Guarded: `cast_kicker_options` is a `ColdState` field, so the `take`
         // deep-copies the whole cold group — once per cast, for a list that is
@@ -9828,7 +9828,7 @@ impl GameState {
         if buyback && let Some(bc) = &card.definition.buyback_additional_cost {
             additional_costs.push(bc.clone());
         }
-        // CR 702.32b — a paid action kicker ("Kicker—Sacrifice an artifact")
+        // CR 702.33b — a paid action kicker ("Kicker—Sacrifice an artifact")
         // is an additional cost of the kicked cast.
         if kicked && let Some(kc) = &card.definition.kicker_action_cost {
             additional_costs.push(kc.clone());
@@ -9936,7 +9936,7 @@ impl GameState {
         } else {
             base_cost
         };
-        // CR 702.32b — fold the optional kicker cost into the total cost.
+        // CR 702.33b — fold the optional kicker cost into the total cost.
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
         } else if kicked && let Some(off) = self.granted_offspring_cost(p, &card.definition) {
@@ -12361,7 +12361,7 @@ impl GameState {
 
     /// Shared tail for `cast_flashback` and `cast_flashback_tap`:
     /// remove the card from its owner's graveyard, mark it
-    /// `cast_via_flashback` so the resolver exiles it (CR 702.34d),
+    /// `cast_via_flashback` so the resolver exiles it (CR 702.34a),
     /// emit `CardLeftGraveyard` + `SpellCast{Flashback}`, and thread the
     /// rest through `finalize_cast`. `plain_graveyard_cast` suppresses the
     /// exile rider for a card that merely permits a graveyard cast.
@@ -12615,7 +12615,7 @@ impl GameState {
     /// `tap_creatures` (must be exactly N untapped creatures the caster
     /// controls). The spell costs no mana — the tap is the entire
     /// flashback cost. Routes the resolved card to exile via
-    /// `cast_via_flashback` (CR 702.34d). Used by Group Project.
+    /// `cast_via_flashback` (CR 702.34a). Used by Group Project.
     pub(crate) fn cast_flashback_tap(
         &mut self,
         card_id: CardId,

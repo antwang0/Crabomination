@@ -823,7 +823,7 @@ impl GameState {
         out
     }
 
-    /// CR 702.32b — for each hand card with "Kicker {A} and/or {B}", the
+    /// CR 702.33b — for each hand card with "Kicker {A} and/or {B}", the
     /// option subsets the caster could actually pay for right now (dry-run per
     /// subset). Lets the client offer one menu entry per payable combination.
     fn kicker_option_sets_on(
