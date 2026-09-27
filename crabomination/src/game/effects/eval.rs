@@ -4498,6 +4498,7 @@ impl GameState {
             // CR 603.10 — an attacker that just left reads as attacking.
             R::IsAttacking => Some(self.is_or_was_attacking(cid)),
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
+            R::IsAttackingYouOrYourPlaneswalker => Some(self.creature_is_attacking_seat_or_its_planeswalker(cid, controller)),
             R::IsAttackingAnOpponent => Some(self.creature_is_attacking_an_opponent_of(cid, controller)),
             R::IsAttackingOpponentPlayer => Some(self.creature_is_attacking_opponent_player(cid, controller)),
             R::IsAttackingChosenPlayerOfSource => Some(self.attacking_chosen_player_of(cid, source)),
@@ -5368,6 +5369,7 @@ impl GameState {
                     R::IsSnow => card.definition.is_snow(),
                     R::IsAttacking => self.is_or_was_attacking(card.id),
                     R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
+                    R::IsAttackingYouOrYourPlaneswalker => self.creature_is_attacking_seat_or_its_planeswalker(card.id, controller),
                     R::IsAttackingAnOpponent => {
                         self.creature_is_attacking_an_opponent_of(card.id, controller)
                     }
@@ -6793,6 +6795,7 @@ impl GameState {
             // "for each attacking creature" reads it from the affinity counter).
             R::IsAttacking => self.is_or_was_attacking(card.id),
             R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
+            R::IsAttackingYouOrYourPlaneswalker => self.creature_is_attacking_seat_or_its_planeswalker(card.id, controller),
             R::IsAttackingAnOpponent => self.creature_is_attacking_an_opponent_of(card.id, controller),
             R::IsAttackingOpponentPlayer => self.creature_is_attacking_opponent_player(card.id, controller),
             R::IsAttackingChosenPlayerOfSource | R::IsAttackingTriggerPlayer => false,

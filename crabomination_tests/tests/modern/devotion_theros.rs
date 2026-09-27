@@ -1176,6 +1176,35 @@ fn soul_snare_exiles_an_attacker() {
     assert!(g.exile.iter().any(|c| c.id == attacker), "attacking creature exiled");
 }
 
+/// CR 506.3 — Soul Snare exiles a creature attacking *you or a planeswalker
+/// you control*: in a pod, one attacking another seat is out of reach (it
+/// shipped as any attacking or blocking creature).
+#[test]
+fn soul_snare_reaches_only_creatures_attacking_you() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = crabomination::game::multi_player_game(3);
+    let snare = g.add_card_to_battlefield(0, catalog::soul_snare());
+    let at_me = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let at_them = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(at_me);
+    g.clear_sickness(at_them);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![
+        Attack { attacker: at_me, target: AttackTarget::Player(0) },
+        Attack { attacker: at_them, target: AttackTarget::Player(2) },
+    ])
+    .expect("declare attackers");
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.priority.player_with_priority = 0;
+    let snare_at = |t| GameAction::ActivateAbility {
+        card_id: snare, ability_index: 0, target: Some(Target::Permanent(t)), additional_targets: Vec::new(), x_value: None, mode: None,
+    };
+    assert!(!g.would_accept(snare_at(at_them)), "attacking seat 2, not me");
+    assert!(g.would_accept(snare_at(at_me)));
+}
+
 #[test]
 fn dragon_fodder_makes_two_goblins() {
     let mut g = two_player_game();

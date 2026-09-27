@@ -41,6 +41,18 @@ impl GameState {
         self.trigger_event_player_scratch.is_some_and(|p| self.creature_is_attacking_seat(id, p))
     }
 
+    /// `id` attacks `seat` or a planeswalker `seat` controls.
+    pub(crate) fn creature_is_attacking_seat_or_its_planeswalker(&self, id: CardId, seat: usize) -> bool {
+        self.attacking.iter().any(|a| {
+            a.attacker == id
+                && match a.target {
+                    AttackTarget::Player(p) => p == seat,
+                    AttackTarget::Planeswalker(pw) => self.battlefield_find(pw).is_some_and(|c| c.controller == seat),
+                    AttackTarget::Battle(_) => false,
+                }
+        })
+    }
+
     /// `id` attacks an opponent of `seat`, or a planeswalker one controls.
     pub(crate) fn creature_is_attacking_an_opponent_of(&self, id: CardId, seat: usize) -> bool {
         self.attacking.iter().any(|a| {

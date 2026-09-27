@@ -2960,6 +2960,10 @@ pub enum SelectionRequirement {
     /// of yours). In a pod, a creature attacking someone else is not one of
     /// them (Arachnogenesis).
     IsAttackingYou,
+    /// `IsAttackingYou` or attacking a planeswalker the evaluating player
+    /// controls — "a creature that's attacking you or a planeswalker you
+    /// control" (Soul Snare). A creature attacking another seat is not one.
+    IsAttackingYouOrYourPlaneswalker,
     /// An attacking creature whose defender is an opponent of the evaluating
     /// player or a planeswalker one controls — "creatures attacking your
     /// opponents and/or planeswalkers they control" (Roar of Resistance).

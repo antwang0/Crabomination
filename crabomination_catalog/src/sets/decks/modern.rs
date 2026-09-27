@@ -25904,8 +25904,8 @@ pub fn oust() -> CardDefinition {
     }
 }
 
-/// Soul Snare — {W} Enchantment. "{1}, Sacrifice Soul Snare: Exile target
-/// attacking or blocking creature."
+/// Soul Snare — {W} Enchantment. "{W}, Sacrifice this enchantment: Exile
+/// target creature that's attacking you or a planeswalker you control."
 pub fn soul_snare() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -25919,9 +25919,7 @@ pub fn soul_snare() -> CardDefinition {
             sac_cost: true,
             effect: Effect::Exile {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(
-                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
-                    ),
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttackingYouOrYourPlaneswalker),
                 ),
             },
             ..Default::default()
