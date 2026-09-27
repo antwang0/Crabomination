@@ -5394,7 +5394,9 @@ impl GameState {
     /// CR 702.140 — cast a creature with Mutate for its mutate cost, merging
     /// it onto `host` (a non-Human creature you own). Paid like a normal
     /// creature spell whose cost is the mutate cost; on resolution the spell
-    /// merges instead of entering (`resolve_top_of_stack`).
+    /// merges instead of entering (`resolve_top_of_stack`). A commander may
+    /// be cast this way from the command zone (CR 903.8: mutate is an
+    /// alternative cost, and the tax is added on top).
     pub(crate) fn cast_mutate(
         &mut self,
         card_id: CardId,
@@ -5404,12 +5406,14 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::CreatureType;
         let p = self.priority.player_with_priority;
-        if !self.players[p].has_in_hand(card_id) {
-            return Err(GameError::CardNotInHand(card_id));
+        let from_command = !self.players[p].has_in_hand(card_id)
+            && self.players[p].commanders.contains(&card_id)
+            && self.players[p].command.iter().any(|c| c.id == card_id);
+        fn zone(g: &mut GameState, p: usize, cmd: bool) -> &mut Vec<crate::card::CardInstance> {
+            if cmd { &mut g.players[p].command } else { &mut g.players[p].hand }
         }
         let (printed, mutate_cost) = {
-            let card = self.players[p]
-                .hand
+            let card = zone(self, p, from_command)
                 .iter()
                 .find(|c| c.id == card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?;
@@ -5431,13 +5435,17 @@ impl GameState {
         // Pay the mutate cost via the normal pipeline by swapping in a
         // mutate-cost definition; restore the printed face after the cast so
         // the merged pile carries the real characteristics.
-        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+        if let Some(c) = zone(self, p, from_command).iter_mut().find(|c| c.id == card_id) {
             let mut d = (*printed).clone();
             d.cost = mutate_cost;
             c.set_definition(std::sync::Arc::new(d));
             c.mutate_onto = Some((host, on_top));
         }
-        let result = self.cast_spell(card_id, None, Vec::new(), None, x_value);
+        let result = if from_command {
+            self.cast_from_command_zone(card_id, None, Vec::new(), None, x_value)
+        } else {
+            self.cast_spell(card_id, None, Vec::new(), None, x_value)
+        };
         match result {
             Ok(events) => {
                 // Restore the printed definition on the stack spell so the
@@ -5453,7 +5461,7 @@ impl GameState {
                 Ok(events)
             }
             Err(e) => {
-                if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+                if let Some(c) = zone(self, p, from_command).iter_mut().find(|c| c.id == card_id) {
                     c.set_definition(printed);
                     c.mutate_onto = None;
                 }

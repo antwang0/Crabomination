@@ -213,3 +213,86 @@ fn tidal_barracuda_locks_your_turn() {
         .is_err()
     );
 }
+
+/// CR 903.3c — a commander that is a component of a merged permanent makes
+/// the merged permanent that player's commander: Otrimi mutated under a
+/// Bear is "your commander", its combat damage is tallied against Otrimi's
+/// card, and when the pile dies only Otrimi goes home (CR 903.9a).
+#[test]
+fn cr_903_3c_a_merged_commander_is_still_the_commander() {
+    let mut g = pod(3);
+    let otrimi = g.seat_commanders(0, vec![catalog::otrimi_the_ever_playful()])[0];
+    let card = {
+        let cmd = &mut g.players[0].command;
+        let i = cmd.iter().position(|c| c.id == otrimi).unwrap();
+        cmd.remove(i)
+    };
+    g.players[0].hand.push(card);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.is_commander(bear));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastMutate { card_id: otrimi, target: bear, on_top: false, x_value: None })
+        .expect("mutate under");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.mutate_stack.len() == 2));
+    assert!(g.is_commander(bear) && g.is_own_commander_object(0, bear));
+
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.commander_damage.get(&(1, otrimi)).copied(), Some(2), "tallied against Otrimi");
+
+    g.remove_from_battlefield_to_graveyard_raw(bear);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == otrimi), "Otrimi goes home");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "the Bear stays");
+}
+
+/// CR 903.8 + 702.140a — mutate is an alternative cost, so a commander may be
+/// cast for it from the command zone, tax added: the second cast of Otrimi's
+/// mutate {1}{B}{G}{U} costs six.
+#[test]
+fn cr_903_8_a_commander_mutates_from_the_command_zone_under_its_tax() {
+    let mut g = pod(3);
+    let otrimi = g.seat_commanders(0, vec![catalog::otrimi_the_ever_playful()])[0];
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mutate = GameAction::CastMutate { card_id: otrimi, target: bear, on_top: true, x_value: None };
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(mutate.clone()).expect("mutate from the command zone");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.mutate_stack.len() == 2 && c.definition.name == "Otrimi, the Ever-Playful"));
+    // Home again, the second cast owes {2}.
+    g.remove_from_battlefield_to_graveyard_raw(bear);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == otrimi));
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let again = GameAction::CastMutate { card_id: otrimi, target: bear2, on_top: true, x_value: None };
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(again.clone()).is_err(), "the tax is owed");
+    assert!(g.players[0].command.iter().any(|c| c.id == otrimi && c.definition.cost.cmc() == 6), "printed cost restored");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(again).expect("with the tax");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear2).is_some_and(|c| c.mutate_stack.len() == 2));
+}
