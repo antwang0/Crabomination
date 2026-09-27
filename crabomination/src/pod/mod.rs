@@ -2563,9 +2563,12 @@ mod tests {
         // Re-blessed 2026-09-27 (`server/manland.rs`): the bot animates a
         // creature-land with idle first-main mana so it can attack. Seed 43
         // changes winner (seat 2 → 0); 0xC0FFEE and 4242 keep theirs.
+        // Re-blessed 2026-09-27 (`server/counter_sink.rs`): idle mana puts a
+        // Forge of Heroes-style counter on the bot's own permanent. Same
+        // winners; seed 43 two turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 68, 3053),
-            (43, Some(0), 88, 4140),
+            (43, Some(0), 86, 4128),
             (4242, Some(0), 60, 2607),
         ];
         let decks = rofellos_pod(4);

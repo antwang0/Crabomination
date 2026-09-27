@@ -3316,6 +3316,7 @@ impl HeuristicBot {
                         .or_else(|| super::room::pick_room_door(state, seat))
                         .or_else(|| super::manland::pick_manland(state, seat))
                         .or_else(|| super::evasion::pick_evasion_grant(state, seat))
+                        .or_else(|| super::counter_sink::pick_counter_sink(state, seat))
                 {
                     return Some(BotStep::plain(a));
                 }
