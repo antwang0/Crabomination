@@ -1212,3 +1212,39 @@ fn impulse_grants_bill_the_card_cost() {
     g.players[0].mana_pool.add(Color::Green, 1);
     from_exile(&mut g, bear).expect("with a green");
 }
+
+/// Ramos, Dragon Engine — a counter per color of the cast spell (Terminate
+/// two, Sol Ring none); "remove five +1/+1 counters" is a cost, the ability
+/// doesn't tap, and it works once each turn. It counted one per spell, tapped,
+/// and made mana from any number of counters.
+#[test]
+fn ramos_counts_colors_and_pays_five_counters_once_a_turn() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let ramos = g.add_card_to_battlefield(0, catalog::ramos_dragon_engine());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let counters = |g: &GameState| g.battlefield_find(ramos).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    let terminate = g.add_card_to_hand(0, catalog::terminate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, terminate, Some(Target::Permanent(bear))).expect("Terminate");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g), 2, "black and red");
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ring, None).expect("Sol Ring");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g), 2, "a colorless spell adds none");
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ramos, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(act(&mut g).is_err(), "two counters can't pay five");
+    g.battlefield_find_mut(ramos).unwrap().add_counters(CounterType::PlusOnePlusOne, 8);
+    act(&mut g).expect("remove five");
+    assert_eq!(counters(&g), 5);
+    assert_eq!(g.players[0].mana_pool.total(), 10);
+    assert!(!g.battlefield_find(ramos).unwrap().tapped, "no {{T}} in the cost");
+    assert!(act(&mut g).is_err(), "once each turn");
+}

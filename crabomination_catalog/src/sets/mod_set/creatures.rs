@@ -5579,9 +5579,11 @@ pub fn maelstrom_archangel() -> CardDefinition {
 }
 
 /// Ramos, Dragon Engine — {6} Legendary Artifact Creature — Dragon 4/4 Flying.
-/// Spell-cast -> +1/+1 counter. Tap, remove 5 counters: add WUBRG×2.
+/// A spell cast adds a +1/+1 counter per color it has; remove five: add
+/// {W}{W}{U}{U}{B}{B}{R}{R}{G}{G}, once each turn.
 pub fn ramos_dragon_engine() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::mana::Color;
     CardDefinition {
         name: "Ramos, Dragon Engine",
         cost: cost(&[generic(6)]),
@@ -5599,36 +5601,21 @@ pub fn ramos_dragon_engine() -> CardDefinition {
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+                amount: Value::ColorCountOf(Box::new(Selector::TriggerSource)),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(5),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![
-                        crate::mana::Color::White,
-                        crate::mana::Color::White,
-                        crate::mana::Color::Blue,
-                        crate::mana::Color::Blue,
-                        crate::mana::Color::Black,
-                        crate::mana::Color::Black,
-                        crate::mana::Color::Red,
-                        crate::mana::Color::Red,
-                        crate::mana::Color::Green,
-                        crate::mana::Color::Green,
-                    ]),
-                },
-            ]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 5)),
+            once_per_turn: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(
+                    [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                        .into_iter()
+                        .flat_map(|c| [c, c])
+                        .collect(),
+                ),
+            },
             ..Default::default()
         }],
         ..Default::default()
