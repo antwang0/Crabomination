@@ -1204,9 +1204,10 @@ pub fn banishing_light() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(
+                    // "... an opponent controls" — it reached your own.
                     SelectionRequirement::Permanent
                         .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::OtherThanSource),
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
                 return_to: ExileReturnZone::Battlefield,
             },

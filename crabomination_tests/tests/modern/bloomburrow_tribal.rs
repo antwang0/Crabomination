@@ -50,6 +50,8 @@ fn banishing_light_exiles_then_returns_on_leave() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    // "... an opponent controls": your own Angel is never the pick.
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
     let bl = g.add_card_to_hand(0, catalog::banishing_light());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -58,6 +60,7 @@ fn banishing_light_exiles_then_returns_on_leave() {
     }).expect("cast Banishing Light");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "ETB exiled the opponent's creature");
+    assert!(g.battlefield_find(mine).is_some());
     // Destroy the enchantment → the exiled card returns to the battlefield.
     g.remove_from_battlefield_to_graveyard_raw(bl);
     drain_stack(&mut g);

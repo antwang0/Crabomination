@@ -1190,6 +1190,11 @@ fn stern_dismissal_bounces_creature_to_owner_hand() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::stern_dismissal());
     g.players[0].mana_pool.add(Color::Blue, 1);
+    // "... an opponent controls": your own creature isn't a legal target.
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err());
     let p1_hand_before = g.players[1].hand.len();
 
     g.perform_action(GameAction::CastSpell {

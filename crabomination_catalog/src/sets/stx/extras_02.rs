@@ -661,7 +661,10 @@ pub fn stern_dismissal() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                // "... an opponent controls" — it reached your own.
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::ControlledByOpponent),
             ),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         },
