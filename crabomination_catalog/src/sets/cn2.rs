@@ -938,7 +938,7 @@ pub fn kaya_ghost_assassin() -> CardDefinition {
         loyalty_abilities: vec![
             crate::card::LoyaltyAbility {
                 loyalty_cost: 0,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::ChooseMode(vec![
                         Effect::ExileReturnAtYourNextUpkeep { what: Selector::This },
                         Effect::ExileReturnAtYourNextUpkeep {
@@ -946,7 +946,7 @@ pub fn kaya_ghost_assassin() -> CardDefinition {
                         },
                     ]),
                     Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-                ]),
+                ])) },
                 ..Default::default()
             },
             crate::card::LoyaltyAbility {

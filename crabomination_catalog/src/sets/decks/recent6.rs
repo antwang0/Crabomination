@@ -294,10 +294,10 @@ pub fn tezzeret_the_seeker() -> CardDefinition {
             // a single target slot.)
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Untap {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Untap {
                     what: target_filtered(SelectionRequirement::Artifact),
                     up_to: None,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

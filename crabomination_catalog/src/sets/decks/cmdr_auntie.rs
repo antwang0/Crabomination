@@ -513,12 +513,12 @@ pub fn liliana_death_wielder() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
-                effect: Effect::ApplyToTargets {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ApplyToTargets {
                     min_targets: 0,
                     max_targets: 1,
                     filter: R::Creature,
                     effect: Box::new(minus(Selector::Target(0), 1)),
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

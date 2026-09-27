@@ -596,7 +596,7 @@ pub fn will_kenrith() -> CardDefinition {
         vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
-                effect: Effect::ApplyToTargets {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ApplyToTargets {
                     max_targets: 2,
                     min_targets: 0,
                     filter: R::Creature,
@@ -609,7 +609,7 @@ pub fn will_kenrith() -> CardDefinition {
                         },
                         Effect::LoseAllAbilities { what: Selector::Target(0), duration: Duration::UntilNextTurn },
                     ])),
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

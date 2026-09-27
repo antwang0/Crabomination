@@ -183,11 +183,11 @@ pub fn ajani_caller_of_the_pride() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::AddCounter {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::AddCounter {
                     what: target_filtered(R::Creature),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

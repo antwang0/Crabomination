@@ -96,7 +96,7 @@ pub fn jared_carthalion() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -3,
                 x_cost: false,
-                effect: Effect::ApplyToTargets {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ApplyToTargets {
                     max_targets: 2,
                     min_targets: 0,
                     filter: R::Creature,
@@ -105,7 +105,7 @@ pub fn jared_carthalion() -> CardDefinition {
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::ColorCountOf(Box::new(Selector::Target(0))),
                     }),
-                },
+                }) },
             },
             LoyaltyAbility {
                 loyalty_cost: -6,

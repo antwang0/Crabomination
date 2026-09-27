@@ -718,13 +718,13 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::Untap { what: target_filtered(R::Creature), up_to: None },
                     Effect::Untap {
                         what: Selector::TargetFiltered { slot: 1, filter: R::Land },
                         up_to: None,
                     },
-                ]),
+                ])) },
                 ..Default::default()
             },
             LoyaltyAbility {

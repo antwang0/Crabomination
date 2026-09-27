@@ -6019,10 +6019,10 @@ pub fn tyvar_jubilant_brawler() -> CardDefinition {
         loyalty_abilities: vec![
             crate::effect::LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Untap {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Untap {
                     what: target_filtered(SelectionRequirement::Creature),
                     up_to: None,
-                },
+                }) },
                 ..Default::default()
             },
             crate::effect::LoyaltyAbility {
@@ -6218,12 +6218,12 @@ pub fn jace_the_perfected_mind() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::PumpPT {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
                     power: Value::Const(-3),
                     toughness: Value::Const(0),
                     duration: Duration::UntilYourNextUntap,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -6387,11 +6387,11 @@ pub fn nahiri_the_unforgiving() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::GrantKeyword {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::GrantKeyword {
                     what: target_filtered(SelectionRequirement::Creature),
                     keyword: Keyword::MustAttack,
                     duration: Duration::UntilYourNextUntap,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -6645,9 +6645,9 @@ pub fn kaito_dancing_shadow() -> CardDefinition {
             // modeled as detain (also locks abilities).
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Detain {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Detain {
                     what: target_filtered(SelectionRequirement::Creature),
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -6699,11 +6699,11 @@ pub fn the_eternal_wanderer() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::ExileReturnNextEndStep {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ExileReturnNextEndStep {
                     what: target_filtered(
                         SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
                     ),
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

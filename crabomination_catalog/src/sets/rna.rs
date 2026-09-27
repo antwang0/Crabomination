@@ -4903,11 +4903,11 @@ pub fn kaya_orzhov_usurper() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::ExileUpToNFromGraveyards {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ExileUpToNFromGraveyards {
                     count: Value::Const(2),
                     of: None,
                     single: true,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

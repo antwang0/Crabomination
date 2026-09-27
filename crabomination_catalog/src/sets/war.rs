@@ -5702,7 +5702,7 @@ pub fn nissa_who_shakes_the_world() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::AddCounter {
                         what: target_filtered(R::Land.and(R::Noncreature).and(R::ControlledByYou)),
                         kind: CounterType::PlusOnePlusOne,
@@ -5720,7 +5720,7 @@ pub fn nissa_who_shakes_the_world() -> CardDefinition {
                         keywords: vec![Keyword::Vigilance, Keyword::Haste],
                         duration: Duration::Permanent,
                     },
-                ]),
+                ])) },
                 ..Default::default()
             },
             LoyaltyAbility {

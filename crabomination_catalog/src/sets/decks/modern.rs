@@ -12813,7 +12813,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
             // planeswalker." — "up to one" rides `MayDo`.
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::Const(2),
@@ -12833,7 +12833,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
                             amount: Value::ONE,
                         }),
                     },
-                ]),
+                ])) },
                 ..Default::default()
             },
             // -3: gain control until end of turn, untap it, corruption counter, haste.
@@ -29283,12 +29283,12 @@ pub fn liliana_the_last_hope() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::PumpPT {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
                     power: Value::Const(-2),
                     toughness: Value::Const(-1),
                     duration: Duration::UntilNextTurn,
-                },
+                }) },
             },
             LoyaltyAbility {
                 x_cost: false,
@@ -55420,7 +55420,7 @@ pub fn karn_the_great_creator() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1, // +1 (shipped as -1 until 2026-09-07)
-                effect: Effect::BecomeCreature {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::BecomeCreature {
                     what: target_filtered(SelectionRequirement::Artifact.and(
                         SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
                     )),
@@ -55429,7 +55429,7 @@ pub fn karn_the_great_creator() -> CardDefinition {
                     creature_types: vec![],
                     keywords: vec![],
                     duration: Duration::UntilYourNextUntap,
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -65976,7 +65976,7 @@ pub fn the_wandering_emperor() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::AddCounter {
                         what: target_filtered(SelectionRequirement::Creature),
                         kind: CounterType::PlusOnePlusOne,
@@ -65987,7 +65987,7 @@ pub fn the_wandering_emperor() -> CardDefinition {
                         keyword: Keyword::FirstStrike,
                         duration: Duration::EndOfTurn,
                     },
-                ]),
+                ])) },
                 ..Default::default()
             },
             LoyaltyAbility {

@@ -3273,6 +3273,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
+            | Effect::OptionalTargets { body, .. }
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
             | Effect::Repeat { body, .. } => body.slot_owner(slot, mode),
             other => other
@@ -3337,6 +3338,7 @@ impl Effect {
                 | Effect::BindTargetSlot { body, .. }
                 | Effect::BindTargetObjects { body, .. }
                 | Effect::BindScratch { body, .. }
+                | Effect::OptionalTargets { body, .. }
                 | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
                 | Effect::Repeat { body, .. } => hostile(body),
                 _ => false,
@@ -3415,6 +3417,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
+            | Effect::OptionalTargets { body, .. }
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } => body.prefers_friendly_target(),
             // "Each of up to N targets" rebinds every slot to the body's
             // `Target(0)`, so the body's flavor is every slot's. Without this

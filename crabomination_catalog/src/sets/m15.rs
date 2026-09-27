@@ -2820,10 +2820,10 @@ pub fn nissa_worldwaker() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Untap {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Untap {
                     what: target_filtered(R::HasLandType(LandType::Forest)),
                     up_to: Some(Value::Const(4)),
-                },
+                }) },
                 ..Default::default()
             },
             LoyaltyAbility {

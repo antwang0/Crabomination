@@ -794,7 +794,7 @@ pub fn teferi_time_raveler() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -3,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(
                             SelectionRequirement::Permanent
@@ -807,7 +807,7 @@ pub fn teferi_time_raveler() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(1),
                     },
-                ]),
+                ])) },
             },
         ],
         ..Default::default()

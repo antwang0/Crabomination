@@ -25666,11 +25666,11 @@ impl GameState {
             {
                 return Err(GameError::SelectionRequirementViolated);
             }
+        } else if required_target::slot0_required(&ability.effect, None, false, x_value.unwrap_or(0)) {
+            // CR 602.2b + 601.2c — as `activate_ability_into`. Loyalty "up to
+            // one target" abilities carry `OptionalTargets { min: 0 }`.
+            return Err(GameError::SelectionRequirementViolated);
         }
-        // No CR 601.2c gate for an empty slot here, unlike
-        // `activate_ability_into`: "up to one target" is common on loyalty
-        // abilities and mostly unmarked in the catalog (Dihada's +2), so the
-        // walk can't tell a required slot from an optional one.
 
         // CR 606 — opponents' loyalty-tax statics (Eidolon of Obstruction)
         // make this activation cost extra generic mana. Pay it before the

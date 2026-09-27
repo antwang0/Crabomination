@@ -89,7 +89,7 @@ pub fn dihada_binder_of_wills() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
-                effect: Effect::Seq(vec![
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::GrantKeyword {
                         what: target_filtered(R::Creature.and(legendary())),
                         keyword: Keyword::Vigilance,
@@ -97,7 +97,7 @@ pub fn dihada_binder_of_wills() -> CardDefinition {
                     },
                     until_next(Keyword::Lifelink),
                     until_next(Keyword::Indestructible),
-                ]),
+                ])) },
                 ..Default::default()
             },
             LoyaltyAbility {
