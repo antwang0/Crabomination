@@ -2918,6 +2918,10 @@ pub enum SelectionRequirement {
     /// equal toughness" — V.A.T.S.). Vacuously true while that slot is
     /// unchosen; read like `SameControllerAsTargetSlot`.
     SameToughnessAsTargetSlot(u8),
+    /// CR 601.2c — "target cards from **a single graveyard**": in the same
+    /// graveyard as the card already chosen for slot `.0`. Vacuously true
+    /// while that slot is unchosen; read like `SameControllerAsTargetSlot`.
+    SameGraveyardAsTargetSlot(u8),
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -3933,7 +3937,8 @@ impl SelectionRequirement {
         match self {
             Self::SameControllerAsTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
-            | Self::SameToughnessAsTargetSlot(_) => true,
+            | Self::SameToughnessAsTargetSlot(_)
+            | Self::SameGraveyardAsTargetSlot(_) => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_cross_slot() || b.mentions_cross_slot()
             }

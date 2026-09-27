@@ -4057,12 +4057,25 @@ impl GameState {
             R::OtherThanTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| o != target)
             }
+            R::SameGraveyardAsTargetSlot(slot) => {
+                slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
+                    self.graveyard_holding(o).is_some() && self.graveyard_holding(o) == self.graveyard_holding(target)
+                })
+            }
             R::SameToughnessAsTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
                     self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
                 })
             }
             _ => true,
+        }
+    }
+
+    /// The seat whose graveyard holds a targeted card; `None` off the graveyards.
+    fn graveyard_holding(&self, t: &Target) -> Option<usize> {
+        match t {
+            Target::Permanent(cid) => self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == *cid)),
+            Target::Player(_) => None,
         }
     }
 
@@ -4708,6 +4721,15 @@ impl GameState {
             // CR 601.2c — "**another** target": not the object slot N already
             // holds. Same scratch, same vacuous answer while that slot is
             // unchosen.
+            R::SameGraveyardAsTargetSlot(slot) => {
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) => {
+                        self.graveyard_holding(other).is_some()
+                            && self.graveyard_holding(other) == self.graveyard_holding(target)
+                    }
+                    None => true,
+                }
+            }
             R::SameToughnessAsTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => {
@@ -6451,7 +6473,8 @@ impl GameState {
             R::SharesColorWithManaSpent
             | R::SameControllerAsTargetSlot(_)
             | R::OtherThanTargetSlot(_)
-            | R::SameToughnessAsTargetSlot(_) => true,
+            | R::SameToughnessAsTargetSlot(_)
+            | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;
                 let wild = card.has_keyword(&crate::card::Keyword::Changeling);
