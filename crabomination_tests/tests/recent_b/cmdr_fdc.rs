@@ -1104,8 +1104,8 @@ fn sure_footed_infiltrator_taps_another_rogue_to_slip_through() {
     assert!(g.computed_permanent(inf).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
-/// A hit opens that player's graveyard for a creature spell this turn, any
-/// color of mana.
+/// A hit opens that player's graveyard for one creature spell this turn, paid
+/// for with any color of mana — not free, and not a second one.
 #[test]
 fn whispersteel_dagger_casts_from_the_hit_players_graveyard() {
     let mut g = main_phase();
@@ -1115,20 +1115,28 @@ fn whispersteel_dagger_casts_from_the_hit_players_graveyard() {
     g.perform_action(GameAction::Equip { equipment: dagger, target: bears }).expect("equip");
     drain_stack(&mut g);
     let piker = g.add_card_to_graveyard(1, catalog::goblin_piker());
+    let bears2 = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     combat(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(1) }], 0, |_| {});
     g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
+    g.players[0].mana_pool = Default::default();
+    let cast_from_gy = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast_from_gy(&mut g, piker).is_err(), "not free");
     g.players[0].mana_pool.add(Color::Black, 2);
-    g.perform_action(GameAction::CastFromZoneWithoutPaying {
-        card_id: piker,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast the Piker with black mana");
+    cast_from_gy(&mut g, piker).expect("cast the Piker with black mana");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(piker).map(|c| c.controller), Some(0));
+    assert_eq!(g.players[0].mana_pool.total(), 0, "paid {{1}}{{R}} with {{B}}{{B}}");
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(cast_from_gy(&mut g, bears2).is_err(), "one creature spell");
 }
 
 /// CR 611.2c — "for as long as you control" ends when the Thief changes

@@ -370,10 +370,10 @@ pub fn sure_footed_infiltrator() -> CardDefinition {
     }
 }
 
-/// Whispersteel Dagger — +2/+0, and a hit opens the damaged player's
-/// graveyard for a creature spell this turn with any-color mana. ⚠ Every
-/// creature card there is castable, not only one.
+/// Whispersteel Dagger — +2/+0, and a hit lets you cast one creature spell
+/// from the damaged player's graveyard this turn, paying with any-color mana.
 pub fn whispersteel_dagger() -> CardDefinition {
+    let theirs = || Selector::CardsInZone { who: PlayerRef::Target(0), zone: Zone::Graveyard, filter: R::Creature };
     CardDefinition {
         name: "Whispersteel Dagger",
         cost: cost(&[generic(2), b()]),
@@ -385,18 +385,17 @@ pub fn whispersteel_dagger() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
-            triggered_abilities: vec![on_combat_damage(Effect::GrantMayPlay {
-                what: Selector::CardsInZone {
-                    who: PlayerRef::Target(0),
-                    zone: Zone::Graveyard,
-                    filter: R::Creature,
+            triggered_abilities: vec![on_combat_damage(Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: theirs(),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: true,
                 },
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: false,
-                any_color: true,
-            })],
+                Effect::OneCastAmongGranted { what: theirs() },
+            ]))],
             ..Default::default()
         }),
         ..Default::default()
