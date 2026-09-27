@@ -2503,6 +2503,9 @@ pub struct ActionCensus {
     /// kind/scope pair — Tahngarth, First Mate's "whenever an opponent
     /// attacks" was one).
     triggered: HashMap<String, usize>,
+    /// The same by printed trigger index (matched by effect): a card with one
+    /// live trigger and one dead one reads "triggered" above.
+    triggered_idx: HashMap<(String, usize), usize>,
 }
 
 /// An action about to be taken, with the card it names peeled off so
@@ -2552,6 +2555,11 @@ impl ActionCensus {
     }
 
     /// How often each card was seen as a trigger's source. Read by key.
+    /// [`trigger_counts`](Self::trigger_counts) by printed trigger index.
+    pub fn trigger_index_counts(&self) -> &HashMap<(String, usize), usize> {
+        &self.triggered_idx
+    }
+
     pub fn trigger_counts(&self) -> &HashMap<String, usize> {
         &self.triggered
     }
@@ -2562,10 +2570,13 @@ impl ActionCensus {
             return;
         }
         for si in g.stack.iter() {
-            if let crate::game::types::StackItem::Trigger { source, .. } = si
+            if let crate::game::types::StackItem::Trigger { source, effect, .. } = si
                 && let Some(c) = g.find_card_anywhere(*source)
             {
                 *self.triggered.entry(c.definition.name.to_string()).or_insert(0) += 1;
+                if let Some(i) = c.definition.triggered_abilities.iter().position(|t| t.effect == **effect) {
+                    *self.triggered_idx.entry((c.definition.name.to_string(), i)).or_insert(0) += 1;
+                }
             }
         }
     }
@@ -2583,6 +2594,9 @@ impl ActionCensus {
         }
         for (k, n) in &other.triggered {
             *self.triggered.entry(k.clone()).or_insert(0) += n;
+        }
+        for (k, n) in &other.triggered_idx {
+            *self.triggered_idx.entry(k.clone()).or_insert(0) += n;
         }
     }
 

@@ -2814,6 +2814,14 @@ fn report_card_census(
                 let events: Vec<String> =
                     def.triggered_abilities.iter().map(|t| format!("{:?}/{:?}", t.event.kind, t.event.scope)).collect();
                 println!("      never triggered: {} [{}]", def.name, events.join(", "));
+            } else if def.triggered_abilities.len() > 1 {
+                // One live trigger hides a dead sibling from the line above.
+                let idx = census.trigger_index_counts();
+                for (i, t) in def.triggered_abilities.iter().enumerate() {
+                    if !idx.contains_key(&(def.name.to_string(), i)) {
+                        println!("      trigger never fired: {} #{i} [{:?}/{:?}]", def.name, t.event.kind, t.event.scope);
+                    }
+                }
             }
         }
     }
