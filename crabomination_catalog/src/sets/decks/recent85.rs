@@ -41,10 +41,38 @@ pub fn steely_resolve() -> CardDefinition {
     chosen_type_keyword("Steely Resolve", &[generic(1), g()], Keyword::Shroud)
 }
 
-/// Kindred Boon — {2}{W}{W} Enchantment. Choose a creature type. Creatures you
-/// control of the chosen type have indestructible.
+/// Kindred Boon — {2}{W}{W} Enchantment. Choose a creature type. {1}{W}: a
+/// divinity counter on target creature you control of the chosen type; each
+/// creature you control with a divinity counter has indestructible. (It
+/// shipped as a free indestructible anthem over the whole chosen type.)
 pub fn kindred_boon() -> CardDefinition {
-    chosen_type_keyword("Kindred Boon", &[generic(2), w(), w()], Keyword::Indestructible)
+    CardDefinition {
+        name: "Kindred Boon",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::AddCounter {
+                what: crate::effect::shortcut::target_filtered(
+                    R::Creature.and(R::ControlledByYou).and(R::IsSourceChosenCreatureType),
+                ),
+                kind: crate::card::CounterType::Divinity,
+                amount: crate::card::Value::ONE,
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a divinity counter on it has indestructible.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::WithCounter(crate::card::CounterType::Divinity)),
+                ),
+                keyword: Keyword::Indestructible,
+            },
+        }],
+        ..Default::default()
+    }
 }
 
 /// Cover of Darkness — {1}{B} Enchantment. Choose a creature type. Creatures of

@@ -23700,8 +23700,8 @@ pub fn horizon_spellbomb() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
+                // "{2}, {T}, Sacrifice" — it shipped with no mana cost.
+                mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Search {

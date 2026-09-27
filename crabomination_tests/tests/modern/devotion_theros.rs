@@ -976,6 +976,21 @@ fn horizon_spellbomb_pays_g_to_draw_when_it_dies() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "declined: {{G}} kept");
 }
 
+/// Horizon Spellbomb's search costs "{2}, {T}, Sacrifice" — it shipped free.
+#[test]
+fn horizon_spellbomb_search_costs_two() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::horizon_spellbomb());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    });
+    assert!(res.is_err(), "{{1}} doesn't pay {{2}}");
+    assert!(g.battlefield_find(bomb).is_some());
+}
+
 /// CR 603.3 — a permanent sacrificed as a cost has its own dies trigger put
 /// on the stack after the ability it paid for, so the trigger resolves first
 /// (it shipped below the ability — ENGINE_BACKLOG "Self-death triggers paid as

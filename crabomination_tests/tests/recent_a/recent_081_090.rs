@@ -784,14 +784,32 @@ mod recent85 {
             "chosen-type Bear has shroud");
     }
 
+    /// Kindred Boon — indestructible comes from a {1}{W} divinity counter on a
+    /// creature of the chosen type, not from the type alone (it shipped as a
+    /// free anthem); another type can't be targeted.
     #[test]
     fn kindred_boon_grants_indestructible() {
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
         let kb = g.add_card_to_battlefield(0, catalog::kindred_boon());
         enter_choosing(&mut g, kb, CreatureType::Bear);
-        assert!(g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
-            .keywords().contains(&Keyword::Indestructible), "chosen-type Bear is indestructible");
+        let indestructible = |g: &GameState| {
+            g.compute_battlefield().iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Indestructible)
+        };
+        assert!(!indestructible(&g), "no counter yet");
+        let activate = |g: &mut GameState, t| {
+            g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+            g.players[0].mana_pool.add_colorless(1);
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: kb, ability_index: 0, target: Some(Target::Permanent(t)),
+                additional_targets: vec![], x_value: None, mode: None,
+            })
+        };
+        assert!(activate(&mut g, elf).is_err(), "an Elf isn't the chosen type");
+        activate(&mut g, bear).expect("{1}{W}: a divinity counter");
+        drain_stack(&mut g);
+        assert!(indestructible(&g));
     }
 
     #[test]
