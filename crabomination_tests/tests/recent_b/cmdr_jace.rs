@@ -174,3 +174,17 @@ fn jhoira_steals_a_historic_permanent() {
     assert_eq!(g.battlefield_find(ring).expect("stolen").controller, 0);
     assert_eq!(g.players[0].life, 19, "lost the Sol Ring's mana value");
 }
+
+/// A token-copy effect's auto-target skips a legend you control (the copy
+/// dies to the legend rule, CR 704.5j) for a nonlegendary permanent: aimed at
+/// Venser, Fervent Forger, a demonstrated Replication Technique looped on
+/// Venser's ETB (seed 1054026, a stack of 512).
+#[test]
+fn cr_704_5j_token_copy_targeting_skips_your_legend() {
+    let mut g = main_phase(3);
+    let venser = g.add_card_to_battlefield(0, catalog::venser_fervent_forger());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let technique = catalog::replication_technique();
+    let t = g.auto_target_for_effect(&technique.effect, 0);
+    assert_eq!(t, Some(Target::Permanent(bears)), "not {venser:?}");
+}

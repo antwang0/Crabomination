@@ -356,8 +356,24 @@ impl GameState {
                 }
                 self.battlefield.find_by_id(cid).map_or(0, |c| c.counters.values().sum())
             };
+            // A token copy of a legend you control dies to the legend rule
+            // (CR 704.5j) and nets its ETB at most, so a token-copy effect
+            // takes a nonlegendary permanent first. Aimed at a Venser,
+            // Fervent Forger, a demonstrated Replication Technique looped:
+            // each Venser token's ETB copied the Technique again (seed
+            // 1054026, a stack of 512).
+            let copies_to_token = eff.any_nested(&|e| {
+                matches!(e, Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. })
+            });
+            let legend_copy = |cid: CardId| {
+                copies_to_token
+                    && self
+                        .battlefield
+                        .find_by_id(cid)
+                        .is_some_and(|c| c.definition.supertypes.contains(&crate::card::Supertype::Legendary))
+            };
             primary_candidates.sort_by_cached_key(|c| {
-                (!fans_out(c.0), std::cmp::Reverse(counters(c.0)), std::cmp::Reverse(c.1))
+                (legend_copy(c.0), !fans_out(c.0), std::cmp::Reverse(counters(c.0)), std::cmp::Reverse(c.1))
             });
         } else {
             // Hostile pick: un-warded first, then the biggest threat.
