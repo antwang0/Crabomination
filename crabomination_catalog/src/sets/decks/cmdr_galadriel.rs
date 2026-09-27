@@ -479,9 +479,8 @@ pub fn mirkwood_elk() -> CardDefinition {
 }
 
 /// Mirkwood Trapper — a player attacking you shrinks one of their attackers
-/// by 2 power; a player attacking only elsewhere pumps one of theirs by 2.
-///
-/// ⚠ Residual: the shrunk attacker is the first one declared, not a target.
+/// by 2 power (a target attacking creature, chosen as the trigger resolves);
+/// a player attacking only elsewhere pumps one of theirs by 2.
 pub fn mirkwood_trapper() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -489,11 +488,15 @@ pub fn mirkwood_trapper() -> CardDefinition {
                 once_per_batch: true,
                 ..EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
             },
-            effect: Effect::PumpPT {
-                what: Selector::TriggerSource,
-                power: Value::Const(-2),
-                toughness: Value::ZERO,
-                duration: Duration::EndOfTurn,
+            // The attack dispatch binds the attacking player into slot 0, so
+            // the target is chosen reflexively as the trigger resolves.
+            effect: Effect::Reflexive {
+                body: Box::new(Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::IsAttacking)),
+                    power: Value::Const(-2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                }),
             },
         }, TriggeredAbility {
             // "Whenever a player attacks, if they aren't attacking you, that

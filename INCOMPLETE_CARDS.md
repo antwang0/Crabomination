@@ -1886,7 +1886,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
-| 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |

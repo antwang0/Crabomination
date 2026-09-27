@@ -1023,3 +1023,29 @@ fn celeborn_grows_per_card_scried() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(celeborn).unwrap().power, 5);
 }
+
+/// Mirkwood Trapper — "Whenever a player attacks you, target attacking
+/// creature gets -2/-0 until end of turn": one attacker, chosen, not the first
+/// declared (the auto-targeter takes the bigger one).
+#[test]
+fn mirkwood_trapper_shrinks_a_target_attacker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mirkwood_trapper());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    for c in [bear, wurm] {
+        g.clear_sickness(c);
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(0) },
+        Attack { attacker: wurm, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let p = |g: &GameState, c| g.computed_permanent(c).unwrap().power;
+    assert_eq!((p(&g, bear), p(&g, wurm)), (2, 4));
+}
