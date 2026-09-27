@@ -26706,8 +26706,8 @@ pub fn springleaf_parade() -> CardDefinition {
 
 /// Shorikai, Genesis Engine — {2}{W}{U} Legendary Artifact — Vehicle 8/8.
 /// `{1}, {T}: Draw two cards, then discard a card. Create a 1/1 colorless
-/// Pilot creature token.` Crew 8. (The Pilot's "crews as though power 2
-/// greater" rider is dropped.)
+/// Pilot creature token with "This token crews Vehicles as though its power
+/// were 2 greater."` Crew 8.
 pub fn shorikai_genesis_engine() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype, Supertype, TokenDefinition};
     CardDefinition {
@@ -26747,6 +26747,13 @@ pub fn shorikai_genesis_engine() -> CardDefinition {
                             creature_types: vec![CreatureType::Pilot],
                             ..Default::default()
                         },
+                        static_abilities: vec![crate::card::StaticAbility {
+                            description: "This token crews Vehicles as though its power were 2 greater.",
+                            effect: crate::effect::StaticEffect::CrewSaddlePowerBonus {
+                                applies_to: Selector::This,
+                                amount: 2,
+                            },
+                        }],
                         ..Default::default()
                     }),
                 },

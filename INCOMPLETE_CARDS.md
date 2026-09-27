@@ -742,12 +742,11 @@ abilities. One residual and two rule-implied allowances:
 | Squee, the Immortal | same | CR 307.1/302.1 — casting a creature is sorcery-speed; the graveyard/exile permission is not a second one |
 | Roadkill Rodney | same, reported in the audit's token bucket | the flag is on the **Mutagen token**, whose own printed text says "Activate only as a sorcery"; a factory holds its tokens' rules text and the card's oracle does not |
 
-Three of the first eleven kept a documented residual rather than shipping whole:
+Two of the first eleven kept a documented residual rather than shipping whole:
 
 | Card | Residual | Why |
 |---|---|---|
 | Sage of the Beyond | "spells you cast **from anywhere other than your hand** cost {2} less" is spelled as its two reachable zones — `GraveyardCastCostReduction` + `ExileCastCostReduction`. A cast from the **command zone** is not discounted | there is no "any zone but hand" cost-reduction static; the two that exist cover flashback/retrace/escape/disturb/aftermath and foretell/plot/adventure/impulse, which is every zone the engine actually casts from outside a Commander game |
-| Sproutback Trudge | the graveyard recursion is Gravecrawler's shape — pay the cost, `Move` to the battlefield — so it is **not a cast**: nothing counters it and no cast trigger sees it. And "this spell costs {X} less to cast, where X is the amount of life you gained this turn" is **absent** | no `StaticEffect` reduces a card's own cost by a `Value`; the `SelfCostReduced*` family is one variant per counted thing (`…PerDiscardThisTurn`, `…PerSpellCastThisTurn`, …). A `SelfCostReducedByValue` would close this one and generalise the whole family |
 | Tome of the Infinite | the activation's `Draw 1` stands in for "conjure a random card from its spellbook" | Alchemy conjure has no primitive (pre-existing row below). The invented ETB scry beside it is gone |
 
 ## The synthesised-name class (2026-09-19) — closed on the docs, and what it left
@@ -1822,8 +1821,9 @@ Tasigur (Splice / Delve).
   {1},{T} to untap *another* artifact. Tests in `stx::part_01` pin both
   costs and the self-target refusal.
 - **Manland pump / artifact-creature type / land detail dropped** across
-  `decks/lands.rs`. Re-read 2026-09-07: Mishra's Factory and Blinkmoth Nexus
-  are not in the catalog at all; Ghost Quarter and Field of Ruin both ship
+  `decks/lands.rs`. Mishra's Factory, Blinkmoth Nexus, Inkmoth Nexus and
+  Mishra's Foundry animate as artifact creatures and carry their pumps
+  (2026-09-27); Ghost Quarter and Field of Ruin both ship
   their basic-land search riders (Ghost Quarter's doc comment claimed
   otherwise and is fixed); Thespian's Stage's only residual is the printed
   "except it has this ability" on the copy. Nothing verified open here.

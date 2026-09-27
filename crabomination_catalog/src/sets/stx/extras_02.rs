@@ -1365,19 +1365,10 @@ pub fn excellent_education() -> CardDefinition {
 
 // ── Sproutback Trudge (STX 2021, mono green) ────────────────────────────────
 
-/// Sproutback Trudge — {7}{G}{G} 9/7 Fungus Beast (STX). Trample; "at the
-/// beginning of your end step, if you gained life this turn, you may cast
-/// this creature from your graveyard."
-///
-/// ⚠ It shipped with an invented ETB lifegain and neither printed ability.
-/// Found by `scripts/audit_invented_trigger.py`.
-///
-/// 🟡 Two documented approximations, both in `INCOMPLETE_CARDS.md`. The
-/// graveyard recursion is Gravecrawler's shape — pay the cost, move it to the
-/// battlefield — so it is not a *cast*: nothing can counter it and no
-/// cast trigger sees it. And "this spell costs {X} less to cast, where X is
-/// the amount of life you gained this turn" is missing; no `StaticEffect`
-/// reduces a card's own cost by a `Value`.
+/// Sproutback Trudge — {7}{G}{G} 9/7 Fungus Beast (STX). "This spell costs
+/// {X} less to cast, where X is the amount of life you gained this turn."
+/// Trample; "at the beginning of your end step, if you gained life this turn,
+/// you may cast this creature from your graveyard" — a real cast, discounted.
 pub fn sproutback_trudge() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::PlayerRef as PR;
@@ -1401,14 +1392,19 @@ pub fn sproutback_trudge() -> CardDefinition {
                 who: PR::You,
                 at_least: Value::Const(1),
             }),
-            effect: Effect::MayPay {
-                description: "Cast Sproutback Trudge from your graveyard?".into(),
-                mana_cost: cost(&[generic(7), g(), g()]),
-                body: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PR::You, tapped: false },
-                }),
-                else_: None,
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::This,
+                source_zone: Zone::Graveyard,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: true,
+            },
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the amount of life you gained this turn.",
+            effect: crate::effect::StaticEffect::SelfCostReducedByValue {
+                amount: Value::LifeGainedThisTurn(PR::You),
             },
         }],
         ..Default::default()

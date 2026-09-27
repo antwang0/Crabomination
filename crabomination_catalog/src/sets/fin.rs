@@ -5082,7 +5082,8 @@ pub fn aerith_rescue_mission() -> CardDefinition {
 
 /// Zack Fair — {W} 0/1 Soldier. Enters with a +1/+1 counter. {1}, Sacrifice
 /// Zack Fair: Target creature you control gains indestructible until end of
-/// turn. (The counter- and Equipment-transfer riders are omitted.)
+/// turn, and gets Zack's +1/+1 counters. (Other counter kinds and the
+/// Equipment move are omitted.)
 pub fn zack_fair() -> CardDefinition {
     CardDefinition {
         name: "Zack Fair",
@@ -5099,13 +5100,21 @@ pub fn zack_fair() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
-            effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                // Its +1/+1 counters, read off the sacrificed Zack (CR 608.2h).
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

@@ -835,16 +835,26 @@ pub(crate) fn colorless_manland(
     toughness: i32,
     creature_types: Vec<crate::card::CreatureType>,
     keywords: Vec<crate::card::Keyword>,
+    artifact: bool,
 ) -> CardDefinition {
+    let become_ = Effect::BecomeCreature {
+        what: Selector::This,
+        power: Value::Const(power),
+        toughness: Value::Const(toughness),
+        creature_types,
+        keywords,
+        duration: crate::effect::Duration::EndOfTurn,
+    };
     let animate = ActivatedAbility {
         mana_cost: animate_cost,
-        effect: Effect::BecomeCreature {
-            what: Selector::This,
-            power: Value::Const(power),
-            toughness: Value::Const(toughness),
-            creature_types,
-            keywords,
-            duration: crate::effect::Duration::EndOfTurn,
+        // "becomes a … artifact creature" — the artifact type rides the turn.
+        effect: if artifact {
+            Effect::Seq(vec![
+                become_,
+                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Artifact, until_eot: true },
+            ])
+        } else {
+            become_
         },
         ..Default::default()
     };
@@ -852,6 +862,32 @@ pub(crate) fn colorless_manland(
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_colorless(), animate],
+        ..Default::default()
+    }
+}
+
+/// "[cost], {T}: Target [attacking] `kind` creature gets +n/+n until end of
+/// turn" — the colorless manlands' pump.
+pub(crate) fn manland_pump(
+    mana: ManaCost,
+    kind: crate::card::CreatureType,
+    attacking: bool,
+    n: i32,
+) -> ActivatedAbility {
+    use SelectionRequirement as R;
+    let mut filter = R::Creature.and(R::HasCreatureType(kind));
+    if attacking {
+        filter = filter.and(R::IsAttacking);
+    }
+    ActivatedAbility {
+        mana_cost: mana,
+        tap_cost: true,
+        effect: Effect::PumpPT {
+            what: target_filtered(filter),
+            power: Value::Const(n),
+            toughness: Value::Const(n),
+            duration: crate::effect::Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }
@@ -867,12 +903,13 @@ pub fn mutavault() -> CardDefinition {
         2,
         vec![],
         vec![Keyword::Changeling],
+        false,
     )
 }
 
 /// Mishra's Factory — `{T}: Add {C}`. `{1}`: becomes a 2/2 Assembly-Worker
-/// until end of turn (still a land). `{T}`: target Assembly-Worker creature
-/// gets +1/+1 until end of turn (itself included, if it hasn't attacked).
+/// artifact creature until end of turn (still a land). `{T}`: target
+/// Assembly-Worker creature gets +1/+1 until end of turn.
 pub fn mishras_factory() -> CardDefinition {
     use crate::card::CreatureType;
     let mut def = colorless_manland(
@@ -882,25 +919,14 @@ pub fn mishras_factory() -> CardDefinition {
         2,
         vec![CreatureType::AssemblyWorker],
         vec![],
+        true,
     );
-    def.activated_abilities.push(ActivatedAbility {
-        tap_cost: true,
-        effect: Effect::PumpPT {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::HasCreatureType(CreatureType::AssemblyWorker)),
-            ),
-            power: Value::ONE,
-            toughness: Value::ONE,
-            duration: crate::effect::Duration::EndOfTurn,
-        },
-        ..Default::default()
-    });
+    def.activated_abilities.push(manland_pump(cost(&[]), CreatureType::AssemblyWorker, false, 1));
     def
 }
 
-/// Inkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth with flying
-/// and infect until end of turn (still a land).
+/// Inkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Phyrexian Blinkmoth
+/// artifact creature with flying and infect until end of turn (still a land).
 pub fn inkmoth_nexus() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
     colorless_manland(
@@ -908,23 +934,28 @@ pub fn inkmoth_nexus() -> CardDefinition {
         cost(&[generic(1)]),
         1,
         1,
-        vec![CreatureType::Blinkmoth],
+        vec![CreatureType::Phyrexian, CreatureType::Blinkmoth],
         vec![Keyword::Flying, Keyword::Infect],
+        true,
     )
 }
 
-/// Blinkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth with flying
-/// until end of turn (still a land). (The pump ability is dropped.)
+/// Blinkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth artifact
+/// creature with flying until end of turn (still a land). `{1}, {T}`: target
+/// Blinkmoth creature gets +1/+1 until end of turn.
 pub fn blinkmoth_nexus() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
-    colorless_manland(
+    let mut def = colorless_manland(
         "Blinkmoth Nexus",
         cost(&[generic(1)]),
         1,
         1,
         vec![CreatureType::Blinkmoth],
         vec![Keyword::Flying],
-    )
+        true,
+    );
+    def.activated_abilities.push(manland_pump(cost(&[generic(1)]), CreatureType::Blinkmoth, false, 1));
+    def
 }
 
 /// Build a Restless creature-land (MOM/LCI cycle): enters tapped, taps for two

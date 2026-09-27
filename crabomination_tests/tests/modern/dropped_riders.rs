@@ -877,3 +877,87 @@ fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "no permission");
 }
+
+/// Mishra's Factory, Blinkmoth Nexus, Mishra's Foundry — each "becomes a …
+/// artifact creature" and carries its printed pump: (land, animate cost,
+/// pump cost, pump size, pump needs an attacker).
+#[test]
+fn colorless_manlands_are_artifacts_and_pump() {
+    use crabomination::card::CardType;
+    let table: [(fn() -> CardDefinition, u32, u32, i32, bool); 3] = [
+        (catalog::mishras_factory, 1, 0, 1, false),
+        (catalog::blinkmoth_nexus, 1, 1, 1, false),
+        (catalog::mishras_foundry, 2, 1, 2, true),
+    ];
+    for (f, animate, pump, n, attacking) in table {
+        let mut g = main_phase();
+        let pumper = g.add_card_to_battlefield(0, f());
+        let body = g.add_card_to_battlefield(0, f());
+        g.clear_sickness(body);
+        g.players[0].mana_pool.add_colorless(animate + pump);
+        let act = |g: &mut GameState, id, idx, target| {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: id, ability_index: idx, target, additional_targets: vec![], x_value: None, mode: None,
+            })
+        };
+        act(&mut g, body, 1, None).expect("animate");
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(body).unwrap();
+        assert!(cp.card_types().contains(&CardType::Artifact), "{} is an artifact creature", cp.def.name);
+        let base = cp.power;
+        if attacking {
+            g.step = TurnStep::DeclareAttackers;
+            g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+                attacker: body,
+                target: crabomination::game::types::AttackTarget::Player(1),
+            }]))
+            .expect("attack");
+        }
+        act(&mut g, pumper, 2, Some(Target::Permanent(body))).expect("pump");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(body).unwrap().power, base + n, "{}", cp.def.name);
+    }
+}
+
+/// Zack Fair — "{1}, Sacrifice Zack Fair: Target creature you control gains
+/// indestructible until end of turn. Put Zack Fair's counters on that
+/// creature" — read off the sacrificed Zack (CR 608.2h).
+#[test]
+fn zack_fair_hands_its_counters_over() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let zack = g.add_card_to_battlefield(0, catalog::zack_fair());
+    g.battlefield_find_mut(zack).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zack, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("sac Zack");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.computed_permanent(bear).unwrap().power == 4);
+}
+
+/// Shorikai, Genesis Engine — its Pilot "crews Vehicles as though its power
+/// were 2 greater" (CR 702.122e): one 1/1 Pilot crews The Belligerent (crew 3).
+#[test]
+fn shorikai_pilot_crews_as_power_three() {
+    let mut g = main_phase();
+    let shorikai = g.add_card_to_battlefield(0, catalog::shorikai_genesis_engine());
+    let ship = g.add_card_to_battlefield(0, catalog::the_belligerent());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shorikai, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").expect("pilot").id;
+    g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![pilot] }).expect("crew 3");
+}

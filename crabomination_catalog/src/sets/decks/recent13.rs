@@ -219,15 +219,23 @@ pub fn ziatoras_proving_ground() -> CardDefinition {
 }
 
 /// Mishra's Foundry — colorless manland. {T}: Add {C}. {2}: becomes a 2/2
-/// Assembly-Worker until end of turn (still a land). (The "pump an attacking
-/// Assembly-Worker" rider is dropped, as on Mishra's Factory.)
+/// Assembly-Worker artifact creature until end of turn (still a land).
+/// {1}, {T}: target attacking Assembly-Worker gets +2/+2 until end of turn.
 pub fn mishras_foundry() -> CardDefinition {
-    super::lands::colorless_manland(
+    let mut def = super::lands::colorless_manland(
         "Mishra's Foundry",
         cost(&[generic(2)]),
         2,
         2,
         vec![CreatureType::AssemblyWorker],
         vec![],
-    )
+        true,
+    );
+    def.activated_abilities.push(super::lands::manland_pump(
+        cost(&[generic(1)]),
+        CreatureType::AssemblyWorker,
+        true,
+        2,
+    ));
+    def
 }
