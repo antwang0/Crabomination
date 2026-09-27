@@ -720,3 +720,31 @@ fn master_biomancer_makes_entering_creatures_mutants() {
     g.remove_to_graveyard_with_triggers(bio);
     assert!(g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Mutant), "the type stays");
 }
+
+/// Ajani's Chosen — "If that enchantment is an Aura, you may attach it to the
+/// token." Holy Strength cast on our bear moves to the new Cat on a yes;
+/// Pacifism on an opponent's creature is never lifted onto our token.
+#[test]
+fn ajanis_chosen_may_move_the_aura_onto_the_cat() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::ajanis_chosen());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::holy_strength());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, aura, Some(Target::Permanent(bear))).expect("Holy Strength");
+    drain_stack(&mut g);
+    let host = g.battlefield_find(aura).and_then(|a| a.attached_to).expect("still attached");
+    assert_ne!(host, bear, "moved off the bear");
+    assert_eq!(g.battlefield_find(host).unwrap().definition.name, "Cat", "onto the token");
+
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pac = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, pac, Some(Target::Permanent(theirs))).expect("Pacifism");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pac).and_then(|a| a.attached_to), Some(theirs), "stays on their creature");
+}

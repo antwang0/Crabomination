@@ -124,8 +124,14 @@ pub fn sigil_of_the_empty_throne() -> CardDefinition {
 }
 
 /// Ajani's Chosen — {2}{W}{W} 3/3 Cat Soldier. Whenever an enchantment you
-/// control enters, create a 2/2 white Cat creature token. (The Aura-attach
-/// rider is dropped — the token still enters.)
+/// control enters, create a 2/2 white Cat creature token. If that enchantment
+/// is an Aura, you may attach it to the token.
+///
+/// The "may" is offered only for an Aura on a creature you control: that is
+/// where the token is a legal new host for its enchant restriction, and the
+/// only move a player would choose — lifting a Pacifism off an opponent's
+/// creature onto your own token is legal but never wanted, and declining is
+/// always legal (CR 603.5).
 pub fn ajanis_chosen() -> CardDefinition {
     CardDefinition {
         name: "Ajani's Chosen",
@@ -137,22 +143,44 @@ pub fn ajanis_chosen() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![constellation(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: std::sync::Arc::new(TokenDefinition {
-                name: "Cat".into(),
-                power: 2,
-                toughness: 2,
-                card_types: vec![CardType::Creature],
-                colors: vec![Color::White],
-                subtypes: Subtypes {
-                    creature_types: vec![CreatureType::Cat],
+        triggered_abilities: vec![constellation(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(TokenDefinition {
+                    name: "Cat".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Cat],
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-        })],
+                }),
+            },
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                    },
+                    Predicate::EntityMatches {
+                        what: Selector::AttachedTo(Box::new(Selector::TriggerSource)),
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    },
+                ]),
+                then: Box::new(Effect::MayDo {
+                    description: "Attach the Aura to the Cat token?".to_string(),
+                    body: Box::new(Effect::Attach {
+                        what: Selector::TriggerSource,
+                        to: Selector::LastCreatedToken,
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..Default::default()
     }
 }
