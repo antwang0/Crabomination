@@ -1329,6 +1329,38 @@ fn cr_611_2_rule_of_law_does_not_lock_on_stale_counter() {
     );
 }
 
+/// CR 302.6 — a summoning-sick mana creature's {T} ability can't pay a cost,
+/// so the auto-tapper leaves it out. Regression: it listed the Elf, chose it
+/// for Cancel's generic pip, the tap failed and the payment gave up with an
+/// Island still untapped — on an opponent's turn after casting the Elf, the
+/// seat could cast nothing.
+#[test]
+fn cr_302_6_auto_pay_skips_a_summoning_sick_mana_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let spell = g.add_card_to_hand(1, catalog::harmonize());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Harmonize");
+    g.priority.player_with_priority = 0;
+    let cancel = g.add_card_to_hand(0, catalog::cancel());
+    g.perform_action(GameAction::CastSpell {
+        card_id: cancel,
+        target: Some(Target::Permanent(spell)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("three Islands pay {1}{U}{U}");
+}
+
 /// CR 302.6 — a stolen creature is summoning-sick under its new controller.
 #[test]
 fn cr_302_6_gain_control_sets_summoning_sickness() {

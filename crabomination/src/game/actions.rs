@@ -16549,7 +16549,12 @@ impl GameState {
             if only.is_some_and(|set| !set.contains(&c.id)) {
                 continue;
             }
+            // CR 302.6 — a summoning-sick creature's {T} mana abilities can't
+            // be activated. Listed, the generic loop picked the Elf, its tap
+            // failed and the loop gave up with Islands untapped.
+            let sick = c.summoning_sick && self.tap_ability_summoning_sick(c, player);
             if printed_only
+                && !sick
                 && self.grants_nothing(c, &scan)
                 && let Some(w) = c.mana_summary(mana_summary_of)
             {
@@ -16564,6 +16569,9 @@ impl GameState {
                 continue;
             }
             self.effective_mana_abilities_into(c, &scan, &mut abilities);
+            if sick {
+                abilities.retain(|(_, a)| !(a.tap_cost || a.untap_self_cost));
+            }
             let Some((first_idx, first)) = abilities.first() else { continue };
             // One walk of each ability's effect tree, not one per colour:
             // the first ability that makes a colour is the one the old
