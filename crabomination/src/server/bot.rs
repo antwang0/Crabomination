@@ -3449,10 +3449,12 @@ fn decide_pending_policy_inner(
             // simulation; a nested mulligan sim there would multiply the
             // cost of every enclosing rollout for a decision that branch
             // barely depends on.
+            // CR 103.5c — a pod's free first mulligan costs no card.
+            let owed = state.mulligan_cards_owed(*mulligans_taken);
             if w.mull_sim && eval_modes {
-                decide_mulligan_by_sim(state, seat, *mulligans_taken, w)
+                decide_mulligan_by_sim(state, seat, owed, w)
             } else {
-                decide_mulligan(state, seat, *mulligans_taken, w)
+                decide_mulligan(state, seat, owed, w)
             }
         }
         // Unlike AutoDecider (which declines every tutor), the

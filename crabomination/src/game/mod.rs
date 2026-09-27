@@ -25878,6 +25878,12 @@ impl GameState {
         self.players[seat].library.shuffle(&mut rng);
     }
 
+    /// CR 103.5 / 103.5c — cards put on the bottom after `mulligans_taken`
+    /// mulligans: in a multiplayer game the first one is free.
+    pub fn mulligan_cards_owed(&self, mulligans_taken: usize) -> usize {
+        if self.players.len() > 2 { mulligans_taken.saturating_sub(1) } else { mulligans_taken }
+    }
+
     fn set_mulligan_decision(&mut self, player: usize, mulligans_taken: usize, next_player: Option<usize>) {
         let hand: Vec<_> = self.players[player].hand
             .iter()
@@ -26111,6 +26117,7 @@ impl GameState {
                         return Ok(vec![]);
                     }
                     DecisionAnswer::Keep => {
+                        let mulligans_taken = self.mulligan_cards_owed(mulligans_taken);
                         if mulligans_taken > 0 {
                             let hand = self.players[player].hand
                                 .iter()

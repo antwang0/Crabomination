@@ -151,6 +151,38 @@ fn mulligan_chain_visits_every_seat_in_a_four_player_game() {
     );
 }
 
+/// CR 103.5c — in a multiplayer game the first mulligan doesn't count toward
+/// the cards bottomed: one mulligan keeps seven, two bottom one. (CR 103.5a's
+/// two-player count is `london_mulligan_repose_on_short_bottoming_answer`.)
+#[test]
+fn cr_103_5c_first_multiplayer_mulligan_is_free() {
+    use crabomination::decision::Decision;
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..30 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    g.start_mulligan_phase();
+    g.submit_decision(DecisionAnswer::TakeMulligan).unwrap();
+    g.submit_decision(DecisionAnswer::Keep).unwrap();
+    assert_eq!(g.players[0].hand.len(), 7, "the free mulligan bottoms nothing");
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|pd| &pd.decision),
+        Some(Decision::Mulligan { player: 1, .. })
+    ));
+    g.submit_decision(DecisionAnswer::TakeMulligan).unwrap();
+    g.submit_decision(DecisionAnswer::TakeMulligan).unwrap();
+    g.submit_decision(DecisionAnswer::Keep).unwrap();
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|pd| &pd.decision),
+        Some(Decision::PutOnLibrary { player: 1, count: 1, .. })
+    ));
+    let id = g.players[1].hand[0].id;
+    g.submit_decision(DecisionAnswer::PutOnLibrary(vec![id])).unwrap();
+    assert_eq!(g.players[1].hand.len(), 6);
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────
 
 #[test]
