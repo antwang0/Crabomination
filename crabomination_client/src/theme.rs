@@ -93,8 +93,11 @@ impl bevy::app::Plugin for UiFontsPlugin {
 
 /// The scripts a UI string's symbols are shaped under: parley looks up
 /// fallbacks by the run's script, and a symbol takes its neighbours' (Latin)
-/// or, alone, Common — Unknown and Inherited cover the rest.
-const FALLBACK_SCRIPTS: [&str; 4] = ["Latn", "Zyyy", "Zzzz", "Zinh"];
+/// or, alone, Common — Unknown and Inherited cover the rest. Greek is for
+/// the Phyrexian mana pip's Φ, which is a letter, not a symbol: its glyph
+/// was in Noto Sans Math and it still drew as a box until Greek runs
+/// were pointed at the fallbacks too.
+const FALLBACK_SCRIPTS: [&str; 5] = ["Latn", "Zyyy", "Zzzz", "Zinh", "Grek"];
 
 /// Point parley's fallback lookup at [`FALLBACK_FONT_PATHS`] once they are
 /// in the font collection, and again whenever the collection is rebuilt
@@ -358,7 +361,9 @@ pub fn animate_overlay_pulses(
         pulse.0 += time.delta_secs();
         transform.scale = Vec2::splat(pulse_scale(pulse.0));
         if pulse.0 >= PULSE_SECS {
-            commands.entity(e).remove::<OverlayPulse>();
+            // `try_`: the overlay can be despawned this frame (its card
+            // left), and a command on a gone entity is an error.
+            commands.entity(e).try_remove::<OverlayPulse>();
         }
     }
 }
@@ -479,7 +484,7 @@ mod tests {
         assert_eq!(pulse_scale(PULSE_SECS * 3.0), 1.0);
     }
 
-    use super::{FALLBACK_FONT_PATHS, FONT_PATH, PULSE_SECS, pulse_scale};
+    use super::{FALLBACK_FONT_PATHS, FALLBACK_SCRIPTS, FONT_PATH, PULSE_SECS, pulse_scale};
     use ab_glyph::{Font as _, FontRef};
 
     /// Every non-ASCII character a client string literal uses has a glyph in
@@ -559,5 +564,22 @@ mod tests {
             .map(|(c, file)| format!("{c} (U+{:04X}, {file})", *c as u32))
             .collect();
         assert!(missing.is_empty(), "no glyph in the UI font or a fallback: {missing:?}");
+
+        // A fallback's glyph is only reached from a run in a script the
+        // fallbacks are registered under (`FALLBACK_SCRIPTS`): a Greek Φ had
+        // its glyph in Noto Sans Math and still drew as a box.
+        use icu_properties::props::Script;
+        use icu_properties::{CodePointMapData, PropertyNamesShort};
+        let scripts = CodePointMapData::<Script>::new();
+        let names = PropertyNamesShort::<Script>::new();
+        let unreached: Vec<String> = symbols
+            .iter()
+            .filter(|(c, _)| fonts[0].glyph_id(*c).0 == 0)
+            .filter_map(|(c, file)| {
+                let script = names.get(scripts.get(*c)).unwrap_or("?");
+                (!FALLBACK_SCRIPTS.contains(&script)).then(|| format!("{c} ({script}, {file})"))
+            })
+            .collect();
+        assert!(unreached.is_empty(), "in a script the fallbacks aren't registered for: {unreached:?}");
     }
 }

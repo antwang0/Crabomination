@@ -107,3 +107,8 @@ gamepad = ["bevy/bevy_gilrs"]
 # dynamic_linking`. Plain `cargo run`/`build`/`--release` stay statically
 # linked.
 dynamic_linking = ["bevy/dynamic_linking"]
+
+[dev-dependencies]
+# `theme::tests::every_ui_symbol_has_a_glyph` asks each symbol's Unicode
+# script. Already in the tree (through parley), so it builds nothing new.
+icu_properties = { version = "2.2.0", default-features = false, features = ["compiled_data"] }

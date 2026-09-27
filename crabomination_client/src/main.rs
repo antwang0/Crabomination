@@ -443,7 +443,9 @@ fn main() {
             layout_harness::inject_damage_for_screenshot.after(crate::net_plugin::poll_net),
         )
         // Mana symbols in UI text, in every state (the draft shows costs too).
-        .add_systems(Update, mana_text::sync_mana_text)
+        // After `Update`, whose systems despawn the nodes it rebuilds (a
+        // tooltip closing), and before the UI lays the new rows out.
+        .add_systems(PostUpdate, mana_text::sync_mana_text.before(bevy::ui::UiSystems::Prepare))
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every

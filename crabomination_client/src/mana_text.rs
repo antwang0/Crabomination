@@ -164,9 +164,8 @@ fn look(p: &Pip) -> (Color, Color, String) {
         Pip::Hybrid(a, b) => (fill(*a), fill(*b), String::new()),
         Pip::MonoHybrid(n, c) => (GREY, fill(*c), n.to_string()),
         Pip::ColorlessHybrid(c) => (GREY, fill(*c), String::new()),
-        // "P", as Oracle text writes it: the fallback fonts have no phi.
-        Pip::Phyrexian(c) => (fill(*c), fill(*c), "P".into()),
-        Pip::PhyrexianHybrid(a, b) => (fill(*a), fill(*b), "P".into()),
+        Pip::Phyrexian(c) => (fill(*c), fill(*c), "Φ".into()),
+        Pip::PhyrexianHybrid(a, b) => (fill(*a), fill(*b), "Φ".into()),
         Pip::Snow => (Color::srgb(0.92, 0.95, 0.98), Color::srgb(0.92, 0.95, 0.98), "S".into()),
         Pip::Tap => (GREY, GREY, "↻".into()),
         Pip::Untap => (GREY, GREY, "⟲".into()),

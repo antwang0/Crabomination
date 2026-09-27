@@ -2469,6 +2469,7 @@ dependencies = [
  "crabomination",
  "dirs",
  "getrandom 0.4.2",
+ "icu_properties",
  "image",
  "imageproc",
  "js-sys",

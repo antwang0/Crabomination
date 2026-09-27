@@ -132,7 +132,8 @@ pub fn animate_coin_drops(
         drop.elapsed += time.delta_secs();
         transform.translation.z = drop.rest_z + drop_lift(drop.elapsed);
         if drop.elapsed >= DROP_SECS {
-            commands.entity(e).remove::<CoinDrop>();
+            // `try_`: the coin goes with its card, which can leave mid-fall.
+            commands.entity(e).try_remove::<CoinDrop>();
         }
     }
 }
@@ -681,7 +682,7 @@ pub fn sync_counter_labels(
                 let n = count.to_string();
                 if text.0 != n {
                     text.0 = n;
-                    commands.entity(e).insert(crate::theme::OverlayPulse::default());
+                    commands.entity(e).try_insert(crate::theme::OverlayPulse::default());
                 }
                 let size = FontSize::Px(count_font_size(radius * 2.0));
                 if font.font_size != size {

@@ -217,10 +217,17 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   trigger prompts ("Pay {3} to keep this trigger?") and the devotion chip
   ("◆ {W}6 {U}2"). The mana-pool chips took the same palette, so a pool's
   white is a cost's white. Layout harness: `--mana-gallery`.
-  - ⏳ Phyrexian pips read "P": the fallback font subsets carry only the
-    symbols the client already used, and phi wasn't one. Add `Φ` to
-    `mana_text::look` and rerun `scripts/ui_fallback_fonts.py` (needs
-    fontTools and the Noto sources).
+  - ✅ Phyrexian pips carry Φ. The fallback subsets hold only the symbols
+    the client uses, so Noto Sans Math's was regenerated
+    (`scripts/ui_fallback_fonts.py --only NotoSansMath`: `--only` rewrites
+    one subset and keeps the rest, so it needs no Noto Emoji source, which
+    `noto-fonts` doesn't ship; `--list` had crashed without `--emoji`).
+    ⚠ **A glyph in a fallback font is reached only from a run in a script
+    the fallbacks are registered under** (`theme::FALLBACK_SCRIPTS`). Φ is
+    a Greek letter, not a symbol: with its glyph in the subset it still drew
+    as a box until Greek was added. `every_ui_symbol_has_a_glyph` now checks
+    each symbol's script too (`icu_properties`, a dev-dependency already in
+    the tree through parley).
   - ⏳ The other decision prompts (X picker, mode lists, pay-life
     choices) print any cost as text; convert them with
     `mana_text::spawn_text` as they turn up.

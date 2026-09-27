@@ -20,6 +20,14 @@ Usage:
     pip install fonttools
     python scripts/ui_fallback_fonts.py --emoji NotoEmoji[wght].ttf [--noto-dir DIR]
     python scripts/ui_fallback_fonts.py --list      # what is missing, and from where
+    python scripts/ui_fallback_fonts.py --only NotoSansMath   # rewrite one subset
+
+`--only STEM[,STEM]` rewrites just those subsets and leaves the others as
+they are, so a symbol a Noto font covers can land without the Noto Emoji
+source (`noto-fonts` ships only the colour emoji font). Emoji is the last
+source, so leaving it out never moves a symbol between the others.
+(`uv run --with fonttools python scripts/ui_fallback_fonts.py ...` when
+fontTools isn't installed.)
 """
 import argparse
 import re
@@ -70,15 +78,17 @@ def main():
     ap.add_argument("--noto-dir", default="/usr/share/fonts/noto")
     ap.add_argument("--emoji", help="Noto Emoji variable font (NotoEmoji[wght].ttf)")
     ap.add_argument("--list", action="store_true", help="report only; write nothing")
+    ap.add_argument("--only", help="comma-separated subset stems to rewrite; the rest are kept")
     args = ap.parse_args()
+    only = set(args.only.split(",")) if args.only else None
 
     have = cmap(TTFont(UI_FONT))
     missing = sorted(c for c in used_symbols() if ord(c) not in have)
     fonts = {}
     for stem, name in SOURCES:
-        path = Path(args.emoji) if name is None else Path(args.noto_dir) / name
         if name is None and not args.emoji:
             continue
+        path = Path(args.emoji) if name is None else Path(args.noto_dir) / name
         font = TTFont(path)
         if name is None and "fvar" in font:
             font = instancer.instantiateVariableFont(font, {"wght": 400})
@@ -95,18 +105,23 @@ def main():
         print(f"NO SOURCE          {len(unmatched):3}  {''.join(unmatched)}  (change the literal or add a source)")
     if args.list:
         return 0 if not unmatched else 1
-    if not args.emoji:
+    if only is not None:
+        unknown = only - set(fonts)
+        if unknown:
+            sys.exit(f"--only: no source loaded for {', '.join(sorted(unknown))}")
+    elif not args.emoji:
         sys.exit("--emoji is required to write the fonts (the pictographs come from it)")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for old in OUT_DIR.glob("*.ttf"):
-        old.unlink()
+        if only is None or old.name.split(".")[0] in only:
+            old.unlink()
     opts = subset.Options()
     opts.layout_features = ["*"]
     opts.name_IDs = ["*"]
     opts.notdef_outline = True
     for stem, chars in assigned.items():
-        if not chars:
+        if not chars or (only is not None and stem not in only):
             continue
         sub = subset.Subsetter(opts)
         sub.populate(unicodes=[ord(c) for c in chars])
@@ -115,6 +130,8 @@ def main():
         out = OUT_DIR / f"{stem}.subset.ttf"
         font.save(out)
         print(f"wrote {out.relative_to(REPO)} ({out.stat().st_size} bytes)")
+    if only is not None:
+        return 0
     return 0 if not unmatched else 1
 
 

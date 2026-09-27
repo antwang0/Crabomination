@@ -219,7 +219,7 @@ pub fn sync_pt_labels(
             }
         }
         if changed {
-            commands.entity(e).insert(crate::theme::OverlayPulse::default());
+            commands.entity(e).try_insert(crate::theme::OverlayPulse::default());
         }
     }
 
