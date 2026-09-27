@@ -164,12 +164,13 @@ fn ancient_excavation_cycles_the_hand() {
     assert_eq!(g.players[0].graveyard.len(), 3, "the two discards and the spell");
 }
 
-/// Entering, it takes on your Equipment.
+/// Entering, it takes on Equipment — an opponent's too, whose control doesn't
+/// change (the card's reminder text).
 #[test]
 fn armory_automaton_suits_up() {
     let mut g = pod(2);
     let boots = g.add_card_to_battlefield(0, catalog::swiftfoot_boots());
-    let bracers = g.add_card_to_battlefield(0, catalog::battlemages_bracers());
+    let bracers = g.add_card_to_battlefield(1, catalog::battlemages_bracers());
     yes(&mut g);
     let a = g.add_card_to_hand(0, catalog::armory_automaton());
     cast(&mut g, 0, a, None).expect("cast");
@@ -177,6 +178,7 @@ fn armory_automaton_suits_up() {
     for e in [boots, bracers] {
         assert_eq!(g.battlefield_find(e).unwrap().attached_to, Some(a));
     }
+    assert_eq!(g.battlefield_find(bracers).unwrap().controller, 1);
 }
 
 /// Entering, a creature of yours gains double strike and lifelink.

@@ -116,13 +116,14 @@ pub fn ancient_excavation() -> CardDefinition {
     }
 }
 
-/// Armory Automaton — entering or attacking, it may take on every Equipment
-/// you control (other players' Equipment is out of reach).
+/// Armory Automaton — entering or attacking, it may take on every Equipment on
+/// the battlefield, anyone's (control doesn't change). The "target" is read
+/// as each Equipment: a hexproof one is taken too.
 pub fn armory_automaton() -> CardDefinition {
     let suit_up = || Effect::MayDo {
-        description: "Attach your Equipment to Armory Automaton?".into(),
+        description: "Attach every Equipment to Armory Automaton?".into(),
         body: Box::new(Effect::Attach {
-            what: Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
+            what: Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
             to: Selector::This,
         }),
     };
