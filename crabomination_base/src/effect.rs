@@ -9056,6 +9056,11 @@ pub enum Effect {
         #[serde(default)]
         any_color: bool,
     },
+    /// Mark the may-play permission on each card `what` resolves to (chain
+    /// after `GrantMayPlay` in a `Seq`): casting the card through it leaves
+    /// its caster unable to cast further spells this turn — Conduit of
+    /// Worlds' "if you do, you can't cast additional spells this turn".
+    LockSpellsAfterGrantedCast { what: Selector },
     /// Stamp a conditional surcharge onto cards just granted a may-play
     /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
     /// [cost] more to cast this way unless the spell targets a permanent
@@ -11448,6 +11453,13 @@ pub enum Effect {
     /// 1 damage prevented this way, put a +1/+1 counter on it." Brace for
     /// Impact — the counter rider rides the shield (`counters_on_target`).
     PreventAllDamageThisTurnWithCounters { target: Selector },
+    /// CR 615 — "Prevent all damage that would be dealt to `target` this turn
+    /// by sources you don't control. If damage from a creature source is
+    /// prevented this way, [this] deals that much damage to that creature. If
+    /// damage from a noncreature source is prevented this way, [this] deals
+    /// that much damage to the source's controller." (Comeuppance.) The
+    /// reflected damage is a new event from the resolving card.
+    PreventOpposingDamageThisTurnReflecting { target: Selector },
 
     /// CR 615 — "Prevent all damage that `from` would deal to `to` this turn."
     /// A source-restricted fog (Stonewise Fortifier's "prevent all damage that

@@ -136,7 +136,9 @@ pub fn curse_of_chaos() -> CardDefinition {
 /// Fiery Justice — 5 damage divided among any number of targets; target
 /// opponent gains 5 life.
 ///
-/// ⚠ Residual: the life goes to the engine's most hostile opponent.
+/// ⚠ Residual: the opponent is chosen on resolution rather than targeted —
+/// the one with the most life, the seat a player would hand 5 life to (the
+/// engine's `HostileOpponent` is the one it is racing, the worst pick).
 pub fn fiery_justice() -> CardDefinition {
     CardDefinition {
         name: "Fiery Justice",
@@ -149,7 +151,7 @@ pub fn fiery_justice() -> CardDefinition {
                 max_targets: 5,
                 retaliate_to_source: false,
             },
-            Effect::GainLife { who: Selector::Player(PlayerRef::HostileOpponent), amount: Value::Const(5) },
+            Effect::GainLife { who: Selector::Player(PlayerRef::HighestLifeOpponent), amount: Value::Const(5) },
         ]),
         ..Default::default()
     }

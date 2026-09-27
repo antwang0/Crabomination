@@ -161,10 +161,17 @@ pub fn scrabbling_skullcrab() -> CardDefinition {
 }
 
 /// Conduit of Worlds — {2}{G}{G} Artifact. You may play lands from your
-/// graveyard. (The "{T}: cast a nonland permanent from your graveyard if you
-/// haven't cast a spell this turn" half is dropped — the one-spell lock isn't
-/// modeled.)
+/// graveyard. {T}: Choose target nonland permanent card in your graveyard. If
+/// you haven't cast a spell this turn, you may cast that card. If you do, you
+/// can't cast additional spells this turn. Activate only as a sorcery.
+///
+/// The cast is a `GrantMayPlay` paying the card's own cost for the rest of the
+/// step (the main phase it was activated in) and `LockSpellsAfterGrantedCast`
+/// shuts spells off once it is cast. Residual: another spell cast between the
+/// activation and that cast isn't refused.
 pub fn conduit_of_worlds() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    use crate::effect::ActivatedAbility;
     CardDefinition {
         name: "Conduit of Worlds",
         cost: cost(&[generic(2), g(), g()]),
@@ -172,6 +179,30 @@ pub fn conduit_of_worlds() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "You may play lands from your graveyard.",
             effect: StaticEffect::MayPlayLandsFromGraveyard,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::If {
+                cond: Predicate::ValueAtMost(Value::SpellsCastThisTurn(PlayerRef::You), Value::Const(0)),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GrantMayPlay {
+                        what: target_filtered(
+                            SelectionRequirement::PermanentCard
+                                .and(SelectionRequirement::Nonland)
+                                .from_your_graveyard(),
+                        ),
+                        duration: MayPlayDuration::EndOfThisStep,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                    Effect::LockSpellsAfterGrantedCast { what: Selector::Target(0) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

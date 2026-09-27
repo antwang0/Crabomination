@@ -5189,7 +5189,7 @@ mod tests {
         let bolt_id = state.next_id();
         let mut bolt = crate::card::CardInstance::new(bolt_id, bolt_def, 0);
         bolt.controller = 0;
-        bolt.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false,
+        bolt.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
             player: 0,
             granted_turn: 1,
             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,

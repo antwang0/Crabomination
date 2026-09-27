@@ -796,6 +796,19 @@ impl GameState {
         // as it resolves) keeps its last known characteristics; with nothing
         // observable, the colour recheck can't disprove a match.
         let src_known = source.is_some_and(|id| self.find_card_anywhere(id).is_some());
+        // Comeuppance — the source's controller, read only when a shield
+        // filters or reflects on it (almost never).
+        let src_ctrl = if self
+            .turn
+            .prevention_shields
+            .iter()
+            .any(|s| s.not_from_controller.is_some() || s.reflect_by.is_some())
+        {
+            source.and_then(|src| self.reflect_source_controller(src))
+        } else {
+            None
+        };
+        let mut reflected_by: Vec<(crate::card::CardId, u32)> = Vec::new();
         for (i, shield) in self
             .turn
             .prevention_shields
@@ -807,6 +820,7 @@ impl GameState {
                     || s.target == PreventionTarget::Anything)
                     && (s.source.is_none() || s.source == source)
                     && (!src_known || s.source_color.is_none_or(|c| src_colors.contains(&c)))
+                    && s.not_from_controller.is_none_or(|p| src_ctrl.is_some_and(|c| c != p))
             })
         {
             if remaining == 0 {
@@ -846,6 +860,9 @@ impl GameState {
             if shield.reflect {
                 reflected += soak;
                 reflect_ctrl = reflect_ctrl.or(shield.source_controller);
+            }
+            if soak > 0 && let Some(by) = shield.reflect_by {
+                reflected_by.push((by, soak));
             }
             if soak > 0 && let Some(dst) = shield.redirect_to {
                 redirected.push((dst, soak));
@@ -928,25 +945,40 @@ impl GameState {
         // prevented/replaced — bounded because each reflect shield is
         // one-event and already spent.
         if reflected > 0 {
-            let ctrl = source
-                .and_then(|src| {
-                    self.battlefield_find(src)
-                        .map(|c| c.controller)
-                        .or_else(|| {
-                            self.stack.iter().find_map(|si| match si {
-                                crate::game::StackItem::Spell { card, caster, .. }
-                                    if card.id == src => Some(*caster),
-                                _ => None,
-                            })
-                        })
-                        .or_else(|| self.died_card_snapshots.get(&src).map(|c| c.controller))
-                })
-                .or(reflect_ctrl);
+            let ctrl = source.and_then(|src| self.reflect_source_controller(src)).or(reflect_ctrl);
             if let Some(ctrl) = ctrl {
                 self.deal_damage_to_from(EntityRef::Player(ctrl), reflected, None, events);
             }
         }
+        // Comeuppance — back at a creature source, else at its controller.
+        for (by, amt) in reflected_by {
+            let creature = source.filter(|&src| self.permanent_is_creature(src));
+            if let Some(src) = creature {
+                self.deal_damage_to_from(EntityRef::Permanent(src), amt, Some(by), events);
+            } else if let Some(ctrl) = src_ctrl {
+                self.deal_damage_to_from(EntityRef::Player(ctrl), amt, Some(by), events);
+            }
+        }
         remaining
+    }
+
+    /// The controller of a damage source: `damage_source_controller` (the
+    /// battlefield and the resolving spell), then a spell on the stack, a
+    /// creature that has since died (its snapshot), or the card's instance.
+    fn reflect_source_controller(&self, src: crate::card::CardId) -> Option<usize> {
+        self.damage_source_controller(src)
+            .or_else(|| {
+                self.stack.iter().find_map(|si| match si {
+                    crate::game::StackItem::Spell { card, caster, .. } if card.id == src => {
+                        Some(*caster)
+                    }
+                    _ => None,
+                })
+            })
+            .or_else(|| self.died_card_snapshots.get(&src).map(|c| c.controller))
+            // A spell mid-resolution is off the stack; its instance still
+            // names the caster.
+            .or_else(|| self.find_card_anywhere(src).map(|c| c.controller))
     }
 
     /// Damage delivery with the source's identity threaded through, so

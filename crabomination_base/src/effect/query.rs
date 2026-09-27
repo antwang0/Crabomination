@@ -2118,7 +2118,8 @@ impl Effect {
             }
             Effect::GrantMayPlay { what, .. }
             | Effect::GrantMayPlayForLife { what, .. }
-            | Effect::StampMayPlaySurcharge { what, .. } => sel_has_target(what),
+            | Effect::StampMayPlaySurcharge { what, .. }
+            | Effect::LockSpellsAfterGrantedCast { what } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. }
@@ -2354,6 +2355,7 @@ impl Effect {
             Effect::PreventAllDamageThisTurn { target, .. }
             | Effect::TurnFaceDown { what: target }
             | Effect::PreventAllDamageThisTurnWithCounters { target }
+            | Effect::PreventOpposingDamageThisTurnReflecting { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
             Effect::PreventAllDamageBetweenThisTurn { from, to } => {
@@ -3119,6 +3121,7 @@ impl Effect {
             | Effect::GrantMayPlay { what, .. }
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
+            | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
@@ -4896,6 +4899,7 @@ impl Effect {
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target, .. }
                 | Effect::PreventAllDamageThisTurnWithCounters { target }
+                | Effect::PreventOpposingDamageThisTurnReflecting { target }
                 | Effect::PreventAllDamageFromChosenColorThisTurn { target }
                 | Effect::PreventDamageToAndByUntilYourNextTurn { target }
                 | Effect::ReplaceNextDamageWithDestroy { target }

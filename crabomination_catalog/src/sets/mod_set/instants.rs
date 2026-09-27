@@ -1753,8 +1753,8 @@ pub fn teferis_protection() -> CardDefinition {
 /// If damage from a creature source is prevented this way, Comeuppance deals
 /// that much damage to that creature. If damage from a noncreature source is
 /// prevented this way, Comeuppance deals that much damage to the source's
-/// controller." ⚠ The prevention ships; the reflected damage does not, and
-/// your own sources are prevented too.
+/// controller." `PreventOpposingDamageThisTurnReflecting` on you and on each
+/// planeswalker you control.
 pub fn comeuppance() -> CardDefinition {
     CardDefinition {
         name: "Comeuppance",
@@ -1762,13 +1762,9 @@ pub fn comeuppance() -> CardDefinition {
         card_types: vec![CardType::Instant],
         // You and your planeswalkers, not a fog for the table.
         effect: Effect::Seq(vec![
-            Effect::PreventAllDamageThisTurn {
-                target: Selector::You,
-                redirect_to: None,
-            },
-            Effect::PreventAllDamageThisTurn {
+            Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You },
+            Effect::PreventOpposingDamageThisTurnReflecting {
                 target: Selector::EachPermanent(SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByYou)),
-                redirect_to: None,
             },
         ]),
         ..Default::default()

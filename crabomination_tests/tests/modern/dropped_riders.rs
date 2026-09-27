@@ -386,6 +386,43 @@ fn finale_of_devastation_is_capped_by_x_and_reaches_the_graveyard() {
     assert!(g.battlefield_find(elf).is_some(), "the graveyard 1-drop");
 }
 
+/// Comeuppance — damage from sources you don't control is prevented and
+/// reflected: an attacking creature takes its own damage back; a Bolt's 3
+/// goes to the Bolt's controller.
+#[test]
+fn comeuppance_reflects_what_it_prevents() {
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let c = g.add_card_to_hand(0, catalog::comeuppance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, c, None).expect("comeuppance");
+    drain_stack(&mut g);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(0))).expect("bolt at P0");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mine, "prevented");
+    assert_eq!(g.players[1].life, theirs - 3, "a noncreature source: its controller takes it");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mine, "combat damage prevented");
+    assert!(g.battlefield_find(bear).is_none(), "the bear took its own 2 back");
+}
+
 /// Comeuppance — it protects you and your planeswalkers; it was a fog for the
 /// whole table (your own attackers dealt nothing).
 #[test]
@@ -793,4 +830,50 @@ fn astrologians_planisphere_counts_the_third_draw() {
         drain_stack(&mut g);
         assert_eq!(counters(&g), want, "after draw {nth}");
     }
+}
+
+/// Conduit of Worlds — "{T}: Choose target nonland permanent card in your
+/// graveyard. If you haven't cast a spell this turn, you may cast that card.
+/// If you do, you can't cast additional spells this turn." The bear is cast
+/// from the graveyard for its cost; after it, a Bolt from hand is refused.
+/// With a spell already cast this turn, the activation grants nothing.
+#[test]
+fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
+    let mut g = main_phase();
+    let conduit = g.add_card_to_battlefield(0, catalog::conduit_of_worlds());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let act = |g: &mut GameState, target| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: conduit, ability_index: 0, target, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    act(&mut g, Some(Target::Permanent(bear))).expect("activate");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bear from the graveyard");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "its cost was paid");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, bolt, Some(Target::Player(1))).is_err(), "no additional spells this turn");
+
+    // A fresh turn with a spell already cast: the ability does nothing.
+    let mut g = main_phase();
+    let conduit = g.add_card_to_battlefield(0, catalog::conduit_of_worlds());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt first");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "no permission");
 }

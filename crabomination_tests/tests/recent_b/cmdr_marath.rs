@@ -125,6 +125,19 @@ fn fiery_justice_divides_five() {
     assert_eq!(g.players[1].life, life + 5);
 }
 
+/// Fiery Justice at three seats: "target opponent gains 5 life" goes to the
+/// opponent with the most life, not to the one being burned out.
+#[test]
+fn fiery_justice_gives_the_life_to_the_healthiest_opponent() {
+    let mut g = main_phase(3);
+    g.players[1].life = 6;
+    g.players[2].life = 30;
+    let fj = g.add_card_to_hand(0, catalog::fiery_justice());
+    cast_at(&mut g, fj, &[Target::Player(1)]).expect("cast");
+    assert_eq!(g.players[1].life, 1, "five damage, no gain");
+    assert_eq!(g.players[2].life, 35, "the healthiest opponent gains 5");
+}
+
 /// From the Ashes: nonbasic lands die; each player fetches a basic per land.
 #[test]
 fn from_the_ashes_trades_nonbasics_for_basics() {

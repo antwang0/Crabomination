@@ -1242,6 +1242,12 @@ pub struct MayPlayPermission {
     /// among the cards can't be played (Dream Pillager, Stolen Strategy).
     #[serde(default)]
     pub cast_only: bool,
+    /// "If you do, you can't cast additional spells this turn" (Conduit of
+    /// Worlds): casting the card through this permission shuts the caster's
+    /// spells off for the rest of the turn. Set by
+    /// `Effect::LockSpellsAfterGrantedCast`.
+    #[serde(default)]
+    pub locks_further_casts: bool,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.

@@ -2536,6 +2536,15 @@ pub struct PreventionShield {
     /// `target` isn't a player (Shadowbane covers creatures too).
     #[serde(default)]
     pub gain_life_to: Option<usize>,
+    /// Soaks only damage from sources this seat doesn't control ("by sources
+    /// you don't control" — Comeuppance). `None` = any controller.
+    #[serde(default)]
+    pub not_from_controller: Option<usize>,
+    /// Comeuppance — what this shield soaks is dealt back by this card: to the
+    /// source itself when it's a creature on the battlefield, else to the
+    /// source's controller.
+    #[serde(default)]
+    pub reflect_by: Option<crate::card::CardId>,
 }
 
 /// CR 615.7 — a turn-long shield around one chosen damage *source*

@@ -359,12 +359,17 @@ Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Be
 Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
 Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
 `Effect::PayLifeOrPutBackDrawnThisTurn`); Master Biomancer's Mutant rider; Compulsive Research's target player;
-Ajani's Chosen's Aura move (offered for an Aura on your own creature only). Still open:
+Ajani's Chosen's Aura move (offered for an Aura on your own creature only);
+Comeuppance's reflection; Conduit of Worlds' {T} cast (residual: a spell cast
+between the activation and that cast isn't refused); Deep Analysis' target
+player; Mishra's Factory's pump; Astrologian's Planisphere's third draw;
+Fiery Justice's life (now the healthiest opponent, not the one being raced).
 
-| Card | Gap |
-|---|---|
-| 🟡 Comeuppance | the prevention ships; the reflected damage (to the creature, else its controller) does not, and your own sources are prevented too. |
-| 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
+Read and left open: Quandrix Command's mode 4 (target player needs a player
+slot inside a modal cast — still the caster), Telling Time (scry 2 + draw 1:
+right card quality, but it *draws*), Zack Fair (moving a sacrificed source's
+counters needs a last-known counter snapshot), Waste Management (kicked, the
+most hostile opponent's graveyard).
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 

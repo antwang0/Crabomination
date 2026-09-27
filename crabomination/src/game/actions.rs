@@ -12788,6 +12788,7 @@ impl GameState {
 
         // Clear any outstanding may-play permission — once the card is
         // cast, the grant (and its miracle alt-cost) is consumed.
+        let locks_further_casts = card.may_play_until.is_some_and(|m| m.locks_further_casts);
         card.may_play_until = None;
         card.granted_alt_cast_cost_eot = None;
         // Stamp the cast-zone flag for "cast a spell from exile" payoffs.
@@ -12829,6 +12830,9 @@ impl GameState {
             mana_spent,
             false,
         );
+        if locks_further_casts {
+            self.players[p].cant_cast_matching_this_turn.push(crate::card::SelectionRequirement::Any);
+        }
         Ok(events)
     }
 
@@ -14679,7 +14683,7 @@ impl GameState {
         hijacker: usize,
         events: &mut Vec<GameEvent>,
     ) {
-        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false,
+        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
             player: hijacker,
             granted_turn: self.turn_number,
             duration: crate::card::MayPlayDuration::WhileExiled,
