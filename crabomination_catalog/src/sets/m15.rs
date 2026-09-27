@@ -1057,16 +1057,34 @@ pub fn krenkos_enforcer() -> CardDefinition {
     )
 }
 
-/// Xathrid Slyblade — {2}{B} 2/1 with hexproof.
+/// Xathrid Slyblade — {2}{B} 2/1 with hexproof; {3}{B}: it trades hexproof
+/// for first strike and deathtouch until end of turn.
 pub fn xathrid_slyblade() -> CardDefinition {
-    creature(
-        "Xathrid Slyblade",
-        cost(&[generic(2), b()]),
-        2,
-        1,
-        vec![CreatureType::Human, CreatureType::Assassin],
-        vec![Keyword::Hexproof],
-    )
+    let eot = Duration::EndOfTurn;
+    CardDefinition {
+        // "{3}{B}: Until end of turn, this creature loses hexproof and gains
+        // first strike and deathtouch" — it shipped as a vanilla hexproof 2/1.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            effect: Effect::Seq(vec![
+                Effect::LoseKeyword { what: Selector::This, keyword: Keyword::Hexproof, duration: eot },
+                Effect::GrantKeywords {
+                    what: Selector::This,
+                    keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+                    duration: eot,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Xathrid Slyblade",
+            cost(&[generic(2), b()]),
+            2,
+            1,
+            vec![CreatureType::Human, CreatureType::Assassin],
+            vec![Keyword::Hexproof],
+        )
+    }
 }
 
 /// Witch's Familiar — {2}{B} 2/3 vanilla.

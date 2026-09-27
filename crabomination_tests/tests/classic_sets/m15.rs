@@ -83,6 +83,20 @@ fn m15_stat_lines() {
     }
 }
 
+/// Xathrid Slyblade — {3}{B}: until end of turn it loses hexproof and gains
+/// first strike and deathtouch (it shipped as a vanilla hexproof 2/1).
+#[test]
+fn xathrid_slyblade_trades_hexproof_for_first_strike_and_deathtouch() {
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::xathrid_slyblade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, s, 0, None);
+    assert!(!g.permanent_has_keyword(s, &Keyword::Hexproof));
+    assert!(g.permanent_has_keyword(s, &Keyword::FirstStrike));
+    assert!(g.permanent_has_keyword(s, &Keyword::Deathtouch));
+}
+
 /// CR 702.51 Convoke — tapping creatures pays the generic and colored pips.
 #[test]
 fn convoke_taps_creatures_for_the_cost() {
