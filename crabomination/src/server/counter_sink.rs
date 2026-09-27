@@ -75,12 +75,14 @@ fn levels_self(e: &Effect) -> bool {
     matches!(e, Effect::AddCounter { what: Selector::This, kind: CounterType::Level, .. })
 }
 
-/// The highest level a tier of `def` asks for (its `SourceHasCountersAtLeast`
-/// thresholds on level counters), past which a level counter buys nothing.
+/// The highest level a tier of `def` asks for — its `LevelBand` minimums and
+/// its `SourceHasCountersAtLeast` thresholds on level counters — past which a
+/// level counter buys nothing.
 fn top_tier(def: &crate::card::CardDefinition) -> u32 {
     let text = format!("{def:?}");
-    text.split("counter: Level, n: ")
-        .skip(1)
+    ["counter: Level, n: ", "LevelBand { min: "]
+        .iter()
+        .flat_map(|key| text.split(key).skip(1))
         .filter_map(|rest| rest.split(|c: char| !c.is_ascii_digit()).next()?.parse().ok())
         .max()
         .unwrap_or(0)
@@ -151,5 +153,9 @@ mod tests {
         assert!(matches!(pick_counter_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == tusk));
         g.battlefield_find_mut(tusk).unwrap().add_counters(CounterType::Level, 6);
         assert!(pick_counter_sink(&g, 0).is_none(), "level 6 is the top tier");
+        // A `LevelBand` card reads its bands' minimums (Coralhelm: 4).
+        let coral = g.add_card_to_battlefield(0, crate::catalog::coralhelm_commander());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        assert!(matches!(pick_counter_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == coral));
     }
 }
