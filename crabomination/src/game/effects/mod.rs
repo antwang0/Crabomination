@@ -1744,6 +1744,25 @@ impl GameState {
         eprintln!("{msg}");
     }
 
+    /// Run `body` with X set to `x`. A body that parks resumes under the stack
+    /// item's context, whose X is not this one, so the parked continuation is
+    /// pinned in a `WithX` (Kodama of the East Tree's pick and Numa's
+    /// {X}{X} distribution both resumed at X = 0 and leaked their answer).
+    pub(crate) fn run_effect_with_x(
+        &mut self,
+        body: &Effect,
+        ctx: &EffectContext,
+        x: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        self.run_effect(body, &EffectContext { x_value: x, ..ctx.clone() }, events)?;
+        rewrap_parked(&mut self.suspend_signal, |carried| Effect::WithX {
+            x: crate::effect::Value::Const(x as i32),
+            body: Box::new(carried),
+        });
+        Ok(())
+    }
+
     /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
     /// stack and copyable) directly above it. Copies inherit the
     /// original's target / mode / x / converged value and are flagged
@@ -6180,9 +6199,7 @@ impl GameState {
                 if n >= *all_won_min && wins == n {
                     // The chosen number rides in as X so the payout can scale
                     // off it (Squee's Revenge draws two per flip).
-                    let mut won_ctx = ctx.clone();
-                    won_ctx.x_value = n;
-                    self.run_effect(all_won, &won_ctx, events)?;
+                    self.run_effect_with_x(all_won, ctx, n, events)?;
                 }
                 Ok(())
             }
@@ -7475,9 +7492,7 @@ impl GameState {
                 if !self.pay_mana_cost_with_picks(ctx.controller, &x_cost, None, events) {
                     return Ok(());
                 }
-                let mut sub = ctx.clone();
-                sub.x_value = n;
-                self.run_effect(body, &sub, events)
+                self.run_effect_with_x(body, ctx, n, events)
             }
 
             Effect::MayPayLife { description, amount, body, else_ } => {
@@ -7582,6 +7597,23 @@ impl GameState {
                 let mut body_ctx = ctx.clone();
                 body_ctx.targets = slot0.into_iter().chain(additional).collect();
                 self.run_effect(body, &body_ctx, events)?;
+                // A parked payoff resumes under the stack item's targets, not
+                // the ones picked here: pin them when they are all objects
+                // (Numa's distribution resumed with no Elves to count on).
+                let ids: Option<Vec<CardId>> = body_ctx
+                    .targets
+                    .iter()
+                    .map(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        Target::Player(_) => None,
+                    })
+                    .collect();
+                if let Some(ids) = ids.filter(|v| !v.is_empty()) {
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetObjects {
+                        ids,
+                        body: Box::new(carried),
+                    });
+                }
                 Ok(())
             }
 
@@ -8172,15 +8204,7 @@ impl GameState {
             Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
             Effect::WithX { x, body } => {
                 let x = self.evaluate_value(x, ctx).max(0) as u32;
-                self.run_effect(body, &EffectContext { x_value: x, ..ctx.clone() }, events)?;
-                // A parked body resumes under the stack item's context, whose
-                // X is not this one: pin it (Kodama of the East Tree's pick
-                // resumed at X = 0, matched nothing and leaked its answer).
-                rewrap_parked(&mut self.suspend_signal, |carried| Effect::WithX {
-                    x: crate::effect::Value::Const(x as i32),
-                    body: Box::new(carried),
-                });
-                Ok(())
+                self.run_effect_with_x(body, ctx, x, events)
             }
             // Both cap the supplied slots at the paid X; they differ only in
             // whether the targeting walk treats slots below X as optional.
@@ -38606,13 +38630,12 @@ impl GameState {
                 // targets (a combat-damage trigger binds the damaged player to
                 // slot 0); only auto-fill if `then` needs a target none is set.
                 let mut then_ctx = ctx.clone();
-                then_ctx.x_value = x;
                 if then.requires_target() && then_ctx.targets.is_empty() {
                     let (slot0, additional) =
                         self.auto_targets_for_effect_all_slots(then, p, None);
                     then_ctx.targets = slot0.into_iter().chain(additional).collect();
                 }
-                self.run_effect(then, &then_ctx, events)?;
+                self.run_effect_with_x(then, &then_ctx, x, events)?;
                 Ok(())
             }
 

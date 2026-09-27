@@ -289,3 +289,39 @@ fn jagged_scar_archers_shoots_a_flier_for_its_power() {
     activate(&mut g, archers, 0, Some(Target::Permanent(angel))).expect("shoot the Angel");
     assert_eq!(g.battlefield_find(angel).map(|c| c.damage), Some(3));
 }
+
+/// Numa at a prompting seat: the X paid for {X}{X} survives the division
+/// prompt of the reflexive "distribute X counters" (regression: an answer
+/// stashed for the division was left behind, `CRAB_ANSWER_LOG=strict`).
+#[test]
+fn numa_distributes_at_a_prompting_seat() {
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::numa_joraga_chieftain());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 8);
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    for _ in 0..40 {
+        if let Some(pd) = g.pending_decision.as_ref() {
+            let answer = match &pd.decision {
+                crabomination::decision::Decision::DivideDamage { total, targets, .. } => {
+                    let mut v = vec![0; targets.len()];
+                    v[0] = *total;
+                    DecisionAnswer::DamageDivision(v)
+                }
+                _ => DecisionAnswer::Amount(2),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        let p = g.priority.player_with_priority;
+        g.perform_action(GameAction::PassPriority).unwrap_or_else(|e| panic!("pass by {p}: {e:?}"));
+    }
+    let counters: u32 = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).sum();
+    assert_eq!(counters, 2, "X = 2 counters");
+    let _ = elf;
+}
