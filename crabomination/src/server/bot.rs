@@ -11307,6 +11307,16 @@ fn pick_attach_ability(state: &GameState, seat: usize) -> Option<GameAction> {
     None
 }
 
+/// Does `e` create an emblem anywhere in its tree?
+fn creates_emblem(e: &Effect) -> bool {
+    if matches!(e, Effect::CreateEmblem { .. }) {
+        return true;
+    }
+    let mut found = false;
+    e.for_each_inner(&mut |inner| found |= creates_emblem(inner));
+    found
+}
+
 /// Walk every planeswalker the bot controls and pick the first activatable
 /// loyalty ability. Auto-target via `auto_target_for_effect` for abilities
 /// that require a target. Prefers a +loyalty ability when available
@@ -11333,7 +11343,7 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         // Enigma Sage / Ichormoon Gauntlet) so the bot can activate granted
         // loyalty abilities too — the engine indexes the same list.
         // Ultimates whose payoff the material eval can't see (emblems)
-        // still lose to a plus — a known limitation.
+        // lose to a plus in a duel; a pod takes them (below).
         let current_loyalty =
             card.counter_count(crate::card::CounterType::Loyalty) as i32;
         let effective = crate::game::effective_loyalty_abilities(card, &state.battlefield);
@@ -11428,6 +11438,17 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         };
         if threat >= bar && finalists.iter().any(spends) {
             finalists.retain(spends);
+        }
+        // Pods: an affordable emblem ultimate is taken — its payoff is the
+        // rest of the game, which no material eval prices (Ob Nixilis
+        // Reignited's −8 and Sorin's −8 were never activated in 183 decks).
+        if !state.players[seat].commanders.is_empty()
+            && let Some(ult) = finalists.iter().position(|f| {
+                matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
+                    if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0 && creates_emblem(&ab.effect)))
+            })
+        {
+            return Some(finalists.swap_remove(ult).action);
         }
         if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
             return Some(best.action);

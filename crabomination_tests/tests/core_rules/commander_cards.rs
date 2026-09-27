@@ -2031,3 +2031,23 @@ fn cr_601_2b_will_gets_one_mode_when_the_commander_arrives_after_the_cast() {
     assert!(has_kw(&g, bear, Keyword::DoubleStrike), "mode 0");
     assert!(!has_kw(&g, bear, Keyword::Lifelink), "no commander as it was cast");
 }
+
+/// A pod bot takes an affordable emblem ultimate (Ob Nixilis Reignited's −8)
+/// rather than plussing: the material eval can't price an emblem, so it
+/// lost to the +1 every time.
+#[test]
+fn a_pod_bot_ultimates_an_emblem_planeswalker() {
+    use crabomination::card::CounterType;
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = commander_game();
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let ob = g.add_card_to_battlefield(0, catalog::ob_nixilis_reignited());
+    g.battlefield_find_mut(ob).unwrap().counters.insert(CounterType::Loyalty, 9);
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::ActivateLoyaltyAbility { card_id, ability_index: 2, .. }) if card_id == ob),
+        "got {action:?}"
+    );
+}
