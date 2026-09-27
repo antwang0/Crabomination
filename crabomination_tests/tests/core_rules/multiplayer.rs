@@ -6312,3 +6312,38 @@ fn cr_506_2_tahngarth_attacks_a_player_its_new_controller_attacks() {
     let t = g.attacking().iter().find(|a| a.attacker == tahn).map(|a| a.target);
     assert_eq!(t, Some(AttackTarget::Player(2)), "joins the attack on seat 2");
 }
+
+/// CR 702.21a + 800.4a — a player who pays a ward cost with City of Brass at
+/// 1 life leaves the game mid-payment, and their Bolt leaves the stack with
+/// them; the ward trigger then found nothing at the index it had looked up
+/// (a pod panic, "removal index (is 0) should be < len (is 0)").
+#[test]
+fn ward_payer_leaving_mid_payment_takes_the_spell_along() {
+    use crabomination::card::{Keyword, WardCost};
+    use crabomination::game::types::Target;
+    use crabomination::mana::{Color, cost, generic};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let mut warded = catalog::grizzly_bears();
+    warded.keywords.push(Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))));
+    let bear = g.add_card_to_battlefield(0, warded);
+    g.add_card_to_battlefield(1, catalog::city_of_brass());
+    g.players[1].life = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt the warded bear");
+    for _ in 0..12 {
+        if g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.stack.is_empty());
+    assert!(!g.players[1].is_alive(), "City of Brass took the last point");
+    assert!(g.battlefield_find(bear).is_some(), "the Bolt left with its caster");
+}

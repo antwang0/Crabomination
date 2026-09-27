@@ -22200,6 +22200,10 @@ impl GameState {
                         None => return Ok(()),
                         Some(true) => {}
                         Some(false) => {
+                            let Some(pos) = self.ward_counter_pos(cid, is_spell, pos) else {
+                                self.clear_answer_log();
+                                return Ok(());
+                            };
                             let removed = self.stack.remove(pos);
                             if is_spell
                                 && let StackItem::Spell { card, caster, .. } = removed
@@ -22222,7 +22226,10 @@ impl GameState {
                     discards.as_deref(),
                 );
 
-                if !paid {
+                // CR 800.4a — paying can take the payer out of the game (a
+                // City of Brass at 1 life), and their spells and abilities
+                // leave the stack with them: find the item again.
+                if !paid && let Some(pos) = self.ward_counter_pos(cid, is_spell, pos) {
                     let removed = self.stack.remove(pos);
                     if is_spell
                         && let StackItem::Spell { card, caster, .. } = removed
@@ -22359,6 +22366,8 @@ impl GameState {
                     }
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                // Two targets naming one source find the same trigger.
+                to_remove.dedup();
                 for pos in to_remove {
                     self.stack.remove(pos);
                 }
@@ -42438,6 +42447,20 @@ impl GameState {
     /// from a hand-picked source set (see [`ask_mana_sources`]).
     ///
     /// [`ask_mana_sources`]: Self::ask_mana_sources
+    /// Where the item a ward trigger counters sits now: `pos` if it is still
+    /// that spell / ability, else the topmost match for `cid`, else `None`
+    /// (it left the stack while the cost was being asked for or paid).
+    fn ward_counter_pos(&self, cid: CardId, is_spell: bool, pos: usize) -> Option<usize> {
+        let matches = |si: &StackItem| match si {
+            StackItem::Spell { card, .. } => is_spell && card.id == cid,
+            StackItem::Trigger { source, .. } => !is_spell && *source == cid,
+        };
+        if self.stack.get(pos).is_some_and(matches) {
+            return Some(pos);
+        }
+        self.stack.iter().rposition(matches)
+    }
+
     pub(crate) fn try_pay_ward_cost_from(
         &mut self,
         payer: usize,
