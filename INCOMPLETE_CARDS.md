@@ -772,7 +772,6 @@ Residuals:
 | Card | Residual | Why |
 |---|---|---|
 | Detective's Phoenix | the whole **bestow** half — the alternative cost, the Aura mode, its +2/+2 and keyword grant, and the graveyard-cast permission that hangs off it | CR 702.103 Bestow has no `Keyword::Bestow` and Collect evidence has no cost form. The body is the printed 2/2 Enchantment Creature with flying and haste and nothing else |
-| Silverquill Lecturer | "creature spells you cast **have demonstrate**" | two pieces: a `StaticEffect::YourCreatureSpellsHave…` in the shape of `YourISSpellsHaveReplicate`, and a `TriggerSource` variant of `Effect::Demonstrate` — the existing one reads `ctx.source` as *the spell on the stack*, so it cannot fire from a permanent's own `SpellCast` trigger |
 | Witch's Cauldron | the sacrifice is an activation **cost** on the print and is resolved in the body here | it happens on resolution rather than on announcement, so a response can no longer be made to a creature that is already gone. ⚠ Its old row in this file claimed the lifegain scaled with the sacrificed creature's toughness; the printed card gains **1**, the body always did, and the doc comment asserted the opposite |
 
 ### Body-only stubs — entire signature ability missing (all ✓ code-verified)

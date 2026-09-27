@@ -352,6 +352,27 @@ fn main() {
     // `--grep NEEDLE`: one line per card whose `Debug` form contains NEEDLE,
     // `name\tdebug` — for oracle-vs-definition scans (step-trigger scopes).
     let args: Vec<String> = std::env::args().collect();
+    // `--shape`: `name\tstatic\tactivated\ttriggered\tloyalty\tspell` —
+    // top-level ability counts, for "the printed text has abilities the
+    // definition doesn't" scans (the `Debug` form nests token definitions).
+    if args.iter().any(|a| a == "--shape") {
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            if seen.insert(def.name.to_string()) {
+                println!(
+                    "{}\t{}\t{}\t{}\t{}\t{}",
+                    def.name,
+                    def.static_abilities.len(),
+                    def.activated_abilities.len(),
+                    def.triggered_abilities.len(),
+                    def.loyalty_abilities.len(),
+                    u8::from(!matches!(def.effect, crabomination::effect::Effect::Noop)),
+                );
+            }
+        }
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--grep") {
         let needle = args.get(i + 1).expect("--grep NEEDLE");
         let mut seen: HashSet<String> = HashSet::default();

@@ -871,13 +871,26 @@ fn prismari_inventor_magecraft_mints_treasure() {
     assert!(treasures_after > treasures_before, "Inventor minted a Treasure on instant cast");
 }
 
-// `silverquill_lecturer_magecraft_pumps_target_creature` is deleted with the
-// invented Magecraft ability it exercised. The printed card is "creature
-// spells you cast have demonstrate" and nothing else, and granting demonstrate
-// is the named gap in `INCOMPLETE_CARDS.md` — there is no behaviour left on
-// the card to assert, and a test that only reads its P/T would be the pure
-// data test CLAUDE.md forbids. Magecraft itself is covered by the cards that
-// actually print it.
+/// Silverquill Lecturer — creature spells you cast have demonstrate (CR
+/// 702.144a): you copy the creature spell, an opponent copies it too, and
+/// each copy resolves as a token (CR 707.10c) under its copier's control.
+#[test]
+fn silverquill_lecturer_demonstrates_creature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_lecturer());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let count = |seat: usize, token: bool| {
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.name == "Grizzly Bears" && c.is_token == token)
+            .count()
+    };
+    assert_eq!((count(0, false), count(0, true), count(1, true)), (1, 1, 1));
+}
 
 #[test]
 fn lorehold_researcher_dies_returns_instant_from_graveyard() {

@@ -34,16 +34,11 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 /// have demonstrate. (Whenever you cast a creature spell, you may copy it. If
 /// you do, choose an opponent to also copy it. Each copy becomes a token.)"
 ///
-/// ⚠ It shipped with an invented Magecraft pump ("whenever you cast or copy
-/// an instant or sorcery, target creature gets +1/+1") under the printed
-/// name. Found by `scripts/audit_synthesised_name.py`.
-///
-/// 🟡 The body is now the printed body and the ability is the named gap.
-/// Granting demonstrate wants a `StaticEffect::YourCreatureSpellsHave…` in
-/// the shape of `YourISSpellsHaveReplicate` — and `Effect::Demonstrate` reads
-/// `ctx.source` as *the spell on the stack*, so it cannot be fired from a
-/// permanent's own `SpellCast` trigger without a `TriggerSource` variant.
-/// Two pieces, one card; see `INCOMPLETE_CARDS.md`.
+/// ⚠ It shipped with an invented Magecraft pump under the printed name
+/// (`scripts/audit_synthesised_name.py`). The grant is a cast trigger on the
+/// Lecturer whose `Effect::Demonstrate` copies the cast spell (its trigger
+/// subject), as The Twelfth Doctor's does; the printed "you may" collapses
+/// as demonstrate's does everywhere.
 pub fn silverquill_lecturer() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Lecturer",
@@ -55,7 +50,11 @@ pub fn silverquill_lecturer() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Creature)),
+            effect: Effect::Demonstrate,
+        }],
         ..Default::default()
     }
 }
