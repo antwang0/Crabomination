@@ -197,6 +197,33 @@ fn archaeomancers_map_fetches_plains() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "the Map left, two Plains came");
 }
 
+/// "If that player controls more lands than you": the land's controller is
+/// asked, not any opponent — seat 1's land drop does nothing while seat 2 is
+/// the one ahead; seat 2's own drop lets a land in from hand.
+#[test]
+fn archaeomancers_map_reads_the_lands_of_that_player() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::archaeomancers_map());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    g.add_card_to_battlefield(1, catalog::swamp());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(2, catalog::mountain());
+    }
+    let spare = g.add_card_to_hand(0, catalog::plains());
+    for seat in [1, 2] {
+        let land = g.add_card_to_hand(seat, catalog::forest());
+        g.active_player_idx = seat;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+        drain_stack(&mut g);
+        let in_play = g.battlefield_find(spare).is_some();
+        assert_eq!(in_play, seat == 2, "after seat {seat}'s land drop");
+    }
+}
+
 /// {T}, sacrifice an artifact: the next artifact enters; damage per reveal.
 #[test]
 fn audacious_reshapers_digs_for_an_artifact() {

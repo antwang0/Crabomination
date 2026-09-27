@@ -156,10 +156,10 @@ pub fn alibou_ancient_witness() -> CardDefinition {
 }
 
 /// Archaeomancer's Map — enters: up to two basic Plains to hand; an
-/// opponent's land entering while an opponent has more lands than you puts a
-/// land from your hand onto the battlefield (an approximation: *an*
-/// opponent, not necessarily that land's controller).
+/// opponent's land entering while that player has more lands than you puts a
+/// land from your hand onto the battlefield.
 pub fn archaeomancers_map() -> CardDefinition {
+    let lands_of = |who: PlayerRef| Value::CountOf(Box::new(Selector::ControlledBy { who, filter: R::Land }));
     CardDefinition {
         triggered_abilities: vec![
             etb(Effect::SearchUpToN {
@@ -172,7 +172,10 @@ pub fn archaeomancers_map() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl).with_filter(
                     Predicate::All(vec![
                         Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land },
-                        Predicate::OpponentControlsMoreLandsThanYou,
+                        Predicate::ValueAtLeast(
+                            lands_of(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                            Value::Sum(vec![lands_of(PlayerRef::You), Value::ONE]),
+                        ),
                     ]),
                 ),
                 effect: Effect::PutFromHandOntoBattlefield {
