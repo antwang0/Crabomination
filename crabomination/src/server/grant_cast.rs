@@ -1,10 +1,13 @@
 //! Grant-then-cast abilities — "{T}, pay 2 life: until end of turn, you may
 //! cast a creature spell from among cards exiled with this" (Serpent's
 //! Soul-Jar), "{T}: choose target artifact card in your graveyard; you may cast
-//! it this turn" (Emry). The grant alone changes no board, so the one-ply
-//! scorer never activated one (a 183-deck `--card-census`). A pod bot now
-//! activates it when a granted card is castable afterwards and that cast beats
-//! passing. Commander games only, so two-player play is unchanged.
+//! it this turn" (Emry), and impulse abilities — "{T}: exile the top card of
+//! your library; until your next end step you may play it" (Yasmin Khan,
+//! Oracle's Vault). The grant alone changes no board, so the one-ply scorer
+//! never activated one (a 183-deck `--card-census`). A pod bot now activates it
+//! when a granted card is castable afterwards and that cast beats passing. The
+//! dry run reads the real library top, as every scored pod candidate's does.
+//! Commander games only, so two-player play is unchanged.
 
 use crate::effect::Effect;
 use crate::game::GameState;
@@ -22,7 +25,7 @@ pub(super) fn pick_grant_cast(state: &GameState, seat: usize, w: &EvalWeights) -
     {
         return None;
     }
-    let grants = |e: &Effect| matches!(e, Effect::GrantMayPlay { .. });
+    let grants = |e: &Effect| matches!(e, Effect::GrantMayPlay { .. } | Effect::ExileTopAndGrantMayPlay { .. });
     let sources: Vec<(crate::card::CardId, usize)> = state
         .battlefield
         .iter()
@@ -119,6 +122,29 @@ mod tests {
         assert!(matches!(
             pick_grant_cast(&g, 0, &w),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == jar
+        ));
+    }
+
+    /// An idle pod bot taps Yasmin Khan when the card it would exile is a
+    /// creature it can then pay for.
+    #[test]
+    fn a_pod_bot_impulses_with_yasmin_khan() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let cmd = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.players[0].commanders.push(cmd);
+        let yasmin = g.add_card_to_battlefield(0, crate::catalog::yasmin_khan());
+        g.clear_sickness(yasmin);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        g.add_card_to_library(0, crate::catalog::grizzly_bears());
+        let w = EvalWeights::default();
+        assert!(matches!(
+            pick_grant_cast(&g, 0, &w),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == yasmin
         ));
     }
 }
