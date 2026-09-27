@@ -94,14 +94,20 @@ fn ritual_of_hope_coven() {
     assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 under coven");
 }
 
-/// Sunset Revelry gains 4 life when an opponent has more life.
+/// Sunset Revelry gains 4 life when an opponent has more life, and draws
+/// one card (it drew two) when an opponent holds more.
 #[test]
 fn sunset_revelry_lifegain() {
     let mut g = two_player_game();
     g.players[0].life = 10;
     g.players[1].life = 20;
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    g.add_card_to_hand(1, catalog::plains());
     g.resolve_effect(&catalog::sunset_revelry().effect, &ctx0(&g)).unwrap();
     assert_eq!(g.players[0].life, 14);
+    assert_eq!(g.players[0].hand.len(), 1);
 }
 
 /// Valorous Stance mode 2 destroys a high-toughness creature.

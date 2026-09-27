@@ -418,7 +418,8 @@ pub fn undercity_reaches() -> CardDefinition {
                     body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
                 },
             },
-            chaos(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            // "You have no maximum hand size for the rest of the game."
+            chaos(Effect::SetNoMaxHandSize { who: Selector::You }),
         ],
     )
 }

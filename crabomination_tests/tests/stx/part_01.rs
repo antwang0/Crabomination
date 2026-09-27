@@ -4545,112 +4545,55 @@ fn settle_the_score_destroys_creature_and_adds_loyalty() {
     );
 }
 
+/// CR 121.2a — Pursuit of Knowledge replaces a draw: the counter comes
+/// instead of the card, and only while it holds fewer than the three its
+/// activation spends; the fourth draw is a normal one.
 #[test]
-fn pursuit_of_knowledge_accumulates_charge_counter_on_draw_action() {
-    // Note: the engine batches multi-card draws into a single trigger
-    // fire today (`dispatch_triggers_for_events` is per-batch, not per
-    // event-instance), so Divination (Draw 2) yields exactly one charge
-    // counter rather than the strict per-card 2 that the printed Oracle
-    // would imply. The per-card trigger refinement is tracked under
-    // "Multi-Card Batch Triggers" in TODO.md. The test asserts the
-    // engine's current per-batch behavior so it stays green and acts as
-    // a regression marker for a future per-event-fire refactor.
-    use crabomination::card::CounterType;
+fn pursuit_of_knowledge_replaces_draws_with_study_counters() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::plains());
     }
     let pok = g.add_card_to_battlefield(0, catalog::pursuit_of_knowledge());
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(true),
-    ]));
-
-    let div = g.add_card_to_hand(0, catalog::divination());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: div,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Divination castable");
-    drain_stack(&mut g);
-
-    let pok_on_bf = g
-        .battlefield
-        .iter()
-        .find(|c| c.id == pok)
-        .expect("PoK still on bf");
-    let study = pok_on_bf
-        .counters
-        .get(&CounterType::Study)
-        .copied()
-        .unwrap_or(0);
-    assert!(
-        study >= 1,
-        "PoK accumulated at least one study counter from Divination"
-    );
+    g.decider = Box::new(ScriptedDecider::new((0..4).map(|_| DecisionAnswer::Bool(true))));
+    let hand = g.players[0].hand.len();
+    let mut events = Vec::new();
+    for _ in 0..4 {
+        g.draw_one(0, &mut events);
+    }
+    let study = g.battlefield_find(pok).unwrap().counter_count(CounterType::Study);
+    assert_eq!((study, g.players[0].hand.len()), (3, hand + 1));
 }
 
+/// CR 602.5b — the activation's "remove three study counters" is a cost:
+/// with two it can't be activated; with four it removes three, sacrifices
+/// the enchantment and draws seven.
 #[test]
-fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
-    // The activation cost is a real CR 602.5b `remove_counter_cost`:
-    // PoK with 3 study counters can't be activated; with 5 it succeeds
-    // (removes exactly 4, draws 3, and sacrifices itself).
-    use crabomination::card::CounterType;
+fn pursuit_of_knowledge_activation_spends_three_study_counters() {
     let mut g = two_player_game();
-    for _ in 0..5 {
+    for _ in 0..8 {
         g.add_card_to_library(0, catalog::plains());
     }
     let pok = g.add_card_to_battlefield(0, catalog::pursuit_of_knowledge());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
-        c.counters.insert(CounterType::Study, 3);
-    }
-    let res_three = g.perform_action(GameAction::ActivateAbility {
-        card_id: pok,
-        ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
-    assert!(
-        res_three.is_err(),
-        "PoK activation with only 3 study counters fails"
-    );
-
-    // Bump to 5 and try again — the cost deducts 4 at announcement.
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
-        c.counters.insert(CounterType::Study, 5);
-    }
-    let hand_before = g.players[0].hand.len();
-    let lib_before = g.players[0].library.len();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: pok,
-        ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("PoK activatable with 4+ study counters");
-    // The remove-counter cost is paid at announcement: 5 − 4 = 1 left
-    // while the ability is on the stack (the sac cost already binned it
-    // otherwise — check via wherever the card now lives).
+    let activate = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pok,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.battlefield_find_mut(pok).unwrap().counters.insert(CounterType::Study, 2);
+    assert!(activate(&mut g).is_err(), "two study counters");
+    g.battlefield_find_mut(pok).unwrap().counters.insert(CounterType::Study, 4);
+    let hand = g.players[0].hand.len();
+    activate(&mut g).expect("four study counters");
     drain_stack(&mut g);
-
-    // 3 cards drawn (gates: hand +3, library -3).
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
-    assert_eq!(g.players[0].library.len(), lib_before - 3);
-    // PoK sacrificed (in graveyard now).
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == pok),
-        "PoK sacrificed"
-    );
-    // Exactly 4 study counters were deducted by the cost (5 − 4 = 1
-    // remains on the card in the graveyard, counters cleared on zone
-    // change notwithstanding — assert via the graveyard instance).
-    let gy_pok = g.players[0].graveyard.iter().find(|c| c.id == pok)
-        .expect("PoK in graveyard");
-    let leftover = gy_pok.counters.get(&CounterType::Study).copied().unwrap_or(0);
-    assert!(leftover <= 1, "cost removed 4 of the 5 study counters");
+    assert_eq!(g.players[0].hand.len(), hand + 7);
+    assert!(g.battlefield_find(pok).is_none(), "sacrificed");
 }
 
 #[test]

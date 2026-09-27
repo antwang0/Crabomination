@@ -826,7 +826,7 @@ pub fn sunset_revelry() -> CardDefinition {
                 cond: Predicate::AnOpponentHasMoreCardsInHand,
                 then: Box::new(Effect::Draw {
                     who: Selector::You,
-                    amount: Value::Const(2),
+                    amount: Value::ONE,
                 }),
                 else_: noop(),
             },

@@ -1595,57 +1595,29 @@ pub fn resurrection() -> CardDefinition {
 
 // ── Pursuit of Knowledge ────────────────────────────────────────────────────
 
-/// Pursuit of Knowledge — {3}{W} Enchantment. "Whenever you draw a
-/// card, you may put a study counter on this enchantment. / Remove
-/// four study counters from this enchantment and sacrifice it: Draw
-/// three cards."
+/// Pursuit of Knowledge — {3}{W} Enchantment. "If you would draw a card,
+/// you may put a study counter on this enchantment instead. / Remove three
+/// study counters from this enchantment, Sacrifice this enchantment: Draw
+/// seven cards."
 ///
-/// ✅ Fully faithful. The first half is wired via an
-/// `EventKind::CardDrawn / YourControl` trigger that wraps
-/// `Effect::AddCounter(Study, 1)` in `Effect::MayDo` (printed "you
-/// may") — the engine has a real `CounterType::Study`. The activation
-/// pays its printed cost exactly: `remove_counter_cost: (Study, 4)` (a
-/// true CR 602.5b cost, pre-flighted and deducted at announcement)
-/// plus `sac_cost: true`, then draws 3.
+/// ⚠ It shipped as a draw *trigger* (the card came too), four counters and
+/// three cards — none of it printed (`dump_cards` draw-count scan).
 pub fn pursuit_of_knowledge() -> CardDefinition {
     CardDefinition {
         name: "Pursuit of Knowledge",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Enchantment],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: ManaCost::default(),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: true,
-            condition: None,
-            remove_counter_cost: Some((CounterType::Study, 4)),
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-            ..Default::default()
+        // CR 121.2a — a draw replacement, not a draw trigger: the counter
+        // comes instead of the card.
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "If you would draw a card, you may put a study counter on this enchantment instead.",
+            effect: crate::effect::StaticEffect::MayReplaceDrawWithCounter { kind: CounterType::Study, stop_at: 3 },
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
-            effect: Effect::MayDo {
-                description: "Put a study counter on this enchantment?".into(),
-                body: Box::new(Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Study,
-                    amount: Value::Const(1),
-                }),
-            },
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+            sac_cost: true,
+            remove_counter_cost: Some((CounterType::Study, 3)),
+            ..Default::default()
         }],
         ..Default::default()
     }

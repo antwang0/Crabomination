@@ -217,3 +217,17 @@ fn the_hippodrome_shrinks_everything_and_chaos_finishes_it() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
 }
+
+/// Undercity Reaches — chaos gives you no maximum hand size for the rest of
+/// the game (it drew two cards).
+#[test]
+fn undercity_reaches_chaos_lifts_the_hand_size_cap() {
+    let mut g = main_phase();
+    planar(&mut g, vec![catalog::undercity_reaches()]);
+    let before = g.players[0].hand.len();
+    assert!(g.effective_max_hand_size(0).is_some());
+    roll(&mut g, PlanarFace::Chaos).expect("roll");
+    drain_stack(&mut g);
+    assert!(g.effective_max_hand_size(0).is_none());
+    assert_eq!(g.players[0].hand.len(), before);
+}

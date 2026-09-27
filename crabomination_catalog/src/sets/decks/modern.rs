@@ -19120,7 +19120,7 @@ pub fn blazing_rootwalla() -> CardDefinition {
 
 /// Anje's Ravager — {2}{R} Creature — Vampire Berserker. 3/3. Attacks each
 /// combat if able; whenever it attacks, discard your hand, then draw three
-/// cards. (Madness {1}{R} is not modelled.)
+/// cards. Madness {1}{R}.
 pub fn anjes_ravager() -> CardDefinition {
 use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
