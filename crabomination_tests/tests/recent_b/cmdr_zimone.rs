@@ -87,9 +87,8 @@ fn attack(g: &mut GameState, attacker: CardId) {
     drain_stack(g);
 }
 
-/// Ashaya makes your nontoken creatures Forest lands and counts lands.
-/// ⚠ Residual: its P/T counts printed lands only, not the creatures it made
-/// lands (a CDA reading the layer-4 result would recurse into the layers).
+/// Ashaya makes your nontoken creatures Forest lands and counts lands — the
+/// Bear and Ashaya itself included.
 #[test]
 fn ashaya_turns_creatures_into_forests() {
     let mut g = main_phase(2);
@@ -98,7 +97,7 @@ fn ashaya_turns_creatures_into_forests() {
     }
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let a = g.add_card_to_battlefield(0, catalog::ashaya_soul_of_the_wild());
-    assert_eq!(pt(&g, a), (3, 3), "the three Forests (residual: not the Bear or Ashaya)");
+    assert_eq!(pt(&g, a), (5, 5), "three Forests, the Bear and Ashaya");
     assert!(g.computed_permanent(bear).unwrap().card_types().contains(&CardType::Land));
 }
 

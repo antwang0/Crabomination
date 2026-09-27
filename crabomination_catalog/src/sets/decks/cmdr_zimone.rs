@@ -73,14 +73,16 @@ fn creature_turned_up(effect: Effect) -> TriggeredAbility {
 }
 
 /// Ashaya, Soul of the Wild — */* equal to your lands; nontoken creatures you
-/// control are Forest lands too.
-///
-/// ⚠ Residual: its P/T counts printed lands only, not the creatures it makes
-/// lands.
+/// control are Forest lands too. The count reads the lands it makes: while it
+/// is out every nontoken creature you control is a land.
 pub fn ashaya_soul_of_the_wild() -> CardDefinition {
     let yours = || Selector::EachPermanent(R::Creature.and(R::NotToken).and(R::ControlledByYou));
     legendary(CardDefinition {
-        dynamic_pt: Some(DynamicPt::PermanentsControlledMatching { base_p: 0, base_t: 0, filter: Box::new(R::Land) }),
+        dynamic_pt: Some(DynamicPt::PermanentsControlledMatching {
+            base_p: 0,
+            base_t: 0,
+            filter: Box::new(R::Land.or(R::Creature.and(R::NotToken))),
+        }),
         static_abilities: vec![
             StaticAbility {
                 description: "Nontoken creatures you control are lands in addition to their other types.",

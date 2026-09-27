@@ -1877,7 +1877,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Thundermane Dragon | Reign of Dragons (FDC) | the top card isn't shown to you; any creature cast from your library gets the haste, not only one this permission cast. |
 | 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
-| 🟡 Ashaya, Soul of the Wild | Jump Scare! (DSC) | its P/T counts printed lands only, not the creatures it makes lands. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
 | 🟡 Zimone, Mystery Unraveler | Jump Scare! (DSC) | the permanent turned face up is the engine's pick. |
