@@ -295,6 +295,40 @@ fn cr_903_8_only_command_zone_casts_count_toward_the_tax() {
     assert_eq!(paid(&mut g, from_zone()), 6, "two prior command-zone casts");
 }
 
+/// CR 903.9b — a commander headed for its owner's library goes to the command
+/// zone instead, whether it is shuffled in (Chaos Warp) or bottomed (Condemn);
+/// the rest of the spell still resolves.
+#[test]
+fn cr_903_9b_a_commander_headed_for_the_library_goes_home() {
+    for (spell, attack) in [(catalog::chaos_warp as fn() -> _, false), (catalog::condemn, true)] {
+        let mut g = main_phase();
+        let cmd = g.seat_commanders(1, vec![catalog::grizzly_bears()])[0];
+        let pos = g.players[1].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[1].command.remove(pos);
+        g.battlefield.push(card);
+        if attack {
+            g.clear_sickness(cmd);
+            g.active_player_idx = 1;
+            g.step = TurnStep::DeclareAttackers;
+            g.priority.player_with_priority = 1;
+            g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cmd, target: AttackTarget::Player(0) }]))
+                .expect("attack");
+        }
+        let library = g.players[1].library.len();
+        let id = g.add_card_to_hand(0, spell());
+        mana(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert!(g.players[1].command.iter().any(|c| c.id == cmd), "{}: home", spell().name);
+        assert!(g.players[1].library.iter().all(|c| c.id != cmd));
+        assert!(g.players[1].library.len() <= library, "{}: nothing added to the library", spell().name);
+    }
+}
+
 /// CR 903.8 — putting a commander onto the battlefield from the command zone
 /// (`Effect::PutCommanderOntoBattlefield`) is not a cast, so it adds no tax;
 /// `ZoneDest::Command` moves a permanent straight back to its owner's command
