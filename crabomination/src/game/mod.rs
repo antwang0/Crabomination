@@ -6511,8 +6511,9 @@ impl GameState {
     /// The commander card `id` stands for: `id` itself when it is one, or —
     /// for a melded permanent — the component that is (Gisela's ruling: "If
     /// they meld into Brisela, Brisela will also be your commander", CR
-    /// 903.3 + 712.4). Commander damage is tallied against that card, so
-    /// Gisela's and Brisela's hits add up and survive the meld.
+    /// 903.3 + 712.4) or a merged one (CR 903.3c). Commander damage is
+    /// tallied against that card, so Gisela's and Brisela's hits add up and
+    /// survive the meld.
     pub fn commander_card_of(&self, id: crate::card::CardId) -> Option<crate::card::CardId> {
         let designated = |c: crate::card::CardId| self.players.iter().any(|p| p.commanders.contains(&c));
         if designated(id) {
@@ -6521,11 +6522,12 @@ impl GameState {
         if self.players.iter().all(|p| p.commanders.is_empty()) {
             return None;
         }
-        self.battlefield.find_by_id(id)?.meld_parts.iter().map(|part| part.id).find(|&c| designated(c))
+        let c = self.battlefield.find_by_id(id)?;
+        c.meld_parts.iter().chain(c.mutate_stack.iter()).map(|part| part.id).find(|&c| designated(c))
     }
 
     /// Whether the battlefield object `id` is one of `seat`'s own commanders,
-    /// directly or as a meld component (CR 903.3).
+    /// directly or as a meld or merge component (CR 903.3b / 903.3c).
     pub fn is_own_commander_object(&self, seat: usize, id: crate::card::CardId) -> bool {
         let Some(p) = self.players.get(seat) else { return false };
         if p.commanders.is_empty() {
@@ -6535,7 +6537,9 @@ impl GameState {
             || self
                 .battlefield
                 .find_by_id(id)
-                .is_some_and(|c| c.meld_parts.iter().any(|part| p.commanders.contains(&part.id)))
+                .is_some_and(|c| {
+                    c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|part| p.commanders.contains(&part.id))
+                })
     }
 
     /// Add `amount` to the commander-damage tally for
