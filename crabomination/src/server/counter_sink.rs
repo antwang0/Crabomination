@@ -3,6 +3,9 @@
 //! — a 6-seat `--card-census` over every deck (seed 206001) never used Forge
 //! of Heroes in four decks. The bot now spends idle main-phase mana on one,
 //! aimed at its own biggest creature or planeswalker the filter allows.
+//! Level up (CR 702.87 — Kazandu Tuskcaller, Hada Spy Patrol, Coralhelm
+//! Commander) had the same gap: a level counter shows on no board until a
+//! tier, so idle mana now levels up to the card's top tier.
 //! Commander games only, so two-player play is unchanged.
 
 use crate::card::CounterType;
@@ -43,7 +46,7 @@ pub(super) fn pick_counter_sink(state: &GameState, seat: usize) -> Option<GameAc
         })
         .collect();
     if abilities.is_empty() {
-        return None;
+        return pick_level_up(state, seat);
     }
     let mut own: Vec<(i32, crate::card::CardId)> = state
         .battlefield
@@ -63,6 +66,43 @@ pub(super) fn pick_counter_sink(state: &GameState, seat: usize) -> Option<GameAc
                 mode: None,
             })
             .find(|a| state.would_accept(a.clone()))
+    })
+    .or_else(|| pick_level_up(state, seat))
+}
+
+/// CR 702.87a — "Level up [cost]": `AddCounter { This, Level }`.
+fn levels_self(e: &Effect) -> bool {
+    matches!(e, Effect::AddCounter { what: Selector::This, kind: CounterType::Level, .. })
+}
+
+/// The highest level a tier of `def` asks for (its `SourceHasCountersAtLeast`
+/// thresholds on level counters), past which a level counter buys nothing.
+fn top_tier(def: &crate::card::CardDefinition) -> u32 {
+    let text = format!("{def:?}");
+    text.split("counter: Level, n: ")
+        .skip(1)
+        .filter_map(|rest| rest.split(|c: char| !c.is_ascii_digit()).next()?.parse().ok())
+        .max()
+        .unwrap_or(0)
+}
+
+/// A level-up activation on one of `seat`'s permanents still below its top
+/// tier, if one is accepted.
+fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
+    state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
+        let idx = c.definition.activated_abilities.iter().position(|ab| levels_self(&ab.effect))?;
+        if c.counter_count(CounterType::Level) >= top_tier(&c.definition) {
+            return None;
+        }
+        let action = GameAction::ActivateAbility {
+            card_id: c.id,
+            ability_index: idx,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        };
+        state.would_accept(action.clone()).then_some(action)
     })
 }
 
@@ -95,5 +135,21 @@ mod tests {
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == forge && t == cmd
         ), "the Giant is bigger but not a commander that entered this turn");
+    }
+
+    /// Kazandu Tuskcaller levels up on idle mana until its top tier (6), then
+    /// stops.
+    #[test]
+    fn idle_mana_levels_up_to_the_top_tier() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let tusk = g.add_card_to_battlefield(0, crate::catalog::kazandu_tuskcaller());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        assert!(matches!(pick_counter_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == tusk));
+        g.battlefield_find_mut(tusk).unwrap().add_counters(CounterType::Level, 6);
+        assert!(pick_counter_sink(&g, 0).is_none(), "level 6 is the top tier");
     }
 }
