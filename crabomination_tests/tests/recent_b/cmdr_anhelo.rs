@@ -416,6 +416,19 @@ fn waste_management_single_graveyard_and_kicked_target_player() {
     assert_eq!(named(&g, 0, "Rogue").len(), 1);
 }
 
+/// "Up to two target cards" (CR 601.2c: zero is a legal count) — cast with
+/// none named while graveyard cards exist, Waste Management resolves making
+/// no Rogue; the optional slot is read through its `Seq` (the step that
+/// declares it decides).
+#[test]
+fn waste_management_may_name_no_cards() {
+    let mut g = pod(3);
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let wm = g.add_card_to_hand(0, catalog::waste_management());
+    cast_full(&mut g, 0, wm, None, vec![], None).expect("up to two");
+    assert!(named(&g, 0, "Rogue").is_empty());
+}
+
 /// Xander's Pact — cast an opponent's exiled top card for life.
 #[test]
 fn xanders_pact_steals_a_spell() {

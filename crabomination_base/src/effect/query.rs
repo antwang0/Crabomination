@@ -5651,6 +5651,12 @@ impl Effect {
                 then.target_slot_optional_x(slot, mode, x) || else_.target_slot_optional_x(slot, mode, x)
             }
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.target_slot_optional_x(slot, None, x)),
+            // The step that declares the slot decides (Waste Management's
+            // `Seq[If { kicked, …, up to two }, tokens]`).
+            Effect::Seq(steps) if self.min_targets_in_mode(mode).is_none() => steps
+                .iter()
+                .find(|e| e.target_filter_for_slot_in_mode_kicked(slot, None, false).is_some())
+                .is_some_and(|e| e.target_slot_optional_x(slot, None, x)),
             _ => self
                 .min_targets_in_mode(mode)
                 .is_some_and(|min| slot >= min),
