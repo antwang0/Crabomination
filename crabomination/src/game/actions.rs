@@ -11231,6 +11231,18 @@ impl GameState {
         from_hand: bool,
     ) {
         let card_id = card.id;
+        // CR 601.2d / 608.2h — "where X is … as you cast this spell" is fixed
+        // now; the body reads it back as the spell's X.
+        let x_value = match &card.definition.x_as_cast {
+            Some(v) => {
+                let ctx = crate::game::effects::EffectContext::for_spell_with_source(
+                    card_id, card.definition.name, p, target.clone(), additional_targets.clone(),
+                    mode.unwrap_or(0), x_value, converged_value, mana_spent,
+                );
+                self.evaluate_value(v, &ctx).max(0) as u32
+            }
+            None => x_value,
+        };
         // "The next [filter] spell you cast this turn can't be countered" is a
         // one-shot: the matching cast consumes its grant.
         if !self.players[p].next_spell_uncounterable.is_empty() {
