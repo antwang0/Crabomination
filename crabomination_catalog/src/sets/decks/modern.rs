@@ -4598,7 +4598,7 @@ pub fn regisaur_alpha() -> CardDefinition {
                 name: "Dinosaur".into(),
                 power: 3,
                 toughness: 3,
-                keywords: vec![],
+                keywords: vec![Keyword::Trample],
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Green],
                 supertypes: vec![],

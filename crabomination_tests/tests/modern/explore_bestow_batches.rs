@@ -342,6 +342,8 @@ fn regisaur_alpha_makes_a_token_and_grants_haste() {
     let view = g.compute_battlefield();
     let tok = view.iter().find(|c| c.id == tok_id).unwrap();
     assert!(tok.keywords().contains(&crabomination::card::Keyword::Haste), "other Dinosaurs gain haste");
+    // The token itself prints trample (it shipped without).
+    assert!(tok.keywords().contains(&crabomination::card::Keyword::Trample));
 }
 
 #[test]
