@@ -696,7 +696,7 @@ impl GameState {
                 return Ok(events);
             }
             TurnStep::Draw => {
-                // CR 103.7a — only the *starting player's first* draw step is
+                // CR 103.8a — only the *starting player's first* draw step is
                 // skipped. Consuming the flag unconditionally handed the skip
                 // to whoever reached a draw step first, so a game advanced
                 // past turn 1 (every test fixture) robbed the wrong seat.

@@ -478,7 +478,7 @@ fn aetherborn_marauder_etb_gathers_your_plus_one_counters() {
 fn lathnu_hellion_survives_end_step_when_energy_paid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -505,7 +505,7 @@ fn lathnu_hellion_survives_end_step_when_energy_paid() {
 fn lathnu_hellion_sacrificed_at_end_step_when_energy_unpaid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {

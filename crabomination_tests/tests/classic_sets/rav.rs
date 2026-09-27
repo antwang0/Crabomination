@@ -885,7 +885,7 @@ fn surveilling_sprite_dies_draw() {
 fn zephyr_spirit_returns_on_block() {
     use crabomination::game::types::{Attack, AttackTarget, TurnStep};
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // CR 103.8a — only turn 1's draw is skipped; stock both libraries so
     // crossing a turn boundary doesn't deck anyone.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -2135,7 +2135,7 @@ fn plague_boiler_pops_at_three_counters() {
     use crabomination::card::CounterType;
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // CR 103.8a — only turn 1's draw is skipped; stock both libraries so
     // crossing a turn boundary doesn't deck anyone.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -2237,7 +2237,7 @@ fn leashling_bounces_itself_for_a_card() {
 fn instill_furor_sacrifices_a_creature_that_didnt_attack() {
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // CR 103.8a — only turn 1's draw is skipped; stock both libraries so
     // crossing a turn boundary doesn't deck anyone.
     for seat in 0..2 {
         for _ in 0..5 {

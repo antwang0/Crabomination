@@ -6837,7 +6837,7 @@ impl GameState {
     /// CR 103.5 — seat `seat` as the starting player. Call after building
     /// the state and before the first turn: it takes the first turn, opens
     /// with priority, and (in a two-player game) skips its first draw per
-    /// CR 103.7a.
+    /// CR 103.8a (103.8c: no skip past two seats).
     ///
     /// `GameState::new` seats player 0, which is right for a scripted test
     /// and wrong for a real match — someone has to win the die roll.
@@ -6853,7 +6853,7 @@ impl GameState {
 
     /// CR 315.5a — "You are the starting player" (Power Play). Call before
     /// the first turn: the seat claiming it becomes the active player, and a
-    /// random one wins if several claim it. Also re-seats the CR 103.7a
+    /// random one wins if several claim it. Also re-seats the CR 103.8a
     /// opening-draw skip. Returns the starting seat.
     pub fn apply_starting_player_conspiracies(&mut self) -> usize {
         use rand::seq::IteratorRandom;

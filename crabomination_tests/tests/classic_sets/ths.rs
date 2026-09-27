@@ -12,7 +12,7 @@ fn main_phase() -> GameState {
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    // CR 103.7a — only turn 1's draw is skipped, so a fixture that crosses a
+    // CR 103.8a — only turn 1's draw is skipped, so a fixture that crosses a
     // turn boundary needs something to draw.
     for seat in 0..2 {
         for _ in 0..5 {

@@ -233,7 +233,7 @@ fn cr_703_4c_untap_precedes_upkeep_priority() {
 }
 
 /// CR 703.4d — the active player draws immediately as the draw step begins
-/// (CR 103.7a's opening-hand skip is a one-shot, not a turn-based action).
+/// (CR 103.8a's opening-hand skip is a one-shot, not a turn-based action).
 #[test]
 fn cr_703_4d_draw_step_draws_a_card() {
     let mut g = main_phase();

@@ -1928,7 +1928,7 @@ fn maelstrom_taps_for_colorless_and_tutors_dragon() {
 fn static_snare_reduced_by_attackers() {
     use crabomination::game::actions::cost_reduction_for_spell;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // CR 103.8a — only turn 1's draw is skipped; stock both libraries so
     // crossing a turn boundary doesn't deck anyone.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -2039,7 +2039,7 @@ fn windcrag_siege_control_single_fire() {
 fn windcrag_siege_jeskai_makes_goblin() {
     use crabomination::card::CreatureType;
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; stock both libraries so
+    // CR 103.8a — only turn 1's draw is skipped; stock both libraries so
     // crossing a turn boundary doesn't deck anyone.
     for seat in 0..2 {
         for _ in 0..5 {

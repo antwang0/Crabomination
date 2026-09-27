@@ -493,7 +493,7 @@ mod recent180 {
     #[test]
     fn mistbreath_elder_bounces_and_grows() {
         let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {

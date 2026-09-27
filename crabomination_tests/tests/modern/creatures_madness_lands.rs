@@ -1317,7 +1317,7 @@ fn thalia_taxes_every_noncreature_spell() {
 #[test]
 fn phyrexian_arena_draws_card_and_loses_life_at_upkeep() {
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {

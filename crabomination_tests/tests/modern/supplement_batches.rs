@@ -2071,7 +2071,7 @@ fn ichorid_returns_at_upkeep_then_sacrifices_at_end_step() {
     // graveyard; if you do, return Ichorid. Seed a black creature in p0's
     // own graveyard and accept the optional return.
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -2275,7 +2275,7 @@ fn bitterbloom_bearer_mints_a_faerie_each_upkeep() {
 #[test]
 fn dandan_sacrifices_at_upkeep_when_no_island() {
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {
@@ -2302,7 +2302,7 @@ fn dandan_sacrifices_at_upkeep_when_no_island() {
 #[test]
 fn dandan_stays_in_play_with_an_island() {
     let mut g = two_player_game();
-    // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
+    // CR 103.8a — only turn 1's draw is skipped; keep libraries stocked for
     // fixtures that cross a turn boundary.
     for seat in 0..2 {
         for _ in 0..5 {

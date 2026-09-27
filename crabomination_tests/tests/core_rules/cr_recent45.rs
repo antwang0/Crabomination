@@ -145,7 +145,7 @@ fn cr_504_1_active_player_draws_as_a_turn_based_action() {
     assert!(g.stack.is_empty(), "the turn-based draw never used the stack");
 }
 
-/// CR 103.7a — the skip belongs to the *starting player's first* draw step,
+/// CR 103.8a — the skip belongs to the *starting player's first* draw step,
 /// not to whoever reaches a draw step first.
 #[test]
 fn cr_103_7a_only_the_starting_players_first_draw_is_skipped() {

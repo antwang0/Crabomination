@@ -140,7 +140,7 @@ fn cr_703_4d_draw_step_draw_is_a_turn_based_action() {
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::lightning_bolt());
     }
-    // CR 103.7a — the starting player skips only their *first* draw step.
+    // CR 103.8a — the starting player skips only their *first* draw step.
     g.turn_number = 2;
     g.step = TurnStep::Upkeep;
     g.priority.player_with_priority = 0;
