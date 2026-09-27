@@ -2653,6 +2653,11 @@ pub enum Predicate {
     /// attackers. Gates "Whenever you attack with one or more creatures with
     /// flying / power 4+" triggers (Teo, Spirited Glider; Bitter Work).
     AttackedWithCreatureMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// The player `player` resolves to is attacked (the player, not a
+    /// planeswalker) by a creature the evaluating controller controls that
+    /// matches `filter` — "whenever one or more Devils you control attack one
+    /// or more players, you and those players …" (Zurzoth, Chaos Rider).
+    PlayerAttackedByMatching { player: PlayerRef, filter: SelectionRequirement },
     /// Some opponent's top library card shares a card type with the card
     /// `what` names (Gandalf, Westward Voyager's "each opponent reveals the
     /// top card of their library. If any of those cards shares a card type

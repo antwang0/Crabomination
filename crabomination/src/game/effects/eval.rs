@@ -3784,6 +3784,19 @@ impl GameState {
                         )
                 })
             }
+            Predicate::PlayerAttackedByMatching { player, filter } => {
+                let Some(q) = self.resolve_player(player, ctx) else { return false };
+                self.attacking.iter().any(|a| {
+                    a.target == crate::game::types::AttackTarget::Player(q)
+                        && self.battlefield_find(a.attacker).is_some_and(|c| c.controller == ctx.controller)
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(a.attacker),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                })
+            }
             Predicate::CommittedCrimeThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].committed_crime_this_turn),
