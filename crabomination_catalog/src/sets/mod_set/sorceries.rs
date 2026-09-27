@@ -227,15 +227,23 @@ pub fn fell() -> CardDefinition {
     }
 }
 
-/// Blasphemous Edict — {3}{B}{B} Sorcery. Each player sacrifices thirteen
-/// creatures of their choice (`Effect::Sacrifice` over `EachPlayer`, which
-/// stops at an empty board). The {B} alternative cost at thirteen or more
-/// creatures is not modelled.
+/// Blasphemous Edict — {3}{B}{B} Sorcery; {B} instead with thirteen or more
+/// creatures on the battlefield. Each player sacrifices thirteen creatures of
+/// their choice (`Effect::Sacrifice` over `EachPlayer`, which stops at an
+/// empty board).
 pub fn blasphemous_edict() -> CardDefinition {
     CardDefinition {
         name: "Blasphemous Edict",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[b()]),
+            condition: Some(crate::effect::Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::EachPermanent(SelectionRequirement::Creature))),
+                Value::Const(13),
+            )),
+            ..Default::default()
+        }),
         effect: Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachPlayer),
             count: Value::Const(13),

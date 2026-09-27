@@ -208,6 +208,30 @@ fn blasphemous_edict_each_player_sacrifices_a_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == theirs));
 }
 
+/// Blasphemous Edict costs {B} with thirteen or more creatures on the
+/// battlefield, and not with twelve (the alternative cost shipped missing).
+#[test]
+fn blasphemous_edict_costs_b_with_thirteen_creatures() {
+    let mut g = two_player_game();
+    for seat in [0, 1] {
+        for _ in 0..6 {
+            g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        }
+    }
+    let edict = g.add_card_to_hand(0, catalog::blasphemous_edict());
+    let alt = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: edict, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    assert!(alt(&mut g).is_err(), "twelve creatures");
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    alt(&mut g).expect("thirteen: {B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
 #[test]
 fn fell_destroys_tapped_creature() {
     let mut g = two_player_game();
