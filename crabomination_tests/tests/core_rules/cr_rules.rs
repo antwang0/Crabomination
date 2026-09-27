@@ -1361,6 +1361,23 @@ fn cr_302_6_auto_pay_skips_a_summoning_sick_mana_creature() {
     .expect("three Islands pay {1}{U}{U}");
 }
 
+/// CR 302.6 — the hybrid pass counts reachable colors the same way: a sick
+/// Elf is no green source, so Kitchen Finks' {G/W}{G/W} splits Forest and
+/// Plains instead of reserving two greens and failing on the Elf.
+#[test]
+fn cr_302_6_hybrid_pips_do_not_count_a_summoning_sick_producer() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let finks = g.add_card_to_hand(0, catalog::kitchen_finks());
+    g.perform_action(GameAction::CastSpell { card_id: finks, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Forest + Plains + Plains pay {1}{G/W}{G/W}");
+}
+
 /// CR 302.6 — a stolen creature is summoning-sick under its new controller.
 #[test]
 fn cr_302_6_gain_control_sets_summoning_sickness() {
