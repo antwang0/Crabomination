@@ -309,3 +309,51 @@ fn cr_400_7_a_transformed_permanent_is_still_the_object_a_delayed_return_names()
     assert!(g.battlefield_find(delver).is_none(), "the transformed commander still goes home");
     assert!(g.players[0].command.iter().any(|c| c.id == delver));
 }
+
+/// CR 400.7 — a delayed "return it" captures the object that died, not the
+/// card: once the card has come back and died again it is a new object and
+/// the old trigger does nothing. Liliana, Defiant Necromancer's emblem
+/// returned a Phantasmal Image once per death it had ever had, and every
+/// return died and doubled the queue (a five-seat pod: 312, 575 ... 9,864
+/// actions a turn, then the cap). A 0/0 dies on each return here.
+#[test]
+fn cr_400_7_a_stale_delayed_return_does_not_bring_back_the_new_object() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let emblem = catalog::liliana_heretical_healer().back_face.expect("Liliana flips").loyalty_abilities[2].effect.clone();
+    g.resolve_effect(&emblem, &EffectContext::for_ability(crabomination::card::CardId(0), 0, None)).unwrap();
+    let reanimate = |g: &mut GameState, id| {
+        let body = Effect::Move {
+            what: Selector::Target(0),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        };
+        g.resolve_effect(&body, &EffectContext::for_ability(id, 0, Some(Target::Permanent(id)))).unwrap();
+        let ev = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(g);
+    };
+    // A 0/0 Endless One dies as it arrives: two deaths, two objects, two
+    // delayed returns queued for the end step.
+    let one = g.add_card_to_graveyard(0, catalog::endless_one());
+    reanimate(&mut g, one);
+    reanimate(&mut g, one);
+    assert_eq!(g.delayed_triggers.len(), 2);
+    // At the end step only the live one returns it; it dies again and queues
+    // one return for the next end step, not two.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    loop {
+        drain_stack(&mut g);
+        let ev = g.check_state_based_actions();
+        if ev.is_empty() && g.stack.is_empty() {
+            break;
+        }
+        g.dispatch_triggers_for_events(&ev);
+    }
+    assert_eq!(g.delayed_triggers.len(), 1);
+}

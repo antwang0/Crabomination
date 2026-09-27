@@ -31200,11 +31200,25 @@ impl GameState {
                     Some(Target::Player(p)) => Some(p),
                     _ => None,
                 };
+                // CR 400.7 — a captured card is that object only until it
+                // next enters the battlefield: the body runs only while its
+                // entry stamp is the captured one.
+                let effect = match target {
+                    Some(Target::Permanent(cid)) => match self.find_card_anywhere(cid) {
+                        Some(c) => Effect::If {
+                            cond: crate::effect::Predicate::TargetIsCapturedObject { battlefield_timestamp: c.battlefield_timestamp },
+                            then: body.clone(),
+                            else_: Box::new(Effect::Noop),
+                        },
+                        None => (**body).clone(),
+                    },
+                    _ => (**body).clone(),
+                };
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     kind: delayed_kind_from_effect(*kind, captured_player, ctx.controller, self.turn_number),
-                    effect: (**body).clone(),
+                    effect,
                     target,
                     bound_token: self.last_created_token,
                     bound_subject: None,

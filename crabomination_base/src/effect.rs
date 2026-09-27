@@ -1947,6 +1947,13 @@ pub enum Predicate {
     /// attach / transform / turn-face-up re-stamps carry it along, since those
     /// keep the object.
     SourceIsSameObjectOnBattlefield { battlefield_timestamp: u64 },
+    /// CR 400.7 — the delayed body's `Target(0)` is still the object that was
+    /// captured, in whatever zone: its `battlefield_timestamp` is unchanged, so
+    /// it has not re-entered the battlefield since. A card that came back and
+    /// left again is a new object (Liliana's emblem returned a Phantasmal
+    /// Image once per death it had ever had). Stamped by
+    /// `Effect::DelayUntilWithCapture`.
+    TargetIsCapturedObject { battlefield_timestamp: u64 },
     /// The source is blocking a creature that at least one *other* blocker
     /// matching `filter` is also blocking, and every blocker on it matches
     /// `filter` (Wall of Caltrops' banding intervening-'if').

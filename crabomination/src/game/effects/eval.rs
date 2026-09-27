@@ -2669,6 +2669,12 @@ impl GameState {
                         .is_some_and(|c| c.battlefield_timestamp == *battlefield_timestamp)
                 })
             }
+            Predicate::TargetIsCapturedObject { battlefield_timestamp } => match ctx.targets.first() {
+                Some(Target::Permanent(cid)) => self
+                    .find_card_anywhere(*cid)
+                    .is_some_and(|c| c.battlefield_timestamp == *battlefield_timestamp),
+                _ => false,
+            },
             // Wall of Caltrops — every blocker on the creature the source is
             // blocking matches `filter`, and at least one of them isn't the
             // source.
