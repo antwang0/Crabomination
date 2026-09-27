@@ -961,3 +961,26 @@ fn shorikai_pilot_crews_as_power_three() {
     let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").expect("pilot").id;
     g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![pilot] }).expect("crew 3");
 }
+
+/// Powder Ganger — "destroy *up to one* target artifact": the opponent's Sol
+/// Ring goes; with only our own artifact out, nothing is destroyed.
+#[test]
+fn powder_ganger_destroys_up_to_one_artifact() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let pg = g.add_card_to_hand(0, catalog::powder_ganger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, pg, None).expect("Powder Ganger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "their artifact destroyed");
+
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let pg = g.add_card_to_hand(0, catalog::powder_ganger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, pg, None).expect("Powder Ganger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "zero targets is legal: ours survives");
+}
