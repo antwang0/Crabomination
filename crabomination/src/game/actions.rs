@@ -16041,6 +16041,10 @@ impl GameState {
                 return false;
             }
             self.effective_mana_abilities_into(c, &scan, &mut mana_abilities);
+            // CR 302.6 — as `mana_source_table`.
+            if c.summoning_sick && self.tap_ability_summoning_sick(c, player) {
+                mana_abilities.retain(|(_, a)| !(a.tap_cost || a.untap_self_cost));
+            }
             if mana_abilities.is_empty() {
                 return false;
             }
