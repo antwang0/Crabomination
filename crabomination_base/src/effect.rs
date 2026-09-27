@@ -6919,6 +6919,10 @@ pub enum Effect {
     /// pile, shuffle that pile, and put it back on top" (Triumph of Saint
     /// Katherine) — only while [what] is still in its owner's graveyard.
     ShuffleIntoTopPile { what: Selector, depth: Value },
+    /// "Copy it. You may cast the copy by paying `cost` rather than paying its
+    /// mana cost" (Blue Mage's Cane) — an alternative cost for a copy cast as
+    /// this resolves; taxes and discounts still apply.
+    CastCopyForCost { what: Selector, source_zone: crate::card::Zone, cost: crate::mana::ManaCost },
     /// "That creature enters with N additional [kind] counters" on a spell
     /// still on the stack — stamps the spell's `pending_etb_counters`
     /// (Bloodlord of Vaasgoth's granted bloodthirst).

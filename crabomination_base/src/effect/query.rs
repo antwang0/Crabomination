@@ -2125,7 +2125,9 @@ impl Effect {
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::LoseCardTypeUntilEot { what, .. } => sel_has_target(what),
-            Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
+            Effect::CastWithoutPayingImmediate { what, .. } | Effect::CastCopyForCost { what, .. } => {
+                sel_has_target(what)
+            }
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
             Effect::Ripple { .. } => false,
@@ -2719,6 +2721,7 @@ impl Effect {
             | Effect::CounterUnless { what, .. }
             | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
+            | Effect::CastCopyForCost { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
             | Effect::CopySpellAsOneOneSpirit { what }
@@ -5309,6 +5312,7 @@ impl Effect {
                 | Effect::GrantMayPlay { what, .. }
                 | Effect::GrantMayPlayForLife { what, .. }
                 | Effect::CastWithoutPayingImmediate { what, .. }
+                | Effect::CastCopyForCost { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
