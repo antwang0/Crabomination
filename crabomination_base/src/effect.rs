@@ -7797,6 +7797,10 @@ pub enum Effect {
     /// ControlledBySeat)`; a player can't be targeted or dealt damage by
     /// anything that player controls. Guardian Archon, Eon Frolicker.
     GainProtectionFromPlayer { what: Selector, from: PlayerRef, duration: Duration },
+    /// CR 509.1b — each permanent `what` picks "can't be blocked by creatures
+    /// [the player `by` resolves to] controls" for `duration`
+    /// (`CantBeBlockedBy(ControlledBySeat)`). The Black Gate.
+    CantBeBlockedByPlayer { what: Selector, by: PlayerRef, duration: Duration },
     /// CR 603.7d — "until your next turn, whenever [those creatures] deal
     /// combat damage, [body]": a delayed trigger per permanent `what` picks,
     /// controlled by this effect's controller (Tamiyo, Field Researcher's +1).

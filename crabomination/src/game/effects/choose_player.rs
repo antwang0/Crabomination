@@ -213,4 +213,25 @@ impl GameState {
             }
         }
     }
+
+    /// `Effect::CantBeBlockedByPlayer` (CR 509.1b): the picked permanents
+    /// can't be blocked by creatures that player controls.
+    pub(super) fn cant_be_blocked_by_player(
+        &mut self,
+        what: &crate::effect::Selector,
+        by: &crate::effect::PlayerRef,
+        duration: crate::effect::Duration,
+        ctx: &EffectContext,
+    ) {
+        use crate::game::effects::EntityRef;
+        let Some(q) = self.resolve_player(by, ctx) else { return };
+        let kw = crate::card::Keyword::CantBeBlockedBy(Box::new(
+            crate::card::SelectionRequirement::ControlledBySeat(q as u8),
+        ));
+        for ent in self.resolve_selector(what, ctx) {
+            if let EntityRef::Permanent(cid) = ent {
+                self.grant_keyword_for(cid, kw.clone(), duration, ctx);
+            }
+        }
+    }
 }

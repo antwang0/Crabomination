@@ -28676,6 +28676,10 @@ impl GameState {
                 self.gain_protection_from_player(what, from, *duration, ctx);
                 Ok(())
             }
+            Effect::CantBeBlockedByPlayer { what, by, duration } => {
+                self.cant_be_blocked_by_player(what, by, *duration, ctx);
+                Ok(())
+            }
 
             Effect::RememberPlayerOnSource { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
