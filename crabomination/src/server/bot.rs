@@ -11270,12 +11270,12 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
             .and_then(|h| state.battlefield_find(h))
             .filter(|h| h.controller == seat && h.definition.is_creature());
         if moving_from.is_some() {
-            let side_power = |g: &GameState| -> i32 {
+            let side_power = |g: &GameState| -> i64 {
                 g.battlefield
                     .iter()
                     .filter(|c| c.controller == seat && c.definition.is_creature())
-                    .map(|c| g.computed_permanent(c.id).map_or(0, |cp| cp.power))
-                    .sum()
+                    .map(|c| i64::from(g.computed_permanent(c.id).map_or(0, |cp| cp.power)))
+                    .sum::<i64>()
             };
             let Some(after) = state.accept(action.clone()) else { continue };
             if side_power(&after) <= side_power(state) {
