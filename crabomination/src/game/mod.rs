@@ -8703,6 +8703,16 @@ impl GameState {
         })
     }
 
+    /// CR 614.12 — the entering card's own "if it wasn't cast [or no mana
+    /// was spent to cast it], exile it instead" (Primeval Spawn).
+    pub(crate) fn exiled_if_enters_uncast_or_free(card: &CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        card.definition
+            .static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, StaticEffect::ExileSelfIfEntersUncastOrFree))
+    }
+
     /// CR 614.2 — number of `StaticEffect::DoubleDamageDealt` permanents on
     /// the battlefield (controller-agnostic: Furnace of Rath doubles *all*
     /// damage). Damage is scaled by `2^n`; `n` doublers → `2^n×`.
@@ -31325,6 +31335,7 @@ fn static_effect_to_effects(
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.
             | StaticEffect::ExileNontokenCreaturesNotCast
+            | StaticEffect::ExileSelfIfEntersUncastOrFree
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize

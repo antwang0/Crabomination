@@ -3006,6 +3006,10 @@ pub enum StaticEffect {
     /// to exile. Cast creature spells bypass this path entirely (they enter
     /// via `resolve_spell` in `stack.rs`), so they are unaffected.
     ExileNontokenCreaturesNotCast,
+    /// CR 614.1a / 614.12 — "If this creature would enter and it wasn't
+    /// cast or no mana was spent to cast it, exile it instead." A self
+    /// replacement read off the entering card (Primeval Spawn).
+    ExileSelfIfEntersUncastOrFree,
     /// CR 402.2 — "You have no maximum hand size." While the controller has
     /// a permanent carrying this static, their cleanup-step discard is
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,

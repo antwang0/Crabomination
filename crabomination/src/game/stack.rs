@@ -2449,6 +2449,18 @@ impl GameState {
                     self.shuffle_library(owner, &mut events);
                     return Ok(events);
                 }
+                // CR 614.12 — "if no mana was spent to cast it, exile it
+                // instead" (Primeval Spawn); a copy was never cast either.
+                if card.definition.is_permanent()
+                    && !card.casting_alt_half()
+                    && mana_spent == 0
+                    && Self::exiled_if_enters_uncast_or_free(&card)
+                {
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    return Ok(events);
+                }
                 if card.definition.is_permanent() && !card.casting_alt_half() {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
