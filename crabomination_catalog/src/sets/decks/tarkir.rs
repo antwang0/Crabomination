@@ -549,7 +549,7 @@ pub fn auroral_procession() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::InGraveyard),
+            what: target_filtered(SelectionRequirement::InYourGraveyard),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()

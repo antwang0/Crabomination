@@ -2023,7 +2023,7 @@ pub fn yathan_roadwatcher() -> CardDefinition {
                 Effect::Reflexive {
                     body: Box::new(Effect::Move {
                         what: target_filtered(
-                            R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3)),
+                            R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3)),
                         ),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,

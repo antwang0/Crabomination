@@ -477,7 +477,7 @@ pub fn lin_sivvi_defiant_hero() -> CardDefinition {
                 effect: Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::InGraveyard
+                        filter: R::InYourGraveyard
                             .and(R::HasCreatureType(CreatureType::Rebel)),
                     },
                     to: ZoneDest::Library {

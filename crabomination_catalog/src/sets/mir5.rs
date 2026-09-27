@@ -276,7 +276,7 @@ pub fn hakim_loreweaver() -> CardDefinition {
                     aura: Selector::TargetFiltered {
                         slot: 0,
                         filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
-                            .and(R::InGraveyard),
+                            .and(R::InYourGraveyard),
                     },
                     host: Selector::This,
                 },

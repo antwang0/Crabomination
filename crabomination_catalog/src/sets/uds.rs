@@ -2106,7 +2106,7 @@ pub fn body_snatcher() -> CardDefinition {
                 body: Box::new(Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::Creature.and(R::InGraveyard),
+                        filter: R::Creature.and(R::InYourGraveyard),
                     },
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),

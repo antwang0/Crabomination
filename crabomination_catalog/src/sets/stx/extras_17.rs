@@ -37,7 +37,7 @@ pub fn efreet_flamepainter() -> CardDefinition {
                 reduce_generic: 0,
                                 pay_own_cost: false,
                 what: target_filtered(
-                    SelectionRequirement::InGraveyard.and(
+                    SelectionRequirement::InYourGraveyard.and(
                         SelectionRequirement::HasCardType(CardType::Instant)
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                     ),
@@ -129,7 +129,7 @@ pub fn venerable_warsinger() -> CardDefinition {
                 description: "Reanimate a creature (MV 3 or less)".into(),
                 body: Box::new(Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::InGraveyard
+                        SelectionRequirement::InYourGraveyard
                             .and(SelectionRequirement::HasCardType(CardType::Creature))
                             .and(SelectionRequirement::ManaValueAtMostXFromCost),
                     ),

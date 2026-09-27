@@ -1394,7 +1394,7 @@ pub fn repository_skaab() -> CardDefinition {
     use crate::effect::shortcut::{exploit, target_filtered};
     let return_is = Effect::Move {
         what: target_filtered(
-            SelectionRequirement::InGraveyard.and(
+            SelectionRequirement::InYourGraveyard.and(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             ),
@@ -2214,7 +2214,7 @@ pub fn olivia_crimson_bride() -> CardDefinition {
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    filter: SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                 },
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
@@ -12296,7 +12296,7 @@ pub fn crawl_from_the_cellar() -> CardDefinition {
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                        SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
@@ -12605,7 +12605,7 @@ pub fn renegade_rallier() -> CardDefinition {
             then: Box::new(Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::InGraveyard
+                    filter: SelectionRequirement::InYourGraveyard
                         .and(SelectionRequirement::PermanentCard)
                         .and(SelectionRequirement::ManaValueAtMost(2)),
                 },

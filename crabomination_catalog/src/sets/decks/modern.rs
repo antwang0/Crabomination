@@ -664,7 +664,7 @@ pub fn ardent_elementalist() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::InGraveyard.and(
+                    SelectionRequirement::InYourGraveyard.and(
                         SelectionRequirement::HasCardType(CardType::Instant)
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                     ),
@@ -21822,7 +21822,7 @@ pub fn order_of_midnight() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
@@ -36054,7 +36054,7 @@ pub fn curious_forager() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Forage {
             then: Box::new(Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::InGraveyard),
+                    SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             }),
@@ -51437,7 +51437,7 @@ pub fn myr_retriever() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Artifact
-                    .and(SelectionRequirement::InGraveyard)
+                    .and(SelectionRequirement::InYourGraveyard)
                     .and(SelectionRequirement::OtherThanSource),
             ),
             to: ZoneDest::Hand(PlayerRef::You),
@@ -56084,7 +56084,7 @@ pub fn goblin_engineer() -> CardDefinition {
                 what: Selector::TargetFiltered {
                     slot: 0,
                     filter: SelectionRequirement::Artifact
-                        .and(SelectionRequirement::InGraveyard)
+                        .and(SelectionRequirement::InYourGraveyard)
                         .and(SelectionRequirement::ManaValueAtMost(3)),
                 },
                 to: ZoneDest::Battlefield {
@@ -66165,7 +66165,7 @@ pub fn survivors_bond() -> CardDefinition {
                 Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::InGraveyard)
+                            .and(SelectionRequirement::InYourGraveyard)
                             .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
@@ -66173,7 +66173,7 @@ pub fn survivors_bond() -> CardDefinition {
                 Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::InGraveyard)
+                            .and(SelectionRequirement::InYourGraveyard)
                             .and(
                                 SelectionRequirement::HasCreatureType(CreatureType::Human).negate(),
                             ),

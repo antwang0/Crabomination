@@ -1816,7 +1816,7 @@ pub fn courier_bat() -> CardDefinition {
             },
             then: Box::new(Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
@@ -2527,7 +2527,7 @@ pub fn undead_butler() -> CardDefinition {
                     },
                     Effect::Move {
                         what: target_filtered(
-                            SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                            SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                         ),
                         to: ZoneDest::Hand(PlayerRef::You),
                     },
@@ -3303,7 +3303,7 @@ pub fn diregraf_rebirth() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
             ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
@@ -3324,7 +3324,7 @@ pub fn edgars_awakening() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
             ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
@@ -3476,7 +3476,7 @@ pub fn dryads_revival() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), g()]))],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::InGraveyard),
+            what: target_filtered(SelectionRequirement::InYourGraveyard),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()
@@ -4167,7 +4167,7 @@ pub fn cant_stay_away() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::InGraveyard
+                    SelectionRequirement::InYourGraveyard
                         .and(SelectionRequirement::Creature)
                         .and(SelectionRequirement::ManaValueAtMost(3)),
                 ),

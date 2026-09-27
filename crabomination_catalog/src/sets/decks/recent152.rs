@@ -51,7 +51,7 @@ pub fn rite_of_the_moth() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(3), w(), w(), b()]))],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

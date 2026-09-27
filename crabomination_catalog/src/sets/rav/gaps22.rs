@@ -87,7 +87,7 @@ pub fn sins_of_the_past() -> CardDefinition {
             what: target_filtered(
                 R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))
-                    .and(R::InGraveyard),
+                    .and(R::InYourGraveyard),
             ),
             duration: MayPlayDuration::EndOfThisTurn,
             to_owner: false,

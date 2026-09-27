@@ -297,7 +297,7 @@ pub fn darigaazs_charm() -> CardDefinition {
         cost(&[b(), r(), g()]),
         Effect::ChooseMode(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::DealDamage { to: target_any(), amount: Value::Const(3) },

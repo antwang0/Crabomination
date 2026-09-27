@@ -594,7 +594,7 @@ pub fn pain_seer() -> CardDefinition {
 /// enchantment creature card from your graveyard to hand.
 pub fn odunos_river_trawler() -> CardDefinition {
     let recur = || Effect::Move {
-        what: target_filtered(R::Creature.and(R::Enchantment).and(R::InGraveyard)),
+        what: target_filtered(R::Creature.and(R::Enchantment).and(R::InYourGraveyard)),
         to: ZoneDest::Hand(PlayerRef::You),
     };
     CardDefinition {
@@ -716,7 +716,7 @@ pub fn silent_sentinel() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::MayDo {
             description: "Return an enchantment from your graveyard".into(),
             body: Box::new(Effect::Move {
-                what: target_filtered(R::Enchantment.and(R::InGraveyard)),
+                what: target_filtered(R::Enchantment.and(R::InYourGraveyard)),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -870,7 +870,7 @@ pub fn dawn_to_dusk() -> CardDefinition {
         Effect::ChooseModesCast {
             modes: vec![
                 Effect::Move {
-                    what: target_filtered(R::Enchantment.and(R::InGraveyard)),
+                    what: target_filtered(R::Enchantment.and(R::InYourGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 Effect::Destroy {

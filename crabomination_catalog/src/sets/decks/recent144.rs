@@ -144,7 +144,7 @@ pub fn aquatic_alchemist() -> CardDefinition {
                 what: target_filtered(
                     R::HasCardType(CardType::Instant)
                         .or(R::HasCardType(CardType::Sorcery))
-                        .and(R::InGraveyard),
+                        .and(R::InYourGraveyard),
                 ),
                 to: ZoneDest::Library {
                     who: PlayerRef::You,

@@ -3606,7 +3606,7 @@ pub fn soulcoil_viper() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                        SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                     ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
@@ -3969,7 +3969,7 @@ pub fn glimpse_the_core() -> CardDefinition {
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::InGraveyard
+                    filter: SelectionRequirement::InYourGraveyard
                         .and(SelectionRequirement::HasLandType(LandType::Cave)),
                 },
                 to: ZoneDest::Battlefield {

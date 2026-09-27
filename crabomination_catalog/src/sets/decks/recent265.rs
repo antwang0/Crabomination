@@ -351,7 +351,7 @@ pub fn kami_of_industry() -> CardDefinition {
             Effect::Move {
                 what: target_filtered(
                     R::HasCardType(CardType::Artifact)
-                        .and(R::InGraveyard)
+                        .and(R::InYourGraveyard)
                         .and(R::ManaValueAtMost(3)),
                 ),
                 to: ZoneDest::Battlefield {

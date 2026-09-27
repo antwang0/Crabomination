@@ -347,7 +347,7 @@ pub fn mnemonic_wall() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(
-                SelectionRequirement::InGraveyard.and(
+                SelectionRequirement::InYourGraveyard.and(
                     SelectionRequirement::HasCardType(Ct::Instant)
                         .or(SelectionRequirement::HasCardType(Ct::Sorcery)),
                 ),

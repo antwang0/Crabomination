@@ -326,13 +326,13 @@ pub fn remember_the_fallen() -> CardDefinition {
         Effect::ChooseModesCast {
             modes: vec![
                 Effect::Move {
-                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Artifact.and(R::InGraveyard),
+                        filter: R::Artifact.and(R::InYourGraveyard),
                     },
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
@@ -379,7 +379,7 @@ pub fn auriok_survivors() -> CardDefinition {
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(
-                        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::InGraveyard),
+                        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::InYourGraveyard),
                     ),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
@@ -1710,7 +1710,7 @@ pub fn entomber_exarch() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::DiscardChosen {

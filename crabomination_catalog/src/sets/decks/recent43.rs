@@ -141,7 +141,7 @@ pub fn buried_ruin() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
                 effect: Effect::Move {
-                    what: target_filtered(R::InGraveyard.and(R::Artifact)),
+                    what: target_filtered(R::InYourGraveyard.and(R::Artifact)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()
@@ -164,7 +164,7 @@ pub fn academy_ruins() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1), u()]),
                 effect: Effect::Move {
-                    what: target_filtered(R::InGraveyard.and(R::Artifact)),
+                    what: target_filtered(R::InYourGraveyard.and(R::Artifact)),
                     to: ZoneDest::Library {
                         who: PlayerRef::You,
                         pos: LibraryPosition::Top,

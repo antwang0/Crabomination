@@ -1520,8 +1520,9 @@ pub fn grave_researcher() -> CardDefinition {
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
+                    // "From A graveyard" — it read only yours.
                     filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::InYourGraveyard),
+                        .and(SelectionRequirement::InGraveyard),
                 },
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

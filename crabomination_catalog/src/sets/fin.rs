@@ -2319,7 +2319,7 @@ pub fn evil_reawakened() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

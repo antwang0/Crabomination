@@ -2245,7 +2245,7 @@ pub fn live_or_die() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

@@ -196,7 +196,7 @@ pub fn fell_horseman() -> CardDefinition {
             cost: cost(&[generic(1), b()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         })),

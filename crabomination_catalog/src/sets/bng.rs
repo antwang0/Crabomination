@@ -224,7 +224,7 @@ pub fn forsaken_drifters() -> CardDefinition {
 pub fn griffin_dreamfinder() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(R::Enchantment.and(R::InGraveyard)),
+            what: target_filtered(R::Enchantment.and(R::InYourGraveyard)),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..creature(

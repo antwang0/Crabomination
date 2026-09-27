@@ -1442,3 +1442,33 @@ fn created_tokens_gain_keywords_only_until_end_of_turn() {
         assert!(!kws.contains(&Keyword::Menace) && !kws.contains(&Keyword::Haste), "gone after the turn");
     }
 }
+
+/// "Target ... card from YOUR graveyard" — ~35 cards read any graveyard
+/// (`InGraveyard`), so Buried Ruin could take an opponent's artifact to your
+/// hand. And Grave Researcher's Reanimate is the reverse: "from A graveyard".
+#[test]
+fn your_graveyard_targets_are_yours_and_a_graveyard_is_any() {
+    let mut g = main_phase();
+    let ruin = g.add_card_to_battlefield(0, catalog::buried_ruin());
+    let theirs = g.add_card_to_graveyard(1, catalog::sol_ring());
+    let mine = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let activate = |g: &mut GameState, t| {
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ruin, ability_index: 1, target: Some(Target::Permanent(t)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(activate(&mut g, theirs).is_err(), "an opponent's graveyard isn't yours");
+    activate(&mut g, mine).expect("your own artifact card");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine));
+    // Reanimate (Grave Researcher's spell half) reaches an opponent's graveyard.
+    let def = catalog::grave_researcher();
+    let reanimate = def.prepare_spell.as_ref().expect("its spell").effect.clone();
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        crabomination::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&reanimate, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+}

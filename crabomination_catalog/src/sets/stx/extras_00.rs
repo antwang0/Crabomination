@@ -920,7 +920,7 @@ pub fn confront_the_past() -> CardDefinition {
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Planeswalker
-                        .and(SelectionRequirement::InGraveyard)
+                        .and(SelectionRequirement::InYourGraveyard)
                         .and(SelectionRequirement::ManaValueAtMostXFromCost),
                 ),
                 to: ZoneDest::Battlefield {

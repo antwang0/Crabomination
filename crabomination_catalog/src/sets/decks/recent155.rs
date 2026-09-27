@@ -95,7 +95,7 @@ pub fn call_a_surprise_witness() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3))),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3))),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

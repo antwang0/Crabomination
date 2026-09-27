@@ -833,7 +833,7 @@ pub fn tortured_existence() -> CardDefinition {
             mana_cost: cost(&[b()]),
             discard_cost: Some((R::Creature, 1)),
             effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()
@@ -1617,7 +1617,7 @@ pub fn volraths_stronghold() -> CardDefinition {
                 mana_cost: cost(&[generic(1), b()]),
                 tap_cost: true,
                 effect: Effect::Move {
-                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                     to: ZoneDest::Library {
                         who: PlayerRef::OwnerOf(Box::new(target_n(0))),
                         pos: crate::effect::LibraryPosition::Top,

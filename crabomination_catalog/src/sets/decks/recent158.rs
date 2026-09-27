@@ -235,7 +235,7 @@ pub fn mourners_surprise() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::CreateToken {
