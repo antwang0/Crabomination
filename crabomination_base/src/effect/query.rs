@@ -3320,7 +3320,12 @@ impl Effect {
                 | Effect::RevealHandDiscardAllMatching { .. }
                 // An Aura attached to a player is a Curse (Curse of
                 // Predation, Curse of Opulence): the bot cursed itself.
-                | Effect::Attach { .. } => true,
+                | Effect::Attach { .. }
+                // "Goad each creature target player controls" (Maestros
+                // Confluence): the bot goaded its own team.
+                | Effect::Goad { .. }
+                | Effect::GoadForTheGame { .. }
+                | Effect::GoadWhile { .. } => true,
                 Effect::ApplyToTargets { effect, .. } => hostile(effect),
                 Effect::TargetPlayerThen { then, .. } => hostile(then),
                 Effect::MayDo { body, .. }
