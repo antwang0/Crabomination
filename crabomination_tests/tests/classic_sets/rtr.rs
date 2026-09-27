@@ -1343,26 +1343,28 @@ fn counterflux_counters_opponent_spell() {
     assert_eq!(g.players[0].life, 20, "Bolt countered — no damage");
 }
 
-/// Mercurial Chemister's second ability exiles a graveyard I/S for damage = its MV.
+/// Mercurial Chemister — "{R}, {T}, Discard a card: This creature deals damage
+/// to target creature equal to the discarded card's mana value." It shipped an
+/// invented "exile an instant or sorcery from your graveyard: any target".
 #[test]
-fn mercurial_chemister_gy_exile_burn() {
+fn mercurial_chemister_discards_to_burn_a_creature() {
     use crabomination::game::types::Target;
     use crabomination::mana::Color;
     let mut g = two_player_game();
     let chem = g.add_card_to_battlefield(0, catalog::mercurial_chemister());
     g.clear_sickness(chem);
-    let wrath = g.add_card_to_graveyard(0, catalog::wrath_of_god()); // MV 4
-    let l1 = g.players[1].life;
+    let ogre = g.add_card_to_battlefield(1, catalog::gray_ogre());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god()); // MV 4
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: chem, ability_index: 1,
-        target: Some(Target::Permanent(wrath)),
-        additional_targets: vec![Target::Player(1)],
-        x_value: None, mode: None,
-    }).expect("exile + burn");
+    let act = |g: &mut GameState, t| g.perform_action(GameAction::ActivateAbility {
+        card_id: chem, ability_index: 1, target: Some(t),
+        additional_targets: vec![], x_value: None, mode: None,
+    });
+    assert!(act(&mut g, Target::Player(1)).is_err(), "creatures only");
+    act(&mut g, Target::Permanent(ogre)).expect("discard + burn");
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == wrath), "the I/S card was exiled");
-    assert_eq!(g.players[1].life, l1 - 4, "dealt 4 (its mana value)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wrath), "Wrath was discarded");
+    assert!(g.battlefield_find(ogre).is_none(), "4 damage kills the 2/2");
 }
 
 /// Grove of the Guardian sacrifices itself and taps two creatures to make an 8/8.

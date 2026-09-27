@@ -1523,3 +1523,20 @@ fn printed_tapped_tokens_enter_tapped() {
     assert_eq!(treasures.len(), 3, "one per point of power");
     assert!(treasures.iter().all(|c| c.tapped), "tapped Treasures");
 }
+
+/// Sphinx of Foresight — "You may reveal this card from your opening hand. If
+/// you do, scry 3 at the beginning of your first upkeep." (it shipped with
+/// only the recurring upkeep scry 1).
+#[test]
+fn sphinx_of_foresight_scries_three_from_the_opening_hand() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_hand(0, catalog::sphinx_of_foresight());
+    g.fire_start_of_game_effects();
+    g.step = TurnStep::Untap;
+    let mut ev = g.advance_step(Vec::new()).unwrap();
+    ev.extend(drain_stack(&mut g));
+    assert!(ev.iter().any(|e| matches!(e, GameEvent::ScriedOrSurveiled { player: 0, surveil: false, looked_at: 3 })));
+}

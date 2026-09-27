@@ -141,8 +141,8 @@ pub fn destroy_the_evidence() -> CardDefinition {
 }
 
 /// Mercurial Chemister — {3}{U}{R} 2/3 Human Wizard. {U}, {T}: Draw two cards.
-/// {R}, {T}, Exile an instant or sorcery card from your graveyard: deals damage
-/// equal to the exiled card's mana value to any target.
+/// {R}, {T}, Discard a card: deals damage equal to the discarded card's mana
+/// value to target creature.
 pub fn mercurial_chemister() -> CardDefinition {
     CardDefinition {
         name: "Mercurial Chemister",
@@ -167,23 +167,11 @@ pub fn mercurial_chemister() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[r()]),
                 tap_cost: true,
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: target_filtered(
-                            (R::HasCardType(CardType::Instant)
-                                .or(R::HasCardType(CardType::Sorcery)))
-                            .and(R::InYourGraveyard),
-                        ),
-                        to: ZoneDest::Exile,
-                    },
-                    Effect::DealDamage {
-                        to: Selector::TargetFiltered {
-                            slot: 1,
-                            filter: R::Creature.or(R::Player).or(R::Planeswalker),
-                        },
-                        amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                    },
-                ]),
+                discard_cost: Some((R::Any, 1)),
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::LastDiscardedManaValue,
+                },
                 ..Default::default()
             },
         ],

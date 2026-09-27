@@ -2230,10 +2230,16 @@ pub fn sentinels_mark() -> CardDefinition {
 }
 
 /// Sphinx of Foresight — {2}{U}{U} 4/4 Sphinx with flying. At the beginning of
-/// your upkeep, scry 1. (The opening-hand reveal → first-upkeep scry 3 rider is
-/// approximated by the recurring upkeep scry.)
+/// your upkeep, scry 1; revealed from the opening hand, scry 3 at the first
+/// upkeep.
 pub fn sphinx_of_foresight() -> CardDefinition {
     CardDefinition {
+        // "You may reveal this card from your opening hand. If you do, scry 3
+        // at the beginning of your first upkeep."
+        opening_hand: Some(crate::effect::OpeningHandEffect::RevealForDelayedTrigger {
+            kind: crate::effect::DelayedTriggerKind::YourNextUpkeep,
+            body: Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
