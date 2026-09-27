@@ -31200,11 +31200,15 @@ impl GameState {
                     Some(Target::Player(p)) => Some(p),
                     _ => None,
                 };
-                // CR 400.7 — a captured card is that object only until it
-                // next enters the battlefield: the body runs only while its
-                // entry stamp is the captured one.
+                // CR 400.7 — a card captured OFF the battlefield (a dies
+                // trigger's graveyard card) is that object only until it next
+                // enters the battlefield: the body runs only while its entry
+                // stamp is the captured one. A permanent captured on the
+                // battlefield is often one this resolution just put there, and
+                // its entry stamp is drawn after this point, so it is left
+                // unstamped (Gift of Immortality, Nahiri's return).
                 let effect = match target {
-                    Some(Target::Permanent(cid)) => match self.find_card_anywhere(cid) {
+                    Some(Target::Permanent(cid)) if self.battlefield_find(cid).is_none() => match self.find_card_anywhere(cid) {
                         Some(c) => Effect::If {
                             cond: crate::effect::Predicate::TargetIsCapturedObject { battlefield_timestamp: c.battlefield_timestamp },
                             then: body.clone(),
