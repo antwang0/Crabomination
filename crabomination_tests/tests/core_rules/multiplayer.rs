@@ -6347,3 +6347,42 @@ fn ward_payer_leaving_mid_payment_takes_the_spell_along() {
     assert!(!g.players[1].is_alive(), "City of Brass took the last point");
     assert!(g.battlefield_find(bear).is_some(), "the Bolt left with its caster");
 }
+
+/// CR 800.4a — the same shape through "counter target spell unless its
+/// controller pays {3}" (Mana Leak): City of Brass takes the caster's last
+/// point mid-payment and their spell leaves with them.
+#[test]
+fn mana_leak_payer_leaving_mid_payment_takes_the_spell_along() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(1, catalog::city_of_brass());
+    g.players[1].life = 1;
+    let life0 = g.players[0].life;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    g.priority.player_with_priority = 0;
+    let leak = g.add_card_to_hand(0, catalog::mana_leak());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("leak the bolt");
+    for _ in 0..12 {
+        if g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.stack.is_empty());
+    assert!(!g.players[1].is_alive(), "City of Brass took the last point");
+    assert_eq!(g.players[0].life, life0, "no Bolt resolved");
+}

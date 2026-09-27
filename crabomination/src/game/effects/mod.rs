@@ -22044,10 +22044,10 @@ impl GameState {
                 let paid = willing
                     && self.pay_mana_cost_with_picks(spell_caster, &cost, picks.as_deref(), events);
 
-                // The stack can only have shifted if we suspended, and a
-                // suspend re-runs this arm from the top — so `pos` is still
-                // the warded spell.
+                // A suspend re-runs this arm from the top, but paying can
+                // still take the caster (and the spell) out of the game.
                 if !paid
+                    && let Some(pos) = self.stack_pos_of(cid, true, pos)
                     && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
                     if card.is_token {
@@ -22200,7 +22200,7 @@ impl GameState {
                         None => return Ok(()),
                         Some(true) => {}
                         Some(false) => {
-                            let Some(pos) = self.ward_counter_pos(cid, is_spell, pos) else {
+                            let Some(pos) = self.stack_pos_of(cid, is_spell, pos) else {
                                 self.clear_answer_log();
                                 return Ok(());
                             };
@@ -22229,7 +22229,7 @@ impl GameState {
                 // CR 800.4a — paying can take the payer out of the game (a
                 // City of Brass at 1 life), and their spells and abilities
                 // leave the stack with them: find the item again.
-                if !paid && let Some(pos) = self.ward_counter_pos(cid, is_spell, pos) {
+                if !paid && let Some(pos) = self.stack_pos_of(cid, is_spell, pos) {
                     let removed = self.stack.remove(pos);
                     if is_spell
                         && let StackItem::Spell { card, caster, .. } = removed
@@ -42447,10 +42447,11 @@ impl GameState {
     /// from a hand-picked source set (see [`ask_mana_sources`]).
     ///
     /// [`ask_mana_sources`]: Self::ask_mana_sources
-    /// Where the item a ward trigger counters sits now: `pos` if it is still
-    /// that spell / ability, else the topmost match for `cid`, else `None`
-    /// (it left the stack while the cost was being asked for or paid).
-    fn ward_counter_pos(&self, cid: CardId, is_spell: bool, pos: usize) -> Option<usize> {
+    /// Where the spell (`is_spell`) or ability from `cid` an "unless [they]
+    /// pay" counter looked up at `pos` sits now: `pos` if it is still there,
+    /// else the topmost match, else `None` — paying can take the payer out of
+    /// the game and their spells with them (CR 800.4a).
+    fn stack_pos_of(&self, cid: CardId, is_spell: bool, pos: usize) -> Option<usize> {
         let matches = |si: &StackItem| match si {
             StackItem::Spell { card, .. } => is_spell && card.id == cid,
             StackItem::Trigger { source, .. } => !is_spell && *source == cid,
