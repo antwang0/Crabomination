@@ -177,7 +177,7 @@ pub fn surge(mana_cost: crate::mana::ManaCost, with_rider: bool) -> crate::card:
 }
 
 /// The "animate a land" rider shared by Awaken (CR 702.113) and
-/// Wall of Resurgence / Cyclone Sire: put `counters` +1/+1 counters on the
+/// Wall of Resurgence / Cyclone Sire / Noyan Dar: put `counters` +1/+1 counters on the
 /// land in target slot `slot` and it becomes a 0/0 Elemental creature with
 /// haste that's still a land.
 pub fn animate_land(slot: u8, counters: i32) -> Effect {
@@ -198,6 +198,26 @@ pub fn animate_land(slot: u8, counters: i32) -> Effect {
             duration: Duration::Permanent,
         },
     ])
+}
+
+/// "Target land [you control] becomes an N/N [Elemental] creature [with
+/// haste] until end of turn. It's still a land." — no counters, so nothing
+/// outlives the turn (Embodiment cycle, Elemental Uprising, Lifespark Spellbomb).
+pub fn animate_land_until_eot(
+    slot: u8,
+    filter: SelectionRequirement,
+    size: i32,
+    creature_types: Vec<crate::card::CreatureType>,
+    keywords: Vec<Keyword>,
+) -> Effect {
+    Effect::BecomeCreature {
+        what: Selector::TargetFiltered { slot, filter },
+        power: Value::Const(size),
+        toughness: Value::Const(size),
+        creature_types,
+        keywords,
+        duration: Duration::EndOfTurn,
+    }
 }
 
 /// Awaken N—`mana_cost` (CR 702.113) alternative cost: cast for `mana_cost`;

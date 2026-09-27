@@ -741,7 +741,13 @@ fn embodiment(
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
             effect: Effect::MayDo {
                 description: "Animate a land you control as a 3/3 Elemental?".into(),
-                body: Box::new(crate::effect::shortcut::animate_land(0, 3)),
+                body: Box::new(crate::effect::shortcut::animate_land_until_eot(
+                    0,
+                    R::Land.and(R::ControlledByYou),
+                    3,
+                    vec![CreatureType::Elemental],
+                    vec![Keyword::Haste],
+                )),
             },
         }],
         ..Default::default()

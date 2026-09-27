@@ -1378,3 +1378,37 @@ fn anyones_creature_triggers_see_an_opponents_creature() {
     drain_stack(&mut g);
     assert!(g.permanent_has_keyword(atk, &Keyword::Flying));
 }
+
+/// Elemental Uprising / the Embodiment cycle / Lifespark Spellbomb: "becomes a
+/// 4/4 (3/3) … until end of turn" is a set P/T that ends, not the Awaken
+/// helper's permanent +1/+1 counters on a 0/0 (which left a counter-laden land
+/// behind and stacked with the next animation).
+#[test]
+fn until_end_of_turn_land_animations_leave_no_counters() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let eu = g.add_card_to_hand(0, catalog::elemental_uprising());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, eu, Some(Target::Permanent(forest))).expect("uprising");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(forest).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert_eq!(g.battlefield_find(forest).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    g.do_cleanup(&mut vec![]);
+    assert!(!g.computed_permanent(forest).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let bomb = g.add_card_to_battlefield(0, catalog::lifespark_spellbomb());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility { card_id: bomb, ability_index: 0, target: Some(Target::Permanent(island)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("spellbomb");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(island).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(!cp.keywords().contains(&Keyword::Haste), "no haste on the Spellbomb's 3/3");
+}

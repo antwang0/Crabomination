@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, Keyword,
     SelectionRequirement as R, StaticAbility, Subtypes, Value,
 };
-use crate::effect::shortcut::{add_any_one_color, animate_land, draw, surge, target_filtered};
+use crate::effect::shortcut::{add_any_one_color, animate_land_until_eot, draw, surge, target_filtered};
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest,
 };
@@ -392,14 +392,20 @@ pub fn lead_by_example() -> CardDefinition {
 }
 
 /// Elemental Uprising — {1}{G} Instant. Target land you control becomes a 4/4
-/// Elemental with haste that must be blocked this turn if able.
+/// Elemental with haste until end of turn that must be blocked if able.
 pub fn elemental_uprising() -> CardDefinition {
     CardDefinition {
         name: "Elemental Uprising",
         cost: cost(&[generic(1), crate::mana::g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            animate_land(0, 4),
+            animate_land_until_eot(
+                0,
+                R::Land.and(R::ControlledByYou),
+                4,
+                vec![CreatureType::Elemental],
+                vec![Keyword::Haste],
+            ),
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::MustBeBlocked,

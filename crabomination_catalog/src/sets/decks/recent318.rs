@@ -6,7 +6,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{animate_land, etb, target_any, target_filtered};
+use crate::effect::shortcut::{animate_land_until_eot, etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -322,14 +322,14 @@ pub fn leonin_bladetrap() -> CardDefinition {
     }
 }
 
-/// Lifespark Spellbomb — {G}, sacrifice: animate a land; {1}, sacrifice: draw.
+/// Lifespark Spellbomb — {G}, sacrifice: a land is a 3/3 until end of turn; {1}, sacrifice: draw.
 pub fn lifespark_spellbomb() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[g()]),
                 sac_cost: true,
-                effect: animate_land(0, 3),
+                effect: animate_land_until_eot(0, R::Land, 3, vec![], vec![]),
                 ..Default::default()
             },
             ActivatedAbility {
