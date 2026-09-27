@@ -752,8 +752,17 @@ fn plasma_bolt_void_scales_damage() {
         card_id: bolt, target: Some(Target::Permanent(toughie)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Plasma Bolt");
-    drain_stack(&mut g);
+    let ev = drain_stack(&mut g);
     assert_eq!(g.battlefield_find(toughie).unwrap().damage, 3, "Void active → 3 damage");
+    // "3 damage instead" is one event, not 2 then 1.
+    let hits: Vec<u32> = ev
+        .iter()
+        .filter_map(|e| match e {
+            GameEvent::DamageDealt { amount, to_card: Some(c), .. } if *c == toughie => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, vec![3]);
 }
 
 /// Seedship Agrarian mints a Lander when it taps and grows on landfall.

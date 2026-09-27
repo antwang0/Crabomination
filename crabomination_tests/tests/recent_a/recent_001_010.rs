@@ -3773,9 +3773,17 @@ mod recent {
             x_value: Some(3),
         })
         .expect("castable for {3}{R}");
-        drain_stack(&mut g);
-        // X=3 → 3+1 = 4 damage kills the 4/4.
+        let ev = drain_stack(&mut g);
+        // X=3 → 3+1 = 4 damage kills the 4/4 — as one event, not 3 then 1.
         assert!(g.battlefield_find(v).is_none(), "X+1 = 4 killed the 4/4");
+        let hits: Vec<u32> = ev
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::DamageDealt { amount, to_card: Some(c), .. } if *c == v => Some(*amount),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(hits, vec![4]);
     }
 
     /// Tyrant's Scorn destroys a small creature (mode 0).

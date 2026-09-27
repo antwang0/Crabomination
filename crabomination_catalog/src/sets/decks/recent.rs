@@ -10257,23 +10257,18 @@ pub fn light_up_the_night() -> CardDefinition {
         name: "Light Up the Night",
         cost: cost(&[crate::mana::x(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
-                amount: Value::XFromCost,
-            },
-            Effect::If {
-                cond: Predicate::EntityMatches {
+        // "X plus 1 damage instead" — one event, not X then 1.
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::IfPred {
+                pred: Box::new(Predicate::EntityMatches {
                     what: Selector::Target(0),
                     filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                },
-                then: Box::new(Effect::DealDamage {
-                    to: Selector::Target(0),
-                    amount: Value::Const(1),
                 }),
-                else_: Box::new(Effect::Noop),
+                then: Box::new(Value::Sum(vec![Value::XFromCost, Value::ONE])),
+                else_: Box::new(Value::XFromCost),
             },
-        ]),
+        },
         ..Default::default()
     }
 }

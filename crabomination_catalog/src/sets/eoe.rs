@@ -2990,22 +2990,15 @@ pub fn plasma_bolt() -> CardDefinition {
         name: "Plasma Bolt",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                amount: Value::Const(2),
-                to: target_any(),
+        // Void — one 3-damage event "instead", not 2 then 1.
+        effect: Effect::DealDamage {
+            amount: Value::IfPred {
+                pred: Box::new(Predicate::VoidActive { who: PlayerRef::You }),
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(2)),
             },
-            Effect::If {
-                cond: Predicate::VoidActive {
-                    who: PlayerRef::You,
-                },
-                then: Box::new(Effect::DealDamage {
-                    amount: Value::Const(1),
-                    to: Selector::Target(0),
-                }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]),
+            to: target_any(),
+        },
         ..Default::default()
     }
 }
