@@ -190,7 +190,7 @@ pub fn dogged_detective() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::FromYourGraveyardAnyPlayer)
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::FromYourGraveyardAnyPlayer)
                     .from_opponent(),
                 effect: Effect::MayDo {
                     description: "Return Dogged Detective to your hand?".into(),

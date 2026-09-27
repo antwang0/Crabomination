@@ -1500,7 +1500,7 @@ pub fn heirloom_blade() -> CardDefinition {
 pub fn gleaming_splendor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::OpponentControl),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::OpponentControl),
             effect: mint_one(treasure_token()),
         }],
         activated_abilities: vec![ActivatedAbility {

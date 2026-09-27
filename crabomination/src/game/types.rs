@@ -1927,7 +1927,7 @@ impl GameEvent {
                 | E::SpellTargetChanged { .. }
                 | E::CardDrawn { .. }
                 | E::FirstCardDrawnThisTurn { .. }
-                | E::SecondCardDrawnThisTurn { .. }
+                | E::NthCardDrawnThisTurn { .. }
                 | E::CardDiscarded { .. }
                 | E::DiscardedBatch { .. }
                 | E::OpponentCausedYouToDiscard { .. }
@@ -2631,9 +2631,10 @@ pub enum GameEvent {
     /// "the first time each turn you draw a card" triggers (God-Eternal
     /// Kefnet) can inspect and act on it.
     FirstCardDrawnThisTurn { player: usize, card_id: CardId },
-    /// CR 121 — the turn's second card drawn by `player` (fired once per
-    /// turn, when `cards_drawn_this_turn` reaches 2). Gleaming Splendor.
-    SecondCardDrawnThisTurn { player: usize, card_id: CardId },
+    /// CR 121 — the turn's `n`th card drawn by `player` (fired once per
+    /// turn, when `cards_drawn_this_turn` reaches `n`; emitted for 2 and 3).
+    /// Gleaming Splendor (2), Astrologian's Planisphere (3).
+    NthCardDrawnThisTurn { player: usize, card_id: CardId, n: u32 },
     CardDiscarded { player: usize, card_id: CardId },
     /// A spell or ability an opponent of `player` controls caused that
     /// discard (`GameState.resolution_causer`). Spiritual Focus.

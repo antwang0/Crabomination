@@ -127,7 +127,8 @@ fn narrate(ev: &Value, players: &[String], names: &HashMap<u64, String>, all: bo
     };
     // Internal signals that render blank in the client, plus (by
     // default) the mana-and-tapping noise between the real beats.
-    const BLANK: &[&str] = &["FirstCardDrawnThisTurn", "SecondCardDrawnThisTurn", "PermanentDied"];
+    const BLANK: &[&str] =
+        &["FirstCardDrawnThisTurn", "SecondCardDrawnThisTurn", "NthCardDrawnThisTurn", "PermanentDied"];
     const NOISE: &[&str] = &[
         "ManaAdded",
         "ColorlessManaAdded",

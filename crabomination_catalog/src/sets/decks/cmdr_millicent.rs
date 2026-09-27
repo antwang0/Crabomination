@@ -242,7 +242,7 @@ pub fn ethereal_investigator() -> CardDefinition {
         triggered_abilities: vec![
             etb(clues(Value::OpponentCount)),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::YourControl),
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
                 effect: make_spirits(Value::ONE),
             },
         ],

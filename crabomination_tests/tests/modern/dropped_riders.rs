@@ -771,3 +771,26 @@ fn mishras_factory_pumps_an_assembly_worker() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
     assert!(g.battlefield_find(b).unwrap().tapped);
 }
+
+/// Astrologian's Planisphere — the equipped creature has "whenever you draw
+/// your third card each turn, put a +1/+1 counter on this creature" (CR 121):
+/// the second draw does nothing, the third adds one, the fourth nothing.
+#[test]
+fn astrologians_planisphere_counts_the_third_draw() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eq = g.add_card_to_battlefield(0, catalog::astrologians_planisphere());
+    g.battlefield_find_mut(eq).unwrap().attached_to = Some(bear);
+    let counters = |g: &GameState| g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    for (nth, want) in [(1, 0), (2, 0), (3, 1), (4, 1)] {
+        let mut evs = Vec::new();
+        assert!(g.draw_one(0, &mut evs));
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(counters(&g), want, "after draw {nth}");
+    }
+}

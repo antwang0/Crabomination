@@ -71,7 +71,7 @@ fn on_connive(effect: Effect) -> TriggeredAbility {
 
 /// "Whenever you draw your second card each turn" (CR 121).
 fn second_draw(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility { event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::YourControl), effect }
+    TriggeredAbility { event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl), effect }
 }
 
 fn villain_cost_reduction() -> StaticAbility {

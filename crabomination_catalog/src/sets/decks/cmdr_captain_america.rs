@@ -149,7 +149,7 @@ pub fn black_widow_agile_avenger() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::OpponentControl),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::OpponentControl),
             effect: Effect::Seq(vec![plus(Selector::This, Value::ONE), draw(Value::ONE)]),
         }],
         ..creature(

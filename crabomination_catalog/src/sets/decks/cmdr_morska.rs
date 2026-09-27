@@ -48,7 +48,7 @@ fn clue() -> R {
 
 /// "Whenever you draw your second card each turn" (CR 121).
 fn second_draw(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility { event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::YourControl), effect }
+    TriggeredAbility { event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl), effect }
 }
 
 /// "Whenever you sacrifice a Clue".

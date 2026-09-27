@@ -319,7 +319,7 @@ pub fn minn_wily_illusionist() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::YourControl),
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
                 effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: illusion },
             },
             TriggeredAbility {

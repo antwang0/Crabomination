@@ -3587,12 +3587,15 @@ pub enum EventKind {
     /// new monarch, so `EventScope::OpponentControl` reads "an opponent
     /// becomes the monarch" (Knights of the Black Rose).
     BecameMonarch,
-    /// CR 121 — the turn's *second* card drawn by a player (fired once per
-    /// turn per player, when their `cards_drawn_this_turn` reaches 2); the
+    /// CR 121 — the turn's `n`th card drawn by a player (fired once per turn
+    /// per player, when their `cards_drawn_this_turn` reaches `n`); the
     /// trigger subject is the drawn card. "Whenever an opponent draws their
-    /// second card each turn" (Gleaming Splendor) — per player, so in a pod
-    /// each opponent's second draw triggers separately.
-    SecondCardDrawnThisTurn,
+    /// second card each turn" (Gleaming Splendor) is `(2)` — per player, so
+    /// in a pod each opponent's second draw triggers separately; "whenever
+    /// you draw your third card each turn" (Astrologian's Planisphere) is
+    /// `(3)`. The engine emits the event for `n` = 2 and 3 only (the first
+    /// draw has its own kind); one mask bit serves every `n`.
+    NthCardDrawnThisTurn(u8),
     /// CR 800.4a — "When enchanted player loses the game" (Curse of
     /// Vengeance): queued for each Aura attached to a player as that player
     /// leaves, before the Aura goes; the event amount is the counters on it.

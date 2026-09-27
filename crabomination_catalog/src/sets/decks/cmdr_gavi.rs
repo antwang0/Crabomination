@@ -96,7 +96,7 @@ pub fn gavi_nest_warden() -> CardDefinition {
             effect: StaticEffect::FirstCyclingEachTurnFree,
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::YourControl),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: make(token(
                 "Dinosaur Cat",
                 vec![Color::Red, Color::White],

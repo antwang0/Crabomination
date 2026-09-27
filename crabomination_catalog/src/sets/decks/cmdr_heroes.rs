@@ -557,7 +557,7 @@ pub fn krang_the_all_powerful() -> CardDefinition {
             effect: StaticEffect::DoubleControllerDrawTriggers,
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SecondCardDrawnThisTurn, EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::AnyPlayer),
             effect: plus(Selector::This, Value::ONE),
         }],
         ..creature(

@@ -377,7 +377,7 @@ pub fn trouble_in_pairs() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::SecondCardDrawnThisTurn,
+                    EventKind::NthCardDrawnThisTurn(2),
                     EventScope::OpponentControl,
                 ),
                 effect: draw(),

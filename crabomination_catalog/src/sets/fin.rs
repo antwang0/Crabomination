@@ -5554,9 +5554,14 @@ fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
 
 /// Astrologian's Planisphere — {1}{U} Equipment. Job select. Equipped creature is
 /// a Wizard and has "Whenever you cast a noncreature spell, put a +1/+1 counter on
-/// this creature." Equip {2}. (The "draw your third card each turn" counter half
-/// is omitted — no drew-Nth-card-this-turn trigger yet.)
+/// this creature" — and the same whenever you draw your third card each turn
+/// (`EventKind::NthCardDrawnThisTurn(3)`). Equip {2}.
 pub fn astrologians_planisphere() -> CardDefinition {
+    let counter = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
     CardDefinition {
         name: "Astrologian's Planisphere",
         cost: cost(&[generic(1), u()]),
@@ -5569,11 +5574,13 @@ pub fn astrologians_planisphere() -> CardDefinition {
         triggered_abilities: vec![job_select_etb()],
         equipped_bonus: Some(EquipBonus {
             add_creature_types: vec![CreatureType::Wizard],
-            triggered_abilities: vec![on_cast_noncreature(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            })],
+            triggered_abilities: vec![
+                on_cast_noncreature(counter()),
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::NthCardDrawnThisTurn(3), EventScope::YourControl),
+                    effect: counter(),
+                },
+            ],
             ..Default::default()
         }),
         ..Default::default()

@@ -20883,8 +20883,8 @@ impl GameState {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 if self.players[p].cards_drawn_this_turn == 1 {
                     events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
-                } else if self.players[p].cards_drawn_this_turn == 2 {
-                    events.push(GameEvent::SecondCardDrawnThisTurn { player: p, card_id: id });
+                } else if let n @ 2..=3 = self.players[p].cards_drawn_this_turn {
+                    events.push(GameEvent::NthCardDrawnThisTurn { player: p, card_id: id, n });
                 }
                 self.maybe_grant_miracle(p, id);
                 true
@@ -23488,7 +23488,7 @@ impl GameState {
                             ev,
                             GameEvent::CardDrawn { .. }
                                 | GameEvent::FirstCardDrawnThisTurn { .. }
-                                | GameEvent::SecondCardDrawnThisTurn { .. }
+                                | GameEvent::NthCardDrawnThisTurn { .. }
                         ),
                         damaged_creature_controller: self.damaged_creature_controller(ev),
                         from_mana_ability: matches!(
