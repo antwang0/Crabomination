@@ -1576,6 +1576,14 @@ pub fn play_one_pod_game(
 /// armed for this game only, rendered if the game did not decide.
 /// `max_actions` is the budget in plays (non-pass actions); see
 /// `PodOutcome::plays`.
+/// `CRAB_POD_TRACE=<n>`: from action `n` on, every accepted action of a pod
+/// game on stderr — turn, step, stack depth, seat, action. Names a capped
+/// game's loop without a rebuild (`--first I --games 1` replays it).
+fn pod_trace_from() -> Option<usize> {
+    static FROM: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+    *FROM.get_or_init(|| std::env::var("CRAB_POD_TRACE").ok().and_then(|s| s.parse().ok()))
+}
+
 pub fn play_one_pod_game_censused(
     template: &GameState,
     pilots: &[Pilot],
@@ -1610,6 +1618,7 @@ pub fn play_one_pod_game_censused(
         pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
     let (mut actions, mut plays, mut stale) = (0usize, 0usize, 0usize);
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
+    let trace_from = pod_trace_from();
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
     let mut census =
@@ -1633,6 +1642,7 @@ pub fn play_one_pod_game_censused(
             // Keyed against the pre-action state: a cast names the card while
             // it is still in the zone it is cast from.
             let key = census.key_for(&g, seat, &action);
+            let traced = trace_from.is_some_and(|n| actions >= n).then(|| format!("{action:?}"));
             let ok = if let Some(settled) = settled {
                 g = *settled;
                 true
@@ -1646,6 +1656,9 @@ pub fn play_one_pod_game_censused(
                 }
             };
             if ok {
+                if let Some(a) = traced {
+                    eprintln!("{actions} t{} {:?} stack {} p{seat} {a}", g.turn_number, g.step, g.stack.len());
+                }
                 census.bump(key);
                 census.note_triggers(&g);
                 any = true;
