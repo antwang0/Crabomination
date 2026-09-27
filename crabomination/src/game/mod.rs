@@ -10094,6 +10094,17 @@ impl GameState {
         if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
             return id;
         }
+        // Past the simulator's board bound the game ends as `BoardCap`
+        // whatever resolves next, so a mint there is pure cost — and a
+        // trigger chain minting into a board already past it walked the
+        // whole board once per token. `scaled_token_count` caps one batch;
+        // this caps the chain: two Redoubled Stormsingers under two Harmonic
+        // Prodigies copy every token that entered this turn, three times a
+        // trigger, and a bot's sim of one combat never returned (six-seat
+        // pod, decks 178,101,83,43,156,115, seed 9815, game 64).
+        if self.battlefield.len() > crate::recommend::MAX_BATTLEFIELD {
+            return id;
+        }
         let mut inst = crate::card::CardInstance::new_token(id, def, controller);
         // CR 111.2 — a token's owner is the player under whose control it
         // actually entered, so a stolen mint belongs to the thief.

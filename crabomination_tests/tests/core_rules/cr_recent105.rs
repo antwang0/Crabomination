@@ -95,7 +95,11 @@ fn cr_614_13_forty_token_doublers_mint_a_bounded_batch() {
     )
     .expect("copies");
     let made = g.battlefield.len() - before;
-    assert!(made > 1000 && made <= 1025, "doubled to the board bound, not 2^40: {made}");
+    // The batch is sized to the bound (1,025) and the mint stops once the
+    // board passes it (`a_token_chain_stops_at_the_board_bound`), so the
+    // board ends one past the bound with the 41 permanents already out.
+    assert!(made <= 1025, "doubled to the board bound, not 2^40: {made}");
+    assert_eq!(g.battlefield.len(), crabomination::recommend::MAX_BATTLEFIELD + 1, "made {made}");
 }
 
 /// CR 614.13 — a token doubler doubles tokens created tapped and attacking
@@ -126,6 +130,34 @@ fn cr_614_13_tokens_created_attacking_are_doubled() {
     .expect("tokens");
     let attackers = g.attacking.iter().filter(|a| g.battlefield_find(a.attacker).is_some_and(|c| c.is_token)).count();
     assert_eq!(attackers, 2, "doubled, both attacking");
+}
+
+/// A token-mint chain is bounded by the simulator's board bound too, not just
+/// one batch: a board already past `recommend::MAX_BATTLEFIELD` (where the
+/// game ends as a board cap regardless) mints nothing more. Two Redoubled
+/// Stormsingers under two Harmonic Prodigies copy every token that entered
+/// this turn, three times a trigger, and a bot's sim of one six-seat combat
+/// never returned — each mint walked the whole board.
+#[test]
+fn a_token_chain_stops_at_the_board_bound() {
+    use crabomination::card::Value;
+    use crabomination::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let batch = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(600),
+        definition: std::sync::Arc::new(crabomination_base::tokens::spirit_token()),
+    };
+    for _ in 0..4 {
+        g.resolve_effect(&batch, &ctx).expect("tokens");
+    }
+    let bound = crabomination::recommend::MAX_BATTLEFIELD;
+    assert!(
+        g.battlefield.len() > bound && g.battlefield.len() <= bound + 600,
+        "the chain stops at the first batch past the bound: {}",
+        g.battlefield.len(),
+    );
 }
 
 /// A spell-copy chain is bounded by the simulator's stack bound

@@ -12715,7 +12715,20 @@ fn tail_guarded(state: &GameState, seat: usize, w: &EvalWeights) -> EvalWeights 
     }
 }
 
+/// The largest battlefield the attack search (the holdback menu and the
+/// attack chain, every candidate a sim) runs on; past it the greedy
+/// declaration stands. A sim step's cost grows with the board and the
+/// chain's pool with the creature count, so a token swarm priced one
+/// decision at minutes: a six-seat pod (decks 70,18,105,123,104,76, seed
+/// 9800, game 60) spent 6-10 s on a declaration at 342 permanents and 399 s
+/// on the next at 897, with the one-turn horizon. A duel's board stays far
+/// below this.
+const ATTACK_SEARCH_MAX_BOARD: usize = 250;
+
 fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+    if state.battlefield.len() > ATTACK_SEARCH_MAX_BOARD {
+        return pick_attacks_w(state, seat, w);
+    }
     let w = &tail_guarded(state, seat, w);
     let mut candidates = attack_candidates_for_mcts(state, seat, w);
     // A one-candidate menu is greedy alone (search off, open board) or
@@ -13761,6 +13774,13 @@ fn sim_outcome(
 /// The board this declaration leads to — the state `simulate_attack_outcome_once`
 /// scores, handed back whole (round 73: the settled successor the policy
 /// head trains on and ranks). `None` when the sim cannot complete.
+/// The largest battlefield [`EvalWeights::pod_horizon`] extends the attack
+/// sim over: the extra turns multiply a sim whose every step grows with
+/// the board (see [`ATTACK_SEARCH_MAX_BOARD`], the search's own cap). Past
+/// this the sim keeps the one-turn horizon; an ordinary pod's board stays
+/// well under it.
+const POD_HORIZON_MAX_BOARD: usize = 160;
+
 fn simulate_attack_leaf(
     base: &GameState,
     seat: usize,
@@ -13771,8 +13791,9 @@ fn simulate_attack_leaf(
     dry_run(&mut g, GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
     // `pod_horizon`: every live opponent's turn before ours, not just the
-    // next seat's. Zero extra turns in a duel.
-    let extra_turns = if w.pod_horizon {
+    // next seat's. Zero extra turns in a duel, and none on a board past
+    // `POD_HORIZON_MAX_BOARD` (see there).
+    let extra_turns = if w.pod_horizon && g.battlefield.len() <= POD_HORIZON_MAX_BOARD {
         let opponents = g.players.iter().enumerate().filter(|&(i, p)| i != seat && p.is_alive()).count();
         opponents.saturating_sub(1) as u32
     } else {
@@ -14601,6 +14622,11 @@ fn block_chain_candidate(
 }
 
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
+    // The attack search's board cap, for the same reason: the game that
+    // measured it spent 7.1 s on one block plan at 612 permanents.
+    if state.battlefield.len() > ATTACK_SEARCH_MAX_BOARD {
+        return pick_blocks(state, seat);
+    }
     // Same saturation fallback as the attack picker: a flat net can't
     // rank block plans either, and the tie falls to the greedy menu.
     let w = &tail_guarded(state, seat, w);
@@ -26872,6 +26898,41 @@ mod monarch_tests {
         assert_eq!(attack_target_player(&g, 0), 1, "all equal → the first opponent");
         g.players[3].life = 4;
         assert_eq!(attack_target_player(&g, 0), 3);
+    }
+
+    /// Past `ATTACK_SEARCH_MAX_BOARD` the attack and block searches return
+    /// their greedy declarations unpriced: a token swarm made one six-seat
+    /// declaration take 399 s. Two bears facing a Hill Giant: the search keeps
+    /// both home where greedy swings both — until the board is too big to
+    /// search, when greedy stands.
+    #[test]
+    fn a_huge_board_skips_the_attack_and_block_searches() {
+        let players = (0..2).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut g = GameState::new(players);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.clear_sickness(giant);
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights::default();
+        assert_ne!(pick_attacks_scored(&g, 0, &w), pick_attacks_w(&g, 0, &w), "the search holds the bears back");
+        for seat in 0..2 {
+            for _ in 0..(ATTACK_SEARCH_MAX_BOARD / 2 + 1) {
+                g.add_card_to_battlefield(seat, catalog::forest());
+            }
+        }
+        assert!(g.battlefield.len() > ATTACK_SEARCH_MAX_BOARD);
+        assert_eq!(pick_attacks_scored(&g, 0, &w), pick_attacks_w(&g, 0, &w), "too big to search: greedy");
+        assert_eq!(pick_blocks_scored(&g, 1, &w), pick_blocks(&g, 1));
     }
 
     /// CR 810 — seat order is not team order, so "the next alive seat" named a
