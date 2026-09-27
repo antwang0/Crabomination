@@ -5689,8 +5689,8 @@ pub fn teo_spirited_glider() -> CardDefinition {
     }
 }
 
-/// Bitter Work — {1}{R}{G} Enchantment. Whenever you attack with one or more
-/// creatures of power 4+, draw a card. Exhaust — {4}: Earthbend 4, only during your turn.
+/// Bitter Work — {1}{R}{G} Enchantment. Whenever you attack a player with one or
+/// more creatures of power 4+, draw a card. Exhaust — {4}: Earthbend 4, only during your turn.
 pub fn bitter_work() -> CardDefinition {
     CardDefinition {
         name: "Bitter Work",
@@ -5700,7 +5700,7 @@ pub fn bitter_work() -> CardDefinition {
             event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
                 Predicate::AttackedWithCreatureMatching {
                     who: PlayerRef::You,
-                    filter: SelectionRequirement::PowerAtLeast(4),
+                    filter: SelectionRequirement::PowerAtLeast(4).and(SelectionRequirement::IsAttackingOpponentPlayer),
                 },
             ),
             effect: Effect::Draw {

@@ -313,9 +313,7 @@ pub fn demolisher_spawn() -> CardDefinition {
 
 /// Demonic Covenant — Demons attacking draw you a card for 1 life; each end
 /// step a 5/5 flying Demon, then mill two, sacrificing it if the two share
-/// all their card types.
-///
-/// Approximation: an attack at a planeswalker also draws.
+/// all their card types. An attack at a planeswalker doesn't draw.
 pub fn demonic_covenant() -> CardDefinition {
     CardDefinition {
         name: "Demonic Covenant",
@@ -327,7 +325,7 @@ pub fn demonic_covenant() -> CardDefinition {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
                     Predicate::AttackedWithCreatureMatching {
                         who: PlayerRef::You,
-                        filter: R::HasCreatureType(CreatureType::Demon),
+                        filter: R::HasCreatureType(CreatureType::Demon).and(R::IsAttackingOpponentPlayer),
                     },
                 ),
                 effect: Effect::Seq(vec![

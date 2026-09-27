@@ -4605,6 +4605,18 @@ fn death_toll_batch() {
     g.add_card_to_library(0, catalog::forest());
     to_end_step(&mut g);
     assert!(g.battlefield_find(cov).is_some());
+    // CR 506.3 — "Demons attack a player": at a planeswalker, no draw.
+    for at_walker in [true, false] {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::demonic_covenant());
+        let demon = g.add_card_to_battlefield(0, catalog::abyssal_persecutor());
+        let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+        g.add_card_to_library(0, catalog::forest());
+        let target = if at_walker { AttackTarget::Planeswalker(walker) } else { AttackTarget::Player(1) };
+        let hand = g.players[0].hand.len();
+        combat(&mut g, vec![Attack { attacker: demon, target }], 0, |_| {});
+        assert_eq!(g.players[0].hand.len(), hand + usize::from(!at_walker), "at the walker: {at_walker}");
+    }
 
     // Carrion Grub: +X/+0 from the graveyard's biggest creature.
     let mut g = main_phase();

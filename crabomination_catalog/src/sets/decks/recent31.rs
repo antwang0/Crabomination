@@ -135,7 +135,7 @@ pub fn orzhov_charm() -> CardDefinition {
 
 /// Naya Charm — {R}{G}{W} Instant. Choose one — 3 damage to target creature; or
 /// return target card from a graveyard to its owner's hand; or tap all
-/// creatures your opponents control (the any-player target is approximated).
+/// creatures target player controls.
 pub fn naya_charm() -> CardDefinition {
     CardDefinition {
         name: "Naya Charm",
