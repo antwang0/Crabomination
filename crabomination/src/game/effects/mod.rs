@@ -8314,10 +8314,16 @@ impl GameState {
                     })
                     .map(|(i, t)| (i, t.clone()))
                     .collect();
-                for (k, (_, t)) in targets.iter().cloned().enumerate() {
+                for (k, (slot, t)) in targets.iter().cloned().enumerate() {
                     let mut sub = ctx.clone();
                     sub.targets = vec![t];
                     self.run_effect(inner, &sub, events)?;
+                    // The one that parked resumes under the stack item's whole
+                    // target list: pin it to its own slot too, or it reads slot 0.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                        slot: slot as u8,
+                        body: Box::new(carried),
+                    });
                     // CR 608.2 — the targets after a suspending one were
                     // dropped. Each remaining one is pinned by its ORIGINAL
                     // slot, which is what the resumed context still holds.

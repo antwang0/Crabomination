@@ -12649,3 +12649,60 @@ fn cr_701_6a_returning_a_spell_ignores_cant_be_countered() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 17, "Memory Lapse counters, so it can't");
 }
+
+/// CR 608.2 — a per-target body that parks (a prompting seat's {X} ask)
+/// resumes against ITS target. Only the second target asks here, so the
+/// continuation used to read the stack item's slot 0 and pump the Bears.
+#[test]
+fn cr_608_2_a_parked_per_target_body_resumes_on_its_own_target() {
+    use crabomination::card::{CardDefinition, CardType, CreatureType, SelectionRequirement as R};
+    use crabomination::effect::{Duration, Effect, Predicate, Selector, Value};
+    let giant_pump = CardDefinition {
+        name: "Test Giant Tonic",
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 1,
+            filter: R::Creature,
+            effect: Box::new(Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::HasCreatureType(CreatureType::Giant) },
+                then: Box::new(Effect::MayPayX {
+                    description: "Pay {X}?".into(),
+                    body: Box::new(Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::XFromCost,
+                        toughness: Value::XFromCost,
+                        duration: Duration::EndOfTurn,
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let tonic = g.add_card_to_hand(0, giant_pump);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tonic, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Permanent(giant)],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    for _ in 0..20 {
+        if g.pending_decision.is_some() {
+            g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(2))).expect("pay X = 2");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 5, "the Giant got +2/+2");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "the Bears did not");
+}
