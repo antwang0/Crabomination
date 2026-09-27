@@ -5553,4 +5553,41 @@ fewer alpha strikes. The first cut of the flag also skipped one trick window
 after sim blocks in duels; the final build keeps the duel path exact, and
 the final-build rows reproduce the first. Control `podhorizon-off`.
 
+**Why a few decks win half their pods — open (2026-09-27).** A six-seat
+census of every deck (4 shuffles x 31 groups x 120 games, `dflt`) has a win
+rate spread of 11.2 points around the 16.7 % due: Gisela, the Broken Blade
+64 %, Y'shtola 58 %, Giada 54 %, Valgavoth 45 %, Trostani 44 %, the bottom
+five 1-3 %. Mostly lifegain decks. What it is NOT:
+
+- *A Y'shtola card bug.* Her text and her deck's payoffs (Reaper's Scythe,
+  Papalymo, Emet-Selch, the Wizard tokens, Champions from Beyond) read as
+  printed; her drain fires only from the battlefield (an uncommitted probe
+  tagged every damage event with the source's zone). Her edge is noncombat:
+  ~37 damage a game from her own trigger at six seats, ~117 dealt in all
+  against ~24 for an average seat; her combat output (63) is Nahiri's (61,
+  26 %).
+- *Being ignored by attackers.* The other seats aim 20 % of attackers at her
+  — exactly 1 of 5 — and each hits her as hard as anyone.
+- *The defender rule.* `EvalWeights::leader_target` aims attacks at the seat
+  with the most material instead of the weakest. One seat on it among `dflt`
+  wins 1.17x at four seats / 1.12x at six (`leader0`, any lead; eight groups
+  each, seeds 10100+/10200+) and 1.10x / 1.08x with a 25 % margin — but
+  with every seat on it the census barely moves (Gisela 64 / 65 / 68 %,
+  Y'shtola 58 / 58 / 57 %, spread 11.2 / 10.5 / 10.4 for old / leader25 /
+  leader0) and pods run 40-57 % longer (`leader0`) or 20-22 % (`leader25`).
+  Left off.
+
+The next suspect is the life term: `life_value` is concave, so a seat at 60
+life is worth little more than one at 40, and neither the material leader
+nor any sim prices "this seat cannot be raced". A lifegain deck is never the
+table's target and never the one the evaluation fears.
+
+**Found on the way: two pod hangs** (the census's per-group timeout caught
+them; `ptrace` is denied here, so the stacks came from `timeout -s ABRT` +
+`coredumpctl debug`). A token chain past the board bound (two Redoubled
+Stormsingers under two Harmonic Prodigies) and the attack search on a
+token-swarm board (399 s for one declaration at 897 permanents). Fixed by
+`e666ac0b1`; the rerun census (six and eight seats, 16,720 games) finished
+every group.
+
 

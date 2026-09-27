@@ -1105,6 +1105,29 @@ pub struct EvalWeights {
     /// control [`pod_horizon_off`](Self::pod_horizon_off), profile
     /// `podhorizon-off`.
     pub pod_horizon: bool,
+    /// Aim a pod's attacks at the table leader. The default defender is the
+    /// monarch, else the opponent who is lowest on life with the fewest
+    /// untapped blockers (`GameState::hostile_opponent_score`) — "finish the
+    /// weakest" — and the eval sums every opponent's material, so nothing
+    /// ever asked who is *winning*: Y'shtola's drain deck gains life and
+    /// keeps its blockers home, was never the weakest seat, and won 48-70 %
+    /// of six-seat pods while the others attacked each other. Non-zero, the
+    /// face target is the live opponent with the most material (board,
+    /// hand, life, crown — `eval_material`'s own terms, `seat_material`)
+    /// when it leads the next opponent by at least `leader_target - 1`
+    /// percent; a closer table keeps the old rule. 0 = off.
+    ///
+    /// **Measured 2026-09-27 and left off.** One seat on it among `dflt`:
+    /// any lead (`leader0`) 1.17x at four seats / 1.12x at six, a 25 %
+    /// margin (`leader25`) 1.10x / 1.08x — the largest pod gain on record.
+    /// But every seat on it makes pods 40-57 % longer (`leader0`; 20-22 %
+    /// for `leader25`) — nobody is knocked out while the table hits whoever
+    /// is ahead — and it does not touch the decks it was aimed at: a
+    /// six-seat census of every deck under each rule leaves Gisela at
+    /// 64 / 65 / 68 %, Y'shtola 58 / 58 / 57 % (old / leader25 / leader0).
+    /// `life_value` is concave, so a lifegain seat far ahead on life is not
+    /// the material leader either. See ML_NOTES.
+    pub leader_target: u8,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -1290,6 +1313,7 @@ impl EvalWeights {
             target_eval: false,
             option_eval: false,
             pod_horizon: false,
+            leader_target: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1402,6 +1426,7 @@ impl EvalWeights {
             target_eval: false,
             option_eval: false,
             pod_horizon: false,
+            leader_target: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1497,6 +1522,7 @@ impl EvalWeights {
             target_eval: false,
             option_eval: false,
             pod_horizon: false,
+            leader_target: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -2646,6 +2672,7 @@ impl EvalWeights {
         }
     }
 
+
     /// The default with option asks back on option 0 — the control for
     /// [`option_eval`](Self::option_eval) (profile `optvote-off`).
     pub const fn option_eval_off() -> Self {
@@ -2658,6 +2685,15 @@ impl EvalWeights {
     /// podhorizon-off`).
     pub const fn pod_horizon_off() -> Self {
         Self { pod_horizon: false, ..Self::default_const() }
+    }
+
+    /// The default aiming pod attacks at the table leader once it leads the
+    /// next opponent by `margin` percent — the opt-in for
+    /// [`leader_target`](Self::leader_target) (profiles `leader0` /
+    /// `leader25`; a pod question: `--commander --a leader0 --b dflt`).
+    /// `margin` is stored +1 so that 0 stays "off".
+    pub const fn leader_target_on(margin: u8) -> Self {
+        Self { leader_target: margin.saturating_add(1), ..Self::default_const() }
     }
 
     /// The round-72 control: the default with the sink generators' sacrifice
@@ -11399,7 +11435,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false))
+    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0))
 }
 
 /// [`pick_attacks`] under a profile: the greedy declaration every sim,
@@ -11408,7 +11444,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
 /// `w`. The flagless [`pick_attacks`] is the pre-round-65 filter, kept as
 /// the test entry so the recorded greedy shapes stay pinned.
 pub fn pick_attacks_w(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
-    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, w.attack_blocker_guard))
+    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target))
 }
 
 /// The guarded safe-attack test (round 65): may `c` swing into
@@ -11517,7 +11553,12 @@ fn turns_to_lethal(life: i32, clock: i32) -> i32 {
 /// attacks — seat 0 was only ever hit by the last seat, whatever the board said
 /// — and which named a *teammate* in a 2HG game, because seat order is not team
 /// order and every attack it declared was then rejected.
-fn attack_target_player(state: &GameState, seat: usize) -> usize {
+fn attack_target_player(state: &GameState, seat: usize, leader_target: u8) -> usize {
+    if leader_target > 0
+        && let Some(q) = table_leader(state, seat, u32::from(leader_target - 1))
+    {
+        return super::pod_attack::attackable_or(state, seat, q);
+    }
     let pick = if let Some(m) = state.monarch
         && m != seat
         && state.players.get(m).is_some_and(|p| p.is_alive())
@@ -11530,9 +11571,50 @@ fn attack_target_player(state: &GameState, seat: usize) -> usize {
     super::pod_attack::attackable_or(state, seat, pick)
 }
 
-fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack> {
+/// The live opponent with the most material (`seat_material`) when it leads
+/// the next one by at least `margin_pct` percent — the table leader
+/// [`EvalWeights::leader_target`] aims at. `None` in a duel, or when the
+/// table is closer than that.
+fn table_leader(state: &GameState, seat: usize, margin_pct: u32) -> Option<usize> {
+    let w = EvalWeights::default();
+    let mut ranked: smallvec::SmallVec<[(i64, usize); 8]> = (0..state.players.len())
+        .filter(|&q| q != seat && state.players[q].is_alive() && !state.same_team(seat, q))
+        .map(|q| (i64::from(seat_material(state, q, &w)), q))
+        .collect();
+    if ranked.len() < 2 {
+        return None;
+    }
+    ranked.sort_unstable_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    let ((first, q), (second, _)) = (ranked[0], ranked[1]);
+    (first * 100 >= second.max(1) * (100 + i64::from(margin_pct)) && first > second).then_some(q)
+}
+
+/// One seat's material, counted as [`eval_material`] counts it for every
+/// seat — non-land permanents at three times their value (walkers less
+/// their loyalty), lands at 2, hand cards at 4, emblems, the crown and the
+/// initiative, and life — without the sum across the table.
+fn seat_material(state: &GameState, q: usize, w: &EvalWeights) -> i32 {
+    let mut m = 0i32;
+    for c in state.battlefield.iter().filter(|c| c.controller == q) {
+        m += if c.definition.is_land() {
+            2 * w.unit
+        } else {
+            let mut pv = permanent_value_with(state, c.id, Some(c), w);
+            if c.definition.is_planeswalker() {
+                pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32 * w.unit;
+            }
+            3 * pv
+        };
+    }
+    let p = &state.players[q];
+    let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, q, e)).sum();
+    let crown = i32::from(state.monarch == Some(q)) * 7 + i32::from(state.initiative == Some(q)) * 9;
+    m + (4 * p.hand.len() as i32 + emblems + crown) * w.unit + life_value(state.effective_life(q), w)
+}
+
+fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target: u8) -> Vec<Attack> {
     use crate::card::Keyword;
-    let target_player = attack_target_player(state, seat);
+    let target_player = attack_target_player(state, seat, leader_target);
     // Filter on `controller`, not `owner`: cards that have
     // changed control (Threaten / Mind Control / etc.) are
     // attacked WITH by the new controller, not the original
@@ -12490,8 +12572,8 @@ struct AttackPool {
     from_empty: bool,
 }
 
-fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> AttackPool {
-    let face_player = attack_target_player(state, seat);
+fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack], leader_target: u8) -> AttackPool {
+    let face_player = attack_target_player(state, seat, leader_target);
     let face = AttackTarget::Player(face_player);
     let statics = crate::game::combat::attack_static_scan(state);
     let power_caps = state.attack_power_caps(statics);
@@ -12747,7 +12829,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     // one-candidate menu the chain cannot extend, so it is returned as it
     // stands rather than simulated for an argmax of one.
     let mut pool = if w.attack_chain > 0 {
-        attack_chain_pool(state, seat, candidates.first().map(Vec::as_slice).unwrap_or(&[]))
+        attack_chain_pool(state, seat, candidates.first().map(Vec::as_slice).unwrap_or(&[]), w.leader_target)
     } else {
         AttackPool { attackers: Vec::new(), from_empty: false }
     };
@@ -23173,7 +23255,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("the start set scores");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0], 0), &SimStarts::new(&g, 0, &w)).expect("the start set scores");
         assert!(chain.iter().any(|a| a.attacker == must), "the chain keeps the must-attacker: {chain:?}");
         g.clone().declare_attackers(chain).expect("the chained declaration is legal");
         let picked = pick_attacks_scored(&g, 0, &w);
@@ -23200,7 +23282,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0], 0), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert_eq!(chain.iter().map(|a| a.attacker).collect::<Vec<_>>(), vec![bear], "{chain:?}");
     }
 
@@ -23228,7 +23310,7 @@ mod tests {
         }
         let w = EvalWeights { attack_chain: 1, ..EvalWeights::attack_chain_on() };
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0], 0), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert_eq!(chain.len(), 1, "one addition allowed: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 3, "three free bears: the alpha strike wins the argmax: {picked:?}");
@@ -23270,7 +23352,7 @@ mod tests {
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
         assert_eq!(menu[0].len(), 2, "greedy sees the lethal swing: {menu:?}");
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0], 0), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert!(chain.is_empty(), "each bear alone is a dead bear: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 2, "the menu still finds lethal: {picked:?}");
@@ -26881,12 +26963,12 @@ mod monarch_tests {
         g.record_commander_damage(2, on_bf, 15);
         let _ = cmd;
 
-        assert_eq!(attack_target_player(&g, 0), 2, "seat 2 is six damage from dead");
+        assert_eq!(attack_target_player(&g, 0, 0), 2, "seat 2 is six damage from dead");
 
         // Progress on a commander this seat does not control is not a reason
         // to pick a defender — that tally cannot grow this combat.
         g.players[0].commanders = vec![cmd];
-        assert_ne!(attack_target_player(&g, 0), 2, "a commander in the zone does not race");
+        assert_ne!(attack_target_player(&g, 0, 0), 2, "a commander in the zone does not race");
     }
 
     /// Life is the tiebreak under the commander race, and the seat order is
@@ -26895,9 +26977,34 @@ mod monarch_tests {
     fn the_defender_choice_prefers_the_lowest_life_seat() {
         let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
         let mut g = GameState::new(players);
-        assert_eq!(attack_target_player(&g, 0), 1, "all equal → the first opponent");
+        assert_eq!(attack_target_player(&g, 0, 0), 1, "all equal → the first opponent");
         g.players[3].life = 4;
-        assert_eq!(attack_target_player(&g, 0), 3);
+        assert_eq!(attack_target_player(&g, 0, 0), 3);
+    }
+
+    /// `leader_target`: the seat that is winning is the defender, not the one
+    /// closest to dead. Seat 3 is low and bare; seat 2 has the life and the
+    /// board. The default finishes seat 3; the flag aims at seat 2, and at no
+    /// one in particular once the table is close.
+    #[test]
+    fn the_leader_flag_aims_at_the_seat_that_is_winning() {
+        let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut g = GameState::new(players);
+        g.players[3].life = 8;
+        g.players[2].life = 40;
+        for _ in 0..3 {
+            g.add_card_to_battlefield(2, catalog::craw_wurm());
+        }
+        let margin = |pct: u8| EvalWeights::leader_target_on(pct).leader_target;
+        assert_eq!(attack_target_player(&g, 0, 0), 3, "the default finishes the weakest seat");
+        assert_eq!(attack_target_player(&g, 0, margin(25)), 2, "the flag hits the leader");
+
+        // A close table: seat 1 matches seat 2, so neither leads by 25 %.
+        g.players[1].life = 40;
+        for _ in 0..3 {
+            g.add_card_to_battlefield(1, catalog::craw_wurm());
+        }
+        assert_eq!(attack_target_player(&g, 0, margin(25)), 3, "no leader: the default rule");
     }
 
     /// Past `ATTACK_SEARCH_MAX_BOARD` the attack and block searches return
@@ -26944,7 +27051,7 @@ mod monarch_tests {
         let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
         let mut g = GameState::new(players);
         g.assign_teams(vec![vec![0, 1], vec![2, 3]]).expect("2v2");
-        let t = attack_target_player(&g, 0);
+        let t = attack_target_player(&g, 0, 0);
         assert!(t == 2 || t == 3, "seat 0 attacks the other team, got {t}");
         assert_ne!(g.team_of(0), TeamId(1));
     }

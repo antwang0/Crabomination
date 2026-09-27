@@ -269,6 +269,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // seat only (the pod horizon was adopted 2026-09-27 on a pod A/B):
         // `--commander --a dflt --b podhorizon-off`.
         "podhorizon-off" => Some(Pilot::Scored(EvalWeights::pod_horizon_off())),
+        // Pod attacks at the table leader (most material), at any lead or
+        // once it leads the next opponent by 25 %. Measured and left off
+        // (longer pods; see `EvalWeights::leader_target`). A pod question:
+        // `--commander --a leader0 --b dflt`.
+        "leader0" => Some(Pilot::Scored(EvalWeights::leader_target_on(0))),
+        "leader25" => Some(Pilot::Scored(EvalWeights::leader_target_on(25))),
         // The attack chain (round 55): grow the declaration one creature
         // at a time from "nobody", each step priced by the attack sim,
         // and offer the finished set beside the holdback menu. Gate as A
