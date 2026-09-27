@@ -105,6 +105,7 @@ mod channel;
 mod grant_cast;
 mod command_zone;
 mod keyword_shield;
+mod lethal_pump;
 mod defensive_ability;
 mod team_combat;
 mod goad_attach;
