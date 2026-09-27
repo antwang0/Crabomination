@@ -3404,7 +3404,9 @@ impl HeuristicBot {
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {
                         if state.stack.is_empty() {
-                            pick_defensive_removal_any(state, seat, &self.weights)
+                            pick_defensive_removal_any(state, seat, &self.weights).or_else(|| {
+                                super::defensive_ability::pick_defensive_ability(state, seat, &self.weights)
+                            })
                         } else {
                             None
                         }
@@ -5529,7 +5531,7 @@ fn self_life_loss(eff: &Effect) -> i32 {
 /// Rough board value of a permanent for target selection: mana value + size,
 /// plus a loyalty term for planeswalkers and a small legendary premium. When
 /// the profile enables it, a keyword term (see [`keyword_value`]) too.
-fn permanent_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) -> i32 {
+pub(super) fn permanent_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) -> i32 {
     permanent_value_with(state, id, state.battlefield_find(id), w)
 }
 
@@ -17179,7 +17181,7 @@ impl WardedCost {
     }
 }
 
-fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
+pub(super) fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
     let (which, target, additional): (WardedCost, &Option<Target>, &[Target]) = match action {
         GameAction::CastSpell { card_id, target, additional_targets, .. }
         | GameAction::CastSpellDelve { card_id, target, additional_targets, .. }

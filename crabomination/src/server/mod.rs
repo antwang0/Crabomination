@@ -102,6 +102,7 @@ mod regenerate;
 mod counter_sink;
 mod cycling;
 mod channel;
+mod defensive_ability;
 mod spell_response;
 mod fight_pick;
 mod transform_sink;
