@@ -173,7 +173,7 @@ lists were picked.
 | **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
-| **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 1 carries a residual (Sunfrill Imitator) |
+| **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | ✅ all 100 implemented, no residuals (2026-09-27) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
 | **Hail, Caesar** (PIP precon) RWB | Caesar, Legion's Emperor | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (Aradesh, Colonel Autumn, Mr. House, Mysterious Stranger) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
@@ -3109,8 +3109,8 @@ live and the LKI damage paths, so lethal enrage doubles too);
 (Progenitor's Icon); `R::SharesCreatureTypeWithCreatureYouControl`
 (Descendants' Path). ⚠ It found `R::ExiledWithSource` reading only the
 imprint link, so "a card exiled with this" never matched an until-leaves
-exile (Bronzebeak Foragers). Residual: **Sunfrill Imitator** takes the
-copied name (Wrathful Raptors' lethal-damage gap closed 2026-09-27). Pods (1,000 games each, all decided): 4 seats beside Sauron / Sevinne /
+exile (Bronzebeak Foragers). Residuals closed 2026-09-27 (Sunfrill Imitator keeps its name; Wrathful
+Raptors triggers on lethal damage). Pods (1,000 games each, all decided): 4 seats beside Sauron / Sevinne /
 Anje (seed 10480) Pantlaza 57.8 %, census: no card of the four unplayed; 6
 seats beside Ashling / Satya / Prosper / Morophon / Omo (10481) 42.6 %. Strict
 debug pods (10470-10472) 180 / 180. `--bench` byte-identical.

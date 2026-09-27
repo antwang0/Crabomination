@@ -1,12 +1,6 @@
 //! Commander: the cards the **Veloci-Ramp-Tor** precon (LCC, Pantlaza,
 //! Sun-Favored) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_pantlaza.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Sunfrill Imitator** — the copy takes the copied Dinosaur's name, not
-//!   "Sunfrill Imitator" (only a legendary copy target tells the difference).
-//! - **Wrathful Raptors** — a Dinosaur's damage that kills the Raptors
-//!   themselves in the same event doesn't trigger them.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
@@ -395,8 +389,7 @@ pub fn scion_of_calamity() -> CardDefinition {
 }
 
 /// Sunfrill Imitator — attacks: it may become a copy of another target
-/// Dinosaur you control, keeping this ability. Residual: the copy takes the
-/// copied Dinosaur's name.
+/// Dinosaur you control, keeping its name and this ability.
 pub fn sunfrill_imitator() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack(Effect::MayDo {
@@ -407,7 +400,7 @@ pub fn sunfrill_imitator() -> CardDefinition {
                 extra_creature_types: vec![],
                 keep_own_triggered: true,
                 keep_own_activated: false,
-                keep_name: false,
+                keep_name: true,
             }),
         })],
         ..dino("Sunfrill Imitator", cost(&[generic(2), g()]), 3, 3)

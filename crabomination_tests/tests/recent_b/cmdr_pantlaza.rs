@@ -265,3 +265,21 @@ fn cr_603_10_wrathful_raptors_sees_a_dinosaur_die_to_its_damage() {
     assert!(g.battlefield_find(egg).is_none(), "the Egg died");
     assert_eq!(g.players[1].life, life - 2);
 }
+
+/// CR 707.2 — "a copy of another target Dinosaur, except its name is
+/// Sunfrill Imitator and it has this ability": it takes the Dinosaur's body
+/// and keeps its own name and attack trigger.
+#[test]
+fn cr_707_2_sunfrill_imitator_copies_but_keeps_its_name() {
+    let mut g = main_phase(2);
+    let sunfrill = g.add_card_to_battlefield(0, catalog::sunfrill_imitator());
+    let dreadmaw = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Target(Target::Permanent(dreadmaw))]));
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(sunfrill, 0, Some(Target::Permanent(dreadmaw)), 0);
+    let trigger = catalog::sunfrill_imitator().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&trigger, &ctx).expect("attack trigger");
+    let c = g.battlefield_find(sunfrill).unwrap();
+    assert_eq!(c.definition.name, "Sunfrill Imitator");
+    assert_eq!(g.computed_permanent(sunfrill).unwrap().power, 6, "the Dreadmaw's body");
+    assert_eq!(c.definition.triggered_abilities.len(), 1, "still has its attack trigger");
+}

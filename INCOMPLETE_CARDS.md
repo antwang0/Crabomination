@@ -1982,7 +1982,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
 | 🟡 Haunting Voyage | Dance of the Elements (ECC) | cast unforetold, the two returned are the two with the greatest power, not the caster's pick. |
 | 🟡 Horde of Notions | Dance of the Elements (ECC) | casts the Elemental card; an Elemental land card can't be played this way. |
-| 🟡 Sunfrill Imitator | Veloci-Ramp-Tor (LCC) | the copy takes the copied Dinosaur's name, not "Sunfrill Imitator" (only a legendary copy target tells the difference). |
 | 🟡 Dack Fayden, Helping Hand | Multiverse Reforged (FRC) | the revealed creatures go to the opponents in turn order, not by your choice. |
 | 🟡 Tamiyo, Upriser Crowned | Multiverse Reforged (FRC) | "one or more creatures" fires once per creature (same taps and stun counters). |
 | 🟡 Aradesh, the Founder | Hail, Caesar (PIP) | only its own enlist earns the double strike and draw; another creature of yours that enlists doesn't. |
