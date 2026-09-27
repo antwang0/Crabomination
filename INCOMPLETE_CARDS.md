@@ -1955,7 +1955,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Feather, Radiant Arbiter | Blame Game (MKC) | a headless caster only copies onto its own creatures (a person is offered every legal one). |
 | 🟡 Immortal Obligation | Blame Game (MKC) | a duty counter put back after the first one left re-arms the goad and the restrictions (CR 611.2b ends them for good). |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
-| 🟡 Will of the Temur | Temur Roar (TDC) | "if you control a commander as you cast this spell" is read as it resolves. |
 | 🟡 Estrid, the Masked | Adaptive Enchantment (C18) | the −7's Auras go on hosts the engine picks. |
 | 🟡 Genesis Storm | Adaptive Enchantment (C18) | the revealed permanent always goes onto the battlefield ("you may" isn't offered). |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |

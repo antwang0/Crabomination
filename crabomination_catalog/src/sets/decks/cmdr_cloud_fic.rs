@@ -443,7 +443,7 @@ pub fn soldier_military_program() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![begin_combat_on_your_turn(Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         })],

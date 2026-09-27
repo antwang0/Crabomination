@@ -1098,7 +1098,7 @@ pub fn will_of_the_sultai() -> CardDefinition {
         cost(&[generic(4), g()]),
         true,
         Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         },

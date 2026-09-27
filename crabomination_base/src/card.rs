@@ -8896,6 +8896,9 @@ pub struct CardData {
     /// CR 702.41 — true if this spell was cast paying its optional Entwine
     /// cost: its `ChooseMode` runs every mode in order.
     pub entwined: bool,
+    /// CR 601.2b — its caster controlled a commander as this spell was cast
+    /// (the Will cycle's "you may choose both"). Stamped at cast; copies keep it.
+    pub cast_controlling_commander: bool,
     /// CR 702.165 — true if this spell was cast with its Gift promised: on
     /// resolution it runs `definition.gift.gifted_effect` instead of `effect`.
     pub gift_promised: bool,
@@ -9827,6 +9830,7 @@ impl CardInstance {
             bargained: false,
             bought_back: false,
             entwined: false,
+            cast_controlling_commander: false,
             gift_promised: false,
             bestowed: false,
             face_down: false,
@@ -11093,6 +11097,9 @@ struct CardInstanceWire {
     /// CR 702.41 entwine flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     entwined: bool,
+    /// CR 601.2b "controlled a commander as you cast" stamp.
+    #[serde(default)]
+    cast_controlling_commander: bool,
     /// CR 702.165 gift-promised flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     gift_promised: bool,
@@ -11412,6 +11419,7 @@ impl serde::Serialize for CardInstance {
             granted_activated_eot: self.granted_activated_eot.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
+            cast_controlling_commander: self.cast_controlling_commander,
             gift_promised: self.gift_promised,
             bestowed: self.bestowed,
             face_down: self.face_down,
@@ -11547,6 +11555,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_activated_eot = wire.granted_activated_eot;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
+        c.cast_controlling_commander = wire.cast_controlling_commander;
         c.gift_promised = wire.gift_promised;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;

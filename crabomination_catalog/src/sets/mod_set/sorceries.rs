@@ -1379,8 +1379,7 @@ pub fn austere_command() -> CardDefinition {
 
 /// Jeska's Will — {2}{R} Sorcery. Choose one — add {R} for each card in
 /// target opponent's hand; or exile the top three cards of your library, you
-/// may play them this turn. Both if you control a commander (read as it
-/// resolves, not as it is cast).
+/// may play them this turn. Both if you controlled a commander as it was cast.
 pub fn jeskas_will() -> CardDefinition {
     use crate::card::MayPlayDuration;
     use crate::effect::ManaPayload;
@@ -1415,7 +1414,7 @@ pub fn jeskas_will() -> CardDefinition {
                 ]
             };
             Effect::If {
-                cond: crate::effect::Predicate::YouControlACommander,
+                cond: crate::effect::Predicate::YouControlledACommanderAsCast,
                 then: Box::new(Effect::ChooseN {
                     picks: vec![0, 1],
                     modes: modes(),

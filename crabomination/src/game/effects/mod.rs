@@ -384,6 +384,9 @@ pub struct EffectContext {
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
+    /// Stamped from `CardInstance.cast_controlling_commander`; read by
+    /// `Predicate::YouControlledACommanderAsCast`.
+    pub cast_controlling_commander: bool,
     /// CR 702.172 — Spree mode indices chosen at cast time. Stamped from the
     /// resolving `CardInstance.spree_modes`; read by `Effect::Spree`. Empty
     /// for non-Spree contexts.
@@ -416,6 +419,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
+            cast_controlling_commander: false,
             spree_modes: Vec::new(),
         }
     }
@@ -504,6 +508,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
+            cast_controlling_commander: false,
             spree_modes: Vec::new(),
         }
     }
@@ -537,6 +542,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
+            cast_controlling_commander: false,
             spree_modes: Vec::new(),
         }
     }
@@ -569,6 +575,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
+            cast_controlling_commander: false,
             spree_modes: Vec::new(),
         }
     }
@@ -670,6 +677,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
+            cast_controlling_commander: false,
             spree_modes: Vec::new(),
         }
     }

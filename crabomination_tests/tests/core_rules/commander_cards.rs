@@ -1991,3 +1991,43 @@ fn bot_does_not_shuffle_equipment_between_equal_hosts() {
     let action = HeuristicBot::new().next_action(&g, 0);
     assert!(!matches!(action, Some(GameAction::Equip { .. })), "got {action:?}");
 }
+
+// ── The Will cycle ──────────────────────────────────────────────────────────
+
+fn cast_akromas_will(g: &mut GameState) {
+    let id = g.add_card_to_hand(0, catalog::akromas_will());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("castable");
+}
+
+/// CR 601.2b — "If you control a commander as you cast this spell, you may
+/// choose both": the modes are fixed at cast, so bouncing the commander in
+/// response still gets both (Akroma's Will ruling, 2020-11-10).
+#[test]
+fn cr_601_2b_will_keeps_both_modes_when_the_commander_leaves_in_response() {
+    let mut g = commander_game();
+    let cmdr = commander_on_the_battlefield(&mut g);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_akromas_will(&mut g);
+    g.remove_from_battlefield_to_hand(cmdr);
+    drain_stack(&mut g);
+    assert!(has_kw(&g, bear, Keyword::DoubleStrike), "mode 0");
+    assert!(has_kw(&g, bear, Keyword::Lifelink), "mode 1 — the commander was there as it was cast");
+}
+
+/// CR 601.2b — the converse: a commander that arrives after the cast doesn't
+/// unlock the second mode.
+#[test]
+fn cr_601_2b_will_gets_one_mode_when_the_commander_arrives_after_the_cast() {
+    let mut g = commander_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_akromas_will(&mut g);
+    commander_on_the_battlefield(&mut g);
+    drain_stack(&mut g);
+    assert!(has_kw(&g, bear, Keyword::DoubleStrike), "mode 0");
+    assert!(!has_kw(&g, bear, Keyword::Lifelink), "no commander as it was cast");
+}

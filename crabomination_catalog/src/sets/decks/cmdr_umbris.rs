@@ -155,10 +155,10 @@ fn instant_or_sorcery() -> R {
 
 /// "Choose one. If you control a commander as you cast this spell, you may
 /// choose both instead." — the Akroma's Will / Jeska's Will shape (the
-/// commander check reads at resolution).
+/// commander check is stamped at cast, CR 601.2b).
 fn commander_both(modes: impl Fn() -> Vec<Effect>) -> Effect {
     Effect::If {
-        cond: Predicate::YouControlACommander,
+        cond: Predicate::YouControlledACommanderAsCast,
         then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
         else_: Box::new(Effect::ChooseMode(modes())),
     }

@@ -594,7 +594,7 @@ pub fn will_of_the_abzan() -> CardDefinition {
         cost(&[generic(3), b()]),
         CardType::Sorcery,
         Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         },

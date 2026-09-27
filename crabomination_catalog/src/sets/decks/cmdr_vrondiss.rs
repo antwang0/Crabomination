@@ -274,7 +274,7 @@ pub fn klauths_will() -> CardDefinition {
         cost(&[x(), r(), r(), g()]),
         CardType::Instant,
         Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         },

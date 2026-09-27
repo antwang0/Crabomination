@@ -2253,6 +2253,9 @@ pub enum Predicate {
     /// when any battlefield permanent the effect's controller controls is
     /// one of their designated commanders (`Player.commanders`).
     YouControlACommander,
+    /// "If you control a commander as you cast this spell" (the Will cycle,
+    /// CR 601.2b): the resolving spell's cast-time stamp, not the board now.
+    YouControlledACommanderAsCast,
     /// "If you've cast a spell from a graveyard or activated an ability of a
     /// card in a graveyard this turn" (Laboratory Drudge). Reads
     /// `Player.used_graveyard_this_turn`.

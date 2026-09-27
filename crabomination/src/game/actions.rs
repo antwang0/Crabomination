@@ -9081,6 +9081,10 @@ impl GameState {
             && (card.definition.has_entwine().is_some()
                 || card.definition.entwine_additional_cost.is_some());
         card.entwined = entwine;
+        // CR 601.2b — "if you control a commander as you cast this spell" is
+        // fixed now (the Will cycle); a commander-less game skips the walk.
+        card.cast_controlling_commander = self.players.iter().any(|pl| !pl.commanders.is_empty())
+            && self.battlefield.iter().any(|c| c.controller == p && self.is_commander(c.id));
         // CR 702.165 — opt-in Gift; only sticks when the card has it. The
         // promised gift carries no mana cost, so nothing folds into the cost.
         card.gift_promised = gift && card.definition.gift.is_some();
@@ -11851,6 +11855,7 @@ impl GameState {
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
+                    cast_controlling_commander: false,
                     spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
@@ -13324,6 +13329,7 @@ impl GameState {
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,
+                    cast_controlling_commander: false,
                     spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -15204,6 +15210,7 @@ impl GameState {
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
+                    cast_controlling_commander: false,
                     spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -19350,6 +19357,7 @@ impl GameState {
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,
+                    cast_controlling_commander: false,
                     spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {

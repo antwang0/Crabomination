@@ -55,7 +55,7 @@ pub fn akromas_will() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN {
                 picks: vec![0, 1],
                 modes: modes(),

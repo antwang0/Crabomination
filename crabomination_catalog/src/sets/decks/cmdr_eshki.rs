@@ -4,8 +4,6 @@
 //! Residuals (each also on its card):
 //! - **Deceptive Frostkite** — the copy isn't optional when a creature with
 //!   power 4 or greater is there to copy.
-//! - **Will of the Temur** — "if you control a commander as you cast" is read
-//!   as it resolves, as the other Will cards read it.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EntersAsCopy, EventKind, EventScope,
@@ -350,7 +348,7 @@ pub fn will_of_the_temur() -> CardDefinition {
         cost(&[generic(5), u()]),
         CardType::Sorcery,
         Effect::If {
-            cond: Predicate::YouControlACommander,
+            cond: Predicate::YouControlledACommanderAsCast,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         },
