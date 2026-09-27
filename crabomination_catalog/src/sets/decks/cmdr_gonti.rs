@@ -200,7 +200,7 @@ pub fn heartless_conscription() -> CardDefinition {
                 duration: MayPlayDuration::WhileExiled,
                 to_owner: false,
                 exile_after: false,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 any_color: true,
             },
         ]),

@@ -1144,3 +1144,57 @@ fn callidus_assassin_enters_tapped_and_kills_its_namesake() {
     assert!(me.tapped, "entered tapped");
     assert!(g.battlefield_find(theirs).is_none(), "the namesake is destroyed");
 }
+
+/// Bug fix: "you may play that card" / "mana of any type can be spent" is a
+/// paid cast. Seven pod-deck grants (Yasmin Khan, Embrace the Unknown,
+/// Heartless Conscription, Armory Paladin, The Flux, Advanced Reconstruction,
+/// Fateful Tempest) stamped no cost, so the exiled card was cast for free.
+#[test]
+fn impulse_grants_bill_the_card_cost() {
+    let from_exile = |g: &mut GameState, card_id: CardId| {
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    let exiled_bear = |g: &GameState| g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").map(|c| c.id);
+
+    // Yasmin Khan's tap impulse.
+    let mut g = main_phase();
+    let yasmin = g.add_card_to_battlefield(0, catalog::yasmin_khan());
+    g.clear_sickness(yasmin);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: yasmin, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap Yasmin");
+    drain_stack(&mut g);
+    let bear = exiled_bear(&g).expect("exiled");
+    assert!(from_exile(&mut g, bear).is_err(), "not free");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    from_exile(&mut g, bear).expect("paid {1}{G}");
+
+    // Embrace the Unknown's two cards.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let embrace = g.add_card_to_hand(0, catalog::embrace_the_unknown());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, embrace, None).expect("cast");
+    drain_stack(&mut g);
+    let bear = exiled_bear(&g).expect("exiled");
+    assert!(from_exile(&mut g, bear).is_err(), "not free");
+
+    // Heartless Conscription: any type of mana, but still the mana value.
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let conscript = g.add_card_to_hand(0, catalog::heartless_conscription());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    cast(&mut g, conscript, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(from_exile(&mut g, theirs).is_err(), "not free");
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    from_exile(&mut g, theirs).expect("two blue pay for {1}{G}");
+}

@@ -271,7 +271,7 @@ pub fn armory_paladin() -> CardDefinition {
             duration: MayPlayDuration::EndOfControllersNextTurn,
             pay_any_color: false,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         })],
         ..creature("Armory Paladin", cost(&[generic(1), r(), w()]), vec![CreatureType::Human, CreatureType::Knight], 3, 3)
