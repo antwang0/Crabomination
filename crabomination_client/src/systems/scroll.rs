@@ -21,7 +21,7 @@
 
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
-use bevy::ui::ComputedNode;
+use bevy::ui::{ComputedNode, UiGlobalTransform};
 
 /// Default wheel speed: one `MouseScrollUnit::Line` detent ≈ this many
 /// logical pixels, chosen so a detent advances roughly one card row.
@@ -70,7 +70,7 @@ impl Scrollable {
 pub fn handle_scroll(
     mut wheel: MessageReader<MouseWheel>,
     windows: Query<&Window>,
-    mut scrollables: Query<(&ComputedNode, &GlobalTransform, &Scrollable, &mut ScrollPosition)>,
+    mut scrollables: Query<(&ComputedNode, &UiGlobalTransform, &Scrollable, &mut ScrollPosition)>,
 ) {
     let mut lines = 0.0f32;
     let mut pixels = 0.0f32;
@@ -84,18 +84,14 @@ pub fn handle_scroll(
         return;
     }
     let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
+    // Layout is in physical pixels (`ComputedNode::size`,
+    // `UiGlobalTransform`), and so is a `Pixel` wheel delta; the scroll
+    // offset is logical.
+    let Some(cursor) = window.physical_cursor_position() else { return };
+    let pixels = pixels / window.scale_factor();
 
-    for (computed, gtf, scrollable, mut scroll) in &mut scrollables {
-        // `ComputedNode::size()` is in logical pixels; the global
-        // translation is the node's centre in screen space.
-        let half = computed.size() * 0.5;
-        let center = gtf.translation().truncate();
-        let inside = cursor.x >= center.x - half.x
-            && cursor.x <= center.x + half.x
-            && cursor.y >= center.y - half.y
-            && cursor.y <= center.y + half.y;
-        if !inside {
+    for (computed, transform, scrollable, mut scroll) in &mut scrollables {
+        if !computed.contains_point(*transform, cursor) {
             continue;
         }
         // Per-panel line distance is applied here rather than at
@@ -109,5 +105,51 @@ pub fn handle_scroll(
         // Topmost hovered scrollable consumes the tick, so nested
         // scrollables don't both move on one detent.
         return;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::ecs::system::RunSystemOnce;
+    use bevy::input::touch::TouchPhase;
+
+    /// A panel laid out at logical (100, 50)-(300, 150) on a 2x display:
+    /// `bevy_ui` keeps its size and position in physical pixels.
+    fn panel(world: &mut World, logical_center: Vec2) -> Entity {
+        world
+            .spawn((
+                Node::default(),
+                Scrollable::default(),
+                ComputedNode { size: Vec2::new(400.0, 200.0), inverse_scale_factor: 0.5, ..default() },
+                UiGlobalTransform::from_translation(logical_center * 2.0),
+            ))
+            .id()
+    }
+
+    /// A wheel detent scrolls the panel under the cursor and no other. The
+    /// hit test read the node's `GlobalTransform`, which a `bevy_ui` 0.19
+    /// node doesn't have, so it matched nothing: the log, the zone browsers
+    /// and the library search never scrolled.
+    #[test]
+    fn a_wheel_detent_scrolls_the_panel_under_the_cursor() {
+        let mut world = World::new();
+        world.init_resource::<Messages<MouseWheel>>();
+        let mut window = Window::default();
+        window.resolution.set_scale_factor_override(Some(2.0));
+        window.set_cursor_position(Some(Vec2::new(150.0, 100.0)));
+        world.spawn(window);
+        let under = panel(&mut world, Vec2::new(200.0, 100.0));
+        let elsewhere = panel(&mut world, Vec2::new(500.0, 300.0));
+        world.write_message(MouseWheel {
+            unit: MouseScrollUnit::Line,
+            x: 0.0,
+            y: -1.0,
+            window: Entity::PLACEHOLDER,
+            phase: TouchPhase::Moved,
+        });
+        world.run_system_once(handle_scroll).unwrap();
+        assert_eq!(world.get::<ScrollPosition>(under).unwrap().0.y, SCROLL_LINE_PX);
+        assert_eq!(world.get::<ScrollPosition>(elsewhere).unwrap().0.y, 0.0);
     }
 }

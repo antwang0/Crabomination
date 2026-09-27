@@ -4,6 +4,9 @@
 //! the table itself — a quadrant each in a 4-player pod, a half each in 1v1.
 //! The regions come from `card::layout::seat_region`, which leaves a seam of
 //! plain table between neighbours.
+//!
+//! In a pod each seat's deck also carries a name plate: a tint tells four
+//! boards apart, not whose each one is.
 
 use bevy::prelude::*;
 
@@ -62,6 +65,91 @@ pub fn sync_seat_tints(
             Transform::from_xyz(c.x, TINT_Y, c.y),
             SeatTint,
             // Despawned with the rest of the match on leaving it.
+            crate::systems::game_ui::InGameRoot,
+        ));
+    }
+}
+
+/// A seat's name plate: its name and life, on its deck pile.
+#[derive(Component)]
+pub struct SeatNamePlate(pub usize);
+
+/// The plate's text: the seat's name ("You" for the viewer) and life, or
+/// the name under a skull once the seat is out. Pure helper.
+fn plate_label(cv: &crabomination::net::ClientView, p: &crabomination::net::PlayerView) -> String {
+    let name = crate::systems::game_ui::table_awareness::seat_label(&cv.players, cv.your_seat, p.seat);
+    if p.eliminated { format!("\u{2620} {name}") } else { format!("{name}  \u{2665} {}", p.life) }
+}
+
+/// Keep a name plate on every seat's deck pile in a pod (3+ seats; a duel's
+/// far board needs no name), centred on the top of the pile and moved with
+/// the camera every frame.
+pub fn sync_seat_name_plates(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<crate::theme::UiFonts>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    mut plates: Query<(Entity, &SeatNamePlate, &mut Node, &mut Text, &bevy::ui::ComputedNode)>,
+) {
+    let pod = view.0.as_ref().filter(|cv| cv.players.len() > 2);
+    let camera = camera_q.single().ok();
+    let (Some(cv), Some((camera, cam_xform))) = (pod, camera) else {
+        for (e, ..) in &plates {
+            commands.entity(e).despawn();
+        }
+        return;
+    };
+    let n = cv.players.len();
+    // Centre of the top of the seat's deck pile, in viewport px.
+    let pile_top = |p: &crabomination::net::PlayerView| {
+        let base = crate::card::layout::deck_position(p.seat, cv.your_seat, n);
+        let top = base + Vec3::Y * crate::card::pile_height(p.library.size);
+        camera.world_to_viewport(cam_xform, top).ok()
+    };
+    let mut placed = vec![false; n];
+    for (e, plate, mut node, mut text, computed) in &mut plates {
+        let Some(p) = cv.players.iter().find(|p| p.seat == plate.0) else {
+            commands.entity(e).despawn();
+            continue;
+        };
+        placed[p.seat.min(n - 1)] = true;
+        let label = plate_label(cv, p);
+        if text.0 != label {
+            text.0 = label;
+        }
+        match pile_top(p) {
+            Some(at) => {
+                let half = computed.size() * computed.inverse_scale_factor() * 0.5;
+                node.display = Display::Flex;
+                node.left = Val::Px(at.x - half.x);
+                node.top = Val::Px(at.y - half.y);
+            }
+            None => node.display = Display::None,
+        }
+    }
+    for p in &cv.players {
+        if placed.get(p.seat).copied().unwrap_or(true) {
+            continue;
+        }
+        // Parked off screen for the frame before layout has sized it.
+        commands.spawn((
+            SeatNamePlate(p.seat),
+            Text::new(plate_label(cv, p)),
+            ui_fonts.tf(13.0),
+            TextColor(crate::theme::TEXT_PRIMARY),
+            BackgroundColor(crate::theme::HUD_BG),
+            BorderColor::all(crate::systems::game_ui::table_awareness::seat_color(p.seat)),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(-1000.0),
+                top: Val::Px(-1000.0),
+                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                border: UiRect::left(Val::Px(4.0)),
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            Pickable::IGNORE,
+            GlobalZIndex(crate::theme::layer::CARD_OVERLAY),
             crate::systems::game_ui::InGameRoot,
         ));
     }

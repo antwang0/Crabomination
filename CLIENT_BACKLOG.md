@@ -25,6 +25,55 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## In-game display pass (2026-09-27) — shipped
+
+Read off layout-harness screenshots (1920x1080 and 1280x720, duel and
+four-seat pod, on a 1.45x display). Before/after shots were compared by
+eye; `framing::tests::budget` gates the table sizes.
+
+- ✅ **A pod's boards say whose they are.** Each seat's deck pile carries a
+  plate with its name and life (`table_tint::sync_seat_name_plates`); the
+  seat tints told four boards apart but left you matching them to the
+  roster in the corner. Pods only — a duel's far board needs no name.
+- ✅ **Keyword strips sit on the top edge of the card as you see it**
+  (`keyword_label`), whichever way the card faces. They hung from the
+  card's own top edge, so an opponent's hung under their cards, a tapped
+  card's beside it, and two pod boards facing each other printed theirs
+  over each other along the seam ("F Fly g").
+- ✅ **Condition chips show only when a card of yours checks them.** Coven,
+  threshold, metalcraft, ferocious, hellbent, formidable, descend, void,
+  corrupted and crime were lit whenever met — a board of three creatures
+  lit three of them in a game with no payoff for any. The test is a card in
+  your hand, on your side or in your command zone whose definition names
+  the condition (`player_stats::Condition`, from the definition's `Debug`
+  text, memoised per name). The per-step strip ("UN UP DR M1 …") under the
+  turn line is gone — the phase chart below it says the same — and the turn
+  line names the step as the chart does ("Main 1", not `PreCombatMain`).
+- ✅ **The prompt line moved under the action buttons**, as MTGO and XMage
+  place theirs; it sat bottom-centre over the hand it was asking you to play
+  from. `framing::hud_rects` reserves four lines of it: 47 → 46 px for a pod
+  at 1280x720, nothing at 1920x1080 or larger.
+- ✅ **Your chip row wraps short of the opponent panel**
+  (`fit_player_hud_width`), at `framing::player_panel_width` — the width
+  the camera fit already assumed — or sooner beside a pod's wider roster.
+  At 1280x720 it ran under the opponent panel and covered its counts.
+  - ⚠ **Cap the wrapping row, not the absolute panel.** With `max_width` on
+    the panel, Taffy wrapped the row but sized the panel for one line, and
+    the second hung below the border.
+  - ⚠ `PlayerHudPanel` is on every seat's chip row, not only the viewer's
+    panel, so `single()` on it fails whenever there is an opponent.
+- ✅ **Mouse-wheel scrolling never worked** (found on the way). `bevy_ui`
+  0.19 nodes carry `UiGlobalTransform`, not `GlobalTransform`, so
+  `scroll::handle_scroll`'s query — and the animation-speed slider's —
+  matched nothing: the log, the zone browsers and the library search sat
+  clipped, as they had before the 2026-09-12 fix below claimed them.
+  `scroll::tests::a_wheel_detent_scrolls_the_panel_under_the_cursor` fails
+  on the old query.
+  - ⚠ **`ComputedNode::size()` and `UiGlobalTransform` are physical
+    pixels; the cursor and `Val::Px` are logical.** The game log's
+    placement read the opponent panel's height as logical, parking the log
+    45 % of that height too low on a 1.45x display.
+
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
 A read of the client turned up four defects that read as bugs rather than
@@ -468,14 +517,6 @@ turn dividers, ×N coalescing, player names. Remaining ⏳: clickable log
 lines (hover-preview the named card — see backlog above) and event
 filtering.
 
-### Button Hover + Pressed Feedback
-Action buttons (Pass / End Turn / Next Turn / Export plus modal buttons) have
-no `Interaction::Hovered` / `Pressed` tinting and no tooltips. Introduce a
-generic `interactive_button` helper that wires hover/press background changes
-and tooltip strings, and apply it across `game_ui.rs` HUD buttons,
-`decision_ui.rs` modal buttons, and `draft.rs` tab buttons. The current pass
-button hard-codes 4 srgb branches per priority state with no hover feedback.
-
 ### Selective Attacker Picking
 ✅ Click-based per-attacker picking is wired (`game_ui/mod.rs`, the
 "Attacker selection" block): click an own creature to toggle it into the
@@ -619,8 +660,9 @@ action buttons moved from the near-left corner (the widest part of the
 view) up under the phase chart, and Export State / Surrender / the
 duplicate Leave went to the Esc menu: pods 86/77 → 99/84 px, 1v1 125/114 →
 129/118. Next to bind: the game log for a pod (96/89 px without it), the
-phase chart for a 1v1 (136/124). At 1280x720 the ~1075 px player panel and the
-opponent panel overlap. The fit only knows the panels by the nominal rects
+phase chart for a 1v1 (136/124). The player panel's chips now wrap at the
+width the fit reserves (2026-09-27, above), so it no longer runs under the
+opponent panel at 1280x720. The fit only knows the panels by the nominal rects
 in `framing::hud_rects` — a slot system that reported real rects would let
 it use space an empty log or a short chip row leaves.
 

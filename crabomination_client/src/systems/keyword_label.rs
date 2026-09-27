@@ -9,8 +9,8 @@
 //! Mechanism mirrors `pt_label`: a screen-space UI strip reprojected from the
 //! card's world position every frame, reconciled against the engine view
 //! (spawned for newly-keyworded creatures, despawned when a creature loses all
-//! displayable keywords or leaves the battlefield). It sits at the card's top
-//! edge so it never collides with the bottom-right P/T badge, and renders
+//! displayable keywords or leaves the battlefield). It sits on the card's top
+//! edge as the viewer sees it, whichever way the card faces, and renders
 //! below default-z UI so popups / tooltips win.
 
 use std::collections::{HashMap, HashSet};
@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use crabomination::card::{CardId, Keyword, WardCost};
 
-use crate::card::{BattlefieldCard, GameCardId, CARD_HEIGHT};
+use crate::card::{BattlefieldCard, GameCardId, CARD_HEIGHT, CARD_WIDTH};
 use crate::net_plugin::CurrentView;
 use crate::systems::game_ui::InGameRoot;
 use crate::theme::UiFonts;
@@ -587,14 +587,6 @@ pub fn sync_keyword_labels(
     };
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
 
-    // card_id → world position of the card's top-centre (the title edge),
-    // transformed through the flat battlefield rotation.
-    let top_center_local = Vec3::new(0.0, CARD_HEIGHT / 2.0, 0.0);
-    let mut card_top: HashMap<CardId, Vec3> = HashMap::new();
-    for (gid, gtf) in &cards {
-        card_top.insert(gid.0, gtf.transform_point(top_center_local));
-    }
-
     // Desired strips: creatures with at least one displayable keyword.
     // Rebuilt only on view change (keyword_strip allocates a String per
     // creature); anchoring/positioning below still tracks every frame, and
@@ -656,12 +648,35 @@ pub fn sync_keyword_labels(
     }
     let desired = &*desired_cache;
 
-    // Project a card-top world point to a viewport pixel, centring a strip of
-    // `chars` glyphs over the card and lifting it above the top edge.
-    let anchor = |world: Vec3, chars: usize| -> Option<(f32, f32)> {
-        camera.world_to_viewport(cam_xform, world).ok().map(|v| {
-            (v.x - chars as f32 * KW_CHAR_PX * 0.5, v.y - KW_LIFT)
-        })
+    // card_id → the viewport point a strip hangs from: the midpoint of the
+    // card's top edge *as seen*, the highest of its four edge midpoints on
+    // screen. The card's own top edge put an opponent's strips under their
+    // cards (which face them) and a tapped card's beside it — and in a pod
+    // two boards that face each other printed their strips over each other
+    // along the seam between them.
+    let edges = [
+        Vec3::new(0.0, CARD_HEIGHT / 2.0, 0.0),
+        Vec3::new(0.0, -CARD_HEIGHT / 2.0, 0.0),
+        Vec3::new(CARD_WIDTH / 2.0, 0.0, 0.0),
+        Vec3::new(-CARD_WIDTH / 2.0, 0.0, 0.0),
+    ];
+    let mut card_top: HashMap<CardId, Vec2> = HashMap::new();
+    for (gid, gtf) in &cards {
+        if !desired.contains_key(&gid.0) {
+            continue;
+        }
+        let top = edges
+            .iter()
+            .filter_map(|&e| camera.world_to_viewport(cam_xform, gtf.transform_point(e)).ok())
+            .min_by(|a, b| a.y.total_cmp(&b.y));
+        if let Some(top) = top {
+            card_top.insert(gid.0, top);
+        }
+    }
+
+    // Centre a strip of `chars` glyphs over the card, lifted above its edge.
+    let anchor = |top: Vec2, chars: usize| -> (f32, f32) {
+        (top.x - chars as f32 * KW_CHAR_PX * 0.5, top.y - KW_LIFT)
     };
 
     // Update existing strips; despawn any whose creature lost all keywords or
@@ -671,9 +686,8 @@ pub fn sync_keyword_labels(
         match desired.get(&label.0) {
             Some(strip) => {
                 seen.insert(label.0);
-                if let Some(world) = card_top.get(&label.0).copied()
-                    && let Some((x, y)) = anchor(world, strip.chars().count())
-                {
+                if let Some(&top) = card_top.get(&label.0) {
+                    let (x, y) = anchor(top, strip.chars().count());
                     node.display = Display::Flex;
                     node.left = Val::Px(x);
                     node.top = Val::Px(y);
@@ -698,7 +712,7 @@ pub fn sync_keyword_labels(
         let (left, top) = card_top
             .get(id)
             .copied()
-            .and_then(|world| anchor(world, strip.chars().count()))
+            .map(|top| anchor(top, strip.chars().count()))
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             KeywordLabel(*id),

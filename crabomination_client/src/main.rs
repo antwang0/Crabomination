@@ -83,10 +83,10 @@ use systems::game_ui::{
     animate_life_flash, record_life_history, sync_life_graph, toggle_life_graph,
     trigger_life_flash, LifeFlashTracker, LifeHistory,
     update_combat_preview_panel,
-    position_log_below_opponents,
+    fit_player_hud_width, position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
-    update_phase_bar, update_player_stats_chips, update_stack_panel,
+    update_player_stats_chips, update_stack_panel,
     handle_stack_resolve_button, update_turn_text,
     ButtonState, GameLogicSet,
 };
@@ -600,12 +600,12 @@ fn main() {
             Update,
             (
                 update_turn_text,
-                update_phase_bar,
                 update_player_stats_chips,
                 update_mana_pips,
                 update_opponent_stats_rows,
                 update_opponent_panel_tint,
                 position_log_below_opponents,
+                fit_player_hud_width,
                 update_hint,
                 update_phase_chart,
                 update_log_text,
@@ -803,6 +803,7 @@ fn main() {
                 crate::systems::camera_zoom::camera_zoom,
                 crate::systems::eliminated::sync_eliminated_shrouds,
                 crate::systems::table_tint::sync_seat_tints,
+                crate::systems::table_tint::sync_seat_name_plates,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),

@@ -315,12 +315,6 @@ pub struct FastForward {
 #[derive(Component)]
 pub struct TurnInfoText;
 
-/// Flex-row of per-step chips (the "phase bar"): one chip per turn step,
-/// the current one highlighted. Rebuilt by `update_phase_bar` when the
-/// step or active player changes.
-#[derive(Component)]
-pub struct PhaseBarRow;
-
 /// Flex-row container that holds the viewer's stat chips (name, life,
 /// hand, deck, graveyard). `update_player_stats_chips` rebuilds its
 /// children whenever the view changes — one tinted chip per stat,
@@ -365,7 +359,7 @@ pub struct HintText;
 /// Wrapper around `HintText` that owns the dark-tinted padding. We
 /// toggle this node's `Display` based on whether the hint string is
 /// non-empty so the chip vanishes entirely between hints (instead of
-/// rendering as an empty dark rectangle floating above the hand).
+/// rendering as an empty dark rectangle under the action buttons).
 #[derive(Component)]
 pub struct HintChip;
 
@@ -394,6 +388,12 @@ pub struct AttackAllPanel;
 /// hand-picked one or more attackers via the per-creature click flow).
 #[derive(Component)]
 pub struct AttackButtonLabel;
+
+/// The viewer's HUD panel's wrapping row of stat chips and mana pips, which
+/// `fit_player_hud_width` caps. (`PlayerHudPanel` is on every seat's chip
+/// row, so it can't pick out the viewer's.)
+#[derive(Component)]
+pub struct ViewerChipRows;
 
 /// Clickable "player avatar" — the per-seat HUD chip-row (viewer's
 /// bottom-left panel, opponents' rows in the top-right strip). Holding
@@ -567,17 +567,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 TurnInfoText,
                 Pickable::IGNORE,
             ));
-            // Phase bar: one chip per step, current step highlighted.
-            p.spawn((
-                Node {
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    column_gap: Val::Px(2.0),
-                    ..default()
-                },
-                PhaseBarRow,
-                Pickable::IGNORE,
-            ));
             // Stats row: small tinted chips for life / hand / deck / grave
             // (rebuilt by `update_player_stats_chips`) and a sibling row
             // of mana pips. Both use the same chip visual vocabulary so
@@ -591,14 +580,18 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     row_gap: Val::Px(4.0),
                     ..default()
                 },
+                ViewerChipRows,
                 Pickable::IGNORE,
             ))
             .with_children(|row| {
+                // Wraps at the panel's width (`fit_player_hud_width`).
                 row.spawn((
                     Node {
                         flex_direction: FlexDirection::Row,
                         align_items: AlignItems::Center,
                         column_gap: Val::Px(4.0),
+                        flex_wrap: FlexWrap::Wrap,
+                        row_gap: Val::Px(4.0),
                         ..default()
                     },
                     PlayerStatsRow,
@@ -743,42 +736,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             ));
         });
 
-    // Bottom-center: hint toast — a centered text strip just above
-    // the action button row. Replaces the old gold hint line that
-    // lived inside the bottom-left player panel.
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(56.0),
-                left: Val::Px(0.0),
-                right: Val::Px(0.0),
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            InGameRoot,
-        ))
-        .with_children(|wrap| {
-            wrap.spawn((
-                Node {
-                    padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
-                    display: Display::None,
-                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                    ..default()
-                },
-                BackgroundColor(theme::HUD_BG),
-                HintChip,
-            ))
-            .with_children(|chip| {
-                chip.spawn((
-                    Text::new(""),
-                    tf(13.0),
-                    TextColor(theme::ACCENT_GOLD),
-                    HintText,
-                ));
-            });
-        });
-
     // Action buttons, under the phase chart in the left control column.
     // Only the in-turn actions live here: Export State, Surrender and Leave
     // are in the Esc menu (`quality::setup_quality_panel`). The bottom
@@ -919,6 +876,26 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ));
                 });
             });
+            // The prompt line ("Your priority — respond, or P to pass",
+            // "Choose a target", a trigger to answer) under the buttons it
+            // names, as MTGO and XMage place theirs. It sat bottom-centre,
+            // over the hand it was asking you to play from. Under the
+            // buttons, so a long prompt never moves them.
+            // `card::framing::hud_rects` keeps the table clear of it.
+            wrap.spawn((
+                Node {
+                    width: Val::Px(170.0),
+                    padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0)),
+                    display: Display::None,
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::HUD_BG),
+                HintChip,
+            ))
+            .with_children(|chip| {
+                chip.spawn((Text::new(""), tf(13.0), TextColor(theme::ACCENT_GOLD), HintText));
+            });
         });
 
     // Bottom-center attack-prompt panel — only visible during the viewer's
@@ -1050,80 +1027,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
 
 // ── HUD text update ───────────────────────────────────────────────────────────
 
-/// Rebuild the phase-bar chips when the step / active player changes.
-/// Combat steps are tinted red on the active chip so the combat phase
-/// reads at a glance; the viewer's own turn highlights gold.
-pub fn update_phase_bar(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    row_q: Query<Entity, With<PhaseBarRow>>,
-    mut last: Local<Option<(crabomination::TurnStep, usize)>>,
-) {
-    use crabomination::TurnStep as S;
-    let Some(cv) = &view.0 else { return };
-    let Ok(row) = row_q.single() else { return };
-    if *last == Some((cv.step, cv.active_player)) {
-        return;
-    }
-    *last = Some((cv.step, cv.active_player));
-    const STEPS: [(S, &str); 13] = [
-        (S::Untap, "UN"),
-        (S::Upkeep, "UP"),
-        (S::Draw, "DR"),
-        (S::PreCombatMain, "M1"),
-        (S::BeginCombat, "BC"),
-        (S::DeclareAttackers, "AT"),
-        (S::DeclareBlockers, "BL"),
-        (S::FirstStrikeDamage, "FS"),
-        (S::CombatDamage, "CD"),
-        (S::EndCombat, "EC"),
-        (S::PostCombatMain, "M2"),
-        (S::End, "EN"),
-        (S::Cleanup, "CL"),
-    ];
-    let is_combat = |s: S| {
-        matches!(
-            s,
-            S::BeginCombat
-                | S::DeclareAttackers
-                | S::DeclareBlockers
-                | S::FirstStrikeDamage
-                | S::CombatDamage
-                | S::EndCombat
-        )
-    };
-    commands.entity(row).despawn_children();
-    commands.entity(row).with_children(|p| {
-        for (step, label) in STEPS {
-            let current = step == cv.step;
-            let (bg, fg) = if current && is_combat(step) {
-                (Color::srgb(0.45, 0.15, 0.12), theme::TEXT_PRIMARY)
-            } else if current {
-                (Color::srgb(0.65, 0.52, 0.18), Color::srgb(0.08, 0.07, 0.03))
-            } else {
-                (Color::srgba(1.0, 1.0, 1.0, 0.06), Color::srgba(1.0, 1.0, 1.0, 0.45))
-            };
-            p.spawn((
-                Node {
-                    padding: UiRect::axes(Val::Px(3.0), Val::Px(1.0)),
-                    ..default()
-                },
-                BackgroundColor(bg),
-                Pickable::IGNORE,
-            ))
-            .with_children(|chip| {
-                chip.spawn((
-                    Text::new(label),
-                    ui_fonts.tf(9.0),
-                    TextColor(fg),
-                    Pickable::IGNORE,
-                ));
-            });
-        }
-    });
-}
-
 pub fn update_turn_text(
     view: Res<CurrentView>,
     mut q: Query<&mut Text, With<TurnInfoText>>,
@@ -1146,7 +1049,7 @@ pub fn update_turn_text(
         } else {
             format!("{}'s turn", player_name(cv, cv.active_player))
         };
-        format!("Turn {} | {:?} | {whose}", cv.turn, cv.step)
+        format!("Turn {} · {} · {whose}", cv.turn, step_name(cv.step))
     };
 }
 
@@ -1204,15 +1107,16 @@ pub fn update_log_text(
 /// Keep the game log positioned just below the opponent status panel. The
 /// panel grows with the opponent count (one chip-row each, wrapping to a
 /// couple of lines in Commander), so a fixed log `top` would overlap it for
-/// 3+ players. Reads the panel's live computed height (`ComputedNode::size`
-/// is in logical px here) and parks the log 8px under it.
+/// 3+ players. Reads the panel's live computed height and parks the log 8px
+/// under it. `ComputedNode::size` is in physical px: read as logical, the
+/// log sat 45 % of the panel's height too low on a 1.45x display.
 pub fn position_log_below_opponents(
     panel_q: Query<&bevy::ui::ComputedNode, With<OpponentStatusPanel>>,
     mut log_q: Query<&mut Node, With<GameLogOuterPanel>>,
 ) {
     let Ok(panel) = panel_q.single() else { return };
     let Ok(mut log) = log_q.single_mut() else { return };
-    let panel_h = panel.size().y;
+    let panel_h = panel.size().y * panel.inverse_scale_factor();
     if panel_h <= 0.0 {
         return;
     }
@@ -1220,6 +1124,34 @@ pub fn position_log_below_opponents(
     let target = Val::Px(10.0 + panel_h + 8.0);
     if log.top != target {
         log.top = target;
+    }
+}
+
+/// Wrap the viewer's HUD chips at the width the camera fit reserves for the
+/// panel (`framing::player_panel_width`), or sooner when a pod's opponent
+/// panel is wider than the fit assumes, so they never run under the
+/// opponent panel — at 1280x720 they covered its life and hand counts.
+///
+/// The cap goes on the chip row, not the panel: an absolute panel with a
+/// `max_width` wrapped its row but sized its own height for one line, so
+/// the second hung below it.
+pub fn fit_player_hud_width(
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    opponents_q: Query<&bevy::ui::ComputedNode, With<OpponentStatusPanel>>,
+    mut rows_q: Query<&mut Node, With<ViewerChipRows>>,
+) {
+    let Ok(window) = windows.single() else { return };
+    let Ok(mut rows) = rows_q.single_mut() else { return };
+    let w = window.width();
+    // Both panels sit 10 px in from their edges; keep 10 px between them.
+    let beside_opponents = opponents_q
+        .single()
+        .map_or(f32::INFINITY, |p| w - 30.0 - p.size().x * p.inverse_scale_factor());
+    let panel = (crate::card::framing::player_panel_width(w) - 10.0).min(beside_opponents);
+    // Less the panel's padding (8 px) and border (2 px) either side.
+    let target = Val::Px((panel.max(260.0) - 20.0).round());
+    if rows.max_width != target {
+        rows.max_width = target;
     }
 }
 
@@ -1240,6 +1172,15 @@ pub(crate) const PHASE_CHART_STEPS: &[(TurnStep, &str)] = &[
     (TurnStep::End, "End"),
     (TurnStep::Cleanup, "Cleanup"),
 ];
+
+/// The step as the turn line names it: the phase chart's label, or its own
+/// name for first-strike damage, which the chart has no row for.
+fn step_name(step: TurnStep) -> &'static str {
+    match step {
+        TurnStep::FirstStrikeDamage => "First-Strike Damage",
+        step => step_short_label(step),
+    }
+}
 
 fn step_short_label(step: TurnStep) -> &'static str {
     PHASE_CHART_STEPS

@@ -341,6 +341,100 @@ pub(super) fn storm_chip_visible(spells_cast_this_turn: u32) -> bool {
     spells_cast_this_turn >= 2
 }
 
+/// A condition the viewer's chip row reports as met: an ability word (coven,
+/// threshold, descend, …) or a committed crime. Met is not the same as
+/// mattering — a board of three creatures lights coven, formidable and
+/// ferocious in most games — so each chip shows only while one of the
+/// viewer's cards checks it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum Condition {
+    Coven,
+    Threshold,
+    Metalcraft,
+    Ferocious,
+    Hellbent,
+    Formidable,
+    Descend,
+    Void,
+    Corrupted,
+    Crime,
+}
+
+impl Condition {
+    const ALL: [Condition; 10] = [
+        Condition::Coven,
+        Condition::Threshold,
+        Condition::Metalcraft,
+        Condition::Ferocious,
+        Condition::Hellbent,
+        Condition::Formidable,
+        Condition::Descend,
+        Condition::Void,
+        Condition::Corrupted,
+        Condition::Crime,
+    ];
+
+    /// Text in a card definition's `Debug` form that means the card checks
+    /// this condition: the engine's name for it (`Predicate::CovenActive`,
+    /// `DescendActive`, `CommittedCrime`, …) or the ability word opening a
+    /// static's description ("Threshold — …").
+    fn needles(self) -> &'static [&'static str] {
+        match self {
+            Condition::Coven => &["Coven"],
+            Condition::Threshold => &["Threshold"],
+            Condition::Metalcraft => &["Metalcraft"],
+            Condition::Ferocious => &["Ferocious"],
+            Condition::Hellbent => &["Hellbent"],
+            Condition::Formidable => &["Formidable"],
+            Condition::Descend => &["Descend"],
+            // Bare "Void" is also a counter type and a dozen card names.
+            Condition::Void => &["VoidActive", "Void —"],
+            Condition::Corrupted => &["Corrupted"],
+            Condition::Crime => &["Crime"],
+        }
+    }
+
+    pub(super) fn bit(self) -> u16 {
+        1 << self as u16
+    }
+}
+
+/// The conditions the card named `name` checks, as a mask of
+/// [`Condition::bit`]s. A card the catalog doesn't know (a token) checks none.
+pub(super) fn conditions_checked(name: &str) -> u16 {
+    let Some(def) = crabomination::catalog::lookup_by_name(name) else { return 0 };
+    let text = format!("{def:?}");
+    Condition::ALL
+        .into_iter()
+        .filter(|c| c.needles().iter().any(|n| text.contains(n)))
+        .fold(0, |mask, c| mask | c.bit())
+}
+
+/// [`conditions_checked`] per card name, memoised: a definition's `Debug`
+/// form runs to kilobytes and the chip row rebuilds on every view.
+#[derive(Default)]
+pub struct CheckedConditions(std::collections::HashMap<String, u16>);
+
+impl CheckedConditions {
+    /// The conditions any of `p`'s cards checks: its hand, the permanents it
+    /// controls, and its commanders.
+    fn of(&mut self, cv: &crabomination::net::ClientView, p: &crabomination::net::PlayerView) -> u16 {
+        let hand = p.hand.iter().filter_map(|c| match c {
+            crabomination::net::HandCardView::Known(k) => Some(k.name.as_str()),
+            crabomination::net::HandCardView::Hidden { .. } => None,
+        });
+        let board = cv.battlefield.iter().filter(|c| c.controller == p.seat).map(|c| c.name.as_str());
+        let commanders = p.commander_casts.iter().map(|(name, _)| name.as_str());
+        hand.chain(board).chain(commanders).fold(0, |mask, name| {
+            let checked = match self.0.get(name) {
+                Some(&checked) => checked,
+                None => *self.0.entry(name.to_owned()).or_insert_with(|| conditions_checked(name)),
+            };
+            mask | checked
+        })
+    }
+}
+
 /// Library size at or below which the Deck chip switches to its amber
 /// deck-out warning style (CR 104.3a — a player with an empty library
 /// loses the next time they'd draw).
@@ -834,6 +928,7 @@ pub fn update_player_stats_chips(
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
     row_q: Query<Entity, With<PlayerStatsRow>>,
+    mut checked: Local<CheckedConditions>,
 ) {
     if !view.is_changed() {
         return;
@@ -841,6 +936,8 @@ pub fn update_player_stats_chips(
     let Ok(row) = row_q.single() else { return };
     let Some(cv) = &view.0 else { return };
     let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
+    let checked = checked.of(cv, p);
+    let checks = |c: Condition| checked & c.bit() != 0;
     commands.entity(row).despawn_children();
     commands.entity(row).with_children(|row| {
         // Out of a pod that goes on: the dimmed "☠ OUT · cause" summary an
@@ -1093,7 +1190,7 @@ pub fn update_player_stats_chips(
         }
         // Innistrad Coven — lit when this player controls 3+ creatures with
         // different powers, so coven-gated payoffs are online.
-        if p.coven_active {
+        if p.coven_active && checks(Condition::Coven) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
         }
         // CR 309 — venture progress: current room while in a dungeon, plus the
@@ -1115,30 +1212,32 @@ pub fn update_player_stats_chips(
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Summon, label);
         }
         // CR 700.13 (OTJ) — lit once this player has committed a crime this turn.
-        if p.committed_crime_this_turn {
+        if p.committed_crime_this_turn && checks(Condition::Crime) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Crime, "🔫 crime".to_string());
         }
         // EOE Void — lit when this player's Void condition is met this turn, so
         // Void-matters payoffs are online.
-        if p.void_active {
+        if p.void_active && checks(Condition::Void) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
         }
         // ONE Corrupted (CR 702.166) — lit while an opponent has 3+ poison,
         // so this player's Corrupted payoffs are online.
-        if cv.players.iter().any(|q| q.team != p.team && q.poison_counters >= 3) {
+        if checks(Condition::Corrupted)
+            && cv.players.iter().any(|q| q.team != p.team && q.poison_counters >= 3)
+        {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::AbilityWord, "✦ corrupted".to_string());
         }
         // Ability-word conditions — lit while the payoff is online, so cards
         // gated on Threshold / Metalcraft / Ferocious / Hellbent / Formidable
         // are easy to read at a glance.
-        for (on, label) in [
-            (p.threshold_active, "✦ threshold"),
-            (p.metalcraft_active, "✦ metalcraft"),
-            (p.ferocious_active, "✦ ferocious"),
-            (p.hellbent_active, "✦ hellbent"),
-            (p.formidable_active, "✦ formidable"),
+        for (on, condition, label) in [
+            (p.threshold_active, Condition::Threshold, "✦ threshold"),
+            (p.metalcraft_active, Condition::Metalcraft, "✦ metalcraft"),
+            (p.ferocious_active, Condition::Ferocious, "✦ ferocious"),
+            (p.hellbent_active, Condition::Hellbent, "✦ hellbent"),
+            (p.formidable_active, Condition::Formidable, "✦ formidable"),
         ] {
-            if on {
+            if on && checks(condition) {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::AbilityWord, label.to_string());
             }
         }
@@ -1146,7 +1245,7 @@ pub fn update_player_stats_chips(
         // non-zero, so descend-4 / descend-8 thresholds are easy to track. When
         // the player has descended this turn, append the per-turn count too, so
         // CR 700.11 per-turn payoffs (The Mycotyrant) are legible at a glance.
-        if p.descend_count > 0 {
+        if p.descend_count > 0 && checks(Condition::Descend) {
             let label = if p.descended_this_turn_count > 0 {
                 format!(
                     "\u{26CF} descend {} (+{} turn)",
@@ -1930,6 +2029,30 @@ mod tests {
         // (Exploration) both earn a chip.
         assert!(land_drop_chip_body(0, 0).is_some_and(|s| s.contains("no land")));
         assert!(land_drop_chip_body(3, 0).is_some_and(|s| s.contains('3')));
+    }
+
+    /// A condition chip needs a card that checks the condition. Each payoff
+    /// is found by the engine's name for its condition or by its ability
+    /// word; the fixture board's cards, which light coven, ferocious and
+    /// formidable without caring, check nothing — and Void Winnower is not a
+    /// Void card.
+    #[test]
+    fn a_condition_chip_needs_a_card_that_checks_it() {
+        use super::{Condition as C, conditions_checked};
+        for (name, condition) in [
+            ("Contortionist Troupe", C::Coven),
+            ("Cabal Torturer", C::Threshold),
+            ("Jagged Poppet", C::Hellbent),
+            ("Sabertooth Outrider", C::Formidable),
+            ("Frilled Cave-Wurm", C::Descend),
+            ("Chorale of the Void", C::Void),
+            ("Incisor Glider", C::Corrupted),
+        ] {
+            assert_eq!(conditions_checked(name), condition.bit(), "{name}");
+        }
+        for name in ["Tarmogoyf", "Serra Angel", "Birds of Paradise", "Void Winnower", "Forest", "No Such Card"] {
+            assert_eq!(conditions_checked(name), 0, "{name}");
+        }
     }
 
     #[test]

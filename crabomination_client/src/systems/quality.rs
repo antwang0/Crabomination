@@ -375,17 +375,18 @@ fn format_speed(speed: f32) -> String {
 /// `Interaction` only registered the initial frame the cursor was over
 /// the track and stalled the moment you dragged past either edge.
 pub fn handle_speed_slider(
-    track_q: Query<(&ComputedNode, &GlobalTransform), With<SpeedSliderTrack>>,
+    track_q: Query<(&ComputedNode, &bevy::ui::UiGlobalTransform), With<SpeedSliderTrack>>,
     windows: Query<&Window>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut dragging: Local<bool>,
     mut speed: ResMut<AnimationSpeed>,
 ) {
     let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
+    // Physical, like the track's layout.
+    let Some(cursor) = window.physical_cursor_position() else { return };
     let Ok((node, xform)) = track_q.single() else { return };
 
-    let center = xform.translation();
+    let center = xform.translation;
     let size = node.size();
     let half = size * 0.5;
     let left = center.x - half.x;

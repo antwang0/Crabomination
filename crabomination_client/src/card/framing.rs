@@ -53,18 +53,27 @@ pub fn hand_zoom_for(logical_height: f32) -> f32 {
     }
 }
 
+/// Right edge of the viewer's HUD panel in a viewport `w` logical px wide:
+/// short of the opponent panel in the top-right corner. The panel's chips
+/// wrap there (`game_ui::fit_player_hud_width`), so the rect [`hud_rects`]
+/// frames the table against is the panel's real extent.
+pub fn player_panel_width(w: f32) -> f32 {
+    1090.0_f32.min(w - 470.0)
+}
+
 /// The persistent HUD panels the table must not run under, in logical px:
 /// nominal sizes of the corner panels `game_ui::setup_game_hud` spawns.
 /// The table is a trapezoid (its far edge is narrow), so it can sit between
 /// the top corner panels while its wide near edge only has to clear the
 /// action buttons.
-pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 5] {
+pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 6] {
     let w = viewport.x;
     // One 45 px row per opponent under a turn-order strip in a pod.
     let opp_panel_h = if n_seats > 2 { 30.0 + 45.0 * (n_seats - 1) as f32 } else { 70.0 };
     [
-        // Player panel: turn line, phase strip and a row of stat chips.
-        Rect::new(0.0, 0.0, 1090.0_f32.min(w - 470.0), 100.0),
+        // Player panel: the turn line and a row of stat chips, wrapping to a
+        // second row at `player_panel_width`.
+        Rect::new(0.0, 0.0, player_panel_width(w), 100.0),
         // The left control column under it: the phase chart, then the
         // action buttons (Pass, End Turn, Next Turn, Auto-pass; the
         // occasional ones are in the Esc menu). High on the left edge, where
@@ -72,6 +81,10 @@ pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 5] {
         // buttons cost a pod's cards 88 → 99 px at 1920x1080.
         Rect::new(0.0, 100.0, 146.0, 346.0),
         Rect::new(0.0, 346.0, 180.0, 516.0),
+        // The prompt line under the buttons, four lines of it; a longer
+        // prompt runs over the table while it's up. It costs a pod's cards
+        // 47 → 46 px at 1280x720 and nothing at 1920x1080 or larger.
+        Rect::new(0.0, 516.0, 180.0, 600.0),
         // Opponent panel, top-right, with the game log hanging under it.
         Rect::new(w - 460.0, 0.0, w, opp_panel_h),
         Rect::new(w - 292.0, opp_panel_h, w, opp_panel_h + 436.0),
