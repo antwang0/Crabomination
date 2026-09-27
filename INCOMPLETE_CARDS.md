@@ -391,7 +391,7 @@ on existing primitives. What each rounds off:
 | High Perfect Morcant | the "tap three Elves" cost is paid from its *other* Elves (`tap_n_filter`); Morcant itself isn't offered | a tap-N cost that may include the source |
 | Mythos of Illuna | the {R}{G} fight runs inside the spell, not as the token's own ETB trigger — no window to respond between entry and fight | a token copy carrying a granted triggered ability |
 | Torment of Hailfire | the victim's choice is a fixed heuristic (life while above 3, then discard, then sacrifice) | a per-round punisher prompt |
-| Najeela, the Blade-Blossom | the "you may" is declined for opponents' Warriors (scoped to yours) | nothing — a strategy choice, noted |
+| Najeela, the Blade-Blossom | an opponent's Warrior attacking asks the "you may" (its controller gets the token); the headless seat declines | nothing — a strategy choice, noted |
 | Balduvian Fallen (older) | "+1/+0 per {B}/{R} spent on cumulative upkeep" dropped | a `CumulativeUpkeepPaid` event carrying the spent colours |
 
 ## Multiplayer wording — the N-seat audit, and what it still misses
