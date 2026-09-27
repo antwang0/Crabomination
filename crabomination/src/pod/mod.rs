@@ -2496,6 +2496,17 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-27 (pod end-step sinks — bisected by disabling
+        // each alone): `pick_cash_in` (a rock's "sacrifice: draw" at six
+        // lands) moves seed 43 65→67 turns, same winner;
+        // `pick_self_counter_sink` moves 0xC0FFEE one action; 4242 unmoved.
+        // (A first cut of `end_step_ping` also fired Walking Ballista's
+        // remove-a-counter ping and moved 0xC0FFEE to seat 1 in 45 turns;
+        // counter-paid pings are excluded now.)
+        // `bot_ladder --commander --a dflt`, 2,000 games at seed 9991,
+        // before/after: 41.04/41.02, 61.20/61.08, 84.15/83.87 turns at
+        // 3/4/6 seats, every block 2,000/2,000 decided; `--bench` 197,136
+        // byte-identical.
         // Re-blessed 2026-09-27 (`server/channel.rs`, a pod bot channels a
         // spare Kamigawa land — bisected by disabling it alone): seed 43
         // 86→65 turns, same winner; 0xC0FFEE 3171→3174 actions; 4242
@@ -2677,8 +2688,8 @@ mod tests {
         // Forge of Heroes-style counter on the bot's own permanent. Same
         // winners; seed 43 two turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 71, 3174),
-            (43, Some(0), 65, 3025),
+            (0xC0FFEE, Some(3), 71, 3175),
+            (43, Some(0), 67, 3165),
             (4242, Some(3), 74, 3378),
         ];
         let decks = rofellos_pod(4);

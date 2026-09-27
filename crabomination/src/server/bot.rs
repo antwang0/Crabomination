@@ -3413,6 +3413,9 @@ impl HeuristicBot {
                         .or_else(|| super::library_top::pick_library_top(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_selection_sink(state, seat))
+                        .or_else(|| super::counter_sink::pick_self_counter_sink(state, seat))
+                        .or_else(|| super::selection_sink::pick_cash_in(state, seat))
+                        .or_else(|| super::end_step_ping::pick_end_step_ping(state, seat))
                 {
                     return Some(BotStep::plain(cycle));
                 }

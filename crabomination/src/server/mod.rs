@@ -100,6 +100,9 @@ mod manland;
 mod selection_sink;
 mod regenerate;
 mod counter_sink;
+mod end_step_ping;
+#[cfg(test)]
+mod ability_probe;
 mod cycling;
 mod channel;
 mod grant_cast;

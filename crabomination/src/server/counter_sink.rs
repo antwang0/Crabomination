@@ -6,6 +6,12 @@
 //! Level up (CR 702.87 — Kazandu Tuskcaller, Hada Spy Patrol, Coralhelm
 //! Commander) had the same gap: a level counter shows on no board until a
 //! tier, so idle mana now levels up to the card's top tier.
+//! A self-growing tap sink — Hangarback Walker's "{1}, {T}: put a +1/+1
+//! counter on this", a storage land's "{1}, {T}: put a storage counter on
+//! this" (Mage-Ring Network), a charge accumulator's (Titan Forge, Coalition
+//! Relic, Lux Cannon, Midnight Clock) — was never activated either (6-seat
+//! census, seed 1270001); it now takes an opponent's end step's spare mana,
+//! when the tap costs nothing before the controller's untap.
 //! Commander games only, so two-player play is unchanged.
 
 use crate::card::CounterType;
@@ -108,6 +114,51 @@ fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
     })
 }
 
+/// "Put a +1/+1 / storage / charge counter on this", with no X in the cost.
+fn grows_self(ab: &crate::card::ActivatedAbility) -> bool {
+    matches!(
+        ab.effect,
+        Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne | CounterType::Storage | CounterType::Charge,
+            ..
+        }
+    ) && !ab.mana_cost.has_x()
+        // A free untapped one would be taken every priority.
+        && (ab.tap_cost || ab.mana_cost.cmc() > 0)
+        && !ab.sac_cost
+        && ab.sac_other_filter.is_none()
+        && ab.tap_other_filter.is_none()
+        && ab.discard_cost.is_none()
+        && ab.life_cost == 0
+        && ab.energy_cost == 0
+        && ab.remove_counter_cost.is_none()
+        && ab.remove_all_counters_cost.is_none()
+        && ab.remove_counter_among_filter.is_none()
+        && ab.exile_other_filter.is_none()
+}
+
+/// The first accepted self-counter sink on `seat`'s permanents — called at
+/// an opponent's end step, where a tapped source untaps before it is needed.
+pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+        return None;
+    }
+    state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
+        c.definition.activated_abilities.iter().enumerate().filter(|(_, ab)| grows_self(ab)).find_map(|(i, _)| {
+            let action = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: i,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +208,26 @@ mod tests {
         let coral = g.add_card_to_battlefield(0, crate::catalog::coralhelm_commander());
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
         assert!(matches!(pick_counter_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == coral));
+    }
+
+    /// Hangarback Walker grows at an opponent's end step with a spare mana,
+    /// never on its controller's own turn (the tap would cost an attack).
+    #[test]
+    fn hangarback_grows_at_an_opponents_end_step() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let walker = g.add_card_to_battlefield(0, crate::catalog::hangarback_walker());
+        g.clear_sickness(walker);
+        g.players[0].mana_pool.add_colorless(1);
+        g.step = TurnStep::End;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert!(pick_self_counter_sink(&g, 0).is_none(), "own turn");
+        g.active_player_idx = 1;
+        let a = pick_self_counter_sink(&g, 0).expect("grow");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == walker));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     }
 }
