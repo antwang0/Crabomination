@@ -1125,9 +1125,29 @@ pub struct EvalWeights {
     /// is ahead — and it does not touch the decks it was aimed at: a
     /// six-seat census of every deck under each rule leaves Gisela at
     /// 64 / 65 / 68 %, Y'shtola 58 / 58 / 57 % (old / leader25 / leader0).
-    /// `life_value` is concave, so a lifegain seat far ahead on life is not
-    /// the material leader either. See ML_NOTES.
+    /// Life counts linearly in the default (`concave_life` is off), so a
+    /// lifegain seat far ahead on life IS the material leader here — and
+    /// still wins when the table aims at it. See ML_NOTES.
     pub leader_target: u8,
+    /// The keyword term ([`keyword_value`], percent) at a table of three or
+    /// more seats, in place of [`keyword_pct`](Self::keyword_pct); 0 keeps
+    /// `keyword_pct` (0 in the default) there too. The keyword term lost in
+    /// two-player sealed long ago (`keywords_only` 51.1 % to the baseline,
+    /// `keywords_quarter` neutral), so every default bot prices a flying,
+    /// first-strike, lifelink Gisela as a vanilla 4/3 — and in pods the
+    /// evasive lifelink decks win half their games: a probe of Gisela's
+    /// six-seat pods has her deal 157 combat damage a game (Adriana 48),
+    /// almost all in the air, and gain 93 life. Duels are untouched.
+    ///
+    /// **Measured 2026-09-27 and left off: null both ways.** One seat on it
+    /// among `dflt` (the leader test's groups, 14,400 six-seat and 16,000
+    /// four-seat games each): 25 % 0.99x / 1.01x, 50 % 1.00x / 1.01x, 100 %
+    /// 1.01x / 1.00x. Every seat on it (six-seat census of every deck):
+    /// Gisela 67 → 64 %, Y'shtola 59 → 64 %, spread 11.7 → 11.8. The
+    /// evaluation already reads computed P/T — a Serra Ascendant at 30 life
+    /// is a 6/6 to it — so the keyword term adds little that moves a
+    /// decision. Profiles `podkw25` / `podkw50` / `podkw100`.
+    pub pod_keyword_pct: i32,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -1314,6 +1334,7 @@ impl EvalWeights {
             option_eval: false,
             pod_horizon: false,
             leader_target: 0,
+            pod_keyword_pct: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1427,6 +1448,7 @@ impl EvalWeights {
             option_eval: false,
             pod_horizon: false,
             leader_target: 0,
+            pod_keyword_pct: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1523,6 +1545,7 @@ impl EvalWeights {
             option_eval: false,
             pod_horizon: false,
             leader_target: 0,
+            pod_keyword_pct: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -2685,6 +2708,13 @@ impl EvalWeights {
     /// podhorizon-off`).
     pub const fn pod_horizon_off() -> Self {
         Self { pod_horizon: false, ..Self::default_const() }
+    }
+
+    /// The default pricing creature keywords at `pct` percent in pods only —
+    /// the opt-in for [`pod_keyword_pct`](Self::pod_keyword_pct) (profiles
+    /// `podkw25` / `podkw50` / `podkw100`).
+    pub const fn pod_keywords_on(pct: i32) -> Self {
+        Self { pod_keyword_pct: pct, ..Self::default_const() }
     }
 
     /// The default aiming pod attacks at the table leader once it leads the
@@ -5569,8 +5599,13 @@ fn permanent_value_with(
         let ceil = crate::player::SCALE_CEILING;
         let (pw, tou) = (c.power.clamp(0, ceil), c.toughness.clamp(0, ceil));
         v += w.creature_base + pw * w.power + tou * w.toughness;
-        if w.keyword_pct != 0 {
-            v += keyword_value(c.keywords(), pw, w) * w.keyword_pct / 100;
+        let keyword_pct = if w.pod_keyword_pct != 0 && state.players.len() > 2 {
+            w.pod_keyword_pct
+        } else {
+            w.keyword_pct
+        };
+        if keyword_pct != 0 {
+            v += keyword_value(c.keywords(), pw, w) * keyword_pct / 100;
         }
     }
     if c.card_types().contains(&CardType::Planeswalker) {
@@ -27003,6 +27038,21 @@ mod monarch_tests {
         assert_eq!(attack_target_player(&g, 0, 0), 1, "all equal → the first opponent");
         g.players[3].life = 4;
         assert_eq!(attack_target_player(&g, 0, 0), 3);
+    }
+
+    /// `pod_keyword_pct` prices creature keywords at a table of three or
+    /// more and nowhere else: a Serra Angel is worth more than its body in
+    /// a pod under the flag, and exactly its body in a duel either way.
+    #[test]
+    fn pod_keywords_price_a_flyer_in_a_pod_only() {
+        let (off, on) = (EvalWeights::default(), EvalWeights::pod_keywords_on(50));
+        let mut pod = crate::game::multi_player_game(3);
+        let angel = pod.add_card_to_battlefield(0, catalog::serra_angel());
+        assert!(permanent_value(&pod, angel, &on) > permanent_value(&pod, angel, &off));
+        let players = (0..2).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut duel = GameState::new(players);
+        let angel = duel.add_card_to_battlefield(0, catalog::serra_angel());
+        assert_eq!(permanent_value(&duel, angel, &on), permanent_value(&duel, angel, &off));
     }
 
     /// `leader_target`: the seat that is winning is the defender, not the one

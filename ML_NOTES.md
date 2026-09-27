@@ -5577,10 +5577,23 @@ five 1-3 %. Mostly lifegain decks. What it is NOT:
   leader0) and pods run 40-57 % longer (`leader0`) or 20-22 % (`leader25`).
   Left off.
 
-The next suspect is the life term: `life_value` is concave, so a seat at 60
-life is worth little more than one at 40, and neither the material leader
-nor any sim prices "this seat cannot be raced". A lifegain deck is never the
-table's target and never the one the evaluation fears.
+- *The value of creature keywords.* The default prices every creature
+  without its keywords (`keyword_pct` 0, a two-player result), so Gisela
+  (flying, first strike, lifelink) reads as a vanilla 4/3 — and her pods are
+  won in the air: a probe of her six-seat games has her deal 157 combat
+  damage a game (Adriana 48), Angels and Gisela nearly all of it, and gain
+  93 life. `EvalWeights::pod_keyword_pct` turns the term on at pod tables
+  only: one seat on it 0.99-1.01x at 25 / 50 / 100 %, every seat on it
+  (census) Gisela 67 → 64 %, Y'shtola 59 → 64 %, spread 11.7 → 11.8. Null.
+- *Life on a curve.* It is not: the default counts life linearly
+  (`concave_life` off), so a seat at 60 life is the material leader — the
+  leader rule above aimed at it and it still won.
+
+Gisela's engine cards read as printed (Angelic Accord and Valkyrie
+Harbinger make a 4/4 at EACH end step after 4 life gained that turn; Serra
+Ascendant is a 6/6 flying lifelinker for {W} at Commander life), so the
+standing explanation is real deck strength against tables that rarely field
+flying blockers. Not a card bug and not any one of these bot terms.
 
 **Found on the way: two pod hangs** (the census's per-group timeout caught
 them; `ptrace` is denied here, so the stacks came from `timeout -s ABRT` +

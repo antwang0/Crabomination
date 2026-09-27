@@ -275,6 +275,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // `--commander --a leader0 --b dflt`.
         "leader0" => Some(Pilot::Scored(EvalWeights::leader_target_on(0))),
         "leader25" => Some(Pilot::Scored(EvalWeights::leader_target_on(25))),
+        // The keyword term (flying, lifelink, first strike, ...) in pods
+        // only, at a quarter / half / full strength. A pod question:
+        // `--commander --a podkw50 --b dflt`.
+        "podkw25" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(25))),
+        "podkw50" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(50))),
+        "podkw100" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(100))),
         // The attack chain (round 55): grow the declaration one creature
         // at a time from "nobody", each step priced by the attack sim,
         // and offer the finished set beside the holdback menu. Gate as A
