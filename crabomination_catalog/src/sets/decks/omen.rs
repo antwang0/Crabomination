@@ -381,8 +381,8 @@ pub fn feral_deathgorger() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 0,
-            // "From a single graveyard" isn't enforced — any graveyard cards.
-            filter: SelectionRequirement::InGraveyard,
+            filter: SelectionRequirement::InGraveyard
+                .and(SelectionRequirement::SameGraveyardAsTargetSlot(0)),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Exile,

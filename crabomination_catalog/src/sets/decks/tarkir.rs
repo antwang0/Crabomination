@@ -2412,7 +2412,7 @@ pub fn arashin_sunshield() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileUpToNFromGraveyards {
             count: Value::Const(2),
             of: None,
-            single: false,
+            single: true,
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

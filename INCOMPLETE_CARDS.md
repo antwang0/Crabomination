@@ -366,10 +366,8 @@ player; Mishra's Factory's pump; Astrologian's Planisphere's third draw;
 Fiery Justice's life (now the healthiest opponent, not the one being raced).
 
 Read and left open: Quandrix Command's mode 4 (target player needs a player
-slot inside a modal cast — still the caster), Telling Time (scry 2 + draw 1:
-right card quality, but it *draws*), Zack Fair (moving a sacrificed source's
-counters needs a last-known counter snapshot), Waste Management (kicked, the
-most hostile opponent's graveyard).
+slot inside a modal cast — still the caster). Telling Time, Zack Fair and
+Waste Management since done.
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
@@ -1902,7 +1900,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
-| 🟡 Primeval Spawn | Painbow (DMC) | not exiled when it would enter uncast. |
 | 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
@@ -2050,7 +2047,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
 | 🟡 Sinister Concierge | Maestros Massacre (NCC) | the second creature suspended must be an opponent's. |
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
-| 🟡 Waste Management | Maestros Massacre (NCC) | kicked, it exiles the hostile opponent's graveyard rather than a targeted player's; unkicked, the two cards may come from different graveyards. |
 | 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
 | 🟡 Cayth, Famed Mechanist | Creative Energy (M3C) | other nontoken creatures you control don't gain fabricate 1. |

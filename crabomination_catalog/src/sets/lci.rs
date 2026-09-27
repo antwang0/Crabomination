@@ -4270,7 +4270,7 @@ pub fn digsite_conservator() -> CardDefinition {
             effect: Effect::ExileUpToNFromGraveyards {
                 count: Value::Const(4),
                 of: None,
-                single: false,
+                single: true,
             },
             ..Default::default()
         }],

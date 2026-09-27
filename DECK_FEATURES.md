@@ -121,7 +121,7 @@ lists were picked.
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (Path of the Ghosthunter) |
 | **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
-| **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -147,7 +147,7 @@ lists were picked.
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
-| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
+| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
@@ -1351,8 +1351,7 @@ Example), `GrantSuspend` (Sinister Concierge), graveyard-scoped triggers
 (Smuggler's Buggy). Residuals: **Maestros Confluence** goads the hostile
 opponent's creatures; **Parnesse** protects only your permanents and offers
 no copy; **Sinister Concierge** suspends an opponent's creature;
-**Syrix** reads any card leaving your graveyard; **Waste Management** kicked
-takes the hostile opponent's graveyard; **Xander's Pact** lets exiled lands be
+**Syrix** reads any card leaving your graveyard; **Xander's Pact** lets exiled lands be
 played; **Zndrsplt's Judgment** makes you the only friend. Pods (1,000 games
 each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11112) Anhelo
 12.0 %, census: no card of the four unplayed; 6 seats beside Saheeli / Zimone
@@ -2461,7 +2460,7 @@ static over "multicolored creatures you control" was dropped whole**
 bot's mana-value gate rejected affordable spells** under next-spell affinity
 or a turn-granted discount (a strict-pod `debug_assert`). Fallaji Wayfarer's
 all-colors CDA is exempt from its identity, as printed (CR 903.4).
-Residuals: **Primeval Spawn**, **Knight of New Alara**, **Unite the
+Residuals: **Knight of New Alara**, **Unite the
 Coalition** (INCOMPLETE_CARDS). Release pods beside Kathril / Kasla /
 Ellivere (seed 11001, 1,000 games): 1,000 decided, Jared 10.8 %, and the
 census leaves no card of the four lists unplayed; strict debug pods beside

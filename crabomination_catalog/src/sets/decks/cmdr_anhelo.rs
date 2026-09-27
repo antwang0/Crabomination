@@ -12,9 +12,6 @@
 //! - **Syrix, Carrier of the Flame** — its end-step check counts any card
 //!   leaving your graveyard, and "you may cast this from your graveyard" is a
 //!   permission for the rest of the turn.
-//! - **Waste Management** — kicked, it exiles the hostile opponent's
-//!   graveyard rather than a targeted player's; unkicked, its two cards may
-//!   come from different graveyards.
 //! - **Xander's Pact** — lands exiled this way may be played for life too.
 //! - **Zndrsplt's Judgment** — you are the only friend and every opponent a
 //!   foe.
@@ -539,11 +536,8 @@ pub fn syrix_carrier_of_the_flame() -> CardDefinition {
     }
 }
 
-/// Waste Management — exile up to two graveyard cards (kicked: a whole
-/// graveyard); a 2/2 Rogue per creature card exiled.
-///
-/// Residual: kicked, it takes the hostile opponent's graveyard; unkicked,
-/// the two cards may come from different graveyards.
+/// Waste Management — exile up to two cards from a single graveyard (kicked:
+/// target player's graveyard); a 2/2 Rogue per creature card exiled.
 pub fn waste_management() -> CardDefinition {
     let rogue = Arc::new(TokenDefinition {
         name: "Rogue".into(),
@@ -563,11 +557,11 @@ pub fn waste_management() -> CardDefinition {
             Effect::Seq(vec![
                 Effect::If {
                     cond: Predicate::SpellWasKicked,
-                    then: Box::new(Effect::ExilePlayerGraveyard { who: PlayerRef::HostileOpponent, filter: None }),
+                    then: Box::new(Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0), filter: None }),
                     else_: Box::new(Effect::ApplyToTargets {
                         max_targets: 2,
                         min_targets: 0,
-                        filter: R::InGraveyard,
+                        filter: R::InGraveyard.and(R::SameGraveyardAsTargetSlot(0)),
                         effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
                     }),
                 },

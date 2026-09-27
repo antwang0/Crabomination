@@ -365,6 +365,35 @@ fn waste_management_makes_rogues() {
     assert_eq!(named(&g, 0, "Rogue").len(), 2);
 }
 
+/// Waste Management — CR 601.2c: the two cards come "from a single
+/// graveyard" (`SameGraveyardAsTargetSlot`); kicked, it exiles *target
+/// player's* graveyard, here a non-hostile seat's.
+#[test]
+fn waste_management_single_graveyard_and_kicked_target_player() {
+    let mut g = pod(3);
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let c = g.add_card_to_graveyard(2, catalog::hill_giant());
+    let wm = g.add_card_to_hand(0, catalog::waste_management());
+    assert!(
+        cast_full(&mut g, 0, wm, Some(Target::Permanent(a)), vec![Target::Permanent(c)], None).is_err(),
+        "two graveyards"
+    );
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: wm,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.is_empty(), "the target's graveyard");
+    assert!(g.players[1].graveyard.iter().any(|x| x.id == a), "not another's");
+    assert_eq!(named(&g, 0, "Rogue").len(), 1);
+}
+
 /// Xander's Pact — cast an opponent's exiled top card for life.
 #[test]
 fn xanders_pact_steals_a_spell() {
