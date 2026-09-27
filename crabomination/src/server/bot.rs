@@ -10145,11 +10145,23 @@ pub(super) fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) 
             {
                 continue;
             }
+            // A targeted maker (Cemetery Reaper's "exile target creature card
+            // from a graveyard") takes the auto-picks — pods only, so a duel
+            // keeps its committed behaviour.
+            let (target, additional_targets) =
+                if ab.effect.requires_target() && !state.players[seat].commanders.is_empty() {
+                    match state.auto_targets_for_effect_all_slots_x(&ab.effect, seat, None, false, Some(card.id), None) {
+                        (Some(t), extra) => (Some(t), extra),
+                        (None, _) => continue,
+                    }
+                } else {
+                    (None, Vec::new())
+                };
             let action = GameAction::ActivateAbility {
                 card_id: card.id,
                 ability_index: idx,
-                target: None,
-                additional_targets: Vec::new(),
+                target,
+                additional_targets,
                 x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {

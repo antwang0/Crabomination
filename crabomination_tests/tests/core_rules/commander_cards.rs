@@ -2051,3 +2051,25 @@ fn a_pod_bot_ultimates_an_emblem_planeswalker() {
         "got {action:?}"
     );
 }
+
+/// A pod bot uses a targeted token maker: Cemetery Reaper exiles a creature
+/// card from a graveyard for a Zombie (the token sink activated with no
+/// target, which the ability refuses).
+#[test]
+fn a_pod_bot_reaps_a_graveyard_creature() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = commander_game();
+    g.step = TurnStep::PostCombatMain;
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let reaper = g.add_card_to_battlefield(0, catalog::cemetery_reaper());
+    g.clear_sickness(reaper);
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+            if card_id == reaper && t == corpse),
+        "got {action:?}"
+    );
+}
