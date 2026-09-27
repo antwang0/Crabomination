@@ -3354,6 +3354,7 @@ impl HeuristicBot {
                         .or_else(|| super::manland::pick_manland(state, seat))
                         .or_else(|| super::evasion::pick_evasion_grant(state, seat))
                         .or_else(|| super::counter_sink::pick_counter_sink(state, seat))
+                        .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                 {
                     return Some(BotStep::plain(a));
                 }
@@ -3372,6 +3373,7 @@ impl HeuristicBot {
                 // surveil / loot sink (pods only).
                 if matches!(action.action, GameAction::PassPriority)
                     && let Some(cycle) = super::cycling::pick_cycle(state, seat)
+                        .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_selection_sink(state, seat))
                 {
                     return Some(BotStep::plain(cycle));
@@ -3392,6 +3394,12 @@ impl HeuristicBot {
                     .or_else(|| super::spell_response::pick_punish_response(state, seat))
                     .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
+                    // Eiganjo's "attacking or blocking creature", once blocks are in.
+                    .or_else(|| {
+                        (state.step == TurnStep::DeclareBlockers)
+                            .then(|| super::channel::pick_channel(state, seat, &self.weights))
+                            .flatten()
+                    })
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {

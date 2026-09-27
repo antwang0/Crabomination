@@ -101,6 +101,7 @@ mod selection_sink;
 mod regenerate;
 mod counter_sink;
 mod cycling;
+mod channel;
 mod spell_response;
 mod fight_pick;
 mod transform_sink;

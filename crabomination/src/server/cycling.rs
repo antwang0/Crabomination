@@ -8,7 +8,7 @@ use crate::game::GameState;
 use crate::game::types::GameAction;
 
 /// Lands on the battlefield past which another land in hand is spare.
-const ENOUGH_LANDS: usize = 6;
+pub(super) const ENOUGH_LANDS: usize = 6;
 
 /// A cycle worth making at an opponent's end step, or `None`: a land once
 /// `seat` controls six, or a nonland card whose mana value is more than two
