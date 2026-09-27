@@ -680,7 +680,7 @@ fn stat_keyword_auras_grant_their_bonus() {
     let cases: &[(Factory, i32, i32, &[Keyword])] = &[
         (catalog::untamed_hunger as Factory, 4, 3, &[Keyword::Menace]),
         (catalog::mark_of_the_vampire as Factory, 4, 4, &[Keyword::Lifelink]),
-        (catalog::hammerhand as Factory, 3, 2, &[Keyword::Haste, Keyword::CantBlock]),
+        (catalog::hammerhand as Factory, 3, 3, &[Keyword::Haste]),
     ];
     for &(factory, p, t, kws) in cases {
         let mut g = two_player_game();
