@@ -3313,6 +3313,7 @@ impl HeuristicBot {
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                         .or_else(|| pick_copy_response(state, seat, &self.weights))
                         .or_else(|| super::spell_response::pick_punish_response(state, seat))
+                        .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     {
                         return Some(BotStep::plain(a));
                     }
@@ -3389,6 +3390,7 @@ impl HeuristicBot {
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     .or_else(|| pick_copy_response(state, seat, &self.weights))
                     .or_else(|| super::spell_response::pick_punish_response(state, seat))
+                    .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).

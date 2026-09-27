@@ -67,6 +67,58 @@ pub(super) fn pick_punish_response(state: &GameState, seat: usize) -> Option<Gam
         .find(|a| state.would_accept(a.clone()))
 }
 
+/// An opponent's noncreature spell of mana value 4 or more on top of the
+/// stack: take it with an exchange instant (Sudden Substitution, CR 701.12a),
+/// giving up our least valuable creature — never a commander — for it. The
+/// census left the card uncast in 1,500 pods: no picker built the two slots.
+pub(super) fn pick_substitution_response(state: &GameState, seat: usize, w: &super::bot::EvalWeights) -> Option<GameAction> {
+    let Some(StackItem::Spell { card, caster, .. }) = state.stack.last() else { return None };
+    if *caster == seat
+        || card.definition.is_creature()
+        || card.definition.cost.cmc() < 4
+        || state.same_team(seat, *caster)
+    {
+        return None;
+    }
+    let spell_id = card.id;
+    let swaps = |c: &&crate::card::CardInstance| {
+        c.definition.is_instant() && matches!(c.definition.effect, Effect::ExchangeSpellAndCreatureControl { .. })
+    };
+    if !state.players[seat].hand.iter().any(|c| swaps(&c)) {
+        return None;
+    }
+    let fodder = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature() && !state.is_commander(c.id))
+        .min_by_key(|c| {
+            let cp = state.computed_permanent(c.id);
+            (cp.as_ref().map_or(0, |p| p.power + p.toughness), c.definition.cost.cmc(), c.id)
+        })?
+        .id;
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(swaps)
+        .map(|c| GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(Target::Permanent(spell_id)),
+            additional_targets: vec![Target::Permanent(fodder)],
+            mode: None,
+            x_value: None,
+        })
+        .find_map(|a| {
+            // Only when owning the resolved spell beats letting it resolve (a
+            // stolen Wrath still sweeps our side).
+            let mut left = state.clone();
+            left.resolve_top_of_stack().ok()?;
+            let mut taken = state.accept(a.clone())?;
+            taken.resolve_top_of_stack().ok()?;
+            taken.resolve_top_of_stack().ok()?;
+            (super::bot::eval_material(&taken, seat, w) > super::bot::eval_material(&left, seat, w)).then_some(a)
+        })
+}
+
 /// With nothing better to do in its own main phase, cast a spell whose whole
 /// effect returns a card from a graveyard or exile to hand, at the
 /// auto-picked target. One card for one card reads as no gain to the

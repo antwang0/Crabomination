@@ -168,3 +168,44 @@ fn grismold_sows_and_reaps() {
     cast_by(&mut g, 0, m, &[Target::Permanent(plant.expect("a Plant"))]);
     assert_eq!(g.battlefield_find(gr).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Sudden Substitution — a bot seat takes an opponent's Harmonize for its
+/// smallest non-commander creature (their draw-three becomes its own), and
+/// leaves a Wrath of God alone (owning it still sweeps its side).
+#[test]
+fn bot_substitutes_a_card_draw_spell_not_a_sweeper() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let setup = |spell: fn() -> crabomination::card::CardDefinition| {
+        let mut g = pod(3);
+        for s in 0..3 {
+            for _ in 0..10 {
+                g.add_card_to_library(s, catalog::island());
+            }
+        }
+        g.seat_commanders(0, vec![catalog::kadena_slinking_sorcerer()]);
+        let small = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        g.add_card_to_battlefield(0, catalog::hill_giant());
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        let sub = g.add_card_to_hand(0, catalog::sudden_substitution());
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        let s = g.add_card_to_hand(1, spell());
+        flood(&mut g, 1);
+        g.perform_action(GameAction::CastSpell { card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        g.priority.player_with_priority = 0;
+        (g, sub, s, small)
+    };
+    let (g, sub, h, small) = setup(catalog::harmonize);
+    let act = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(&act, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), additional_targets, .. })
+            if *card_id == sub && *t == h && additional_targets == &vec![Target::Permanent(small)]),
+        "{act:?}"
+    );
+    let (g, sub, ..) = setup(catalog::wrath_of_god);
+    let act = HeuristicBot::new().next_action(&g, 0);
+    assert!(!matches!(&act, Some(GameAction::CastSpell { card_id, .. }) if *card_id == sub), "{act:?}");
+}
