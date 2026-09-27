@@ -59,10 +59,12 @@ pub fn manaform_hellkite() -> CardDefinition {
         },
         keywords: vec![Keyword::Flying, Keyword::Haste],
         dynamic_pt: Some((Value::CastSpellManaSpent, Value::CastSpellManaSpent)),
+        // "The next end step" — whoever's turn it is, so a token made on an
+        // opponent's turn is gone before yours.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::End),
-                EventScope::YourControl,
+                EventScope::AnyPlayer,
             ),
             effect: Effect::ExileSource,
         }],

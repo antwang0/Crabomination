@@ -345,7 +345,8 @@ pub fn seance_board() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+            // "Each end step" — every player's.
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
                 .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
             effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Soul, amount: Value::ONE },
         }],

@@ -286,11 +286,12 @@ pub fn joined_researchers() -> CardDefinition {
         spell,
     );
     // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
-    // time, and re-checked at resolution by the step-trigger path.
+    // time, and re-checked at resolution by the step-trigger path. "Each end
+    // step" — every player's, not only yours.
     front.triggered_abilities.push(TriggeredAbility {
         event: EventSpec::new(
             EventKind::StepBegins(TurnStep::End),
-            EventScope::ActivePlayer,
+            EventScope::AnyPlayer,
         )
         .with_filter(Predicate::ValueAtLeast(
             Value::HandSizeOf(PlayerRef::EachOpponent),

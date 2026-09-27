@@ -349,6 +349,21 @@ fn summarize(def: &CardDefinition) -> CardSummary {
 
 fn main() {
     let factories = all_known_factories();
+    // `--grep NEEDLE`: one line per card whose `Debug` form contains NEEDLE,
+    // `name\tdebug` — for oracle-vs-definition scans (step-trigger scopes).
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(i) = args.iter().position(|a| a == "--grep") {
+        let needle = args.get(i + 1).expect("--grep NEEDLE");
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            let dbg = format!("{def:?}");
+            if dbg.contains(needle.as_str()) && seen.insert(def.name.to_string()) {
+                println!("{}\t{}", def.name, dbg);
+            }
+        }
+        return;
+    }
     let mut seen: HashSet<String> = HashSet::default();
     let mut cards: Vec<CardSummary> = Vec::new();
 

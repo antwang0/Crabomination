@@ -496,7 +496,8 @@ pub fn sunbirds_invocation() -> CardDefinition {
 pub fn tendershoot_dryad() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            // "Each upkeep" — every player's, not only yours.
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
             effect: make(1, token("Saproling", Color::Green, CreatureType::Saproling)),
         }],
         static_abilities: vec![crate::sets::ascend(), StaticAbility {

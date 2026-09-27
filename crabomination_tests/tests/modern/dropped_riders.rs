@@ -1248,3 +1248,72 @@ fn ramos_counts_colors_and_pays_five_counters_once_a_turn() {
     assert!(!g.battlefield_find(ramos).unwrap().tapped, "no {{T}} in the cost");
     assert!(act(&mut g).is_err(), "once each turn");
 }
+
+/// "Each upkeep" / "each end step" / "the next end step" are every player's
+/// step (CR 503.1 / 513.1), not only the controller's — the scope these five
+/// shipped with. Driven on the opponent's turn (seat 1 active).
+#[test]
+fn each_step_triggers_fire_on_an_opponents_turn() {
+    use crabomination::card::CounterType;
+    let opp_turn = |step| {
+        let mut g = main_phase();
+        g.active_player_idx = 1;
+        g.step = step;
+        g
+    };
+    // Tendershoot Dryad: a Saproling on every upkeep.
+    let mut g = opp_turn(TurnStep::Upkeep);
+    g.add_card_to_battlefield(0, catalog::tendershoot_dryad());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Saproling" && c.controller == 0));
+    // Séance Board: morbid soul counter at every end step.
+    let mut g = opp_turn(TurnStep::End);
+    let board = g.add_card_to_battlefield(0, catalog::seance_board());
+    g.players[1].creatures_died_this_turn = 1;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(board).unwrap().counter_count(CounterType::Soul), 1);
+    // Joined Researchers: prepared at every end step while an opponent holds more.
+    let mut g = opp_turn(TurnStep::End);
+    let jr = g.add_card_to_battlefield(0, catalog::joined_researchers());
+    g.add_card_to_hand(1, catalog::forest());
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jr).unwrap().counter_count(CounterType::Prepared), 1);
+    // Manaform Hellkite: an Illusion made on the opponent's turn is exiled at
+    // that turn's end step, not left to attack on yours.
+    let mut g = opp_turn(TurnStep::PreCombatMain);
+    g.add_card_to_battlefield(0, catalog::manaform_hellkite());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt on their turn");
+    drain_stack(&mut g);
+    let illusion = |g: &GameState| g.battlefield.iter().any(|c| c.definition.name == "Dragon Illusion");
+    assert!(illusion(&g));
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!illusion(&g), "exiled at the next end step, whoever's turn");
+}
+
+/// Instill Furor — "at the beginning of YOUR end step": the enchanted
+/// creature's controller's. An opponent's end step, when it cannot have
+/// attacked, no longer sacrifices it.
+#[test]
+fn instill_furor_fires_only_on_its_hosts_controllers_end_step() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::instill_furor());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "opponent's end step");
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "its own end step, no attack");
+}

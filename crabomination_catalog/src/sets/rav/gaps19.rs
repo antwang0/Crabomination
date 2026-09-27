@@ -347,10 +347,11 @@ pub fn instill_furor() -> CardDefinition {
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                filter: Some(Predicate::Not(Box::new(Predicate::EntityMatches {
+                // "Your end step" is the enchanted creature's controller's.
+                filter: Some(Predicate::EntityMatches {
                     what: Selector::AttachedTo(Box::new(Selector::This)),
-                    filter: R::AttackedThisTurn,
-                }))),
+                    filter: R::ControlledByActivePlayer.and(R::AttackedThisTurn.negate()),
+                }),
                 ..EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
             },
             effect: Effect::SacrificePermanent {
