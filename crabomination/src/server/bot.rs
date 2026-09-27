@@ -3330,9 +3330,11 @@ impl HeuristicBot {
             // instant was dead in hand until the bot's own main phase.
             TurnStep::End if !is_active && state.stack.is_empty() => {
                 let action = main_phase_action_with(state, seat, self.scored, &self.weights);
-                // Spare mana with nothing to cast: cycle (pods only).
+                // Spare mana with nothing to cast: cycle, else a scry /
+                // surveil / loot sink (pods only).
                 if matches!(action.action, GameAction::PassPriority)
                     && let Some(cycle) = super::cycling::pick_cycle(state, seat)
+                        .or_else(|| super::selection_sink::pick_selection_sink(state, seat))
                 {
                     return Some(BotStep::plain(cycle));
                 }
