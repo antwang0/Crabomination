@@ -8694,6 +8694,10 @@ pub enum Effect {
         /// Chimera's "except it has this ability", so it can shift again.
         #[serde(default)]
         keep_own_activated: bool,
+        /// CR 707.2 "except its name is [this card's]" — the copier keeps its
+        /// own name (Sunfrill Imitator), like `EntersAsCopy::keep_name`.
+        #[serde(default)]
+        keep_name: bool,
     },
     /// CR 707.9b — "becomes a copy of [source], except its name is [its
     /// own], it's legendary in addition to its other types, and it has this

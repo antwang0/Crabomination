@@ -506,6 +506,7 @@ pub fn shadow_kin() -> CardDefinition {
                             extra_creature_types: vec![],
                             keep_own_triggered: true,
                             keep_own_activated: false,
+                            keep_name: false,
                         },
                     ])),
                 },

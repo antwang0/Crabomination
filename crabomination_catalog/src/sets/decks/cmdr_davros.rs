@@ -969,6 +969,7 @@ pub fn the_flood_of_mars() -> CardDefinition {
                     extra_creature_types: vec![],
                     keep_own_triggered: false,
                     keep_own_activated: false,
+                    keep_name: false,
                 }),
                 else_: Box::new(Effect::GainLandType {
                     what: Selector::Target(0),

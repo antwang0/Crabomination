@@ -1134,6 +1134,7 @@ pub fn volatile_chimera() -> CardDefinition {
                 extra_creature_types: vec![],
                 keep_own_triggered: false,
                 keep_own_activated: true,
+                keep_name: false,
             },
             ..Default::default()
         }],

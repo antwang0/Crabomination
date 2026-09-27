@@ -2228,6 +2228,7 @@ impl GameState {
                 extra_creature_types: spec.extra_creature_types.clone(),
                 keep_own_triggered: false,
                 keep_own_activated: false,
+                keep_name: false,
             },
             &ctx,
         ) {
@@ -32773,6 +32774,7 @@ impl GameState {
                         extra_creature_types: vec![],
                         keep_own_triggered: false,
                         keep_own_activated: true,
+                        keep_name: false,
                     },
                     ctx,
                     events,
@@ -32795,6 +32797,7 @@ impl GameState {
                 extra_creature_types,
                 keep_own_triggered,
                 keep_own_activated,
+                keep_name,
             } => {
                 // CR 707.2 — `what` becomes a copy of `source`'s copiable
                 // characteristics. One-shot definition rewrite: clone the
@@ -32846,6 +32849,9 @@ impl GameState {
                                         new_def.activated_abilities.push(a.clone());
                                     }
                                 }
+                            }
+                            if *keep_name {
+                                new_def.name = own.name;
                             }
                             // CR 708.10 — a face-down permanent that becomes a
                             // copy keeps the face-down characteristics; only its

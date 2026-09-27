@@ -1108,6 +1108,7 @@ pub fn protean_thaumaturge() -> CardDefinition {
                 body: Box::new(Effect::BecomeCopyOf {
                     keep_own_triggered: false,
                     keep_own_activated: false,
+                    keep_name: false,
                     what: Selector::This,
                     source: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),

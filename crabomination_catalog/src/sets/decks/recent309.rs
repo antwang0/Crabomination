@@ -1179,6 +1179,7 @@ pub fn lazav_familiar_stranger() -> CardDefinition {
                             extra_creature_types: vec![],
                             keep_own_triggered: false,
                             keep_own_activated: false,
+                            keep_name: false,
                         },
                     ])),
                 },

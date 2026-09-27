@@ -34,6 +34,7 @@ fn cr_708_10_a_copy_onto_a_face_down_permanent_changes_only_its_copiable_values(
             extra_creature_types: vec![],
             keep_own_triggered: false,
             keep_own_activated: false,
+            keep_name: false,
         },
         &ctx,
     )

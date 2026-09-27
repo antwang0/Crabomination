@@ -244,6 +244,7 @@ pub fn infinite_reflection() -> CardDefinition {
             extra_creature_types: vec![],
             keep_own_triggered: false,
             keep_own_activated: false,
+            keep_name: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "Nontoken creatures you control enter as a copy of enchanted creature.",

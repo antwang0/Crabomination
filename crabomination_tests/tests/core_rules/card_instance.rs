@@ -459,6 +459,7 @@ fn cr_123_1_name_stickers_are_not_copiable_values() {
             extra_creature_types: vec![],
             keep_own_triggered: false,
             keep_own_activated: false,
+            keep_name: false,
         },
         &copy_ctx,
     )
