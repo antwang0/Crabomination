@@ -436,6 +436,10 @@ fn main() {
                     .run_if(in_state(AppState::InGame)),
             ),
         )
+        .add_systems(
+            PreUpdate,
+            layout_harness::inject_damage_for_screenshot.after(crate::net_plugin::poll_net),
+        )
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every

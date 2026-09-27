@@ -39,7 +39,8 @@ eye; `framing::tests::budget` gates the table sizes.
   (`keyword_label`), whichever way the card faces. They hung from the
   card's own top edge, so an opponent's hung under their cards, a tapped
   card's beside it, and two pod boards facing each other printed theirs
-  over each other along the seam ("F Fly g").
+  over each other along the seam ("F Fly g"). Superseded the same day:
+  they sit on the P/T line ("Counters and card overlays", below).
 - ✅ **Condition chips show only when a card of yours checks them.** Coven,
   threshold, metalcraft, ferocious, hellbent, formidable, descend, void,
   corrupted and crime were lit whenever met — a board of three creatures
@@ -178,6 +179,28 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
     speck on a large face and the badge hung off the card's corner.
   - Layout harness: `--zoom-card NAME` holds the camera close over one of
     the viewer's cards.
+- ✅ **Keyword strips sit on the card's P/T line** (`keyword_label`),
+  ending at the P/T badge and running toward the card's left as seen. The
+  bottom of a card is the part a card in front of it leaves showing, and
+  on the card no neighbour's overlays land. Hung above the card's top edge
+  (the display pass, above), an opponent's front row printed its strips
+  over the P/T badges of the back row peeking out behind it — "Stun 1"
+  under Tarmogoyf's 3/4. The strip ends where the badge's laid-out width
+  says it starts (`ComputedNode`, a frame behind).
+- ✅ **Damage numerals read, and say whose they are** (`impact`). A struck
+  creature's "−N" punches in on its P/T box (the badge whose toughness
+  just turned red) and rises off it; a batch's hits on one creature are
+  summed. It was a thin red numeral at the card's centre, which vanished
+  into card art, printed two hits over each other, and for a back-row
+  creature landed on the card in front of it. Now outlined in near-black,
+  brighter and larger. Layout harness: `--demo-damage` feeds the client a
+  batch of damage a moment before the screenshot.
+- ✅ **The viewer's own spell on the stack always has its 3-D card**
+  (`sync_game_visuals`). It only came out of the viewer's hand, so a spell
+  already on the stack when a view arrived — a reconnect, a resume, a
+  spectator — or cast from elsewhere (a commander, a flashback) had no
+  card on the table and no target arrows, which start at it. It drops
+  onto the stack from above. Layout harness: `--stack`.
 
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
@@ -335,10 +358,6 @@ cut, and the first two would make the third and fourth reviewable:
 ✅ Shipped — `V` toggles a browser listing exiled cards with per-card
 source annotations (linked exile, cipher, foretell, …).
 
-### Damage Overlays
-When combat damage is assigned, show floating damage numbers rising off
-affected creatures before SBA removes the dead ones.
-
 ### Card Tooltip with Full Oracle Text
 Hovering over a card shows its Scryfall art via the peek popup, but not the
 full rules text.  A tooltip panel (shown on hover or via a dedicated key)
@@ -360,14 +379,6 @@ Improvements:
 Token cards in the 3D view use the Scryfall-fetched art path, which often
 resolves to a generic back image.  A text overlay (name + P/T) on token cards
 would disambiguate multiple different tokens on the battlefield.
-
-### Card Art on the Stack
-The stack panel (`game_ui.rs::update_stack_panel`) shows only a "SPELL /
-TRIGGER" badge + name + controller text. Add a small card thumbnail
-(~70×100 px) per row using `scryfall::card_asset_path` — the scry/search
-modals (`decision_ui.rs:293-334`) already follow the exact `ImageNode`
-pattern. MTG players read the stack by visual recognition; text-only is
-a big information-density loss in critical priority decisions.
 
 ### Life-Total Animation + Damage Feedback
 Life changes are instantaneous text mutations in `update_player_text` /

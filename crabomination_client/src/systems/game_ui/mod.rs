@@ -2837,14 +2837,26 @@ pub fn sync_game_visuals(
         }
     }
 
-    // ── Opponent stack-card visuals ──────────────────────────────────────────
+    // ── Stack-card visuals for items that arrived without one ────────────────
     // For each opponent spell on the stack that doesn't yet have a 3-D entity,
     // consume one face-down hand visual and spawn a face-up card that animates
     // to the stack hover position (matching how the viewer's own spells behave).
+    //
+    // The viewer's own spells come out of their hand (the hand pass above
+    // tags the hand entity). One already on the stack when the view arrives —
+    // a reconnect, a resume, a spectator joining — or cast from somewhere
+    // other than the hand (a commander, a flashback) had no hand card to come
+    // from, so it had no 3-D card at all, and no target arrows, which start
+    // at it. It drops onto the stack from above.
     use crabomination::net::StackItemView;
+    let hand_entity_ids: HashSet<CardId> = all_hand_entity_ids.iter().map(|gid| gid.0).collect();
     for (idx, item) in cv.stack.iter().enumerate() {
         let StackItemView::Known(k) = item else { continue };
-        if k.controller == viewer { continue; }
+        if k.controller == viewer
+            && (k.kind != crabomination::net::StackItemKind::Spell || hand_entity_ids.contains(&k.source))
+        {
+            continue;
+        }
         if visual_opp_stack_ids.contains(&k.source) { continue; }
         if visual_bf_ids.contains(&k.source) { continue; }
 
@@ -2853,7 +2865,9 @@ pub fn sync_game_visuals(
         let target = stack_card_transform(idx, total);
 
         let pool = hand_pool_by_owner.entry(seat).or_default();
-        let (start_pos, start_rot) = if let Some((hand_entity, pos, rot)) = pool.pop() {
+        let (start_pos, start_rot) = if seat == viewer {
+            (target.translation + Vec3::Y * 2.0, target.rotation)
+        } else if let Some((hand_entity, pos, rot)) = pool.pop() {
             commands.entity(hand_entity).despawn();
             promoted.insert(hand_entity);
             (pos, rot)

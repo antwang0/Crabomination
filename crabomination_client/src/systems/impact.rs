@@ -49,9 +49,10 @@ pub struct HitVignette {
     peak_alpha: f32,
 }
 
-/// A floating "−N" numeral that rises and fades off a creature that was just
-/// dealt damage. Screen-space after spawn (no per-frame card tracking), the
-/// same pattern as the HUD life-flash numerals.
+/// A floating "−N" numeral that punches in over a creature that was just
+/// dealt damage, then rises and fades. Screen-space after spawn (no
+/// per-frame card tracking), the same pattern as the HUD life-flash
+/// numerals.
 #[derive(Component)]
 pub struct DamageNumeral {
     remaining: f32,
@@ -101,9 +102,20 @@ const VIGNETTE_TTL: f32 = 0.7;
 /// peripheral vision without crowding the corner HUD panels.
 const VIGNETTE_BORDER: f32 = 48.0;
 
-const DMG_NUMERAL_SECS: f32 = 0.9;
+const DMG_NUMERAL_SECS: f32 = 1.1;
 /// How far (px) the damage numeral floats upward over its lifetime.
-const DMG_NUMERAL_RISE: f32 = 36.0;
+const DMG_NUMERAL_RISE: f32 = 40.0;
+/// The numeral lands at this scale and snaps down to size over the punch.
+const DMG_NUMERAL_PUNCH: f32 = 1.8;
+const DMG_NUMERAL_PUNCH_SECS: f32 = 0.14;
+const DMG_NUMERAL_FONT: f32 = 32.0;
+/// A bright red that holds up over any card art inside its dark outline.
+const DMG_NUMERAL_RED: Color = Color::srgb(1.0, 0.32, 0.26);
+/// The outline: the numeral drawn in near-black at each of these offsets
+/// (px) under the red one. The UI font is a thin Light cut, and a bare red
+/// numeral all but vanished into the card art.
+const DMG_NUMERAL_OUTLINE: [(f32, f32); 8] =
+    [(-2.0, 0.0), (2.0, 0.0), (0.0, -2.0), (0.0, 2.0), (-1.4, -1.4), (1.4, -1.4), (-1.4, 1.4), (1.4, 1.4)];
 
 const MANA_MOTE_TTL: f32 = 0.55;
 /// Peak arc height of a travelling mana mote.
@@ -161,6 +173,10 @@ pub fn spawn_impact_effects(
     let pos_of = |id: CardId| -> Option<Vec3> {
         cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation())
     };
+    // Damage each struck permanent took in this batch, in the order first
+    // struck: two blockers' damage is one "−N", not two numerals printed
+    // over each other.
+    let mut struck: Vec<(CardId, u32)> = Vec::new();
 
     for ev in &events.0 {
         match ev {
@@ -217,16 +233,12 @@ pub fn spawn_impact_effects(
                 // much it took. Player damage already surfaces via the
                 // life-loss flash numeral + vignette, so only creatures here.
                 if *amount > 0
-                    && let Some(world) = card_world
-                    && let Ok((camera, cam_xform)) = camera_q.single()
-                    && let Some(screen) = crate::theme::project_to_ui(
-                        camera,
-                        cam_xform,
-                        &ui_scale,
-                        world + Vec3::Y * 0.6,
-                    )
+                    && let Some(id) = to_card
                 {
-                    spawn_damage_numeral(&mut commands, &ui_fonts, *amount, screen);
+                    match struck.iter_mut().find(|(c, _)| c == id) {
+                        Some((_, total)) => *total += amount,
+                        None => struck.push((*id, *amount)),
+                    }
                 }
             }
             GameEventWire::Explored { card_id, .. } => {
@@ -248,6 +260,24 @@ pub fn spawn_impact_effects(
                 spawn_vignette(&mut commands, peak_alpha);
             }
             _ => {}
+        }
+    }
+
+    // Each numeral punches in on the struck card's P/T box and rises off it,
+    // uncovering the toughness it just turned red. The box is also the part
+    // of a back-row card that the card in front of it leaves showing: at the
+    // card's centre, a back-row creature's numeral landed on its neighbour.
+    let Ok((camera, cam_xform)) = camera_q.single() else { return };
+    for (id, amount) in struck {
+        if let Some((card, _)) = cards.iter().find(|(_, g)| g.0 == id)
+            && let Some(screen) = crate::theme::project_to_ui(
+                camera,
+                cam_xform,
+                &ui_scale,
+                card.transform_point(crate::systems::pt_label::PT_BOX),
+            )
+        {
+            spawn_damage_numeral(&mut commands, &ui_fonts, amount, screen);
         }
     }
 }
@@ -386,28 +416,48 @@ fn spawn_burst(
 }
 
 fn spawn_damage_numeral(commands: &mut Commands, fonts: &UiFonts, amount: u32, screen: Vec2) {
-    let base_top = screen.y;
+    let text = format!("-{amount}");
     commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(base_top),
-                // Nudge left so the numeral sits roughly centred over the hit.
-                left: Val::Px(screen.x - 14.0),
+                top: Val::Px(screen.y),
+                left: Val::Px(screen.x),
                 ..default()
             },
+            // Centred on the hit, and landing big (`animate_damage_numerals`).
+            UiTransform {
+                translation: Val2::percent(-50.0, -50.0),
+                scale: Vec2::splat(DMG_NUMERAL_PUNCH),
+                ..UiTransform::IDENTITY
+            },
+            GlobalZIndex(theme::layer::HUD),
             Pickable::IGNORE,
             InGameRoot,
-            DamageNumeral { remaining: DMG_NUMERAL_SECS, total: DMG_NUMERAL_SECS, base_top },
+            DamageNumeral { remaining: DMG_NUMERAL_SECS, total: DMG_NUMERAL_SECS, base_top: screen.y },
         ))
         .with_children(|p| {
-            p.spawn((
-                Text::new(format!("-{amount}")),
-                fonts.tf(26.0),
-                TextColor(theme::TEXT_DANGER),
-                Pickable::IGNORE,
-            ));
+            for (dx, dy) in DMG_NUMERAL_OUTLINE {
+                p.spawn((
+                    Text::new(text.clone()),
+                    fonts.tf(DMG_NUMERAL_FONT),
+                    TextColor(Color::srgb(0.06, 0.02, 0.02)),
+                    Node { position_type: PositionType::Absolute, left: Val::Px(dx), top: Val::Px(dy), ..default() },
+                    Pickable::IGNORE,
+                ));
+            }
+            // Last, so it draws over its outline; in the flow, so the node
+            // takes its size.
+            p.spawn((Text::new(text), fonts.tf(DMG_NUMERAL_FONT), TextColor(DMG_NUMERAL_RED), Pickable::IGNORE));
         });
+}
+
+/// A damage numeral's scale `elapsed` seconds in: it lands at
+/// [`DMG_NUMERAL_PUNCH`] and snaps to size, easing out.
+fn damage_numeral_scale(elapsed: f32) -> f32 {
+    let k = (elapsed / DMG_NUMERAL_PUNCH_SECS).clamp(0.0, 1.0);
+    let ease = 1.0 - (1.0 - k) * (1.0 - k);
+    DMG_NUMERAL_PUNCH + (1.0 - DMG_NUMERAL_PUNCH) * ease
 }
 
 fn spawn_vignette(commands: &mut Commands, peak_alpha: f32) {
@@ -483,21 +533,25 @@ pub fn animate_hit_vignettes(
     }
 }
 
-/// Float each damage numeral upward and fade it out, despawning when elapsed.
+/// Punch each damage numeral in, then float it upward and fade it out,
+/// despawning when elapsed.
 pub fn animate_damage_numerals(
     mut commands: Commands,
     time: Res<Time>,
-    mut numerals: Query<(Entity, &mut DamageNumeral, &mut Node, &Children)>,
+    mut numerals: Query<(Entity, &mut DamageNumeral, &mut Node, &mut UiTransform, &Children)>,
     mut texts: Query<&mut TextColor>,
 ) {
-    for (entity, mut numeral, mut node, children) in &mut numerals {
+    for (entity, mut numeral, mut node, mut transform, children) in &mut numerals {
         numeral.remaining -= time.delta_secs();
         if numeral.remaining <= 0.0 {
             commands.entity(entity).despawn();
             continue;
         }
         let frac = (numeral.remaining / numeral.total).clamp(0.0, 1.0); // 1 → 0
-        node.top = Val::Px(numeral.base_top - (1.0 - frac) * DMG_NUMERAL_RISE);
+        transform.scale = Vec2::splat(damage_numeral_scale(numeral.total - numeral.remaining));
+        // Rise easing out: quick off the hit, settling as it fades.
+        let risen = 1.0 - frac * frac;
+        node.top = Val::Px(numeral.base_top - risen * DMG_NUMERAL_RISE);
         // Hold full opacity, then ease out over the final 50%.
         let alpha = (frac / 0.5).min(1.0);
         for child in children.iter() {
@@ -547,5 +601,19 @@ fn draw_ring(gizmos: &mut Gizmos<ImpactGizmos>, center: Vec3, r: f32, color: Col
         let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
         let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
         gizmos.line(p0, p1, color);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_damage_numeral_lands_big_and_snaps_to_size() {
+        assert_eq!(damage_numeral_scale(0.0), DMG_NUMERAL_PUNCH);
+        let midway = damage_numeral_scale(DMG_NUMERAL_PUNCH_SECS / 2.0);
+        assert!(midway > 1.0 && midway < DMG_NUMERAL_PUNCH);
+        assert_eq!(damage_numeral_scale(DMG_NUMERAL_PUNCH_SECS), 1.0);
+        assert_eq!(damage_numeral_scale(DMG_NUMERAL_SECS), 1.0);
     }
 }

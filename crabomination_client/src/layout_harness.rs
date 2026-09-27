@@ -11,7 +11,10 @@
 //! `--menu` (or `--menu-format FORMAT`) screenshots the main menu instead;
 //! `--ui-size PERCENT` draws the UI at that size (0 = Auto); `--zoom-card
 //! NAME` holds the camera close over that card on the viewer's board, for a
-//! look at what sits on it (counter chips, badges).
+//! look at what sits on it (counter chips, badges); `--demo-damage` feeds the
+//! client a batch of combat damage just before the screenshot, so it catches
+//! the damage numerals in flight; `--stack` starts with two spells on the
+//! stack.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -55,6 +58,11 @@ pub struct HarnessArgs {
     /// `--zoom-card NAME`: the camera looks down on this card of the
     /// viewer's from close by.
     pub zoom_card: Option<String>,
+    /// `--demo-damage`: a batch of damage events, client-side only, a moment
+    /// before the screenshot.
+    pub demo_damage: bool,
+    /// `--stack`: the viewer has cast two spells and holds priority.
+    pub stack: bool,
 }
 
 impl HarnessArgs {
@@ -83,6 +91,8 @@ impl HarnessArgs {
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),
+            demo_damage: args.iter().any(|a| a == "--demo-damage"),
+            stack: args.iter().any(|a| a == "--stack"),
         }
     }
 
@@ -196,6 +206,31 @@ pub fn fixture_state(seats: usize) -> GameState {
     g
 }
 
+/// `--stack`: seat 0 casts Lightning Bolt at seat 1's Serra Angel and, holding
+/// priority, Giant Growth on its own Luminarch Aspirant — two items on the
+/// stack, the pump on top, with the match waiting on the viewer.
+pub fn put_spells_on_stack(g: &mut GameState) {
+    use crabomination::game::{GameAction, Target};
+    let find = |g: &GameState, seat: usize, name: &str| {
+        g.battlefield.iter().find(|c| c.controller == seat && c.definition.name == name).map(|c| c.id)
+    };
+    let casts = [("Lightning Bolt", find(g, 1, "Serra Angel")), ("Giant Growth", find(g, 0, "Luminarch Aspirant"))];
+    for (spell, target) in casts {
+        let Some(def) = crabomination::catalog::lookup_by_name(spell) else { continue };
+        let card_id = g.add_card_to_hand(0, def);
+        let cast = GameAction::CastSpell {
+            card_id,
+            target: target.map(Target::Permanent),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if let Err(e) = g.perform_action(cast) {
+            eprintln!("--stack: casting {spell}: {e:?}");
+        }
+    }
+}
+
 /// `--viewer-out`: knock seat 0 out of the fixture with 21 damage from
 /// seat 1's commander, and hand the turn to seat 1.
 pub fn knock_out_viewer(g: &mut GameState) {
@@ -275,6 +310,45 @@ pub fn zoom_on_card_for_screenshot(
     let focus = card.translation();
     *transform = Transform::from_translation(focus + (home.pose.translation - home.target) * 0.16)
         .looking_at(focus, Vec3::Y);
+}
+
+/// Hits `--demo-damage` deals: (seat, card, damage). Luminarch Aspirant is
+/// hit twice in one batch, as by two blockers.
+const DEMO_HITS: &[(usize, &str, u32)] = &[
+    (1, "Serra Angel", 3),
+    (1, "Walking Ballista", 5),
+    (0, "Luminarch Aspirant", 2),
+    (0, "Luminarch Aspirant", 1),
+    (0, "Hangarback Walker", 4),
+];
+
+/// `--demo-damage`: add [`DEMO_HITS`] to the event batch once, a third of a
+/// second before the screenshot — the view itself is untouched, so only the
+/// transient effects (numerals, sparks) show. Runs after `poll_net`, which
+/// clears the batch each frame.
+pub fn inject_damage_for_screenshot(
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    time: Res<Time>,
+    mut events: ResMut<crate::net_plugin::LatestServerEvents>,
+    mut since_view: Local<f32>,
+    mut done: Local<bool>,
+) {
+    let Some(cv) = view.0.as_ref().filter(|_| args.demo_damage && !*done) else { return };
+    *since_view += time.delta_secs();
+    if *since_view < args.screenshot_delay - 0.3 {
+        return;
+    }
+    *done = true;
+    for &(seat, name, amount) in DEMO_HITS {
+        if let Some(p) = cv.battlefield.iter().find(|p| p.controller == seat && p.name == name) {
+            events.0.push(crabomination::net::GameEventWire::DamageDealt {
+                amount,
+                to_player: None,
+                to_card: Some(p.id),
+            });
+        }
+    }
 }
 
 /// Seconds since the first view arrived; `None` until then.

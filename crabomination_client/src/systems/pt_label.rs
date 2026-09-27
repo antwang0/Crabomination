@@ -39,11 +39,11 @@ const PT_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 /// Card-local centre of the printed P/T box, which the badge sits over.
 /// (It hung a fixed number of pixels in from the corner, so a card seen up
 /// close — the Ctrl zoom — had its badge off the box and out past the edge.)
-const PT_BOX: Vec3 = Vec3::new(CARD_WIDTH * 0.385, -CARD_HEIGHT * 0.43, 0.0);
+pub(crate) const PT_BOX: Vec3 = Vec3::new(CARD_WIDTH * 0.385, -CARD_HEIGHT * 0.43, 0.0);
 
 /// The badge's font size on a card `card_width` UI px across: about the
 /// printed box's size, never smaller than a glance can read.
-fn badge_font_size(card_width: f32) -> f32 {
+pub(crate) fn badge_font_size(card_width: f32) -> f32 {
     (card_width * 0.15).round().clamp(16.0, 40.0)
 }
 

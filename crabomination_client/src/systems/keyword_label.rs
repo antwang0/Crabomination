@@ -9,16 +9,23 @@
 //! Mechanism mirrors `pt_label`: a screen-space UI strip reprojected from the
 //! card's world position every frame, reconciled against the engine view
 //! (spawned for newly-keyworded creatures, despawned when a creature loses all
-//! displayable keywords or leaves the battlefield). It sits on the card's top
-//! edge as the viewer sees it, whichever way the card faces, and renders
-//! below default-z UI so popups / tooltips win.
+//! displayable keywords or leaves the battlefield). It sits on the card's
+//! P/T line, ending at the P/T badge (or the printed box), and renders below
+//! default-z UI so popups / tooltips win.
+//!
+//! The bottom of a card is the part a card in front of it leaves showing —
+//! a back-row creature's, one under a wrapped row — and on the card no
+//! neighbour's overlays land. The strip hung above the card's top edge as
+//! seen, which is where the card behind it peeks out: an opponent's front
+//! row printed its strips over the P/T badges of the back row.
 
 use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use crabomination::card::{CardId, Keyword, WardCost};
 
-use crate::card::{BattlefieldCard, GameCardId, CARD_HEIGHT, CARD_WIDTH};
+use crate::card::{BattlefieldCard, GameCardId, CARD_WIDTH};
+use crate::systems::pt_label::{PT_BOX, PtLabel};
 use crate::net_plugin::CurrentView;
 use crate::systems::game_ui::InGameRoot;
 use crate::theme::UiFonts;
@@ -27,12 +34,26 @@ use crate::MainCamera;
 /// Renders below default-z (0) UI so popups / tooltips / modals win — same
 /// band as the P/T badge.
 const KW_Z: i32 = crate::theme::layer::CARD_OVERLAY;
-/// Lift the strip a few px above the card's projected top edge so it reads as
-/// a banner sitting on the card rather than overlapping the title.
-const KW_LIFT: f32 = 14.0;
-/// Rough px width per character at the strip's font size, used only to centre
-/// the strip horizontally over the card (the node itself auto-sizes).
-const KW_CHAR_PX: f32 = 6.5;
+/// Between the strip and the P/T badge it ends at.
+const KW_GAP: f32 = 3.0;
+
+/// Which way a strip runs from where it ends, by where the card's left
+/// (local −X) falls on screen: an opponent's cards face them, and a tapped
+/// card's P/T line runs up or down the screen.
+fn strip_run(card_left: Vec2) -> Val2 {
+    if card_left.x.abs() >= card_left.y.abs() {
+        if card_left.x < 0.0 { Val2::percent(-100.0, -50.0) } else { Val2::percent(0.0, -50.0) }
+    } else if card_left.y < 0.0 {
+        Val2::percent(-50.0, -100.0)
+    } else {
+        Val2::percent(-50.0, 0.0)
+    }
+}
+
+/// The strip's font size on a card `card_width` UI px across.
+fn strip_font_size(card_width: f32) -> f32 {
+    (card_width * 0.1).round().clamp(12.0, 26.0)
+}
 
 /// Screen-space keyword strip tied to a battlefield card's `CardId`.
 #[derive(Component)]
@@ -584,12 +605,13 @@ pub fn sync_keyword_labels(
     cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
-    mut labels: Query<(Entity, &KeywordLabel, &mut Node, &mut Text)>,
+    badges: Query<(&PtLabel, &Node, &ComputedNode), Without<KeywordLabel>>,
+    mut labels: Query<(Entity, &KeywordLabel, &mut Node, &mut Text, &mut TextFont, &mut UiTransform)>,
     mut desired_cache: Local<HashMap<CardId, String>>,
 ) {
     // No view (between matches): clear every strip and bail.
     let Some(cv) = &view.0 else {
-        for (e, _, _, _) in &mut labels {
+        for (e, ..) in &mut labels {
             commands.entity(e).despawn();
         }
         return;
@@ -651,90 +673,91 @@ pub fn sync_keyword_labels(
     }
     let desired = &*desired_cache;
 
-    // card_id → the UI point a strip hangs from: the midpoint of the
-    // card's top edge *as seen*, the highest of its four edge midpoints on
-    // screen. The card's own top edge put an opponent's strips under their
-    // cards (which face them) and a tapped card's beside it — and in a pod
-    // two boards that face each other printed their strips over each other
-    // along the seam between them.
-    let edges = [
-        Vec3::new(0.0, CARD_HEIGHT / 2.0, 0.0),
-        Vec3::new(0.0, -CARD_HEIGHT / 2.0, 0.0),
-        Vec3::new(CARD_WIDTH / 2.0, 0.0, 0.0),
-        Vec3::new(-CARD_WIDTH / 2.0, 0.0, 0.0),
-    ];
-    // A strip hides while another card lies over that edge (`card::cover`):
+    // The P/T badges' laid-out sizes, UI px — a frame behind, which the
+    // badge settles in.
+    let badge_size: HashMap<CardId, Vec2> = badges
+        .iter()
+        .filter(|(_, node, _)| node.display != Display::None)
+        .map(|(badge, _, computed)| (badge.0, computed.size() * computed.inverse_scale_factor()))
+        .collect();
+
+    // card_id → (where the strip ends, which way it runs, its font size).
+    // A strip hides while another card lies over that line (`card::cover`):
     // it printed on the card on top, whose keywords it then seemed to be.
     let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
-    let mut card_top: HashMap<CardId, Vec2> = HashMap::new();
+    let mut placed: HashMap<CardId, (Vec2, Val2, f32)> = HashMap::new();
     for (e, gid, gtf) in &cards {
-        if !desired.contains_key(&gid.0) {
+        if !desired.contains_key(&gid.0) || cover.hides_local(e, gtf, PT_BOX - Vec3::X * CARD_WIDTH * 0.3) {
             continue;
         }
-        let top = edges
-            .iter()
-            .filter_map(|&edge| {
-                crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(edge))
-                    .map(|at| (at, edge))
-            })
-            .min_by(|a, b| a.0.y.total_cmp(&b.0.y));
-        if let Some((top, edge)) = top
-            && !cover.hides_local(e, gtf, edge * 0.85)
-        {
-            card_top.insert(gid.0, top);
-        }
+        let project =
+            |local: Vec3| crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(local));
+        let on_line = |x: f32| project(Vec3::new(x, PT_BOX.y, 0.0));
+        let (Some(pt), Some(left_edge), Some(right_edge)) =
+            (project(PT_BOX), on_line(-CARD_WIDTH / 2.0), on_line(CARD_WIDTH / 2.0))
+        else {
+            continue;
+        };
+        let card_left = (left_edge - right_edge).normalize_or_zero();
+        let card_width = left_edge.distance(right_edge);
+        // Half the badge along the way the strip runs; the printed box's
+        // when the P/T is as printed and there is no badge.
+        let badge = badge_size.get(&gid.0).copied();
+        let half = if card_left.x.abs() >= card_left.y.abs() {
+            badge.map_or(card_width * 0.075, |b| b.x / 2.0)
+        } else {
+            badge.map_or(card_width * 0.05, |b| b.y / 2.0)
+        };
+        let end = pt + card_left * (half + KW_GAP);
+        placed.insert(gid.0, (end, strip_run(card_left), strip_font_size(card_width)));
     }
-
-    // Centre a strip of `chars` glyphs over the card, lifted above its edge.
-    let anchor = |top: Vec2, chars: usize| -> (f32, f32) {
-        (top.x - chars as f32 * KW_CHAR_PX * 0.5, top.y - KW_LIFT)
-    };
 
     // Update existing strips; despawn any whose creature lost all keywords or
     // left the battlefield.
     let mut seen: HashSet<CardId> = HashSet::new();
-    for (e, label, mut node, mut text) in &mut labels {
-        match desired.get(&label.0) {
-            Some(strip) => {
-                seen.insert(label.0);
-                if let Some(&top) = card_top.get(&label.0) {
-                    let (x, y) = anchor(top, strip.chars().count());
-                    node.display = Display::Flex;
-                    node.left = Val::Px(x);
-                    node.top = Val::Px(y);
-                } else {
-                    node.display = Display::None;
-                }
-                if text.0 != *strip {
-                    *text = Text::new(strip.clone());
-                }
-            }
-            None => {
-                commands.entity(e).despawn();
-            }
+    for (e, label, mut node, mut text, mut font, mut transform) in &mut labels {
+        let Some(strip) = desired.get(&label.0) else {
+            commands.entity(e).despawn();
+            continue;
+        };
+        seen.insert(label.0);
+        if text.0 != *strip {
+            *text = Text::new(strip.clone());
+        }
+        let Some(&(end, run, size)) = placed.get(&label.0) else {
+            node.display = Display::None;
+            continue;
+        };
+        node.display = Display::Flex;
+        node.left = Val::Px(end.x);
+        node.top = Val::Px(end.y);
+        if transform.translation != run {
+            transform.translation = run;
+        }
+        let size = FontSize::Px(size);
+        if font.font_size != size {
+            font.font_size = size;
         }
     }
 
-    // Spawn strips for newly-keyworded creatures.
+    // Spawn strips for newly-keyworded creatures, parked off-screen until
+    // the next frame places them.
     for (id, strip) in desired.iter() {
         if seen.contains(id) {
             continue;
         }
-        let (left, top) = card_top
-            .get(id)
-            .copied()
-            .map(|top| anchor(top, strip.chars().count()))
-            .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             KeywordLabel(*id),
             Text::new(strip.clone()),
             ui_fonts.tf(12.0),
             TextColor(Color::srgb(0.96, 0.94, 0.80)),
-            BackgroundColor(Color::srgba(0.05, 0.05, 0.08, 0.62)),
+            BackgroundColor(Color::srgba(0.05, 0.05, 0.08, 0.72)),
+            // One line: a strip that wrapped stood taller than the P/T line.
+            TextLayout::no_wrap(),
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(left),
-                top: Val::Px(top),
+                left: Val::Px(-1000.0),
+                top: Val::Px(-1000.0),
                 padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
                 border_radius: BorderRadius::all(Val::Px(3.0)),
                 ..default()
@@ -750,6 +773,20 @@ pub fn sync_keyword_labels(
 mod tests {
     use super::{board_status_strip, goad_tag, keyword_strip, req_short};
     use crabomination::card::Keyword;
+
+    #[test]
+    fn a_strip_runs_toward_the_cards_left_as_seen() {
+        use super::strip_run;
+        use bevy::prelude::{Val2, Vec2};
+        // Upright: the card's left is screen-left, so the strip ends at the
+        // P/T badge and runs left of it.
+        assert_eq!(strip_run(Vec2::new(-1.0, 0.1)), Val2::percent(-100.0, -50.0));
+        // An opponent's card faces them: its left is screen-right.
+        assert_eq!(strip_run(Vec2::new(1.0, -0.1)), Val2::percent(0.0, -50.0));
+        // A tapped card's P/T line runs up or down the screen.
+        assert_eq!(strip_run(Vec2::new(0.1, -1.0)), Val2::percent(-50.0, -100.0));
+        assert_eq!(strip_run(Vec2::new(-0.1, 1.0)), Val2::percent(-50.0, 0.0));
+    }
 
     #[test]
     fn req_short_names_composite_filter_half() {
