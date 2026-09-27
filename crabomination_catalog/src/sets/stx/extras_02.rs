@@ -1525,7 +1525,6 @@ pub fn brawn() -> CardDefinition {
 /// Deep Analysis — {3}{U} Sorcery (STA reprint, originally Torment).
 /// "Target player draws two cards. / Flashback—{1}{U}, Pay 3 life."
 /// The flashback life is `flashback_additional_cost` (`PayLife`).
-/// Approximation: "target player" is collapsed to you.
 pub fn deep_analysis() -> CardDefinition {
     CardDefinition {
         name: "Deep Analysis",
@@ -1534,7 +1533,7 @@ pub fn deep_analysis() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
         effect: Effect::Draw {
-            who: Selector::You,
+            who: crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
             amount: Value::Const(2),
         },
         ..Default::default()

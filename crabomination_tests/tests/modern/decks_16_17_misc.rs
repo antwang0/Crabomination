@@ -263,7 +263,7 @@ fn deep_analysis_draws_two() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Deep Analysis castable");
     drain_stack(&mut g);
 

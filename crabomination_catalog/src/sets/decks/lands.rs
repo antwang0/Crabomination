@@ -871,18 +871,32 @@ pub fn mutavault() -> CardDefinition {
 }
 
 /// Mishra's Factory — `{T}: Add {C}`. `{1}`: becomes a 2/2 Assembly-Worker
-/// until end of turn (still a land). (The +1/+1 Assembly-Worker pump rider is
-/// dropped.)
+/// until end of turn (still a land). `{T}`: target Assembly-Worker creature
+/// gets +1/+1 until end of turn (itself included, if it hasn't attacked).
 pub fn mishras_factory() -> CardDefinition {
     use crate::card::CreatureType;
-    colorless_manland(
+    let mut def = colorless_manland(
         "Mishra's Factory",
         cost(&[generic(1)]),
         2,
         2,
         vec![CreatureType::AssemblyWorker],
         vec![],
-    )
+    );
+    def.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::AssemblyWorker)),
+            ),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    });
+    def
 }
 
 /// Inkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth with flying

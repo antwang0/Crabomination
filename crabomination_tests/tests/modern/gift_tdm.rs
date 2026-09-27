@@ -2746,7 +2746,7 @@ fn deep_analysis_flashback_pays_three_life() {
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastFlashback {
-        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: spell, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Deep Analysis flashback castable for {1}{U} + 3 life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 3, "paid 3 life as a flashback cost");

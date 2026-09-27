@@ -2110,7 +2110,7 @@ fn deep_analysis_draws_two_and_loses_two_life() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Deep Analysis castable for {3}{U}");
     drain_stack(&mut g);
@@ -2119,23 +2119,24 @@ fn deep_analysis_draws_two_and_loses_two_life() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
+/// "*Target player* draws two cards" — aimed at an opponent, they draw.
 #[test]
-fn deep_analysis_caster_draws_two() {
-    // Deep Analysis draws for the caster (target-player collapsed).
+fn deep_analysis_target_player_draws_two() {
     let mut g = two_player_game();
-    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::deep_analysis());
-    let hand_before = g.players[0].hand.len();
+    let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
 
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Deep Analysis castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "cast(-1) + draw(+2) = +1");
+    assert_eq!(g.players[1].hand.len(), theirs + 2, "the target drew two");
+    assert_eq!(g.players[0].hand.len(), mine - 1, "the caster only spent the card");
 }
 
 // ── Tribute to Hunger (STA reprint) ─────────────────────────────────────────

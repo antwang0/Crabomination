@@ -748,3 +748,26 @@ fn ajanis_chosen_may_move_the_aura_onto_the_cat() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(pac).and_then(|a| a.attached_to), Some(theirs), "stays on their creature");
 }
+
+/// Mishra's Factory — "{T}: Target Assembly-Worker creature gets +1/+1 until
+/// end of turn." One animated Factory (a 2/2 Assembly-Worker) pumped by a
+/// second is a 3/3.
+#[test]
+fn mishras_factory_pumps_an_assembly_worker() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::mishras_factory());
+    let b = g.add_card_to_battlefield(0, catalog::mishras_factory());
+    g.players[0].mana_pool.add_colorless(1);
+    let act = |g: &mut GameState, card_id, ability_index, target| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id, ability_index, target, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    act(&mut g, a, 1, None).expect("animate");
+    drain_stack(&mut g);
+    act(&mut g, b, 2, Some(Target::Permanent(a))).expect("pump the Assembly-Worker");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(g.battlefield_find(b).unwrap().tapped);
+}
