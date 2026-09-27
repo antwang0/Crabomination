@@ -274,3 +274,73 @@ fn neyam_trades_only_with_the_damaged_player() {
     assert_eq!(g.players[1].life, 17, "Neyam connected");
     assert!(g.players[2].graveyard.iter().any(|c| c.id == theirs), "seat 2's card stays put");
 }
+
+/// Redemptor Dreadnought — Fallen Warrior exiles at most one creature card
+/// from your graveyard as it's cast (no discount), and Plasma Incinerator's
+/// attack pump is that card's power; without one it is a plain 4/4.
+#[test]
+fn redemptor_dreadnought_pumps_by_the_exiled_cards_power() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(2);
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dread = g.add_card_to_hand(0, catalog::redemptor_dreadnought());
+    let delve = |cards: Vec<CardId>| GameAction::CastSpellDelve {
+        card_id: dread,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        delve_cards: cards,
+    };
+    flood(&mut g);
+    assert!(g.perform_action(delve(vec![wurm, bear])).is_err(), "one card at most");
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(delve(vec![wurm])).is_err(), "no discount: still {{5}}");
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(delve(vec![wurm])).expect("{5}, exiling the Wurm");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == wurm && c.exiled_with == Some(dread)));
+    g.clear_sickness(dread);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: dread, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, dread), (10, 10), "4/4 + the Wurm's 6");
+}
+
+/// The bot takes Fallen Warrior's exile — the biggest creature card — rather
+/// than the plain cast at the same price.
+#[test]
+fn bot_casts_redemptor_dreadnought_exiling_its_biggest_creature_card() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    g.step = TurnStep::PostCombatMain;
+    for seat in 0..2 {
+        library(&mut g, seat, 10);
+    }
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let dread = g.add_card_to_hand(0, catalog::redemptor_dreadnought());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    let mut picked = None;
+    for _ in 0..6 {
+        match HeuristicBot::new().next_action(&g, 0) {
+            Some(a @ (GameAction::CastSpell { .. } | GameAction::CastSpellDelve { .. })) => {
+                picked = Some(a);
+                break;
+            }
+            Some(other) => {
+                g.perform_action(other).ok();
+            }
+            None => break,
+        }
+    }
+    assert!(
+        matches!(picked, Some(GameAction::CastSpellDelve { card_id, ref delve_cards, .. }) if card_id == dread && *delve_cards == vec![wurm]),
+        "{picked:?}"
+    );
+}

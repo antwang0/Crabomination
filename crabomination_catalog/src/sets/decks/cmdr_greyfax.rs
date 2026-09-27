@@ -9,8 +9,6 @@
 //! - **Inquisitor Eisenhorn** — the first-draw reveal is automatic.
 //! - **Neyam Shai Murad** — the card you take is the engine's pick, not
 //!   theirs.
-//! - **Redemptor Dreadnought** — the optional graveyard exile (and the
-//!   attack pump it feeds) isn't offered.
 //! - **Triumph of Saint Katherine** — Praesidium Protectiva isn't
 //!   implemented.
 
@@ -586,14 +584,27 @@ pub fn reaver_titan() -> CardDefinition {
     def
 }
 
-/// Redemptor Dreadnought — a 4/4 trampler.
-///
-/// ⚠ Residual: the optional graveyard exile and its attack pump aren't
-/// offered.
+/// Redemptor Dreadnought — Fallen Warrior may exile a creature card from
+/// your graveyard as it's cast; Plasma Incinerator pumps each attack by that
+/// card's power.
 pub fn redemptor_dreadnought() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Trample],
+        graveyard_exile_cost: Some(crate::card::GraveyardExileCost { filter: R::Creature, discount: 0, max: Some(1) }),
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 603.4 — "if a card is exiled with it" is an intervening if.
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::ValueAtLeast(
+                Value::CardsExiledWithSourceCount,
+                Value::ONE,
+            )),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
+                toughness: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
         ..creature("Redemptor Dreadnought", cost(&[generic(5)]), vec![CreatureType::Astartes, CreatureType::Dreadnought], 4, 4)
     }
 }
