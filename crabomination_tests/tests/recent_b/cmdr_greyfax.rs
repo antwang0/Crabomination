@@ -344,3 +344,27 @@ fn bot_casts_redemptor_dreadnought_exiling_its_biggest_creature_card() {
         "{picked:?}"
     );
 }
+
+/// Inquisitor Eisenhorn — only the first card drawn each turn is revealed:
+/// an instant there makes Cherubael; an instant drawn second does not, and
+/// neither does a land first.
+#[test]
+fn inquisitor_eisenhorn_reveals_only_the_first_draw() {
+    let first_draw_makes_cherubael = |first_is_instant: bool| {
+        let mut g = main_phase(2);
+        g.add_card_to_battlefield(0, catalog::inquisitor_eisenhorn());
+        // Added to the bottom: the first card added is drawn first.
+        g.add_card_to_library(0, if first_is_instant { catalog::lightning_bolt() } else { catalog::island() });
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.players[0].cards_drawn_this_turn = 0;
+        for _ in 0..2 {
+            let mut events = Vec::new();
+            g.draw_one(0, &mut events);
+            g.dispatch_triggers_for_events(&events);
+            drain_stack(&mut g);
+        }
+        count(&g, 0, "Cherubael")
+    };
+    assert_eq!(first_draw_makes_cherubael(true), 1);
+    assert_eq!(first_draw_makes_cherubael(false), 0, "the second card isn't revealed");
+}
