@@ -1744,6 +1744,25 @@ impl GameState {
         eprintln!("{msg}");
     }
 
+    /// Pin the object targets a resolution bound on a derived context around
+    /// whatever `body` just parked: a continuation resumes under the stack
+    /// item's targets. Player targets can't be pinned this way (left as is).
+    pub(crate) fn pin_parked_targets(&mut self, targets: &[Target]) {
+        let ids: Option<Vec<CardId>> = targets
+            .iter()
+            .map(|t| match t {
+                Target::Permanent(id) => Some(*id),
+                Target::Player(_) => None,
+            })
+            .collect();
+        if let Some(ids) = ids.filter(|v| !v.is_empty()) {
+            rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetObjects {
+                ids,
+                body: Box::new(carried),
+            });
+        }
+    }
+
     /// Run `body` with X set to `x`. A body that parks resumes under the stack
     /// item's context, whose X is not this one, so the parked continuation is
     /// pinned in a `WithX` (Kodama of the East Tree's pick and Numa's
@@ -7598,22 +7617,8 @@ impl GameState {
                 body_ctx.targets = slot0.into_iter().chain(additional).collect();
                 self.run_effect(body, &body_ctx, events)?;
                 // A parked payoff resumes under the stack item's targets, not
-                // the ones picked here: pin them when they are all objects
-                // (Numa's distribution resumed with no Elves to count on).
-                let ids: Option<Vec<CardId>> = body_ctx
-                    .targets
-                    .iter()
-                    .map(|t| match t {
-                        Target::Permanent(id) => Some(*id),
-                        Target::Player(_) => None,
-                    })
-                    .collect();
-                if let Some(ids) = ids.filter(|v| !v.is_empty()) {
-                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetObjects {
-                        ids,
-                        body: Box::new(carried),
-                    });
-                }
+                // the ones picked here (Numa's distribution found no Elves).
+                self.pin_parked_targets(&body_ctx.targets);
                 Ok(())
             }
 
@@ -8296,7 +8301,10 @@ impl GameState {
                 }
                 let mut sub = ctx.clone();
                 sub.targets = kept;
-                self.run_effect(body, &sub, events)
+                self.run_effect(body, &sub, events)?;
+                // An inner slot pin indexes THIS list, not the stack item's.
+                self.pin_parked_targets(&sub.targets);
+                Ok(())
             }
 
             Effect::ApplyToTargets { effect: inner, .. } => {
@@ -38546,6 +38554,7 @@ impl GameState {
                 let mut then_ctx = ctx.clone();
                 then_ctx.targets = slot0.into_iter().chain(additional).collect();
                 self.run_effect(then, &then_ctx, events)?;
+                self.pin_parked_targets(&then_ctx.targets);
                 Ok(())
             }
 
@@ -38642,6 +38651,7 @@ impl GameState {
                     then_ctx.targets = slot0.into_iter().chain(additional).collect();
                 }
                 self.run_effect_with_x(then, &then_ctx, x, events)?;
+                self.pin_parked_targets(&then_ctx.targets);
                 Ok(())
             }
 
@@ -38721,6 +38731,7 @@ impl GameState {
                 let mut then_ctx = ctx.clone();
                 then_ctx.targets = slot0.into_iter().chain(additional).collect();
                 self.run_effect(then, &then_ctx, events)?;
+                self.pin_parked_targets(&then_ctx.targets);
                 Ok(())
             }
 
