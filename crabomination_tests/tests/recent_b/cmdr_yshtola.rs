@@ -105,6 +105,28 @@ fn blue_mages_cane_job_selects() {
     assert!(g.computed_permanent(hero).unwrap().subtypes().creature_types.contains(&CreatureType::Wizard));
 }
 
+/// Blue Mage's Cane: attacking exiles an instant from the defending player's
+/// graveyard and casts a copy of it for {3} rather than its mana cost.
+#[test]
+fn blue_mages_cane_casts_the_copy_for_three() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(2);
+    let c = g.add_card_to_hand(0, catalog::blue_mages_cane());
+    cast_at(&mut g, c, &[]).expect("cast");
+    let hero = g.battlefield.iter().find(|x| x.definition.name == "Hero").unwrap().id;
+    g.clear_sickness(hero);
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: hero, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the card is exiled");
+    assert_eq!(g.players[1].life, 17, "its copy was cast for {{3}}");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
 /// Champions from Beyond makes X Heroes.
 #[test]
 fn champions_from_beyond_assemble() {

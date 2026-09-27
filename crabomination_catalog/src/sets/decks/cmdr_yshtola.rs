@@ -164,10 +164,8 @@ pub fn ardbert_warrior_of_darkness() -> CardDefinition {
 
 /// Blue Mage's Cane — job select; equipped creature gets +0/+2, is a Wizard,
 /// and attacking copies an instant or sorcery from the defending player's
-/// graveyard to cast; equip {2}.
-///
-/// ⚠ Residual: the copy costs the card's own mana cost, not {3}, and the
-/// graveyard card isn't exiled.
+/// graveyard: it's exiled, and you may cast a copy of it by paying {3}
+/// rather than its mana cost; equip {2}.
 pub fn blue_mages_cane() -> CardDefinition {
     equipment(
         "Blue Mage's Cane",
@@ -178,14 +176,16 @@ pub fn blue_mages_cane() -> CardDefinition {
             add_creature_types: vec![CreatureType::Wizard],
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::CastWithoutPayingImmediate {
-                    what: target_filtered(instant_or_sorcery().and(R::InGraveyard).and(R::OwnedByDefendingPlayer)),
-                    source_zone: Zone::Graveyard,
-                    exile_after: false,
-                    copy: true,
-                    reduce_generic: 0,
-                    pay_own_cost: true,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Exile {
+                        what: target_filtered(instant_or_sorcery().and(R::InGraveyard).and(R::OwnedByDefendingPlayer)),
+                    },
+                    Effect::CastCopyForCost {
+                        what: Selector::Target(0),
+                        source_zone: Zone::Exile,
+                        cost: cost(&[generic(3)]),
+                    },
+                ]),
             }],
             ..Default::default()
         },
