@@ -9,7 +9,9 @@
 //! opens the window at that size instead of maximized, so one machine can
 //! render several aspect ratios. `--settings-open` opens the Esc menu;
 //! `--menu` (or `--menu-format FORMAT`) screenshots the main menu instead;
-//! `--ui-size PERCENT` draws the UI at that size (0 = Auto).
+//! `--ui-size PERCENT` draws the UI at that size (0 = Auto); `--zoom-card
+//! NAME` holds the camera close over that card on the viewer's board, for a
+//! look at what sits on it (counter chips, badges).
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -50,6 +52,9 @@ pub struct HarnessArgs {
     pub menu_format: Option<crate::menu::MatchFormat>,
     /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
     pub ui_size: Option<u16>,
+    /// `--zoom-card NAME`: the camera looks down on this card of the
+    /// viewer's from close by.
+    pub zoom_card: Option<String>,
 }
 
 impl HarnessArgs {
@@ -77,6 +82,7 @@ impl HarnessArgs {
             menu: args.iter().any(|a| a == "--menu"),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
+            zoom_card: value("--zoom-card"),
         }
     }
 
@@ -248,6 +254,27 @@ pub fn open_settings_for_screenshot(
         settings.0 = true;
         *done = true;
     }
+}
+
+/// `--zoom-card NAME`: put the camera close over that card, at the home
+/// pose's angle. Runs after `camera_zoom`, which would ease it home.
+pub fn zoom_on_card_for_screenshot(
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    home: Res<crate::systems::camera_zoom::CameraHome>,
+    cards: Query<(&crate::card::GameCardId, &GlobalTransform), With<crate::card::BattlefieldCard>>,
+    mut camera: Query<&mut Transform, With<crate::MainCamera>>,
+) {
+    let (Some(name), Some(cv)) = (args.zoom_card.as_deref(), view.0.as_ref()) else { return };
+    let Some(id) = cv.battlefield.iter().find(|p| p.controller == cv.your_seat && p.name == name).map(|p| p.id)
+    else {
+        return;
+    };
+    let Some((_, card)) = cards.iter().find(|(g, _)| g.0 == id) else { return };
+    let Ok(mut transform) = camera.single_mut() else { return };
+    let focus = card.translation();
+    *transform = Transform::from_translation(focus + (home.pose.translation - home.target) * 0.16)
+        .looking_at(focus, Vec3::Y);
 }
 
 /// Seconds since the first view arrived; `None` until then.

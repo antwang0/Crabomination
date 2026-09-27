@@ -431,6 +431,9 @@ fn main() {
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
+                layout_harness::zoom_on_card_for_screenshot
+                    .after(crate::systems::camera_zoom::camera_zoom)
+                    .run_if(in_state(AppState::InGame)),
             ),
         )
         .add_systems(Startup, setup)
@@ -697,7 +700,10 @@ fn main() {
         // Counter coins (3-D piles on top of permanents).
         .add_systems(
             Update,
-            crate::systems::counter_coins::sync_counter_coins
+            (
+                crate::systems::counter_coins::sync_counter_coins,
+                crate::systems::counter_coins::animate_coin_drops,
+            )
                 .run_if(in_state(AppState::InGame)),
         )
         // Impact feedback: death bursts, damage sparks, life-loss vignette.
@@ -1091,11 +1097,7 @@ fn setup(
         n_seats,
         viewer_seat,
     );
-    crate::systems::counter_coins::init_counter_coin_assets(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-    );
+    crate::systems::counter_coins::init_counter_coin_assets(&mut commands, &mut materials);
 
     // Ambient fill light — softens harsh shadows.
     commands.insert_resource(GlobalAmbientLight {

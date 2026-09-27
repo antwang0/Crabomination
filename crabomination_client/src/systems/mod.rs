@@ -4,6 +4,7 @@ pub mod eliminated;
 pub mod table_tint;
 pub mod chat;
 pub mod commander_ui;
+pub mod coin_mesh;
 pub mod counter_coins;
 pub mod counter_tooltip;
 pub mod debug_console;

@@ -4,8 +4,8 @@
 //!
 //! Whenever a creature's *computed* power/toughness (after counters,
 //! auras, and other layer effects) differs from its *printed* base, or it
-//! has damage marked, we float a small `P/T` text badge at the card's
-//! bottom-right corner — the same spot the printed P/T box sits — so the
+//! has damage marked, we float a small `P/T` text badge over the card's
+//! printed P/T box, sized with the card on screen, so the
 //! player can read the real fighting stats at a glance. Each stat is
 //! coloured on its own: green above the printed value, red below, so a pump
 //! reads apart from a debuff, and a +2/−1 says which half went which way.
@@ -36,10 +36,16 @@ use crate::theme::UiFonts;
 
 /// Renders below default-z (0) UI so popups / tooltips / modals win.
 const PT_Z: i32 = crate::theme::layer::CARD_OVERLAY;
-/// Approximate badge footprint, used to tuck it just inside the card's
-/// projected bottom-right corner rather than spilling off the edge.
-const PT_OFFSET_X: f32 = 38.0;
-const PT_OFFSET_Y: f32 = 22.0;
+/// Card-local centre of the printed P/T box, which the badge sits over.
+/// (It hung a fixed number of pixels in from the corner, so a card seen up
+/// close — the Ctrl zoom — had its badge off the box and out past the edge.)
+const PT_BOX: Vec3 = Vec3::new(CARD_WIDTH * 0.385, -CARD_HEIGHT * 0.43, 0.0);
+
+/// The badge's font size on a card `card_width` UI px across: about the
+/// printed box's size, never smaller than a glance can read.
+fn badge_font_size(card_width: f32) -> f32 {
+    (card_width * 0.15).round().clamp(16.0, 40.0)
+}
 
 /// Screen-space P/T badge tied to a battlefield card's `CardId`.
 #[derive(Component)]
@@ -93,8 +99,8 @@ pub fn sync_pt_labels(
     cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
-    mut labels: Query<(Entity, &PtLabel, &mut Node, &mut Text, &mut TextColor, &Children)>,
-    mut spans: Query<(&mut TextSpan, &mut TextColor), Without<PtLabel>>,
+    mut labels: Query<(Entity, &PtLabel, &mut Node, &mut Text, &mut TextColor, &mut TextFont, &Children)>,
+    mut spans: Query<(&mut TextSpan, &mut TextColor, &mut TextFont), Without<PtLabel>>,
 ) {
     // No view (e.g. between matches): clear every badge and bail.
     let Some(cv) = &view.0 else {
@@ -105,19 +111,27 @@ pub fn sync_pt_labels(
     };
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
 
-    // card_id → world position of the card's bottom-right corner (the
-    // printed P/T box). Transforming a card-local corner through the
-    // card's `GlobalTransform` keeps the anchor correct under the flat
-    // battlefield rotation and any perspective.
-    let bottom_right_local = Vec3::new(CARD_WIDTH / 2.0, -CARD_HEIGHT / 2.0, 0.0);
-    // A badge hides while another card lies over its corner (`card::cover`).
+    // card_id → where the card's printed P/T box is on screen and the font
+    // the badge takes there. Projecting card-local points through the
+    // card's `GlobalTransform` keeps it right under the flat battlefield
+    // rotation and any perspective. A card with another over its box
+    // (`card::cover`) is left out: its badge hides.
     let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
-    let mut card_corner: HashMap<CardId, Vec3> = HashMap::new();
-    let mut covered: HashSet<CardId> = HashSet::new();
+    let mut card_box: HashMap<CardId, (Vec2, f32)> = HashMap::new();
+    let mut on_board: HashSet<CardId> = HashSet::new();
     for (e, gid, gtf) in &cards {
-        card_corner.insert(gid.0, gtf.transform_point(bottom_right_local));
-        if cover.hides_local(e, gtf, bottom_right_local * 0.85) {
-            covered.insert(gid.0);
+        on_board.insert(gid.0);
+        if cover.hides_local(e, gtf, PT_BOX) {
+            continue;
+        }
+        let project = |local: Vec3| {
+            crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(local))
+        };
+        let edge = |x: f32| project(Vec3::new(x, PT_BOX.y, 0.0));
+        if let (Some(centre), Some(left), Some(right)) =
+            (project(PT_BOX), edge(-CARD_WIDTH / 2.0), edge(CARD_WIDTH / 2.0))
+        {
+            card_box.insert(gid.0, (centre, badge_font_size(left.distance(right))));
         }
     }
 
@@ -127,7 +141,7 @@ pub fn sync_pt_labels(
     // combat-relevant P/T.
     let mut desired: HashMap<CardId, BadgeRuns> = HashMap::new();
     for p in &cv.battlefield {
-        if !card_corner.contains_key(&p.id) {
+        if !on_board.contains(&p.id) {
             continue;
         }
         if p.is_creature() {
@@ -160,38 +174,26 @@ pub fn sync_pt_labels(
         }
     }
 
-    /// Project a card-corner world point to a viewport pixel anchor,
-    /// tucking the badge just inside the corner so it overlaps the
-    /// card's bottom-right rather than floating off it.
-    fn anchor(
-        camera: &Camera,
-        cam_xform: &GlobalTransform,
-        ui_scale: &UiScale,
-        world: Vec3,
-    ) -> Option<(f32, f32)> {
-        crate::theme::project_to_ui(camera, cam_xform, ui_scale, world)
-            .map(|v| (v.x - PT_OFFSET_X, v.y - PT_OFFSET_Y))
-    }
-
     // Update existing badges; despawn any whose creature is no longer
     // modified (or has left the battlefield). Text is only written when it
     // changed — a write re-shapes it.
     let mut seen: HashSet<CardId> = HashSet::new();
-    for (e, label, mut node, mut text, mut color, children) in &mut labels {
+    for (e, label, mut node, mut text, mut color, mut font, children) in &mut labels {
         let Some(runs) = desired.get(&label.0) else {
             commands.entity(e).despawn();
             continue;
         };
         seen.insert(label.0);
-        if !covered.contains(&label.0)
-            && let Some(world) = card_corner.get(&label.0).copied()
-            && let Some((x, y)) = anchor(camera, cam_xform, &ui_scale, world)
-        {
-            node.display = Display::Flex;
-            node.left = Val::Px(x);
-            node.top = Val::Px(y);
-        } else {
+        let Some(&(centre, size)) = card_box.get(&label.0) else {
             node.display = Display::None;
+            continue;
+        };
+        node.display = Display::Flex;
+        node.left = Val::Px(centre.x);
+        node.top = Val::Px(centre.y);
+        let size = FontSize::Px(size);
+        if font.font_size != size {
+            font.font_size = size;
         }
         // A badge swells when its numbers change (`theme::OverlayPulse`).
         let mut changed = false;
@@ -203,7 +205,10 @@ pub fn sync_pt_labels(
             color.0 = runs[0].1;
         }
         for (child, (body, tone)) in children.iter().zip(&runs[1..]) {
-            if let Ok((mut span, mut color)) = spans.get_mut(child) {
+            if let Ok((mut span, mut color, mut font)) = spans.get_mut(child) {
+                if font.font_size != size {
+                    font.font_size = size;
+                }
                 if span.0 != *body {
                     span.0 = body.clone();
                     changed = true;
@@ -223,24 +228,20 @@ pub fn sync_pt_labels(
         if seen.contains(&id) {
             continue;
         }
-        let (left, top) = card_corner
-            .get(&id)
-            .copied()
-            .and_then(|world| anchor(camera, cam_xform, &ui_scale, world))
-            .unwrap_or((-1000.0, -1000.0));
+        // Parked off-screen until the next frame places it.
         commands
             .spawn((
                 PtLabel(id),
                 Text::new(lead.0),
-                ui_fonts.tf(18.0),
+                ui_fonts.tf(16.0),
                 // Each run in its stat's tone, on a white background that
                 // mirrors the printed P/T box.
                 TextColor(lead.1),
                 BackgroundColor(Color::WHITE),
                 Node {
                     position_type: PositionType::Absolute,
-                    left: Val::Px(left),
-                    top: Val::Px(top),
+                    left: Val::Px(-1000.0),
+                    top: Val::Px(-1000.0),
                     // Tight, symmetric padding so the white box hugs the
                     // glyphs; centre the text within the box.
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
@@ -249,6 +250,8 @@ pub fn sync_pt_labels(
                     border_radius: BorderRadius::all(Val::Px(4.0)),
                     ..default()
                 },
+                // Centred on the printed box: left/top are its centre.
+                UiTransform::from_translation(Val2::percent(-50.0, -50.0)),
                 Pickable::IGNORE,
                 GlobalZIndex(PT_Z),
                 InGameRoot,
@@ -256,7 +259,7 @@ pub fn sync_pt_labels(
             ))
             .with_children(|badge| {
                 for (body, tone) in [slash, tail] {
-                    badge.spawn((TextSpan::new(body), ui_fonts.tf(18.0), TextColor(tone)));
+                    badge.spawn((TextSpan::new(body), ui_fonts.tf(16.0), TextColor(tone)));
                 }
             });
     }

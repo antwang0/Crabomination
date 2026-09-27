@@ -15,8 +15,9 @@
 //! (`keyword_label`).
 //!
 //! Coins are children of the card entity, rebuilt only when a card's piles
-//! change; the labels are screen-space nodes reprojected every frame, like
-//! `pt_label`'s badges.
+//! change, and a coin a pile gains drops onto it ([`CoinDrop`]); the labels
+//! are screen-space nodes reprojected every frame, like `pt_label`'s
+//! badges. The coin itself, a poker chip, is `coin_mesh`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -27,16 +28,12 @@ use crabomination::net::PermanentView;
 use crate::card::{BattlefieldCard, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, GameCardId};
 use crate::net_plugin::CurrentView;
 
-/// Shared coin meshes and the rim material; each kind's fill is made the
-/// first time that kind is shown ([`coin_fill`]).
+/// The material every chip shares, and each kind's chip
+/// (`coin_mesh::chip_mesh`), made the first time that kind is shown.
 #[derive(Resource)]
 pub struct CounterCoinAssets {
-    pub coin_mesh: Handle<Mesh>,
-    /// Slightly larger, flatter cylinder behind each coin: a bright rim
-    /// that keeps the coin's edge readable over any card art.
-    pub outline_mesh: Handle<Mesh>,
-    pub outline_material: Handle<StandardMaterial>,
-    fills: HashMap<CounterType, Handle<StandardMaterial>>,
+    material: Handle<StandardMaterial>,
+    chips: HashMap<CounterType, Handle<Mesh>>,
 }
 
 /// Marker on each spawned coin-mesh entity, with its kind so a card's
@@ -52,11 +49,7 @@ pub struct CounterCoin {
 /// grows along +Z — toward the camera, like chips on a card.
 const COIN_RADIUS: f32 = 0.34;
 const COIN_HEIGHT: f32 = 0.06;
-const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.03;
-/// Outline ring: a touch wider than the coin and a touch shorter, so it
-/// shows as a rim without poking through the coin's face.
-const OUTLINE_RADIUS: f32 = COIN_RADIUS + 0.045;
-const OUTLINE_HEIGHT: f32 = COIN_HEIGHT * 0.7;
+const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.01;
 /// Coins in the tallest pile; the number on top carries the rest.
 const MAX_PILE: u32 = 5;
 /// The column: inset from the left edge, the first pile just under the name
@@ -84,40 +77,63 @@ fn pile_top(slot: usize, count: u32) -> Vec3 {
     )
 }
 
-pub fn init_counter_coin_assets(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-) {
-    let outline_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.96, 0.96, 0.98),
-        perceptual_roughness: 0.5,
-        metallic: 0.0,
-        emissive: LinearRgba::new(0.30, 0.30, 0.34, 1.0),
-        ..default()
-    });
+pub fn init_counter_coin_assets(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>) {
     commands.insert_resource(CounterCoinAssets {
-        coin_mesh: meshes.add(Cylinder::new(COIN_RADIUS, COIN_HEIGHT)),
-        outline_mesh: meshes.add(Cylinder::new(OUTLINE_RADIUS, OUTLINE_HEIGHT)),
-        outline_material,
-        fills: HashMap::new(),
+        material: materials.add(super::coin_mesh::chip_material()),
+        chips: HashMap::new(),
     });
 }
 
-/// A kind's coin fill: the deep shade of its label colour, so the white
-/// number on it reads and the coin matches its tag. Self-lit a little so a
-/// coin in the card's shadow doesn't go black, not enough to bloom — a
-/// glowing coin washed out to pastel under the number.
-fn coin_fill(kind: CounterType) -> StandardMaterial {
-    let label = counter_label_color(kind).to_srgba();
-    let fill = Color::srgb(label.red * 0.42, label.green * 0.42, label.blue * 0.42);
-    let lin = fill.to_linear();
-    StandardMaterial {
-        base_color: fill,
-        perceptual_roughness: 0.45,
-        metallic: if kind == CounterType::Loyalty { 0.8 } else { 0.3 },
-        emissive: LinearRgba::new(lin.red * 0.35, lin.green * 0.35, lin.blue * 0.35, 1.0),
-        ..default()
+/// A kind's chip colour: the deep shade of its tag's colour, so the chip
+/// matches its tag. (The chips glowed their colour once, and washed out to
+/// pastel under the number.)
+fn coin_body(kind: CounterType) -> Color {
+    shade(counter_label_color(kind), 0.5)
+}
+
+/// The count's ink on the chip's cream face: the kind's colour, darker still.
+fn count_ink(kind: CounterType) -> Color {
+    shade(counter_label_color(kind), 0.2)
+}
+
+fn shade(colour: Color, by: f32) -> Color {
+    let c = colour.to_srgba();
+    Color::srgb(c.red * by, c.green * by, c.blue * by)
+}
+
+/// A coin just added to a pile, falling onto it: card-local `rest_z` is
+/// where it lands, `elapsed` starts below zero to stagger a pile's coins.
+#[derive(Component)]
+pub struct CoinDrop {
+    rest_z: f32,
+    elapsed: f32,
+}
+
+/// How far above its resting place a new coin starts, and how long it falls.
+const DROP_HEIGHT: f32 = 0.9;
+const DROP_SECS: f32 = 0.22;
+/// Between one new coin of a pile and the next.
+const DROP_STAGGER: f32 = 0.06;
+
+/// Height above its resting place `elapsed` seconds into a fall: slow off
+/// the top and fastest as it lands, as under gravity.
+fn drop_lift(elapsed: f32) -> f32 {
+    let k = (elapsed / DROP_SECS).clamp(0.0, 1.0);
+    DROP_HEIGHT * (1.0 - k * k)
+}
+
+/// Bevy system: run each [`CoinDrop`] and drop it once the coin has landed.
+pub fn animate_coin_drops(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut coins: Query<(Entity, &mut CoinDrop, &mut Transform)>,
+) {
+    for (e, mut drop, mut transform) in &mut coins {
+        drop.elapsed += time.delta_secs();
+        transform.translation.z = drop.rest_z + drop_lift(drop.elapsed);
+        if drop.elapsed >= DROP_SECS {
+            commands.entity(e).remove::<CoinDrop>();
+        }
     }
 }
 
@@ -169,7 +185,7 @@ pub fn sync_counter_coins(
     mut commands: Commands,
     view: Res<CurrentView>,
     assets: Option<ResMut<CounterCoinAssets>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     bf_cards: Query<(Entity, &GameCardId), With<BattlefieldCard>>,
     existing: Query<(Entity, &ChildOf, &CounterCoin)>,
     // Battlefield entities spawn via deferred commands, a frame after the
@@ -221,37 +237,43 @@ pub fn sync_counter_coins(
             }
         }
 
-        let coin_rot = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+        // The chip is turned about its Y; this lays that axis along the
+        // card's +Z, so the chip lies flat on the card face up.
+        let lay_flat = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+        let had = |kind: CounterType| {
+            existing_piles.get(&parent).and_then(|piles| piles.iter().find(|(k, _)| *k == kind)).map_or(0, |&(_, n)| n)
+        };
         for (slot, &(kind, coins)) in desired.iter().enumerate() {
-            let fill = assets
-                .fills
+            let chip = assets
+                .chips
                 .entry(kind)
-                .or_insert_with(|| materials.add(coin_fill(kind)))
+                .or_insert_with(|| meshes.add(super::coin_mesh::chip_mesh(COIN_RADIUS, COIN_HEIGHT, coin_body(kind))))
                 .clone();
             let top = pile_top(slot, coins);
+            let had = had(kind);
             commands.entity(parent).with_children(|card| {
                 for i in 0..coins {
-                    // Local space: the card face is XY, +Z out of the front;
-                    // the cylinder's axis turned onto Z lays the coin flat on
-                    // the card, and each one sits on the one below.
-                    let z = COIN_BASE_Z + (i as f32 + 0.5) * COIN_HEIGHT;
-                    card.spawn((
-                        Mesh3d(assets.coin_mesh.clone()),
-                        MeshMaterial3d(fill.clone()),
-                        Transform::from_xyz(top.x, top.y, z).with_rotation(coin_rot),
+                    // Each coin turned a little from the one under it, so a
+                    // pile's spots don't line up into stripes, and set a hair
+                    // off-centre, as a hand stacks them.
+                    let twist = Quat::from_rotation_y(i as f32 * 0.9);
+                    let off = if i == 0 { Vec2::ZERO } else { Vec2::from_angle(i as f32 * 2.4) * 0.012 };
+                    let rest = Vec3::new(top.x + off.x, top.y + off.y, COIN_BASE_Z + (i as f32 + 0.5) * COIN_HEIGHT);
+                    let mut coin = card.spawn((
+                        Mesh3d(chip.clone()),
+                        MeshMaterial3d(assets.material.clone()),
+                        Transform::from_translation(rest).with_rotation(lay_flat * twist),
                         CounterCoin { card_id: p.id, kind },
-                    ))
-                    .with_children(|coin| {
-                        // The rim is the coin's child, so it despawns with it
-                        // and isn't counted as a coin. Local −Y is card −Z
-                        // under the coin's rotation: just behind its face.
-                        coin.spawn((
-                            Mesh3d(assets.outline_mesh.clone()),
-                            MeshMaterial3d(assets.outline_material.clone()),
-                            Transform::from_xyz(0.0, -0.01, 0.0),
-                            Pickable::IGNORE,
+                    ));
+                    // A coin the pile didn't have falls onto it.
+                    if i >= had {
+                        let elapsed = -((i - had) as f32) * DROP_STAGGER;
+                        coin.insert((
+                            CoinDrop { rest_z: rest.z, elapsed },
+                            Transform::from_translation(rest + Vec3::Z * drop_lift(elapsed))
+                                .with_rotation(lay_flat * twist),
                         ));
-                    });
+                    }
                 }
             });
         }
@@ -440,7 +462,7 @@ fn counter_token(kind: CounterType) -> &'static str {
 }
 
 /// Bright, legible text colour for each counter kind's tag; the coin fill is
-/// its deep shade ([`coin_fill`]).
+/// its deep shade ([`coin_body`]).
 fn counter_label_color(kind: CounterType) -> Color {
     match kind {
         CounterType::PlusOnePlusOne
@@ -534,10 +556,17 @@ fn place_tag(node: &mut Node, transform: &mut UiTransform, side: TagSide) {
     }
 }
 
-/// The count's font size for a coin `diameter` UI px across: as big as fits
-/// two digits, within reason.
+/// The count's font size for a coin `diameter` UI px across: two digits
+/// inside the chip's face, which is 60 % of it — printed on the chip, it
+/// grows with it seen up close (the Ctrl zoom).
 fn count_font_size(diameter: f32) -> f32 {
-    (diameter * 0.62).round().clamp(10.0, 20.0)
+    (diameter * 0.56).round().clamp(10.0, 48.0)
+}
+
+/// The tag's font size beside a coin `diameter` UI px across: a label, so
+/// it grows more slowly than the count.
+fn tag_font_size(diameter: f32) -> f32 {
+    (diameter * 0.22).round().clamp(11.0, 20.0)
 }
 
 /// A pile's label, tied to a battlefield card's counter of one kind: a box
@@ -588,7 +617,10 @@ pub fn sync_counter_labels(
     ui_scale: Res<UiScale>,
     mut labels: Query<(Entity, &CounterLabel, &mut Node, &Children), Without<CounterTag>>,
     mut counts: Query<(&mut Text, &mut TextFont), (With<CounterCount>, Without<CounterTag>)>,
-    mut tags: Query<(&mut Text, &mut CounterTag, &mut Node, &mut UiTransform), Without<CounterCount>>,
+    mut tags: Query<
+        (&mut Text, &mut TextFont, &mut CounterTag, &mut Node, &mut UiTransform),
+        Without<CounterCount>,
+    >,
     mut coins: Query<(&CounterCoin, &mut Visibility)>,
     mut desired_cache: Local<HashMap<(CardId, CounterType), (u32, usize, bool)>>,
 ) {
@@ -655,7 +687,11 @@ pub fn sync_counter_labels(
                 if font.font_size != size {
                     font.font_size = size;
                 }
-            } else if let Ok((mut text, mut tag, mut tag_node, mut transform)) = tags.get_mut(child) {
+            } else if let Ok((mut text, mut font, mut tag, mut tag_node, mut transform)) = tags.get_mut(child) {
+                let size = FontSize::Px(tag_font_size(radius * 2.0));
+                if font.font_size != size {
+                    font.font_size = size;
+                }
                 let name = counter_tag(label.kind, impending);
                 if text.0 != name {
                     text.0 = name.to_string();
@@ -718,8 +754,10 @@ pub fn sync_counter_labels(
                     CounterCount,
                     Text::new(count.to_string()),
                     ui_fonts.tf(14.0),
-                    TextColor(Color::WHITE),
-                    TextShadow { offset: Vec2::splat(1.0), color: Color::srgba(0.0, 0.0, 0.0, 0.95) },
+                    TextColor(count_ink(kind)),
+                    // The UI font is a Light cut; a copy of the digits a
+                    // hair to the right thickens them enough to read.
+                    TextShadow { offset: Vec2::new(0.7, 0.0), color: count_ink(kind) },
                     Pickable::IGNORE,
                 ));
                 label.spawn((

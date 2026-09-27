@@ -162,6 +162,22 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
 - ✅ **A changed count swells for a moment** (`theme::OverlayPulse`): a
   pile's number, a P/T badge — the change catches the eye instead of
   silently rewriting a digit.
+- ✅ **The coin is a casino chip** (`coin_mesh`): turned from a profile
+  with a rounded edge, a raised rim around a recessed cream face the count
+  is printed on (in the kind's deep colour), a dark groove around the face
+  and eight cream spots that wrap over the rim. It was a plain cylinder —
+  a flat disc of paint with no edge to catch the light — backed by a
+  second, larger cylinder as its outline. The colours are vertex colours,
+  so the spots are geometry, not a decal fighting the surface for depth;
+  every kind shares one material. A pile's chips are turned against each
+  other and set a hair off-centre, and a chip a pile gains drops onto it
+  (`CoinDrop`).
+  - The count grows with its chip seen up close (Ctrl zoom), and the P/T
+    badge sits over the printed P/T box at a size that follows the card:
+    both were fixed-size and fixed-offset, so up close the count was a
+    speck on a large face and the badge hung off the card's corner.
+  - Layout harness: `--zoom-card NAME` holds the camera close over one of
+    the viewer's cards.
 
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
