@@ -2,8 +2,11 @@
 //! Passage, Sunhome, Witch's Clinic, Whirler Rogue) was activated by no bot
 //! path: its main-phase score reads a temporary grant as idle, so a 400-game
 //! census never activated one. The bot now spends idle first-main mana on one,
-//! aimed at its biggest ready attacker that lacks the keyword. Commander games
-//! only, so two-player play is unchanged.
+//! aimed at its biggest ready attacker that lacks the keyword, or on a
+//! board-wide one ("all Zombies gain menace" — Lord of the Accursed) when a
+//! ready attacker of ours gains; a grant that taps its source doesn't count
+//! the source as an attacker. Commander games only, so two-player play is
+//! unchanged.
 //!
 //! Haste grants had the same gap (a 6-seat `--a dflt` census, seed 1360001:
 //! Flamekin Village, Crashing Drawbridge, Otepec Huntmaster, Skyship Stalker
@@ -39,7 +42,10 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
     {
         return None;
     }
-    let grants: Vec<(crate::card::CardId, usize, &Keyword)> = state
+    // (source, ability, keyword, board-wide filter — `None` for a target
+    // slot, whether it taps its source)
+    type Grant<'a> = (crate::card::CardId, usize, &'a Keyword, Option<&'a crate::card::SelectionRequirement>, bool);
+    let grants: Vec<Grant> = state
         .battlefield
         .iter()
         .filter(|c| c.controller == seat)
@@ -48,7 +54,14 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
                 Effect::GrantKeyword { what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }, keyword, duration: Duration::EndOfTurn }
                     if attack_keyword(keyword) && !ab.sac_cost =>
                 {
-                    Some((c.id, i, keyword))
+                    Some((c.id, i, keyword, None, ab.tap_cost))
+                }
+                // "All Zombies gain menace until end of turn" (Lord of the
+                // Accursed): bought when one of our ready attackers gains.
+                Effect::GrantKeyword { what: Selector::EachPermanent(filter), keyword, duration: Duration::EndOfTurn }
+                    if attack_keyword(keyword) && !ab.sac_cost =>
+                {
+                    Some((c.id, i, keyword, Some(filter), ab.tap_cost))
                 }
                 _ => None,
             })
@@ -69,15 +82,23 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
         .filter(|(power, _)| *power > 0)
         .collect();
     ready.sort_by_key(|(power, id)| (std::cmp::Reverse(*power), *id));
-    for (source, index, keyword) in grants {
+    for (source, index, keyword, board, taps_source) in grants {
         for &(_, creature) in &ready {
-            if state.computed_permanent(creature).is_some_and(|cp| cp.keywords().has_kw(keyword)) {
+            // A source the grant taps won't be attacking.
+            if (taps_source && creature == source)
+                || state.computed_permanent(creature).is_some_and(|cp| cp.keywords().has_kw(keyword))
+            {
+                continue;
+            }
+            if board.is_some_and(|f| {
+                !state.evaluate_requirement_static(f, &Target::Permanent(creature), seat, Some(source))
+            }) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
                 card_id: source,
                 ability_index: index,
-                target: Some(Target::Permanent(creature)),
+                target: board.is_none().then_some(Target::Permanent(creature)),
                 additional_targets: Vec::new(),
                 x_value: None,
                 mode: None,
@@ -210,5 +231,26 @@ mod tests {
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert!(g.computed_permanent(giant).unwrap().keywords().has_kw(&Keyword::Haste));
+    }
+
+    /// Lord of the Accursed's "all Zombies gain menace" is bought for a ready
+    /// Zombie attacker — not for the Lord alone, which the cost taps.
+    #[test]
+    fn lord_of_the_accursed_menaces_ready_zombies() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let lord = g.add_card_to_battlefield(0, crate::catalog::lord_of_the_accursed());
+        g.clear_sickness(lord);
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.players[0].mana_pool.add(Color::Black, 2);
+        assert!(pick_evasion_grant(&g, 0).is_none(), "the Lord taps; the Bear isn't a Zombie");
+        let zombie = g.add_card_to_battlefield(0, crate::catalog::walking_corpse());
+        g.clear_sickness(zombie);
+        let a = pick_evasion_grant(&g, 0).expect("menace for the Corpse");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, target: None, .. } if card_id == lord));
     }
 }
