@@ -3389,6 +3389,7 @@ impl HeuristicBot {
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::goad_attach::pick_goad_attach(state, seat))
                         .or_else(|| super::grant_cast::pick_grant_cast(state, seat, &self.weights))
+                        .or_else(|| super::library_top::pick_library_top(state, seat))
                 {
                     return Some(BotStep::plain(a));
                 }
@@ -3407,6 +3408,7 @@ impl HeuristicBot {
                 // surveil / loot sink (pods only).
                 if matches!(action.action, GameAction::PassPriority)
                     && let Some(cycle) = super::cycling::pick_cycle(state, seat)
+                        .or_else(|| super::library_top::pick_library_top(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_selection_sink(state, seat))
                 {

@@ -106,6 +106,7 @@ mod grant_cast;
 mod defensive_ability;
 mod team_combat;
 mod goad_attach;
+mod library_top;
 mod spell_response;
 mod fight_pick;
 mod transform_sink;
