@@ -26408,6 +26408,7 @@ pub fn baloth_prime() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
+        tapped: true,
         ..Default::default()
     };
     CardDefinition {

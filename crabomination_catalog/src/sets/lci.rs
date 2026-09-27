@@ -145,7 +145,7 @@ pub fn goldvein_hydra() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::PowerOf(Box::new(Selector::This)),
-            definition: std::sync::Arc::new(treasure_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::tapped_treasure_token()),
         })],
         ..Default::default()
     }

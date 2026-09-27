@@ -3011,6 +3011,7 @@ pub fn dranas_chosen() -> CardDefinition {
             creature_types: vec![CreatureType::Zombie],
             ..Default::default()
         },
+        tapped: true,
         ..Default::default()
     };
     CardDefinition {

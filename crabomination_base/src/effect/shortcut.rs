@@ -1817,6 +1817,11 @@ pub fn mint_fractals(count: i32) -> Effect {
 
 /// Mint N Treasure tokens (`{T}, Sacrifice: add one mana of any
 /// color`). Uses [`crate::tokens::treasure_token`].
+/// Mint N tapped Treasure tokens ("create N tapped Treasure tokens").
+pub fn mint_tapped_treasures(count: i32) -> Effect {
+    mint_token(crate::tokens::tapped_treasure_token(), count)
+}
+
 pub fn mint_treasures(count: i32) -> Effect {
     let token = crate::tokens::treasure_token();
     mint_token(token, count)

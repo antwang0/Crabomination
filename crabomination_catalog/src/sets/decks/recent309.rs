@@ -881,7 +881,7 @@ pub fn great_train_heist() -> CardDefinition {
                         body: Box::new(Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+                            definition: std::sync::Arc::new(crabomination_base::tokens::tapped_treasure_token()),
                         }),
                     },
                 ),

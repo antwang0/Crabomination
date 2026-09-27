@@ -227,6 +227,11 @@ pub fn food_token() -> TokenDefinition {
     }
 }
 
+/// "Create a tapped Treasure token" (CR 111.1 — the token enters tapped).
+pub fn tapped_treasure_token() -> TokenDefinition {
+    TokenDefinition { tapped: true, ..treasure_token() }
+}
+
 pub fn treasure_token() -> TokenDefinition {
     TokenDefinition {
         name: "Treasure".into(),

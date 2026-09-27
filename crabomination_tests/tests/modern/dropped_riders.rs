@@ -1493,3 +1493,33 @@ fn slip_on_the_ring_targets_by_owner_not_controller() {
     let back = g.battlefield.iter().find(|c| c.owner == 0 && c.definition.name == "Grizzly Bears").unwrap();
     assert_eq!(back.controller, 0);
 }
+
+/// "Create a tapped Treasure / Beast / Horror token" — the token enters
+/// tapped (Blood Money's sibling cards shipped untapped Treasures that paid
+/// for the rest of the turn): Goldvein Hydra, Ancient Adamantoise, Great
+/// Train Heist, Baloth Prime, Drana's Chosen, The Final Days.
+#[test]
+fn printed_tapped_tokens_enter_tapped() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::forest());
+    let days = g.add_card_to_hand(0, catalog::the_final_days());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, days, None).expect("The Final Days");
+    drain_stack(&mut g);
+    let horrors: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Horror").collect();
+    assert_eq!(horrors.len(), 2);
+    assert!(horrors.iter().all(|c| c.tapped), "tapped Horrors");
+    let hydra = g.add_card_to_battlefield(0, catalog::goldvein_hydra());
+    g.battlefield_find_mut(hydra).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 3);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let kill = crabomination::effect::Effect::Destroy {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasCreatureType(CreatureType::Hydra)),
+    };
+    let evs = g.resolve_effect(&kill, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").collect();
+    assert_eq!(treasures.len(), 3, "one per point of power");
+    assert!(treasures.iter().all(|c| c.tapped), "tapped Treasures");
+}
