@@ -1294,3 +1294,15 @@ fn panoptic_mirror_recasts_the_imprinted_spell_for_free() {
     assert_eq!(g.players[1].life, 17, "the free copy resolves");
     assert!(g.exile.iter().any(|c| c.id == bolt), "the original stays imprinted");
 }
+
+/// Myr Matrix — "Myr creatures get +1/+1": every player's Myr (it pumped
+/// only yours).
+#[test]
+fn myr_matrix_pumps_every_players_myr() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::myr_matrix());
+    let mine = g.add_card_to_battlefield(0, catalog::myr_enforcer());
+    let theirs = g.add_card_to_battlefield(1, catalog::myr_enforcer());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 5);
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 5);
+}

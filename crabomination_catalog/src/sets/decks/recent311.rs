@@ -854,7 +854,8 @@ pub fn myr_matrix() -> CardDefinition {
                 toughness: 1,
                 keywords: vec![],
                 opponents: false,
-                all_players: false,
+                // "Myr creatures get +1/+1" — every player's Myr.
+                all_players: true,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },
