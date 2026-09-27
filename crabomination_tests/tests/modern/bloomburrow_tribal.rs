@@ -342,13 +342,14 @@ fn crusade_buffs_white_creatures_both_players() {
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 3, "affects both players' white creatures");
 }
 
+/// Bad Moon — "Black creatures get +1/+1" (it gave +1/+0).
 #[test]
-fn bad_moon_buffs_power_only() {
+fn bad_moon_buffs_black_creatures() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::bad_moon());
     let z = g.add_card_to_battlefield(0, catalog::gifted_aetherborn()); // black 2/3
     let cp = g.computed_permanent(z).unwrap();
-    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+0 to a black creature");
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+1 to a black creature");
 }
 
 #[test]

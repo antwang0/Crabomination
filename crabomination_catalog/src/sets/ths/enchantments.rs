@@ -94,8 +94,8 @@ fn god(
 }
 
 /// Nylea, God of the Hunt — {3}{G} 6/6. Indestructible God; isn't a
-/// creature while devotion to green < 5. Other creatures you control get
-/// +2/+0. {3}{G}: Target creature gains trample until end of turn.
+/// creature while devotion to green < 5. Other creatures you control have
+/// trample. {3}{G}: Target creature gets +2/+2 until end of turn.
 pub fn nylea_god_of_the_hunt() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
@@ -106,26 +106,26 @@ pub fn nylea_god_of_the_hunt() -> CardDefinition {
                     threshold: 5,
                 },
             },
+            // The two abilities shipped swapped: a +2/+0 anthem and an
+            // activated trample grant.
             StaticAbility {
-                description: "Other creatures you control get +2/+0.",
-                effect: StaticEffect::PumpPT {
+                description: "Other creatures you control have trample.",
+                effect: StaticEffect::GrantKeyword {
                     applies_to: Selector::EachPermanent(
                         SelectionRequirement::Creature
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     ),
-                    power: 2,
-                    toughness: 0,
+                    keyword: Keyword::Trample,
                 },
             },
         ],
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
             mana_cost: cost(&[generic(3), g()]),
-            effect: Effect::GrantKeyword {
+            effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Trample,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()

@@ -617,7 +617,7 @@ fn nantuko_husk_sacrifices_for_a_pump() {
     }).expect("sac ability activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(husk).unwrap();
-    assert_eq!((c.power(), c.toughness()), (3, 3), "Nantuko Husk pumps to 3/3");
+    assert_eq!((c.power(), c.toughness()), (4, 4), "Nantuko Husk gets +2/+2");
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1,
         "the fodder creature was sacrificed");
 }

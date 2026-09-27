@@ -68,11 +68,28 @@ fn nylea_becomes_a_creature_at_five_devotion_and_anthems_others() {
     let cp = g.computed_permanent(nylea).unwrap();
     assert!(cp.card_types().contains(&CardType::Creature),
         "Nylea is a creature once devotion ≥ 5");
-    // Anthem: another creature you control gets +2/+0.
+    // Other creatures you control have trample (it shipped as a +2/+0
+    // anthem with the trample grant as the activation).
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bcp = g.computed_permanent(bear).unwrap();
-    assert_eq!(bcp.power, 4, "Nylea grants +2/+0 to other creatures");
-    assert_eq!(bcp.toughness, 2);
+    assert_eq!((bcp.power, bcp.toughness), (2, 2));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Trample));
+    assert!(!g.permanent_has_keyword(nylea, &Keyword::Trample), "other creatures");
+    // {3}{G}: target creature gets +2/+2 until end of turn.
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nylea,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let bcp = g.computed_permanent(bear).unwrap();
+    assert_eq!((bcp.power, bcp.toughness), (4, 4));
 }
 
 /// Erebos, God of the Dead prints "**Your opponents** can't gain life."

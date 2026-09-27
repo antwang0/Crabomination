@@ -7349,7 +7349,7 @@ pub fn crusade() -> CardDefinition {
     }
 }
 
-/// Bad Moon — {1}{B} Enchantment. "Black creatures get +1/+0." (LEA)
+/// Bad Moon — {1}{B} Enchantment. "Black creatures get +1/+1." (LEA)
 pub fn bad_moon() -> CardDefinition {
     use crate::effect::StaticEffect;
     CardDefinition {
@@ -7357,14 +7357,14 @@ pub fn bad_moon() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Black creatures get +1/+0.",
+            description: "Black creatures get +1/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::HasColor(crate::mana::Color::Black)),
                 ),
                 power: 1,
-                toughness: 0,
+                toughness: 1,
             },
         }],
         ..Default::default()

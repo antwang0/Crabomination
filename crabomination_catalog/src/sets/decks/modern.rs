@@ -6606,7 +6606,7 @@ pub fn doomed_dissenter() -> CardDefinition {
 }
 
 /// Nantuko Husk — {2}{B} 2/2 Zombie Insect. Sacrifice a creature: it gets
-/// +1/+1 until end of turn.
+/// +2/+2 until end of turn.
 pub fn nantuko_husk() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -6626,8 +6626,8 @@ pub fn nantuko_husk() -> CardDefinition {
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(1),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
