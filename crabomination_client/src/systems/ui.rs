@@ -182,7 +182,7 @@ pub fn update_castable_highlights(
     }
 
     // `hard` = castable for the normal cost (green). `alt` = playable only
-    // via an alternative path — Dash (CR 702.110), an exile-to-pitch
+    // via an alternative path — Dash (CR 702.109), an exile-to-pitch
     // ability (Force of Will / Spirit Guides), or kicker (CR 702.32) — that
     // ISN'T already hard-castable (cyan). A card hard-castable *and*
     // kickable stays green: you can just cast it, and kicker is an opt-in

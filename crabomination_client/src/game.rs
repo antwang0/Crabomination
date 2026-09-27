@@ -200,7 +200,7 @@ pub struct TargetingState {
     /// right-click "Cast the Omen" affordance.
     pub pending_omen: bool,
     /// When `true`, the pending cast pays the card's optional Kicker (CR
-    /// 702.32) or Offspring (CR 702.166) cost — the eventual submit routes
+    /// 702.32) or Offspring (CR 702.175) cost — the eventual submit routes
     /// through `GameAction::CastSpellKicked`. Set by the right-click
     /// "Cast with kicker/Offspring" affordance.
     pub pending_kicked: bool,
