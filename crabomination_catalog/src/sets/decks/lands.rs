@@ -693,7 +693,7 @@ pub fn shifting_woodland() -> CardDefinition {
                 }),
                 effect: Effect::BecomeCopyOfFor {
                     what: Selector::This,
-                    source: target_filtered(permanent_card.and(SelectionRequirement::InGraveyard)),
+                    source: target_filtered(permanent_card.and(SelectionRequirement::InYourGraveyard)),
                     duration: Duration::EndOfTurn,
                     non_legendary: false,
                 },

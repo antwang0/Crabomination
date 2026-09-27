@@ -58,16 +58,17 @@ def main():
         fl = " ".join(f for f in target_filters(dbg) if "Graveyard" in f)
         if not fl:
             continue
-        yours = re.search(r"target [^.]*card[^.]* from your graveyard", oracle)
+        yours = re.search(r"target [^.]*card[^.]* (?:from|in) your graveyard", oracle)
         other = re.search(
             r"a graveyard|any graveyard|graveyards|opponent.s graveyard|that player.s graveyard|"
             r"target player.s graveyard|its owner.s graveyard",
             oracle,
         )
-        if yours and not other and not re.search(r"InYourGraveyard|OwnedByYou|InOpponent", fl):
+        any_atom = re.search(r"(?<![A-Za-z])InGraveyard\b", fl)
+        if yours and not other and any_atom and not re.search(r"InYourGraveyard|OwnedByYou|InOpponent", fl):
             rows.append(f"{name:40} printed your graveyard; filter {fl[:90]}")
-        anyg = re.search(r"target [^.]*card[^.]* from a graveyard", oracle)
-        if anyg and not yours and "InYourGraveyard" in fl and not re.search(r"(?<![A-Za-z])InGraveyard\b", fl):
+        anyg = re.search(r"target [^.]*card[^.]* (?:from|in) a graveyard", oracle)
+        if anyg and not yours and "InYourGraveyard" in fl and not any_atom:
             rows.append(f"{name:40} printed a graveyard; filter {fl[:90]}")
     for r in rows:
         print(r)
