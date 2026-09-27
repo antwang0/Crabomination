@@ -2574,7 +2574,8 @@ impl GameState {
 
         // CR 508 — "Whenever you attack" fires once for the attacking player
         // when one or more attackers are declared. Active-player permanents fire
-        // for the SelfSource/YourControl scopes (the event is player-wide);
+        // for the SelfSource/YourControl scopes (the event is player-wide), an
+        // `OpponentControl` one for each opponent of the attacker;
         // `AnyPlayer`-scoped triggers are observers ("whenever [a player]
         // attacks", Argent Dais) and fire from every controller, once per
         // combat, with the ability's controller as the fired-for player.
@@ -2588,10 +2589,14 @@ impl GameState {
             // A graveyard-scoped "whenever you attack" (Persistent
             // Marshstalker) functions only from the graveyard (CR 603.3d);
             // its battlefield copy is walked below, not here.
+            // "Whenever an opponent attacks" (`OpponentControl`, Tahngarth,
+            // First Mate) fires for every seat not on the attacker's team.
             let listens = |t: &crate::card::TriggeredAbility, ctrl: usize| {
                 t.event.kind == EventKind::YouAttack
                     && !t.event.scope.from_graveyard()
-                    && (ctrl == ap || t.event.scope == crate::effect::EventScope::AnyPlayer)
+                    && (ctrl == ap
+                        || t.event.scope == crate::effect::EventScope::AnyPlayer
+                        || (t.event.scope == crate::effect::EventScope::OpponentControl && !self.same_team(ctrl, ap)))
             };
             let visit = |c: &crate::card::CardInstance| {
                 if stripped.contains(&c.id) {

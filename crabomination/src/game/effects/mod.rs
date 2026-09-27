@@ -21276,6 +21276,21 @@ impl GameState {
                         })
                         .map(|a| a.target)
                         .or_else(|| {
+                            // "A player or planeswalker that opponent is
+                            // attacking" (Tahngarth, First Mate): one its new
+                            // controller already attacks, the chooser's
+                            // opponents first — never a seat nobody attacks.
+                            let attacked = || {
+                                self.attacking.iter().filter(|a| {
+                                    self.battlefield_find(a.attacker).is_some_and(|c| c.controller == controller)
+                                })
+                            };
+                            attacked()
+                                .find(|a| self.defender_for(a.target) != Some(ctx.controller))
+                                .or_else(|| attacked().next())
+                                .map(|a| a.target)
+                        })
+                        .or_else(|| {
                             // CR 506.2 / 800.4a — a seat that has left the
                             // game is not a legal defending player.
                             self.default_hostile_opponent(controller).map(AttackTarget::Player)

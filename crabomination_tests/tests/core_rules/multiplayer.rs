@@ -6283,3 +6283,32 @@ fn cr_506_3_garruk_emblem_pumps_only_attackers_of_its_owner() {
     assert_eq!(g.computed_permanent(at_one).unwrap().power, 7, "attacking the emblem's owner");
     assert_eq!(g.computed_permanent(at_two).unwrap().power, 2, "attacking seat 2");
 }
+
+/// CR 506.2 / 508.1 — Tahngarth, First Mate's "whenever an opponent attacks"
+/// fires (the attack walk admitted only the attacker's own triggers, so it
+/// never did), and it joins "a player or planeswalker that opponent is
+/// attacking": at four seats, seat 1's attack on seat 2 takes it to seat 2,
+/// not to seat 1's default opponent (Tahngarth's owner, or an idle seat).
+#[test]
+fn cr_506_2_tahngarth_attacks_a_player_its_new_controller_attacks() {
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(4);
+    let tahn = g.add_card_to_battlefield(0, catalog::tahngarth_first_mate());
+    g.battlefield_find_mut(tahn).unwrap().tapped = true;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[0].life = 5;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let evs = g
+        .declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }])
+        .expect("declare attackers");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tahn).map(|c| c.controller), Some(1));
+    let t = g.attacking().iter().find(|a| a.attacker == tahn).map(|a| a.target);
+    assert_eq!(t, Some(AttackTarget::Player(2)), "joins the attack on seat 2");
+}
