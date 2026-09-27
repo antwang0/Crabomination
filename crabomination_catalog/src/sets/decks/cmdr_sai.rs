@@ -359,7 +359,7 @@ pub fn steel_hellkite() -> CardDefinition {
                     what: Selector::EachPermanent(
                         R::Nonland
                             .and(R::ManaValueExactlyXFromCost)
-                            .and(R::ControllerDamagedBySourceThisTurn),
+                            .and(R::ControllerCombatDamagedBySourceThisTurn),
                     ),
                 },
                 ..Default::default()

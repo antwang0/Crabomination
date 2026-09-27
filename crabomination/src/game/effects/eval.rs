@@ -4866,10 +4866,10 @@ impl GameState {
                 }),
                 Target::Permanent(_) => false,
             },
-            R::ControllerDamagedBySourceThisTurn => match target {
+            R::ControllerCombatDamagedBySourceThisTurn => match target {
                 Target::Permanent(cid) => source.is_some_and(|s| {
                     self.bf_hint_or_find(*cid, hint).is_some_and(|c| {
-                        self.players[c.controller].creatures_that_damaged_me_this_turn.contains(&s)
+                        self.players[c.controller].creatures_that_combat_damaged_me_this_turn.contains(&s)
                     })
                 }),
                 Target::Player(_) => false,
@@ -6853,7 +6853,7 @@ impl GameState {
             | R::BlockingOrBlockedBySource
             | R::BlockedBySourceThisTurn
             | R::BlockedSourceThisTurn
-            | R::PlayerDamagedBySourceThisTurn | R::ControllerDamagedBySourceThisTurn
+            | R::PlayerDamagedBySourceThisTurn | R::ControllerCombatDamagedBySourceThisTurn
             | R::SaddledSourceThisTurn => false,
         }
     }

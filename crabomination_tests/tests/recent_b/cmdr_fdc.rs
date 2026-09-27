@@ -4,6 +4,7 @@
 use crabomination::card::{CardDefinition, CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+use crabomination::game::effects::EntityRef;
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -306,7 +307,8 @@ fn skysovereign_shoots_an_opposing_creature_on_entry() {
 
 /// Rulings 2021-03-19 — {X} destroys each nonland permanent with mana value
 /// exactly X controlled by a player the Hellkite dealt combat damage to this
-/// turn; the other seat's permanents and lands are untouched.
+/// turn; the other seat's permanents and lands are untouched. Noncombat damage
+/// from the Hellkite (seat 2, below) doesn't count — the ability says "combat".
 #[test]
 fn steel_hellkite_sweeps_mana_value_x_from_the_players_it_hit() {
     let mut g = multi_player_game(3);
@@ -317,13 +319,15 @@ fn steel_hellkite_sweeps_mana_value_x_from_the_players_it_hit() {
     let hit_land = g.add_card_to_battlefield(1, catalog::forest());
     let safe_bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
     combat(&mut g, vec![Attack { attacker: kite, target: AttackTarget::Player(1) }], 0, |_| {});
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(2), 1, Some(kite), &mut events);
     g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
     activate(&mut g, kite, 1, Some(2)).expect("X = 2");
     assert!(g.battlefield_find(hit_bears).is_none());
     assert!(g.battlefield_find(hit_giant).is_some(), "mana value 4");
     assert!(g.battlefield_find(hit_land).is_some(), "a land");
-    assert!(g.battlefield_find(safe_bears).is_some(), "seat 2 wasn't hit");
+    assert!(g.battlefield_find(safe_bears).is_some(), "seat 2 took only noncombat damage");
     assert!(activate(&mut g, kite, 1, Some(4)).is_err(), "once each turn");
 }
 
