@@ -793,6 +793,7 @@ impl Effect {
         }
         match self {
             Effect::Voyage { .. }
+            | Effect::ShuffleIntoTopPile { .. }
             | Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::SecretCouncilPlayerVote { .. }
             | Effect::SecretCouncilPermanentVote { .. }

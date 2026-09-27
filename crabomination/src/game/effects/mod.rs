@@ -39,6 +39,7 @@ mod fantastic_four;
 mod turtle_power;
 mod blast_from_the_past;
 mod voyage;
+mod top_pile;
 mod time_travel;
 mod phasing;
 mod supertypes;
@@ -6348,6 +6349,7 @@ impl GameState {
                 Ok(())
             }
             Effect::Voyage { home } => self.voyage(*home, ctx, events),
+            Effect::ShuffleIntoTopPile { what, depth } => self.shuffle_into_top_pile(what, depth, ctx, events),
             Effect::ExileOtherCreaturesKeepingUpTo { keep, max } => {
                 self.exile_other_creatures_keeping(keep, *max, ctx, events)
             }

@@ -6915,6 +6915,10 @@ pub enum Effect {
     /// voyage counter on the source, or (`home`) return it to the battlefield
     /// with X +1/+1 counters and draw X, X being its voyage counters.
     Voyage { home: bool },
+    /// "Exile [what] and the top `depth` cards of your library in a face-down
+    /// pile, shuffle that pile, and put it back on top" (Triumph of Saint
+    /// Katherine) — only while [what] is still in its owner's graveyard.
+    ShuffleIntoTopPile { what: Selector, depth: Value },
     /// "That creature enters with N additional [kind] counters" on a spell
     /// still on the stack — stamps the spell's `pending_etb_counters`
     /// (Bloodlord of Vaasgoth's granted bloodthirst).
