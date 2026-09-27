@@ -15854,7 +15854,7 @@ impl GameState {
                 Vec::new()
             } else {
                 // These pips' colours are pinned, so `diverse` is moot — but
-                // the CR 106.6b source filter is not (a "spend only creature
+                // the CR 106.6 source filter is not (a "spend only creature
                 // mana" cast must not eat a land here).
                 self.auto_tap_for_cost_filtered(
                     payer,
@@ -16495,7 +16495,7 @@ impl GameState {
         events
     }
 
-    /// `auto_tap_for_cost` with a CR 106.6b source filter: when
+    /// `auto_tap_for_cost` with a CR 106.6 source filter: when
     /// `creature_only`, only creature mana sources are tapped, so a
     /// "spend only mana produced by creatures" cast (Myr Superion) never
     /// strands itself by tapping lands it can't spend.
@@ -18369,7 +18369,7 @@ impl GameState {
     }
 
     #[allow(clippy::too_many_arguments)]
-    /// CR 106.6b — mana a *creature* produces carries provenance so a
+    /// CR 106.6 — mana a *creature* produces carries provenance so a
     /// "spend only mana produced by creatures" cost (Myr Superion) can find
     /// it. Tagging the pool delta here catches printed, granted (Cryptolith
     /// Rite) and intrinsic mana abilities in one place.

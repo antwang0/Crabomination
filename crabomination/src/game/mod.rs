@@ -5581,7 +5581,7 @@ impl GameState {
 
         // Two-Headed Giant — Phase F. Default seating partitions
         // consecutive seat pairs into teams (0+1, 2+3, …) per
-        // CR 810.2a and seeds each team's shared pool to the format's
+        // CR 810.1 and seeds each team's shared pool to the format's
         // starting life. Callers wanting a different pairing can
         // call `assign_teams` afterwards; the shared-life seeding
         // happens here regardless. An odd seat count leaves the

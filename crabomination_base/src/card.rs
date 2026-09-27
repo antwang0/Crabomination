@@ -4585,7 +4585,7 @@ pub struct CardDefinition {
     /// hop (Captive Audience). Defaults to `false`.
     #[serde(default)]
     pub enters_under_opponent_control: bool,
-    /// CR 106.6b — "Spend only mana produced by creatures to cast this spell"
+    /// CR 106.6 — "Spend only mana produced by creatures to cast this spell"
     /// (Myr Superion). Surfaces on `spell_kind()` as
     /// `SpellKind::creature_mana_only`, which narrows payment to the pool's
     /// creature-produced provenance and keeps auto-tap off non-creature

@@ -802,7 +802,7 @@ fn a_draw_omen_machine_skips_does_not_deck_the_drawer() {
 }
 
 
-/// CR 106.6b — Myr Superion can only be paid with mana a creature produced.
+/// CR 106.6 — Myr Superion can only be paid with mana a creature produced.
 #[test]
 fn myr_superion_spends_only_creature_mana() {
     let mut g = main_phase();

@@ -1049,7 +1049,7 @@ pub struct SpellKind {
     pub planeswalker: bool,
     /// Casting a legendary spell (Untaidake, the Cloud Keeper).
     pub legendary: bool,
-    /// CR 106.6b — "spend only mana produced by creatures to cast this spell"
+    /// CR 106.6 — "spend only mana produced by creatures to cast this spell"
     /// (Myr Superion). Unlike every other field this *narrows* what may pay:
     /// [`ManaPool::pay_for_spell`] routes to [`ManaPool::pay_creature_only`].
     pub creature_mana_only: bool,
@@ -1813,7 +1813,7 @@ impl ManaPool {
         Ok(side_effects)
     }
 
-    /// Pay `cost` using **only** mana a creature produced (CR 106.6b —
+    /// Pay `cost` using **only** mana a creature produced (CR 106.6 —
     /// Myr Superion). The creature-produced portion of the pool is lifted
     /// into a scratch pool, paid there with the ordinary [`pay`] rules, and
     /// the per-bucket difference is charged back to the real pool. On
@@ -1853,7 +1853,7 @@ impl ManaPool {
         cost: &ManaCost,
         kind: &SpellKind,
     ) -> Result<PaymentSideEffects, ManaError> {
-        // CR 106.6b — a creature-mana-only spell ignores the restricted
+        // CR 106.6 — a creature-mana-only spell ignores the restricted
         // pools entirely; only tagged provenance can fund it.
         if kind.creature_mana_only {
             return self.pay_creature_only(cost);

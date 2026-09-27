@@ -577,7 +577,7 @@ fn cr_903_5e_a_commander_deck_may_not_have_a_sideboard() {
 
 // ── CR 106.6 — a rider narrows nothing, and the estimate has to agree ──────
 
-/// CR 106.6b/c. Path of Ancestry's "when that mana is spent…" is an ability
+/// CR 106.6/c. Path of Ancestry's "when that mana is spent…" is an ability
 /// the mana *triggers*, not a restriction on what it may pay for, so the
 /// floating green funds an activated ability's `{G}` like any other green.
 ///

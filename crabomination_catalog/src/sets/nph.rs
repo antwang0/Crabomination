@@ -2390,7 +2390,7 @@ pub fn invader_parasite() -> CardDefinition {
 }
 
 /// Myr Superion — a 5/6 for {2} that only creature-produced mana can cast
-/// (CR 106.6b).
+/// (CR 106.6).
 pub fn myr_superion() -> CardDefinition {
     CardDefinition {
         spend_only_creature_mana: true,
