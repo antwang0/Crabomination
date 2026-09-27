@@ -325,9 +325,8 @@ pub fn path_to_the_world_tree() -> CardDefinition {
 }
 
 /// Primeval Spawn — vigilance, trample, lifelink; leaving, exile the top ten
-/// and cast spells from among them free.
-/// Residual: it isn't exiled when entering uncast, and the leave trigger
-/// casts one spell of mana value 10 or less.
+/// and cast any number of spells with total mana value 10 or less from among
+/// them free. Residual: it isn't exiled when entering uncast.
 pub fn primeval_spawn() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink],
@@ -340,9 +339,9 @@ pub fn primeval_spawn() -> CardDefinition {
                 Effect::CastAnyOrderWithoutPaying {
                     what: Selector::CardExiledWithSource,
                     source_zone: Zone::Exile,
-                    filter: Some(R::ManaValueAtMost(10)),
-                    cap: Some(Value::ONE),
-                    total_mana_value: None,
+                    filter: None,
+                    cap: None,
+                    total_mana_value: Some(Value::Const(10)),
                 },
             ]),
         }],

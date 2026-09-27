@@ -985,3 +985,19 @@ fn powder_ganger_destroys_up_to_one_artifact() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(mine).is_some(), "zero targets is legal: ours survives");
 }
+
+/// Primeval Spawn — "You may cast any number of spells with total mana value
+/// 10 or less from among them" (not one): five Bears fit, a sixth doesn't.
+#[test]
+fn primeval_spawn_casts_spells_totalling_ten() {
+    let mut g = main_phase();
+    let spawn = g.add_card_to_battlefield(0, catalog::primeval_spawn());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let mut events = Vec::new();
+    g.destroy_permanent(spawn, false, &mut events);
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 5, "five two-drops total ten");
+}

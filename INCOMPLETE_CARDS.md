@@ -1906,7 +1906,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
-| 🟡 Primeval Spawn | Painbow (DMC) | not exiled when it would enter uncast; the leave trigger casts one spell of mana value 10 or less, not any number totalling 10. |
+| 🟡 Primeval Spawn | Painbow (DMC) | not exiled when it would enter uncast. |
 | 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
