@@ -370,11 +370,8 @@ pub fn arms_dealer() -> CardDefinition {
 pub fn briar_patch() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::ControlledByOpponent,
-                },
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsAttackingYou },
             ),
             effect: Effect::PumpPT {
                 what: Selector::TriggerSource,

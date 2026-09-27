@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Printed "attacking you" modelled as plain "attacking".
+"""Printed "attacking you" / "attacks you" modelled as plain "attacking".
 
 CR 506.3 — a creature attacking *you* is one of the attackers whose defender
 is you (or, where printed, a planeswalker you control). In a duel every
@@ -34,8 +34,16 @@ _spec = importlib.util.spec_from_file_location(
 _adm = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_adm)
 
-CLAUSE = re.compile(r"attacking you\b", re.I)
-TOKENS = ("IsAttackingYou", "CreaturesAttackingPlayer", "AttackedDefenderWithCountAtLeast")
+CLAUSE = re.compile(r"attack(?:s|ing) you\b", re.I)
+# The atoms, the per-seat count, and the defender-side trigger scopes (the
+# `combat.rs` listener walk fires them only for the attacked seat).
+TOKENS = (
+    "IsAttackingYou",
+    "CreaturesAttackingPlayer",
+    "AttackedDefenderWithCountAtLeast",
+    "ControllerAttackedByOpponent",
+    "AnyPlayerAttacks",
+)
 
 TAX = "an attack tax, charged per creature attacking the controller by the combat engine (`StaticEffect::AttackTaxToController`)"
 ALLOWLIST = {
@@ -69,12 +77,12 @@ def main():
                 seen.add(fn)
                 if fn in ALLOWLIST or any(t in body for t in TOKENS):
                     continue
-                clause = re.search(r"[^.]*attacking you[^.]*", oracle, re.I).group(0).strip()
+                clause = re.search(r"[^.]*attack(?:s|ing) you[^.]*", oracle, re.I).group(0).strip()
                 hits.append((name, fn, os.path.relpath(path, ROOT), clause))
     hits.sort()
     for name, fn, path, clause in hits:
         print(f"{path}::{fn}\n    {name}: “{clause}”")
-    print(f"# {len(hits)} open, {len(seen)} cards print “attacking you”, {len(ALLOWLIST)} allowlisted")
+    print(f"# {len(hits)} open, {len(seen)} cards print “attacks/attacking you”, {len(ALLOWLIST)} allowlisted")
     stale = [k for k in ALLOWLIST if k not in seen]
     for k in stale:
         print(f"# allowlist entry `{k}` names no card here any more", file=sys.stderr)

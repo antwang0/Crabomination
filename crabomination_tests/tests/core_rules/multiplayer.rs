@@ -6205,3 +6205,66 @@ fn cr_506_3_attacking_you_excludes_attacks_on_another_seat() {
     assert!(!g.would_accept(exile(at_them)));
     assert!(g.would_accept(exile(at_me)));
 }
+
+/// CR 506.3 / 603.2 — "whenever a creature attacks you" triggers only on the
+/// attacks on you: Briar Patch and Barbed Foliage leave a creature attacking
+/// seat 2 alone (they fired on any opposing attacker before).
+#[test]
+fn cr_506_3_attacks_you_triggers_ignore_attacks_on_another_seat() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::briar_patch());
+    g.add_card_to_battlefield(0, catalog::barbed_foliage());
+    let at_me = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let at_them = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(at_me);
+    g.clear_sickness(at_them);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let evs = g
+        .declare_attackers(vec![
+            Attack { attacker: at_me, target: AttackTarget::Player(0) },
+            Attack { attacker: at_them, target: AttackTarget::Player(2) },
+        ])
+        .expect("declare attackers");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let me = g.battlefield_find(at_me).map(|c| (g.computed_permanent(c.id).unwrap().power, c.damage));
+    assert_eq!(me, Some((1, 1)), "the Bear attacking me: -1/-0 and a point of damage");
+    let them = g.battlefield_find(at_them).map(|c| (g.computed_permanent(c.id).unwrap().power, c.damage));
+    assert_eq!(them, Some((3, 0)), "the Giant attacking seat 2: untouched");
+}
+
+/// The same on an emblem: Garruk, Apex Predator's −8 gives seat 1 "whenever a
+/// creature attacks you, it gets +5/+5" — a creature attacking seat 2 doesn't.
+#[test]
+fn cr_506_3_garruk_emblem_pumps_only_attackers_of_its_owner() {
+    use crabomination::game::types::{Attack, AttackTarget, Target};
+    let mut g = multi_player_game(3);
+    let minus_eight = catalog::garruk_apex_predator()
+        .loyalty_abilities
+        .into_iter()
+        .find(|l| l.loyalty_cost == -8)
+        .expect("the -8")
+        .effect;
+    let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    g.resolve_effect(&minus_eight, &ctx).expect("emblem");
+    let at_one = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let at_two = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(at_one);
+    g.clear_sickness(at_two);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let evs = g
+        .declare_attackers(vec![
+            Attack { attacker: at_one, target: AttackTarget::Player(1) },
+            Attack { attacker: at_two, target: AttackTarget::Player(2) },
+        ])
+        .expect("declare attackers");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(at_one).unwrap().power, 7, "attacking the emblem's owner");
+    assert_eq!(g.computed_permanent(at_two).unwrap().power, 2, "attacking seat 2");
+}

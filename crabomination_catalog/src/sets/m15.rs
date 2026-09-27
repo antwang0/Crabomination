@@ -2462,7 +2462,12 @@ pub fn garruk_apex_predator() -> CardDefinition {
                     who: PlayerRef::Target(0),
                     name: "Garruk, Apex Predator".into(),
                     triggered: vec![TriggeredAbility {
-                        event: EventSpec::new(EventKind::Attacks, EventScope::OpponentControl),
+                        event: EventSpec::new(EventKind::Attacks, EventScope::OpponentControl).with_filter(
+                            crate::effect::Predicate::EntityMatches {
+                                what: Selector::TriggerSource,
+                                filter: crate::card::SelectionRequirement::IsAttackingYou,
+                            },
+                        ),
                         effect: Effect::Seq(vec![
                             Effect::PumpPT {
                                 what: Selector::TriggerSource,
