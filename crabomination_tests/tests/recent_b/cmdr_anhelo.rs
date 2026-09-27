@@ -438,6 +438,23 @@ fn zndrsplts_judgment_friend_and_foe() {
     assert!(g.players[1].hand.iter().any(|c| c.id == bears));
 }
 
+/// CR 601.2c — each chosen goad instance needs its target player: three
+/// target-bearing modes with two targets named is not a legal cast.
+#[test]
+fn maestros_confluence_needs_a_target_per_chosen_mode() {
+    let mut g = pod(3);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mc = g.add_card_to_hand(0, catalog::maestros_confluence());
+    flood(&mut g, 0);
+    let cast = |extra: Vec<Target>| GameAction::CastSpellSpree {
+        card_id: mc, spree_modes: vec![1, 2, 2], target: Some(Target::Permanent(angel)),
+        additional_targets: extra, x_value: None,
+    };
+    assert!(g.perform_action(cast(vec![Target::Player(2)])).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == mc), "still in hand");
+    g.perform_action(cast(vec![Target::Player(2), Target::Player(1)])).expect("three targets");
+}
+
 /// A bot aiming the goad mode's player slot (`player_slot_is_hostile`) picks
 /// an opponent, not its own team.
 #[test]

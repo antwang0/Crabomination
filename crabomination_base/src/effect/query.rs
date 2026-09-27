@@ -5565,11 +5565,23 @@ impl Effect {
             | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
             // The target walkers read these delayed bodies' slots as the
-            // spell's own, so their "up to one" is too (Ride the Avalanche).
+            // spell's own, so their "up to one" is too (Ride the Avalanche,
+            // Season of the Bold).
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
-            | Effect::OnYourNextInstantSorceryThisTurn { body } => body.min_targets_in_mode(mode),
+            | Effect::OnYourNextInstantSorceryThisTurn { body }
+            | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
+            | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
+            | Effect::OnYourNextNamedSpellThisTurn { body, .. }
+            | Effect::OnEachSpellCastThisTurn { body, .. }
+            | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body, .. }
+            | Effect::OnAttackedUntilYourNextTurn { body, .. }
+            | Effect::OnMatchingAttacksThisTurn { body, .. }
+            | Effect::OnMatchingBlocksThisTurn { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::DelayUntilWithCapture { body, .. }
+            | Effect::AtEachCombatThisTurn { body, .. } => body.min_targets_in_mode(mode),
             _ => None,
         }
     }

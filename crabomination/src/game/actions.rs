@@ -7381,6 +7381,37 @@ impl GameState {
                 return Err(GameError::InvalidTarget);
             }
         }
+        // CR 601.2c — each chosen instance of a target-bearing mode takes the
+        // next slot in printed order; one whose target is required must get
+        // it. A short list left a later mode aimed at nothing (Maestros
+        // Confluence's goad resolved for nobody).
+        let need = self.players[p].hand.iter().find(|c| c.id == card_id).map_or(0, |c| {
+            let mode_effect = |i: u8| -> Option<&crate::effect::Effect> {
+                match &c.definition.effect {
+                    crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes } => {
+                        modes.get(i as usize).map(|m| &m.effect)
+                    }
+                    crate::effect::Effect::ChooseModesCast { modes, .. }
+                    | crate::effect::Effect::ChooseModesByPoints { modes, .. } => modes.get(i as usize),
+                    _ => None,
+                }
+            };
+            let mut slot = 0usize;
+            let mut need = 0usize;
+            for &i in &chosen {
+                let Some(e) = mode_effect(i) else { continue };
+                if e.requires_target() {
+                    slot += 1;
+                    if !e.target_slot_optional(0, None) {
+                        need = slot;
+                    }
+                }
+            }
+            need
+        });
+        if usize::from(target.is_some()) + additional_targets.len() < need {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         self.cast_atomically(|g| {
             g.scratch.pending_spree_modes = Some(chosen.clone());
             let cast =

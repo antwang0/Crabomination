@@ -224,6 +224,8 @@ fn three_steps_ahead_draws_and_discards() {
 fn spreeable_affordance_surfaces_castable_spree_card() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::explosive_derailment());
+    // Every mode targets (CR 601.2c): give the damage mode a creature.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     // No mana → not offered (can't afford even the cheapest mode).
