@@ -3474,6 +3474,7 @@ fn sage_of_the_beyond_discounts_a_flashback_cast_and_has_no_damage_trigger() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Blue, 1);
     let hand_before = g.players[0].hand.len();
+    // "Target player draws two cards" — the caster, here.
     g.perform_action(GameAction::CastFlashback {
         card_id: deep, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
