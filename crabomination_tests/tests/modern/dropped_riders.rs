@@ -1090,3 +1090,23 @@ fn speed_young_avenger_is_blockable_by_haste() {
     assert!(!kws.contains(&Keyword::Unblockable));
     assert!(kws.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))));
 }
+
+/// Triumph of Saint Katherine — Praesidium Protectiva: dying, it is shuffled
+/// with the top six into a pile that goes back on top (a miracle set-up).
+#[test]
+fn triumph_of_saint_katherine_hides_in_the_top_seven() {
+    let mut g = main_phase();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let seventh_down = g.players[0].library[6].id;
+    let t = g.add_card_to_battlefield(0, catalog::triumph_of_saint_katherine());
+    let mut events = Vec::new();
+    g.destroy_permanent(t, false, &mut events);
+    drain_stack(&mut g);
+    let lib = &g.players[0].library;
+    assert_eq!(lib.len(), 11);
+    let at = lib.iter().position(|c| c.id == t).expect("in the library");
+    assert!(at < 7, "among the top seven, at {at}");
+    assert_eq!(lib[7].id, seventh_down, "the rest of the library is untouched");
+}

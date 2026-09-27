@@ -757,12 +757,13 @@ pub fn thunderwolf_cavalry() -> CardDefinition {
     }
 }
 
-/// Triumph of Saint Katherine — lifelink; miracle {1}{W}.
-///
-/// ⚠ Residual: Praesidium Protectiva isn't implemented.
+/// Triumph of Saint Katherine — lifelink; miracle {1}{W}. Praesidium
+/// Protectiva: put into your graveyard from the battlefield, it is shuffled
+/// into a face-down pile with your top six and the pile goes back on top.
 pub fn triumph_of_saint_katherine() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![on_dies(Effect::ShuffleIntoTopPile { what: Selector::This, depth: Value::Const(6) })],
         miracle: Some(cost(&[generic(1), w()])),
         ..creature("Triumph of Saint Katherine", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Warrior], 5, 5)
     }
