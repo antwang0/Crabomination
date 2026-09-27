@@ -9,7 +9,7 @@ use crabomination::mana::Color;
 #[allow(unused)]
 use crate::Factory;
 
-// ── Gift (CR 702.165) ────────────────────────────────────────────────────────
+// ── Gift (CR 702.174) ────────────────────────────────────────────────────────
 
 /// Crumb and Get It without its gift only pumps +2/+2 (base resolution).
 #[test]

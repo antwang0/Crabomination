@@ -1016,7 +1016,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         rest_in_peace,
         // ── modern_decks: Adventure enchantment (anthem + token) ──
         virtue_of_loyalty,
-        // ── claude/modern_decks: Extort (CR 702.99) ──
+        // ── claude/modern_decks: Extort (CR 702.101) ──
         syndic_of_tithes,
         // ── Backup that grants a triggered ability (CR 702.164) ──
         bola_slinger,
@@ -1029,7 +1029,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         oketras_attendant,
         anointer_priest,
         angel_of_sanctions,
-        // ── Exert (CR 702.137) ──
+        // ── Exert (CR 701.43) ──
         tah_crop_elite,
         glory_bound_initiate,
         // ── flash O-Ring + combat removal ──
@@ -1048,7 +1048,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pillarfield_ox,
         skyknight_legionnaire,
         healers_hawk,
-        // ── Investigate (CR 701.13) ──
+        // ── Investigate (CR 701.16) ──
         thraben_inspector,
         selfless_spirit,
         champion_of_the_parish,
@@ -1146,7 +1146,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         elves_of_deep_shadow,
         generous_ent,
         patchwork_automaton,
-        // Proliferate (CR 701.27) suite — grows the controller's counters
+        // Proliferate (CR 701.34) suite — grows the controller's counters
         // + poisons opponents via `Effect::Proliferate`.
         steady_progress,
         volt_charge,
@@ -1346,7 +1346,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Exalted (CR 702.83) ──
         akrasan_squire,
         aven_squire,
-        // ── Renown (CR 702.111) / Outlast (CR 702.97) ──
+        // ── Renown (CR 702.112) / Outlast (CR 702.107) ──
         topan_freeblade,
         stalwart_aven,
         ainok_bond_kin,
@@ -1690,7 +1690,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         benthic_biomancer,
         pteramander,
         quandrix_cryptomancer,
-        // ── Kicker (CR 702.32) ──
+        // ── Kicker (CR 702.33) ──
         into_the_roil,
         aether_figment,
         glint_nest_crane,
@@ -2046,7 +2046,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bastion_of_remembrance,
         dictate_of_erebos,
         bump_in_the_night,
-        // ── Eternalize (CR 702.91) ──
+        // ── Eternalize (CR 702.129) ──
         dreamstealer,
         // ── Afflict (CR 702.130) ──
         khenra_eternal,
@@ -2059,7 +2059,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grim_haruspex,
         kitesail_freebooter,
         tormented_soul,
-        // ── Fabricate (CR 702.122) ──
+        // ── Fabricate (CR 702.123) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
         stromkirk_patrol,
@@ -2069,7 +2069,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         urza_chief_artificer,
         // ── modern_decks: Jund sacrifice payoff ──
         korvold_fae_cursed_king,
-        // ── claude/modern_decks: Extort (CR 702.99) ──
+        // ── claude/modern_decks: Extort (CR 702.101) ──
         basilica_screecher,
         tithe_drinker,
         kingpins_pet,
@@ -2082,7 +2082,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         typhoid_rats,
         abyssal_specter,
         bloodgift_demon,
-        // ── claude/modern_decks: Explore (CR 701.40) ──
+        // ── claude/modern_decks: Explore (CR 701.44) ──
         seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
         royal_assassin,
@@ -2279,7 +2279,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         corpse_dance,
         // ── modern_decks-17 ──
         tasigur_the_golden_fang,
-        // ── Outlast (CR 702.97) / Renown (CR 702.111) ──
+        // ── Outlast (CR 702.107) / Renown (CR 702.112) ──
         mer_ek_nightblade,
         disowned_ancestor,
     ];
@@ -2546,7 +2546,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         stormblood_berserker,
         // ── modern_decks: artifacts-matter aggro ──
         inventors_apprentice,
-        // ── Eternalize (CR 702.91) ──
+        // ── Eternalize (CR 702.129) ──
         earthshaker_khenra,
         // ── aggressive red bodies + burn ──
         bloodrage_brawler,
@@ -2562,7 +2562,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         crested_craghorn,
         // ── simple keyword body ──
         bloodrock_cyclops,
-        // ── claude/modern_decks: Riot (CR 702.137) ──
+        // ── claude/modern_decks: Riot (CR 702.136) ──
         zhur_taa_goblin,
         frenzied_arynx,
         // ── claude/modern_decks: red value/keyword bodies ──
@@ -2574,7 +2574,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         fire_imp,
         goblin_balloon_brigade,
         thundering_giant,
-        // ── Kicker (CR 702.32) ──
+        // ── Kicker (CR 702.33) ──
         goblin_bushwhacker,
         goblin_chainwhirler,
         seasoned_pyromancer,
@@ -2602,9 +2602,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arc_lightning,
         forked_lightning,
         chandras_pyrohelix,
-        // ── claude/modern_decks: Goad (CR 701.38) ──
+        // ── claude/modern_decks: Goad (CR 701.15) ──
         disrupt_decorum,
-        // ── claude/modern_decks: Monstrosity (CR 701.31) ──
+        // ── claude/modern_decks: Monstrosity (CR 701.37) ──
         ember_swallower,
         ill_tempered_cyclops,
         charging_monstrosaur,
@@ -2629,7 +2629,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Copy-with-new-targets (CR 707.12 / 115.7)
         reverberate,
         fork,
-        // Battle cry (CR 702.92)
+        // Battle cry (CR 702.91)
         goblin_wardriver,
         sweltering_suns,
         fanatical_firebrand,
@@ -2796,7 +2796,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kari_zev_skyship_raider,
         // ── New cube cards ──
         greasewrench_goblin,
-        // ── Renown (CR 702.111) ──
+        // ── Renown (CR 702.112) ──
         skyraker_giant,
         // ── Bloodthirst (CR 702.54) ──
         scab_clan_mauler,
@@ -3052,7 +3052,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         charging_badger,
         bellowing_tanglewurm,
         vinelasher_kudzu,
-        // ── Embalm (CR 702.88) ──
+        // ── Embalm (CR 702.128) ──
         honored_hydra,
         timeless_witness,
         // ── AKH green bodies (Exert, Flash, ramp, big cycler) ──
@@ -3128,14 +3128,14 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // the marquee value engine in green ramp shells and fires.
         // Activate.
         tireless_tracker,
-        // ── claude/modern_decks: Explore (CR 701.40) ──
+        // ── claude/modern_decks: Explore (CR 701.44) ──
         merfolk_branchwalker,
         jadelight_ranger,
         wildgrowth_walker,
         tishanas_wayfinder,
         emperors_vanguard,
         path_of_discovery,
-        // ── claude/modern_decks: Monstrosity (CR 701.31) ──
+        // ── claude/modern_decks: Monstrosity (CR 701.37) ──
         nessian_wilds_ravager,
         arbor_colossus,
         // ── claude/modern_decks: Ixalan dinosaurs / green value ──
@@ -3263,7 +3263,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         scavenging_ooze,
         // ── New cube cards ──
         esikas_chariot,
-        // ── Outlast (CR 702.97) / Graft (CR 702.57) ──
+        // ── Outlast (CR 702.107) / Graft (CR 702.58) ──
         tuskguard_captain,
         aquastrand_spider,
         plaxcaster_frogling,

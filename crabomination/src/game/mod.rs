@@ -32514,7 +32514,7 @@ pub fn can_block_attacker_computed(
                 }
                 a_shadow = true;
             }
-            // Skulk (CR 702.72a) and Formation Breaker's inverse: both sides
+            // Skulk (CR 702.118) and Formation Breaker's inverse: both sides
             // use layer-computed power, so an anthem-pumped Skulk attacker
             // dodges bigger blockers correctly.
             Keyword::Skulk if blocker_power > attacker_power => return false,

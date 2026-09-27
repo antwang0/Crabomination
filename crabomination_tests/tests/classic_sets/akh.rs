@@ -1,4 +1,4 @@
-//! Functionality tests for Amonkhet Embalm (CR 702.88) / Eternalize
+//! Functionality tests for Amonkhet Embalm (CR 702.128) / Eternalize
 //! (CR 702.91) creatures (`catalog::sets::akh`).
 
 use crabomination::catalog;
@@ -147,7 +147,7 @@ fn akh_etb_and_pump_batch() {
     }
 }
 
-/// Exert (CR 701.38) attackers: buff on attack, skip the next untap.
+/// Exert (CR 701.43) attackers: buff on attack, skip the next untap.
 #[test]
 fn akh_exert_batch() {
     use crabomination::card::Keyword;

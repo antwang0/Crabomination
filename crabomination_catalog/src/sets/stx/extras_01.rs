@@ -1466,7 +1466,7 @@ pub fn divide_by_zero() -> CardDefinition {
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },

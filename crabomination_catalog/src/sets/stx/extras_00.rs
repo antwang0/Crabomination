@@ -98,7 +98,7 @@ pub fn field_trip() -> CardDefinition {
                     tapped: true,
                 },
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },
@@ -227,7 +227,7 @@ pub fn igneous_inspiration() -> CardDefinition {
                 ),
                 amount: Value::Const(3),
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },

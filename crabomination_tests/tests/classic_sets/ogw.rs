@@ -2091,7 +2091,7 @@ fn coastal_discovery_awaken_draws_and_animates() {
     assert_eq!((cl.power, cl.toughness), (4, 4), "animated to 4/4");
 }
 
-// ── Surge (CR 702.108) ────────────────────────────────────────────────────
+// ── Surge (CR 702.117) ────────────────────────────────────────────────────
 
 /// Reckless Bushwhacker cast for its surge cost fires the "if surge paid"
 /// ETB: other creatures you control get +1/+0 and haste.

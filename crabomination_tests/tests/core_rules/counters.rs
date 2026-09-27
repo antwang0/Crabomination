@@ -70,7 +70,7 @@ fn arcbound_ravager_sacs_artifact_for_a_counter() {
     assert!(g.battlefield_find(fodder).is_none(), "the sacrificed artifact is gone");
 }
 
-// ── Graft (CR 702.57) ─────────────────────────────────────────────────────
+// ── Graft (CR 702.58) ─────────────────────────────────────────────────────
 
 #[test]
 fn aquastrand_spider_enters_with_two_counters() {
@@ -148,7 +148,7 @@ fn melee_pumps_the_attacker() {
     assert_eq!((view.power, view.toughness), (3, 3), "Melee grants +1/+1 on attack");
 }
 
-// ── Renown (CR 702.111) ────────────────────────────────────────────────────
+// ── Renown (CR 702.112) ────────────────────────────────────────────────────
 
 #[test]
 fn renown_adds_counters_on_first_combat_damage() {
@@ -194,7 +194,7 @@ fn renown_fires_despite_preexisting_counter() {
         "renowned creature doesn't re-trigger");
 }
 
-// ── Outlast (CR 702.97) ────────────────────────────────────────────────────
+// ── Outlast (CR 702.107) ────────────────────────────────────────────────────
 
 #[test]
 fn outlast_adds_a_counter_at_sorcery_speed() {
@@ -568,7 +568,7 @@ fn cr_122_1d_stun_counter_replaces_untap() {
     assert_eq!(c.counter_count(CounterType::Stun), 0, "one stun counter removed instead");
 }
 
-// ── Amass (CR 701.43) ────────────────────────────────────────────────────
+// ── Amass (CR 701.47) ────────────────────────────────────────────────────
 
 /// Helper: a vanilla creature whose ETB amasses N.
 fn amasser(n: i32) -> crabomination::card::CardDefinition {
@@ -621,7 +621,7 @@ fn cr_701_43_amass_grows_existing_army_instead_of_making_a_second() {
     assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 4, "1 + 3 amassed counters");
 }
 
-// ── Support (CR 701.32) ──────────────────────────────────────────────────
+// ── Support (CR 701.41) ──────────────────────────────────────────────────
 
 #[test]
 fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
@@ -649,7 +649,7 @@ fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-// ── Populate (CR 701.32) ────────────────────────────────────────────────────
+// ── Populate (CR 701.36) ────────────────────────────────────────────────────
 
 #[test]
 fn populate_copies_a_creature_token_you_control() {

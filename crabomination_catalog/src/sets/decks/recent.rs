@@ -5503,7 +5503,7 @@ pub fn pawpatch_recruit() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Offspring(cost(&[generic(2)]))],
         triggered_abilities: vec![
-            // Offspring (CR 702.166): if its cost was paid, mint a 1/1 copy.
+            // Offspring (CR 702.175): if its cost was paid, mint a 1/1 copy.
             etb(Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::CreateTokenCopyOf {

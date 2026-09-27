@@ -9,7 +9,7 @@ use crabomination::mana::Color;
 #[allow(unused)]
 use crate::Factory;
 
-// ── Explore (CR 701.40) ──────────────────────────────────────────────────────
+// ── Explore (CR 701.44) ──────────────────────────────────────────────────────
 
 /// Merfolk Branchwalker explores; a nonland on top means a +1/+1 counter
 /// (and the card stays in the library).
@@ -94,7 +94,7 @@ fn wildgrowth_walker_grows_and_gains_life_on_explore() {
     assert_eq!(g.players[0].life, life_before + 3, "gained 3 life on explore");
 }
 
-// ── Goad (CR 701.38) ─────────────────────────────────────────────────────────
+// ── Goad (CR 701.15) ─────────────────────────────────────────────────────────
 
 /// Disrupt Decorum goads every creature its caster doesn't control.
 #[test]
@@ -144,7 +144,7 @@ fn goad_expires_at_goaders_next_turn() {
         "goad lifted once the goader's turn began");
 }
 
-// ── Monstrosity (CR 701.31) ──────────────────────────────────────────────────
+// ── Monstrosity (CR 701.37) ──────────────────────────────────────────────────
 
 /// Nessian Wilds Ravager's monstrosity grows it by five +1/+1 counters and
 /// marks it monstrous.

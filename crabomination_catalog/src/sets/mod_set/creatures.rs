@@ -2963,7 +2963,7 @@ pub fn indulgent_tormentor() -> CardDefinition {
     }
 }
 
-/// Basilica Screecher — {1}{B} 1/2 Bat. Flying, Extort (CR 702.99).
+/// Basilica Screecher — {1}{B} 1/2 Bat. Flying, Extort (CR 702.101).
 pub fn basilica_screecher() -> CardDefinition {
     CardDefinition {
         name: "Basilica Screecher",
@@ -2981,7 +2981,7 @@ pub fn basilica_screecher() -> CardDefinition {
     }
 }
 
-/// Zhur-Taa Goblin — {R}{G} 2/2 Goblin Berserker with Riot (CR 702.137):
+/// Zhur-Taa Goblin — {R}{G} 2/2 Goblin Berserker with Riot (CR 702.136):
 /// enters with a +1/+1 counter or haste (your choice).
 pub fn zhur_taa_goblin() -> CardDefinition {
     CardDefinition {
@@ -6167,7 +6167,7 @@ pub fn spore_frog() -> CardDefinition {
     }
 }
 
-// ── Renown (CR 702.111) ───────────────────────────────────────────────────
+// ── Renown (CR 702.112) ───────────────────────────────────────────────────
 
 /// Topan Freeblade — {1}{W} 2/2 Human Soldier with Vigilance, Renown 1.
 pub fn topan_freeblade() -> CardDefinition {
@@ -6223,7 +6223,7 @@ pub fn skyraker_giant() -> CardDefinition {
     }
 }
 
-// ── Outlast (CR 702.97) ────────────────────────────────────────────────────
+// ── Outlast (CR 702.107) ────────────────────────────────────────────────────
 
 /// "Each creature you control with a +1/+1 counter on it has [keyword]" —
 /// the Khans Outlast lord static, via the layer system's `AllWithCounter`

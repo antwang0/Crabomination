@@ -2463,7 +2463,7 @@ pub fn rise_of_extus() -> CardDefinition {
                 }),
                 to: ZoneDest::Exile,
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },

@@ -1848,7 +1848,7 @@ pub enum Predicate {
     PlayerDamagedThisTurn { who: PlayerRef },
     /// True if any player matched by `who` has lost life this turn (damage or
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
-    /// Spectacle (CR 702.111) — pair with `who: EachOpponent`.
+    /// Spectacle (CR 702.137) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
     /// True if any player matched by `who` has gained life this turn. Backed by
     /// `Player.life_gained_this_turn`. Powers "if you gained or lost life this
@@ -8305,7 +8305,7 @@ pub enum Effect {
     /// creature card, the source gets +power/+toughness until end of turn equal
     /// to that card's power and toughness. Bioplasm's attack trigger.
     ExileTopSelfPumpIfCreature,
-    /// Myriad (CR 702.115): for each opponent of the source's controller
+    /// Myriad (CR 702.116): for each opponent of the source's controller
     /// other than the player the source is attacking, create a token that's
     /// a copy of the source, tapped and attacking that opponent. The copies
     /// are exiled at end of combat. No-op outside combat / when the source
@@ -8578,13 +8578,13 @@ pub enum Effect {
     /// AutoDecider fills top-down). Aziza's "tap three untapped creatures
     /// you control" — the surrounding `If` guarantees enough candidates.
     TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool, exact: bool },
-    /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
+    /// Enlist (CR 702.154): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /
     /// "which creature" collapses to auto-tapping the highest-power eligible
     /// creature (only when its power is positive, so it's never a downgrade).
     Enlist,
-    /// Enlist (CR 702.151), then — only when a creature was enlisted —
+    /// Enlist (CR 702.154), then — only when a creature was enlisted —
     /// `then` ("if it enlisted a creature this combat, …": Aradesh, the
     /// Founder's payoff on its own attack).
     EnlistThen { then: Box<Effect> },
@@ -9025,7 +9025,7 @@ pub enum Effect {
     /// player who revealed the greatest mana value (uniquely) may repoint the
     /// targets of the spell that just chose them. A tie changes nothing.
     RevealTopGreatestMayChangeTargets,
-    /// Demonstrate (CR 702.150) — copy this spell for its caster, then pick an
+    /// Demonstrate (CR 702.144) — copy this spell for its caster, then pick an
     /// opponent who also copies it; every copy may choose new targets. Modeled
     /// as a non-optional "always demonstrate" (the printed "you may" collapses
     /// since copying a beneficial spell is virtually always correct). Driven
@@ -9223,7 +9223,7 @@ pub enum Effect {
     /// continues each main phase.
     CastFreeParadigmCopy,
 
-    /// Cipher (CR 702.46). Trailing effect of a Cipher spell: the controller
+    /// Cipher (CR 702.99). Trailing effect of a Cipher spell: the controller
     /// may exile this spell card "encoded" on a creature they control (stamping
     /// `CardInstance.encoded_on`). The combat-damage-to-player dispatch then
     /// offers a free copy whenever that creature connects. Sets a pending flag

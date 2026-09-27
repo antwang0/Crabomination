@@ -81,7 +81,7 @@ pub fn eyetwitch() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            // Learn (CR 701.45): reveal a Lesson from your sideboard into
+            // Learn (CR 701.48): reveal a Lesson from your sideboard into
             // hand, or discard a card to draw. `Effect::Learn` falls back to
             // a plain draw when no Lessons sideboard is configured.
             effect: Effect::Learn {
@@ -425,7 +425,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
                 count: Value::Const(1),
                 definition: std::sync::Arc::new(pest),
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn { who: PR::You },
         ]),
         ..Default::default()

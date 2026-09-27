@@ -514,7 +514,7 @@ pub fn big_play() -> CardDefinition {
 // ── Push XVII (session 2): additional mono-color staples ────────────────
 
 /// Professor of Symbology — {1}{W}, 2/1 Human Cleric.
-/// ETB: Learn (CR 701.45) — reveal a Lesson from the sideboard into hand or
+/// ETB: Learn (CR 701.48) — reveal a Lesson from the sideboard into hand or
 /// discard-to-draw; falls back to Draw 1 with no Lessons sideboard.
 pub fn professor_of_symbology() -> CardDefinition {
     CardDefinition {

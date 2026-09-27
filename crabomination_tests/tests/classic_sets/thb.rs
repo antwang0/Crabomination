@@ -1543,7 +1543,7 @@ fn tymaret_toughness_tracks_devotion() {
     assert_eq!((c.power, c.toughness), (2, 2), "2/* with devotion 2");
 }
 
-/// Battle cry (CR 702.92): an attacking Goblin Wardriver pumps each *other*
+/// Battle cry (CR 702.91): an attacking Goblin Wardriver pumps each *other*
 /// attacking creature +1/+0, but not itself.
 #[test]
 fn battle_cry_pumps_other_attackers() {

@@ -166,7 +166,7 @@ pub fn lesson_in_honor() -> CardDefinition {
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: crate::effect::PlayerRef::You,
             },

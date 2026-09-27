@@ -1,4 +1,4 @@
-//! Craft (CR 702.169) — LCI transforming artifacts. Exercises the
+//! Craft (CR 702.167) — LCI transforming artifacts. Exercises the
 //! `craft_exile_cost` additional cost (exile N other objects) paired with
 //! `Effect::ExileSelfReturnTransformed`, plus the sorcery-speed restriction.
 

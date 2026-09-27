@@ -5281,7 +5281,7 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
             }
         }
     }
-    // Exploit (CR 702.105) and its shape-alikes: a body that *starts* with a
+    // Exploit (CR 702.110) and its shape-alikes: a body that *starts* with a
     // self-sacrifice and then pays off is a cost-for-value trade, which the
     // generic self-cost screen below would always decline. Accept it when the
     // controller has a spare body to feed it — a token, or one of several
@@ -7743,7 +7743,7 @@ pub(super) fn cast_candidates<'a>(
     }
     });
 
-    // Gift (CR 702.165): a spell/permanent with a gift can be cast via
+    // Gift (CR 702.174): a spell/permanent with a gift can be cast via
     // `CastGift`, promising the gift to resolve its enhanced `gifted_effect`
     // (or, for permanent gifts, unlock a `SourceGiftPromised`-gated ETB). A
     // plain `CastSpell` only ever gets the base effect, so gift-payoff cards
@@ -8038,7 +8038,7 @@ pub(super) fn cast_candidates<'a>(
             x_value: None,
         };
         if GameState::would_accept_on(state, action.clone()) {
-            // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
+            // Offspring (CR 702.175) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
             if c.definition.has_offspring().is_some() || c.definition.has_kicker().is_none() {
@@ -8132,7 +8132,7 @@ pub(super) fn cast_candidates<'a>(
     }
     });
 
-    // Replicate (CR 702.107a): the most copies affordable (probed 4 → 1),
+    // Replicate (CR 702.56): the most copies affordable (probed 4 → 1),
     // printed or granted (Djinn Illuminatus, Hatchery Sliver). Scored like
     // multikicker, so the plain cast still competes.
     gated_block!(mask, spec::REPLICATE, castable, {
@@ -15796,7 +15796,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
         set
     };
-    // Infect (CR 702.90) / Toxic (CR 702.180) make poison the lethal clock,
+    // Infect (CR 702.90) / Toxic (CR 702.164) make poison the lethal clock,
     // not life: a player with 10+ poison counters loses (CR 104.3d). The bot
     // must chump an infect/toxic attacker to avoid a poison-out even at a
     // healthy life total. Infect deals its power as poison; Toxic N adds N on
@@ -20715,7 +20715,7 @@ mod tests {
             "a pure-upside 'you may draw' is taken by the bot");
     }
 
-    /// The bot pays Offspring (CR 702.166) when it can afford it — the chosen
+    /// The bot pays Offspring (CR 702.175) when it can afford it — the chosen
     /// main-phase cast is the kicked variant, not the plain cast.
     #[test]
     fn bot_pays_offspring_when_affordable() {

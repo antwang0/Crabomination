@@ -152,7 +152,7 @@ pub fn seized_from_slumber() -> CardDefinition {
     }
 }
 
-/// Manifest Dread — {1}{G} sorcery. Manifest dread (CR 701.41).
+/// Manifest Dread — {1}{G} sorcery. Manifest dread (CR 701.62).
 pub fn manifest_dread_spell() -> CardDefinition {
     CardDefinition {
         name: "Manifest Dread",

@@ -4130,7 +4130,7 @@ pub struct ActivatedAbility {
     /// to false.
     #[serde(default)]
     pub activate_once: bool,
-    /// Craft (CR 702.169) — exile `count` *other* objects matching this
+    /// Craft (CR 702.167) — exile `count` *other* objects matching this
     /// filter from among permanents you control and/or cards in your
     /// graveyard, as an additional cost. Pairs with
     /// `Effect::ExileSelfReturnTransformed` (which exiles the source and

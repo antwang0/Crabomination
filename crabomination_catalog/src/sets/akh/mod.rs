@@ -1,6 +1,6 @@
 //! Amonkhet block (AKH / HOU) cards.
 //!
-//! Showcases Embalm (CR 702.88) and Eternalize (CR 702.91) via
+//! Showcases Embalm (CR 702.128) and Eternalize (CR 702.129) via
 //! `shortcut::embalm` / `shortcut::eternalize`: exile the card from your
 //! graveyard for the listed cost to mint a token copy (a Zombie; 4/4 for
 //! Eternalize). The token-color override (white/black) is approximated — the

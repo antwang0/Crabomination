@@ -519,7 +519,7 @@ fn aftermath_analyst_mills_then_returns_lands() {
         "nonland stays in graveyard");
 }
 
-// ── Meld (CR 701.37): Urza, Lord Protector + The Mightstone and Weakstone ───
+// ── Meld (CR 701.42): Urza, Lord Protector + The Mightstone and Weakstone ───
 
 /// Urza's {7} melds with the Mightstone into Urza, Planeswalker (loyalty 7);
 /// both components are gone from the battlefield.

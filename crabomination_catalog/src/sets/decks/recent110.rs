@@ -1,4 +1,4 @@
-//! Modern-deck staples batch 110 — Fortify (CR 702.71), the remaining
+//! Modern-deck staples batch 110 — Fortify (CR 702.67), the remaining
 //! no-mana-cost suspend classics (Restore Balance / Wheel of Fate /
 //! Hypergenesis), and assorted archetype staples. Tests in
 //! `tests/recent110.rs`.

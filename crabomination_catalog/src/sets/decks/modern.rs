@@ -738,7 +738,7 @@ pub fn noble_hierarch() -> CardDefinition {
     }
 }
 
-// ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
+// ── Spectacle (CR 702.137) ───────────────────────────────────────────────────
 
 /// Skewer the Critics — {2}{R} Sorcery. Deal 3 damage to any target.
 /// Spectacle {R}.
@@ -4239,7 +4239,7 @@ pub fn lay_down_arms() -> CardDefinition {
     }
 }
 
-// ── Explore (CR 701.40) ────────────────────────────────────────────────────
+// ── Explore (CR 701.44) ────────────────────────────────────────────────────
 
 /// Merfolk Branchwalker — {1}{G} 2/1 Merfolk Scout. ETB: it explores.
 pub fn merfolk_branchwalker() -> CardDefinition {
@@ -4383,7 +4383,7 @@ pub fn path_of_discovery() -> CardDefinition {
     }
 }
 
-// ── Monstrosity (CR 701.31) ─────────────────────────────────────────────────
+// ── Monstrosity (CR 701.37) ─────────────────────────────────────────────────
 
 /// Nessian Wilds Ravager — {4}{G}{G} 6/6 Hydra. {6}{G}{G}: Monstrosity 5. When
 /// it becomes monstrous, you may have it fight target creature you don't
@@ -4900,7 +4900,7 @@ pub fn farhaven_elf() -> CardDefinition {
     }
 }
 
-// ── Goad (CR 701.38) ────────────────────────────────────────────────────────
+// ── Goad (CR 701.15) ────────────────────────────────────────────────────────
 
 /// Disrupt Decorum — {2}{R}{R} Sorcery. Goad all creatures you don't control.
 pub fn disrupt_decorum() -> CardDefinition {
@@ -13315,7 +13315,7 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
-// ── Disguise (CR 702.166) ─────────────────────────────────────────────────────
+// ── Disguise (CR 702.168) ─────────────────────────────────────────────────────
 
 /// Defenestrated Phantom — {4}{W}{W} 4/3 Spirit with flying. Disguise {4}{W}
 /// (cast face down for {3} as a 2/2 ward-{2} creature, turn up for {4}{W}). (MKM)
@@ -18964,7 +18964,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Offspring(cost(&[generic(4)]))],
         triggered_abilities: vec![
-            // Offspring (CR 702.166): if its cost was paid, mint a 1/1 copy.
+            // Offspring (CR 702.175): if its cost was paid, mint a 1/1 copy.
             etb(Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::CreateTokenCopyOf {
@@ -27154,7 +27154,7 @@ pub fn nettlecyst() -> CardDefinition {
             triggered_abilities: vec![],
             ..Default::default()
         }),
-        // Living weapon (CR 702.91): mint a Germ and attach on ETB.
+        // Living weapon (CR 702.92): mint a Germ and attach on ETB.
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -29851,7 +29851,7 @@ pub fn sedge_troll() -> CardDefinition {
     }
 }
 
-/// Young Wolf — {G} 1/1 Wolf with Undying (CR 702.92).
+/// Young Wolf — {G} 1/1 Wolf with Undying (CR 702.93).
 pub fn young_wolf() -> CardDefinition {
     CardDefinition {
         name: "Young Wolf",
@@ -40771,7 +40771,7 @@ pub fn zephyrim() -> CardDefinition {
     }
 }
 
-// ── Replicate (CR 702.107) ───────────────────────────────────────────────────
+// ── Replicate (CR 702.56) ───────────────────────────────────────────────────
 // `Keyword::Replicate(cost)`; cast via `GameAction::CastSpellReplicate{times}`,
 // which copies the spell once per replicate payment.
 
@@ -44296,7 +44296,7 @@ pub fn shadow_slice() -> CardDefinition {
     }
 }
 
-/// Last Thoughts — {3}{U} Sorcery. Draw a card. Cipher (CR 702.46).
+/// Last Thoughts — {3}{U} Sorcery. Draw a card. Cipher (CR 702.99).
 pub fn last_thoughts() -> CardDefinition {
     CardDefinition {
         name: "Last Thoughts",
@@ -44314,7 +44314,7 @@ pub fn last_thoughts() -> CardDefinition {
 }
 
 /// Hidden Strings — {1}{U} Sorcery. You may tap or untap target permanent, then
-/// you may tap or untap another target permanent. Cipher (CR 702.46).
+/// you may tap or untap another target permanent. Cipher (CR 702.99).
 /// Encoded as a 4-way `ChooseMode` (tap/untap × slot 0/slot 1), each half
 /// individually declinable via `MayDo`.
 pub fn hidden_strings() -> CardDefinition {
@@ -44404,7 +44404,7 @@ pub fn paranoid_delusions() -> CardDefinition {
 }
 
 /// Midnight Recovery — {3}{B} Sorcery. Return target creature card from your
-/// graveyard to your hand. Cipher (CR 702.46). (The "from your graveyard" zone
+/// graveyard to your hand. Cipher (CR 702.99). (The "from your graveyard" zone
 /// filter is dropped, matching Disentomb.)
 pub fn midnight_recovery() -> CardDefinition {
     CardDefinition {
@@ -44424,7 +44424,7 @@ pub fn midnight_recovery() -> CardDefinition {
 
 /// Hands of Binding — {1}{U} Sorcery. Tap target creature an opponent controls;
 /// it doesn't untap during its controller's next untap step (a stun counter).
-/// Cipher (CR 702.46).
+/// Cipher (CR 702.99).
 pub fn hands_of_binding() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -44449,7 +44449,7 @@ pub fn hands_of_binding() -> CardDefinition {
 }
 
 /// Stolen Identity — {4}{U}{U} Sorcery. Create a token that's a copy of target
-/// artifact or creature. Cipher (CR 702.46).
+/// artifact or creature. Cipher (CR 702.99).
 pub fn stolen_identity() -> CardDefinition {
     CardDefinition {
         name: "Stolen Identity",
@@ -44479,7 +44479,7 @@ pub fn stolen_identity() -> CardDefinition {
 
 /// Whispering Madness — {2}{U}{B} Sorcery. Each player discards their hand,
 /// then draws cards equal to the greatest number discarded this way (the
-/// Windfall pattern). Cipher (CR 702.46).
+/// Windfall pattern). Cipher (CR 702.99).
 pub fn whispering_madness() -> CardDefinition {
     CardDefinition {
         name: "Whispering Madness",

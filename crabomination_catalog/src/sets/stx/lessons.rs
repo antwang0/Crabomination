@@ -145,7 +145,7 @@ pub fn guiding_voice() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },
@@ -295,7 +295,7 @@ pub fn mascot_interpretation() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn {
                 who: PlayerRef::You,
             },

@@ -1269,7 +1269,7 @@ fn archon_of_justice_exiles_a_permanent_on_death() {
     assert!(g.exile.iter().any(|c| c.id == bear), "dies-trigger exiled a permanent");
 }
 
-// ── Impending (CR 702.183) — Duskmourn Overlords ─────────────────────────────
+// ── Impending (CR 702.176) — Duskmourn Overlords ─────────────────────────────
 
 /// Cast for the impending cost, an Overlord enters with N time counters, isn't
 /// a creature, and still fires its enters-or-attacks trigger.
@@ -1379,7 +1379,7 @@ fn impending_hauntwoods_creates_tapped_omniland() {
     }
 }
 
-// ── Hideaway (CR 702.76) — Shelldock Isle ────────────────────────────────────
+// ── Hideaway (CR 702.75) — Shelldock Isle ────────────────────────────────────
 
 /// Shelldock Isle's ETB Hideaway exiles the best of the top four cards face
 /// down, linked to the land; its activated ability then plays that card for
@@ -2226,7 +2226,7 @@ fn wasteland_raider_etb_each_player_sacrifices() {
         && c.definition.name == "Wasteland Raider"), "Raider stays");
 }
 
-// ── Replicate (CR 702.107) ───────────────────────────────────────────────────
+// ── Replicate (CR 702.56) ───────────────────────────────────────────────────
 
 /// Pyromatics replicated twice resolves three times (original + two copies),
 /// dealing 3 total to the same player.

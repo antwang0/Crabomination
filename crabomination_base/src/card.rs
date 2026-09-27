@@ -1477,7 +1477,7 @@ pub enum Keyword {
     Unblockable,
     Shadow,
     Horsemanship,
-    /// Landwalk (CR 702.15) — this creature can't be blocked as long as the
+    /// Landwalk (CR 702.14) — this creature can't be blocked as long as the
     /// defending player controls a land of the named type (Forestwalk,
     /// Islandwalk, Swampwalk, Mountainwalk, Plainswalk, …).
     Landwalk(LandType),
@@ -6237,7 +6237,7 @@ pub struct AlternativeCost {
     /// change the spell's resolution behavior.
     #[serde(default)]
     pub effect_override: Option<crate::effect::Effect>,
-    /// True for Dash (CR 702.110) alternative costs — the resulting
+    /// True for Dash (CR 702.109) alternative costs — the resulting
     /// creature gains haste and is returned to its owner's hand at the
     /// beginning of the next end step.
     #[serde(default)]
@@ -6256,7 +6256,7 @@ pub struct AlternativeCost {
     /// True when paying this alternative cost stamps the resolving spell as
     /// "kicked" (`CardInstance.kicked`), so "if its [surge/...] cost was paid"
     /// ETB riders fire via `Predicate::SpellWasKicked`. Reuses the kicker
-    /// pipeline for Surge (CR 702.108) — Reckless Bushwhacker, Tyrant of
+    /// pipeline for Surge (CR 702.117) — Reckless Bushwhacker, Tyrant of
     /// Valakut.
     #[serde(default)]
     pub marks_kicked: bool,
@@ -7394,7 +7394,7 @@ impl CardDefinition {
         d
     }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
-        // Offspring (CR 702.166) is an optional additional cast cost that
+        // Offspring (CR 702.175) is an optional additional cast cost that
         // reuses the Kicker pipeline (pay it → `SpellWasKicked` → ETB mints a
         // 1/1 token copy). A card carries one or the other, not both.
         self.keywords.iter().find_map(|kw| match kw {
@@ -8975,7 +8975,7 @@ pub struct CardData {
     /// True if this card was free-cast off the last Suspend time counter
     /// (CR 702.62f) — on ETB a creature so cast gains haste.
     pub cast_from_suspend: bool,
-    /// True if this card was cast via Escape (CR 702.139) from the
+    /// True if this card was cast via Escape (CR 702.138) from the
     /// graveyard. Read by the "sacrifice it unless it escaped" ETB rider
     /// on the Theros-Beyond-Death titans (Kroxa, Uro).
     pub cast_from_escape: bool,

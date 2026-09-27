@@ -112,7 +112,7 @@ pub fn add_any_one_color(n: i32) -> Effect {
     Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(n)) }
 }
 
-/// Dash (CR 702.110) alternative cost: cast for `mana_cost`; the creature
+/// Dash (CR 702.109) alternative cost: cast for `mana_cost`; the creature
 /// gains haste and returns to its owner's hand at the next end step.
 pub fn dash(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, dash: true, ..Default::default() }
@@ -161,7 +161,7 @@ pub fn impending(n: u32, mana_cost: crate::mana::ManaCost) -> crate::card::Alter
     crate::card::AlternativeCost { mana_cost, impending: n, ..Default::default() }
 }
 
-/// Surge (CR 702.108) alternative cost: cast for `mana_cost` if you or a
+/// Surge (CR 702.117) alternative cost: cast for `mana_cost` if you or a
 /// teammate cast another spell this turn. `with_rider` stamps the spell
 /// "kicked" so "if its surge cost was paid" ETB riders fire.
 pub fn surge(mana_cost: crate::mana::ManaCost, with_rider: bool) -> crate::card::AlternativeCost {
@@ -229,7 +229,7 @@ pub fn emerge(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost 
     }
 }
 
-/// Spectacle (CR 702.111) alternative cost: cast for `mana_cost` rather
+/// Spectacle (CR 702.137) alternative cost: cast for `mana_cost` rather
 /// than the printed cost if an opponent lost life this turn.
 pub fn spectacle(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost {
@@ -963,7 +963,7 @@ pub fn squad_etb() -> TriggeredAbility {
     })
 }
 
-/// Demonstrate (CR 702.150) — the self-cast trigger that copies the spell for
+/// Demonstrate (CR 702.144) — the self-cast trigger that copies the spell for
 /// its caster and an opponent (each copy may choose new targets). Attach to a
 /// card's `triggered_abilities`; see `Effect::Demonstrate`.
 pub fn demonstrate() -> TriggeredAbility {
@@ -2185,14 +2185,14 @@ pub fn amass_zombies(n: i32) -> Effect {
     }
 }
 
-/// Myriad (CR 702.115): an `Attacks / SelfSource` trigger minting a
+/// Myriad (CR 702.116): an `Attacks / SelfSource` trigger minting a
 /// tapped+attacking copy of the source for each other opponent, exiled
 /// at end of combat.
 pub fn myriad() -> TriggeredAbility {
     on_attack(Effect::Myriad)
 }
 
-/// Enlist (CR 702.151): an `Attacks / SelfSource` trigger that taps a
+/// Enlist (CR 702.154): an `Attacks / SelfSource` trigger that taps a
 /// nonattacking creature and adds its power to the attacker EOT.
 pub fn enlist() -> TriggeredAbility {
     on_attack(Effect::Enlist)
@@ -2282,7 +2282,7 @@ pub fn partner_with_search(name: &str) -> TriggeredAbility {
     })
 }
 
-/// Extort (CR 702.99): "Whenever you cast a spell, you may pay
+/// Extort (CR 702.101): "Whenever you cast a spell, you may pay
 /// {W/B}. If you do, each opponent loses 1 life and you gain that
 /// much life." A `SpellCast / YourControl` trigger whose body is a
 /// `MayPay` over the canonical [`drain`] shape. Basilica Screecher,
@@ -2307,7 +2307,7 @@ pub fn tribute(n: u32, otherwise: Effect) -> TriggeredAbility {
     etb(Effect::Tribute { n, otherwise: Box::new(otherwise) })
 }
 
-/// Exploit (CR 702.105): "When this creature enters, you may sacrifice
+/// Exploit (CR 702.110): "When this creature enters, you may sacrifice
 /// a creature. When you exploit a creature, `payoff`." Modeled as an ETB
 /// `MayDo([Sacrifice 1 creature (this can be itself), payoff])`. Declining
 /// the sacrifice skips the payoff (CR 702.105d — the exploit trigger only
@@ -2351,7 +2351,7 @@ pub fn devour_filter(n: i32, filter: SelectionRequirement) -> Effect {
     }
 }
 
-/// Riot (CR 702.137): "This creature enters the battlefield with
+/// Riot (CR 702.136): "This creature enters the battlefield with
 /// your choice of a +1/+1 counter or haste." Modeled as an ETB
 /// `ChooseMode([grant Haste permanently, add a +1/+1 counter])`.
 /// AutoDecider takes mode 0 (haste); scripted deciders can pick the
@@ -2507,7 +2507,7 @@ pub fn ingest() -> TriggeredAbility {
     }
 }
 
-/// Recover (CR 702.58): "When a creature is put into your graveyard from the
+/// Recover (CR 702.59): "When a creature is put into your graveyard from the
 /// battlefield, you may pay [cost]. If you do, return this card from your
 /// graveyard to your hand. Otherwise, exile this card." A
 /// `CreatureDied / FromYourGraveyard` trigger that fires while this card sits
@@ -2533,7 +2533,7 @@ pub fn recover(cost: crate::mana::ManaCost) -> TriggeredAbility {
     }
 }
 
-/// Outlast (CR 702.97) — the activated ability "{cost}, {T}: Put a
+/// Outlast (CR 702.107) — the activated ability "{cost}, {T}: Put a
 /// +1/+1 counter on this creature. Activate only as a sorcery." Returns
 /// the `ActivatedAbility`; pass the (already mana-loaded) cost in.
 pub fn outlast(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
@@ -3157,7 +3157,7 @@ pub fn modular_dies() -> TriggeredAbility {
     })
 }
 
-/// Embalm (CR 702.88) / Eternalize (CR 702.91) — the activated ability:
+/// Embalm (CR 702.128) / Eternalize (CR 702.129) — the activated ability:
 /// "[cost], Exile this card from your graveyard: Create a token that's a
 /// copy of it, except it's a [white/black] Zombie [with no mana cost
 /// / and 4/4]. Activate only as a sorcery." Both ride the
@@ -3237,7 +3237,7 @@ pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
     }
 }
 
-/// Craft (CR 702.169): "[cost], Exile this artifact, Exile `count` other
+/// Craft (CR 702.167): "[cost], Exile this artifact, Exile `count` other
 /// [filter] from among permanents you control and/or [filter] cards from your
 /// graveyard: Return this card transformed. Activate only as a sorcery." The
 /// source's exile-and-return-transformed rides `ExileSelfReturnTransformed`;

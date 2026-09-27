@@ -1005,7 +1005,7 @@ fn reality_ripple_phases_target_out() {
     assert!(g.phased_out.iter().any(|c| c.id == bear));
 }
 
-// ── Forecast (CR 702.56) ───────────────────────────────────────────────────
+// ── Forecast (CR 702.57) ───────────────────────────────────────────────────
 
 /// Steeling Stance's Forecast ability pumps a target creature from hand
 /// during the controller's upkeep, leaving the card in hand.

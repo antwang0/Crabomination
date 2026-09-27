@@ -697,7 +697,7 @@ pub struct PlayerData {
     pub steals_opponent_tokens_this_turn: bool,
     /// True if this player has lost life this turn (damage or direct life
     /// loss). Set in `adjust_life` on a negative delta, reset at the active
-    /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
+    /// player's `do_untap`. Powers Spectacle (CR 702.137). Defaults to false
     /// for snapshot back-compat.
     #[serde(default)]
     pub lost_life_this_turn: bool,

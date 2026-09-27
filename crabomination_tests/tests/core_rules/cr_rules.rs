@@ -9,7 +9,7 @@
 //! Ward—pay-life-equal-to-power (CR 702.21), once-each-turn triggers
 //! (CR 603.3d), Defender + conditional attack override (CR 702.12),
 //! delayed "when you cast your next spell" triggers (CR 603.7e), counters
-//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165),
+//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.174),
 //! Survival (CR 702.180), the fixed-threshold power block restriction
 //! (CR 509.1b — Questing Beast), "lose half your life, rounded up"
 //! (CR 120.6), "up to N target" spells accepting fewer targets
@@ -23,7 +23,7 @@
 //! unless you control N" restrictions (CR 508.1a), the Ring-bearer's
 //! granted Legendary supertype (CR 701.54c / 205.4b), block-only combat
 //! restrictions (CR 509.1c), one-sided "deals damage equal to its
-//! power" effects (CR 701.12-style), Craft (CR 702.169), the Descend ability
+//! power" effects (CR 701.12-style), Craft (CR 702.167), the Descend ability
 //! word (CR 207.2c — permanent cards in the graveyard), losing on an
 //! empty-library draw (CR 104.3c / 704.5c), characteristic-defining P/T that
 //! recomputes live (CR 604.3 — Lhurgoyf), ownership independent of control
@@ -5683,7 +5683,7 @@ fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
 
 // ── CR 702.169 — Craft ────────────────────────────────────────────────────────
 
-/// Craft (CR 702.169) is a sorcery-speed activated ability that exiles the
+/// Craft (CR 702.167) is a sorcery-speed activated ability that exiles the
 /// source and other objects, returning the source transformed.
 #[test]
 fn cr_702_169_craft_exiles_and_returns_transformed() {

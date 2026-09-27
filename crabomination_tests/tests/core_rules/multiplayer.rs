@@ -3519,7 +3519,7 @@ fn abyssal_specter_only_defending_player_discards_in_ffa() {
     assert_eq!(g.players[2].hand.len(), h2 - 1, "only the defending player discards");
 }
 
-// ── Myriad (CR 702.115) ────────────────────────────────────────────────────
+// ── Myriad (CR 702.116) ────────────────────────────────────────────────────
 
 #[test]
 fn cr_702_115_myriad_copies_attack_each_other_opponent_then_exile() {

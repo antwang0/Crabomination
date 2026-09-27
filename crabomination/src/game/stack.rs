@@ -2916,7 +2916,7 @@ impl GameState {
                         );
                     }
 
-                    // Dash (CR 702.110): the dashed creature gains haste and
+                    // Dash (CR 702.109): the dashed creature gains haste and
                     // returns to its owner's hand at the beginning of the next
                     // end step. Grant haste on the entering instance and arm
                     // the delayed bounce.

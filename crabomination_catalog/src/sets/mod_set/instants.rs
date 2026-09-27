@@ -803,7 +803,7 @@ pub fn dig_through_time() -> CardDefinition {
 /// Lose Focus — {1}{U} Instant. Replicate {U}. Counter target spell unless
 /// its controller pays {2}.
 ///
-/// Replicate (CR 702.55), not the Delve this shipped with — an invented
+/// Replicate (CR 702.56), not the Delve this shipped with — an invented
 /// keyword `audit_keyword_drift.py` found and took off. Reuses
 /// `Effect::CounterUnlessPaid`.
 pub fn lose_focus() -> CardDefinition {

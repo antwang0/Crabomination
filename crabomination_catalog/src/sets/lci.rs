@@ -151,7 +151,7 @@ pub fn goldvein_hydra() -> CardDefinition {
     }
 }
 
-// ── Craft (CR 702.169) — LCI transforming artifacts ─────────────────────────
+// ── Craft (CR 702.167) — LCI transforming artifacts ─────────────────────────
 // The front face exiles itself and returns transformed via
 // `Effect::ExileSelfReturnTransformed`; the "exile N other [type]" additional
 // cost rides `craft_exile_cost` (graveyard cards first, then lowest-power

@@ -553,7 +553,7 @@ fn eidolon_burns_on_cheap_spell() {
     assert_eq!(g.players[1].life, 18, "caster of a MV<=3 spell took 2 from Eidolon");
 }
 
-// ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
+// ── Spectacle (CR 702.137) ───────────────────────────────────────────────────
 
 /// Skewer the Critics can be cast for its Spectacle cost only after an
 /// opponent has lost life this turn.
