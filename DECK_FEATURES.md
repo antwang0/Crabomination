@@ -53,7 +53,7 @@ lists were picked.
 | **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | ✅ complete |
 | **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
 | **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -3410,8 +3410,7 @@ were missing; five primitives: `Effect::OnYourNextSpellOfTypeThisTurn` (CR
 `Value::CommanderCastsFromCommandZone` (CR 903.8, Thunderclap Drake),
 `Effect::ExileSelfSuspended` (CR 702.62a, Rousing Refrain) and
 `SpendRestriction::SmallInstantSorceryExileInstead` (CR 106.6, Forger's
-Foundry). Residuals: **Crackling Spellslinger**'s storm count is read as its
-copy trigger resolves, not as the spell is cast; **Forger's Foundry**'s "may
+Foundry). Residual: **Forger's Foundry**'s "may
 exile" has no prompt (it exiles while you still control the Foundry, else the
 graveyard, where Eris / Octavia / Stagecoach count it).
 Seed 10051, 1,000 games at 24 seats: **979 decided, 20 action caps (all long
