@@ -585,26 +585,20 @@ pub fn relic_retriever() -> CardDefinition {
     }
 }
 
-/// Serra Paragon — flying; once each of your turns, cast a permanent spell
-/// with mana value 3 or less from your graveyard; lands from it too.
-/// Residual: lands don't share the limit, and the rider isn't granted.
+/// Serra Paragon — flying; once during each of your turns, play a land or
+/// cast a permanent spell with mana value 3 or less from your graveyard; it
+/// gains "when this is put into a graveyard from the battlefield, exile it
+/// and you gain 2 life".
 pub fn serra_paragon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        static_abilities: vec![
-            StaticAbility {
-                description: "Once during each of your turns, you may cast a permanent spell with mana value 3 or less from your graveyard.",
-                effect: StaticEffect::GraveyardCastOncePerTurn {
-                    mv_at_most_counters: None,
-                    filter: R::PermanentCard.and(R::Nonland).and(R::ManaValueAtMost(3)),
-                    exile_after: false,
-                },
+        static_abilities: vec![StaticAbility {
+            description: "Once during each of your turns, you may play a land from your graveyard or cast a permanent spell with mana value 3 or less from your graveyard. If you do, it gains \"When this permanent is put into a graveyard from the battlefield, exile it and you gain 2 life.\"",
+            effect: StaticEffect::GraveyardPlayOncePerTurnWithRider {
+                filter: R::PermanentCard.and(R::Nonland).and(R::ManaValueAtMost(3)),
+                rider_life: 2,
             },
-            StaticAbility {
-                description: "You may play a land from your graveyard.",
-                effect: StaticEffect::MayPlayLandsFromGraveyard,
-            },
-        ],
+        }],
         ..creature("Serra Paragon", cost(&[generic(2), w(), w()]), vec![CreatureType::Angel], 3, 4)
     }
 }

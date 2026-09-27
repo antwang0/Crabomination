@@ -143,7 +143,7 @@ lists were picked.
 | **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (Karazikar, Hellish Rebuke, Share the Spoils, Danse Macabre) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
-| **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
+| **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster) |
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
@@ -1424,8 +1424,8 @@ found one engine gap: ⚠ **`ExileFromGraveyard` / `ExileBottomOfGraveyard`
 never recorded what they exiled this resolution**, so an "exiled this way"
 count after them read 0 (Augusta, Order Returned). Residuals: **Ao, the Dawn
 Sky** leaves the unpicked cards on top; **Quintorius, Loremaster** casts the
-exiled card as the ability resolves and doesn't bottom it; **Serra Paragon**'s
-lands don't share its once-a-turn limit and its rider isn't granted. Four-seat pods beside Sigarda / Teval / Disa (seed 11104,
+exiled card as the ability resolves and doesn't bottom it (Serra Paragon's
+shared once and exile rider shipped since). Four-seat pods beside Sigarda / Teval / Disa (seed 11104,
 1,000 games, all decided): Quintorius 35.7 %; census: no card of the four
 unplayed; 6 and 8 seats (seed 11105) 1,000 / 1,000 each once a self-copying
 token stops at `BOARD_GATE` (they were 997 / 998, every cap a Scute Swarm).

@@ -2037,7 +2037,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dune Chanter | Desert Bloom (OTC) | land cards off the battlefield aren't Deserts (lands you control are). |
 | 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
-| 🟡 Serra Paragon | Lorehold Spirit (SOC) | lands played from the graveyard don't share the once-a-turn limit, and the "exile it and gain 2 life" rider isn't granted — it wants a trigger granted to the cast object for as long as it is that object (CR 400.7); `granted_triggers_timed` has no such expiry and a baked `definition_make_mut` grant rides the card into its next zone. |
 | 🟡 Grave Endeavor | Dungeons of Death (AFC) | the creature card returned is the greatest-power one, not a free choice, and its counters are put on after it enters. |
 | 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |
 | 🟡 Phantom Steed | Dungeons of Death (AFC) | the attacking token copy isn't an Illusion in addition to its other types. |

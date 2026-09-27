@@ -3283,8 +3283,7 @@ Newer deferrals (modern_decks, counter/aristocrat/aggro batches):
   this by keying on `PermanentSacrificed` instead. A canonical once-per-leave
   event dispatched in the same LKI window as `CreatureDied` would fix it
   properly (the naive mid-SBA dispatch clobbers `died_card_snapshots`).
-- **Deferred real cards** wanting unbuilt primitives: Serra Paragon
-  (once-per-turn play-from-graveyard with a delayed-exile rider), Enduring
+- **Deferred real cards** wanting unbuilt primitives: Enduring
   Tenacity (lifegain→opponent-loses scaled by amount + Enduring dies-return-as-
   enchantment), Sheltered by Ghosts (Aura with a second ETB exile-until-leaves
   target), Fear of Missing Out (Delirium first-attack token rider),

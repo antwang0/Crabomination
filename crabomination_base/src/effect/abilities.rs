@@ -2214,6 +2214,14 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         sacrifice: SelectionRequirement,
     },
+    /// "Once during each of your turns, you may play a land from your
+    /// graveyard or cast a [filter] spell from your graveyard. If you do, it
+    /// gains 'When this permanent is put into a graveyard from the
+    /// battlefield, exile it and you gain `rider_life` life.'" (Serra
+    /// Paragon). The land play and the cast share the per-source tally of
+    /// `GraveyardCastOncePerTurn`; the rider is baked onto the permanent as it
+    /// enters (`bake_grant`, so it ends with the object — CR 400.7).
+    GraveyardPlayOncePerTurnWithRider { filter: SelectionRequirement, rider_life: u32 },
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,

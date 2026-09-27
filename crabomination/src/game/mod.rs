@@ -1520,6 +1520,11 @@ pub struct ColdState {
     /// Amalgam's gate). Cleared at each turn's untap step.
     #[serde(default)]
     pub(crate) entered_from_graveyard_this_turn: crate::game::types::IdSet<CardId>,
+    /// Serra Paragon — spells cast through a `GraveyardPlayOncePerTurnWithRider`
+    /// grant this turn, with the rider's life: the permanent gains the rider
+    /// as it enters (`bake_graveyard_play_rider`). Cleared at each untap.
+    #[serde(default)]
+    pub(crate) graveyard_play_riders: Vec<(CardId, u32)>,
     /// Permanents that entered the battlefield directly from exile (not via a
     /// cast) this turn. Set in the exile→battlefield move path; read by
     /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent
@@ -31255,6 +31260,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
             | StaticEffect::GraveyardCastOncePerTurn { .. }
+            | StaticEffect::GraveyardPlayOncePerTurnWithRider { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }

@@ -7133,6 +7133,7 @@ impl BoardFacts {
                     SE::MayCastPermanentsFromGraveyard
                     | SE::PlayCardsFromGraveyardDuringYourTurn
                     | SE::GraveyardCastOncePerTurn { .. }
+                    | SE::GraveyardPlayOncePerTurnWithRider { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
                     | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
                     SE::CastFromGraveyardMatching { .. } => {
@@ -9514,6 +9515,7 @@ fn main_phase_action_with(
     // graveyard if no hand land was played (CR 305 land-from-gy permission).
     if can_play_land
         && (state.player_may_play_lands_from_graveyard(seat)
+            || state.graveyard_land_play_grant(seat).is_some()
             || state.battlefield.iter().any(|c| {
                 c.controller == seat
                     && c.definition.static_abilities.iter().any(|sa| {

@@ -1585,3 +1585,41 @@ fn carrier_thrall_leaves_an_eldrazi_scion() {
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Scion));
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Eldrazi));
 }
+
+/// Serra Paragon — "Once during each of your turns, you may play a land from
+/// your graveyard or cast a permanent spell with mana value 3 or less from
+/// your graveyard. If you do, it gains 'When this permanent is put into a
+/// graveyard from the battlefield, exile it and you gain 2 life.'" Lands used
+/// to be unlimited and the rider was never granted.
+#[test]
+fn serra_paragon_shares_its_once_and_grants_the_exile_rider() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::serra_paragon());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::PlayLandFromGraveyard(forest)).expect("the land is the once");
+    g.players[0].mana_pool.add(Color::Green, 2);
+    assert!(cast(&mut g, bears, None).is_err(), "the land used this turn's grant");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::serra_paragon());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bears, None).expect("Bears from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    let life = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let kill = crabomination::effect::Effect::Destroy {
+        what: crabomination::effect::Selector::EachPermanent(
+            crabomination::card::SelectionRequirement::HasCreatureType(CreatureType::Bear),
+        ),
+    };
+    let evs = g.resolve_effect(&kill, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears), "exiled by the rider");
+    assert_eq!(g.players[0].life, life + 2);
+    let card = g.exile.iter().find(|c| c.id == bears).unwrap();
+    assert!(card.definition.triggered_abilities.is_empty(), "the rider ended with the permanent");
+}
