@@ -2251,11 +2251,12 @@ fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
 
     // Bolt should now be in exile with may_play + pay-own-cost-any-color
     // stamped (printed: "mana of any type can be spent to cast that
-    // spell" — NOT a free cast), and no exile-after rider.
+    // spell" — NOT a free cast), and the exile-after rider ("if that spell
+    // would be put into a graveyard, exile it instead").
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
         .expect("bolt moved to exile by Nita");
     let perm = exiled.may_play_until.expect("may_play stamped");
-    assert!(!perm.exile_after, "printed text has no exile-on-resolution rider");
+    assert!(perm.exile_after, "the printed exile-on-resolution rider");
     assert_eq!(perm.player, 0, "permission goes to Nita's controller");
     let alt = exiled.granted_alt_cast_cost_eot.clone().expect("pays its own cost");
     assert_eq!(alt.cmc(), 1, "Bolt's mana value, payable with any type of mana");

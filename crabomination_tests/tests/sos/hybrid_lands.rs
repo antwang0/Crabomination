@@ -1678,6 +1678,9 @@ fn nita_sacrifices_another_and_cast_pays_own_cost() {
     .expect("paying {1} with green mana casts the exiled bolt");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17, "bolt resolved");
+    // "If that spell would be put into a graveyard, exile it instead."
+    assert!(g.exile.iter().any(|c| c.id == bolt_id), "the resolved bolt is exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bolt_id));
 }
 
 /// Visionary's Dance's "{2}, Discard this card: look at the top two, one to

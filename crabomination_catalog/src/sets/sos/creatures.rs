@@ -5127,7 +5127,8 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 /// each creature you control. / {2}, Sacrifice another creature: Exile
 /// target instant or sorcery card from an opponent's graveyard. You
 /// may cast it this turn, and mana of any type can be spent to cast
-/// that spell. Activate only as a sorcery."
+/// that spell. If that spell would be put into a graveyard, exile it
+/// instead. Activate only as a sorcery." (the rider is `exile_after`)
 ///
 /// Push (modern_decks): the `{2}, Sacrifice another creature` activation
 /// is **now wired** via the new cast-from-exile primitives. The activation
@@ -5137,8 +5138,7 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 /// any_color: true` — the printed "you may cast it ... and mana of any
 /// type can be spent" charges the spell's own mana value payable in any
 /// colors, not a free cast. Sorcery-speed gate via `sorcery_speed:
-/// true`; sacrifice-another-creature cost via `sac_cost: true`. The
-/// cast card follows normal resolution routing (owner's graveyard).
+/// true`; sacrifice-another-creature cost via `sac_cost: true`.
 /// The sacrifice cost uses `sac_other_filter` — "sacrifice ANOTHER
 /// creature" — not `sac_cost` (which sacrifices the source).
 ///
@@ -5185,7 +5185,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
                         what: Selector::LastMoved,
                         duration: crate::card::MayPlayDuration::EndOfThisTurn,
                         to_owner: false,
-                        exile_after: false,
+                        exile_after: true,
                         pay_own_cost: true,
                         any_color: true,
                     },
