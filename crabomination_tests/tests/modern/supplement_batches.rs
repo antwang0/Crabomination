@@ -1625,7 +1625,7 @@ fn compulsive_research_draws_three_discards_a_land() {
     g.players[0].mana_pool.add_colorless(2);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
     // -1 (cast) + 3 (draw) - 1 (a land discarded instead of two cards) = +1.

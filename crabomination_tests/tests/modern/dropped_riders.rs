@@ -283,9 +283,28 @@ fn compulsive_research_discards_a_land_instead() {
     let cr = g.add_card_to_hand(0, catalog::compulsive_research());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, cr, None).expect("cast");
+    cast(&mut g, cr, Some(Target::Player(0))).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 3, "one land discarded, three Bolts kept");
+}
+
+/// Compulsive Research — "*Target player* draws three cards. Then that player
+/// discards …": aimed at an opponent, they draw and they discard.
+#[test]
+fn compulsive_research_can_target_an_opponent() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::lightning_bolt());
+    }
+    let cr = g.add_card_to_hand(0, catalog::compulsive_research());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let mine = g.players[0].hand.len();
+    cast(&mut g, cr, Some(Target::Player(1))).expect("cast at P1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), mine - 1, "the caster only spent the card");
+    assert_eq!(g.players[1].hand.len(), 1, "P1 drew three Bolts and, with no land, discarded two");
+    assert_eq!(g.players[1].graveyard.len(), 2);
 }
 
 /// Mask of Griselbrand — "you may pay X life … If you do, draw X cards": the

@@ -358,12 +358,11 @@ Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
 Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Beast; Lethal Scheme;
 Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
 Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
-`Effect::PayLifeOrPutBackDrawnThisTurn`); Master Biomancer's Mutant rider. Still open:
+`Effect::PayLifeOrPutBackDrawnThisTurn`); Master Biomancer's Mutant rider; Compulsive Research's target player. Still open:
 
 | Card | Gap |
 |---|---|
 | 🟡 Comeuppance | the prevention ships; the reflected damage (to the creature, else its controller) does not, and your own sources are prevented too. |
-| 🟡 Compulsive Research | "target player" is always you. |
 | 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
 
