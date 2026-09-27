@@ -602,13 +602,13 @@ pub fn dread_return() -> CardDefinition {
     }
 }
 
-/// Archdruid's Charm — {G}{G}{G} Instant.
+/// Archdruid's Charm — {G}{G}{G} Instant. Choose one — search for a creature
+/// or land card (a land onto the battlefield tapped, otherwise to hand); a
+/// +1/+1 counter on your creature, which then deals damage equal to its power
+/// to a creature you don't control; or exile an artifact or enchantment.
 ///
-/// Oracle: Choose one — Search your library for a creature card, reveal it,
-/// put it into your hand / Put two +1/+1 counters on target creature you
-/// control / Destroy target artifact or non-Forest land an opponent controls.
-///
-/// All three modes wired via ChooseMode.
+/// ⚠ It shipped with three invented modes (a creature-only tutor, two
+/// counters, and "destroy an artifact or non-Forest land").
 pub fn archdruids_charm() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -616,24 +616,43 @@ pub fn archdruids_charm() -> CardDefinition {
         cost: cost(&[g(), g(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact
-                        .or(SelectionRequirement::Land)
-                        .and(SelectionRequirement::ControlledByOpponent),
-                ),
+            Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::If {
+                    cond: crate::effect::Predicate::EntityMatches {
+                        what: Selector::LastMoved,
+                        filter: SelectionRequirement::Land,
+                    },
+                    then: Box::new(Effect::Move {
+                        what: Selector::LastMoved,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::Target(0),
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou.negate()),
+                    },
+                },
+            ]),
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
             },
         ]),
         ..Default::default()

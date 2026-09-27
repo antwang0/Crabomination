@@ -4493,7 +4493,7 @@ fn spitfire_lagac_landfall_burns_each_opp() {
 }
 
 #[test]
-fn settle_the_score_destroys_creature_and_adds_loyalty() {
+fn settle_the_score_exiles_creature_and_adds_loyalty() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -4519,18 +4519,8 @@ fn settle_the_score_destroys_creature_and_adds_loyalty() {
     .expect("Settle the Score castable for {3}{B}");
     drain_stack(&mut g);
 
-    // Bear destroyed.
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == victim),
-        "bear destroyed"
-    );
-    assert!(
-        g.players[1]
-            .graveyard
-            .iter()
-            .any(|c| c.definition.name == "Grizzly Bears"),
-        "bear in graveyard"
-    );
+    // Bear exiled — the print says exile (it destroyed).
+    assert!(g.exile.iter().any(|c| c.id == victim), "bear exiled");
     // Planeswalker gained 2 loyalty.
     let loyalty_after = g
         .battlefield

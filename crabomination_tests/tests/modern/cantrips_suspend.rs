@@ -228,18 +228,19 @@ fn wrangle_steals_until_end_of_turn() {
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "control reverts at EOT");
 }
 
-/// Ravenform destroys a creature and gives its controller a Bird.
+/// Ravenform EXILES a creature (it destroyed) and gives its controller a 1/1
+/// Bird (it was a "Bird Illusion").
 #[test]
-fn ravenform_destroys_and_gifts_bird() {
+fn ravenform_exiles_and_gifts_bird() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::ravenform());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(bear));
-    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
     let birds = g.battlefield.iter()
-        .filter(|c| c.controller == 1 && c.definition.name == "Bird Illusion").count();
+        .filter(|c| c.controller == 1 && c.definition.name == "Bird").count();
     assert_eq!(birds, 1, "its controller got a Bird");
 }
 

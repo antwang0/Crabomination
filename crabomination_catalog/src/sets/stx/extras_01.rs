@@ -1364,7 +1364,8 @@ pub fn settle_the_score() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy {
+            // "Exile" — it destroyed.
+            Effect::Exile {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::AddCounter {

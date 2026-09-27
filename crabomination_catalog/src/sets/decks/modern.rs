@@ -1407,7 +1407,8 @@ pub fn ravenform() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy {
+            // "Exile" — it destroyed (indestructible and dies triggers saw it).
+            Effect::Exile {
                 what: target_filtered(
                     SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
                 ),
@@ -1416,14 +1417,14 @@ pub fn ravenform() -> CardDefinition {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 definition: std::sync::Arc::new(TokenDefinition {
-                    name: "Bird Illusion".into(),
+                    name: "Bird".into(),
                     power: 1,
                     toughness: 1,
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Blue],
                     keywords: vec![Keyword::Flying],
                     subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Bird, CreatureType::Illusion],
+                        creature_types: vec![CreatureType::Bird],
                         ..Default::default()
                     },
                     ..Default::default()

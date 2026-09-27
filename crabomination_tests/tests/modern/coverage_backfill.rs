@@ -192,21 +192,41 @@ fn sowing_mycospawn_kicked_exiles_a_land() {
     assert!(g.battlefield_find(victim).is_none(), "kicked, it exiles target land");
 }
 
+/// Archdruid's Charm (mode 1) — a +1/+1 counter on your creature, which then
+/// deals damage equal to its power to a creature you don't control (it
+/// shipped with two counters and no bite).
 #[test]
-fn archdruids_charm_mode_one_adds_two_counters_to_your_creature() {
+fn archdruids_charm_mode_one_counters_then_bites() {
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant());
     let id = g.add_card_to_hand(0, catalog::archdruids_charm());
     g.players[0].mana_pool.add(Color::Green, 3);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bears)),
-        additional_targets: vec![], mode: Some(1), x_value: None,
+        additional_targets: vec![Target::Permanent(foe)], mode: Some(1), x_value: None,
     }).expect("Archdruid's Charm castable for {G}{G}{G}");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let b = view.iter().find(|c| c.id == bears).unwrap();
-    assert_eq!((b.power, b.toughness), (4, 4), "2/2 + two +1/+1 counters = 4/4");
+    assert_eq!((b.power, b.toughness), (3, 3), "one counter");
+    assert!(g.battlefield_find(foe).is_none(), "3 damage to the 3/3");
+}
+
+/// Archdruid's Charm (mode 0) — a land found goes onto the battlefield tapped.
+#[test]
+fn archdruids_charm_mode_zero_puts_a_land_in_tapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::archdruids_charm());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped));
 }
 
 /// Awaken the Honored Dead is a `{B}{G}{U}` Saga: I destroys a nonland
