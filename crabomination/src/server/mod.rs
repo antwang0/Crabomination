@@ -92,6 +92,7 @@ mod combat_only;
 mod suspend;
 mod foretell;
 mod room;
+mod mutate;
 mod fog;
 mod voyage;
 mod evasion;

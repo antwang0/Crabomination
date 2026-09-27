@@ -296,3 +296,28 @@ fn cr_903_8_a_commander_mutates_from_the_command_zone_under_its_tax() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear2).is_some_and(|c| c.mutate_stack.len() == 2));
 }
+
+/// CR 702.140 — a pod bot mutates: with a Bear that can already attack, the
+/// Shoreshark goes on top of it for {3}{U} rather than entering sick for five.
+#[test]
+fn bot_mutates_onto_a_ready_host() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(3);
+    for s in 0..3 {
+        for _ in 0..10 {
+            g.add_card_to_library(s, catalog::island());
+        }
+    }
+    g.seat_commanders(0, vec![catalog::otrimi_the_ever_playful()]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let shark = g.add_card_to_hand(0, catalog::pouncing_shoreshark());
+    let act = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(act, Some(GameAction::CastMutate { card_id, target, on_top: true, .. }) if card_id == shark && target == bear),
+        "{act:?}"
+    );
+}

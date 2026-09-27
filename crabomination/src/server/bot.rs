@@ -8280,6 +8280,9 @@ pub(super) fn cast_candidates<'a>(
     }
     });
 
+    // Mutate (CR 702.140), Commander games only — see `server/mutate.rs`.
+    castable.extend(super::mutate::mutate_candidates(state, seat).into_iter().map(|a| (a, false)));
+
     // Retrace (CR 702.81): recast a graveyard card by discarding a land card —
     // offered only with a land to spare (a second land in hand, or the land
     // drop already made this turn).
@@ -19900,6 +19903,9 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastFromCommandZone { card_id, target, .. } => {
             (*card_id, target.clone(), 0, 0)
         }
+        // CR 702.140 — the merged creature is the card, with the host's
+        // readiness (and its abilities) as the variant's premium.
+        GameAction::CastMutate { card_id, .. } => (*card_id, None, 3, 0),
         GameAction::CastAdventureCreature { card_id, target, .. }
         | GameAction::CastPlotted { card_id, target, .. }
         | GameAction::CastForetold { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
@@ -19930,7 +19936,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
     let mut slot0_wants_self = false;
     // `find_card_anywhere` doesn't walk the command zone.
     let card = state.find_card_anywhere(card_id).or_else(|| match action {
-        GameAction::CastFromCommandZone { .. } => {
+        GameAction::CastFromCommandZone { .. } | GameAction::CastMutate { .. } => {
             state.players[seat].command.iter().find(|c| c.id == card_id)
         }
         _ => None,
