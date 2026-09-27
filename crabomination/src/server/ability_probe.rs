@@ -1,9 +1,10 @@
 //! The ability probe: `CRAB_PROBE=names.txt cargo nextest run -p crabomination
 //! probe_abilities --no-capture` puts each named card, untapped and unsick,
 //! onto seat 0's battlefield in a three-seat Commander game — fifteen basic
-//! lands, a Grizzly Bears commander, a Hill Giant across the table, stocked
-//! libraries and graveyard — and prints whether the bot's next action at its
-//! post-combat main and at an opponent's end step activates it. Feed it the
+//! lands, a Grizzly Bears commander, a Hill Giant, Glorious Anthem and Sol
+//! Ring across the table, stocked libraries and graveyards — and prints
+//! whether the bot's next action at its post-combat main and at an
+//! opponent's end step activates it. Feed it the
 //! `never activated` names from a `--card-census` run: a card the census never
 //! saw used but the probe does is a coverage gap, and one the probe skips too
 //! is a bot gap. A planeswalker gets `CRAB_PROBE_LOYALTY` loyalty on top of
@@ -53,8 +54,11 @@ fn probe_abilities() {
             g.clear_sickness(b);
             g.players[0].commanders.push(b);
             g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+            g.add_card_to_battlefield(1, crate::catalog::glorious_anthem());
+            g.add_card_to_battlefield(1, crate::catalog::sol_ring());
             for _ in 0..3 {
                 g.add_card_to_graveyard(0, crate::catalog::grizzly_bears());
+                g.add_card_to_graveyard(1, crate::catalog::grizzly_bears());
             }
             for seat in 0..3 {
                 for _ in 0..20 {
