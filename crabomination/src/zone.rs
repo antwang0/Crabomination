@@ -1002,6 +1002,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::SharedFate
                 | S::PlayersDrawExiledPlayable
                 | S::ControllerMaySkipDraws
+                | S::MayReplaceDrawWithCounter { .. }
                 | S::MayReplaceDrawWithTutor
                 | S::MayDrawFromSourceExilePile
                 | S::MayReplaceDrawWithRevealUntilKind

@@ -20548,6 +20548,22 @@ impl GameState {
         })
     }
 
+    /// CR 121.2a — the permanent `p` controls whose
+    /// `MayReplaceDrawWithCounter` is still short of its `stop_at`, and the
+    /// counter it takes.
+    fn counter_instead_of_drawing(&self, p: usize) -> Option<(crate::card::CardId, crate::card::CounterType)> {
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(crate::effect::StaticEffect::MayReplaceDrawWithCounter { kind, stop_at })
+                    if c.counter_count(*kind) < *stop_at =>
+                {
+                    Some((c.id, *kind))
+                }
+                _ => None,
+            })
+        })
+    }
+
     /// CR 121.2a — the look-N-keep-one draw replacement `p` controls
     /// (Tomorrow, Azami's Familiar), peeled through the gating wrappers.
     fn look_instead_of_drawing(&self, p: usize) -> Option<u32> {
@@ -20795,6 +20811,9 @@ impl GameState {
             }
             if self.player_may_reveal_until_kind_instead_of_drawing(p) {
                 applicable.push(DrawDig::RevealUntilKind);
+            }
+            if self.counter_instead_of_drawing(p).is_some() {
+                applicable.push(DrawDig::CounterOnSource);
             }
             applicable.retain(|k| !declined.contains(k));
             let Some(kind) = self.choose_draw_replacement(p, &applicable) else { break };
@@ -21158,6 +21177,25 @@ impl GameState {
                     },
                     &ctx,
                 ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+            // Pursuit of Knowledge — "you may put a study counter on this
+            // enchantment instead"; through `AddCounter` so counter triggers
+            // and doublers see it.
+            DrawDig::CounterOnSource => {
+                let Some((src, kind)) = self.counter_instead_of_drawing(p) else { return false };
+                if !ask(self, "Put a counter on it instead of drawing?") {
+                    return false;
+                }
+                let ctx = crate::game::effects::EffectContext::for_ability(src, p, None);
+                let add = crate::effect::Effect::AddCounter {
+                    what: crate::effect::Selector::This,
+                    kind,
+                    amount: crate::effect::Value::ONE,
+                };
+                if let Ok(mut evs) = self.resolve_effect_driven(&add, &ctx) {
                     events.append(&mut evs);
                 }
                 true
@@ -31539,6 +31577,7 @@ fn static_effect_to_effects(
             // `draw_one`; no layer effect.
             | StaticEffect::MayReplaceDrawWithTutor
             | StaticEffect::ControllerMaySkipDraws
+            | StaticEffect::MayReplaceDrawWithCounter { .. }
             // Catalyst Stone — read by `flashback_cost_shift` at cast time.
             | StaticEffect::FlashbackCostReduction { .. }
             | StaticEffect::SelfFlashbackCostsLess { .. }
@@ -32724,6 +32763,8 @@ pub(crate) enum DrawDig {
     Tutor,
     /// Abundance — reveal until a land/nonland of your choice.
     RevealUntilKind,
+    /// Pursuit of Knowledge — put a counter on the source instead.
+    CounterOnSource,
 }
 
 impl DrawDig {
@@ -32733,6 +32774,7 @@ impl DrawDig {
             DrawDig::LookN => "Look at the top cards and keep one",
             DrawDig::Tutor => "Search your library for a card",
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
+            DrawDig::CounterOnSource => "Put a counter on it instead",
         }
     }
 }

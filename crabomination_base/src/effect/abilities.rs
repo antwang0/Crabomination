@@ -416,6 +416,11 @@ pub enum StaticEffect {
     /// skips only when the library is empty (the draw that would otherwise
     /// lose the game).
     ControllerMaySkipDraws,
+    /// CR 121.2a — "If you would draw a card, you may put a [kind] counter on
+    /// this instead" (Pursuit of Knowledge). Controller-scoped and optional;
+    /// offered only while this has fewer than `stop_at` counters of `kind`
+    /// (the count its payoff spends), so the auto policy banks exactly that.
+    MayReplaceDrawWithCounter { kind: crate::card::CounterType, stop_at: u32 },
     /// "[applies_to] you control get +per/+per for each Equipment attached to
     /// *this creature*" (Armament Master). The attachment-scaled sibling of
     /// `PumpTeamByControlledPermanents`, which counts board-wide instead.
