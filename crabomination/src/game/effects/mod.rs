@@ -38775,6 +38775,23 @@ impl GameState {
                 let mut mana_spent = 0u32;
                 if *reduce_generic > 0 || *pay_own_cost {
                     let mut discounted = card_def.cost.clone();
+                    // A paid cast is a cast: the caster's taxes and discounts
+                    // apply (Sproutback Trudge's life-gained discount, a
+                    // Thalia on the table).
+                    if let Some(card) = self.find_card_anywhere(cast_id) {
+                        let zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
+                        let extra = crate::game::actions::extra_cost_for_spell(self, ctx.controller, card, auto_target.as_ref());
+                        let less = crate::game::actions::cost_reduction_for_spell_full(
+                            self,
+                            ctx.controller,
+                            card,
+                            auto_target.as_ref(),
+                            zone == crate::card::Zone::Graveyard,
+                            zone == crate::card::Zone::Exile,
+                        );
+                        discounted.add_generic(extra);
+                        discounted.reduce_generic(less);
+                    }
                     discounted.reduce_generic(*reduce_generic);
                     let forced_only = self.seat_prompts(ctx.controller);
                     match self.try_pay_with_auto_tap_mode(ctx.controller, &discounted, forced_only) {
