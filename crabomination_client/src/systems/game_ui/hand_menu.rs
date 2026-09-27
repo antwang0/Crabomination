@@ -219,9 +219,7 @@ pub fn spawn_hand_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(option_label(option, &k)),
-                        ui_fonts.tf(13.0),
-                        TextColor(theme::TEXT_PRIMARY),
+                        crate::mana_text::mana_text(option_label(option, &k), 13.0, theme::TEXT_PRIMARY),
                         Pickable::IGNORE,
                     ));
                 });

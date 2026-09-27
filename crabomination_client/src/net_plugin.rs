@@ -919,23 +919,19 @@ fn pending_cast_banner_label(pc: &PendingCast, view: &CurrentView) -> String {
 fn update_pending_cast_banner(
     mut commands: Commands,
     pending: Res<PendingManaCast>,
-    fonts: Option<Res<crate::theme::UiFonts>>,
     view: Res<CurrentView>,
     existing: Query<Entity, With<PendingCastBanner>>,
-    mut text_q: Query<&mut Text, With<PendingCastBannerText>>,
+    mut text_q: Query<&mut crate::mana_text::ManaText, With<PendingCastBannerText>>,
 ) {
     match (&pending.0, existing.iter().next()) {
         (Some(pc), Some(_)) => {
             // Live update: the remaining-cost readout shrinks as sources tap.
             let label = pending_cast_banner_label(pc, &view);
             for mut text in &mut text_q {
-                if text.0 != label {
-                    text.0 = label.clone();
-                }
+                text.set(&label);
             }
         }
         (Some(pc), None) => {
-            let Some(fonts) = fonts else { return };
             let label = pending_cast_banner_label(pc, &view);
             commands
                 .spawn((
@@ -953,11 +949,10 @@ fn update_pending_cast_banner(
                     GlobalZIndex(crate::theme::layer::BANNER),
                 ))
                 .with_children(|row| {
+                    // "{1}{U} to go" in mana pips (`mana_text`).
                     row.spawn((
-                        Text::new(label),
+                        crate::mana_text::ManaText::new(label, 16.0, crate::theme::ACCENT_GOLD),
                         PendingCastBannerText,
-                        fonts.tf(16.0),
-                        TextColor(crate::theme::ACCENT_GOLD),
                         BackgroundColor(Color::srgba(0.04, 0.06, 0.12, 0.92)),
                         Node {
                             padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),

@@ -32,6 +32,7 @@ mod deck_picker;
 mod embedded_assets;
 mod game;
 mod layout_harness;
+mod mana_text;
 mod menu;
 mod net_plugin;
 mod render_quality;
@@ -431,6 +432,7 @@ fn main() {
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
+                layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
                 layout_harness::zoom_on_card_for_screenshot
                     .after(crate::systems::camera_zoom::camera_zoom)
                     .run_if(in_state(AppState::InGame)),
@@ -440,6 +442,8 @@ fn main() {
             PreUpdate,
             layout_harness::inject_damage_for_screenshot.after(crate::net_plugin::poll_net),
         )
+        // Mana symbols in UI text, in every state (the draft shows costs too).
+        .add_systems(Update, mana_text::sync_mana_text)
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every

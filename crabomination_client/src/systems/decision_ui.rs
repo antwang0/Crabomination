@@ -2655,11 +2655,8 @@ fn spawn_optional_modal(
     commands.entity(root).add_child(panel);
 
     commands.entity(panel).with_children(|p| {
-        p.spawn((
-            Text::new(description.to_string()),
-            ui_fonts.tf(16.0),
-            TextColor(theme::TEXT_PRIMARY),
-        ));
+        // "Pay {3} to keep this trigger?" — its cost as mana pips.
+        crate::mana_text::spawn_text(p, ui_fonts, description, 16.0, theme::TEXT_PRIMARY);
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
             column_gap: Val::Px(12.0),

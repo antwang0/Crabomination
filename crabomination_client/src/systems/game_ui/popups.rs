@@ -288,9 +288,7 @@ pub fn spawn_ability_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(fg),
+                        crate::mana_text::mana_text(label, 13.0, fg),
                         Pickable::IGNORE,
                     ));
                 });
@@ -307,9 +305,7 @@ pub fn spawn_ability_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(theme::TEXT_PRIMARY),
+                        crate::mana_text::mana_text(label, 13.0, theme::TEXT_PRIMARY),
                         Pickable::IGNORE,
                     ));
                 });
@@ -331,9 +327,7 @@ pub fn spawn_ability_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(fg),
+                        crate::mana_text::mana_text(label, 13.0, fg),
                         Pickable::IGNORE,
                     ));
                 });
@@ -355,9 +349,7 @@ pub fn spawn_ability_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(fg),
+                        crate::mana_text::mana_text(label, 13.0, fg),
                         Pickable::IGNORE,
                     ));
                 });
@@ -379,9 +371,7 @@ pub fn spawn_ability_menu(
                 ))
                 .with_children(|b| {
                     b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(fg),
+                        crate::mana_text::mana_text(label, 13.0, fg),
                         Pickable::IGNORE,
                     ));
                 });
@@ -1195,9 +1185,7 @@ pub fn spawn_split_cast_modal(
                         ))
                         .with_children(|b| {
                             b.spawn((
-                                Text::new(label),
-                                ui_fonts.tf(13.0),
-                                TextColor(theme::TEXT_PRIMARY),
+                                crate::mana_text::mana_text(label, 13.0, theme::TEXT_PRIMARY),
                                 bevy::picking::Pickable::IGNORE,
                             ));
                         });
@@ -1396,9 +1384,7 @@ pub fn spawn_spree_cast_modal(
                                 bevy::picking::Pickable::IGNORE,
                             ));
                             b.spawn((
-                                Text::new(label.clone()),
-                                ui_fonts.tf(13.0),
-                                TextColor(theme::TEXT_PRIMARY),
+                                crate::mana_text::mana_text(label.clone(), 13.0, theme::TEXT_PRIMARY),
                                 bevy::picking::Pickable::IGNORE,
                             ));
                         });
@@ -1628,9 +1614,7 @@ pub fn spawn_helper_tap_modal(
                                 bevy::picking::Pickable::IGNORE,
                             ));
                             b.spawn((
-                                Text::new(label.clone()),
-                                ui_fonts.tf(13.0),
-                                TextColor(theme::TEXT_PRIMARY),
+                                crate::mana_text::mana_text(label.clone(), 13.0, theme::TEXT_PRIMARY),
                                 bevy::picking::Pickable::IGNORE,
                             ));
                         });

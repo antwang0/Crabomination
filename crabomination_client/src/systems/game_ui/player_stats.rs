@@ -314,20 +314,21 @@ pub(super) fn summon_chip_body(bonus_counters: u32, gains_haste: bool) -> Option
     (!parts.is_empty()).then(|| format!("\u{1F43A} next {}", parts.join(" ")))
 }
 
-/// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
+/// Compact per-color devotion readout (CR 700.5), e.g. `"{B}3 {G}1"`. Returns
 /// `None` when the player has no devotion (the common non-Theros case), so
 /// callers can skip the chip entirely. Shared by the viewer and opponent rows.
 pub(super) fn devotion_chip_body(devotion: &[u32; 5]) -> Option<String> {
     if !devotion.iter().any(|&d| d > 0) {
         return None;
     }
+    // A pip and its count: `spawn_stat_chip` draws the `{W}` (`mana_text`).
     const SYM: [&str; 5] = ["W", "U", "B", "R", "G"];
     Some(
         devotion
             .iter()
             .enumerate()
             .filter(|&(_, &d)| d > 0)
-            .map(|(i, &d)| format!("{}{}", SYM[i], d))
+            .map(|(i, &d)| format!("{{{}}}{}", SYM[i], d))
             .collect::<Vec<_>>()
             .join(" "),
     )
@@ -497,12 +498,12 @@ pub(super) fn spawn_stat_chip(
             Pickable::IGNORE,
         ))
         .with_children(|chip| {
-            chip.spawn((
-                Text::new(text),
-                ui_fonts.tf(12.0),
-                TextColor(fg),
-                Pickable::IGNORE,
-            ));
+            // A chip with a mana symbol in it (devotion) draws it as a pip.
+            if crate::mana_text::has_pips(&text) {
+                chip.spawn((crate::mana_text::mana_text(text, 12.0, fg), Pickable::IGNORE));
+            } else {
+                chip.spawn((Text::new(text), ui_fonts.tf(12.0), TextColor(fg), Pickable::IGNORE));
+            }
         });
 }
 
@@ -1152,7 +1153,7 @@ pub fn update_player_stats_chips(
             );
         }
         // CR 700.5 devotion — only surface in Theros-flavored games (any
-        // nonzero color). Compact per-color readout, e.g. "◆ B3 G1".
+        // nonzero color). Compact per-color readout, e.g. "◆ {B}3 {G}1".
         if let Some(body) = devotion_chip_body(&p.devotion) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
@@ -1481,17 +1482,12 @@ pub fn update_player_stats_chips(
 // ── Mana pips ────────────────────────────────────────────────────────────────
 
 /// Per-color visual style for a mana pip: background tint + readable
-/// text colour for the count rendered on top.
+/// text colour for the count rendered on top — the mana symbols' own
+/// palette (`mana_text`), so a pool's white is a cost's white.
 fn mana_pip_colors(color: Option<crabomination::mana::Color>) -> (Color, Color) {
-    use crabomination::mana::Color as MC;
     match color {
-        Some(MC::White) => (Color::srgb(0.95, 0.93, 0.85), Color::srgb(0.20, 0.18, 0.15)),
-        Some(MC::Blue) => (Color::srgb(0.30, 0.55, 0.90), theme::TEXT_PRIMARY),
-        Some(MC::Black) => (Color::srgb(0.18, 0.18, 0.22), theme::TEXT_PRIMARY),
-        Some(MC::Red) => (Color::srgb(0.85, 0.30, 0.25), theme::TEXT_PRIMARY),
-        Some(MC::Green) => (Color::srgb(0.30, 0.65, 0.35), theme::TEXT_PRIMARY),
-        // Colorless
-        None => (Color::srgb(0.70, 0.70, 0.72), Color::srgb(0.20, 0.20, 0.22)),
+        Some(c) => (crate::mana_text::fill(c), crate::mana_text::INK),
+        None => (crate::mana_text::GREY, crate::mana_text::INK),
     }
 }
 

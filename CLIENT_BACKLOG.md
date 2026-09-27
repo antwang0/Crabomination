@@ -202,6 +202,29 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Mana symbols (2026-09-27) — shipped, with residuals
+
+- ✅ **Costs draw as mana pips** (`mana_text`). The engine writes every
+  cost the Oracle way (`ManaCost::summary()`'s `{3}{W}{W}`, an ability's
+  `{2}{T}: Draw a card`) and the client printed the braces. `ManaText` on
+  a node draws such a string as a row: each `{…}` a round pip in the
+  printed symbol's colour with its letter or number — hybrids split corner
+  to corner, `{T}` ↻, `{Q}` ⟲, `{E}` ⚡ — and the rest as text, wrapping
+  between words where asked. The UI font has no mana glyphs, so a pip is a
+  node. On it: the command-zone cost chip, the ability / alternative-cost
+  / split-card / spree popups, the hand menu, the Alt tooltip, the hover
+  panel's cost lines, the "{1}{U} to go" manual-tap banner, optional
+  trigger prompts ("Pay {3} to keep this trigger?") and the devotion chip
+  ("◆ {W}6 {U}2"). The mana-pool chips took the same palette, so a pool's
+  white is a cost's white. Layout harness: `--mana-gallery`.
+  - ⏳ Phyrexian pips read "P": the fallback font subsets carry only the
+    symbols the client already used, and phi wasn't one. Add `Φ` to
+    `mana_text::look` and rerun `scripts/ui_fallback_fonts.py` (needs
+    fontTools and the Noto sources).
+  - ⏳ The other decision prompts (X picker, mode lists, pay-life
+    choices) print any cost as text; convert them with
+    `mana_text::spawn_text` as they turn up.
+
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
 A read of the client turned up four defects that read as bugs rather than
@@ -386,13 +409,6 @@ Life changes are instantaneous text mutations in `update_player_text` /
 ~0.5s and spawn a floating "−4" / "+2" near the player portrait that
 drifts up and fades. Hook off `GameEventWire::DamageDealt`, `LifeLost`,
 `LifeGained`. Pulse the life text red on lethal threat.
-
-### Mana Symbol Rendering (Costs + Pool)
-Mana is rendered as text codes (`W:1 R:2`) in the player status, ability
-costs, alt-cast modal, and decision modals. Adopt a mana-symbol font or
-PNG atlas plus a text segmenter that splits `{2}{R}{R}` into icons +
-numerals. Once the glyph primitive exists every mana surface benefits
-(the pip-style mana-pool HUD already ships in `player_stats.rs`).
 
 ### Phase Chart Progress Indicator
 `update_phase_chart` highlights only the current step in yellow. Add a

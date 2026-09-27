@@ -252,11 +252,10 @@ fn command_zone_cost_labels(cv: &ClientView) -> HashMap<CardId, String> {
 pub fn sync_command_zone_cost_badges(
     mut commands: Commands,
     view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<CommandZoneCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
-    mut badges: Query<(Entity, &CommandZoneCostBadge, &mut Node, &mut Text)>,
+    mut badges: Query<(Entity, &CommandZoneCostBadge, &mut Node, &mut crate::mana_text::ManaText)>,
 ) {
     let desired = view.0.as_ref().map(command_zone_cost_labels).unwrap_or_default();
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
@@ -271,8 +270,8 @@ pub fn sync_command_zone_cost_badges(
                 .map(|v| (gid.0, v))
         })
         .collect();
-    // Rough centring: the node auto-sizes, so offset by an estimated width.
-    let place = |label: &str, at: Vec2| (at.x - label.chars().count() as f32 * 3.4, at.y + 2.0);
+    // Centred under the card (the chip's `UiTransform`), just below it.
+    let place = |at: Vec2| (at.x, at.y + 2.0);
 
     let mut seen: HashSet<CardId> = HashSet::new();
     for (e, badge, mut node, mut text) in &mut badges {
@@ -281,12 +280,10 @@ pub fn sync_command_zone_cost_badges(
             continue;
         };
         seen.insert(badge.0);
-        if text.0 != *label {
-            text.0 = label.clone();
-        }
+        text.set(label);
         match anchor_of.get(&badge.0) {
             Some(at) => {
-                let (x, y) = place(label, *at);
+                let (x, y) = place(*at);
                 node.display = Display::Flex;
                 node.left = Val::Px(x);
                 node.top = Val::Px(y);
@@ -298,22 +295,21 @@ pub fn sync_command_zone_cost_badges(
         if seen.contains(id) {
             continue;
         }
-        let (left, top) =
-            anchor_of.get(id).map(|at| place(label, *at)).unwrap_or((-1000.0, -1000.0));
+        let (left, top) = anchor_of.get(id).map(|at| place(*at)).unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             CommandZoneCostBadge(*id),
-            Text::new(label.clone()),
-            ui_fonts.tf(12.0),
-            TextColor(theme::ACCENT_GOLD),
+            // The cost as mana pips (`mana_text`), the tax note as text.
+            crate::mana_text::ManaText::new(label.clone(), 13.0, theme::ACCENT_GOLD),
             BackgroundColor(Color::srgba(0.10, 0.09, 0.05, 0.92)),
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(left),
                 top: Val::Px(top),
-                padding: UiRect::axes(Val::Px(5.0), Val::Px(1.0)),
-                border_radius: BorderRadius::all(Val::Px(6.0)),
+                padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                border_radius: BorderRadius::all(Val::Px(8.0)),
                 ..default()
             },
+            UiTransform::from_translation(Val2::percent(-50.0, 0.0)),
             Pickable::IGNORE,
             GlobalZIndex(BADGE_Z),
             InGameRoot,

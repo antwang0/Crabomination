@@ -14,7 +14,7 @@
 //! look at what sits on it (counter chips, badges); `--demo-damage` feeds the
 //! client a batch of combat damage just before the screenshot, so it catches
 //! the damage numerals in flight; `--stack` starts with two spells on the
-//! stack.
+//! stack; `--mana-gallery` lays every kind of mana symbol over the board.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -63,6 +63,8 @@ pub struct HarnessArgs {
     pub demo_damage: bool,
     /// `--stack`: the viewer has cast two spells and holds priority.
     pub stack: bool,
+    /// `--mana-gallery`: a panel of sample costs over the board.
+    pub mana_gallery: bool,
 }
 
 impl HarnessArgs {
@@ -93,6 +95,7 @@ impl HarnessArgs {
             zoom_card: value("--zoom-card"),
             demo_damage: args.iter().any(|a| a == "--demo-damage"),
             stack: args.iter().any(|a| a == "--stack"),
+            mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
         }
     }
 
@@ -349,6 +352,54 @@ pub fn inject_damage_for_screenshot(
             });
         }
     }
+}
+
+/// What `--mana-gallery` shows: each kind of symbol the engine writes, in
+/// the shapes the client prints them.
+const MANA_GALLERY: &[&str] = &[
+    "{3}{W}{W}   {X}{R}{R}   {1}{U}{B}{G}   {10}",
+    "{2}{T}: Draw a card.   {Q}: Untap target land.",
+    "Hybrid {W/U}{W/U}   {2/G}   {C/W}   Phyrexian {B/P}   {R/G/P}",
+    "{C}{C}   Snow {S}   Energy {E}{E}",
+    "{4}{G} (+2 tax)",
+    "Ward {2}   Kicker {1}{R}   {1}{U} to go · tap mana sources",
+];
+
+/// `--mana-gallery`: spawn [`MANA_GALLERY`] once, at 13 and 18 px, over the
+/// top of the board.
+pub fn spawn_mana_gallery(
+    mut commands: Commands,
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    mut done: Local<bool>,
+) {
+    if !args.mana_gallery || *done || view.0.is_none() {
+        return;
+    }
+    *done = true;
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Percent(30.0),
+                top: Val::Px(120.0),
+                max_width: Val::Px(620.0),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(6.0),
+                padding: UiRect::all(Val::Px(12.0)),
+                ..default()
+            },
+            BackgroundColor(crate::theme::PANEL_BG),
+            GlobalZIndex(crate::theme::layer::MODAL),
+            crate::systems::game_ui::InGameRoot,
+        ))
+        .with_children(|panel| {
+            for size in [13.0, 18.0] {
+                for line in MANA_GALLERY {
+                    panel.spawn(crate::mana_text::mana_text(*line, size, crate::theme::TEXT_PRIMARY));
+                }
+            }
+        });
 }
 
 /// Seconds since the first view arrived; `None` until then.

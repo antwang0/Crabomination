@@ -1254,12 +1254,22 @@ pub fn hover_card_preview(
                         } else {
                             theme::TEXT_PRIMARY
                         };
-                        panel.spawn((
-                            Text::new(text),
-                            ui_fonts.tf(12.0),
-                            TextColor(color),
-                            Pickable::IGNORE,
-                        ));
+                        // A line with a cost in it ("{2}{T}: …") draws
+                        // its mana as pips, wrapping between words.
+                        if crate::mana_text::has_pips(&text) {
+                            panel.spawn((
+                                Node { width: Val::Percent(100.0), ..default() },
+                                crate::mana_text::ManaText::new(text, 12.0, color).wrapping(),
+                                Pickable::IGNORE,
+                            ));
+                        } else {
+                            panel.spawn((
+                                Text::new(text),
+                                ui_fonts.tf(12.0),
+                                TextColor(color),
+                                Pickable::IGNORE,
+                            ));
+                        }
                     }
                 });
             }

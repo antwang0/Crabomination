@@ -23,7 +23,6 @@ use crabomination::card::{CardId, CardType, CounterType};
 
 use crate::card::{BattlefieldCard, CardHovered, GameCardId};
 use crate::net_plugin::CurrentView;
-use crate::theme::UiFonts;
 
 /// Root marker for the floating tooltip panel.
 #[derive(Component)]
@@ -39,10 +38,9 @@ pub fn update_alt_tooltip(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
     hovered: Query<&GameCardId, (With<BattlefieldCard>, With<CardHovered>)>,
     mut tooltip_q: Query<Entity, With<AltTooltip>>,
-    mut text_q: Query<&mut Text, With<AltTooltipText>>,
+    mut text_q: Query<&mut crate::mana_text::ManaText, With<AltTooltipText>>,
 ) {
     let alt_held = keys.pressed(KeyCode::AltLeft) || keys.pressed(KeyCode::AltRight);
 
@@ -119,10 +117,8 @@ pub fn update_alt_tooltip(
 
     if tooltip_q.single_mut().is_ok() {
         // Existing tooltip — just refresh its text.
-        if let Ok(mut text) = text_q.single_mut()
-            && text.0 != body
-        {
-            text.0 = body;
+        if let Ok(mut text) = text_q.single_mut() {
+            text.set(&body);
         }
         return;
     }
@@ -145,10 +141,9 @@ pub fn update_alt_tooltip(
         ))
         .id();
     commands.entity(panel).with_children(|p| {
+        // Costs in it (abilities, ward, equip) as mana pips.
         p.spawn((
-            Text::new(body),
-            ui_fonts.tf(13.0),
-            TextColor(Color::srgba(0.95, 0.95, 1.0, 1.0)),
+            crate::mana_text::mana_text(body, 13.0, Color::srgba(0.95, 0.95, 1.0, 1.0)),
             AltTooltipText,
             Pickable::IGNORE,
         ));
