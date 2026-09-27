@@ -12215,6 +12215,31 @@ fn cr_601_2c_flashback_needs_its_required_target() {
     assert_eq!(g.players[1].hand.len(), hand + 2);
 }
 
+/// CR 602.2b + 601.2c — an activated ability announces its required target
+/// too: Prodigal Pyromancer's ping with none named is rejected (it used to go
+/// on the stack and hit nobody). Words of War's "any target" belongs to the
+/// draw replacement, chosen when it applies, so that one activates bare.
+#[test]
+fn cr_602_2b_an_activation_names_its_required_target() {
+    let act = |id, target| GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target, additional_targets: vec![], x_value: None, mode: None,
+    };
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let pyro = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    g.clear_sickness(pyro);
+    assert!(g.perform_action(act(pyro, None)).is_err());
+    assert!(!g.battlefield_find(pyro).unwrap().tapped, "nothing was paid");
+    g.perform_action(act(pyro, Some(Target::Player(1)))).expect("aimed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    let words = g.add_card_to_battlefield(0, catalog::words_of_war());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(act(words, None)).expect("the replacement picks its target later");
+}
+
 /// CR 603.10 — a dies trigger's "its power" is the creature's last-known
 /// power **as computed**: an Equipment's and an anthem's bonus count, not
 /// only base + counters + pumps. Regression: the death snapshot was a plain

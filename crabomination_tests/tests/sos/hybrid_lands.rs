@@ -753,7 +753,7 @@ fn cauldron_activation_reanimates_and_sac_fires_death_drain() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
+        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cauldron reanimation activatable");
     drain_stack(&mut g);
 

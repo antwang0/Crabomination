@@ -1401,7 +1401,7 @@ fn lyzolda_sac_black_draws() {
     let h0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: lyz, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Lyzolda sacrificing a black creature");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), h0 + 1, "black sacrifice drew a card");

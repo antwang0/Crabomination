@@ -1383,7 +1383,7 @@ fn scavenging_ooze_exiles_a_creature_card_then_grows() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: ooze,
         ability_index: 0,
-        target: None,
+        target: Some(Target::Permanent(dead)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     })
@@ -1413,7 +1413,7 @@ fn scavenging_ooze_exiling_a_noncreature_card_grows_nothing() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: ooze,
         ability_index: 0,
-        target: None,
+        target: Some(Target::Permanent(bolt)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     })

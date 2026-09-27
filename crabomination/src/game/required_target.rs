@@ -22,26 +22,33 @@ impl GameState {
         x: u32,
     ) -> bool {
         let def = &card.definition;
-        if !(def.is_instant() || def.is_sorcery()) {
-            return false;
-        }
-        let Some(filter) = effect.target_filter_for_slot_in_mode_kicked(0, mode, kicked) else {
-            return false;
-        };
-        if filter.mentions_stack_object() || effect.target_slot_optional_x(0, mode, x) {
-            return false;
-        }
-        // A mode picked here narrows to that mode; any other mode choice
-        // (unpicked, "choose N", points) settles later, so the gate stays out.
-        let view = match (effect, mode) {
-            (Effect::ChooseMode(modes), Some(m)) => match modes.get(m) {
-                Some(v) => v,
-                None => return false,
-            },
-            _ => effect,
-        };
-        !has_mode_choice(view)
+        (def.is_instant() || def.is_sorcery()) && slot0_required(effect, mode, kicked, x)
     }
+}
+
+/// Whether `effect` requires a slot-0 target (CR 601.2c, and CR 602.2b for
+/// an activated ability): declared, not optional, not a stack-object filter,
+/// and not behind a mode chosen later.
+pub(crate) fn slot0_required(effect: &Effect, mode: Option<usize>, kicked: bool, x: u32) -> bool {
+    let Some(filter) = effect.target_filter_for_slot_in_mode_kicked(0, mode, kicked) else {
+        return false;
+    };
+    if filter.mentions_stack_object()
+        || effect.target_slot_optional_x(0, mode, x)
+        || effect.slot_owner(0, mode).is_some_and(deferred)
+    {
+        return false;
+    }
+    // A mode picked here narrows to that mode; any other mode choice
+    // (unpicked, "choose N", points) settles later, so the gate stays out.
+    let view = match (effect, mode) {
+        (Effect::ChooseMode(modes), Some(m)) => match modes.get(m) {
+            Some(v) => v,
+            None => return false,
+        },
+        _ => effect,
+    };
+    !has_mode_choice(view)
 }
 
 fn has_mode_choice(e: &Effect) -> bool {
@@ -62,4 +69,39 @@ fn has_mode_choice(e: &Effect) -> bool {
     let mut found = false;
     e.for_each_inner(&mut |inner| found |= has_mode_choice(inner));
     found
+}
+
+/// A body that resolves later — a delayed trigger or a replacement of your
+/// next draw — whose "target" is chosen when it fires or applies, not as the
+/// spell is cast or the ability activated (Words of War, Ride the Avalanche).
+fn deferred(e: &Effect) -> bool {
+    matches!(
+        e,
+        Effect::ReplaceYourNextDrawThisTurn { .. }
+            | Effect::DelayUntil { .. }
+            | Effect::DelayUntilWithCapture { .. }
+            | Effect::OnAttackedUntilYourNextTurn { .. }
+            | Effect::OnMatchingAttacksThisTurn { .. }
+            | Effect::OnMatchingBlocksThisTurn { .. }
+            | Effect::CreaturesYouControlEnteringThisTurn { .. }
+            | Effect::CreaturesYouControlDyingThisTurn { .. }
+            | Effect::WheneverCreatureDiesThisTurn { .. }
+            | Effect::WheneverCreatureEntersThisTurn { .. }
+            | Effect::WheneverCreatureEntersUntilYourNextTurn { .. }
+            | Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. }
+            | Effect::WheneverYouGainLifeThisTurn { .. }
+            | Effect::WheneverOpponentMakesYouDiscardThisTurn { .. }
+            | Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. }
+            | Effect::OnEachSpellCastThisTurn { .. }
+            | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { .. }
+            | Effect::OnYourNextSpellCastThisTurn { .. }
+            | Effect::OnYourNextExhaustActivationThisTurn { .. }
+            | Effect::OnYourNextAttackThisTurn { .. }
+            | Effect::OnYourNextInstantSorceryThisTurn { .. }
+            | Effect::OnYourNextSpellOfTypeThisTurn { .. }
+            | Effect::OnYourNextSpellMatchingThisTurn { .. }
+            | Effect::OnYourNextNamedSpellThisTurn { .. }
+            | Effect::AtEachCombatThisTurn { .. }
+            | Effect::WhenLastCreatedTokenLeaves { .. }
+    )
 }

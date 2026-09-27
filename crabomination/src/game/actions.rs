@@ -19435,7 +19435,10 @@ impl GameState {
         // is every mana ability and so most of this function's traffic; the
         // whole block is one expression so the stamp is cleared once.
         let target_violation = if target.is_none() && additional_targets.is_empty() {
-            None
+            // CR 602.2b + 601.2c — an ability announces its required target;
+            // one activated with none resolved for nobody (a pinger's ping).
+            super::required_target::slot0_required(&ability.effect, chosen_mode, false, x_value.unwrap_or(0))
+                .then_some(GameError::SelectionRequirementViolated)
         } else {
             self.target_slots_scratch = std::iter::once(target.clone())
                 .chain(additional_targets.iter().cloned().map(Some))

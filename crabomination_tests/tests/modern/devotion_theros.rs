@@ -638,7 +638,7 @@ fn pithing_needle_naming_a_different_card_leaves_ability_usable() {
     g.battlefield_find_mut(needle).unwrap().named_card = Some("Llanowar Elves".into());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
+        card_id: crypt, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("an unrelated name doesn't suppress the Crypt");
 }
 
@@ -663,7 +663,7 @@ fn a_namer_without_the_lock_static_does_not_suppress() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: crypt,
         ability_index: 0,
-        target: None,
+        target: Some(Target::Player(1)),
         additional_targets: Vec::new(),
         x_value: None,
         mode: None,
