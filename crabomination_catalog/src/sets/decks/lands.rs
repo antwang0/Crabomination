@@ -1189,13 +1189,13 @@ fn channel_land(
     channel_effect: Effect,
 ) -> CardDefinition {
     use crate::card::{SelectionRequirement, Supertype};
-    // Every channel land except Boseiju prints "this ability costs {1} less
-    // to activate for each legendary creature you control."
-    let discount = (name != "Boseiju, Who Endures").then(|| {
+    // Every channel land prints "this ability costs {1} less to activate for
+    // each legendary creature you control."
+    let discount = Some(
         SelectionRequirement::Creature
             .and(SelectionRequirement::HasSupertype(Supertype::Legendary))
-            .and(SelectionRequirement::ControlledByYou)
-    });
+            .and(SelectionRequirement::ControlledByYou),
+    );
     CardDefinition {
         name,
         supertypes: vec![Supertype::Legendary],

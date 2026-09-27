@@ -55,6 +55,25 @@ fn boseiju_opponent_search_routes_to_the_searched_seat() {
         "fetched land enters untapped under the searched player");
 }
 
+/// Boseiju's channel costs {1} less per legendary creature you control, as
+/// every channel land's does (it shipped without the discount): with one
+/// legend out, {G} alone pays it.
+#[test]
+fn boseiju_channel_discounted_by_a_legendary_creature() {
+    let mut g = two_player_game();
+    let boseiju = g.add_card_to_hand(0, catalog::boseiju_who_endures());
+    let target = g.add_card_to_battlefield(1, catalog::mishras_factory());
+    let mut legend = catalog::grizzly_bears();
+    legend.supertypes.push(crabomination::card::Supertype::Legendary);
+    g.add_card_to_battlefield(0, legend);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("channel for {G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none());
+}
+
 /// Sokenzan channels for two 1/1 hasty Spirits.
 #[test]
 fn sokenzan_channel_makes_two_spirits() {
