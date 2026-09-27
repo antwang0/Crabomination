@@ -1264,9 +1264,9 @@ pub fn tectonic_giant() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: true,
+                pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
         ])

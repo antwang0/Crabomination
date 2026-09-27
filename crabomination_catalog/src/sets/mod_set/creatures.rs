@@ -9823,9 +9823,9 @@ pub fn chandra_torch_of_defiance() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
+                    pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: Some(Box::new(Effect::DealDamage {
                         to: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::Const(2),

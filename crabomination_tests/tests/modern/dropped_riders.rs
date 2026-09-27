@@ -1197,4 +1197,18 @@ fn impulse_grants_bill_the_card_cost() {
     assert!(from_exile(&mut g, theirs).is_err(), "not free");
     g.players[0].mana_pool.add(Color::Blue, 2);
     from_exile(&mut g, theirs).expect("two blue pay for {1}{G}");
+
+    // The reverse: Chandra, Torch of Defiance's +1 "cast that card" is the
+    // card's own cost, not its mana value in any color.
+    let mut g = main_phase();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: chandra, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    let bear = exiled_bear(&g).expect("exiled");
+    g.players[0].mana_pool.add(Color::Red, 2);
+    assert!(from_exile(&mut g, bear).is_err(), "{{R}}{{R}} doesn't pay {{1}}{{G}}");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    from_exile(&mut g, bear).expect("with a green");
 }

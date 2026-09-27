@@ -7028,9 +7028,9 @@ pub fn memorial_vault() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Sum(vec![Value::Const(1), Value::SacrificedManaValue]),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: true,
+                pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
             ..Default::default()
