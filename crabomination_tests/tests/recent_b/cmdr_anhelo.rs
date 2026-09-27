@@ -242,12 +242,34 @@ fn maestros_confluence_shrinks_and_goads() {
     flood(&mut g, 0);
     g.perform_action(GameAction::CastSpellSpree {
         card_id: mc, spree_modes: vec![1, 1, 2], target: Some(Target::Permanent(angel)),
-        additional_targets: vec![Target::Permanent(angel)], x_value: None,
+        additional_targets: vec![Target::Permanent(angel), Target::Player(1)], x_value: None,
     })
     .expect("confluence");
     drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_none(), "-6/-6");
     assert!(g.goaded_by_player(g.battlefield_find(bears).unwrap(), 0));
+}
+
+/// Maestros Confluence's goad mode goads each creature *target player*
+/// controls (a player slot inside a modal cast, CR 700.2 + 601.2c): here the
+/// third seat's, not the hostile one's.
+#[test]
+fn maestros_confluence_goads_the_targeted_players_creatures() {
+    let mut g = pod(3);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let mc = g.add_card_to_hand(0, catalog::maestros_confluence());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: mc, spree_modes: vec![1, 2, 2], target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Player(2), Target::Player(2)], x_value: None,
+    })
+    .expect("confluence");
+    drain_stack(&mut g);
+    assert!(g.goaded_by_player(g.battlefield_find(bears).unwrap(), 0));
+    assert!(g.goaded_by_player(g.battlefield_find(giant).unwrap(), 0));
+    assert!(!g.goaded_by_player(g.battlefield_find(angel).unwrap(), 0), "seat 1 wasn't targeted");
 }
 
 /// Make an Example — the opponent sacrifices one of their two piles.
@@ -414,4 +436,19 @@ fn zndrsplts_judgment_friend_and_foe() {
     cast(&mut g, 0, zj, None).expect("judgment");
     assert_eq!(named(&g, 0, "Serra Angel").len(), 2);
     assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+}
+
+/// A bot aiming the goad mode's player slot (`player_slot_is_hostile`) picks
+/// an opponent, not its own team.
+#[test]
+fn maestros_confluence_goad_slot_aims_at_an_opponent() {
+    let mut g = pod(3);
+    g.players[0].hostile_player_targets = true;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let crabomination::effect::Effect::ChooseModesCast { modes, .. } = catalog::maestros_confluence().effect else {
+        panic!("modal")
+    };
+    let (t, _) = g.auto_targets_for_effect_all_slots(&modes[2], 0, None);
+    assert!(matches!(t, Some(Target::Player(p)) if p != 0), "{t:?}");
 }

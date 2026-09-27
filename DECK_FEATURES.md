@@ -147,7 +147,7 @@ lists were picked.
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
-| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Xander's Pact, Zndrsplt's Judgment) |
+| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 5 carry residuals (Parnesse, Sinister Concierge, Syrix, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
@@ -1348,8 +1348,7 @@ casualty block (Anhelo); `Effect::OwnerShufflesInExilesTopPlaysOrCasts`
 Example), `GrantSuspend` (Sinister Concierge), graveyard-scoped triggers
 (Dogged Detective's opponent draw, Skyclave Shade's landfall, Syrix),
 `GrantMayPlayForLife` (Xander's Pact), `Hideaway` + a capped free cast
-(Smuggler's Buggy). Residuals: **Maestros Confluence** goads the hostile
-opponent's creatures; **Parnesse** protects only your permanents and offers
+(Smuggler's Buggy). Residuals: **Parnesse** protects only your permanents and offers
 no copy; **Sinister Concierge** suspends an opponent's creature;
 **Syrix** reads any card leaving your graveyard; **Xander's Pact** lets exiled lands be
 played; **Zndrsplt's Judgment** makes you the only friend. Pods (1,000 games

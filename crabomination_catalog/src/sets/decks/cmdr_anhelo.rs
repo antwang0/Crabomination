@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_anhelo.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Maestros Confluence** — the goad mode takes the hostile opponent's
-//!   creatures rather than a targeted player's.
 //! - **Parnesse, the Subtle Brush** — only your permanents get the pay-4-life
 //!   tax (a targeted player doesn't), and copying a spell doesn't offer an
 //!   opponent a copy.
@@ -276,9 +274,7 @@ pub fn maestros_charm() -> CardDefinition {
 }
 
 /// Maestros Confluence — three modes, repeats allowed: regrow a monocolored
-/// instant or sorcery, -3/-3, or goad a player's creatures.
-///
-/// Residual: the goad mode takes the hostile opponent's creatures.
+/// instant or sorcery, -3/-3, or goad target player's creatures.
 pub fn maestros_confluence() -> CardDefinition {
     spell(
         "Maestros Confluence",
@@ -298,7 +294,7 @@ pub fn maestros_confluence() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
                 Effect::Goad {
-                    what: Selector::ControlledBy { who: PlayerRef::HostileOpponent, filter: R::Creature },
+                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
                 },
             ],
         },
