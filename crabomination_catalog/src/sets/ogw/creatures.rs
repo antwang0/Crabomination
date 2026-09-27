@@ -1444,10 +1444,16 @@ pub fn bane_of_bala_ged() -> CardDefinition {
 }
 
 /// Birthing Hulk — {6}{G} 5/4 Eldrazi Drone. Devoid; ETB create two Eldrazi
-/// Scions. (Its Awaken {7}{G} alt-cast is dropped.)
+/// Scions; {1}{C}: regenerate.
 pub fn birthing_hulk() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 2)],
+        // "{1}{C}: Regenerate this creature" — shipped missing.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), crate::mana::colorless(1)]),
+            effect: Effect::Regenerate { what: crate::effect::Selector::This },
+            ..Default::default()
+        }],
         ..drone("Birthing Hulk", cost(&[generic(6), g()]), 5, 4)
     }
 }

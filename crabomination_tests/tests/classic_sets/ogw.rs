@@ -631,6 +631,18 @@ fn birthing_hulk_makes_two_scions() {
     g.players[0].mana_pool.add_colorless(6);
     crabomination::game::cast(&mut g, id);
     assert_eq!(scion_count(&g), 2);
+    // {1}{C}: regenerate — the {C} wants colorless mana, not green.
+    let regen = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Green, 2);
+    assert!(regen(&mut g).is_err(), "{{C}} can't be paid with green");
+    g.players[0].mana_pool.add_colorless(1);
+    regen(&mut g).expect("{1}{C}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().regeneration_shields, 1);
 }
 
 /// Drowner of Hope sacrifices a Scion to tap a creature.
