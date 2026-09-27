@@ -1,6 +1,7 @@
 //! A card-selection mana sink — "scry N", "surveil N", "draw a card, then
 //! discard a card" on the bot's own permanent (Castle Vantress, the Strixhaven
-//! Campuses, Desolate Lighthouse, Nivix Guildmage) — never beat passing in
+//! Campuses, Desolate Lighthouse, Nivix Guildmage, Sensei's Divining Top's
+//! rearrange, Mazemind Tome's page-counter scry) — never beat passing in
 //! the outcome score, which can't see library order, so a 6-seat
 //! `--card-census` (seed 206001) never activated one. The bot now spends
 //! leftover mana on one at an opponent's end step, after cycling. Commander
@@ -15,14 +16,20 @@ use crate::effect::{Effect, PlayerRef, Selector};
 use crate::game::GameState;
 use crate::game::types::GameAction;
 
-/// Scry / surveil for yourself, or a loot (draw then discard, both yours).
+/// Scry / surveil / rearrange for yourself, or a loot (draw then discard,
+/// both yours). A sequence led by a scry counts (Mazemind Tome's scry, then
+/// its page-count check).
 fn is_selection(e: &Effect) -> bool {
     match e {
-        Effect::Scry { who: PlayerRef::You, .. } | Effect::Surveil { who: PlayerRef::You, .. } => true,
-        Effect::Seq(v) => matches!(
-            v.as_slice(),
-            [Effect::Draw { who: Selector::You, .. }, Effect::Discard { who: Selector::You, .. }]
-        ),
+        Effect::Scry { who: PlayerRef::You, .. }
+        | Effect::Surveil { who: PlayerRef::You, .. }
+        | Effect::RearrangeTop { who: PlayerRef::You, .. } => true,
+        Effect::Seq(v) => {
+            matches!(
+                v.as_slice(),
+                [Effect::Draw { who: Selector::You, .. }, Effect::Discard { who: Selector::You, .. }]
+            ) || matches!(v.first(), Some(Effect::Scry { who: PlayerRef::You, .. }))
+        }
         _ => false,
     }
 }
@@ -46,7 +53,13 @@ pub(super) fn pick_selection_sink(state: &GameState, seat: usize) -> Option<Game
                     && ab.life_cost == 0
                     && ab.energy_cost == 0
                     && ab.remove_counter_x.is_none();
-                (costs_only_mana && is_selection(&ab.effect)).then_some(GameAction::ActivateAbility {
+                // An untapped rearrange (Sensei's Divining Top) would repeat
+                // for every spare mana: once a turn, read off the seat's
+                // "activated an artifact's ability this turn".
+                let repeats = !ab.tap_cost
+                    && matches!(ab.effect, Effect::RearrangeTop { .. })
+                    && state.players[seat].artifact_ability_activated_this_turn;
+                (costs_only_mana && !repeats && is_selection(&ab.effect)).then_some(GameAction::ActivateAbility {
                     card_id: c.id,
                     ability_index: i,
                     target: None,
@@ -149,5 +162,27 @@ mod tests {
         crate::game::drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), 3);
         assert!(g.battlefield_find(hedron).is_none());
+    }
+
+    /// Sensei's Divining Top rearranges once at an opponent's end step, not
+    /// once per spare mana.
+    #[test]
+    fn senseis_top_rearranges_once_a_turn() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        let top = g.add_card_to_battlefield(0, crate::catalog::senseis_divining_top());
+        for _ in 0..5 {
+            g.add_card_to_library(0, crate::catalog::grizzly_bears());
+        }
+        g.players[0].mana_pool.add_colorless(3);
+        let a = pick_selection_sink(&g, 0).expect("rearrange");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, ability_index: 0, .. } if card_id == top));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        g.priority.player_with_priority = 0;
+        assert!(pick_selection_sink(&g, 0).is_none(), "once a turn");
     }
 }
