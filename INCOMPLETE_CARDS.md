@@ -358,7 +358,7 @@ Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
 Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Beast; Lethal Scheme;
 Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
 Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
-`Effect::PayLifeOrPutBackDrawnThisTurn`). Still open:
+`Effect::PayLifeOrPutBackDrawnThisTurn`); Master Biomancer's Mutant rider. Still open:
 
 | Card | Gap |
 |---|---|
@@ -366,7 +366,6 @@ Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
 | 🟡 Compulsive Research | "target player" is always you. |
 | 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
-| 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 

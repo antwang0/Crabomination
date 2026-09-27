@@ -7631,6 +7631,43 @@ impl GameState {
     /// one counter spec per matching source: a *different* permanent the same
     /// player controls whose chosen creature type is among the entering
     /// creature's types. The entering card must already be on the battlefield.
+    /// CR 614.1c / 613.1d — "enters … as a [type] in addition to its other
+    /// types" (Master Biomancer): each `OtherCreaturesEnterAsAdditionalType`
+    /// its controller has out gives the entering creature that creature type
+    /// for as long as it stays. Behind the same lane as the counter riders.
+    pub(crate) fn apply_etb_type_riders(&mut self, entering: CardId, controller: usize) {
+        use crate::effect::StaticEffect;
+        if !self.battlefield.has_etb_counter_static() {
+            return;
+        }
+        if !self.battlefield.find_by_id(entering).is_some_and(|c| c.definition.is_creature()) {
+            return;
+        }
+        let mut riders: Vec<(CardId, crate::card::CreatureType)> = Vec::new();
+        for src in &self.battlefield {
+            if src.controller != controller || src.id == entering {
+                continue;
+            }
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::OtherCreaturesEnterAsAdditionalType { creature_type } = sa.effect {
+                    riders.push((src.id, creature_type));
+                }
+            }
+        }
+        for (source, ct) in riders {
+            let timestamp = self.next_timestamp();
+            self.add_continuous_effect(ContinuousEffect {
+                timestamp,
+                source,
+                affected: AffectedPermanents::just(entering),
+                layer: Layer::L4Type,
+                sublayer: None,
+                duration: EffectDuration::Indefinite,
+                modification: Modification::AddCreatureType(ct),
+            });
+        }
+    }
+
     pub fn chosen_type_etb_counter_specs(
         &self,
         entering: CardId,
@@ -10172,6 +10209,7 @@ impl GameState {
         // ETB counters apply to minted tokens too (they enter as normal
         // creatures), and so do the creating effect's own "with N counters".
         // Skipped while counters are locked (Solemnity).
+        self.apply_etb_type_riders(id, ctrl);
         if !self.counters_locked() {
             let minted = counters.and_then(|(kind, value, ctx)| {
                 let n = self.evaluate_value(value, ctx).max(0) as u32;
@@ -31619,6 +31657,9 @@ fn static_effect_to_effects(
             | StaticEffect::TypeEntersWithCountersPerControlled { .. }
             | StaticEffect::TypedCreaturesEnterWithExtraCounter { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
+            // Read at `apply_etb_type_riders`, which installs its own layer-4
+            // effect on the entrant.
+            | StaticEffect::OtherCreaturesEnterAsAdditionalType { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).

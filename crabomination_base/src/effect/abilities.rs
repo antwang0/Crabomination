@@ -2475,6 +2475,11 @@ pub enum StaticEffect {
     /// `chosen_type_etb_counter_specs`; the source's live power (layers applied)
     /// sets the count, so a pumped Biomancer grants more.
     OtherCreaturesEnterWithCountersEqualToSourcePower { kind: CounterType },
+    /// "Each other creature you control enters … as a `creature_type` in
+    /// addition to its other types" (Master Biomancer's Mutant). Read by
+    /// `apply_etb_type_riders` beside `chosen_type_etb_counter_specs`, at the
+    /// same three entry sites; the type is an indefinite layer-4 addition.
+    OtherCreaturesEnterAsAdditionalType { creature_type: crate::card::CreatureType },
     /// Arwen, Weaver of Hope — each other creature you control enters with
     /// that many more `kind` counters as the source's live toughness.
     OtherCreaturesEnterWithCountersEqualToSourceToughness { kind: CounterType },

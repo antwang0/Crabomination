@@ -2656,6 +2656,9 @@ impl GameState {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
                     }
+                    if is_creature_resolve {
+                        self.apply_etb_type_riders(card_id, caster);
+                    }
                     // CR 603.7e — one-shot "your next creature spell enters
                     // with N counters / these keywords" riders (FIN "Summon"
                     // saga chapters — Fenrir II counters, Brynhildr Gestalt haste).

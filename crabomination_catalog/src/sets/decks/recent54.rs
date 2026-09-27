@@ -581,7 +581,7 @@ pub fn travel_preparations() -> CardDefinition {
 
 /// Master Biomancer — {2}{G}{U} 2/4 Elf Wizard. Each other creature you control
 /// enters with a number of additional +1/+1 counters equal to this creature's
-/// power. (The "as a Mutant" type rider is omitted.)
+/// power and as a Mutant in addition to its other types.
 pub fn master_biomancer() -> CardDefinition {
     CardDefinition {
         name: "Master Biomancer",
@@ -598,6 +598,11 @@ pub fn master_biomancer() -> CardDefinition {
                           +1/+1 counters on it equal to this creature's power.",
             effect: StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower {
                 kind: CounterType::PlusOnePlusOne,
+            },
+        }, StaticAbility {
+            description: "Each other creature you control enters as a Mutant in addition to its other types.",
+            effect: StaticEffect::OtherCreaturesEnterAsAdditionalType {
+                creature_type: CreatureType::Mutant,
             },
         }],
         ..Default::default()

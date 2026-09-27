@@ -677,3 +677,27 @@ fn serra_avenger_waits_for_your_fourth_turn() {
         }
     }
 }
+
+/// Master Biomancer — each other creature you control enters with +1/+1
+/// counters equal to its power *and as a Mutant in addition to its other
+/// types* (CR 614.1c). A cast bear is a Bear Mutant 4/4; the type stays after
+/// the Biomancer leaves; an opponent's bear gets neither.
+#[test]
+fn master_biomancer_makes_entering_creatures_mutants() {
+    use crabomination::card::CreatureType;
+    let mut g = main_phase();
+    let bio = g.add_card_to_battlefield(0, catalog::master_biomancer());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear, None).expect("bear");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Mutant), "a Mutant");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Bear), "in addition to Bear");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "two counters from Biomancer's power");
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(theirs).unwrap().subtypes().creature_types.contains(&CreatureType::Mutant));
+    g.remove_to_graveyard_with_triggers(bio);
+    assert!(g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Mutant), "the type stays");
+}
