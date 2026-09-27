@@ -1051,7 +1051,7 @@ pub fn brash_taunter() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Fight {
                 attacker: Selector::This,
-                defender: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                defender: target_filtered(R::Creature.and(R::OtherThanSource)),
             },
             ..Default::default()
         }],

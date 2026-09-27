@@ -2943,6 +2943,33 @@ fn brash_taunter_reflects_damage_at_an_opponent() {
     assert!(g.battlefield_find(taunter).is_some(), "and it is indestructible");
 }
 
+/// "{2}{R}, {T}: fights **another** target creature" — any controller's, so
+/// fighting your own big creature sends its power at an opponent (it shipped
+/// as "a creature an opponent controls").
+#[test]
+fn brash_taunter_fights_its_controllers_own_creature() {
+    let mut g = two_player_game();
+    let taunter = g.add_card_to_battlefield(0, catalog::brash_taunter());
+    g.clear_sickness(taunter);
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: taunter, ability_index: 0, target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("fight my own Wurm");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "the Wurm's six come back at the opponent");
+    g.battlefield_find_mut(taunter).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let self_fight = GameAction::ActivateAbility {
+        card_id: taunter, ability_index: 0, target: Some(Target::Permanent(taunter)),
+        additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(!g.would_accept(self_fight), "not itself");
+}
+
 /// Void Rend: "This spell can't be countered. Destroy target nonland
 /// permanent." The uncounterable half is what makes it a staple.
 #[test]
