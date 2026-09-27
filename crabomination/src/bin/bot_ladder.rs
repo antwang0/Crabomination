@@ -2818,7 +2818,10 @@ fn report_card_census(
                 // One live trigger hides a dead sibling from the line above.
                 let idx = census.trigger_index_counts();
                 for (i, t) in def.triggered_abilities.iter().enumerate() {
-                    if !idx.contains_key(&(def.name.to_string(), i)) {
+                    // "Enters or attacks" twins share an effect, and the tally
+                    // credits the first: the second is unreadable, not dead.
+                    let twin = def.triggered_abilities[..i].iter().any(|u| u.effect == t.effect);
+                    if !twin && !idx.contains_key(&(def.name.to_string(), i)) {
                         println!("      trigger never fired: {} #{i} [{:?}/{:?}]", def.name, t.event.kind, t.event.scope);
                     }
                 }
