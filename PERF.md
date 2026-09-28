@@ -3015,6 +3015,25 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-28 (Commander session `01E9u8Mj`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: both requirement walkers take
+`face_view_of` for an off-battlefield card that is split / Room / Adventure /
+bestowed or has `{X}` (a flag test and a symbol scan; the view is a clone,
+built only for those), `finalize_cast` reads the cast face once per cast, and
+six target walkers gate a captured delayed body. Card fixes reach the cube
+(Kiki-Jiki). 4-core container, not the 24-core box: absolute games/s is not
+comparable to the blocks below.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 determinism ok (all pairs split); peak_rss_mib 35.3
+bench_ab.py      16 pairs, base e41eefa55 (session base, release-fast) vs the
+                 face-view tip: +4.10 % median (mean +4.55 %, sd 10.19) — noise
+two-player pools cube / sos / sealed x 300 an archetype, seed 9310001: all decided
+pod              2,549 release games at 3-8 seats, one legal CR 104.4a draw
+```
+
 ### 2026-09-27 (Commander session `01PdWYgx`) — guardrail, no perf work
 
 Engine edits on paths every pool can reach: `finalize_cast` reads
