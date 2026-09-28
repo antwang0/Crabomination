@@ -401,6 +401,53 @@ fn main() {
         names.iter().for_each(|n| println!("{n}"));
         return;
     }
+    // `--targets`: `name\tslots\tmin\tmodal` for every instant/sorcery —
+    // the spell effect's declared target slots and required minimum
+    // (`scripts/audit_target_counts.py`).
+    if args.iter().any(|a| a == "--targets") {
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            if !(def.is_instant() || def.is_sorcery()) || !seen.insert(def.name.to_string()) {
+                continue;
+            }
+            let modal = format!("{:?}", def.effect).contains("ChooseMode");
+            println!(
+                "{}\t{}\t{}\t{}",
+                def.name,
+                def.effect.target_slot_count(),
+                def.effect.min_targets_in_mode(None).map_or("-".to_string(), |m| m.to_string()),
+                u8::from(modal),
+            );
+        }
+        return;
+    }
+    // `--effects`: `name\twhere\tDebug(effect)`, one line per spell effect /
+    // activated / triggered / loyalty ability — for per-ability scans
+    // (`scripts/audit_slot_reuse.py`).
+    if args.iter().any(|a| a == "--effects") {
+        use crabomination::effect::Effect;
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            if !seen.insert(def.name.to_string()) {
+                continue;
+            }
+            if !matches!(def.effect, Effect::Noop) {
+                println!("{}\tspell\t{:?}", def.name, def.effect);
+            }
+            for (i, a) in def.activated_abilities.iter().enumerate() {
+                println!("{}\tactivated{i}\t{:?}", def.name, a.effect);
+            }
+            for (i, t) in def.triggered_abilities.iter().enumerate() {
+                println!("{}\ttriggered{i}\t{:?}", def.name, t.effect);
+            }
+            for (i, l) in def.loyalty_abilities.iter().enumerate() {
+                println!("{}\tloyalty{i}\t{:?}", def.name, l.effect);
+            }
+        }
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--grep") {
         let needle = args.get(i + 1).expect("--grep NEEDLE");
         let mut seen: HashSet<String> = HashSet::default();

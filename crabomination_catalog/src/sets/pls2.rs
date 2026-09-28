@@ -815,7 +815,8 @@ pub fn planeswalkers_favor() -> CardDefinition {
         cost(&[generic(3), g()]),
         false,
         Effect::PumpPT {
-            what: target_filtered(R::Creature),
+            // Slot 0 is the opponent; the creature is the second target.
+            what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
             power: Value::LastRevealedManaValue,
             toughness: Value::LastRevealedManaValue,
             duration: Duration::EndOfTurn,
@@ -856,7 +857,7 @@ pub fn planeswalkers_scorn() -> CardDefinition {
         cost(&[generic(3), b()]),
         true,
         Effect::PumpPT {
-            what: target_filtered(R::Creature),
+            what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
             power: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::LastRevealedManaValue)),
             toughness: Value::Times(
                 Box::new(Value::Const(-1)),

@@ -2655,8 +2655,12 @@ pub fn bond_of_passion() -> CardDefinition {
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
+            // "Any OTHER target" — slot 1, never the stolen creature.
             Effect::DealDamage {
-                to: target_any(),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.or(R::Player).or(R::Planeswalker).and(R::OtherThanTargetSlot(0)),
+                },
                 amount: Value::Const(2),
             },
         ]),

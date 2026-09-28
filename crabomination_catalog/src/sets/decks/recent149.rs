@@ -104,7 +104,9 @@ pub fn mabels_mettle() -> CardDefinition {
         name: "Mabel's Mettle",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        // "Up to one OTHER target creature" is an optional slot 1; both
+        // pumps shipped on slot 0, a +3/+3 on one creature.
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: crate::card::Value::Const(2),
@@ -112,12 +114,12 @@ pub fn mabels_mettle() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: target_filtered(R::Creature),
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) },
                 power: crate::card::Value::ONE,
                 toughness: crate::card::Value::ONE,
                 duration: Duration::EndOfTurn,
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

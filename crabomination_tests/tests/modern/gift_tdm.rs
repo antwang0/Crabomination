@@ -3290,6 +3290,25 @@ fn time_wipe_saves_one_creature_then_wraths() {
     assert!(g.battlefield_find(theirs).is_none(), "their creature destroyed by the wrath");
 }
 
+/// "Return a creature you control" is not a target (CR 115.1): with none of
+/// yours out Time Wipe still wraths. It shipped as a required target slot
+/// and the cast was refused (the target-count scan, 2026-09-28).
+#[test]
+fn time_wipe_wraths_with_no_creature_of_yours() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::time_wipe());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Time Wipe castable with no creature of yours");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
 #[test]
 fn disallow_counters_a_spell() {
     let mut g = two_player_game();

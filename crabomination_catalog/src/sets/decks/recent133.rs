@@ -97,7 +97,9 @@ pub fn witchs_mark() -> CardDefinition {
         name: "Witch's Mark",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        // "Up to one target creature you control": castable (for the loot)
+        // with no creature out.
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::MayDiscard {
                 description: "Discard a card to draw two?".into(),
                 count: Value::ONE,
@@ -111,7 +113,7 @@ pub fn witchs_mark() -> CardDefinition {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
                 definition: std::sync::Arc::new(wicked_role()),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

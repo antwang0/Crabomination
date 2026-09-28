@@ -241,6 +241,22 @@ fn jolted_awake_energy_reanimates() {
     assert_eq!(g.players[0].energy, 0, "the two energy gained paid the MV-2 return");
 }
 
+/// "Choose up to one target": with an empty graveyard Jolted Awake still
+/// casts for the {E}{E} (a required slot refused it — the target-count
+/// scan, 2026-09-28).
+#[test]
+fn jolted_awake_casts_with_nothing_to_target() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let spell = g.add_card_to_hand(0, catalog::jolted_awake());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with no target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2);
+}
+
 /// Cycling Jolted Awake for {2} draws a card.
 #[test]
 fn jolted_awake_cycles() {

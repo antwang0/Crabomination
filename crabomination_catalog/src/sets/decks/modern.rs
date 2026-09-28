@@ -17861,15 +17861,16 @@ pub fn cleansing_nova() -> CardDefinition {
     }
 }
 
-/// Time Wipe — {2}{W}{W}{U} Sorcery. Return target creature you control to its
-/// owner's hand, then destroy all creatures.
+/// Time Wipe — {2}{W}{W}{U} Sorcery. Return a creature you control to its
+/// owner's hand, then destroy all creatures. The return is modeled as an
+/// optional slot, so the wrath is castable with no creature of yours out.
 pub fn time_wipe() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Time Wipe",
         cost: cost(&[generic(2), w(), w(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -17882,7 +17883,7 @@ pub fn time_wipe() -> CardDefinition {
                     what: Selector::TriggerSource,
                 }),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

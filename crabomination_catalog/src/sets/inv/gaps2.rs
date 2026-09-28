@@ -1604,7 +1604,8 @@ pub fn plague_spores() -> CardDefinition {
             Effect::DestroyNoRegen {
                 what: target_filtered(R::Creature.and(R::HasColor(Color::Black).negate())),
             },
-            Effect::DestroyNoRegen { what: target_filtered(R::Land) },
+            // "and target land" — a second target, not a land creature.
+            Effect::DestroyNoRegen { what: Selector::TargetFiltered { slot: 1, filter: R::Land } },
         ]),
     )
 }

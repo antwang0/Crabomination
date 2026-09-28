@@ -1139,3 +1139,74 @@ fn cr_601_2f_a_paid_may_play_cast_is_taxed() {
     cast(&mut g).expect("{1}{R} pays the taxed Bolt");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// CR 601.2c — each "target" word is its own slot. These spells wrote a
+/// second printed target on slot 0 as well, so Plague Spores wanted one
+/// permanent that was both a nonblack creature and a land (the slot-reuse
+/// scan, 2026-09-28).
+fn main_phase_106() -> GameState {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for c in [crabomination::mana::Color::White, crabomination::mana::Color::Black,
+              crabomination::mana::Color::Red, crabomination::mana::Color::Green] {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.players[0].mana_pool.add_colorless(5);
+    g
+}
+
+fn cast_two(g: &mut GameState, id: crabomination::card::CardId, a: Target, b: Target) {
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(a), additional_targets: vec![b], mode: None, x_value: None,
+    }).expect("cast with two targets");
+    drain_stack(g);
+}
+
+#[test]
+fn cr_601_2c_plague_spores_takes_a_creature_and_a_land() {
+    let mut g = main_phase_106();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::plague_spores());
+    cast_two(&mut g, id, Target::Permanent(bear), Target::Permanent(land));
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(land).is_none());
+}
+
+#[test]
+fn cr_601_2c_bond_of_passion_burns_another_target() {
+    let mut g = main_phase_106();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::bond_of_passion());
+    let life = g.players[1].life;
+    cast_two(&mut g, id, Target::Permanent(angel), Target::Player(1));
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 0, "the stolen creature is not the other target");
+}
+
+#[test]
+fn cr_601_2c_mabels_mettle_pumps_two_creatures() {
+    let mut g = main_phase_106();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mabels_mettle());
+    cast_two(&mut g, id, Target::Permanent(a), Target::Permanent(b));
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(b).unwrap().power, 3);
+}
+
+#[test]
+fn cr_601_2c_planeswalkers_favor_pumps_a_creature_not_the_opponent() {
+    let mut g = main_phase_106();
+    let fav = g.add_card_to_battlefield(0, catalog::planeswalkers_favor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::serra_angel());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fav, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)], x_value: None, mode: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2 + 5, "Serra Angel is mana value 5");
+}

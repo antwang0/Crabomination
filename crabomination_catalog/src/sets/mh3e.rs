@@ -191,7 +191,8 @@ pub fn jolted_awake() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
-        effect: Effect::Seq(vec![
+        // "Choose up to one target" — the {E}{E} comes with no card to aim at.
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::AddEnergy(Value::Const(2)),
             Effect::PayEnergyValue {
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
@@ -206,7 +207,7 @@ pub fn jolted_awake() -> CardDefinition {
                     },
                 }),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
