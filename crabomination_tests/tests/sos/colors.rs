@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 // The parametrized card tables carry many columns by design (cost, P/T,
 // keyword, expected deltas); a `type` alias per table would hurt readability.
 #![allow(clippy::type_complexity)]
@@ -8,7 +7,6 @@ use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
-use crate::prepared_on_battlefield;
 
 // ── White ───────────────────────────────────────────────────────────────────
 

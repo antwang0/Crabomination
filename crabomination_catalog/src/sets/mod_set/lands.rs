@@ -3,8 +3,8 @@
 //!
 //! * Shocklands — dual land of two basic types; ETB choice "pay 2 life or
 //!   enter tapped" via `shockland` (CR 614.12, a replacement).
-//! * Fastlands — dual land that ETB-taps once you control four+ lands;
-//!   reuses `fastland_etb_conditional_tap`.
+//! * Fastlands — dual land that enters tapped once you control four+
+//!   lands; `fastland_enters_tapped` (CR 614.1c, a replacement).
 //! * Artifact lands (Mirrodin cycle) — single-color land that's also an
 //!   artifact. Built inline here since the existing `dual_land_with`
 //!   helper doesn't compose `CardType::Artifact` onto a Land.

@@ -1729,14 +1729,6 @@ impl PlayerData {
         Some(id)
     }
 
-    /// Return all hand cards to the bottom of the library.
-    /// Call `library.shuffle(&mut rng)` afterwards to randomize.
-    pub fn return_hand_to_library(&mut self) {
-        while let Some(card) = self.hand.pop() {
-            self.library.push(card);
-        }
-    }
-
     pub fn has_in_hand(&self, id: CardId) -> bool {
         self.hand.iter().any(|c| c.id == id)
     }

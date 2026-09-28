@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -6,8 +5,6 @@ use crabomination::game::*;
 use crabomination::TurnStep;
 use crabomination::game::{drain_stack, multi_player_game, two_player_game};
 use crabomination::mana::Color;
-#[allow(unused)]
-use crate::Factory;
 
 // ── Channel lands (Kamigawa legendary lands) ─────────────────────────────────
 

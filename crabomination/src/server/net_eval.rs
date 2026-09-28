@@ -87,12 +87,6 @@ fn net_for(slot: u8) -> Option<Arc<dyn NetEvaluator>> {
     })
 }
 
-/// Whether a slot currently holds an evaluator — the check gating "use
-/// the strongest available bot" decisions like the lobby's seat filler.
-pub fn slot_loaded(slot: u8) -> bool {
-    net_for(slot).is_some()
-}
-
 /// The slot's net for `state`, or `None` when the slot is empty *or* the
 /// state has other than two seats. The encoder is two-seat (it reads the
 /// opponent as `1 - seat`), so a Commander pod has no encoding: seat 2 would

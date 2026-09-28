@@ -390,23 +390,6 @@ impl ColorList {
     }
 }
 
-/// Build a main deck restricted to `colors` (plus the explicitly allowed
-/// `splash` cards), greedy by static card score with optional `noise`
-/// jitter for randomized gauntlet builds. Same copy-cap/overflow behavior
-/// as `draft::suggest_main_deck`.
-pub fn suggest_main_deck_in_colors<R: Rng>(
-    picks: &[CardFactory],
-    colors: &[Color],
-    splash: &[CardFactory],
-    target_spells: usize,
-    noise: i32,
-    rng: &mut R,
-    quality: bool,
-) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let scores = PoolScores::new(picks, quality, false);
-    suggest_main_deck_in_colors_with(&scores, colors, splash, target_spells, noise, rng)
-}
-
 /// Everything the shape lattice reads off a pool card that does not depend
 /// on the shape: its brief, and its scorer output against the pool's own pip
 /// totals.
@@ -553,19 +536,6 @@ struct MainDeck {
     /// the contents `assemble_lands` used to rediscover with a `card_brief`
     /// per leftover.
     lands: Vec<(u32, crate::mana::ColorSet)>,
-}
-
-/// [`suggest_main_deck_in_colors`] against a prebuilt [`PoolScores`].
-pub fn suggest_main_deck_in_colors_with<R: Rng>(
-    scores: &PoolScores<'_>,
-    colors: &[Color],
-    splash: &[CardFactory],
-    target_spells: usize,
-    noise: i32,
-    rng: &mut R,
-) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let d = suggest_main_deck_shape(scores, colors, splash, target_spells, noise, rng, Detail::Full);
-    (d.main, d.leftovers)
 }
 
 /// [`suggest_main_deck_in_colors_with`] keeping the land index the shape
@@ -2974,34 +2944,8 @@ fn worker_threads(cfg: &SimConfig) -> usize {
     std::thread::available_parallelism().map(|n| n.get().saturating_sub(1)).unwrap_or(1).max(1)
 }
 
-/// Evaluate candidate decks against the gauntlet field in parallel.
-///
-/// Racing on: round r samples `min(gauntlet, 5·2^r)` opponents per active
-/// candidate at `games_per_pairing` games each, then eliminates every
-/// candidate sitting significantly below the current leader — by paired
-/// per-slot comparison when enough shared decided slots exist (CRN makes
-/// the slots genuinely paired), by Wilson-bound overlap otherwise.
-/// Racing off: one full round-robin (every candidate × every gauntlet
-/// deck).
-///
-/// `on_progress` is invoked (from worker threads) with the full eval
-/// snapshot after every finished job — wire it to an `mpsc` sender for
-/// live UI updates.
-pub fn evaluate_candidates<F>(
-    candidate_decks: &[Vec<CardFactory>],
-    gauntlet: &[GauntletDeck],
-    cfg: &SimConfig,
-    on_progress: F,
-) -> Vec<CandidateEval>
-where
-    F: Fn(&[CandidateEval]) + Sync,
-{
-    let prefill = vec![SlotOutcomes::default(); candidate_decks.len()];
-    evaluate_candidates_slots(candidate_decks, gauntlet, cfg, &prefill, &on_progress).0
-}
-
-/// [`evaluate_candidates`] plus per-candidate slot outcomes, seeded from
-/// `prefill`: any chunk of the schedule whose slots are all present in a
+/// Evaluate candidate decks against the gauntlet field in parallel, with
+/// per-candidate slot outcomes, seeded from `prefill`: any chunk of the schedule whose slots are all present in a
 /// candidate's prefill map (this exact deck already played those seeded
 /// games earlier in the session) is credited instantly instead of
 /// simulated.

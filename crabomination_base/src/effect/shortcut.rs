@@ -78,23 +78,14 @@ pub fn draw(n: i32) -> Effect {
 pub fn discard(who: Selector, n: i32, random: bool) -> Effect {
     Effect::Discard { who, amount: Value::Const(n), random }
 }
-pub fn destroy_target() -> Effect { Effect::Destroy { what: target() } }
-/// "Destroy target ... It can't be regenerated." (CR 701.19)
-pub fn destroy_target_no_regen() -> Effect {
-    Effect::DestroyNoRegen { what: target() }
-}
 pub fn exile_target() -> Effect { Effect::Exile { what: target() } }
-/// "Destroy target **creature**. It can't be regenerated." The unfiltered
-/// sibling above leaves slot 0 open, and an unfiltered slot enumerates every
-/// permanent — Terminate destroyed anything. See TODO's unfiltered-slot
-/// census.
+/// "Destroy target **creature**. It can't be regenerated." Filtered: an
+/// unfiltered slot 0 enumerates every permanent — Terminate, written with an
+/// unfiltered target, destroyed anything. See TODO's unfiltered-slot census.
 pub fn destroy_target_creature_no_regen() -> Effect {
     Effect::DestroyNoRegen { what: target_filtered(SelectionRequirement::Creature) }
 }
-pub fn return_target_to_hand() -> Effect {
-    Effect::Move { what: target(), to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target()))) }
-}
-/// "Return target **creature** to its owner's hand" — the filtered sibling.
+/// "Return target **creature** to its owner's hand", filtered to creatures.
 pub fn return_target_creature_to_hand() -> Effect {
     Effect::Move {
         what: target_filtered(SelectionRequirement::Creature),
@@ -1805,7 +1796,7 @@ pub fn on_attack_create_token(token: crate::card::TokenDefinition) -> TriggeredA
 /// `who: PlayerRef::You`.
 ///
 /// Push claude/modern_decks batch 105: shipped as part of the
-/// `mint_pests`/`mint_inklings`/`mint_spirits` / `mint_fractals` /
+/// `mint_pests` / `mint_inklings` / `mint_fractals` /
 /// `mint_treasures` family that centralises the canonical token
 /// mints for STX/SOS catalog cards.
 pub fn mint_token(token: crate::card::TokenDefinition, count: i32) -> Effect {
@@ -1827,13 +1818,6 @@ pub fn mint_pests(count: i32) -> Effect {
 /// Mint N SOS Inkling tokens (1/1 W/B flying creature).
 pub fn mint_inklings(count: i32) -> Effect {
     let token = crate::tokens::inkling_token();
-    mint_token(token, count)
-}
-
-/// Mint N SOS Spirit tokens (1/1 W flying creature, from SOS's
-/// Spirit Mascot template).
-pub fn mint_spirits(count: i32) -> Effect {
-    let token = crate::tokens::spirit_token();
     mint_token(token, count)
 }
 
@@ -2040,21 +2024,6 @@ pub fn dies_mint_token(
         who: PlayerRef::You,
         count: Value::Const(count),
         definition: std::sync::Arc::new(definition),
-    })
-}
-
-/// Dies-Ping-Creature shortcut: "When this creature dies, deal
-/// `amount` damage to target creature." Mirror of `dies_ping_any`
-/// / `dies_drain` for the creature-only target case. Used by
-/// Mogg Fanatic-style "dies dealing N to a creature" cards.
-///
-/// Push claude/modern_decks batch 141: shipped to collapse the
-/// recurring "dies → ping creature" pattern.
-pub fn dies_ping_creature(amount: i32) -> TriggeredAbility {
-    use crate::card::SelectionRequirement;
-    on_dies(Effect::DealDamage {
-        to: target_filtered(SelectionRequirement::Creature),
-        amount: Value::Const(amount),
     })
 }
 
@@ -3165,27 +3134,6 @@ pub fn etb_drain_and_counter_self(amount: i32) -> TriggeredAbility {
             amount: Value::Const(1),
         },
     ]))
-}
-
-/// On-Combat-Damage-To-Player + Gain Life shortcut: "Whenever this
-/// creature deals combat damage to a player, you gain `amount`
-/// life." Inkrise Lifedrainer template. Wraps the standard
-/// `EventKind::DealsCombatDamageToPlayer / SelfSource` event spec
-/// with a `GainLife { who: You }` body.
-///
-/// Push (claude/modern_decks batch 201): collapses the recurring
-/// inline "DealsCombatDamageToPlayer → GainLife" pattern across
-/// Inkrise-template cards. Keeps the call site to one line and
-/// gives the spec stability across refactors.
-pub fn on_combat_damage_to_player_gain_life(amount: i32) -> TriggeredAbility {
-    use crate::card::{EventKind, EventScope, EventSpec};
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-        effect: Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(amount),
-        },
-    }
 }
 
 /// On-Combat-Damage-To-Player + Drain shortcut: "Whenever this

@@ -1726,9 +1726,9 @@ fn own_line(text: &str, name: &str, f: impl Fn(&str) -> bool) -> bool {
 /// (Noble's Purse, Sphere of the Suns, Leviathan) does count — the rest of the
 /// sentence does not change the tapped half.
 ///
-/// ⚠ **Two spellings, and both are in the catalog**: `sets::etb_tap`'s trigger
-/// (`Tap { what: This }`) and `StaticEffect::EntersTapped` (the rules-correct
-/// replacement). Looking for only the trigger reports Leviathan as a miss.
+/// ⚠ **Two spellings**: an ETB trigger tapping the permanent (`Tap { what:
+/// This }`, the form the retired `sets::etb_tap` built) and
+/// `StaticEffect::EntersTapped` (the rules-correct replacement). Looking for only the trigger reports Leviathan as a miss.
 #[test]
 fn every_permanent_that_prints_entering_tapped_enters_tapped() {
     clause_ratchet(

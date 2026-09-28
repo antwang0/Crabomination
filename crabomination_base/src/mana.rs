@@ -1292,16 +1292,6 @@ impl ManaPool {
         self.clamp_creature();
     }
 
-    /// How much of `color`'s bucket (`None` = colorless) came from a creature.
-    pub fn creature_amount(&self, color: Option<Color>) -> u32 {
-        self.creature[prov_index(color)]
-    }
-
-    /// Total creature-produced mana floating.
-    pub fn creature_total(&self) -> u32 {
-        self.creature.iter().sum()
-    }
-
     /// Clamp each provenance counter to the bucket it describes. Spending
     /// paths don't know *which* mana of a color left the pool, so — exactly
     /// like `snow` — we never claim more provenance than the bucket holds.
@@ -1348,12 +1338,6 @@ impl ManaPool {
     /// Add mana from a snow source. The mana is both colored and snow.
     pub fn add_snow(&mut self, color: Color, amount: u32) {
         *self.slot_mut(color) += amount;
-        self.snow += amount;
-    }
-
-    /// Add colorless mana from a snow source.
-    pub fn add_snow_colorless(&mut self, amount: u32) {
-        self.colorless += amount;
         self.snow += amount;
     }
 

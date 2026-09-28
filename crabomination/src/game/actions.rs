@@ -3326,7 +3326,6 @@ impl crate::game::GameState {
     /// Legacy entrypoint kept for symmetry; new call sites should use
     /// `caster_grants_uncounterable_with_x` to thread the cast's X
     /// value. Internally delegates with X = 0.
-    #[allow(dead_code)]
     pub fn caster_grants_uncounterable(
         &self,
         caster: usize,

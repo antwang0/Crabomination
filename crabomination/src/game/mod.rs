@@ -1246,7 +1246,7 @@ pub struct HandAffordances {
     pub may_play_castable: Vec<CardId>,
     /// The land half of the same permission: `may_play_until` cards that
     /// are lands, so they are *played* via `GameAction::PlayLand` rather
-    /// than cast. See `GameState::may_play_playable_lands`.
+    /// than cast. See `GameState::may_play_playable_lands_on`.
     pub may_play_lands: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
@@ -9229,15 +9229,6 @@ impl GameState {
         })
     }
 
-    /// Scale a pending damage event by the global doubling/halving
-    /// replacements (CR 614.2 / 614.5): every doubler ×2, then every
-    /// halver ÷2 rounded down.
-    pub fn scale_damage(&self, amount: u32) -> u32 {
-        let d = self.damage_doublers().min(16);
-        let h = self.damage_halvers().min(16);
-        amount.saturating_mul(1 << d) >> h
-    }
-
     /// Source- and target-aware damage scaling: the global doublers/halvers,
     /// the side-scoped ones (Gisela, Blade of Goldnight —
     /// `DoubleDamageToOpponents` doubles events hitting an opponent's side,
@@ -10912,8 +10903,10 @@ impl GameState {
         Self::relax_cost_colors_known(self.spend_mana_as_any_color_active_for(None), cost)
     }
 
-    /// `relax_cost_colors_for`, but consulting the name-restricted permission
-    /// too (Unexpected Potential's chosen name).
+    /// [`relax_cost_colors`](Self::relax_cost_colors) for a seat — also
+    /// relaxing for one holding this turn's North Star permission — and
+    /// consulting the name-restricted permission too (Unexpected Potential's
+    /// chosen name).
     ///
     /// Borrowed when no permission is active — which is every payment in a
     /// game without a Lattice-style effect — so the common path costs no
@@ -10958,17 +10951,6 @@ impl GameState {
             symbols.push(ManaSymbol::Generic(relaxed));
         }
         std::borrow::Cow::Owned(crate::mana::ManaCost::new(symbols))
-    }
-
-    /// The seat-aware form: also relaxes for a seat holding this turn's North
-    /// Star permission.
-    pub fn relax_cost_colors_for(
-        &self,
-        seat: Option<usize>,
-        cost: &crate::mana::ManaCost,
-    ) -> crate::mana::ManaCost {
-        Self::relax_cost_colors_known(self.spend_mana_as_any_color_active_for(seat), cost)
-            .into_owned()
     }
 
     /// Short human-readable lines for the turn-scoped continuous effects that

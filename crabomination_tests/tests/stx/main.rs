@@ -5,16 +5,11 @@
 // Table-driven tests use wide tuple rows; the shape is the point.
 #![allow(clippy::type_complexity)]
 
-use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::game::*;
 use crabomination::game::drain_stack;
 use crabomination::mana::Color;
 
-
-// Suppress unused-import lint when CounterType isn't used in this batch.
-#[allow(dead_code)]
-fn _keepalive(_: CounterType) {}
 
 // ── batch 125 — CR 706 (Roll a Die) primitive tests ────────────────────────
 

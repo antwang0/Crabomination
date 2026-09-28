@@ -10489,11 +10489,6 @@ impl CardInstance {
             || self.counter_count(CounterType::Indestructible) > 0
     }
 
-    pub fn has_protection_from(&self, color: Color) -> bool {
-        // Granted/stripped EOT keywords count, same as `has_keyword`.
-        self.has_keyword(&Keyword::Protection(color))
-    }
-
     /// CR 708 — flip this permanent face down: stash the real definition in
     /// CR 902.5 / 315.5 — this command-zone card's abilities function from
     /// there. A Vanguard avatar always does; a Conspiracy only while it is

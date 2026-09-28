@@ -982,29 +982,6 @@ impl GameState {
             .collect()
     }
 
-    /// The land half of [`may_play_castable`](Self::may_play_castable):
-    /// cards outside the caster's hand carrying a live `may_play_until`
-    /// permission that are **lands**, and so are *played* rather than cast.
-    ///
-    /// CR 118.x — "you may play that card" covers lands, and `play_land`
-    /// honours the grant from exile. But `may_play_castable` probes only
-    /// `GameAction::CastFromZoneWithoutPaying`, which correctly refuses a
-    /// land, so a land was published nowhere: the exile browser showed
-    /// Suspend Aggression's exiled top-of-library card with a "May play
-    /// (you)" badge and no way to click it, for the ~40 % of casts where
-    /// that card is a land. The bot had the play all along
-    /// (`pick_main_phase_action`'s impulse-exile branch); only the human
-    /// could not reach it.
-    ///
-    /// Same `would_accept` dry-run as its sibling, so the land-drop
-    /// allowance, timing and any `CantPlayLands` lock all gate it.
-    pub fn may_play_playable_lands(&self, caster: usize) -> Vec<CardId> {
-        if self.player_with_priority() != caster {
-            return Vec::new();
-        }
-        self.may_play_playable_lands_on(&self.affordance_probe_template(), caster)
-    }
-
     fn may_play_playable_lands_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         let candidates: Vec<CardId> = self
             .exile
@@ -1499,20 +1476,9 @@ impl GameState {
             .collect()
     }
 
-    /// Cards in `caster`'s hand they could cast for their Blitz cost right now
-    /// (CR 702.152). Surfaced in `PlayerView.blitzable_hand` so the client can
-    /// offer a "Blitz" affordance alongside Dash.
-    pub fn blitzable_hand_cards(&self, caster: usize) -> Vec<CardId> {
-        if self.player_with_priority() != caster {
-            return Vec::new();
-        }
-        self.blitzable_hand_cards_on(&self.affordance_probe_template(), caster)
-    }
-
-    /// [`blitzable_hand_cards`] against a prebuilt probe template; the caller
-    /// owns the priority short-circuit.
-    ///
-    /// [`blitzable_hand_cards`]: Self::blitzable_hand_cards
+    /// Cards in `caster`'s hand they could cast for their Blitz cost right
+    /// now, against a prebuilt probe template; the caller owns the priority
+    /// short-circuit.
     fn blitzable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
@@ -1532,20 +1498,9 @@ impl GameState {
             .collect()
     }
 
-    /// Cards in `caster`'s hand they could cast for their Warp cost right now
-    /// (EOE). Surfaced in `PlayerView.warpable_hand` so the client can offer a
-    /// "Warp" affordance alongside Dash/Blitz.
-    pub fn warpable_hand_cards(&self, caster: usize) -> Vec<CardId> {
-        if self.player_with_priority() != caster {
-            return Vec::new();
-        }
-        self.warpable_hand_cards_on(&self.affordance_probe_template(), caster)
-    }
-
-    /// [`warpable_hand_cards`] against a prebuilt probe template; the caller
-    /// owns the priority short-circuit.
-    ///
-    /// [`warpable_hand_cards`]: Self::warpable_hand_cards
+    /// Cards in `caster`'s hand they could cast for their Warp cost right
+    /// now, against a prebuilt probe template; the caller owns the priority
+    /// short-circuit.
     fn warpable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand

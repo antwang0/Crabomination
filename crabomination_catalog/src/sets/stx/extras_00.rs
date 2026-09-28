@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 //! Strixhaven supplemental cards — additions to the base STX catalog
 //! that flesh out the set with more castable spells and creatures.
 //!
@@ -7,19 +6,18 @@
 //! depend on Mentor/Mutate/Lesson-sideboard primitives ship as their
 //! body half only and are marked 🟡 in `STRIXHAVEN2.md`.
 
-use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Effect, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
     Selector, SpellSubtype, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    magecraft,
     target_filtered,
 };
 use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{
-    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+    Color, b, cost, g, generic, hybrid, r, u, w, x,
 };
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
@@ -1582,7 +1580,6 @@ pub fn reckless_amplimancer() -> CardDefinition {
 /// (matches the printed "creatures you control have haste"
 /// continuous effect).
 pub fn crashing_drawbridge() -> CardDefinition {
-    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Crashing Drawbridge",
         cost: cost(&[generic(2)]),

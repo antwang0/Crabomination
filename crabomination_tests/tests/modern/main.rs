@@ -3,7 +3,6 @@
 //! at least one test exercising its primary play pattern.
 
 /// Card-factory fn pointer for parametrized case tables.
-#[allow(unused)]
 pub type Factory = fn() -> crabomination::card::CardDefinition;
 
 mod cantrips_suspend;

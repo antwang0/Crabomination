@@ -339,7 +339,7 @@ pub fn verge_land(
 /// Triggered ability: when this permanent enters the battlefield, tap it.
 /// CR 614.1c — "This land enters tapped" as the **replacement** it is.
 ///
-/// The sibling of [`etb_tap`], and the one to reach for. An
+/// Not an ETB trigger tapping the permanent (`Tap { what: This }`): an
 /// `EntersBattlefield` trigger puts the land on the battlefield untapped,
 /// puts the trigger on the stack and hands its controller priority: it can
 /// tap the land for mana it should never have made, and its opponents see an
@@ -376,18 +376,6 @@ pub fn enters_tapped_unless_you_control(land: crate::card::LandType) -> StaticAb
             condition: Predicate::SelectorExists(Selector::EachPermanent(
                 SelectionRequirement::HasLandType(land).and(SelectionRequirement::ControlledByYou),
             )),
-        },
-    }
-}
-
-/// ⚠ **The trigger form, and CR 614.1c says it is the wrong one** — see
-/// [`enters_tapped`]. Kept only for the `etb_tap_then_*` siblings, whose
-/// "then" half really is a trigger.
-pub fn etb_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap {
-            what: Selector::This,
         },
     }
 }
@@ -485,26 +473,6 @@ pub fn fastland_enters_tapped() -> StaticAbility {
                 ),
                 n: Value::Const(3),
             })),
-        },
-    }
-}
-
-/// ⚠ **The trigger form, and CR 614.1c says it is the wrong one** — see
-/// [`fastland_enters_tapped`].
-pub fn fastland_etb_conditional_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(4),
-            },
-            then: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
-            else_: Box::new(Effect::Noop),
         },
     }
 }

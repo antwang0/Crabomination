@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 //! Strixhaven supplemental cards — additions to the base STX catalog
 //! that flesh out the set with more castable spells and creatures.
 //!
@@ -7,19 +6,18 @@
 //! depend on Mentor/Mutate/Lesson-sideboard primitives ship as their
 //! body half only and are marked 🟡 in `STRIXHAVEN2.md`.
 
-use super::super::no_abilities;
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
     Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
-    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, landfall, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    etb_gain_life, landfall, magecraft,
     target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
+use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{
-    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+    Color, b, cost, g, generic, hybrid, phyrexian, r, u, w, x,
 };
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────

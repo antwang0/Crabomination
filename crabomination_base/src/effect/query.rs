@@ -278,7 +278,6 @@ fn implicit_any_target_if_bare(what: &Selector) -> Option<&'static SelectionRequ
 }
 
 impl Effect {
-    pub const NOOP: Effect = Effect::Noop;
 
     /// True if this effect is an *adapt* effect (CR 702.108) — the
     /// counter-check shape produced by `shortcut::adapt`: "if this creature

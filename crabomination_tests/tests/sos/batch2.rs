@@ -1,11 +1,9 @@
-#![allow(unused_imports)]
-use crabomination::card::{CardType, CounterType, Keyword};
+use crabomination::card::{CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
-use crate::prepared_on_battlefield;
 
 // ── Graduation Day (new) ────────────────────────────────────────────────────
 

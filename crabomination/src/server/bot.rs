@@ -16436,17 +16436,6 @@ fn min_blockers_required_kws(kws: &[crate::card::Keyword]) -> usize {
 }
 
 
-/// True if the player can pay the card's mana cost from their current
-/// pool **including** static-ability cost increases (Damping Sphere's
-/// post-first-spell tax, Chancellor of the Annex's first-spell tax).
-///
-/// The state-aware overload `can_afford_in_state` is what the bot's
-/// main_phase_action uses; the simpler signature is kept for
-/// existing callers that don't have a `GameState` handy.
-pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
-    can_afford_with_extra(&def.cost, pool, 0, 0)
-}
-
 /// What `seat` could still pay with this phase: mana already floating,
 /// plus the most each *untapped* source they control could add.
 ///

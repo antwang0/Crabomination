@@ -2190,21 +2190,9 @@ impl Battlefield {
     }
 
     /// Visit every permanent that can carry a printed trigger or a Station
-    /// band: the [`trigger_members`](Self::trigger_members) list on a hit,
+    /// band — the [`trigger_members`](Self::trigger_members) list on a hit,
     /// the whole board on a miss (the dispatcher fills the list; this never
-    /// does). For a walker whose per-card body reads only
-    /// `definition.triggered_abilities` / `station` — the combat
-    /// declaration's two whole-board trigger walks (PERF `(-222)`) and the
-    /// combat-damage-to-player listener walk (`(-224)`) and the step-trigger
-    /// walk when no static grant is live (`(-228)`), and the cast-trigger
-    /// walk on the same condition (`(-231)`).
-    #[inline]
-    pub fn for_each_triggerer(&self, f: impl FnMut(&CardInstance)) {
-        self.for_each_triggerer_or_all(false, f)
-    }
-
-    /// [`for_each_triggerer`](Self::for_each_triggerer), or the whole board
-    /// when `all` — the shape for a hook whose grant presence read says a
+    /// does) — or the whole board when `all`: the shape for a hook whose grant presence read says a
     /// permanent with no printed trigger may carry one this time. One call,
     /// not an `if` over two walks: a closure handed to two generic walks is
     /// codegen'd out of line and called per permanent (~30 Ir each, +0.24 %

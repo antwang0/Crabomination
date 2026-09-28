@@ -24,8 +24,8 @@ use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 // ── Fastlands ────────────────────────────────────────────────────────────────
 //
 // Real Oracle: "ENTERS tapped unless you control two or fewer other lands."
-// `fastland_etb_conditional_tap` evaluates the post-ETB land count: if you
-// already control 4+ lands (this land plus 3+ others) it taps itself.
+// `fastland_enters_tapped` is the CR 614.1c replacement: if you already
+// control three or more other lands, it enters tapped.
 
 pub fn blackcleave_cliffs() -> CardDefinition {
     {

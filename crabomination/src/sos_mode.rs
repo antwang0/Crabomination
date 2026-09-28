@@ -17,9 +17,8 @@
 //! - The college's school land
 //!
 //! The pools are hand-maintained lists (they were originally generated
-//! from STRIXHAVEN2.md's status tables by `scripts/list_sos_ok.py` /
-//! `scripts/sos_ok_factory_map.py`, but those tables no longer exist and
-//! the scripts are stale). The 2026-07 audit backfilled the implemented-
+//! from STRIXHAVEN2.md's status tables, which no longer exist, nor do the
+//! scripts that read them). The 2026-07 audit backfilled the implemented-
 //! but-unpooled cards, including the Quandrix and Silverquill elders.
 //!
 //! Pool sizes are smaller than the cube's, especially for Prismari

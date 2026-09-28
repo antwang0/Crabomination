@@ -2456,7 +2456,6 @@ name = "crabomination_catalog"
 version = "0.1.0"
 dependencies = [
  "crabomination_base",
- "serde",
 ]
 
 [[package]]

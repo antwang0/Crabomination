@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
