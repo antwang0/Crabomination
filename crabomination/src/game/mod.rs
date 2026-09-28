@@ -19817,6 +19817,9 @@ impl GameState {
         self.objects_leave_with_player(seat, &mut events);
         // Resolve the game-over / surviving-team determination.
         self.check_state_based_actions_into(&mut events);
+        // The leave (and anything the sweep did) triggers like any other
+        // event — the server hands these straight to the wire.
+        self.dispatch_triggers_for_events(&events);
         events
     }
 

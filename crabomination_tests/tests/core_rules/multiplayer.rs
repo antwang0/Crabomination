@@ -6675,3 +6675,24 @@ fn cr_800_4m_a_departed_goaders_goad_lifts_when_their_turn_would_have_begun() {
     assert_eq!(g.active_player_idx, 2, "seat 1's turn was skipped");
     assert!(!g.is_goaded(g.battlefield_find(bear).unwrap()), "the goad ended where seat 1's turn would have begun");
 }
+
+/// CR 800.4a — leaving the game is leaving the battlefield for every object
+/// the departed player owns, so another player's leave trigger sees each one
+/// (Twilight Drover's ruling: "all creature tokens that player owns also leave
+/// the game. Twilight Drover's ability will trigger once per token"). The
+/// departure path removed them silently, and a concession dispatched nothing.
+#[test]
+fn cr_800_4a_a_departed_players_tokens_leaving_trigger_twilight_drover() {
+    use crabomination::card::CounterType;
+    let mut g = multi_player_game(4);
+    let drover = g.add_card_to_battlefield(0, catalog::twilight_drover());
+    for _ in 0..2 {
+        let t = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(t).unwrap().is_token = true;
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.concede(1);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(drover).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}

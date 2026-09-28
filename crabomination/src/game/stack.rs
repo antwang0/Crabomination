@@ -5621,6 +5621,15 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
+        // CR 800.4a — leaving the game is leaving the battlefield: every
+        // other player's "whenever a … leaves the battlefield" sees each one
+        // (Twilight Drover's ruling: once per creature token). The departed
+        // seat's own leave triggers are refused on push (CR 800.4d).
+        let leavers: Vec<crate::card::CardInstance> =
+            self.battlefield.iter().filter(|c| c.owner == p).cloned().collect();
+        for c in &leavers {
+            self.note_left_without_dying(c, events);
+        }
         self.battlefield.retain(|c| c.owner != p);
         let reverts: Vec<(CardId, usize)> = self
             .battlefield
