@@ -387,3 +387,80 @@ fn cr_707_2_vesuva_enters_as_a_copy() {
     assert_eq!(v.definition.name, "Breeding Pool");
     assert!(v.tapped);
 }
+
+/// CR 605.3b / 603.3 — a mana ability's cost is still an event: sacrificing
+/// a Treasure for mana triggers Disciple of the Vault, and the trigger goes
+/// on the stack the next time a player would receive priority.
+#[test]
+fn cr_605_3b_a_mana_abilitys_sacrifice_triggers() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::disciple_of_the_vault());
+    let tok = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::CreateToken {
+            who: crabomination::effect::PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            definition: std::sync::Arc::new(crabomination::game::effects::treasure_token()),
+        },
+        &tok,
+    )
+    .expect("a Treasure");
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Treasure").unwrap().id;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: t,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Treasure for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert_eq!(g.stack.len(), 1, "Disciple's trigger waits on the stack");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "Disciple drained off the mana ability's sacrifice");
+}
+
+/// CR 603.10 — a "leaves the battlefield" trigger looks back: "whenever an
+/// artifact an opponent controls dies" reads the dead artifact's last-known
+/// controller. `ControlledByOpponent` (and `…Seat` / `…ActivePlayer`) had no
+/// look-back and answered `false` for every permanent already gone.
+#[test]
+fn cr_603_10_an_opponents_dead_artifact_is_read_by_its_last_controller() {
+    use crabomination::card::{
+        CardDefinition, CardType, EventKind, EventScope, EventSpec, SelectionRequirement as R, TriggeredAbility,
+        Value,
+    };
+    use crabomination::effect::{Effect, Predicate, Selector};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(
+        0,
+        CardDefinition {
+            name: "Watcher",
+            card_types: vec![CardType::Enchantment],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact.and(R::ControlledByOpponent),
+                    },
+                ),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        },
+    );
+    g.add_card_to_battlefield(1, catalog::worn_powerstone());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 1, None);
+    let evs = g
+        .resolve_effect(
+            &Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Artifact },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 21, "the opponent's artifact died");
+}

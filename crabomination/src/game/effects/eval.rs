@@ -4651,6 +4651,19 @@ impl GameState {
         self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == cid))
     }
 
+    /// The controller the controller leaves (`ControlledByYou` / `…Opponent` /
+    /// `…Seat` / `…ActivePlayer`) read: a permanent's, a spell's caster, or —
+    /// CR 603.10 — a permanent that just left the battlefield by its
+    /// last-known controller (a death trigger's filter).
+    fn last_known_controller(&self, cid: CardId, hint: Option<&CardInstance>) -> Option<usize> {
+        match self.bf_hint_or_find(cid, hint) {
+            Some(c) => Some(c.controller),
+            None => self
+                .stack_spell_caster(cid)
+                .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller)),
+        }
+    }
+
     fn evaluate_requirement_static_hinted<'a>(
         &'a self,
         req: &SelectionRequirement,
@@ -4735,15 +4748,7 @@ impl GameState {
                 // The battlefield answers first and the two fallbacks are
                 // out-of-line `or_else` calls in this build, so they sit
                 // behind a branch rather than in the chain.
-                Target::Permanent(cid) => {
-                    let ctrl = match self.bf_hint_or_find(*cid, hint) {
-                        Some(c) => Some(c.controller),
-                        None => self
-                            .stack_spell_caster(*cid)
-                            .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller)),
-                    };
-                    ctrl == Some(controller)
-                }
+                Target::Permanent(cid) => self.last_known_controller(*cid, hint) == Some(controller),
                 Target::Player(p) => *p == controller,
             },
             // CR 601.2c — "controlled by the same player as slot N". The
@@ -4795,24 +4800,18 @@ impl GameState {
                 if self.players.get(*p).is_some_and(|pl| pl.sorceries_cast_this_turn > 0)),
             R::ControlledByActivePlayer => match target {
                 Target::Permanent(cid) => {
-                    self.bf_hint_or_find(*cid, hint).is_some_and(|c| c.controller == self.active_player_idx)
+                    self.last_known_controller(*cid, hint) == Some(self.active_player_idx)
                 }
                 Target::Player(p) => *p == self.active_player_idx,
             },
             R::ControlledBySeat(q) => match target {
-                Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
-                    Some(c) => c.controller == *q as usize,
-                    None => self.stack_spell_caster(*cid) == Some(*q as usize),
-                },
+                Target::Permanent(cid) => self.last_known_controller(*cid, hint) == Some(*q as usize),
                 Target::Player(p) => *p == *q as usize,
             },
             R::ControlledByOpponent => match target {
-                Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
-                    Some(c) => !self.same_team(c.controller, controller),
-                    None => self
-                        .stack_spell_caster(*cid)
-                        .is_some_and(|ctrl| !self.same_team(ctrl, controller)),
-                },
+                Target::Permanent(cid) => self
+                    .last_known_controller(*cid, hint)
+                    .is_some_and(|ctrl| !self.same_team(ctrl, controller)),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
             R::ProtectedByOpponent => match target {
