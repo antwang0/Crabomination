@@ -4961,6 +4961,9 @@ fn cleansing_wildfire_destroys_land_and_draws() {
         "target land destroyed");
     // Caster drew a card: -1 (cast CW) + 1 (draw) = 0 net vs hand_before.
     assert_eq!(g.players[0].hand.len(), hand_before);
+    // "put it onto the battlefield tapped" — the replacement basic.
+    let forest = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Forest");
+    assert!(forest.is_some_and(|c| c.tapped), "the fetched basic enters tapped");
 }
 
 // ── Tendrils of Agony ───────────────────────────────────────────────────────

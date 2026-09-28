@@ -1707,7 +1707,7 @@ pub fn cleansing_wildfire() -> CardDefinition {
                 filter: SelectionRequirement::IsBasicLand,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                    tapped: false,
+                    tapped: true,
                 },
             },
             Effect::Draw {
