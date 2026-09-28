@@ -2215,7 +2215,9 @@ pub fn sentinels_mark() -> CardDefinition {
     // Addendum: the engine auto-attaches the aura, so grant lifelink to the
     // host via a self-ETB trigger (its `attached_to` link is live by then).
     def.triggered_abilities = vec![TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        // "If you cast it during your main phase" (CR 603.4).
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+            .with_filter(Predicate::TriggerSourceEnteredByCast),
         effect: Effect::If {
             cond: Predicate::YourMainPhase,
             then: Box::new(Effect::GrantKeyword {

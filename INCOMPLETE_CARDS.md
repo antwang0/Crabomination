@@ -2344,3 +2344,24 @@ for as long as" wants a while-source-on-battlefield `BecomeTreasure`); Hollow
 Marauder draws off the last discard only, not one per opponent who discarded
 low; Solitude / Shriekmaw / Pit Fight / Teferi TR keep the documented
 opponent-only narrowing (Atzocan Archer's reason).
+
+## Scope and slot scans (2026-09-28, session `012RbSk7`) — what the fixes left
+
+Fixed: the CR 506.3 attack scopes (`scripts/audit_attack_scope.py --gate`, 0 —
+thirteen bare "attacks you" cards, Oath of Kaya, Revenge of Ravens), the
+"for each player / opponent … target … that player controls" slots (Blatant
+Thievery, Nils, Riptide Gearhulk, Demonic Junker), 21 "up to" spells whose
+slots were mandatory, "if you cast it" riders (Lutri, Iridescent Tiger,
+Sentinel's Mark, Weftwalking), Wojek Investigator's per-opponent count, Rain
+of Embers' players and flyers, Ink-Eyes / Boneyard Parley targets, Laelia's
+library-exile event.
+
+| Card | Residual | Why |
+|---|---|---|
+| Weftwalking | "the first spell each player casts during each of their turns may be cast without paying its mana cost" is absent | no once-per-turn-per-player free-cast static |
+| Coveted Jewel, Flame Sweep, The One Ring | a bare "attack you" fires on planeswalker attacks; "except creatures you control with flying" spares every flyer; the protection rider ignores "if you cast it" | cube pool — frozen |
+| Choreographed Sparks, Render Speechless, Cost of Brilliance, Homesickness, Vibrant Outburst, Burrog Barrage, Chelonian Tackle, Dissection Practice, Impractical Joke | copy any-controller spell / "up to" slots still mandatory | SOS pool — frozen; this also blocks the CR 601.2c later-slot gate (TODO) |
+| Nihiloor | one steal, tapping Nihiloor, not one per opponent per tapped creature | the steal's power cap reads the creature tapped for it |
+| Turf War | the contested land per player is the engine's pick | `ContestOneLandPerPlayer` has no per-player target slot |
+| Chainer, Nightmare Adept | the graveyard-cast permission names one creature card (the first) | the priciest pick can be one it can't afford; wants a one-cast group over every creature card |
+| Scaretiller | the graveyard land is untargeted | a target inside the hand-or-graveyard branch would drop the trigger when no land card is there |

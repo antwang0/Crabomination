@@ -7881,15 +7881,20 @@ pub fn weftwalking() -> CardDefinition {
         name: "Weftwalking",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ShuffleHandAndGraveyardIntoLibrary {
-                who: PlayerRef::You,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(7),
-            },
-        ]))],
+        // "When this enchantment enters, if you cast it, …" (CR 603.4).
+        triggered_abilities: vec![{
+            let mut t = etb(Effect::Seq(vec![
+                Effect::ShuffleHandAndGraveyardIntoLibrary {
+                    who: PlayerRef::You,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(7),
+                },
+            ]));
+            t.event = t.event.with_filter(crate::card::Predicate::TriggerSourceEnteredByCast);
+            t
+        }],
         ..Default::default()
     }
 }

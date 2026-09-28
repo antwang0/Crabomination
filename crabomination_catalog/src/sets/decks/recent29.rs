@@ -111,16 +111,21 @@ pub fn iridescent_tiger() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::AddMana {
-            who: PlayerRef::You,
-            pool: ManaPayload::Colors(vec![
-                Color::White,
-                Color::Blue,
-                Color::Black,
-                Color::Red,
-                Color::Green,
-            ]),
-        })],
+        // "When this creature enters, if you cast it, add {W}{U}{B}{R}{G}."
+        triggered_abilities: vec![{
+            let mut t = etb(Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![
+                    Color::White,
+                    Color::Blue,
+                    Color::Black,
+                    Color::Red,
+                    Color::Green,
+                ]),
+            });
+            t.event = t.event.with_filter(crate::card::Predicate::TriggerSourceEnteredByCast);
+            t
+        }],
         ..Default::default()
     }
 }

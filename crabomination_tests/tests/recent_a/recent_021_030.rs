@@ -3614,11 +3614,23 @@ mod recent29 {
         assert_eq!(count_named(&g, 0, "Treasure"), 1, "ETB Treasure");
     }
 
-    /// Iridescent Tiger adds five mana on entry.
+    /// Iridescent Tiger adds WUBRG on entry — "if you cast it" (CR 603.4):
+    /// put onto the battlefield some other way, it adds nothing.
     #[test]
     fn iridescent_tiger_etb_mana() {
         let mut g = two_player_game();
         etb_bf(&mut g, 0, catalog::iridescent_tiger());
+        assert_eq!(g.players[0].mana_pool.total(), 0, "not cast: no mana");
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let tiger = g.add_card_to_hand(0, catalog::iridescent_tiger());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.perform_action(crabomination::game::types::GameAction::CastSpell {
+            card_id: tiger, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.total(), 5, "WUBRG added");
     }
 
