@@ -10,7 +10,7 @@
 //! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
 //! Fools, Sivitri, Dragon Master, Elminster and Tasha, the Witch Queen; and
 //! Jon Irenicus, Shattered One; Aloy, Savior of Meridian, Kibo, Uktabi
-//! Prince and Shilgengar, Sire of Famine.
+//! Prince, Shilgengar, Sire of Famine and Goro-Goro and Satoru.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -1095,6 +1095,52 @@ pub fn shilgengar_sire_of_famine() -> CardDefinition {
             vec![CreatureType::Elder, CreatureType::Demon],
             6,
             6,
+        )
+    }
+}
+
+/// Goro-Goro and Satoru — {U}{B}{R} 3/4 Goblin Human. "Whenever one or more
+/// creatures you control that entered this turn deal combat damage to a
+/// player" is one fire per damaged player (CR 603.2c, `once_per_batch`, the
+/// filter read per dealer): a 5/5 red Dragon Spirit with flying. {1}{R}: your
+/// creatures gain haste until end of turn.
+pub fn goro_goro_and_satoru() -> CardDefinition {
+    let dragon_spirit = TokenDefinition {
+        name: "Dragon Spirit".into(),
+        power: 5,
+        toughness: 5,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon, CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(trigger_source_is(R::Creature.and(R::EnteredThisTurn)))
+                .once_per_batch(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(dragon_spirit),
+            },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Goro-Goro and Satoru",
+            cost(&[u(), b(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Human],
+            3,
+            4,
         )
     }
 }

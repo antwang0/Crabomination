@@ -4508,6 +4508,7 @@ static DECKS: &[Factory] = &[
     super::decks::aloy_savior_of_meridian,
     super::decks::kibo_uktabi_prince,
     super::decks::shilgengar_sire_of_famine,
+    super::decks::goro_goro_and_satoru,
     super::decks::aragorn_the_uniter,
     super::decks::zur_the_enchanter,
     super::decks::flubs_the_fool,

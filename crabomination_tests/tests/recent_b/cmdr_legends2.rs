@@ -643,3 +643,31 @@ fn shilgengar_bleeds_angels_and_raises_vampires() {
         assert!(g.computed_permanent(id).unwrap().subtypes().creature_types.contains(&CreatureType::Vampire));
     }
 }
+
+/// Goro-Goro and Satoru: combat damage from creatures that entered THIS turn
+/// makes one 5/5 flying Dragon Spirit per damaged player (CR 603.2c "one or
+/// more"), however many of them connected; an old creature makes none.
+#[test]
+fn goro_goro_makes_a_dragon_for_this_turns_entrants() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::goro_goro_and_satoru());
+    let fresh: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    for &id in &fresh {
+        g.battlefield_find_mut(id).unwrap().entered_turn = Some(g.turn_number);
+    }
+    let old = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(old).unwrap().entered_turn = Some(g.turn_number - 1);
+    attack(&mut g, &[fresh[0], fresh[1], old]);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let dragons: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Dragon Spirit").collect();
+    assert_eq!(dragons.len(), 1, "one batch, one Dragon");
+    assert!(dragons[0].definition.keywords.contains(&Keyword::Flying));
+
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::goro_goro_and_satoru());
+    let old = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(old).unwrap().entered_turn = Some(g.turn_number - 1);
+    attack(&mut g, &[old]);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Dragon Spirit"));
+}
