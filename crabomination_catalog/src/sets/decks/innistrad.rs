@@ -737,24 +737,24 @@ pub fn flare_of_faith() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::If {
             cond: Predicate::EntityMatches {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
             },
             then: Box::new(Effect::Seq(vec![
                 Effect::PumpPT {
-                    what: Selector::Target(0),
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
                     power: Value::Const(3),
                     toughness: Value::Const(3),
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {
-                    what: Selector::Target(0),
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
             ])),
             else_: Box::new(Effect::PumpPT {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(2),
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,

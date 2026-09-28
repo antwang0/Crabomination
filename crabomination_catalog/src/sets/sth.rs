@@ -1184,9 +1184,13 @@ pub fn cannibalize() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Exile { what: Selector::Target(0) },
+            // "two target creatures controlled by the same player".
+            Effect::Exile { what: target_filtered(R::Creature) },
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)).and(R::SameControllerAsTargetSlot(0)),
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },

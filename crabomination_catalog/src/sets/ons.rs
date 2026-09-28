@@ -665,7 +665,12 @@ pub fn searing_flesh() -> CardDefinition {
     sorcery(
         "Searing Flesh",
         cost(&[generic(6), r()]),
-        Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(7) },
+        Effect::DealDamage {
+            to: crate::effect::shortcut::target_filtered(
+                crate::card::SelectionRequirement::OpponentPlayer.or(crate::card::SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(7),
+        },
     )
 }
 

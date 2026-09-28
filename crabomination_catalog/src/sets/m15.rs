@@ -2257,7 +2257,7 @@ pub fn ajani_steadfast() -> CardDefinition {
                     min: 0,
                     body: Box::new(Effect::Seq(vec![
                         Effect::PumpPT {
-                            what: Selector::Target(0),
+                            what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                             power: Value::ONE,
                             toughness: Value::ONE,
                             duration: Duration::EndOfTurn,

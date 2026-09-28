@@ -1063,7 +1063,7 @@ pub fn omnibian() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::BecomeCreatureType {
-                    what: Selector::Target(0),
+                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                     creature_types: vec![CreatureType::Frog],
                     duration: Duration::EndOfTurn,
                 },
@@ -1127,10 +1127,10 @@ pub fn cytoshape() -> CardDefinition {
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::BecomeCopyOfFor {
-            what: Selector::Target(0),
+            what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
             source: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature,
+                filter: R::Creature.and(R::HasSupertype(crate::card::Supertype::Legendary).negate()),
             },
             duration: Duration::EndOfTurn,
             non_legendary: false,

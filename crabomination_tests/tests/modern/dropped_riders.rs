@@ -2848,3 +2848,33 @@ fn cr_115_4_bare_any_target_slots_refuse_a_land() {
         }
     }
 }
+
+/// CR 115.1 — the rest of the bare-slot class: each printed target now
+/// bounds its slot. Flare of Faith and Cytoshape name a creature (a land is
+/// refused), Searing Flesh an opponent or planeswalker (a creature is
+/// refused), and Cannibalize's two creatures share a controller.
+#[test]
+fn cr_115_1_bare_target_slots_name_their_filter() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let try_cast = |g: &mut GameState, f: fn() -> crabomination::card::CardDefinition, t: Target, extra: Vec<Target>| {
+        let id = g.add_card_to_hand(0, f());
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            g.players[0].mana_pool.add(c, 3);
+        }
+        g.players[0].mana_pool.add_colorless(8);
+        g.priority.player_with_priority = 0;
+        let ok = g
+            .perform_action(GameAction::CastSpell { card_id: id, target: Some(t), additional_targets: extra, mode: None, x_value: None })
+            .is_ok();
+        drain_stack(g);
+        ok
+    };
+    assert!(!try_cast(&mut g, catalog::flare_of_faith, Target::Permanent(land), vec![]));
+    assert!(!try_cast(&mut g, catalog::cytoshape, Target::Permanent(land), vec![Target::Permanent(bear)]));
+    assert!(!try_cast(&mut g, catalog::searing_flesh, Target::Permanent(bear), vec![]));
+    assert!(!try_cast(&mut g, catalog::cannibalize, Target::Permanent(bear), vec![Target::Permanent(mine)]), "different controllers");
+    assert!(try_cast(&mut g, catalog::searing_flesh, Target::Player(1), vec![]));
+}
