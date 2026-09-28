@@ -1746,6 +1746,20 @@ fn visions_of_brutality_cant_block_and_bleeds() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, own_life - 2,
         "controller loses life equal to the 2 combat damage dealt");
+    // CR 120.1: "deals damage" is any damage — a fight is non-combat damage
+    // to a creature, and it bleeds too (it once read only combat damage to
+    // a player).
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let prey = g.add_card_to_hand(0, catalog::prey_upon());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: prey, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Prey Upon");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 2, "fight damage bleeds the controller");
 }
 
 /// Mutant's Prey fights an opponent's creature using a counter-bearing attacker.

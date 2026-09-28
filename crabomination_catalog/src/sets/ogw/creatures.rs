@@ -2238,7 +2238,8 @@ pub fn bearer_of_silence() -> CardDefinition {
 }
 
 /// Visions of Brutality — {1}{B} Devoid Aura. Enchanted creature can't block,
-/// and whenever it deals combat damage, its controller loses that much life.
+/// and whenever it deals damage (any damage, to anything — CR 120.1), its
+/// controller loses that much life.
 pub fn visions_of_brutality() -> CardDefinition {
     use crate::card::{
         EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, SelectionRequirement,
@@ -2264,7 +2265,7 @@ pub fn visions_of_brutality() -> CardDefinition {
             keywords: vec![Keyword::CantBlock],
             scale: None,
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
                 effect: Effect::LoseLife {
                     who: Selector::You,
                     amount: Value::TriggerEventAmount,
