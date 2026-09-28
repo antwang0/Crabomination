@@ -949,6 +949,8 @@ pub fn quagmire_druid() -> CardDefinition {
             mana_cost: cost(&[g()]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
+            // "Sacrifice a creature" — this one included.
+            sac_other_may_be_source: true,
             effect: Effect::Destroy { what: target_filtered(R::Enchantment) },
             ..Default::default()
         }],

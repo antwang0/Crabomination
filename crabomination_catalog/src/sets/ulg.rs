@@ -685,6 +685,8 @@ pub fn phyrexian_plaguelord() -> CardDefinition {
     let mut def = carrier("Phyrexian Plaguelord", cost(&[generic(3), b(), b()]), 4, 4, 4);
     def.activated_abilities.push(ActivatedAbility {
         sac_other_filter: Some((R::Creature, 1)),
+        // "Sacrifice a creature" — this one included.
+        sac_other_may_be_source: true,
         effect: Effect::PumpPT {
             what: target_filtered(R::Creature),
             power: Value::Const(-1),

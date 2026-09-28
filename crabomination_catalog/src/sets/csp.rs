@@ -260,6 +260,8 @@ pub fn gutless_ghoul() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_other_filter: Some((R::Creature, 1)),
+            // "Sacrifice a creature" — this one included.
+            sac_other_may_be_source: true,
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
             ..Default::default()
         }],

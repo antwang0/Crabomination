@@ -2257,6 +2257,8 @@ pub fn corpse_harvester() -> CardDefinition {
             mana_cost: cost(&[generic(1), b()]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
+            // "Sacrifice a creature" — this one included.
+            sac_other_may_be_source: true,
             effect: Effect::Seq(vec![
                 Effect::Search {
                     who: PlayerRef::You,

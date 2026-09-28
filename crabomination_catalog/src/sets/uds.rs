@@ -1754,6 +1754,8 @@ pub fn bloodshot_cyclops() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
+            // "Sacrifice a creature" — this one included.
+            sac_other_may_be_source: true,
             effect: Effect::DealDamage { to: target_any(), amount: Value::SacrificedPower },
             ..Default::default()
         }],

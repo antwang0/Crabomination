@@ -570,6 +570,8 @@ pub fn blighted_shaman() -> CardDefinition {
     let pump = |filter: R, n: i32| ActivatedAbility {
         tap_cost: true,
         sac_other_filter: Some((filter, 1)),
+        // "Sacrifice a creature" — this one included.
+        sac_other_may_be_source: true,
         effect: Effect::PumpPT {
             what: target_filtered(R::Creature),
             power: Value::Const(n),

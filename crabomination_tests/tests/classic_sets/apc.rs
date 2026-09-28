@@ -503,8 +503,23 @@ fn quagmire_druid_eats_an_enchantment() {
     g.clear_sickness(druid);
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let ench = g.add_card_to_battlefield(1, catalog::powerstone_minefield());
+    let bear = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id;
     activate(&mut g, 0, druid, 0, Some(Target::Permanent(ench)));
     assert!(g.battlefield_find(ench).is_none());
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(druid).is_some(), "another creature pays first");
+}
+
+/// "Sacrifice a creature" includes the Druid itself: alone, it pays with
+/// its own body.
+#[test]
+fn quagmire_druid_may_sacrifice_itself() {
+    let mut g = main_phase();
+    let druid = g.add_card_to_battlefield(0, catalog::quagmire_druid());
+    g.clear_sickness(druid);
+    let ench = g.add_card_to_battlefield(1, catalog::powerstone_minefield());
+    activate(&mut g, 0, druid, 0, Some(Target::Permanent(ench)));
+    assert!(g.battlefield_find(ench).is_none());
+    assert!(g.battlefield_find(druid).is_none(), "the Druid paid for it");
 }
 
 /// Quicksilver Dagger pings and cantrips off the host.
