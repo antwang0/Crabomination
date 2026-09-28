@@ -553,3 +553,93 @@ fn jon_irenicus_gifts_a_goaded_creature_and_draws_when_it_attacks() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "its owner draws");
 }
+
+fn activate(g: &mut GameState, seat: usize, card: CardId, index: usize) {
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: card,
+        ability_index: index,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// Aloy discovers only when an artifact creature attacks, for the greatest
+/// power among them (Juggernaut's 5 finds the top Bears).
+#[test]
+fn aloy_discovers_for_attacking_artifact_creatures() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::aloy_savior_of_meridian());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lib = g.players[0].library.len();
+    attack(&mut g, &[bear]);
+    assert_eq!(g.players[0].library.len(), lib, "no artifact creature attacked");
+
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::aloy_savior_of_meridian());
+    let jugg = g.add_card_to_battlefield(0, catalog::juggernaut());
+    let lib = g.players[0].library.len();
+    attack(&mut g, &[jugg]);
+    assert_eq!(g.players[0].library.len(), lib - 1, "discover took the top Bears");
+}
+
+/// Kibo: every seat gets a Banana (mana and 2 life); an opponent's artifact
+/// dying grows Kibo, a Monkey — CR 603.10: the sacrificed token is read by its
+/// last-known controller; attacking, the defender sacrifices an artifact.
+#[test]
+fn kibo_hands_out_bananas_and_eats_artifacts() {
+    let mut g = pod(3);
+    let kibo = g.add_card_to_battlefield(0, catalog::kibo_uktabi_prince());
+    g.clear_sickness(kibo);
+    activate(&mut g, 0, kibo, 0);
+    let banana = |g: &GameState, seat: usize| {
+        g.battlefield.iter().find(|c| c.controller == seat && c.definition.name == "Banana").map(|c| c.id)
+    };
+    assert!((0..3).all(|s| banana(&g, s).is_some()), "each player has a Banana");
+
+    let life = g.players[1].life;
+    let theirs = banana(&g, 1).unwrap();
+    activate(&mut g, 1, theirs, 0);
+    assert_eq!(g.players[1].life, life + 2);
+    assert_eq!(g.players[1].mana_pool.total(), 1);
+    assert_eq!(pt(&g, kibo), (3, 3), "an opponent's artifact died: +1/+1 on the Monkey");
+
+    g.battlefield_find_mut(kibo).unwrap().tapped = false;
+    attack(&mut g, &[kibo]);
+    assert!(banana(&g, 1).is_none() && banana(&g, 2).is_some(), "seat 1 sacrificed its artifact");
+}
+
+/// Shilgengar: a sacrificed creature makes one Blood, an Angel as many as its
+/// toughness; six Blood tokens return every creature card with a finality
+/// counter, as Vampires.
+#[test]
+fn shilgengar_bleeds_angels_and_raises_vampires() {
+    use crabomination::card::{CounterType, CreatureType};
+    let mut g = pod(3);
+    let shil = g.add_card_to_battlefield(0, catalog::shilgengar_sire_of_famine());
+    let blood = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Blood").count();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, shil, 0);
+    assert_eq!(blood(&g), 1);
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    activate(&mut g, 0, shil, 0);
+    assert_eq!(blood(&g), 5, "the Angel's toughness 4");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, shil, 0);
+    assert_eq!(blood(&g), 6);
+
+    g.players[0].mana_pool.add(Color::Black, 3);
+    activate(&mut g, 0, shil, 1);
+    assert_eq!(blood(&g), 0, "six Blood tokens paid");
+    let back: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && !c.is_token && c.id != shil).map(|c| c.id).collect();
+    assert_eq!(back.len(), 3, "both Bears and the Angel");
+    for id in back {
+        let c = g.battlefield_find(id).unwrap();
+        assert_eq!(c.counter_count(CounterType::Finality), 1);
+        assert!(g.computed_permanent(id).unwrap().subtypes().creature_types.contains(&CreatureType::Vampire));
+    }
+}

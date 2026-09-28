@@ -9,7 +9,8 @@
 //! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
 //! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
 //! Fools, Sivitri, Dragon Master, Elminster and Tasha, the Witch Queen; and
-//! Jon Irenicus, Shattered One.
+//! Jon Irenicus, Shattered One; Aloy, Savior of Meridian, Kibo, Uktabi
+//! Prince and Shilgengar, Sire of Famine.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -942,6 +943,158 @@ pub fn jon_irenicus_shattered_one() -> CardDefinition {
             vec![CreatureType::Elf, CreatureType::Wizard],
             3,
             3,
+        )
+    }
+}
+
+/// Aloy, Savior of Meridian — vigilance, reach; whenever one or more artifact
+/// creatures you control attack, discover X, where X is the greatest power
+/// among them.
+pub fn aloy_savior_of_meridian() -> CardDefinition {
+    let attackers = || R::Artifact.and(R::Creature).and(R::IsAttacking);
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(attackers().and(R::ControlledByYou))),
+            ),
+            effect: Effect::Discover {
+                n: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(attackers()))),
+                filter: None,
+            },
+        }],
+        ..legend(
+            "Aloy, Savior of Meridian",
+            cost(&[generic(3), g(), u()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            3,
+            5,
+        )
+    }
+}
+
+/// Kibo, Uktabi Prince — {T}: each player creates a Banana ("{T}, sacrifice:
+/// add {R} or {G}; you gain 2 life"); an opponent's artifact going to a
+/// graveyard grows your Apes and Monkeys; attacking, the defending player
+/// sacrifices an artifact.
+pub fn kibo_uktabi_prince() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    let banana = TokenDefinition {
+        name: "Banana".into(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let primate = || R::HasCreatureType(CreatureType::Ape).or(R::HasCreatureType(CreatureType::Monkey));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::EachPlayer,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(banana),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer)
+                    .with_filter(trigger_source_is(R::Artifact.and(R::ControlledByOpponent))),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(primate())),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
+                    count: Value::ONE,
+                    filter: R::Artifact,
+                },
+            },
+        ],
+        ..legend(
+            "Kibo, Uktabi Prince",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Monkey, CreatureType::Noble],
+            2,
+            2,
+        )
+    }
+}
+
+/// Shilgengar, Sire of Famine — flying; sacrifice another creature: a Blood
+/// token, or as many as a sacrificed Angel's toughness; {W/B}{W/B}{W/B},
+/// sacrifice six Blood tokens: return each creature card from your graveyard
+/// with a finality counter, as Vampires in addition to their other types.
+/// The counter is put on as they enter (the ETB sees it), not "with" it.
+pub fn shilgengar_sire_of_famine() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    use crate::effect::ZoneDest;
+    use crate::game::effects::blood_token;
+    use crate::mana::hybrid;
+    let blood = |n: Value| Effect::CreateToken { who: PlayerRef::You, count: n, definition: std::sync::Arc::new(blood_token()) };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                sac_other_filter: Some((R::Creature, 1)),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::SacrificedCard,
+                        filter: R::HasCreatureType(CreatureType::Angel),
+                    },
+                    then: Box::new(blood(Value::SacrificedToughness)),
+                    else_: Box::new(blood(Value::ONE)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: crate::mana::ManaCost::new(vec![
+                    hybrid(Color::White, Color::Black),
+                    hybrid(Color::White, Color::Black),
+                    hybrid(Color::White, Color::Black),
+                ]),
+                sac_other_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Blood).and(R::IsToken), 6)),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: R::Creature,
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
+                    Effect::AddCreatureTypes {
+                        what: Selector::LastMoved,
+                        creature_types: vec![CreatureType::Vampire],
+                        duration: Duration::Permanent,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Shilgengar, Sire of Famine",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Elder, CreatureType::Demon],
+            6,
+            6,
         )
     }
 }
