@@ -568,7 +568,7 @@ pub fn eiganjo_free_riders() -> CardDefinition {
                 },
                 Value::ONE,
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         ..creature(
             "Eiganjo Free-Riders",

@@ -4631,7 +4631,7 @@ pub fn dovins_acuity() -> CardDefinition {
                         description: "Return Dovin's Acuity to its owner's hand.".into(),
                         body: Box::new(Effect::Move {
                             what: Selector::This,
-                            to: ZoneDest::Hand(PlayerRef::You),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                         }),
                     }),
                     else_: Box::new(Effect::Noop),

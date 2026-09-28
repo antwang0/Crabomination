@@ -123,7 +123,7 @@ pub fn intimidation_campaign() -> CardDefinition {
                     description: "return Intimidation Campaign to your hand".into(),
                     body: Box::new(Effect::Move {
                         what: Selector::This,
-                        to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                        to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                 },
             },

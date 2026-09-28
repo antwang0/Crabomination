@@ -6574,7 +6574,7 @@ pub fn roiling_dragonstorm() -> CardDefinition {
                     }),
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
             },
         ],

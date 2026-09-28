@@ -135,7 +135,7 @@ pub fn stockpiling_celebrant() -> CardDefinition {
                     what: target_filtered(
                         R::Nonland.and(R::ControlledByYou).and(R::OtherThanSource),
                     ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 Effect::Scry {
                     who: PlayerRef::You,

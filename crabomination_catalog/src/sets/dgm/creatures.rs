@@ -460,7 +460,7 @@ pub fn deputy_of_acquittals() -> CardDefinition {
             description: "return another creature you control to hand?".into(),
             body: Box::new(Effect::Move {
                 what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             }),
         })],
         ..Default::default()

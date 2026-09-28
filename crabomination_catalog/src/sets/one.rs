@@ -4024,7 +4024,7 @@ pub fn magmatic_sprinter() -> CardDefinition {
                     }),
                     else_: Box::new(Effect::Move {
                         what: Selector::This,
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                 },
             },

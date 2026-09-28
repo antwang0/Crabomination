@@ -3123,3 +3123,30 @@ fn remember_the_fallen_artifact_mode_alone() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == relic), "the artifact card returned");
 }
+
+/// CR 110.2 — "return … to its owner's hand" hands a stolen permanent back
+/// to its owner, not to the player who controls it (`audit_owner_hand.py`,
+/// 61 cards): Blinking Spirit's self-bounce, and the Invasion riders, which
+/// also choose on resolution rather than target (CR 608.2d).
+#[test]
+fn owners_hand_bounces_go_to_the_owner() {
+    let mut g = main_phase();
+    let spirit = g.add_card_to_battlefield(1, catalog::blinking_spirit());
+    g.battlefield_find_mut(spirit).unwrap().controller = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spirit, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("{0}: return it");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == spirit), "its owner's hand");
+
+    let mut g = main_phase();
+    let lions = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    g.battlefield_find_mut(lions).unwrap().controller = 0;
+    let drake = g.add_card_to_hand(0, catalog::silver_drake());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, drake, None).expect("Silver Drake needs no target");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == lions), "the stolen Lions go home");
+}

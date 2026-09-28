@@ -1200,7 +1200,7 @@ pub fn epharas_enlightenment() -> CardDefinition {
                     description: "Return Ephara's Enlightenment to your hand".into(),
                     body: Box::new(Effect::Move {
                         what: Selector::This,
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                 },
             },

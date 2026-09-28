@@ -617,7 +617,7 @@ pub fn hypervolt_grasp() -> CardDefinition {
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],

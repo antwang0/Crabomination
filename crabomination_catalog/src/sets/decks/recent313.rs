@@ -228,7 +228,7 @@ pub fn quicksilver_behemoth() -> CardDefinition {
         kind: crate::effect::DelayedTriggerKind::EndOfCombat,
         body: Box::new(Effect::Move {
             what: Selector::This,
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         }),
     };
     CardDefinition {

@@ -153,7 +153,7 @@ pub fn thopter_assembly() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,

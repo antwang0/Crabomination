@@ -84,7 +84,7 @@ pub fn arcanis_the_omnipotent() -> CardDefinition {
                 mana_cost: cost(&[generic(2), u(), u()]),
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 ..Default::default()
             },

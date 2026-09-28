@@ -994,7 +994,7 @@ pub fn loyal_gryff() -> CardDefinition {
                     ),
                     Value::Const(1),
                 ),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             }),
         })],
         ..Default::default()

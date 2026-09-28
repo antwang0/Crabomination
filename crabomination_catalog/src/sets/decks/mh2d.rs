@@ -842,7 +842,7 @@ pub fn skyblades_boon() -> CardDefinition {
                 mana_cost: cost(&[generic(2), w()]),
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 ..Default::default()
             },
@@ -851,7 +851,7 @@ pub fn skyblades_boon() -> CardDefinition {
                 from_graveyard: true,
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 ..Default::default()
             },

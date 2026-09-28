@@ -301,7 +301,7 @@ pub fn wingspan_stride() -> CardDefinition {
             mana_cost: cost(&[generic(2), u()]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],
@@ -657,7 +657,7 @@ pub fn corroding_dragonstorm() -> CardDefinition {
                     }),
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
             },
         ],
@@ -811,7 +811,7 @@ pub fn encroaching_dragonstorm() -> CardDefinition {
                     }),
                 effect: Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
             },
         ],

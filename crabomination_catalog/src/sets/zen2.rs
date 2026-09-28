@@ -1221,7 +1221,7 @@ pub fn khalni_gem() -> CardDefinition {
             filter: None,
             count: Value::Const(2),
             up_to: false,
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -1653,7 +1653,7 @@ pub fn living_tsunami() -> CardDefinition {
                         filter: None,
                         count: Value::Const(1),
                         up_to: false,
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                     else_: Box::new(Effect::SacrificeSource),
                 }),

@@ -1798,7 +1798,7 @@ pub fn essence_reliquary() -> CardDefinition {
             condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::Move {
                 what: target_filtered(R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource)),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],

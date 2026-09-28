@@ -358,7 +358,7 @@ pub fn forced_worship() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
             ..Default::default()
         }],
         ..aura(
@@ -898,7 +898,7 @@ pub fn glistening_oil() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
-                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
             },
         ],
         ..aura(

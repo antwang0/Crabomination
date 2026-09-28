@@ -397,7 +397,7 @@ pub fn mana_bloom() -> CardDefinition {
             )),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
         }],
         ..Default::default()

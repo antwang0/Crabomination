@@ -25066,7 +25066,7 @@ pub fn blinking_spirit() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],
@@ -28508,7 +28508,7 @@ pub fn batterskull() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],
@@ -45300,7 +45300,7 @@ pub fn bomat_courier() -> CardDefinition {
             discard_hand_cost: true,
             effect: Effect::Move {
                 what: Selector::CardExiledWithSource,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],
@@ -63098,7 +63098,7 @@ pub fn kogla_the_titan_ape() -> CardDefinition {
                         SelectionRequirement::HasCreatureType(CreatureType::Human)
                             .and(SelectionRequirement::ControlledByYou),
                     ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 Effect::GrantKeyword {
                     what: Selector::This,

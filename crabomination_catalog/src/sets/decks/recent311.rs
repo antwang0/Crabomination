@@ -601,7 +601,7 @@ pub fn neurok_prodigy() -> CardDefinition {
             discard_cost: Some((R::Artifact, 1)),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],

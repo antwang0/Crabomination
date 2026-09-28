@@ -1060,7 +1060,7 @@ pub fn vapor_snare() -> crate::card::CardDefinition {
                         filter: None,
                         count: Value::Const(1),
                         up_to: false,
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                     else_: Box::new(Effect::SacrificeSource),
                 }),

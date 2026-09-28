@@ -1078,7 +1078,7 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
             discard_cost: Some((SelectionRequirement::Any, 1)),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],

@@ -247,7 +247,7 @@ pub fn timid_drake() -> CardDefinition {
                     filter: R::Creature.and(R::OtherThanSource),
                 },
             ),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
         }],
         ..creature("Timid Drake", cost(&[generic(2), u()]), vec![CreatureType::Drake], 3, 3)
     }

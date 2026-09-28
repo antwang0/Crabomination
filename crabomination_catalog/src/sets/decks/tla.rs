@@ -6121,7 +6121,7 @@ pub fn avatar_destiny() -> CardDefinition {
                 },
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 Effect::Move {
                     what: Selector::one_of(Selector::CardsInZone {

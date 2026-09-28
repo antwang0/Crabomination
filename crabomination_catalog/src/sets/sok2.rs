@@ -426,7 +426,7 @@ pub fn trusted_advisor() -> CardDefinition {
                 },
                 Value::ONE,
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         ..creature(
             "Trusted Advisor",
@@ -843,15 +843,9 @@ fn upkeep_bounce(
     color: Color,
 ) -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_upkeep(Effect::Move {
-            what: Selector::take(
-                Selector::ControlledBy {
-                    who: PlayerRef::You,
-                    filter: R::Creature.and(R::HasColor(color)),
-                },
-                Value::ONE,
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        triggered_abilities: vec![on_upkeep(Effect::ReturnOneYouControl {
+            filter: R::Creature.and(R::HasColor(color)),
+            keep_best: false,
         })],
         ..creature(name, c, types, p, t)
     }

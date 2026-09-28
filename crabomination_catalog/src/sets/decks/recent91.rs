@@ -120,7 +120,7 @@ pub fn the_locust_god() -> CardDefinition {
             crate::effect::shortcut::on_dies(Effect::AtNextEndStep {
                 body: Box::new(Effect::Move {
                     what: Selector::This,
-                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
             }),
         ],

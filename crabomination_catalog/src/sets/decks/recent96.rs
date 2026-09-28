@@ -97,7 +97,7 @@ pub fn reinforced_ronin() -> CardDefinition {
             ),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -5225,7 +5225,7 @@ pub fn shimmerwing_chimera() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
             },
         }],

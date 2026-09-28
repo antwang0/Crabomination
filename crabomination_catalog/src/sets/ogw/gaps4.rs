@@ -283,7 +283,7 @@ pub fn dimensional_infiltrator() -> CardDefinition {
                         description: "Return this creature to your hand?".into(),
                         body: Box::new(Effect::Move {
                             what: Selector::This,
-                            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                            to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                         }),
                     }),
                     else_: Box::new(Effect::Noop),

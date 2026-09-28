@@ -592,7 +592,7 @@ pub fn fleetfoot_panther() -> CardDefinition {
                     .and(R::ControlledByYou)
                     .and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         ..creature(
             "Fleetfoot Panther",
@@ -758,7 +758,7 @@ pub fn horned_kavu() -> CardDefinition {
                     .and(R::ControlledByYou)
                     .and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         ..creature("Horned Kavu", cost(&[r(), g()]), vec![CreatureType::Kavu], 3, 4)
     }
@@ -896,7 +896,7 @@ pub fn lava_zombie() -> CardDefinition {
                     .and(R::ControlledByYou)
                     .and(R::HasColor(Color::Black).or(R::HasColor(Color::Red))),
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),

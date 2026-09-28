@@ -3259,7 +3259,7 @@ pub fn living_twister() -> CardDefinition {
                 mana_cost: cost(&[g()]),
                 effect: Effect::Move {
                     what: target_filtered(R::Land.and(R::ControlledByYou).and(R::Tapped)),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 ..Default::default()
             },

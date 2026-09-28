@@ -780,7 +780,7 @@ pub fn dust_stalker() -> CardDefinition {
             }))),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
         }],
         ..eldrazi(

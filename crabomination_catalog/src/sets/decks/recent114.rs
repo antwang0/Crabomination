@@ -805,7 +805,7 @@ pub fn angelic_destiny() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
         }],
         ..Default::default()
@@ -888,7 +888,7 @@ pub fn flickering_ward() -> CardDefinition {
             mana_cost: cost(&[w()]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
         }],

@@ -89,13 +89,12 @@ fn saproling() -> crate::card::TokenDefinition {
 }
 
 /// The Invasion-block bounce riders: "return a [colors] creature you control to
-/// its owner's hand."
+/// its owner's hand" — chosen on resolution, not targeted (CR 608.2d), and to
+/// its owner's hand.
 fn bounce_own(a: Color, b: Color) -> TriggeredAbility {
-    etb(Effect::Move {
-        what: target_filtered(
-            R::Creature.and(R::ControlledByYou).and(R::HasColor(a).or(R::HasColor(b))),
-        ),
-        to: ZoneDest::Hand(PlayerRef::You),
+    etb(Effect::ReturnOneYouControl {
+        filter: R::Creature.and(R::HasColor(a).or(R::HasColor(b))),
+        keep_best: false,
     })
 }
 
@@ -957,7 +956,7 @@ pub fn natural_emergence() -> CardDefinition {
                     .and(R::ControlledByYou)
                     .and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
             ),
-            to: ZoneDest::Hand(PlayerRef::You),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         static_abilities: vec![StaticAbility {
             description: "Lands you control are 2/2 creatures with first strike. They're still \

@@ -235,7 +235,7 @@ pub fn squirrel_sanctuary() -> CardDefinition {
                     mana_cost: cost(&[generic(1)]),
                     body: Box::new(Effect::Move {
                         what: Selector::This,
-                        to: ZoneDest::Hand(PlayerRef::You),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                     else_: None,
                 },

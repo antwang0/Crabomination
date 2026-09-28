@@ -4961,7 +4961,7 @@ pub fn corpses_of_the_lost() -> CardDefinition {
                         amount: Value::ONE,
                         body: Box::new(Effect::Move {
                             what: Selector::This,
-                            to: ZoneDest::Hand(PlayerRef::You),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                         }),
                         else_: None,
                     }),

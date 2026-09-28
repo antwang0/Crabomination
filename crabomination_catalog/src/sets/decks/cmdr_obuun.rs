@@ -205,7 +205,7 @@ pub fn murasa_rootgrazer() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::Move {
                     what: target_filtered(basic_land().and(R::ControlledByYou)),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
                 ..Default::default()
             },
