@@ -185,9 +185,7 @@ pub fn putrid_warrior() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
-            effect: Effect::ChooseN {
-                picks: vec![0],
-                modes: vec![
+            effect: Effect::ChooseMode(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachPlayer),
                         amount: Value::ONE,
@@ -196,8 +194,7 @@ pub fn putrid_warrior() -> CardDefinition {
                         who: Selector::Player(PlayerRef::EachPlayer),
                         amount: Value::ONE,
                     },
-                ],
-            },
+                ]),
         }],
         ..creature(
             "Putrid Warrior",

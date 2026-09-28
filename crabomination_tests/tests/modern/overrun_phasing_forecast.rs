@@ -2125,7 +2125,8 @@ fn charming_prince_gains_three_life() {
     let life0 = g.players[0].life;
     let id = g.add_card_to_battlefield(0, catalog::charming_prince());
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
-        crabomination::decision::DecisionAnswer::Modes(vec![1]),
+        // CR 700.2b — the mode is chosen as the trigger goes on the stack.
+        crabomination::decision::DecisionAnswer::Mode(1),
     ]));
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);

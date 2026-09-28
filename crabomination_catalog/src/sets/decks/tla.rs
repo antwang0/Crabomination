@@ -791,9 +791,7 @@ pub fn irohs_demonstration() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
-        effect: Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        effect: Effect::ChooseMode(vec![
                 Effect::DealDamage {
                     to: Selector::EachPermanent(
                         SelectionRequirement::Creature
@@ -805,8 +803,7 @@ pub fn irohs_demonstration() -> CardDefinition {
                     to: target_filtered(SelectionRequirement::Creature),
                     amount: Value::Const(4),
                 },
-            ],
-        },
+            ]),
         ..Default::default()
     }
 }
@@ -820,8 +817,10 @@ pub fn azula_always_lies() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         subtypes: lesson(),
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -978,9 +977,7 @@ pub fn momo_playful_pet() -> CardDefinition {
                 EventKind::PermanentLeavesBattlefield,
                 EventScope::SelfSource,
             ),
-            effect: Effect::ChooseN {
-                picks: vec![0],
-                modes: vec![
+            effect: Effect::ChooseMode(vec![
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
@@ -998,8 +995,7 @@ pub fn momo_playful_pet() -> CardDefinition {
                     // "choose one" with two of its three arms is a mode the
                     // decider can never pick.
                     Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                ],
-            },
+                ]),
         }],
         ..Default::default()
     }
@@ -1391,17 +1387,14 @@ pub fn sandbenders_storm() -> CardDefinition {
         name: "Sandbenders' Storm",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        effect: Effect::ChooseMode(vec![
                 Effect::Destroy {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
                     ),
                 },
                 Effect::Earthbend { n: Value::Const(3) },
-            ],
-        },
+            ]),
         ..Default::default()
     }
 }
@@ -1414,9 +1407,7 @@ pub fn airbenders_reversal() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         subtypes: lesson(),
-        effect: Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        effect: Effect::ChooseMode(vec![
                 Effect::Destroy {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
@@ -1427,8 +1418,7 @@ pub fn airbenders_reversal() -> CardDefinition {
                         SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                 },
-            ],
-        },
+            ]),
         ..Default::default()
     }
 }
@@ -3769,9 +3759,7 @@ pub fn team_avatar() -> CardDefinition {
 /// Appa enters or attacks, choose one — target creature you control gains
 /// flying; or airbend another target nonland permanent you control.
 pub fn appa_loyal_sky_bison() -> CardDefinition {
-    let modal = || Effect::ChooseN {
-        picks: vec![0],
-        modes: vec![
+    let modal = || Effect::ChooseMode(vec![
             Effect::GrantKeyword {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -3786,8 +3774,7 @@ pub fn appa_loyal_sky_bison() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 ),
             },
-        ],
-    };
+        ]);
     CardDefinition {
         name: "Appa, Loyal Sky Bison",
         cost: cost(&[generic(4), w(), w()]),

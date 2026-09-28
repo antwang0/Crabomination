@@ -14513,9 +14513,7 @@ pub fn territorial_kavu() -> CardDefinition {
         dynamic_pt: Some(DynamicPt::DomainCount),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::ChooseN {
-                picks: vec![0],
-                modes: vec![
+            effect: Effect::ChooseMode(vec![
                     // "Discard a card. If you do, draw a card." The discard is
                     // mandatory, so the only way it fails is an empty hand —
                     // which is exactly what the guard tests.
@@ -14540,8 +14538,7 @@ pub fn territorial_kavu() -> CardDefinition {
                         of: None,
                         single: true,
                     },
-                ],
-            },
+                ]),
         }],
         ..Default::default()
     }
@@ -36339,9 +36336,7 @@ pub fn charming_prince() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
                 Effect::Scry {
                     who: PlayerRef::You,
                     amount: Value::Const(2),
@@ -36357,8 +36352,7 @@ pub fn charming_prince() -> CardDefinition {
                             .and(SelectionRequirement::OtherThanSource),
                     ),
                 },
-            ],
-        })],
+            ]))],
         ..Default::default()
     }
 }
@@ -37889,9 +37883,7 @@ pub fn deceiver_exarch() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
                 Effect::Untap {
                     what: target_filtered(SelectionRequirement::ControlledByYou),
                     up_to: None,
@@ -37899,8 +37891,7 @@ pub fn deceiver_exarch() -> CardDefinition {
                 Effect::Tap {
                     what: target_filtered(SelectionRequirement::ControlledByOpponent),
                 },
-            ],
-        })],
+            ]))],
         ..Default::default()
     }
 }

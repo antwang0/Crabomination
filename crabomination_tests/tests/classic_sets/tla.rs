@@ -436,15 +436,13 @@ fn irohs_demonstration_sweep_mode() {
 /// Iroh's Demonstration mode 1 deals 4 to a single target creature.
 #[test]
 fn irohs_demonstration_burn_mode() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
     let id = g.add_card_to_hand(0, catalog::irohs_demonstration());
     ready0(&mut g);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(foe)), additional_targets: vec![],
-        mode: None, x_value: None,
+        mode: Some(1), x_value: None,
     }).expect("cast (burn mode)");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(foe).map(|c| c.damage), Some(4));
@@ -459,9 +457,9 @@ fn azula_always_lies_both_modes() {
     let grow = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::azula_always_lies());
     ready0(&mut g);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(shrink)),
-        additional_targets: vec![Target::Permanent(grow)], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 1], target: Some(Target::Permanent(shrink)),
+        additional_targets: vec![Target::Permanent(grow)], x_value: None,
     }).expect("cast (both modes)");
     drain_stack(&mut g);
     let s = g.computed_permanent(shrink).unwrap();
@@ -564,7 +562,8 @@ fn momo_playful_pet_third_mode_is_scry_two() {
         g.add_card_to_library(0, catalog::island());
     }
     let lib = g.players[0].library.len();
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Modes(vec![2])]));
+    // CR 700.2b — chosen as the trigger goes on the stack.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(2)]));
     g.remove_to_graveyard_with_triggers(m);
     drain_stack(&mut g);
     assert!(

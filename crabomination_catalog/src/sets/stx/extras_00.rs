@@ -1931,9 +1931,7 @@ pub fn defend_the_campus() -> CardDefinition {
         name: "Defend the Campus",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        effect: Effect::ChooseMode(vec![
                 Effect::PumpPT {
                     what: Selector::EachPermanent(
                         SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1947,8 +1945,7 @@ pub fn defend_the_campus() -> CardDefinition {
                         SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
                     ),
                 },
-            ],
-        },
+            ]),
         ..Default::default()
     }
 }

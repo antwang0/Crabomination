@@ -6681,9 +6681,7 @@ pub fn archenemys_charm() -> CardDefinition {
         name: "Archenemy's Charm",
         cost: cost(&[b(), b(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0],
-            modes: vec![
+        effect: Effect::ChooseMode(vec![
                 Effect::Exile {
                     what: target_filtered(
                         SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
@@ -6708,8 +6706,7 @@ pub fn archenemys_charm() -> CardDefinition {
                         duration: Duration::EndOfTurn,
                     },
                 ]),
-            ],
-        },
+            ]),
         ..Default::default()
     }
 }
