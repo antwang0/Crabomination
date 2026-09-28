@@ -524,7 +524,9 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Minimum-cost floor** (`StaticEffect::SpellCostFloor` via
   `apply_spell_cost_floor`, applied after every reduction — Trinisphere) and
   **cost-increase statics** (`extra_cost_for_spell` walks nine flavours plus
-  `ColoredSpellTax` and the turn-scoped pool).
+  `ColoredSpellTax` and the turn-scoped pool). Every cast path pays them
+  (2026-09-28): zone casts, paid may-play grants and the half-card casts
+  go through `game/cast_cost.rs` (`add_spell_taxes`, `half_spell_probe`).
 - 🟡 **Conditional / additional costs** as a general modal layer. Card-intrinsic
   target-conditional reduction ships (`self_cost_reduction_if_target` — Ride's
   End's "{3} less if it targets a tapped permanent", generic-only / colored-pip
