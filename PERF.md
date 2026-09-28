@@ -3038,6 +3038,25 @@ pod              19,800 release games at 3-8 seats + 8,250 strict debug-assertio
                  games, all decided bar one legal draw
 ```
 
+### 2026-09-28 (Commander session `01P3edJz`) — guardrail, no perf work
+
+Engine edits a two-player pool can reach: the graveyard auto-target ranks by
+mana value, a spell's zoned graveyard target is re-checked at resolution
+(CR 608.2b), five top-of-library arms read index 0, `effective_retrace`
+reads emblems. Bot edits: the loyalty pick drops a mana-only +1 beside an
+impulse one; the retrace block reads granted retrace; the life-draw and
+exact-X sinks are pods only. The fixed pool holds none of the touched cards.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical at every
+                 build; the session base 054b44824 reads the same (the move from
+                 197,136 is 496030930's, the entry below)
+                 determinism ok (all pairs split); peak_rss_mib 32.3-35.6
+two-player pools cube / sos / sealed x 300, seeds 6200001 and 6300001: all decided
+                 bar 2 legal cube draws
+pod              12,800 release games at 3-8 seats, zero panics, one CR 104.4a draw
+```
+
 ### 2026-09-28 (Commander session `01Jhcydf`) — the `--bench` invariant MOVES: 197,136 -> 196,176
 
 Intentional: CR 115.4 (`496030930`). The fixed pool's Lightning Bolt and
