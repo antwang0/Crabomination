@@ -1639,12 +1639,34 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
     if names.is_empty() { dbg } else { format!("{dbg} [{}]", names.join(", ")) }
 }
 
+/// `CRAB_POD_CONCEDE=<n>`: after each accepted action, a living seat concedes
+/// with probability `n / 10_000` (CR 104.3a) — CR 800.4a's leave path driven
+/// at arbitrary points (mid-combat, mid-payment, under a pending ask), where a
+/// pod's own losses only ever reach it from a state-based check. Its own
+/// seeded stream, so an unset run is the run it always was.
+fn pod_concede_rate() -> Option<u32> {
+    static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
+    *RATE.get_or_init(|| std::env::var("CRAB_POD_CONCEDE").ok().and_then(|s| s.parse().ok()))
+}
+
 pub fn play_one_pod_game_censused(
     template: &GameState,
     pilots: &[Pilot],
     max_actions: usize,
     seed: u64,
     into: Option<&mut ActionCensus>,
+) -> PodOutcome {
+    play_pod_game(template, pilots, max_actions, seed, into, pod_concede_rate())
+}
+
+/// The pod loop; `concede_rate` is [`pod_concede_rate`]'s knob as a value.
+fn play_pod_game(
+    template: &GameState,
+    pilots: &[Pilot],
+    max_actions: usize,
+    seed: u64,
+    into: Option<&mut ActionCensus>,
+    concede_rate: Option<u32>,
 ) -> PodOutcome {
     crate::server::bot::set_jitter_seed(Some(seed));
     let mut g = template.clone();
@@ -1675,6 +1697,7 @@ pub fn play_one_pod_game_censused(
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
+    let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
     let mut census =
@@ -1730,6 +1753,16 @@ pub fn play_one_pod_game_censused(
                 any = true;
                 actions += 1;
                 plays += usize::from(!is_pass);
+                if let Some((rate, rng)) = concede.as_mut()
+                    && !g.is_game_over()
+                    && rng.random_range(0..10_000u32) < *rate
+                {
+                    let live: Vec<usize> = g.living_seats().collect();
+                    if let Some(&quitter) = live.get(rng.random_range(0..live.len().max(1))) {
+                        let events = g.concede(quitter);
+                        g.recycle_events(events);
+                    }
+                }
                 if g.is_game_over() {
                     break;
                 }
@@ -2431,6 +2464,22 @@ mod tests {
         let a = play_one_pod_game(&t, &pilots, 3_000, 0xC0FFEE);
         let b = play_one_pod_game(&t, &pilots, 3_000, 0xC0FFEE);
         assert_eq!((a.winner, a.actions, a.turns), (b.winner, b.actions, b.turns));
+    }
+
+    /// CR 104.3a / 800.4a — a player may concede at any time, so the leave
+    /// path runs mid-combat, mid-payment and under a pending ask, not only
+    /// from a state-based check. Four seats, a concession roughly every 200
+    /// actions: every game ends, nothing panics, and a seat that left owes
+    /// nothing (the loop's own debug assertion).
+    #[test]
+    fn cr_800_4a_pods_survive_concessions_at_arbitrary_points() {
+        let field = pod_field(4);
+        let t = build_pod_template(&field);
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [11u64, 12, 13, 14] {
+            let o = play_pod_game(&t, &pilots, 20_000, seed, None, Some(50));
+            assert!(matches!(o.stop, StopReason::GameOver), "seed {seed}: {:?}", o.stop);
+        }
     }
 
     /// The pod's half of the two-player `thread_determinism` gate: a chunk

@@ -390,7 +390,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
 | Puca's Covenant | "another target permanent card" can pick the creature that just died | no "other than the trigger source" requirement (the requirement walkers would all need it) |
-| Espers to Magicite (pod) | the token copy stays a creature (printed: "it's an artifact and it loses all other card types") | `CreateTokenCopyOf` adds card types but can't replace them |
+| Espers to Magicite (pod) | the copied card is the first creature card exiled, not a chosen target (the artifact-only type change ships: `SetCardTypesTo`) | the reflexive "choose up to one target … exiled this way" has no target slot over a resolution-exiled set |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
