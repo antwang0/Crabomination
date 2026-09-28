@@ -12,6 +12,10 @@
 //! Relic, Lux Cannon, Midnight Clock) — was never activated either (6-seat
 //! census, seed 1270001); it now takes an opponent's end step's spare mana,
 //! when the tap costs nothing before the controller's untap.
+//! Oblivion Stone's "put a fate counter on another target permanent" had the
+//! same gap in four decks (census seed 3100001), so its sweep took its
+//! controller's board too: the same end step now marks the controller's most
+//! valuable unmarked nonland permanent.
 //! Commander games only, so two-player play is unchanged.
 
 use crate::card::CounterType;
@@ -159,6 +163,62 @@ pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<G
     })
 }
 
+/// "Put a fate counter on [another] target permanent" (Oblivion Stone).
+fn marks_fate(e: &Effect) -> bool {
+    matches!(
+        e,
+        Effect::AddCounter {
+            what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. },
+            kind: CounterType::Fate,
+            ..
+        }
+    )
+}
+
+/// A fate counter on `seat`'s most valuable nonland permanent without one —
+/// called at an opponent's end step, like [`pick_self_counter_sink`].
+pub(super) fn pick_fate_sink(state: &GameState, seat: usize, w: &super::bot::EvalWeights) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+        return None;
+    }
+    let sinks: Vec<(crate::card::CardId, usize)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat)
+        .flat_map(|c| {
+            c.definition
+                .activated_abilities
+                .iter()
+                .enumerate()
+                .filter(|(_, ab)| marks_fate(&ab.effect))
+                .map(move |(i, _)| (c.id, i))
+        })
+        .collect();
+    if sinks.is_empty() {
+        return None;
+    }
+    let mut own: Vec<(i32, crate::card::CardId)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && !c.definition.is_land() && c.counter_count(CounterType::Fate) == 0)
+        .map(|c| (super::bot::permanent_value(state, c.id, w), c.id))
+        .collect();
+    own.sort_by_key(|&(v, id)| (std::cmp::Reverse(v), id));
+    own.iter().find_map(|&(_, id)| {
+        sinks.iter().find_map(|&(card_id, ability_index)| {
+            let action = GameAction::ActivateAbility {
+                card_id,
+                ability_index,
+                target: Some(Target::Permanent(id)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,5 +289,33 @@ mod tests {
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+
+    /// Oblivion Stone marks its controller's best nonland permanent (never
+    /// itself — "another target permanent") at an opponent's end step.
+    #[test]
+    fn oblivion_stone_marks_the_best_permanent_it_would_sweep() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let stone = g.add_card_to_battlefield(0, crate::catalog::oblivion_stone());
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        g.add_card_to_battlefield(0, crate::catalog::forest());
+        g.players[0].mana_pool.add_colorless(4);
+        g.step = TurnStep::End;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let w = crate::server::bot::EvalWeights::default();
+        let on_itself = GameAction::ActivateAbility {
+            card_id: stone, ability_index: 0, target: Some(Target::Permanent(stone)),
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        };
+        assert!(!g.would_accept(on_itself), "another target permanent");
+        let a = pick_fate_sink(&g, 0, &w).expect("mark");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
+            if card_id == stone && t == wurm));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::Fate), 1);
     }
 }

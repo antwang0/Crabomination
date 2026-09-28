@@ -51203,7 +51203,8 @@ pub fn oblivion_stone() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 tap_cost: true,
                 effect: Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Permanent),
+                    // "another target permanent"
+                    what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource)),
                     kind: CounterType::Fate,
                     amount: Value::Const(1),
                 },
