@@ -3024,7 +3024,7 @@ arm the step-bounded gate; three new effect/predicate arms. Card fixes reach
 the cube (Chandra, Torch of Defiance) and SOS (Nita).
 
 ```text
---bench          decisions 197,136 / 27.77 / 616.0 / 0 stalls — byte-identical
+--bench          decisions 197,136 / 27.77 / 616.0 / 0 stalls — byte-identical (196,176 / 27.64 / 613.0 from 2026-09-28, CR 115.4 — see below)
                  determinism ok (all pairs split)
 bench_ab.py      16 pairs, base 6083cf0c1 (session start, release-fast) vs HEAD:
                  +0.49 % median (sd 4.75), then -3.83 % median (sd 5.26) on a
@@ -3036,6 +3036,23 @@ two-player pools cube/sos/sealed x 300 an archetype, seeds 93001-93003 = 22,500
                  games, all decided
 pod              19,800 release games at 3-8 seats + 8,250 strict debug-assertion
                  games, all decided bar one legal draw
+```
+
+### 2026-09-28 (Commander session `01Jhcydf`) — the `--bench` invariant MOVES: 197,136 -> 196,176
+
+Intentional: CR 115.4 (`496030930`). The fixed pool's Lightning Bolt and
+Shock named a bare `Target(0)` slot that accepted any object; they now name
+`target_any()`, so the red deck's target lists shrank. Golden traces
+re-blessed in the same commit (winners / turns / actions unchanged). The
+engine commits before it (CR 119.4 `life_payable`, CR 603.4
+`EffectContext::event_player`) did not move the bench.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls (was 197,136 / 27.77 / 616.0)
+                 determinism ok (all pairs split); peak_rss_mib 35.4-37.1
+bench_ab.py      16 pairs, base 7cbb0bb5d (session start, release-fast) vs 054b44824:
+                 games/s median -1.48 % (mean -2.14 %, sd 8.73) — noise, and the
+                 two sides play different games
 ```
 
 ### 2026-09-26 (Commander session `015BCEt5`) — the `--bench` invariant MOVES: 200,398 -> 197,136
