@@ -4779,10 +4779,10 @@ impl GameState {
         // every other "if you gained life this turn" gate resets for EVERY
         // player at each untap, not just the active one.
         //
-        // The per-player-turn convention that `lands_played_this_turn` and
-        // `spells_cast_this_turn` use does not transfer: those are quantities
-        // only their own controller can add to on their own turn, whereas
-        // life-gain is read by both players' cards at any time. Resetting only
+        // The per-player-turn convention of `lands_played_this_turn` does not
+        // transfer: land drops happen only on their controller's own turn,
+        // whereas life-gain (like spells — see `spells_cast_this_game_turn`)
+        // happens and is read on every turn. Resetting only
         // the active player left the *non*-active player's tally standing
         // through the whole opposing turn: life gained on your turn kept
         // Thornfist Striker's team pump and trample switched on for all of
