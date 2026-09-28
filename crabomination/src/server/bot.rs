@@ -5314,7 +5314,10 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     // Defenses offered an Elf Warrior per -1/-1 counter and the bot took all
     // 980 under Everlasting Torment until the six-seat pod's board cap
     // (seat 173 pod, seed 17302 game 37).
-    if body.is_some_and(ability_makes_token)
+    if body.is_some_and(|b| super::renewal_guard::copier_has_copied_itself(state, source, b)) {
+        return false;
+    }
+    if body.is_some_and(|b| ability_makes_token(b) || super::renewal_guard::makes_token_copy(b))
         && (state.battlefield.len() >= crate::recommend::BOARD_GATE
             || state
                 .battlefield

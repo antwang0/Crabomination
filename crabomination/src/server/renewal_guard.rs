@@ -61,6 +61,37 @@ pub(super) fn sacrifices_to_draw_from_empty_library(state: &GameState, seat: usi
     state.players[seat].library.is_empty() && draws_you_a_card(&ab.effect)
 }
 
+/// Whether `e` makes a token copy of something, through `Seq` and `If`.
+pub(super) fn makes_token_copy(e: &Effect) -> bool {
+    match e {
+        Effect::CreateTokenCopyOf { .. } => true,
+        Effect::Seq(steps) => steps.iter().any(makes_token_copy),
+        Effect::If { then, else_, .. } => makes_token_copy(then) || makes_token_copy(else_),
+        _ => false,
+    }
+}
+
+/// How many same-named permanents a token copier may reach before the bot
+/// stops copying: past it, the copier is copying itself.
+const SELF_COPY_CAP: usize = 4;
+
+/// True when `body` makes a token copy and `source`'s controller already has
+/// [`SELF_COPY_CAP`] permanents named like `source`. Ondu Spiritdancer under
+/// Secret Arcade is an enchantment, so each token copy of it copies itself on
+/// its own "once each turn": 65 Ondus by the optional-loop cap, and every
+/// enchantment after that triggered each of them (seed 1515035 game 38, an
+/// action cap with 1,649 items on the stack).
+pub(super) fn copier_has_copied_itself(state: &GameState, source: CardId, body: &Effect) -> bool {
+    let Some(src) = state.battlefield.find_by_id(source) else { return false };
+    makes_token_copy(body)
+        && state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == src.controller && c.definition.name == src.definition.name)
+            .count()
+            >= SELF_COPY_CAP
+}
+
 /// True when `seat`'s board is already overkill: at least
 /// [`SATURATED_CREATURES`] creatures whose total power is three times the
 /// life every live opponent has left. Another token then changes nothing but
@@ -256,5 +287,28 @@ mod tests {
             g.add_card_to_battlefield(me, catalog::grizzly_bears());
         }
         assert!(!optional_trigger_beneficial(&g, fd, ask), "sixty Bears against 40 life: enough");
+    }
+
+    /// Ondu Spiritdancer copying itself under Secret Arcade: the ask is taken
+    /// while there are few Ondus and declined at four, and a cluttered board
+    /// declines a token copy as it does a token (seed 1515035, game 38).
+    #[test]
+    fn a_token_copier_stops_copying_itself() {
+        use crate::server::bot::optional_trigger_beneficial;
+        let mut g = multi_player_game(4);
+        let me = 0;
+        let ask = "Create a token copy of the entering enchantment?";
+        let ondu = g.add_card_to_battlefield(me, catalog::ondu_spiritdancer());
+        assert!(optional_trigger_beneficial(&g, ondu, ask), "one Ondu copies");
+        for _ in 0..3 {
+            g.add_card_to_battlefield(me, catalog::ondu_spiritdancer());
+        }
+        assert!(!optional_trigger_beneficial(&g, ondu, ask), "four Ondus: it is copying itself");
+        let mut g = multi_player_game(4);
+        let ondu = g.add_card_to_battlefield(me, catalog::ondu_spiritdancer());
+        while !super::board_is_cluttered(&g, me) {
+            g.add_card_to_battlefield(me, catalog::forest());
+        }
+        assert!(!optional_trigger_beneficial(&g, ondu, ask), "150 permanents: no more copies");
     }
 }
