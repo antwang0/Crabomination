@@ -2379,6 +2379,13 @@ impl GameState {
                 def.keywords.push(crate::card::Keyword::Crew(n));
             }
         }
+        // "Enter TAPPED as a copy" (Vesuva): the tapping is part of this
+        // replacement, so it survives the copy overwriting the printed text.
+        if spec.tapped
+            && let Some(c) = self.battlefield_find_mut(card_id)
+        {
+            c.tapped = true;
+        }
         true
     }
 

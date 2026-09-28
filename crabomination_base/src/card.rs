@@ -5255,6 +5255,10 @@ pub struct EntersAsCopy {
     /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
     #[serde(default)]
     pub non_legendary: bool,
+    /// "You may have this enter **tapped** as a copy" (Vesuva): the copy
+    /// enters tapped; declining leaves it untapped.
+    #[serde(default)]
+    pub tapped: bool,
     /// Activated abilities layered on top of the copy (Mercurial Pretender's
     /// "except it has '{2}{U}{U}: Return this creature to its owner's hand'").
     #[serde(default)]

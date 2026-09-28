@@ -4808,6 +4808,11 @@ impl GameState {
             card.enter_as_new_object();
         }
         self.battlefield.push(card);
+        // CR 707.2 — "enter as a copy of any land" (Vesuva) is chosen as it
+        // enters, before the as-enters replacements below, which then read
+        // the copied card's (the token path's order).
+        let mut copy_events = Vec::new();
+        self.apply_enters_as_copy(card_id, p, &mut copy_events);
         // CR 614.12 — a land drop is a battlefield entry like any other, so
         // the as-enters replacements run here too, before the counters and
         // before the ETB triggers. Cavern of Souls names its creature type
@@ -4834,6 +4839,7 @@ impl GameState {
             return Ok(vec![GameEvent::LandPlayed { player: p, card_id, played: true }]);
         }
         let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true }];
+        out.append(&mut copy_events);
         out.append(&mut self.finish_land_entry(card_id, p));
         Ok(out)
     }
