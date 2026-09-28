@@ -415,6 +415,8 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 | Invasion of Amonkhet | Lazotep Convert doesn't enter as a copy of a graveyard creature card | a transformed battle's back face has no enters-as-copy path |
 | Sunscourge Champion | eternalize's "Discard a card" additional cost isn't paid | the `eternalize` shortcut carries a mana cost only |
 | Summons of Saruman | the flashback X is paid in mana, not by exiling X cards from your graveyard | a flashback cost can't carry a variable exile |
+| Towering-Wave Mystic | mills only on combat damage, and mills the damaged player rather than a chosen target player | `DealsDamage*` binds slot 0 to the damaged object, so "target player" has no free slot |
+| Enter the Infinite | "until your next turn, you have no maximum hand size" lasts the rest of the game | no timed no-max-hand-size effect |
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
