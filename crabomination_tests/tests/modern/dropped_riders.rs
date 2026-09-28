@@ -2203,3 +2203,46 @@ fn other_creature_statics_apply_to_your_side_only() {
     g.battlefield_find_mut(thalia).unwrap().tapped = false;
     assert!(!ind(&g), "untapped");
 }
+
+/// Trigger halves that shipped dropped (trigger-kind scan): Orcish
+/// Bowmasters pings and amasses as it enters; Glint-Sleeve Siphoner gets {E}
+/// as it enters; Dreamstealer's combat damage makes that player discard that
+/// many cards.
+#[test]
+fn dropped_trigger_halves_fire() {
+    let mut g = main_phase();
+    let bow = g.add_card_to_hand(0, catalog::orcish_bowmasters());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bow, None).expect("bowmasters");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Army"), "amassed on ETB");
+
+    let mut g = main_phase();
+    let gs = g.add_card_to_hand(0, catalog::glint_sleeve_siphoner());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gs, None).expect("siphoner");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 1, "{{E}} on ETB");
+
+    let mut g = main_phase();
+    let ds = g.add_card_to_battlefield(0, catalog::dreamstealer());
+    g.clear_sickness(ds);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: ds,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 2, "1 combat damage, 1 discard");
+}

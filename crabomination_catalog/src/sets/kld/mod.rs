@@ -148,8 +148,8 @@ pub fn bristling_hydra() -> CardDefinition {
     }
 }
 
-/// Glint-Sleeve Siphoner — {1}{B} 2/1 Vampire Rogue with Menace. Whenever
-/// it attacks, you get {E}. At the beginning of your upkeep, you may pay
+/// Glint-Sleeve Siphoner — {1}{B} 2/1 Human Rogue with Menace. Whenever
+/// it enters or attacks, you get {E}. At the beginning of your upkeep, you may pay
 /// {E}{E}; if you do, draw a card and lose 1 life.
 pub fn glint_sleeve_siphoner() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
@@ -165,6 +165,7 @@ pub fn glint_sleeve_siphoner() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::AddEnergy(Value::Const(1))),
             on_attack(Effect::AddEnergy(Value::Const(1))),
             TriggeredAbility {
                 event: EventSpec::new(

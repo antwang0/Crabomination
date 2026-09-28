@@ -558,19 +558,19 @@ pub fn form_of_the_dragon() -> CardDefinition {
     }
 }
 
-/// Goblin Psychopath — a 5/5 that flips a coin over whom it hits.
+/// Goblin Psychopath — a 5/5 that flips a coin over whom it hits, whenever it
+/// attacks or blocks.
 pub fn goblin_psychopath() -> CardDefinition {
+    let flip = || Effect::FlipCoin {
+        count: Value::ONE,
+        on_heads: Box::new(Effect::Noop),
+        on_tails: Box::new(Effect::RedirectNextCombatDamageToController { what: Selector::This }),
+    };
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::FlipCoin {
-                count: Value::ONE,
-                on_heads: Box::new(Effect::Noop),
-                on_tails: Box::new(Effect::RedirectNextCombatDamageToController {
-                    what: Selector::This,
-                }),
-            },
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: flip() },
+            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: flip() },
+        ],
         ..creature(
             "Goblin Psychopath",
             cost(&[generic(3), r()]),

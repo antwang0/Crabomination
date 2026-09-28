@@ -44916,6 +44916,19 @@ pub fn wrench_mind() -> CardDefinition {
 /// deal 1 damage to any target, then amass Orcs 1.
 pub fn orcish_bowmasters() -> CardDefinition {
     use crate::game::types::TurnStep;
+    let ping_amass = || {
+        Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(1), extra_type: Some(CreatureType::Orc) },
+        ])
+    };
     CardDefinition {
         name: "Orcish Bowmasters",
         cost: cost(&[generic(1), b()]),
@@ -44927,7 +44940,7 @@ pub fn orcish_bowmasters() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![etb(ping_amass()), TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl)
                 // Exempt the drawing player's first draw of their own draw
                 // step (the turn-based draw).
@@ -44939,21 +44952,7 @@ pub fn orcish_bowmasters() -> CardDefinition {
                         Value::Const(1),
                     ),
                 ])))),
-            effect: Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
-                    ),
-                    amount: Value::Const(1),
-                },
-                Effect::Amass {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    extra_type: Some(CreatureType::Orc),
-                },
-            ]),
+            effect: ping_amass(),
         }],
         ..Default::default()
     }

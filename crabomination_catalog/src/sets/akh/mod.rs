@@ -186,19 +186,28 @@ pub fn sunscourge_champion() -> CardDefinition {
     c
 }
 
-/// Dreamstealer — {2}{B} 1/2 Human Wizard, Menace. Eternalize {5}{B}{B}.
-/// (The combat-damage discard rider collapses — the body + Eternalize is the
-/// gameplay-relevant attribute.)
+/// Dreamstealer — {2}{B} 1/2 Human Wizard, Menace. Whenever it deals combat
+/// damage to a player, that player discards that many cards. Eternalize
+/// {4}{B}{B}.
 pub fn dreamstealer() -> CardDefinition {
-    akh_body(
+    let mut c = akh_body(
         "Dreamstealer",
         cost(&[generic(2), b()]),
         vec![CreatureType::Human, CreatureType::Wizard],
         1,
         2,
         vec![Keyword::Menace],
-        eternalize(cost(&[generic(5), b(), b()])),
-    )
+        eternalize(cost(&[generic(4), b(), b()])),
+    );
+    c.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::Discard {
+            who: Selector::Player(PlayerRef::TriggerEventPlayer),
+            amount: Value::TriggerEventAmount,
+            random: false,
+        },
+    }];
+    c
 }
 
 /// Oketra's Attendant — {3}{W}{W} 3/3 Bird Soldier, Flying. Cycling {2}.
