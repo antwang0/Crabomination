@@ -221,22 +221,25 @@ pub fn explosive_entry() -> CardDefinition {
         name: "Explosive Entry",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Artifact,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Artifact,
+                    },
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature,
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature,
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
                 },
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

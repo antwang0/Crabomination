@@ -411,36 +411,39 @@ pub fn snow_day() -> CardDefinition {
         name: "Snow Day",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            // Slot 0: tap + freeze the first creature.
-            Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
-            Effect::SkipNextUntap {
-                what: Selector::Target(0),
-            },
-            // Slot 1: tap + freeze the second creature (optional — resolves
-            // to no-op when only one target was chosen).
-            Effect::Tap {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                // Slot 0: tap + freeze the first creature.
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
                 },
-            },
-            Effect::SkipNextUntap {
-                what: Selector::Target(1),
-            },
-            // Draw two cards, then discard a card.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]),
+                Effect::SkipNextUntap {
+                    what: Selector::Target(0),
+                },
+                // Slot 1: tap + freeze the second creature (optional — resolves
+                // to no-op when only one target was chosen).
+                Effect::Tap {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
+                },
+                Effect::SkipNextUntap {
+                    what: Selector::Target(1),
+                },
+                // Draw two cards, then discard a card.
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

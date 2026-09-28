@@ -1993,31 +1993,34 @@ pub fn black_suns_twilight() -> CardDefinition {
         name: "Black Sun's Twilight",
         cost: cost(&[x(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
-                toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::If {
-                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
-                then: Box::new(Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::EachMatching {
-                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                            filter: SelectionRequirement::Creature,
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: true,
-                    },
-                }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]),
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                    toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                    then: Box::new(Effect::Move {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::EachMatching {
+                                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                                filter: SelectionRequirement::Creature,
+                            }),
+                            count: Box::new(Value::ONE),
+                        },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: true,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

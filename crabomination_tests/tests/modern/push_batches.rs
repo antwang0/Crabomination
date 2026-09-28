@@ -1681,6 +1681,29 @@ fn frost_breath_taps_and_stuns() {
     assert_eq!(ra.counter_count(CounterType::Stun), 1, "stun counter applied");
 }
 
+/// CR 601.2c — "up to two target creatures": one target, or none, is a
+/// legal choice; the declined slot does nothing.
+#[test]
+fn cr_601_2c_frost_breath_up_to_two_takes_one_or_none() {
+    use crabomination::game::types::Target;
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for target in [Some(Target::Permanent(a)), None] {
+        let id = g.add_card_to_hand(0, catalog::frost_breath());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("up to two: fewer targets are legal");
+        drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "resolved");
+    }
+    let ra = g.battlefield_find(a).unwrap();
+    assert!(ra.tapped);
+    assert_eq!(ra.counter_count(CounterType::Stun), 1);
+}
+
 /// Furnace of Rath doubles damage: a 3-damage bolt deals 6.
 #[test]
 fn furnace_of_rath_doubles_damage() {

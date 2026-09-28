@@ -453,22 +453,25 @@ pub fn badlands_revival() -> CardDefinition {
         name: "Badlands Revival",
         cost: cost(&[generic(3), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-            },
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Permanent.and(R::InYourGraveyard),
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Permanent.and(R::InYourGraveyard),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

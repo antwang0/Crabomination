@@ -3296,13 +3296,16 @@ pub fn true_ancestry() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Permanent.from_your_graveyard()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            investigate(1),
-        ]),
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Permanent.from_your_graveyard()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                investigate(1),
+            ])),
+        },
         ..Default::default()
     }
 }

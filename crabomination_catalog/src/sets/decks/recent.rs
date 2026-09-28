@@ -12353,20 +12353,23 @@ pub fn rotten_reunion() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(cost(&[generic(1), b()]))],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::InGraveyard,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::InGraveyard,
+                    },
+                    to: ZoneDest::Exile,
                 },
-                to: ZoneDest::Exile,
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(decayed_zombie_token()),
-            },
-        ]),
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: std::sync::Arc::new(decayed_zombie_token()),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

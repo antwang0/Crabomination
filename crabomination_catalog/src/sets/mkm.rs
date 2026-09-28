@@ -709,54 +709,57 @@ pub fn relive_the_past() -> CardDefinition {
         name: "Relive the Past",
         cost: cost(&[generic(5), g(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Artifact
-                        .and(SelectionRequirement::InYourGraveyard),
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Artifact
+                            .and(SelectionRequirement::InYourGraveyard),
+                    },
+                    to: crate::effect::ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Land
+                            .and(SelectionRequirement::InYourGraveyard),
+                    },
+                    to: crate::effect::ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-            },
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Land
-                        .and(SelectionRequirement::InYourGraveyard),
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 2,
+                        filter: SelectionRequirement::HasCardType(CardType::Enchantment)
+                            .and(SelectionRequirement::InYourGraveyard)
+                            .and(SelectionRequirement::Not(Box::new(
+                                SelectionRequirement::HasEnchantmentSubtype(
+                                    crate::card::EnchantmentSubtype::Aura,
+                                ),
+                            ))),
+                    },
+                    to: crate::effect::ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+                Effect::BecomeCreature {
+                    what: Selector::LastMoved,
+                    power: Value::Const(5),
+                    toughness: Value::Const(5),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![],
+                    duration: crate::effect::Duration::Permanent,
                 },
-            },
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 2,
-                    filter: SelectionRequirement::HasCardType(CardType::Enchantment)
-                        .and(SelectionRequirement::InYourGraveyard)
-                        .and(SelectionRequirement::Not(Box::new(
-                            SelectionRequirement::HasEnchantmentSubtype(
-                                crate::card::EnchantmentSubtype::Aura,
-                            ),
-                        ))),
-                },
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-            Effect::BecomeCreature {
-                what: Selector::LastMoved,
-                power: Value::Const(5),
-                toughness: Value::Const(5),
-                creature_types: vec![CreatureType::Elemental],
-                keywords: vec![],
-                duration: crate::effect::Duration::Permanent,
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

@@ -3303,16 +3303,19 @@ pub fn walk_with_the_ancestors() -> CardDefinition {
         name: "Walk with the Ancestors",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::PermanentCard.from_your_graveyard()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::Discover {
-                n: Value::Const(4),
-                filter: None,
-            },
-        ]),
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::PermanentCard.from_your_graveyard()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Discover {
+                    n: Value::Const(4),
+                    filter: None,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

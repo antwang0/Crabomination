@@ -1342,17 +1342,20 @@ pub fn force_of_vigor() -> CardDefinition {
         name: "Force of Vigor",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(art_or_ench.clone()),
-            },
-            Effect::Destroy {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: art_or_ench,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(art_or_ench.clone()),
                 },
-            },
-        ]),
+                Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: art_or_ench,
+                    },
+                },
+            ])),
+        },
         alternative_cost: Some(AlternativeCost {
             awaken: false,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Green)),
@@ -1632,7 +1635,10 @@ pub fn frost_breath() -> CardDefinition {
         name: "Frost Breath",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![tap_and_stun(0), tap_and_stun(1)]),
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![tap_and_stun(0), tap_and_stun(1)])),
+        },
         ..Default::default()
     }
 }
