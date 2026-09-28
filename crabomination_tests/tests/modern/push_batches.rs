@@ -3822,3 +3822,52 @@ fn six_more_cards_carry_the_mechanic_they_print() {
         "Plot {{3}}{{U}}",
     );
 }
+
+/// Lutri — "When Lutri enters, if you cast it, copy target instant or sorcery
+/// spell you control": flashed in over your own Bolt it copies the Bolt; put
+/// onto the battlefield without being cast it does nothing (CR 603.4).
+#[test]
+fn lutri_copies_your_spell_only_when_cast() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let lutri = g.add_card_to_hand(0, catalog::lutri_the_spellchaser());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lutri, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lutri has flash");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "the Bolt and its copy");
+    // Put onto the battlefield, not cast: no copy.
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt");
+    let body = g.add_card_to_graveyard(0, catalog::lutri_the_spellchaser());
+    let reanimate = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::ExactObjects(vec![body]),
+        to: crabomination::effect::ZoneDest::Battlefield {
+            controller: crabomination::effect::PlayerRef::You,
+            tapped: false,
+        },
+    };
+    let evs = g
+        .resolve_effect(&reanimate, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0))
+        .expect("reanimate");
+    assert!(g.battlefield_find(body).is_some());
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "no copy without a cast");
+}

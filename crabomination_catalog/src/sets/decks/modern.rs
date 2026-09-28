@@ -45993,14 +45993,24 @@ pub fn lutri_the_spellchaser() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Companion],
         companion: Some(crate::card::CompanionRule::Singleton),
-        // "if you cast it" cast-condition on the ETB is approximated away.
-        triggered_abilities: vec![etb(Effect::CopySpellMayChooseTargets {
-            what: target_filtered(SelectionRequirement::Or(
-                Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
-                Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
-            )),
-            count: Value::Const(1),
-        })],
+        // "When Lutri enters, if you cast it, copy target instant or sorcery
+        // spell you control" — the intervening if (CR 603.4) and the
+        // controller both.
+        triggered_abilities: vec![{
+            let mut t = etb(Effect::CopySpellMayChooseTargets {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        ),
+                ),
+                count: Value::Const(1),
+            });
+            t.event = t.event.with_filter(crate::card::Predicate::SourceWasCast);
+            t
+        }],
         ..Default::default()
     }
 }
