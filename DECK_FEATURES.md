@@ -68,7 +68,7 @@ lists were picked.
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | ✅ complete |
-| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | ✅ complete |
