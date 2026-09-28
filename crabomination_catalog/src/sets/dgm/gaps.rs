@@ -516,10 +516,12 @@ pub fn pyrewild_shaman() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
+            // "One or more creatures": once per damaged player.
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
                 EventScope::FromYourGraveyard,
-            ),
+            )
+            .once_per_batch(),
             effect: Effect::MayPay {
                 description: "pay {3}: return Pyrewild Shaman to your hand".into(),
                 mana_cost: cost(&[generic(3)]),

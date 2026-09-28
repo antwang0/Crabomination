@@ -485,7 +485,8 @@ pub fn yarus_roar_of_the_old_gods() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                     .with_filter(face_down_trigger(Selector::TriggerSource))
-                    .once_per_turn(),
+                    // "One or more": once per damaged player, not once a turn.
+                    .once_per_batch(),
                 effect: draw(1),
             },
             TriggeredAbility {

@@ -915,3 +915,41 @@ fn conspiracy_unraveler_surfaces_a_free_cast_affordance() {
     }
     assert_eq!(g.compute_hand_affordances(0).free_castable, vec![bolt]);
 }
+
+/// CR 603.2c — "whenever one or more face-down creatures you control deal
+/// combat damage to a player, draw a card" fires once per damaged player, and
+/// is not once a turn (it carried an unprinted `once_per_turn`): face-down
+/// Bears at two seats draw two, both at one seat draw one.
+#[test]
+fn cr_603_2c_yarus_draws_per_player_dealt_damage() {
+    for (split, cards) in [(false, 1), (true, 2)] {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, catalog::yarus_roar_of_the_old_gods());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let hidden = [0, 1].map(|_| {
+            let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.battlefield_find_mut(b).unwrap().turn_face_down();
+            g.clear_sickness(b);
+            b
+        });
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: hidden[0], target: AttackTarget::Player(1) },
+            Attack { attacker: hidden[1], target: AttackTarget::Player(if split { 2 } else { 1 }) },
+        ]))
+        .expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        assert_eq!(g.players[0].hand.len(), hand + cards, "split: {split}");
+    }
+}
