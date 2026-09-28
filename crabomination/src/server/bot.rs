@@ -7892,6 +7892,17 @@ pub(super) fn cast_candidates<'a>(
         {
             candidates.push((0..modes.len() as u8).collect());
         }
+        // "If this spell was kicked, choose any number instead" (the
+        // Inscriptions): every pick of two or more modes, the kicked cast;
+        // `would_accept` drops the ones whose kicker doesn't fit.
+        if c.definition.kicked_any_modes {
+            let n = modes.len().min(8) as u32;
+            candidates.extend(
+                (1u32..1 << n)
+                    .filter(|m| m.count_ones() > 1)
+                    .map(|m| (0..n as u8).filter(|i| m & (1 << i) != 0).collect()),
+            );
+        }
         for picks in candidates {
             let Some(action) = pick(picks) else { continue };
             castable.push((action, false));
@@ -29314,6 +29325,28 @@ mod stack_response_tests {
                 if *card_id == conf && spree_modes.len() == 3))
             .collect();
         assert!(!casts.is_empty(), "no three-mode cast offered");
+    }
+
+    /// CR 702.33d — "if this spell was kicked, choose any number instead" is
+    /// offered as a kicked multi-mode cast when the kicker fits.
+    #[test]
+    fn a_kicked_inscription_is_offered_with_several_modes() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.add_card_to_hand(1, catalog::island());
+        let spell = g.add_card_to_hand(0, catalog::inscription_of_ruin());
+        g.players[0].mana_pool.add(Color::Black, 3);
+        g.players[0].mana_pool.add_colorless(4);
+        let kicked = cast_candidates(&g, 0, &EvalWeights::default(), None)
+            .into_iter()
+            .map(|(a, _)| a)
+            .filter(|a| matches!(a, GameAction::CastSpellSpree { card_id, spree_modes, .. }
+                if *card_id == spell && spree_modes.len() > 1));
+        assert!(kicked.into_iter().any(|a| g.clone().perform_action(a).is_ok()));
     }
 
     /// CR 707.10 / 115.7 — Wild Ricochet retargets, then copies: the same

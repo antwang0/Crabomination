@@ -7496,6 +7496,9 @@ impl GameState {
         //   "up to four, same mode more than once").
         // - ChooseModesByPoints (the BLB Season cycle): any picks whose
         //   point prices total at most the printed budget, repeats allowed.
+        let widen = self.players[p].hand.iter().find(|c| c.id == card_id).is_some_and(|c| {
+            c.definition.kicked_any_modes && c.definition.has_kicker().is_some()
+        });
         let (mode_count, min_pick, max_pick, allow_repeats, points) = self.players[p]
             .hand
             .iter()
@@ -7527,7 +7530,10 @@ impl GameState {
             }
         }
         chosen.sort_unstable();
-        if chosen.len() < min_pick || chosen.len() > max_pick {
+        // CR 702.33d / 700.2 — "if this spell was kicked, choose any number
+        // instead": more modes than printed is the kicked cast.
+        let kicked = widen && chosen.len() > max_pick;
+        if chosen.len() < min_pick || (chosen.len() > max_pick && !kicked) {
             return Err(GameError::InvalidTarget);
         }
         if let Some((prices, budget)) = points {
@@ -7579,8 +7585,11 @@ impl GameState {
         }
         self.cast_atomically(|g| {
             g.scratch.pending_spree_modes = Some(chosen.clone());
-            let cast =
-                g.cast_spell(card_id, target.clone(), additional_targets.clone(), None, x_value);
+            let cast = if kicked {
+                g.cast_spell_kicked(card_id, target.clone(), additional_targets.clone(), None, x_value)
+            } else {
+                g.cast_spell(card_id, target.clone(), additional_targets.clone(), None, x_value)
+            };
             g.scratch.pending_spree_modes = None;
             cast
         })

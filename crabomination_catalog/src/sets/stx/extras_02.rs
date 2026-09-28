@@ -1718,52 +1718,33 @@ pub fn inkfathom_witch() -> CardDefinition {
 
 // ── Inscription of Ruin (STX 2021) ──────────────────────────────────────────
 
-/// Inscription of Ruin — {2}{B} Sorcery (STX 2021).
-///
-/// "Choose one or more. If this spell was kicked, you may choose two or
-/// three instead. / • Target opponent discards two cards. / • Return
-/// target creature card with mana value 2 or less from your graveyard
-/// to the battlefield. / • Destroy target creature with mana value 3 or
-/// less."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Wired via the engine's
-/// `Effect::ChooseN { picks: [0, 2], modes }` — auto-picks discard +
-/// destroy at the regular {2}{B}{B} cost (the two highest-impact
-/// modes against a typical board). The Kicker {3}{B} alt-cost for the
-/// "choose two or three" upgrade is engine-wide ⏳ (same Kicker gap
-/// as Burst Lightning). Mode 1 reanimates one creature card of mana
-/// value 2 or less, picked by the decider.
+/// Inscription of Ruin — {2}{B} Sorcery, Kicker {2}{B}{B}. Choose one (kicked:
+/// any number): target opponent discards two cards; return target creature
+/// card with mana value 2 or less from your graveyard to the battlefield;
+/// destroy target creature with mana value 3 or less.
 pub fn inscription_of_ruin() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Inscription of Ruin",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 2],
+        keywords: vec![crate::card::Keyword::Kicker(cost(&[generic(2), b(), b()]))],
+        kicked_any_modes: true,
+        effect: Effect::ChooseModesCast {
             modes: vec![
-                // Mode 0: target opponent discards two — one seat, the
-                // chosen one (the each-opponent fan-out was the whole table).
                 Effect::Discard {
-                    who: Selector::Player(PR::HostileOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(2),
                     random: false,
                 },
-                // Mode 1: return a creature card with mana value 2 or less
-                // from your graveyard to the battlefield.
                 Effect::Move {
-                    what: Selector::CardsInZone {
-                        who: PR::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature
-                            .and(SelectionRequirement::ManaValueAtMost(2)),
-                    },
-                    to: ZoneDest::Battlefield {
-                        controller: PR::You,
-                        tapped: false,
-                    },
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMost(2))
+                            .from_your_graveyard(),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PR::You, tapped: false },
                 },
-                // Mode 2: destroy target creature with mana value 3 or less.
                 Effect::Destroy {
                     what: target_filtered(
                         SelectionRequirement::Creature
@@ -1771,6 +1752,9 @@ pub fn inscription_of_ruin() -> CardDefinition {
                     ),
                 },
             ],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
         },
         ..Default::default()
     }

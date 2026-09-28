@@ -2409,65 +2409,56 @@ fn inkfathom_witch_makes_unblocked_creatures_4_1() {
 
 // ── Inscription of Ruin ─────────────────────────────────────────────────────
 
+/// CR 702.33d / 700.2 — "Choose one. If this spell was kicked, choose any
+/// number instead": two modes need the kicker paid ({4}{B}{B}{B}); without
+/// it only one mode can be chosen. (It shipped running discard + destroy on
+/// every unkicked cast.)
 #[test]
-fn inscription_of_ruin_destroys_creature_and_discards() {
+fn inscription_of_ruin_kicked_chooses_any_number() {
     use crabomination::game::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_hand(1, catalog::grizzly_bears());
-    let opp_hand_before = g.players[1].hand.len();
-
+    g.add_card_to_hand(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::inscription_of_ruin());
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
+    let both = || GameAction::CastSpellSpree {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
         x_value: None,
-    })
-    .expect("Inscription of Ruin castable for {2}{B}{B}");
+    };
+    assert!(g.perform_action(both()).is_err(), "two modes without the kicker");
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(both()).expect("kicked: discard and destroy");
     drain_stack(&mut g);
-
-    // Both modes should fire — opp discards 2 + target creature destroyed.
-    assert!(
-        g.battlefield_find(bear).is_none(),
-        "target bear destroyed"
-    );
-    // Discard 2: opp had only 1 card so loses everything available (1 card).
-    assert!(
-        g.players[1].hand.len() < opp_hand_before,
-        "opp discarded at least one card"
-    );
+    assert!(g.battlefield_find(bear).is_none(), "target bear destroyed");
+    assert!(g.players[1].hand.is_empty(), "discarded two");
 }
 
+/// CR 700.2a — one chosen mode runs alone: returning the one targeted card
+/// (not every small creature card in the graveyard) and destroying nothing.
 #[test]
-fn choose_n_decider_overrides_the_default_mode_picks() {
-    // CR 700.2d — a ScriptedDecider can pick modes other than the card's
-    // default. Inscription of Ruin defaults to [discard, destroy]; scripting
-    // mode [1] (reanimate only) returns a creature from gy to the battlefield
-    // and leaves the opponent's creature alive.
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn inscription_of_ruin_unkicked_runs_only_its_mode() {
     use crabomination::game::Target;
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let gy_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // reanimation target
+    let gy_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let other = g.add_card_to_graveyard(0, catalog::llanowar_elves());
     let id = g.add_card_to_hand(0, catalog::inscription_of_ruin());
-    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
+        card_id: id, target: Some(Target::Permanent(gy_bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable for {2}{B}");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(opp_bear).is_some(),
-        "destroy mode was NOT chosen — opponent's creature survives");
-    assert!(g.battlefield.iter().any(|c| c.id == gy_bear && c.controller == 0),
-        "reanimate mode ran — the gy creature is back on the battlefield");
-    assert!(!g.players[0].graveyard.iter().any(|c| c.id == gy_bear),
-        "the reanimated creature left the graveyard");
+    assert!(g.battlefield_find(opp_bear).is_some(), "the destroy mode was not chosen");
+    assert!(g.battlefield.iter().any(|c| c.id == gy_bear && c.controller == 0), "reanimated");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == other), "only the target");
 }
 
 // ── Tome of the Infinite ────────────────────────────────────────────────────

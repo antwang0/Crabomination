@@ -1125,15 +1125,6 @@ pub fn stonebound_mentor() -> CardDefinition {
 
 // ── Inscription of Insight (STX — base set Quandrix-leaning) ───────────────
 
-/// Inscription of Insight — {3}{U} Sorcery (Strixhaven base set).
-/// "Choose one or more. X can't be 0. / • Put X +1/+1 counters on target
-/// creature. / • Target player draws a card for each 1/1 creature they
-/// control. / • Untap up to X target permanents."
-///
-/// Wired via `Effect::ChooseN { picks: [0], modes }` with three modes
-/// available for future mode-pick UI. AutoDecider picks the +1/+1
-/// counters mode by default. The "one or more" mode-count picker is
-/// engine-wide ⏳; auto-picks one mode at cast time.
 /// Inscription of Insight — {3}{U} Sorcery, Kicker {2}{U}{U}.
 ///
 /// "Choose one. If this spell was kicked, choose any number instead. •
@@ -1141,13 +1132,8 @@ pub fn stonebound_mentor() -> CardDefinition {
 /// draw two cards. • Target player creates an X/X blue Illusion creature
 /// token, where X is the number of cards in their hand."
 ///
-/// Shipped as an entirely different card — three `XFromCost` modes on a spell
-/// with no `{X}` in its cost — until the `token` oracle-verb class read it.
-/// Two named approximations remain, both in `Effect::ChooseN`'s known
-/// limitation (cast-time mode selection is a TODO): the bounce is one target
-/// rather than "up to two", and the Illusion's controller is you rather than
-/// a targeted player. Kicker is carried so the cost is right; "choose any
-/// number instead" is the same TODO.
+/// Two approximations remain: the bounce is one target rather than "up to
+/// two", and the Illusion's controller is you rather than a targeted player.
 pub fn inscription_of_insight() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -1155,8 +1141,11 @@ pub fn inscription_of_insight() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![crate::card::Keyword::Kicker(cost(&[generic(2), u(), u()]))],
-        effect: Effect::ChooseN {
-            picks: vec![0],
+        kicked_any_modes: true,
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 1,
+            allow_repeats: false,
             modes: vec![
                 // Mode 0: return target creature to its owner's hand.
                 Effect::Move {

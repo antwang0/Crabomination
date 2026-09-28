@@ -1441,10 +1441,9 @@ CoW'd, so price it before taking it for one card.
 | Divert Disaster | `CounterUnlessPaid { if_paid: None }` | "If they do, you create a Lander token" — the field was already there and empty |
 | Inscription of Insight | three `XFromCost` modes **on a spell with no `{X}` in its cost** | the printed bounce / scry-2-draw-2 / X-X blue Illusion, plus the Kicker keyword |
 
-⚠ **Inscription keeps two approximations, both `Effect::ChooseN`'s documented
-cast-time-mode-selection limitation**: the bounce is one target rather than "up
-to two", and the Illusion's controller is you rather than a targeted player.
-"Choose any number instead when kicked" is the same TODO. The X/X body uses the
+⚠ **Inscription keeps two approximations**: the bounce is one target rather
+than "up to two", and the Illusion's controller is you rather than a targeted
+player. "Choose any number instead when kicked" is `kicked_any_modes`. The X/X body uses the
 `wild_hypothesis` idiom — mint 0/0, then `AddCounter` with
 `Value::CardsInHandMatching`.
 

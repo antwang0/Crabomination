@@ -1911,7 +1911,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
-| 🟡 Inscription of Abundance | Call for Backup (MOC) | no kicker (one mode only). |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
 | 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |

@@ -4812,6 +4812,11 @@ pub struct CardDefinition {
     /// original, like Storm's. Defaults to false.
     #[serde(default)]
     pub copies_on_cast_x: bool,
+    /// "Choose one. If this spell was kicked, choose any number instead."
+    /// (the Inscription cycle): a `ChooseModesCast` cast choosing more than
+    /// its `max` is a kicked cast (CR 702.33d, 700.2).
+    #[serde(default)]
+    pub kicked_any_modes: bool,
     /// "where X is … as you cast this spell": evaluated once in `finalize_cast`
     /// and stamped as the spell's X, so the body reads `Value::XFromCost`
     /// (Monstrous Onslaught, Volcanic Wind — CR 601.2d's division needs it then).

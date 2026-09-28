@@ -328,15 +328,16 @@ pub fn high_sentinels_of_arashin() -> CardDefinition {
     }
 }
 
-/// Inscription of Abundance — choose one: two +1/+1 counters; a player gains
-/// life equal to their greatest power; your creature fights.
-///
-/// ⚠ Residual: no kicker (one mode only).
+/// Inscription of Abundance — kicker {2}{G}; choose one (kicked: any number):
+/// two +1/+1 counters; a player gains life equal to their greatest power; your
+/// creature fights.
 pub fn inscription_of_abundance() -> CardDefinition {
     CardDefinition {
         name: "Inscription of Abundance",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), g()]))],
+        kicked_any_modes: true,
         effect: Effect::ChooseModesCast {
             modes: vec![
                 plus_one(target_filtered(R::Creature), 2),
