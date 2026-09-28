@@ -1522,7 +1522,7 @@ whole class of miss for one `in cache` test.
 battlefield." **CR 614.12a** — "If a replacement effect that modifies how a
 permanent enters the battlefield requires a choice, that choice is made
 **before** the permanent enters the battlefield." Both verified against
-`MagicCompRules_20260417.txt`.
+`MagicCompRules_20260925.txt`.
 
 An `EventKind::EntersBattlefield` trigger is a different object. It puts the
 permanent on the battlefield first, then goes on the stack, and its
@@ -10313,7 +10313,7 @@ finds, so only these survived the compaction.
 
 ## MagicCompRules coverage audit
 
-Periodic spot-check against the rules document (`MagicCompRules_20260417.txt`).
+Periodic spot-check against the rules document (`MagicCompRules_20260925.txt`).
 One line per rule: status (✅ wired · 🟡 partial · ⏳ todo) plus the still-open
 gap. The full per-clause accounting (every sub-rule, code line, and test name)
 was elided in a doc-compaction pass — recover it from

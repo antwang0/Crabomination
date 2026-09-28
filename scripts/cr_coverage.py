@@ -16,7 +16,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 TESTS = REPO / "crabomination_tests" / "tests"
-RULES = REPO / "crabomination" / "MagicCompRules_20260417.txt"
+RULES = REPO / "crabomination" / "MagicCompRules_20260925.txt"
 OUT = REPO / "CR_COVERAGE.md"
 
 # `cr_509_1b_multi_block` → section 509, subrule 1b. A bare `cr_509_...` with

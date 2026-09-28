@@ -17,7 +17,7 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 ## Commander status (CR 903 + the 800-series it rests on)
 
 The map for the next Commander run — **audited 2026-09-18 against the tree and
-against the shipped CR text (`crabomination/MagicCompRules_20260417.txt`), not
+against the shipped CR text (`crabomination/MagicCompRules_20260925.txt`), not
 against this file's history**. Don't re-audit; update rows as they move.
 Per-deck card completion lives in `DECK_FEATURES.md`.
 

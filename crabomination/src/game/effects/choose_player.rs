@@ -86,8 +86,8 @@ impl GameState {
 
     /// "Choose an opponent" made where no resolution can suspend — a cast's
     /// additional cost (Gift, CR 702.174a / 601.2b), a replacement as a
-    /// permanent enters (a Siege's protector, CR 310.11a; Tribute, CR
-    /// 702.104a), a state-based action (CR 704.5w-x) or a cast trigger's copy
+    /// permanent enters (a Siege's protector, CR 310.12a; Tribute, CR
+    /// 702.104a), a state-based action (CR 704.5x-y) or a cast trigger's copy
     /// (Demonstrate, CR 702.144a). A scripted or bot decider answers the
     /// [`gift_ballot`](Self::gift_ballot); a headless or live-UI seat takes
     /// its headless pick.
@@ -104,7 +104,7 @@ impl GameState {
         opps.get(i).or(opps.first()).copied()
     }
 
-    /// CR 704.5w / 704.5x — a battle with no protector in the game (its
+    /// CR 704.5x / 704.5y — a battle with no protector in the game (its
     /// protector left) and nothing attacking it, or a Siege its own controller
     /// protects (a control change), gets a new protector from its
     /// controller's opponents; with none to choose, it goes to its owner's

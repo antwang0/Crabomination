@@ -2608,7 +2608,7 @@ impl GameState {
                             });
                         }
                     }
-                    // CR 310.8a / 310.11a — as a cast Siege enters, its
+                    // CR 310.9a / 310.12a — as a cast Siege enters, its
                     // controller chooses one of their opponents to protect it.
                     if let Some(c) = self.battlefield.find_by_id(card_id)
                         && c.definition.is_battle()
@@ -7056,7 +7056,7 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
-        // Saga rule (CR 714.4 / 704.5x): a Saga whose lore counters have
+        // Saga rule (CR 714.4 / 704.5s): a Saga whose lore counters have
         // reached its final chapter number is sacrificed — unless one of its
         // chapter abilities is still a trigger on the stack (so the last
         // chapter resolves before the Saga leaves). CR 714.4 has no creature
@@ -7669,7 +7669,7 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
-        // CR 704.5y — if a permanent has more than one Role controlled by
+        // CR 704.5z — if a permanent has more than one Role controlled by
         // the same player attached, each but the newest (by battlefield
         // timestamp, CardId tiebreak) goes to its owner's graveyard.
         let stale_roles: Vec<CardId> = if !scan.role {
@@ -7704,7 +7704,7 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
-        // CR 704.5z — a player who controls a "Start your engines!" permanent
+        // CR 704.5aa — a player who controls a "Start your engines!" permanent
         // and has no speed gets speed 1. (The self-ETB path also seeds it;
         // this SBA covers blink/control-change/token-copy arrivals.)
         if scan.start_engines {
@@ -7910,7 +7910,7 @@ impl GameState {
                 events.push(GameEvent::PlayerLost { player: p, cause });
             }
         }
-        // CR 704.5w-x — after the departures, so a protector who left in this
+        // CR 704.5x-y — after the departures, so a protector who left in this
         // sweep is replaced in it.
         if scan.battle {
             self.reseat_battle_protectors(events);

@@ -3584,7 +3584,7 @@ pub enum SelectionRequirement {
     /// spells can become prepared.)" on Biblioplex Tomekeeper /
     /// Skycoach Waypoint's target filters.
     HasPrepareSpell,
-    /// CR 310.8e — a battle whose protector is an opponent of the evaluating
+    /// CR 310.9e — a battle whose protector is an opponent of the evaluating
     /// player ("each battle they protect", Joyful Stormsculptor).
     ProtectedByOpponent,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),

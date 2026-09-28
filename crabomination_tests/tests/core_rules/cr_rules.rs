@@ -2350,7 +2350,7 @@ fn cr_702_64_absorb_soaks_combat_damage() {
     assert!(g.battlefield_find(bear).is_none(), "bear takes the full strike-back");
 }
 
-// ── CR 704.5y — Role uniqueness SBA ───────────────────────────────────────────
+// ── CR 704.5z — Role uniqueness SBA ───────────────────────────────────────────
 
 /// Two Roles controlled by the same player on one permanent: the older one
 /// goes to the graveyard (and, being a token, ceases to exist).
@@ -2388,7 +2388,7 @@ fn cr_704_5y_same_controller_roles_keep_only_the_newest() {
     );
 }
 
-/// Roles controlled by different players coexist (CR 704.5y is
+/// Roles controlled by different players coexist (CR 704.5z is
 /// per-controller).
 #[test]
 fn cr_704_5y_different_controllers_roles_coexist() {
@@ -7566,7 +7566,7 @@ fn cr_702_180c_toxic_gives_poison_equal_to_value() {
     assert_eq!(g.players[1].poison_counters, 4, "toxic 4 → four poison counters (CR 702.180c)");
 }
 
-/// CR 704.5z — controlling a "Start your engines!" permanent with no speed
+/// CR 704.5aa — controlling a "Start your engines!" permanent with no speed
 /// sets speed 1 via state-based action (covers non-cast arrivals).
 #[test]
 fn cr_704_5z_engines_seed_speed_sba() {
@@ -7576,7 +7576,7 @@ fn cr_704_5z_engines_seed_speed_sba() {
     g.add_card_to_battlefield(0, racer);
     assert_eq!(g.players[0].speed, 0, "SBA hasn't run yet");
     g.check_state_based_actions();
-    assert_eq!(g.players[0].speed, 1, "704.5z seeded speed 1");
+    assert_eq!(g.players[0].speed, 1, "704.5aa seeded speed 1");
     g.check_state_based_actions();
     assert_eq!(g.players[0].speed, 1, "idempotent");
 }
@@ -8560,9 +8560,9 @@ fn cr_700_4_noncreature_self_death_trigger_fires() {
     assert_eq!(g.players[1].life, 19, "the enchantment's own death trigger drained the opponent");
 }
 
-// ── CR 704.5y — a creature keeps only the newest Role its controller owns ─────
+// ── CR 704.5z — a creature keeps only the newest Role its controller owns ─────
 
-/// CR 704.5y — if a permanent has two or more Role Auras controlled by the same
+/// CR 704.5z — if a permanent has two or more Role Auras controlled by the same
 /// player, the older ones are put into the graveyard as a state-based action.
 #[test]
 fn cr_704_5y_second_role_replaces_first() {
@@ -8597,7 +8597,7 @@ fn cr_704_5y_second_role_replaces_first() {
     drain_stack(&mut g);
     let roles = g.battlefield.iter().filter(|c| c.attached_to == Some(bear)
         && c.definition.name == "Monster").count();
-    assert_eq!(roles, 1, "only the newest Role survives (CR 704.5y)");
+    assert_eq!(roles, 1, "only the newest Role survives (CR 704.5z)");
 }
 
 // ── CR 603.4 / 506.5 — an Attacks intervening-if reads the attacker's P/T ─────

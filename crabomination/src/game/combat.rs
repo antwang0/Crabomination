@@ -5730,7 +5730,7 @@ impl GameState {
                 }
             }
             AttackTarget::Battle(b_id) => {
-                // CR 310.10 — combat damage to a battle removes that many
+                // CR 310.6 — combat damage to a battle removes that many
                 // defense counters. The defeat trigger fires from the SBA once
                 // the last counter is gone.
                 if let Some(b) = self.battlefield_find_mut(b_id) {

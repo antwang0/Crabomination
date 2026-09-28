@@ -4608,7 +4608,7 @@ impl GameState {
         events.push(GameEvent::Transformed { card_id: id });
     }
 
-    /// CR 310.10 — a battle whose last defense counter is removed is defeated.
+    /// CR 310.12b — a battle whose last defense counter is removed is defeated.
     /// For a Siege the printed defeat trigger is "exile it, then cast it
     /// transformed": we transform the permanent to its back face and flicker it
     /// (exile, then re-enter under its controller as a new object) so the

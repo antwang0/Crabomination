@@ -872,7 +872,7 @@ mod recent264 {
         assert_eq!(g.players[1].life, before - 2);
     }
 
-    /// CR 310.10 — Onakke Javelineer's noncombat ping removes defense counters
+    /// CR 310.6 — Onakke Javelineer's noncombat ping removes defense counters
     /// from a battle (the noncombat analogue of combat damage to a battle).
     #[test]
     fn onakke_javelineer_damages_a_battle() {

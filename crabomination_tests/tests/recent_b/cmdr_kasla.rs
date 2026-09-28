@@ -102,7 +102,7 @@ fn wand_grants_the_next_spell_convoke() {
     })
     .expect("wand");
     drain_stack(&mut g);
-    // CR 310.8e — "each battle they protect": seat 1's Siege, which seat 2
+    // CR 310.9e — "each battle they protect": seat 1's Siege, which seat 2
     // protects, takes the point; seat 0's own, which seat 1 protects, too.
     let mine = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
     let theirs = g.add_card_to_battlefield(1, catalog::invasion_of_zendikar());

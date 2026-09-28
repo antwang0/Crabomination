@@ -575,7 +575,7 @@ fn view_projects_goaders_and_attack_targets_per_seat() {
         assert_eq!(i.defending_player, None);
         assert_eq!(i.protected_by, None, "a non-battle has no protector");
     }
-    // CR 310.8 — a battle carries its protector, the seat an attack on it
+    // CR 310.9 — a battle carries its protector, the seat an attack on it
     // is aimed at (CR 508.4), so the client can colour a planned attack.
     let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
     g.battlefield_find_mut(battle).unwrap().protected_by = Some(3);
@@ -6111,9 +6111,9 @@ fn cr_702_141a_each_encore_token_attacks_its_own_opponent() {
     ])).expect("each token at its own opponent");
 }
 
-// ── CR 310.11a / 704.5w-x — a Siege's protector is one chosen opponent ────
+// ── CR 310.12a / 704.5x-y — a Siege's protector is one chosen opponent ────
 
-/// CR 310.11a — as a Siege enters, its controller chooses its protector from
+/// CR 310.12a — as a Siege enters, its controller chooses its protector from
 /// among their opponents; it was the lowest-numbered one.
 #[test]
 fn cr_310_11a_the_siege_controller_chooses_its_protector() {
@@ -6126,7 +6126,7 @@ fn cr_310_11a_the_siege_controller_chooses_its_protector() {
     assert_eq!(g.battlefield_find(battle).unwrap().protected_by, Some(3));
 }
 
-/// CR 704.5x — a Siege whose controller becomes its protector (a control
+/// CR 704.5y — a Siege whose controller becomes its protector (a control
 /// change) gets a new protector among the new controller's opponents.
 #[test]
 fn cr_704_5x_a_stolen_siege_gets_a_new_protector() {
@@ -6148,7 +6148,7 @@ fn cr_704_5x_a_stolen_siege_gets_a_new_protector() {
     assert!(matches!(b.protected_by, Some(0 | 2)), "an opponent of seat 1, not seat 1: {:?}", b.protected_by);
 }
 
-/// CR 704.5w — a battle whose protector has left the game gets a new one.
+/// CR 704.5x — a battle whose protector has left the game gets a new one.
 #[test]
 fn cr_704_5w_a_battle_whose_protector_left_gets_a_new_one() {
     let mut g = multi_player_game(4);

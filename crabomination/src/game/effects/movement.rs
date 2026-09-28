@@ -1662,7 +1662,7 @@ impl GameState {
                     .battlefield_find(cid)
                     .map(|c| c.definition.is_planeswalker())
                     .unwrap_or(false);
-                // CR 310.10 — damage dealt to a battle removes that many
+                // CR 310.6 — damage dealt to a battle removes that many
                 // defense counters (the noncombat analogue of the combat path
                 // in `combat.rs`; a battle isn't a creature, so without this it
                 // would mark useless `c.damage`). The defeat trigger fires from
@@ -2765,7 +2765,7 @@ impl GameState {
                     }
                 }
                 // CR 310.4b — a battle enters with defense counters equal to
-                // its printed defense, and (CR 310.8a / 310.11a) its
+                // its printed defense, and (CR 310.9a / 310.12a) its
                 // controller chooses one of their opponents to protect it.
                 if card.definition.is_battle() {
                     let defense = card.definition.defense;
