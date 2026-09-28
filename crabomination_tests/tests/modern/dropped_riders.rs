@@ -1743,3 +1743,23 @@ fn resolute_archangel_and_unstoppable_slasher_check_their_ifs() {
         assert_eq!(g.battlefield_find(slasher).is_some(), round == 0, "returns once, then stays dead");
     }
 }
+
+/// Fearless Swashbuckler — "Whenever you attack, if a Pirate and a Vehicle
+/// attacked this combat, draw three cards, then discard two." It looted on
+/// every attack.
+#[test]
+fn fearless_swashbuckler_needs_a_pirate_and_a_vehicle() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let swash = g.add_card_to_battlefield(0, catalog::fearless_swashbuckler());
+    g.clear_sickness(swash);
+    g.step = TurnStep::DeclareAttackers;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: swash, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "a Pirate alone draws nothing");
+}

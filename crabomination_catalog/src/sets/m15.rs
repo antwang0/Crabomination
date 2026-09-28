@@ -1388,9 +1388,21 @@ pub fn blood_host() -> CardDefinition {
     }
 }
 
-/// Siege Dragon — {5}{R}{R} 5/5 flier. ETB wipes Walls; attacking, it sweeps
-/// the ground.
+/// Siege Dragon — {5}{R}{R} 5/5 flier. ETB destroys your opponents' Walls;
+/// attacking, if the defending player controls no Walls, 2 damage to each of
+/// that player's creatures without flying.
 pub fn siege_dragon() -> CardDefinition {
+    let mut sweep = on_attack(Effect::DealDamage {
+        to: Selector::EachPermanent(
+            R::Creature
+                .and(R::ControlledByDefendingPlayer)
+                .and(R::HasKeyword(Keyword::Flying).negate()),
+        ),
+        amount: Value::Const(2),
+    });
+    sweep.event.filter = Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+        R::HasCreatureType(CreatureType::Wall).and(R::ControlledByDefendingPlayer),
+    )))));
     CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Destroy {
@@ -1398,14 +1410,7 @@ pub fn siege_dragon() -> CardDefinition {
                     R::HasCreatureType(CreatureType::Wall).and(R::ControlledByOpponent),
                 ),
             }),
-            on_attack(Effect::DealDamage {
-                to: Selector::EachPermanent(
-                    R::Creature
-                        .and(R::ControlledByOpponent)
-                        .and(R::HasKeyword(Keyword::Flying).negate()),
-                ),
-                amount: Value::Const(2),
-            }),
+            sweep,
         ],
         ..creature(
             "Siege Dragon",

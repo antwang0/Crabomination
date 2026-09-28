@@ -6399,3 +6399,30 @@ fn mana_leak_payer_leaving_mid_payment_takes_the_spell_along() {
     assert!(!g.players[1].is_alive(), "the land took the last four");
     assert_eq!(g.players[0].life, life0, "no Bolt resolved");
 }
+
+/// Siege Dragon — "Whenever this creature attacks, if defending player
+/// controls no Walls, it deals 2 damage to each creature without flying that
+/// player controls." It hit every opponent's ground creatures and ignored the
+/// Wall gate; at three seats the bystander's Bears must live.
+#[test]
+fn siege_dragon_sweeps_only_the_defending_players_ground() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for with_wall in [false, true] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        let dragon = g.add_card_to_battlefield(0, catalog::siege_dragon());
+        g.clear_sickness(dragon);
+        let target_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let bystander = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        if with_wall {
+            g.add_card_to_battlefield(1, catalog::wall_of_wood());
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }]))
+            .expect("attack seat 1");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(target_bear).is_none(), !with_wall, "wall {with_wall}");
+        assert!(g.battlefield_find(bystander).is_some(), "not the defending player's");
+    }
+}

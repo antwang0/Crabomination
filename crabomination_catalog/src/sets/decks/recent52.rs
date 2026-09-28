@@ -517,9 +517,8 @@ pub fn unwanted_remake() -> CardDefinition {
 }
 
 /// Fear of the Dark — {4}{B} 5/5 Enchantment Creature — Nightmare. When it
-/// attacks it gains menace and deathtouch until end of turn. (The "if defending
-/// player controls no Glimmer creatures" rider is approximated as
-/// unconditional — Glimmers are rare.)
+/// attacks, if the defending player controls no Glimmer creatures, it gains
+/// menace and deathtouch until end of turn.
 pub fn fear_of_the_dark() -> CardDefinition {
     CardDefinition {
         name: "Fear of the Dark",
@@ -531,18 +530,28 @@ pub fn fear_of_the_dark() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
-            Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Menace,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Deathtouch,
-                duration: Duration::EndOfTurn,
-            },
-        ]))],
+        triggered_abilities: vec![{
+            let mut t = crate::effect::shortcut::on_attack(Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+            ]));
+            t.event.filter = Some(crate::effect::Predicate::Not(Box::new(crate::effect::Predicate::SelectorExists(
+                Selector::EachPermanent(
+                    crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::HasCreatureType(CreatureType::Glimmer))
+                        .and(crate::card::SelectionRequirement::ControlledByDefendingPlayer),
+                ),
+            ))));
+            t
+        }],
         ..Default::default()
     }
 }

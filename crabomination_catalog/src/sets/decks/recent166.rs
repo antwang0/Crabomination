@@ -773,8 +773,8 @@ fn insect_token() -> TokenDefinition {
 }
 
 /// Fearless Swashbuckler — {1}{U}{R} 3/3 Fish Pirate. Haste; Vehicles you control
-/// have haste. Whenever you attack, draw three cards, then discard two. (The
-/// printed "if a Pirate and a Vehicle attacked" gate is dropped.)
+/// have haste. Whenever you attack, if a Pirate and a Vehicle attacked this
+/// combat, draw three cards, then discard two.
 pub fn fearless_swashbuckler() -> CardDefinition {
     CardDefinition {
         name: "Fearless Swashbuckler",
@@ -797,7 +797,18 @@ pub fn fearless_swashbuckler() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
+                crate::effect::Predicate::All(vec![
+                    crate::effect::Predicate::SelectorExists(Selector::EachPermanent(
+                        R::IsAttacking.and(R::ControlledByYou).and(R::HasCreatureType(CreatureType::Pirate)),
+                    )),
+                    crate::effect::Predicate::SelectorExists(Selector::EachPermanent(
+                        R::IsAttacking
+                            .and(R::ControlledByYou)
+                            .and(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                    )),
+                ]),
+            ),
             effect: Effect::Seq(vec![
                 Effect::Draw {
                     who: Selector::You,
