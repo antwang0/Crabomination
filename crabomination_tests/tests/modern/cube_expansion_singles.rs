@@ -697,8 +697,8 @@ fn blade_splicer_etb_creates_golem_token() {
     drain_stack(&mut g);
     // Blade Splicer (1/1) + Golem token (3/3)
     assert_eq!(g.battlefield.len(), bf_before + 2);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Golem"),
-        "A 3/3 Golem token should be on the battlefield");
+    let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").map(|c| c.id).expect("a Golem");
+    assert!(g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::FirstStrike), "Golems you control have first strike");
 }
 
 /// Torpor Orb (CR 614): a creature's ETB trigger doesn't fire while it's in

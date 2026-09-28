@@ -4205,6 +4205,17 @@ pub fn blade_splicer() -> CardDefinition {
                 definition: std::sync::Arc::new(crabomination_base::tokens::golem_3_3_token()),
             },
         }],
+        static_abilities: vec![StaticAbility {
+            description: "Golems you control have first strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Golem))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::FirstStrike,
+            },
+        }],
         ..Default::default()
     }
 }
