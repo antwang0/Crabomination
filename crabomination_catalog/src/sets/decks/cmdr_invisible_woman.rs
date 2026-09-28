@@ -498,10 +498,15 @@ pub fn namor_atlantean_king() -> CardDefinition {
         triggered_abilities: vec![
             on_cast_noncreature(make(merfolk, 1)),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::ValueAtLeast(
-                    Value::LifeOf(PlayerRef::DefendingPlayer),
-                    Value::Sum(vec![Value::LifeOf(PlayerRef::You), Value::ONE]),
-                )),
+                // CR 506.2 — "attacks a player who has more life": not a
+                // planeswalker, whatever its controller's life.
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer },
+                    Predicate::ValueAtLeast(
+                        Value::LifeOf(PlayerRef::DefendingPlayer),
+                        Value::Sum(vec![Value::LifeOf(PlayerRef::You), Value::ONE]),
+                    ),
+                ])),
                 effect: Effect::PumpOtherAttackersOnSamePlayer { power: Value::Const(2), toughness: Value::Const(0) },
             },
         ],
