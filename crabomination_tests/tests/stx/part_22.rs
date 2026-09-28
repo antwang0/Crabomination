@@ -1249,8 +1249,7 @@ fn cr_121_2_multi_draw_fires_one_event_per_card() {
     let draw_count = all_events.iter()
         .filter(|e| matches!(e, GameEvent::CardDrawn { player: 0, .. }))
         .count();
-    // -1 (cast) + 3 (draw) - 2 (stack 2 on top) = 0 net. Verify 3 individual
-    // CardDrawn events fired.
+    // Verify 3 individual CardDrawn events fired.
     assert!(draw_count >= 3, "got {draw_count} CardDrawn events, expected ≥3 for Draw 3");
     let _ = pre_hand;
 }

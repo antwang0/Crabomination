@@ -814,8 +814,11 @@ fn past_in_flames_flashback_cast_pays_cost_and_exiles() {
 
 // ── Inspired Idea ──────────────────────────────────────────────────────────
 
+/// "Draw three cards. [Your maximum hand size is reduced by three for the
+/// rest of the game.]" — the bracketed half shipped as an invented "put two
+/// back on top".
 #[test]
-fn inspired_idea_draws_three_then_stacks_two_on_top() {
+fn inspired_idea_draws_three_and_shrinks_max_hand_size() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
@@ -832,14 +835,9 @@ fn inspired_idea_draws_three_then_stacks_two_on_top() {
     .expect("Inspired Idea castable for {1}{U}{U}");
     drain_stack(&mut g);
 
-    // Hand: -1 (cast) +3 (draw) -2 (top of library) = +0 vs hand_before.
-    assert_eq!(
-        g.players[0].hand.len(),
-        hand_before,
-        "Net hand: -1 cast + 3 draws - 2 to top of library"
-    );
-    // Library: -3 (drawn) +2 (returned) = -1 vs lib_before.
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "-1 cast, +3 draws");
+    assert_eq!(g.players[0].library.len(), lib_before - 3);
+    assert_eq!(g.players[0].max_hand_size, Some(4), "seven reduced by three");
 }
 
 // ── Resurgent Belief ───────────────────────────────────────────────────────

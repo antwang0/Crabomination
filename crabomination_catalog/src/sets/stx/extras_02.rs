@@ -350,37 +350,19 @@ pub fn past_in_flames() -> CardDefinition {
 
 // ── Inspired Idea (STA reprint, M11) — synthesized for Strixhaven slot ──────
 
-/// Inspired Idea — {2}{U} Sorcery.
-///
-/// Push (modern_decks) NEW: blue card-velocity sorcery. "Draw three cards,
-/// then put two cards from your hand on top of your library."
-///
-/// Wired as `Seq(Draw 3, PutOnLibraryFromHand 2)`. The dig-and-stack
-/// pattern is the canonical "smooth the next draws" blue effect (same
-/// shape as Compulsive Research / Mystic Confluence's draw mode). Two-
-/// card top-of-library push lets the controller line up their next two
-/// draws — a powerful combo enabler in blue control / combo shells.
-///
-/// "Inspired Idea" is the STA / Strixhaven slot's stand-in for the
-/// classic Magic 2011 Inspired Idea. Cheap and effective in any blue
-/// magecraft / spell-velocity deck.
+/// Inspired Idea — {2}{U} Sorcery. Cleave {3}{U}{U}. Draw three cards. [Your
+/// maximum hand size is reduced by three for the rest of the game.]
 pub fn inspired_idea() -> CardDefinition {
     CardDefinition {
         name: "Inspired Idea",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        // ⚠ The bracketed half is "your maximum hand size is reduced by three
-        // for the rest of the game", which has no primitive; putting two cards
-        // back on the library is the standing approximation of the downside.
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::PutOnLibraryFromHand {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-            },
+            Effect::ReduceMaxHandSize { who: Selector::You, by: Value::Const(3) },
         ]),
         // CR 702.147 — Cleave {3}{U}{U}: cast for the cleave cost and the
         // bracketed words come off, so the override is the draw alone.
