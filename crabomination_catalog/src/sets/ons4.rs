@@ -66,13 +66,19 @@ pub fn risky_move() -> CardDefinition {
                 effect: Effect::FlipCoin {
                     count: Value::Const(1),
                     on_heads: Box::new(Effect::Noop),
-                    on_tails: Box::new(Effect::GainControl {
-                        what: Selector::TargetFiltered {
-                            slot: 0,
-                            filter: R::Creature.and(R::ControlledByYou),
-                        },
-                        to: Some(PlayerRef::Target(1)),
-                        duration: Duration::Permanent,
+                    // "Choose a creature you control and an opponent" — choices,
+                    // not targets (CR 608.2d); losing the flip hands it over.
+                    on_tails: Box::new(Effect::ChooseOpponentThen {
+                        then: Box::new(Effect::ChooseOneAmong {
+                            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::GainControl {
+                                what: Selector::SeparatedPile { chosen: true },
+                                to: Some(PlayerRef::ChosenPlayerOfSource),
+                                duration: Duration::Permanent,
+                            }),
+                            other: Box::new(Effect::Noop),
+                        }),
                     }),
                 },
             },
