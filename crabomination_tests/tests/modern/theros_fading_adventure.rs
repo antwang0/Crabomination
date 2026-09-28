@@ -966,6 +966,30 @@ fn keldon_marauders_pings_on_etb_and_death() {
     assert_eq!(g.players[1].life, 18, "leaves-play ping");
 }
 
+/// Keldon Marauders at 3 seats: each ping is ONE target player (not every
+/// opponent), and a bounce is "leaves the battlefield" too.
+#[test]
+fn keldon_marauders_pings_one_target_and_on_a_bounce() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    let mut g = multi_player_game(3);
+    let start: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let id = g.add_card_to_hand(0, catalog::keldon_marauders());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let lost = |g: &GameState| (0..3).map(|p| start[p] - g.players[p].life).sum::<i32>();
+    let after_etb = lost(&g);
+    assert_eq!(after_etb, 1, "one ping on entry, one player");
+    let bounce = Effect::Move { what: Selector::ExactObjects(vec![id]), to: ZoneDest::Hand(PlayerRef::You) };
+    let evs = g.resolve_effect(&bounce, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(lost(&g), 2, "the bounce pinged once more");
+}
+
 /// Ball Lightning is a 6/1 trample/haste that also self-sacrifices at end step.
 #[test]
 fn ball_lightning_is_six_one_and_self_sacrifices() {

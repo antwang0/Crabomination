@@ -22523,7 +22523,14 @@ pub fn hellspark_elemental() -> CardDefinition {
 /// Keldon Marauders — {1}{R} Creature — Human Warrior 3/3, Vanishing 2.
 /// When it enters and when it leaves, deal 1 damage to each opponent.
 pub fn keldon_marauders() -> CardDefinition {
-    use crate::effect::shortcut::{each_opponent, on_dies};
+    use crate::effect::shortcut::target_filtered;
+    // "When this creature enters or leaves the battlefield, it deals 1 damage
+    // to target player or planeswalker" — one target (not every opponent),
+    // and any way it leaves, not only dying.
+    let ping = || Effect::DealDamage {
+        to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
+        amount: Value::Const(1),
+    };
     CardDefinition {
         name: "Keldon Marauders",
         cost: cost(&[generic(1), r()]),
@@ -22536,14 +22543,11 @@ pub fn keldon_marauders() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vanishing(2)],
         triggered_abilities: vec![
-            etb(Effect::DealDamage {
-                to: each_opponent(),
-                amount: Value::Const(1),
-            }),
-            on_dies(Effect::DealDamage {
-                to: each_opponent(),
-                amount: Value::Const(1),
-            }),
+            etb(ping()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: ping(),
+            },
         ],
         ..Default::default()
     }

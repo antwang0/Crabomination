@@ -2362,3 +2362,5 @@ library-exile event.
 | Turf War | the contested land per player is the engine's pick | `ContestOneLandPerPlayer` has no per-player target slot |
 | Chainer, Nightmare Adept | the graveyard-cast permission names one creature card (the first) | the priciest pick can be one it can't afford; wants a one-cast group over every creature card |
 | Scaretiller | the graveyard land is untargeted | a target inside the hand-or-graveyard branch would drop the trigger when no land card is there |
+| Rhuk, Hexgold Nabber | only the attack half: an equipped creature of yours DYING doesn't move its Equipment to Rhuk | the Equipment falls off before the trigger resolves; `AttachedToMe` of the dead creature needs last-known attachments |
+| Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
