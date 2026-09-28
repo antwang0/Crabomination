@@ -3688,7 +3688,7 @@ impl GameState {
                 for id in returning {
                     if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
                         let c = self.phased_out.remove(pos);
-                        self.battlefield.push(c);
+                        self.phase_in_card(c);
                         events.push(GameEvent::PermanentPhasedIn { card_id: id });
                     }
                 }

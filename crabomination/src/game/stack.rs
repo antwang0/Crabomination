@@ -3627,9 +3627,7 @@ impl GameState {
             if self.phased_out[i].controller == p && self.phased_out[i].phased_out_by.is_none() {
                 let c = self.phased_out.remove(i);
                 phased_in.push(c.id);
-                // CR 702.26 — it comes back with its counters.
-                self.board_instance_keywords |= !c.keyword_counters.is_empty();
-                self.battlefield.push(c);
+                self.phase_in_card(c);
             } else {
                 i += 1;
             }
