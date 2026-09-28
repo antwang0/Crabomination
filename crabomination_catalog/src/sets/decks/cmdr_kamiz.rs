@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kamiz.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Kamiz, Obscura Oculus** — the lesser-power attacker given double
-//!   strike is the engine's pick.
 //! - **Obscura Confluence** — its third mode returns a creature card from
 //!   *your* graveyard (the engine's pick), not a target player's choice.
 //! - **Oskar, Rubbish Reclaimer** — the discarded card may be cast from the
@@ -353,9 +351,7 @@ pub fn jailbreak() -> CardDefinition {
 
 /// Kamiz, Obscura Oculus — whenever you attack, target attacking creature
 /// can't be blocked and connives; another attacker with lesser power gains
-/// double strike.
-///
-/// ⚠ Residual: the lesser-power attacker is the engine's pick.
+/// double strike (your choice, on resolution).
 pub fn kamiz_obscura_oculus() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -365,15 +361,15 @@ pub fn kamiz_obscura_oculus() -> CardDefinition {
                 Effect::Connive { what: Selector::Target(0), amount: Value::ONE },
                 Effect::WithX {
                     x: Value::Diff(Box::new(Value::PowerOf(Box::new(Selector::Target(0)))), Box::new(Value::ONE)),
-                    body: Box::new(Effect::GrantKeyword {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::EachPermanent(
-                                R::IsAttacking.and(R::ControlledByYou).and(R::PowerAtMostXFromCost),
-                            )),
-                            count: Box::new(Value::ONE),
-                        },
-                        keyword: Keyword::DoubleStrike,
-                        duration: Duration::EndOfTurn,
+                    body: Box::new(Effect::ChooseOneAmong {
+                        what: Selector::EachPermanent(R::IsAttacking.and(R::PowerAtMostXFromCost)),
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::GrantKeyword {
+                            what: Selector::SeparatedPile { chosen: true },
+                            keyword: Keyword::DoubleStrike,
+                            duration: Duration::EndOfTurn,
+                        }),
+                        other: Box::new(Effect::Noop),
                     }),
                 },
             ]),

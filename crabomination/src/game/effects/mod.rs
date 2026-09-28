@@ -20987,15 +20987,12 @@ impl GameState {
                     .collect();
                 // "Choose up to one …, destroy the rest" (Duneblast): the pick
                 // is the survivor, so it is a gain — ours first, the biggest —
-                // and choosing none is legal. A +1/+1 counter or a free
-                // turn-face-up on the pick (Zimone's Hypothesis) is a gain too.
+                // and choosing none is legal. A friendly body on the pick (a
+                // +1/+1 counter, a keyword, a free turn-face-up) is a gain too.
                 let keeps = matches!(**chosen, Effect::Noop);
                 let gain = keeps
-                    || matches!(
-                        **chosen,
-                        Effect::AddCounter { kind: CounterType::PlusOnePlusOne, .. }
-                            | Effect::TurnFaceUpFree { .. }
-                    );
+                    || chosen.prefers_friendly_target()
+                    || matches!(**chosen, Effect::TurnFaceUpFree { .. });
                 let default = if gain {
                     ids.iter()
                         .copied()

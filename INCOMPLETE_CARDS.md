@@ -1923,7 +1923,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
-| 🟡 Kamiz, Obscura Oculus | Obscura Operation (NCC) | the lesser-power attacker given double strike is the engine's pick. |
 | 🟡 Obscura Confluence | Obscura Operation (NCC) | the third mode returns a creature card from your graveyard (the engine's pick), not a target player's choice. |
 | 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
