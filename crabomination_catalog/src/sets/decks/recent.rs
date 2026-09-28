@@ -3228,8 +3228,9 @@ pub fn hunted_bonebrute() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Menace, Keyword::Disguise(cost(&[generic(1), b()]))],
         triggered_abilities: vec![
+            // "target opponent creates two … Dogs" — one opponent.
             etb(Effect::CreateToken {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::Target(0),
                 count: Value::Const(2),
                 definition: std::sync::Arc::new(TokenDefinition {
                     name: "Dog".into(),

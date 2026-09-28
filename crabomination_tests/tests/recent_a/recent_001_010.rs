@@ -54,7 +54,13 @@ mod recent {
         g.players[1].life = 20;
         let brute = catalog::hunted_bonebrute();
         let etb_ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
-        g.resolve_effect(&brute.triggered_abilities[0].effect, &etb_ctx).unwrap();
+        // "Target opponent creates two Dogs" — the trigger's target.
+        let target_ctx = crabomination::game::effects::EffectContext::for_ability(
+            crabomination::card::CardId(0),
+            0,
+            Some(crabomination::game::types::Target::Player(1)),
+        );
+        g.resolve_effect(&brute.triggered_abilities[0].effect, &target_ctx).unwrap();
         let dogs = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Dog").count();
         assert_eq!(dogs, 2, "opponent made two Dogs");
         // Death drain.

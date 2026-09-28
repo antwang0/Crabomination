@@ -63534,8 +63534,9 @@ pub fn clackbridge_troll() -> CardDefinition {
         toughness: 8,
         keywords: vec![Keyword::Trample, Keyword::Haste],
         triggered_abilities: vec![
+            // "target opponent creates three … Goats" — one opponent.
             etb(Effect::CreateToken {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::Target(0),
                 count: Value::Const(3),
                 definition: std::sync::Arc::new(goat),
             }),

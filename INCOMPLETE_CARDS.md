@@ -2364,3 +2364,4 @@ library-exile event.
 | Scaretiller | the graveyard land is untargeted | a target inside the hand-or-graveyard branch would drop the trigger when no land card is there |
 | Rhuk, Hexgold Nabber | only the attack half: an equipped creature of yours DYING doesn't move its Equipment to Rhuk | the Equipment falls off before the trigger resolves; `AttachedToMe` of the dead creature needs last-known attachments |
 | Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
+| Jace, Vryn's Prodigy | the −9 emblem mills EACH opponent five, not one target opponent | an emblem trigger with a player target is untested ground; the ultimate is rarely reached |
