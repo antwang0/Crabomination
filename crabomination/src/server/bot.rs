@@ -25084,6 +25084,7 @@ mod tests {
         g.clear_sickness(sphere);
         // Bot 0 has cast one spell already this turn.
         g.players[0].spells_cast_this_turn = 1;
+        g.players[0].spells_cast_this_game_turn = 1;
         g.spells_cast_this_turn = 1;
         // Bot 0 has Frantic Search ({2}{U}) in hand and exactly 3 mana
         // (1U + 2C). Without the Damping Sphere tax the bot could

@@ -18969,7 +18969,7 @@ impl GameState {
                 }),
                 // CR 509.1b — Illvoi Infiltrator's spell count.
                 Keyword::CantBeBlockedIfControllerCastSpells(n) => {
-                    self.players[attacker.controller].spells_cast_this_turn >= *n
+                    self.players[attacker.controller].spells_cast_this_game_turn >= *n
                 }
                 // CR 509.1b — Graxiplon.
                 Keyword::CantBeBlockedUnlessDefenderSharedType(n) => {

@@ -570,9 +570,11 @@ mod recent {
         assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
         // Second spell (1 cast already): {1} less.
         g.players[0].spells_cast_this_turn = 1;
+        g.players[0].spells_cast_this_game_turn = 1;
         assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 1);
         // Third spell: no discount.
         g.players[0].spells_cast_this_turn = 2;
+        g.players[0].spells_cast_this_game_turn = 2;
         assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
     }
 

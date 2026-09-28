@@ -824,7 +824,7 @@ fn project_player(
         cards_exiled_this_turn: player.cards_exiled_this_turn,
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
-        spells_cast_this_turn: player.spells_cast_this_turn,
+        spells_cast_this_turn: player.spells_cast_this_game_turn,
         spell_cast_lock,
         even_mv_cast_locked,
         development_locked: state.damping_engine_locks(player_seat),
@@ -961,7 +961,7 @@ fn project_player(
             && state.opponent_has_static(player_seat, |e| {
                 matches!(e, crate::effect::StaticEffect::OpponentsWhoAttackedCantCast)
             }),
-        arbiter_cant_attack: player.spells_cast_this_turn > 0
+        arbiter_cant_attack: player.spells_cast_this_game_turn > 0
             && state.opponent_has_static(player_seat, |e| {
                 matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
             }),

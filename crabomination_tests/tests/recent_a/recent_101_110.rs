@@ -268,6 +268,7 @@ mod recent102 {
         assert_eq!(g.battlefield_find(m0).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
         // Two spells cast this turn → enters with two counters.
         g.players[0].spells_cast_this_turn = 2;
+        g.players[0].spells_cast_this_game_turn = 2;
         let m2 = g.move_card_to_battlefield_for_test(0, catalog::effortless_master());
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(m2).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);

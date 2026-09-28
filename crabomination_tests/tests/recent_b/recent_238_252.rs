@@ -273,6 +273,7 @@ mod recent239 {
     fn outlaw_stitcher_token_scales_with_spells() {
         let mut g = two_player_game();
         g.players[0].spells_cast_this_turn = 3; // Stitcher + 2 others → 2 extra
+        g.players[0].spells_cast_this_game_turn = 3;
         assert!(catalog::outlaw_stitcher().plot_cost.is_some());
         let src = g.add_card_to_battlefield(0, catalog::outlaw_stitcher());
         let etb = catalog::outlaw_stitcher().triggered_abilities[0].effect.clone();

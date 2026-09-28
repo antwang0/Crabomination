@@ -937,6 +937,14 @@ impl GameState {
                     // handle, so each write below was its own `Arc::make_mut`.
                     let pl = &mut **pl;
                     pl.spells_cast_this_game_turn = 0;
+                    // "Attacked this turn" is the current turn's attack (Angelic
+                    // Arbiter, Fire and Brimstone): cleared for every seat here,
+                    // not only as the attacker's own next turn begins.
+                    // `attacked_players_this_turn` stays — it is "their last
+                    // turn" for Avenge (CR 800.4i).
+                    pl.attacked_this_turn = false;
+                    pl.attacked_with_commander_this_turn = false;
+                    pl.creatures_attacked_this_turn = 0;
                     pl.sorceries_cast_this_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;

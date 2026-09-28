@@ -1660,7 +1660,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
             _ => {}
         }
     }
-    let already_cast = state.players[caster].spells_cast_this_turn;
+    let already_cast = state.players[caster].spells_cast_this_game_turn;
     for src in srcs {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
@@ -2169,7 +2169,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 }
                 StaticEffect::CostReductionNthSpell { filter, nth, amount }
                     if src.controller == caster
-                        && state.players[caster].spells_cast_this_turn + 1 == *nth
+                        && state.players[caster].spells_cast_this_game_turn + 1 == *nth
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
                     reduction += amount;
@@ -2460,10 +2460,10 @@ fn self_cost_reduction_from_card(
         reduction = reduction.saturating_add(state.players[caster].cards_drawn_this_turn);
     }
     // Card-intrinsic "costs {amount} less if you've cast another spell this
-    // turn" (Rally the Monastery). `spells_cast_this_turn` excludes the spell
-    // being cast, so `> 0` means a prior spell went off.
+    // turn" (Rally the Monastery). The tally excludes the spell being cast,
+    // so `> 0` means a prior spell went off.
     if let Some(amount) = card.definition.self_cost_reduction_if_cast_spell
-        && state.players[caster].spells_cast_this_turn > 0
+        && state.players[caster].spells_cast_this_game_turn > 0
     {
         reduction = reduction.saturating_add(amount);
     }
@@ -2663,7 +2663,7 @@ fn self_cost_reduction_from_card(
             // "Costs {N} less for each other spell cast this turn" (Thrasta) —
             // every player's casts count.
             StaticEffect::SelfCostReducedPerSpellCastThisTurn { per } => {
-                let count: u32 = state.players.iter().map(|p| p.spells_cast_this_turn).sum();
+                let count: u32 = state.players.iter().map(|p| p.spells_cast_this_game_turn).sum();
                 reduction = reduction.saturating_add(per * count);
                 true
             }

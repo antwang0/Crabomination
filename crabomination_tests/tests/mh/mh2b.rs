@@ -21,6 +21,7 @@ fn resolve_spell(g: &mut GameState, def: crabomination::card::CardDefinition, ta
 fn thrasta_discount_and_entry_hexproof() {
     let mut g = two_player_game();
     g.players[0].spells_cast_this_turn = 3;
+    g.players[0].spells_cast_this_game_turn = 3;
     let thrasta = g.add_card_to_hand(0, catalog::thrasta_tempests_roar());
     // 12 total − 9 discount = {1}{G}{G} equivalent: 3 mana pays it.
     g.players[0].mana_pool.add(Color::Green, 3);
@@ -434,6 +435,7 @@ fn ripley_vance_third_spell() {
     let ripley = g.add_card_to_battlefield(0, catalog::captain_ripley_vance());
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     g.players[0].spells_cast_this_turn = 2;
+    g.players[0].spells_cast_this_game_turn = 2;
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.step = TurnStep::PreCombatMain;

@@ -7360,3 +7360,45 @@ fn cr_506_3_attack_scopes_on_miasma_oath_and_ravens() {
     assert_eq!((run(catalog::oath_of_kaya, false), run(catalog::oath_of_kaya, true)), (0, 2));
     assert_eq!((run(catalog::revenge_of_ravens, false), run(catalog::revenge_of_ravens, true)), (1, 1));
 }
+
+/// CR 500.1 / 514 — "this turn" is the current turn, whoever's it is. Seat 1's
+/// spells cast on its own turn used to count through every other seat's turn
+/// until its next one began (`spells_cast_this_turn` resets only at its
+/// owner's turn start), so Damping Sphere taxed an opponent's first spell on
+/// your turn and "if you've cast N spells this turn" read last turn's casts.
+#[test]
+fn cr_500_1_this_turns_spell_count_is_the_current_turns() {
+    use crabomination::effect::{Predicate, Value};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.players[1].spells_cast_this_turn = 2;
+    g.players[1].spells_cast_this_game_turn = 2;
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let two = Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(2) };
+    assert!(g.evaluate_predicate(&two, &ctx));
+    g.step = TurnStep::End;
+    while g.active_player_idx == 1 {
+        g.advance_step(vec![]).expect("advance");
+    }
+    assert_eq!(g.active_player_idx, 2);
+    assert!(!g.evaluate_predicate(&two, &ctx), "seat 1 has cast nothing this turn");
+}
+
+/// CR 500.1 — "attacked this turn" is the current turn too: Angelic Arbiter's
+/// "each opponent who attacked with a creature this turn can't cast spells"
+/// kept an opponent from casting on YOUR turn because they attacked on theirs.
+#[test]
+fn cr_500_1_an_attack_last_turn_is_not_an_attack_this_turn() {
+    use crabomination::effect::Predicate;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.players[1].attacked_this_turn = true;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let attacked = Predicate::PlayerAttackedThisTurn { who: PlayerRef::Seat(1) };
+    assert!(g.evaluate_predicate(&attacked, &ctx));
+    g.step = TurnStep::End;
+    while g.active_player_idx == 1 {
+        g.advance_step(vec![]).expect("advance");
+    }
+    assert!(!g.evaluate_predicate(&attacked, &ctx), "seat 1 attacked last turn, not this one");
+}

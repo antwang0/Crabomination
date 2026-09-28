@@ -2126,6 +2126,7 @@ fn reckless_bushwhacker_surge_pumps_team() {
     let mut g = two_player_game();
     let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].spells_cast_this_turn = 1; // a prior spell this turn
+    g.players[0].spells_cast_this_game_turn = 1;
     let id = g.add_card_to_hand(0, catalog::reckless_bushwhacker());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -2190,6 +2191,7 @@ fn wall_of_resurgence_animates_land_on_etb() {
 fn tyrant_of_valakut_surge_pings() {
     let mut g = two_player_game();
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     let id = g.add_card_to_hand(0, catalog::tyrant_of_valakut());
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(3);
@@ -2260,6 +2262,7 @@ fn boulder_salvo_deals_four() {
 fn goblin_freerunner_surge_cast_succeeds() {
     let mut g = two_player_game();
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     let id = g.add_card_to_hand(0, catalog::goblin_freerunner());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);

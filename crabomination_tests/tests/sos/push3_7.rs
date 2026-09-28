@@ -886,6 +886,7 @@ fn burrog_barrage_kills_opp_bear_with_second_target_filled() {
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].spells_cast_this_turn = 1; // pretend we already cast a spell
+    g.players[0].spells_cast_this_game_turn = 1;
     let id = g.add_card_to_hand(0, catalog::burrog_barrage());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);

@@ -727,6 +727,7 @@ fn potioners_trove_lifegain_blocked_without_spell_cast() {
     let trove = g.add_card_to_battlefield(0, catalog::potioners_trove());
     drain_stack(&mut g);
     g.players[0].spells_cast_this_turn = 0;
+    g.players[0].spells_cast_this_game_turn = 0;
 
     // Lifegain ability index 1 (mana ability is index 0).
     let res = g.perform_action(GameAction::ActivateAbility {
@@ -3305,6 +3306,7 @@ fn potioners_trove_lifegain_rejects_after_creature_cast_only() {
     drain_stack(&mut g);
     // Simulate having cast a creature this turn (no IS spells).
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     g.players[0].creatures_cast_this_turn = 1;
     g.players[0].instants_or_sorceries_cast_this_turn = 0;
 

@@ -694,7 +694,7 @@ pub enum StaticEffect {
     /// "Your Nth spell each turn costs `amount` less" (Highspire Bell-Ringer —
     /// second spell). Applied in `cost_reduction_for_spell` when the caster
     /// controls the source and is about to cast their `nth` spell this turn
-    /// (i.e. `Player.spells_cast_this_turn == nth - 1`). Generic-only.
+    /// (i.e. `Player.spells_cast_this_game_turn == nth - 1`). Generic-only.
     CostReductionNthSpell { filter: SelectionRequirement, nth: u32, amount: u32 },
     /// "The first creature spell you cast each turn costs `amount` less"
     /// (Conduit of Ruin). Unlike `CostReductionNthSpell` (which keys off the
@@ -726,7 +726,7 @@ pub enum StaticEffect {
     /// Damping-Sphere-style "spells cost {amount} more after the first
     /// spell that player casts each turn." `filter` narrows which spells
     /// are taxed; the cost increase is applied at cast time when the
-    /// caster's `Player.spells_cast_this_turn >= 1`.
+    /// caster's `Player.spells_cast_this_game_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
     /// Thalia-style unconditional tax: spells matching `filter` cost
     /// `amount` more to cast, every time (no first-spell gate). Applied at
@@ -886,7 +886,7 @@ pub enum StaticEffect {
     SelfCostReducedByValue { amount: Value },
     /// "Each player can't cast more than one spell each turn" (Rule of Law,
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
-    /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
+    /// `perform_action` cast gate against `Player.spells_cast_this_game_turn`.
     OneSpellPerTurn,
     /// CR 303.4a — "Enchanted player can't cast more than one spell each turn"
     /// (Curse of Exhaustion). Scoped to the source Aura's enchanted seat.

@@ -318,6 +318,7 @@ fn snipe_cantrips_on_second_spell_cast() {
     }
     // Fake a prior spell having been cast this turn.
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     g.spells_cast_this_turn = 1;
 
     let id = g.add_card_to_hand(0, catalog::snipe());

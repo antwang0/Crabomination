@@ -4053,6 +4053,7 @@ fn damping_sphere_resets_count_at_turn_start() {
     let mut g = two_player_game();
     let _sphere = g.add_card_to_battlefield(0, catalog::damping_sphere());
 
+    // Last turn's casts; its cleanup already cleared the game-turn tally.
     g.players[0].spells_cast_this_turn = 3;
     // Simulate a fresh turn for P0 — `do_untap` resets the per-player
     // counter (and lands_played).
@@ -7794,6 +7795,7 @@ fn cr_502_2_day_becomes_night_with_no_spells_last_turn() {
     g.day_night = Some(DayNight::Day);
     g.previous_turn_active = Some(1);
     g.players[1].spells_cast_this_turn = 0;
+    g.players[1].spells_cast_this_game_turn = 0;
     let mut ev = vec![];
     g.check_day_night_transition(&mut ev);
     assert_eq!(g.day_night, Some(DayNight::Night), "day → night when no spells were cast");
@@ -7806,6 +7808,7 @@ fn cr_502_2_night_becomes_day_with_two_spells_last_turn() {
     g.day_night = Some(DayNight::Night);
     g.previous_turn_active = Some(1);
     g.players[1].spells_cast_this_turn = 2;
+    g.players[1].spells_cast_this_game_turn = 2;
     let mut ev = vec![];
     g.check_day_night_transition(&mut ev);
     assert_eq!(g.day_night, Some(DayNight::Day), "night → day when 2+ spells were cast");

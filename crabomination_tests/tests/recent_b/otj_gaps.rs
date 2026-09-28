@@ -268,6 +268,7 @@ fn geralf_makes_zombies_that_grow_on_each_other() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::geralf_the_fleshwright());
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);

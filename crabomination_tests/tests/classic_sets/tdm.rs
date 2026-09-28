@@ -482,6 +482,7 @@ fn rally_the_monastery_cheaper_after_a_spell() {
     let spell = g.add_card_to_hand(0, catalog::rally_the_monastery());
     // Pretend a prior spell resolved this turn.
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1); // only {1}{W} = 2 available, not 4
     g.step = TurnStep::PreCombatMain;
@@ -1503,6 +1504,7 @@ fn narset_discards_hand_draws_per_spells() {
     g.add_card_to_hand(0, catalog::grizzly_bears());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     g.players[0].spells_cast_this_turn = 2;
+    g.players[0].spells_cast_this_game_turn = 2;
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }

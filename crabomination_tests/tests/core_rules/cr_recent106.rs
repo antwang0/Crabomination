@@ -373,6 +373,7 @@ fn cr_800_4_for_any_player_asks_every_opponent() {
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     assert!(!g.evaluate_predicate(&pred, &ctx));
     g.players[2].spells_cast_this_turn = 3;
+    g.players[2].spells_cast_this_game_turn = 3;
     assert!(g.evaluate_predicate(&pred, &ctx), "the second opponent counts");
 }
 

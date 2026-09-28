@@ -745,6 +745,7 @@ mod recent66 {
             g.add_card_to_library(0, catalog::grizzly_bears());
         }
         g.players[0].spells_cast_this_turn = 2;
+        g.players[0].spells_cast_this_game_turn = 2;
         let ls = g.add_card_to_battlefield(0, catalog::loan_shark());
         let hand = g.players[0].hand.len();
         g.fire_self_etb_triggers(ls, 0);

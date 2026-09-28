@@ -136,6 +136,7 @@ fn lavaball_trap_watches_land_drops() {
 fn mindbreak_trap_exiles_the_spell() {
     let mut g = two_player_game();
     g.players[1].spells_cast_this_turn = 3;
+    g.players[1].spells_cast_this_game_turn = 3;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;

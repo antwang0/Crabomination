@@ -355,6 +355,7 @@ fn brightspear_zealot_grows_after_two_spells() {
     let zealot = g.add_card_to_battlefield(0, catalog::brightspear_zealot());
     assert_eq!(g.computed_permanent(zealot).unwrap().power, 2);
     g.players[0].spells_cast_this_turn = 2;
+    g.players[0].spells_cast_this_game_turn = 2;
     assert_eq!(g.computed_permanent(zealot).unwrap().power, 4, "+2/+0 with two spells cast");
 }
 
@@ -994,6 +995,7 @@ fn gigastorm_titan_cost_reduction() {
     let spell = crabomination::card::CardInstance::new(g.next_id(), catalog::gigastorm_titan(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no spell cast yet → full price");
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 3, "after a spell → {{3}} off");
 }
 
@@ -1604,6 +1606,7 @@ fn uthros_psionicist_second_spell_discount() {
     let spell = crabomination::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "first spell: no discount");
     g.players[0].spells_cast_this_turn = 1; // now casting the second
+    g.players[0].spells_cast_this_game_turn = 1;
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "second spell: {{2}} off");
 }
 
@@ -2352,10 +2355,12 @@ fn illvoi_infiltrator_conditional_unblockable() {
     g.step = TurnStep::DeclareBlockers;
     // One spell cast → blockable.
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, illvoi)])).is_ok(),
         "blockable with one spell cast");
     // Two spells cast → unblockable.
     g.players[0].spells_cast_this_turn = 2;
+    g.players[0].spells_cast_this_game_turn = 2;
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, illvoi)])).is_err(),
         "unblockable after two spells");
 }

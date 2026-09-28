@@ -1437,7 +1437,7 @@ impl GameState {
         // attack with creatures at all.
         if !attacks.is_empty() {
             let p = self.active_player_idx;
-            if self.players[p].spells_cast_this_turn > 0
+            if self.players[p].spells_cast_this_game_turn > 0
                 && self.opponent_has_static(p, |e| {
                     matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
                 })

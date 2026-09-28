@@ -101,6 +101,7 @@ fn return_the_past_grants_flashback_on_your_turn_only() {
 fn impending_flux_counts_paradox_spells() {
     let mut g = pod(2);
     g.players[0].spells_cast_this_turn = 3;
+    g.players[0].spells_cast_this_game_turn = 3;
     g.players[0].spells_cast_from_hand_this_turn = 1;
     flood(&mut g, 0);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

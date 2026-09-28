@@ -903,7 +903,7 @@ pub enum Value {
     /// turn" (the count includes the spell that triggered it).
     NoncreatureSpellsCastThisTurn(PlayerRef),
     /// Total spells `who` has cast so far this turn (max over resolved
-    /// players). Backed by `Player.spells_cast_this_turn` — Narset, Jeskai
+    /// players). Backed by `Player.spells_cast_this_game_turn` — Narset, Jeskai
     /// Waymaster draws this many after discarding her hand.
     SpellsCastThisTurn(PlayerRef),
     /// Spells `who` has cast this turn **other than** the source spell/ability
@@ -2141,7 +2141,7 @@ pub enum Predicate {
     /// the Burning Masks). Counts distinct sources per controller-at-the-time.
     SourcesYouControlledDealtDamageThisTurnAtLeast(u32),
     /// `who` has cast at least `at_least` spells on the current turn.
-    /// Backed by `Player.spells_cast_this_turn`. Used by Burrog Barrage
+    /// Backed by `Player.spells_cast_this_game_turn`. Used by Burrog Barrage
     /// ("if you've cast another instant or sorcery spell this turn, …")
     /// and similar pumps that key off spell-count.
     SpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
@@ -2158,7 +2158,7 @@ pub enum Predicate {
     /// noncreature-spell event filter so a later creature spell doesn't match.
     FirstNoncreatureSpellThisTurn,
     /// `who` has cast *exactly* `count` spells so far this turn. Backed by
-    /// `Player.spells_cast_this_turn` (already incremented for the current
+    /// `Player.spells_cast_this_game_turn` (already incremented for the current
     /// cast at trigger time). Used by "whenever a player casts their second
     /// spell each turn" triggers (Ledger Shredder) — pair with
     /// `PlayerRef::Triggerer` + `EventScope::AnyPlayer` so it reads the

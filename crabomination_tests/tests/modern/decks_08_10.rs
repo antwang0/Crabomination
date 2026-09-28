@@ -706,6 +706,7 @@ fn vryn_wingmare_taxes_noncreature_spells_after_first_cast() {
     // P1 has cast one spell already this turn — the next noncreature
     // spell should be taxed +{1}.
     g.players[1].spells_cast_this_turn = 1;
+    g.players[1].spells_cast_this_game_turn = 1;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     // {R} only — printed cost; with Vryn Wingmare's +{1} should fail.
     g.players[1].mana_pool.add(Color::Red, 1);

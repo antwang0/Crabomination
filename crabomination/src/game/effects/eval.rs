@@ -812,17 +812,17 @@ impl GameState {
             Value::SpellsCastThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()
-                .map(|&p| self.players[p].spells_cast_this_turn as i32)
+                .map(|&p| self.players[p].spells_cast_this_game_turn as i32)
                 .max()
                 .unwrap_or(0),
             Value::GreatestManaValueExiledThisTurn => self.greatest_exiled_mv_this_turn as i32,
             Value::SpellsCastThisTurnTotal => {
-                self.players.iter().map(|p| p.spells_cast_this_turn as i32).sum()
+                self.players.iter().map(|p| p.spells_cast_this_game_turn as i32).sum()
             }
             Value::OtherSpellsCastThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()
-                .map(|&p| (self.players[p].spells_cast_this_turn as i32 - 1).max(0))
+                .map(|&p| (self.players[p].spells_cast_this_game_turn as i32 - 1).max(0))
                 .max()
                 .unwrap_or(0),
             Value::InstantsOrSorceriesCastThisTurn(p) => self
@@ -1179,7 +1179,7 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| {
                     let pl = &self.players[p];
-                    pl.spells_cast_this_turn.saturating_sub(pl.spells_cast_from_hand_this_turn) as i32
+                    pl.spells_cast_this_game_turn.saturating_sub(pl.spells_cast_from_hand_this_turn) as i32
                 })
                 .unwrap_or(0),
             Value::AurasYouControlledOnDyingSubject => ctx
@@ -2918,13 +2918,13 @@ impl GameState {
             Predicate::SpellsCastThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
-                    .map(|p| self.players[p].spells_cast_this_turn >= n)
+                    .map(|p| self.players[p].spells_cast_this_game_turn >= n)
                     .unwrap_or(false)
             }
             Predicate::SpellsCastThisTurnEquals { who, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
-                    .map(|p| self.players[p].spells_cast_this_turn == n)
+                    .map(|p| self.players[p].spells_cast_this_game_turn == n)
                     .unwrap_or(false)
             }
             Predicate::NoSpellCastFromHandThisTurn { who } => self

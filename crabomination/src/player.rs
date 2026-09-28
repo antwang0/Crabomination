@@ -509,9 +509,11 @@ pub struct PlayerData {
     /// Chain Veil's end-step "if you didn't …" check). Cleared each turn.
     #[serde(default)]
     pub activated_loyalty_this_turn: bool,
-    /// How many spells this player has cast this turn. Reset on
-    /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
-    /// cost {1} more" static.
+    /// How many spells this player has cast since **their own** turn began —
+    /// reset only as it begins, so it outlives the other seats' turns. Rules
+    /// text's "this turn" is `spells_cast_this_game_turn`; this one is kept
+    /// for the observation encoder (`encode.rs`), day / night (the previous
+    /// active player's count) and the next-spell discount tallies.
     pub spells_cast_this_turn: u32,
     /// Sorcery spells cast this turn — Backdraft's "a player who cast one or
     /// more sorcery spells this turn". Reset at Cleanup.

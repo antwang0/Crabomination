@@ -918,8 +918,10 @@ fn angelic_arbiter_forces_the_choice() {
         .is_ok()
     };
     g.players[0].spells_cast_this_turn = 1;
+    g.players[0].spells_cast_this_game_turn = 1;
     assert!(!swing(&mut g), "a spell this turn shuts off the attack");
     g.players[0].spells_cast_this_turn = 0;
+    g.players[0].spells_cast_this_game_turn = 0;
     assert!(swing(&mut g), "no spell cast, the attack is legal");
 
     // Having attacked, the same player can no longer cast.

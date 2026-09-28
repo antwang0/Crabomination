@@ -1646,6 +1646,7 @@ mod recent20 {
     fn slick_sequence_draws_after_second_spell() {
         let mut g = two_player_game();
         g.players[0].spells_cast_this_turn = 1; // pretend a spell was already cast
+        g.players[0].spells_cast_this_game_turn = 1;
         add_top(&mut g, 0, catalog::grizzly_bears());
         let hand_before = g.players[0].hand.len();
         let ss = g.add_card_to_hand(0, catalog::slick_sequence());
@@ -1665,6 +1666,7 @@ mod recent20 {
         let mut g = two_player_game();
         let rd = g.add_card_to_battlefield(0, catalog::razzle_dazzler());
         g.players[0].spells_cast_this_turn = 1;
+        g.players[0].spells_cast_this_game_turn = 1;
         // Casting any spell makes it the second this turn.
         let bolt = g.add_card_to_hand(0, catalog::lava_spike());
         g.players[0].mana_pool.add(Color::Red, 1);
@@ -1747,6 +1749,7 @@ mod recent20 {
         let sphinx = g.add_card_to_battlefield(0, catalog::stoic_sphinx());
         assert!(g.computed_permanent(sphinx).unwrap().keywords().contains(&Keyword::Hexproof));
         g.players[0].spells_cast_this_turn = 1;
+        g.players[0].spells_cast_this_game_turn = 1;
         assert!(
             !g.computed_permanent(sphinx).unwrap().keywords().contains(&Keyword::Hexproof),
             "loses hexproof once you've cast a spell"
