@@ -3717,3 +3717,31 @@ fn cr_712_transforming_and_modal_dfcs_are_told_apart() {
     assert!(transforming > 50, "only {transforming} transforming DFCs found — is the detector blind?");
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
+
+/// CR 115.1 / 601.2c — a spell that targets names what it can target. A bare
+/// `Selector::Target(0)` bounds nothing (Lightning Bolt could target a
+/// Forest), so this counts instants and sorceries whose effect requires a
+/// target while slot 0 carries no filter, and ratchets the count down.
+#[test]
+fn cr_115_1_spell_target_slots_carry_a_filter() {
+    let mut bare: Vec<&str> = Vec::new();
+    let mut checked = 0usize;
+    for f in crabomination::catalog::all_known_factories() {
+        let def = f();
+        if !(def.is_instant() || def.is_sorcery()) {
+            continue;
+        }
+        checked += 1;
+        if def.effect.requires_target() && def.effect.target_filter_for_slot(0).is_none() {
+            bare.push(def.name);
+        }
+    }
+    bare.sort_unstable();
+    bare.dedup();
+    assert!(checked > 3_000, "only {checked} spells walked — the ratchet is vacuous");
+    // 126 on 2026-09-28: nearly all "target player" / "target spell" slots,
+    // which the cast path bounds implicitly, plus multi-slot shapes (Chaos
+    // Mutation, Run Away Together) whose slot 0 is a player pick. A NEW row is
+    // a spell naming an object through a bare slot — give it its filter.
+    assert!(bare.len() <= 126, "{} spells target through a bare slot: {bare:?}", bare.len());
+}

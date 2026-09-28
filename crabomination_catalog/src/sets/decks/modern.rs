@@ -53197,7 +53197,7 @@ fn death_protection_rider(name: &'static str) -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::WhenTargetDiesThisTurn {
-            filter: None,
+            filter: Some(crate::card::SelectionRequirement::Creature),
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::TriggerSource,
@@ -54664,7 +54664,7 @@ pub fn malakir_rebirth() -> CardDefinition {
                 amount: Value::Const(2),
             },
             Effect::WhenTargetDiesThisTurn {
-                filter: None,
+                filter: Some(crate::card::SelectionRequirement::Creature),
                 body: Box::new(Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Battlefield {

@@ -1522,7 +1522,7 @@ pub fn candles_glow() -> CardDefinition {
         subtypes: arcane(),
         keywords: vec![Keyword::Splice(cost(&[generic(1), w()]), SpellSubtype::Arcane)],
         effect: Effect::PreventNextDamageAndGainLife {
-            target: Selector::Target(0),
+            target: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()

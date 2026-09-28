@@ -372,7 +372,7 @@ pub fn rushed_rebirth() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::WhenTargetDiesThisTurn {
-            filter: None,
+            filter: Some(crate::card::SelectionRequirement::Creature),
             body: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::And(
