@@ -1960,3 +1960,19 @@ fn ceaseless_conflict_counts_nontoken_creatures_you_controlled() {
     let spirits = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
     assert_eq!(spirits, 3, "your Bears and the two stolen; not the token, not the lent one");
 }
+
+/// CR 614.1c — "This artifact enters tapped" is a replacement, not an ETB
+/// trigger: Worn Powerstone and Star Compass tapped themselves with a trigger,
+/// leaving a window to tap them for mana first.
+#[test]
+fn worn_powerstone_enters_tapped_as_a_replacement() {
+    let mut g = main_phase();
+    let stone = g.add_card_to_hand(0, catalog::worn_powerstone());
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, stone, None).expect("Worn Powerstone");
+    g.perform_action(GameAction::PassPriority).ok();
+    g.perform_action(GameAction::PassPriority).ok();
+    let c = g.battlefield_find(stone).expect("resolved");
+    assert!(c.tapped, "tapped as it entered");
+    assert!(g.stack.is_empty(), "no enters-tapped trigger to respond to");
+}

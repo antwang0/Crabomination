@@ -422,7 +422,7 @@ fn cmdr_umbris_wharf_infiltrator_discard_makes_eldrazi() {
     g.add_card_to_battlefield(0, catalog::wharf_infiltrator());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     flood(&mut g, 0);
-    let rot = g.add_card_to_hand(0, catalog::mind_rot());
+    let rot = g.add_card_to_hand(0, catalog::hymn_to_tourach());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     cast(&mut g, rot, Some(Target::Player(0)), vec![], None);
     assert_eq!(named_on_battlefield(&g, "Eldrazi Horror", 0), 1);

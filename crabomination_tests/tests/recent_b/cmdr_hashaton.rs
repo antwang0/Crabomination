@@ -172,7 +172,7 @@ fn hashaton_pays_to_copy_a_discarded_creature() {
     g.add_card_to_hand(0, catalog::serra_angel());
     flood(&mut g, 0);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    let d = g.add_card_to_hand(0, catalog::mind_rot());
+    let d = g.add_card_to_hand(0, catalog::hymn_to_tourach());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
         card_id: d, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,

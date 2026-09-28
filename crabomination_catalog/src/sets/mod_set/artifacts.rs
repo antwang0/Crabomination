@@ -556,7 +556,7 @@ pub fn star_compass() -> CardDefinition {
         name: "Star Compass",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![enters_tapped_trigger()],
+        static_abilities: vec![enters_tapped()],
         activated_abilities: vec![tap_for(ManaPayload::AnyColorYouCouldProduce)],
         ..Default::default()
     }
@@ -974,12 +974,12 @@ pub fn hedron_archive() -> CardDefinition {
 // ── Mana rocks & utility artifacts ───────────────────────────────────────────
 
 /// Triggered ability: this permanent enters the battlefield tapped.
-fn enters_tapped_trigger() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap {
-            what: Selector::This,
-        },
+/// "This artifact enters tapped." — CR 614.1c, a replacement: no window to
+/// tap it for mana first (it was an ETB trigger that tapped it).
+fn enters_tapped() -> crate::card::StaticAbility {
+    crate::card::StaticAbility {
+        description: "This artifact enters tapped.",
+        effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
     }
 }
 
@@ -1004,7 +1004,7 @@ pub fn worn_powerstone() -> CardDefinition {
         name: "Worn Powerstone",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![enters_tapped_trigger()],
+        static_abilities: vec![enters_tapped()],
         activated_abilities: vec![tap_for(ManaPayload::Colorless(Value::Const(2)))],
         ..Default::default()
     }
