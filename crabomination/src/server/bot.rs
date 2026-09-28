@@ -8957,7 +8957,7 @@ pub(super) fn cast_candidates<'a>(
         let action = if c.on_adventure && c.definition.is_land() {
             // CR 715.3d — a land half is played, not cast (FIN's Town cycle).
             GameAction::PlayLand(c.id)
-        } else if c.on_adventure {
+        } else if c.on_adventure || c.self_exile_castable() {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
             } else {

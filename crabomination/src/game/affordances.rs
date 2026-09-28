@@ -1658,7 +1658,7 @@ impl GameState {
     fn adventure_exile_playable_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.exile
             .iter()
-            .filter(|c| c.owner == caster && c.on_adventure)
+            .filter(|c| c.owner == caster && (c.on_adventure || c.self_exile_castable()))
             .filter_map(|c| {
                 let id = c.id;
                 if c.definition.is_land() {

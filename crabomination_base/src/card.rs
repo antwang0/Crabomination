@@ -1708,6 +1708,11 @@ pub enum Keyword {
     /// `flashback_additional_cost` riders, with **no** exile-after tail
     /// (Wickerfolk Indomitable). Rides the flashback cast path.
     GraveyardCast,
+    /// "You may cast this card from exile" (Eternal Scourge, Misthollow
+    /// Griffin, Squee): the owner casts it from face-up exile for its own
+    /// mana cost at its normal timing. Rides the adventure-creature cast path
+    /// (`CastAdventureCreature`), which already pays the printed cost there.
+    ExileCast,
     Kicker(crate::mana::ManaCost),
     /// CR 702.33c — Multikicker: a kicker cost that may be paid any number
     /// of times. `CardInstance.kick_count` records how many times;
@@ -9968,6 +9973,14 @@ impl CardInstance {
 
     /// True when [`face_view`](Self::face_view) can differ from the card.
     #[inline]
+    /// "You may cast this card from exile" (`Keyword::ExileCast`): a
+    /// face-up, nonland card in exile its owner may cast for its own cost.
+    pub fn self_exile_castable(&self) -> bool {
+        !self.face_down
+            && !self.definition.is_land()
+            && self.definition.keywords.contains(&Keyword::ExileCast)
+    }
+
     pub fn has_face_view(&self) -> bool {
         let d = &**self.definition;
         d.split.is_some() || d.room.is_some() || self.adventuring || self.omen_casting || self.bestowed

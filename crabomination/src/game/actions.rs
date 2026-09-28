@@ -8349,8 +8349,11 @@ impl GameState {
         let pos = self
             .exile
             .iter()
-            .position(|c| c.id == card_id && c.on_adventure && c.owner == p)
+            .position(|c| c.id == card_id && c.owner == p && (c.on_adventure || c.self_exile_castable()))
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // An adventurer's creature half counts as cast from hand (the
+        // existing tally); a "cast this card from exile" card doesn't.
+        let was_adventure = self.exile[pos].on_adventure;
         // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
         if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
             return Err(GameError::CardNotInHand(card_id));
@@ -8410,7 +8413,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
-            true,
+            was_adventure,
         );
         Ok(events)
     }

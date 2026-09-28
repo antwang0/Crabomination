@@ -526,3 +526,52 @@ fn cr_709_5_a_rooms_mana_value_is_its_unlocked_doors() {
     let exact = R::ManaValueAtMost(right).and(R::ManaValueAtMost(right.saturating_sub(1)).negate());
     assert!(g.evaluate_requirement_static(&exact, &Target::Permanent(room), 0, None), "the right door's");
 }
+
+/// CR 601.2 / 601.3 — "You may cast this card from exile"
+/// (`Keyword::ExileCast`): the owner casts it from face-up exile for its own
+/// cost. It's a cast (the spell count moves, it uses the stack), not a cast
+/// from hand; another player can't cast it, and a face-down exiled card has
+/// no abilities, so it can't be cast this way.
+#[test]
+fn cr_601_exile_cast_keyword_casts_the_card_from_exile() {
+    use crabomination::card::Keyword;
+    let exile_bear = || {
+        let mut d = catalog::grizzly_bears();
+        d.keywords.push(Keyword::ExileCast);
+        d
+    };
+    let mut g = main_phase();
+    let bear = g.add_card_to_exile(0, exile_bear());
+    let cast_it = |g: &mut GameState, id| {
+        g.perform_action(GameAction::CastAdventureCreature {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    let (spells, from_hand) = (g.spells_cast_this_turn, g.players[0].spells_cast_from_hand_this_turn);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.compute_hand_affordances(0).adventure_exile.contains(&bear), "offered to its owner");
+    cast_it(&mut g, bear).expect("cast from exile");
+    assert!(
+        g.stack.iter().any(|si| matches!(si, StackItem::Spell { card, .. } if card.id == bear)),
+        "on the stack"
+    );
+    assert_eq!(g.spells_cast_this_turn, spells + 1, "a cast");
+    assert_eq!(g.players[0].spells_cast_from_hand_this_turn, from_hand, "not from hand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+
+    // Another player can't cast it.
+    let theirs = g.add_card_to_exile(1, exile_bear());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast_it(&mut g, theirs).is_err(), "only its owner");
+    // Face down, it has no abilities.
+    let hidden = g.add_card_to_exile(0, exile_bear());
+    g.exile.iter_mut().find(|c| c.id == hidden).unwrap().face_down = true;
+    assert!(cast_it(&mut g, hidden).is_err(), "face-down exile");
+}
