@@ -520,14 +520,8 @@ pub fn zaffai_thunder_conductor() -> CardDefinition {
     ]);
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![
-            magecraft(body.clone()),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCopied, EventScope::YourControl)
-                    .with_filter(cast_is_instant_or_sorcery()),
-                effect: body,
-            },
-        ],
+        // `magecraft` covers the copy half too (`EventSpec::or_copy`).
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(body))],
         ..creature(
             "Zaffai, Thunder Conductor",
             cost(&[generic(2), u(), r()]),

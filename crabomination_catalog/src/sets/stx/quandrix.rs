@@ -43,13 +43,13 @@ pub fn quandrix_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::LookPickToHand(Box::new(LookPick {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             pick_filter: Some(SelectionRequirement::Land),
             optional: true,
     ..Default::default()
-})))],
+}))))],
         ..Default::default()
     }
 }
@@ -78,11 +78,11 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
-        })],
+        }))],
         ..Default::default()
     }
 }
@@ -676,11 +676,11 @@ pub fn dragonsguard_elite() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
-        })],
+        }))],
         ..Default::default()
     }
 }

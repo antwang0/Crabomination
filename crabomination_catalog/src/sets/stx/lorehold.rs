@@ -50,7 +50,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::GainActivatedAbility {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::GainActivatedAbility {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
@@ -65,7 +65,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
                 ..Default::default()
             }),
             duration: crate::effect::Duration::EndOfTurn,
-        })],
+        }))],
         ..Default::default()
     }
 }
@@ -92,7 +92,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft_self_pump(1, 0))],
         ..Default::default()
     }
 }
@@ -221,11 +221,11 @@ pub fn storm_kiln_artist() -> CardDefinition {
                 per_toughness: 0,
             },
         }],
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: std::sync::Arc::new(treasure_token()),
-        })],
+        }))],
         ..Default::default()
     }
 }

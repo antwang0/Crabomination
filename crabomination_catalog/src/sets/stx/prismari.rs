@@ -40,9 +40,9 @@ pub fn prismari_pledgemage() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![magecraft(Effect::AttackDespiteDefenderThisTurn {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::AttackDespiteDefenderThisTurn {
             what: Selector::This,
-        })],
+        }))],
         ..Default::default()
     }
 }
@@ -68,7 +68,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::Seq(vec![
             // "This creature can't be blocked this turn."
             Effect::GrantKeyword {
                 what: Selector::This,
@@ -89,7 +89,7 @@ pub fn prismari_apprentice() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
-        ]))],
+        ])))],
         ..Default::default()
     }
 }
@@ -389,13 +389,13 @@ pub fn symmetry_sage() -> CardDefinition {
         },
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![magecraft(Effect::SetBasePower {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::SetBasePower {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             power: Value::Const(2),
             duration: Duration::EndOfTurn,
-        })],
+        }))],
         ..Default::default()
     }
 }
@@ -828,7 +828,7 @@ pub fn elemental_expressionist() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::Seq(vec![
             // "If this creature would leave the battlefield, exile it
             // instead" — death half (graveyard → exile redirect, EOT).
             Effect::ExileIfWouldDieThisTurn {
@@ -853,7 +853,7 @@ pub fn elemental_expressionist() -> CardDefinition {
                 }),
                 duration: Duration::EndOfTurn,
             },
-        ]))],
+        ])))],
         ..Default::default()
     }
 }

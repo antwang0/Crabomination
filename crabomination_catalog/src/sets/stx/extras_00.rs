@@ -329,11 +329,11 @@ pub fn spell_satchel() -> CardDefinition {
         name: "Spell Satchel",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::Book,
             amount: Value::Const(1),
-        })],
+        }))],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -1900,13 +1900,13 @@ pub fn karok_wrangler() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
-        })],
+        }))],
         ..Default::default()
     }
 }

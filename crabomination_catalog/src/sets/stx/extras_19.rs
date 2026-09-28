@@ -890,7 +890,7 @@ pub fn extus_oriq_overlord() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::DoubleStrike],
-        triggered_abilities: vec![magecraft(Effect::Move {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
                 zone: Zone::Graveyard,
@@ -899,7 +899,7 @@ pub fn extus_oriq_overlord() -> CardDefinition {
                 ))),
             }),
             to: ZoneDest::Hand(PlayerRef::You),
-        })],
+        }))],
         back_face: Some(Box::new(awaken_the_blood_avatar())),
         ..Default::default()
     }
@@ -1104,7 +1104,7 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
             },
             ..Default::default()
         }],
-        triggered_abilities: vec![magecraft(Effect::If {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::If {
             cond: Predicate::EntityMatches {
                 what: top(),
                 filter: SelectionRequirement::Land,
@@ -1129,7 +1129,7 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
                 }),
                 else_: None,
             }),
-        })],
+        }))],
         back_face: Some(Box::new(journey_to_the_oracle())),
         ..Default::default()
     }

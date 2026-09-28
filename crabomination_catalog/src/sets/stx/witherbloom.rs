@@ -33,7 +33,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft_drain_each_opp(1))],
         ..Default::default()
     }
 }
@@ -462,7 +462,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        triggered_abilities: vec![magecraft(gain_life(1))],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(gain_life(1)))],
         ..Default::default()
     }
 }

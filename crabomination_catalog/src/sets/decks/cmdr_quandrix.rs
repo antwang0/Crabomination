@@ -111,7 +111,7 @@ pub fn curiosity_crafter() -> CardDefinition {
 pub fn deekah_fractal_theorist() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![magecraft(fractal(Value::ManaValueOf(Box::new(Selector::TriggerSource))))],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(fractal(Value::ManaValueOf(Box::new(Selector::TriggerSource)))))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),
             effect: Effect::GrantKeyword {

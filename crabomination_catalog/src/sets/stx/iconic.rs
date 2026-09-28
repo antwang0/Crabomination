@@ -75,7 +75,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
             Keyword::Menace,
             Keyword::Ward(crate::card::WardCost::Life(3)),
         ],
-        triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(crate::effect::shortcut::magecraft_mint_pest())],
         ..Default::default()
     }
 }
@@ -1382,11 +1382,11 @@ pub fn professor_onyx() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
             ..Default::default()
         },
-        triggered_abilities: vec![magecraft(Effect::Drain {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
-        })],
+        }))],
         base_loyalty: 5,
         loyalty_abilities: vec![
             // +1: "You lose 1 life. Look at the top three cards of your

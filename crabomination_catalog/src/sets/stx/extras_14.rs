@@ -325,14 +325,14 @@ pub fn leonin_lightscribe() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::PumpPT {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             power: Value::Const(1),
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
-        })],
+        }))],
         ..Default::default()
     }
 }

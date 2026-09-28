@@ -148,12 +148,12 @@ pub fn octavia_living_thesis() -> CardDefinition {
             ),
             8,
         )),
-        triggered_abilities: vec![magecraft(Effect::SetBasePT {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::SetBasePT {
             what: target_filtered(R::Creature),
             power: Value::Const(8),
             toughness: Value::Const(8),
             duration: Duration::EndOfTurn,
-        })],
+        }))],
         ..creature(
             "Octavia, Living Thesis",
             cost(&[generic(8), u(), u()]),

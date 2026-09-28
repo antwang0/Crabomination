@@ -415,7 +415,7 @@ pub fn eager_first_year() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft_self_pump(1, 0))],
         ..Default::default()
     }
 }
@@ -477,7 +477,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![],
-        triggered_abilities: vec![magecraft(Effect::ChooseMode(vec![
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::ChooseMode(vec![
             Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Flying,
@@ -488,7 +488,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
                 keyword: Keyword::Lifelink,
                 duration: Duration::EndOfTurn,
             },
-        ]))],
+        ])))],
         ..Default::default()
     }
 }
@@ -14096,7 +14096,7 @@ pub fn clever_lumimancer() -> CardDefinition {
             ..Default::default()
         },
         toughness: 1,
-        triggered_abilities: vec![magecraft_self_pump(2, 2)],
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft_self_pump(2, 2))],
         ..Default::default()
     }
 }
@@ -14117,12 +14117,12 @@ pub fn silverquill_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
+        triggered_abilities: vec![crate::effect::shortcut::with_copies(magecraft(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(1),
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
-        })],
+        }))],
         ..Default::default()
     }
 }
