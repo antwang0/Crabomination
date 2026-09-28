@@ -540,6 +540,29 @@ fn cr_702_99_extort_drains_when_the_optional_cost_is_paid() {
     assert_eq!(g.players[0].life, my_life + 1, "extort gained the controller 1");
 }
 
+/// CR 702.101a — extort gains "the total life lost this way": at a four-seat
+/// table, three opponents lose 1 each and the controller gains 3 (it gained 1).
+#[test]
+fn cr_702_101a_extort_gains_the_total_lost_at_a_table() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = crabomination::game::multi_player_game(4);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::basilica_screecher());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].life, life - 1);
+    assert_eq!(g.players[3].life, life - 1);
+    assert_eq!(g.players[0].life, life + 3, "one from each of three opponents");
+}
+
 #[test]
 fn cr_702_99_extort_does_nothing_when_declined() {
     let mut g = two_player_game();

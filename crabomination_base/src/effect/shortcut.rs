@@ -55,6 +55,11 @@ pub fn drain(amount: i32) -> Effect {
         amount: Value::Const(amount),
     }
 }
+/// "Each opponent loses `amount` life. You gain life equal to the life lost
+/// this way" — the gain is the total across opponents (`DrainLifeLost`).
+pub fn drain_life_lost(amount: Value) -> Effect {
+    Effect::DrainLifeLost { from: Selector::Player(PlayerRef::EachOpponent), to: you(), amount }
+}
 pub fn lose_life(amount: i32, who: Selector) -> Effect {
     Effect::LoseLife { who, amount: Value::Const(amount) }
 }
@@ -2320,18 +2325,19 @@ pub fn partner_with_search(name: &str) -> TriggeredAbility {
     })
 }
 
-/// Extort (CR 702.101): "Whenever you cast a spell, you may pay
-/// {W/B}. If you do, each opponent loses 1 life and you gain that
-/// much life." A `SpellCast / YourControl` trigger whose body is a
-/// `MayPay` over the canonical [`drain`] shape. Basilica Screecher,
-/// Crypt Ghast, Pontiff of Blight.
+/// Extort (CR 702.101a): "Whenever you cast a spell, you may pay {W/B}. If
+/// you do, each opponent loses 1 life and you gain life equal to the total
+/// life lost this way." A `SpellCast / YourControl` trigger whose body is a
+/// `MayPay` over [`drain_life_lost`]. Basilica Screecher, Crypt Ghast.
 pub fn extort() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
         effect: Effect::MayPay {
             description: "Extort — pay {W/B}: drain 1".into(),
             mana_cost: crate::mana::cost(&[crate::mana::hybrid(Color::White, Color::Black)]),
-            body: Box::new(drain(1)),
+            // CR 702.101a — "you gain life equal to the total life lost this
+            // way": one per opponent at a table, not one.
+            body: Box::new(drain_life_lost(Value::ONE)),
             else_: None,
         },
     }
