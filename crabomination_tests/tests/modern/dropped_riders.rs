@@ -1843,7 +1843,9 @@ fn intrepid_stablemaster_funds_vehicles_only() {
 /// Afterlife are pod cards.
 #[test]
 fn cr_701_19c_cant_be_regenerated_riders_beat_a_shield() {
-    let spells: [(fn() -> crabomination::card::CardDefinition, bool, Option<u32>); 9] = [
+    // (spell, targeted, X)
+    type Case = (crate::Factory, bool, Option<u32>);
+    let spells: [Case; 9] = [
         (catalog::afterlife, true, None),
         (catalog::befoul, true, None),
         (catalog::fissure, true, None),
