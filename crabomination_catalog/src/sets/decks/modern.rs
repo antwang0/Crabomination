@@ -10838,12 +10838,11 @@ pub fn tenacious_tomeseeker() -> CardDefinition {
             effect: Effect::If {
                 cond: Predicate::SpellWasBargained,
                 then: Box::new(Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    }),
+                    what: crate::effect::shortcut::target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
                 else_: Box::new(Effect::Noop),

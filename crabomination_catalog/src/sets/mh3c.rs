@@ -542,11 +542,9 @@ pub fn pinnacle_monk() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
-            what: Selector::one_of(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-            }),
+            what: crate::effect::shortcut::target_filtered(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+            ),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         back_face: Some(Box::new(mdfc_pain_land("Mystic Peak", Color::Red))),

@@ -1604,16 +1604,10 @@ pub fn slickshot_lockpicker() -> CardDefinition {
         toughness: 3,
         plot_cost: Some(cost(&[generic(2), u()])),
         triggered_abilities: vec![etb(Effect::GrantFlashbackThisTurn {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Or(
-                        Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
-                        Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    ),
-                },
-                Value::Const(1),
+            what: crate::effect::shortcut::target_filtered(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .and(SelectionRequirement::InYourGraveyard),
             ),
         })],
         ..Default::default()

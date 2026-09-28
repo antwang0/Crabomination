@@ -3,7 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, LandType, SelectionRequirement as R, Subtypes, TriggeredAbility, Zone,
+    Keyword, LandType, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
@@ -195,11 +195,7 @@ pub fn agent_of_masks() -> CardDefinition {
 /// your hand.
 pub fn exhumer_thrull() -> CardDefinition {
     let recur = || Effect::Move {
-        what: Selector::one_of(Selector::CardsInZone {
-            who: PlayerRef::You,
-            zone: Zone::Graveyard,
-            filter: R::Creature,
-        }),
+        what: crate::effect::shortcut::target_filtered(R::Creature.and(R::InYourGraveyard)),
         to: ZoneDest::Hand(PlayerRef::You),
     };
     CardDefinition {
