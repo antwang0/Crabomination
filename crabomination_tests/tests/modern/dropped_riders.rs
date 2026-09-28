@@ -2072,3 +2072,29 @@ fn saheeli_sublime_artificer_copy_stays_an_artifact() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
 }
+
+/// Vile Redeemer — a Scion "for each nontoken creature that died under your
+/// control this turn": neither your token nor an opponent's creature counts.
+#[test]
+fn vile_redeemer_counts_only_your_nontoken_deaths() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, wrath, None).expect("wrath");
+    drain_stack(&mut g);
+    assert!(g.battlefield.is_empty());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let vr = g.add_card_to_hand(0, catalog::vile_redeemer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, vr, None).expect("vile redeemer");
+    drain_stack(&mut g);
+    let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
+    assert_eq!(scions, 1);
+}

@@ -169,7 +169,9 @@ pub fn vile_redeemer() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     definition: std::sync::Arc::new(eldrazi_scion_token()),
-                    count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+                    count: Value::CreatureDeathsThisTurnMatching {
+                        filter: R::NotToken.and(R::ControlledByYou),
+                    },
                 }),
                 else_: None,
             },
