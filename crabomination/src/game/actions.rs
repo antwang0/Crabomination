@@ -8599,6 +8599,9 @@ impl GameState {
         self.plotted_cards.insert(card_id);
         self.plotted_this_turn.insert(card_id);
         events.push(GameEvent::PermanentExiled { card_id });
+        if from_library_top {
+            self.note_exiled_from_library(p, card_id, &mut events);
+        }
         self.push_plot_triggers(card_id, p, plot_triggers);
         Ok(events)
     }

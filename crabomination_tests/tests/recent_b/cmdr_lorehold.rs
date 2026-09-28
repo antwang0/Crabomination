@@ -328,6 +328,33 @@ fn laelia_exiles_and_grows() {
     assert_eq!(g.battlefield_find(laelia).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// CR 400.7 — Laelia counts cards put into exile from her controller's
+/// library or graveyard: not an opponent's library, not the battlefield.
+#[test]
+fn cr_400_7_laelia_counts_library_and_graveyard_exiles_only() {
+    use crabomination::effect::Selector;
+    let mut g = pod(2);
+    let laelia = g.add_card_to_battlefield(0, catalog::laelia_the_blade_reforged());
+    let mine_lib = g.add_card_to_library(0, catalog::island());
+    let foe_lib = g.add_card_to_library(1, catalog::island());
+    let mine_gy = g.add_card_to_graveyard(0, catalog::island());
+    let mine_bf = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let counters = |g: &GameState| g.battlefield_find(laelia).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let exile = |g: &mut GameState, id: CardId| {
+        let evs = g.resolve_effect(&Effect::Exile { what: Selector::ExactObjects(vec![id]) }, &ctx).expect("exile");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    exile(&mut g, foe_lib);
+    exile(&mut g, mine_bf);
+    assert_eq!(counters(&g), 0, "an opponent's library and the battlefield don't count");
+    exile(&mut g, mine_lib);
+    assert_eq!(counters(&g), 1, "your library counts");
+    exile(&mut g, mine_gy);
+    assert_eq!(counters(&g), 2, "your graveyard counts");
+}
+
 /// An artifact creature entering draws, once a turn.
 #[test]
 fn losheel_draws_once_a_turn() {

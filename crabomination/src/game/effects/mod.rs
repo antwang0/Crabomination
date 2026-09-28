@@ -4203,6 +4203,7 @@ impl GameState {
                     card.exiled_with = Some(source);
                     let card_id = card.id;
                     self.exile.push(card);
+                    self.note_exiled_from_library(seat, card_id, events);
                     events.push(GameEvent::PermanentExiled { card_id });
                 }
                 self.shuffle_library(seat, events);
@@ -10727,7 +10728,9 @@ impl GameState {
                 let n = self.evaluate_value(exile_count, ctx).max(0) as usize;
                 for _ in 0..n.min(self.players[p].library.len()) {
                     let card = self.players[p].library.remove(0);
+                    let cid = card.id;
                     self.exile.push(card);
+                    self.note_exiled_from_library(p, cid, events);
                 }
                 let named = ctx
                     .source
@@ -10746,7 +10749,9 @@ impl GameState {
                         self.players[p].hand.push(card);
                         return Ok(());
                     }
+                    let cid = card.id;
                     self.exile.push(card);
+                    self.note_exiled_from_library(p, cid, events);
                 }
                 Ok(())
             }
@@ -11161,6 +11166,7 @@ impl GameState {
                         && let Some(card) = Self::take_card(&mut self.players[p].library, *cid)
                     {
                         self.exile.push(card);
+                        self.note_exiled_from_library(p, *cid, events);
                     }
                 }
                 Ok(())
@@ -13883,6 +13889,8 @@ impl GameState {
                             self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                         }
                         EntityRef::Permanent(cid) => {
+                            let last_controller =
+                                self.battlefield_find(cid).map_or(ctx.controller, |c| c.controller);
                             self.remove_from_battlefield_to_exile(cid);
                             // Bump the controller's per-turn exile tally
                             // for Ennis-style "if a card was put into
@@ -13892,8 +13900,10 @@ impl GameState {
                                     self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
                             }
                             events.push(GameEvent::PermanentExiled { card_id: cid });
-                            events.push(GameEvent::CardExiledFromPlayOrGraveyard {
+                            events.push(GameEvent::CardExiledFrom {
                                 card_id: cid,
+                                player: last_controller,
+                                from: crate::effect::exile_from::BATTLEFIELD,
                             });
                         }
                         EntityRef::Card(cid) => {
@@ -19446,6 +19456,7 @@ impl GameState {
                     if let Some(i) = self.players[p].library.iter().position(|c| c.id == cid) {
                         let card = self.players[p].library.remove(i);
                         self.exile.push(card);
+                        self.note_exiled_from_library(p, cid, events);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                     }
                 }
@@ -19961,6 +19972,7 @@ impl GameState {
                     for id in hits {
                         if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                             self.exile.push(card);
+                            self.note_exiled_from_library(p, id, events);
                             self.players[p].cards_exiled_this_turn += 1;
                             events.push(GameEvent::PermanentExiled { card_id: id });
                         }
@@ -21869,6 +21881,8 @@ impl GameState {
                                     self.exile.push(c);
                                     if zone == "gy" {
                                         self.note_exiled_from_graveyard(owner, id, events);
+                                    } else if zone != "hand" {
+                                        self.note_exiled_from_library(owner, id, events);
                                     }
                                 }
                             }
@@ -25357,6 +25371,7 @@ impl GameState {
                     let Some(card) = Self::take_card(&mut self.players[p].library, *cid) else { continue };
                     if denied.contains(cid) {
                         self.exile.push(card);
+                        self.note_exiled_from_library(p, *cid, events);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     } else {
                         self.players[p].hand.push(card);
@@ -25392,6 +25407,7 @@ impl GameState {
                     card.face_down = true;
                     card.exiled_with = Some(src);
                     self.exile.push(card);
+                    self.note_exiled_from_library(p, pick, events);
                     events.push(crate::game::GameEvent::PermanentExiled { card_id: pick });
                 }
                 // Bottom the remaining looked-at cards in a random order.
@@ -25815,6 +25831,7 @@ impl GameState {
                     let cid = card.id;
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
+                    self.note_exiled_from_library(opp, cid, events);
                     if *grant == G::CastFreeNonland {
                         self.scratch.exiled_card_ids_this_resolution.push(cid);
                     }
@@ -29106,6 +29123,7 @@ impl GameState {
                         if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
                             names.push(card.definition.name);
                             self.exile.push(card);
+                            self.note_exiled_from_library(p, *cid, events);
                             events.push(GameEvent::PermanentExiled { card_id: *cid });
                         }
                     }
@@ -32440,6 +32458,7 @@ impl GameState {
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: eid });
+                    self.note_exiled_from_library(p, eid, events);
                     removed = Some(eid);
                 }
                 // The rest of the revealed cards go to your hand.
@@ -35754,6 +35773,8 @@ impl GameState {
                         events.push(GameEvent::PermanentExiled { card_id: id });
                         if from_gy {
                             self.note_exiled_from_graveyard(p, id, events);
+                        } else {
+                            self.note_exiled_from_library(p, id, events);
                         }
                     }
                 }
@@ -37379,6 +37400,7 @@ impl GameState {
                 ]));
                 self.exile.push(card);
                 events.push(GameEvent::PermanentExiled { card_id: top_id });
+                self.note_exiled_from_library(lib, top_id, events);
                 Ok(())
             }
 

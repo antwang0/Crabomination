@@ -1378,7 +1378,7 @@ pub fn kaya_spirits_justice() -> CardDefinition {
         base_loyalty: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::CardExiledFromPlayOrGraveyard,
+                EventKind::CardExiledFrom(crate::effect::exile_from::BATTLEFIELD | crate::effect::exile_from::GRAVEYARD),
                 EventScope::AnyPlayer,
             )
             .with_filter(Predicate::EntityMatches {

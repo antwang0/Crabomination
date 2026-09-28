@@ -761,7 +761,7 @@ pub fn ketramose_the_new_dawn() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::CardExiledFromPlayOrGraveyard,
+                EventKind::CardExiledFrom(crate::effect::exile_from::BATTLEFIELD | crate::effect::exile_from::GRAVEYARD),
                 EventScope::AnyPlayer,
             )
             .with_filter(Predicate::IsTurnOf(PlayerRef::You))

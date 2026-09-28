@@ -125,7 +125,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CardSurveiledIntoGraveyard { .. } => bits!(K::CardMilled),
         E::CardPutIntoHandFromGraveyard { .. } => bits!(K::PutIntoHandFromGraveyard),
         E::PermanentExiled { .. } => bits!(K::CardExiled),
-        E::CardExiledFromPlayOrGraveyard { .. } => bits!(K::CardExiledFromPlayOrGraveyard),
+        E::CardExiledFrom { .. } => bits!(K::CardExiledFrom(0)),
         E::BecameTarget { .. } => bits!(K::BecameTarget),
         E::ChoseTargets { .. } => bits!(K::ChoseTargets),
         E::CardCycled { .. } => bits!(K::CardCycled),
@@ -250,6 +250,8 @@ fn event_payload_matches(
         (EventKind::NthCardDrawnThisTurn(k), GameEvent::NthCardDrawnThisTurn { n, .. }) => {
             u32::from(*k) == *n
         }
+        // One mask bit for every origin set: the zone is the payload.
+        (EventKind::CardExiledFrom(mask), GameEvent::CardExiledFrom { from, .. }) => mask & from != 0,
         _ => true,
     }
 }
@@ -371,9 +373,9 @@ fn reference_event_kind_matches(
         (EventKind::PutIntoHandFromGraveyard, GameEvent::CardPutIntoHandFromGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (
-            EventKind::CardExiledFromPlayOrGraveyard,
-            GameEvent::CardExiledFromPlayOrGraveyard { .. },
-        ) => true,
+            EventKind::CardExiledFrom(mask),
+            GameEvent::CardExiledFrom { from, .. },
+        ) => mask & from != 0,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
@@ -1305,6 +1307,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
+        | GameEvent::CardExiledFrom { player, .. }
         | GameEvent::CreatureFought { controller: player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
@@ -1404,6 +1407,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CreatureFought { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardExiledFrom { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentDied { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentDestroyedByEffect { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -1751,7 +1755,7 @@ mod tests {
             E::PermanentExiled { card_id: c },
             E::RolledToVisitAttractions { player: 0, result: 3 },
             E::AttractionVisited { card_id: c },
-            E::CardExiledFromPlayOrGraveyard { card_id: c },
+            E::CardExiledFrom { card_id: c, player: 0, from: crate::effect::exile_from::GRAVEYARD },
             E::DamageDealt {
                 amount: 2,
                 to_player: Some(1),
@@ -1984,7 +1988,7 @@ mod tests {
             K::AdaptAbilityActivated,
             K::CardLeftGraveyard,
             K::CardExiled,
-            K::CardExiledFromPlayOrGraveyard,
+            K::CardExiledFrom(crate::effect::exile_from::GRAVEYARD),
             K::BecameTarget,
             K::ChoseTargets,
             K::CardCycled,

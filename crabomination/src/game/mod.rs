@@ -10447,7 +10447,28 @@ impl GameState {
         events: &mut Vec<crate::game::GameEvent>,
     ) {
         self.note_left_graveyard(p, card_id, events);
-        events.push(crate::game::GameEvent::CardExiledFromPlayOrGraveyard { card_id });
+        events.push(crate::game::GameEvent::CardExiledFrom {
+            card_id,
+            player: p,
+            from: crate::effect::exile_from::GRAVEYARD,
+        });
+    }
+
+    /// CR 400.7 — "put into exile from a library" (Laelia, the Blade
+    /// Reforged). Every library → exile path announces it here: the impulse
+    /// draws, cascades and dig-and-exile effects move cards off the library
+    /// directly, not through `move_card_to`.
+    pub(crate) fn note_exiled_from_library(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        events.push(crate::game::GameEvent::CardExiledFrom {
+            card_id,
+            player: p,
+            from: crate::effect::exile_from::LIBRARY,
+        });
     }
 
     /// `note_left_graveyard` for a card the move put into its owner's hand:
@@ -20834,6 +20855,7 @@ impl GameState {
             let card_id = card.id;
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id });
+            self.note_exiled_from_library(p, card_id, events);
             return DrawOutcome::Drew;
         }
         // CR 614 — Uba Mask: "If a player would draw a card, that player exiles
@@ -20854,6 +20876,7 @@ impl GameState {
             let card_id = card.id;
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id });
+            self.note_exiled_from_library(p, card_id, events);
             return DrawOutcome::Drew;
         }
         // CR 614 — a queued "the next time you would draw a card this turn,
@@ -27295,7 +27318,9 @@ impl GameState {
                         if rest_to_exile {
                             // Devourer of Destiny — the non-kept cards are
                             // exiled outright.
+                            let cid = card.id;
                             self.exile.push(card);
+                            self.note_exiled_from_library(player, cid, &mut events);
                         } else if rest_to_graveyard {
                             // Discerning Taste — track the greatest power
                             // among milled creature cards.
@@ -27372,14 +27397,16 @@ impl GameState {
                     // CR 121.5 — put into hand, not drawn: no CardDrawn.
                     self.players[player].hand.push(card);
                 }
+                let mut exiled_events = Vec::new();
                 // Exile the rest of the revealed set.
                 for rid in &revealed {
                     if Some(*rid) == pick { continue; }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
                         self.exile.push(card);
+                        self.note_exiled_from_library(player, *rid, &mut exiled_events);
                     }
                 }
-                Ok(vec![])
+                Ok(exiled_events)
             }
             PendingEffectState::PayLifeExileFromHandPending { opp, revealed } => {
                 let DecisionAnswer::Discard(ids) = answer else {
@@ -27774,6 +27801,8 @@ impl GameState {
                                 self.exile.push(card);
                                 if zone == "gy" {
                                     self.note_exiled_from_graveyard(who, id, &mut events);
+                                } else if zone != "hand" {
+                                    self.note_exiled_from_library(who, id, &mut events);
                                 }
                             }
                         }

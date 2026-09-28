@@ -2704,11 +2704,11 @@ pub enum GameEvent {
     /// CR 717.5 — one Attraction's lit-up numbers matched the roll, so its
     /// visit ability triggers.
     AttractionVisited { card_id: CardId },
-    /// A card was put into exile **from a graveyard or the battlefield**
-    /// (CR 400.7 — the origin matters to Ketramose, the New Dawn). Emitted
-    /// alongside `PermanentExiled` by `move_card_to`, which is the only place
-    /// that still knows which zone the card came from.
-    CardExiledFromPlayOrGraveyard { card_id: CardId },
+    /// A card was put into exile from the battlefield, a graveyard or a library
+    /// (CR 400.7 — the origin matters to Ketramose and Laelia). `from` is one
+    /// [`crate::effect::exile_from`] bit; `player` is the zone's player (the
+    /// permanent's last controller, else the card's owner).
+    CardExiledFrom { card_id: CardId, player: usize, from: u8 },
     /// `combat` is true for combat damage (CR 510), false for damage from
     /// spells/abilities (burn, pingers, Fight). Read by "whenever … is dealt
     /// *noncombat* damage" triggers (Chandra's Spitfire).

@@ -375,28 +375,30 @@ pub fn laelia_the_blade_reforged() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![
-            // The attack's own exile is the one "put into exile from your
-            // library" the engine announces no event for, so its counter
-            // rides the same trigger; a graveyard exile has its own event.
+            // The attack's exile grows Laelia through the trigger below
+            // (CR 400.7 — a library exile reports its origin).
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::ExileTopAndGrantMayPlay {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        duration: MayPlayDuration::EndOfThisTurn,
-                        pay_any_color: false,
-                        max_mana_value: None,
-                        pay_own_cost: true,
-                        uncast_penalty: None,
-                    },
-                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
-                ]),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
             },
             TriggeredAbility {
                 event: EventSpec {
                     once_per_batch: true,
-                    ..EventSpec::new(EventKind::CardExiledFromPlayOrGraveyard, EventScope::YourControl)
+                    // "from your library and/or your graveyard" (CR 400.7).
+                    ..EventSpec::new(
+                        EventKind::CardExiledFrom(
+                            crate::effect::exile_from::LIBRARY | crate::effect::exile_from::GRAVEYARD,
+                        ),
+                        EventScope::YourControl,
+                    )
                 },
                 effect: Effect::AddCounter {
                     what: Selector::This,

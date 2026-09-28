@@ -377,7 +377,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Card | Residual | Why |
 |---|---|---|
 | Grab the Prize (pod) | the discard happens as it resolves, not as a cast cost (castable from an empty hand; a countered copy discards nothing) | a cast-time discard's card type doesn't reach the resolution's `DiscardedNonlandThisEffect` |
-| Laelia, the Blade Reforged (pod) | only her own attack's library exile (and graveyard exiles) grow her | the engine emits no "exiled from a library" event; she is the only card that needs one |
 | Chevill, Bane of Monsters | "a permanent an opponent controls" dies is read as any permanent with a bounty counter | bounty counters only go on opponents' permanents, so it differs only after a control change |
 | Avacyn's Judgment | Madness {X}{R} is absent (and with it the "X damage divided instead" mode) | a madness cost with {X} and a `MadnessCostPaid` damage switch |
 | Elenda, Saint of Dusk | "hexproof from instants" is dropped | a `HexproofFrom` variant over a card type |

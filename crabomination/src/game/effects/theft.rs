@@ -95,6 +95,7 @@ impl GameState {
             card.face_down = true;
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id: pick });
+            self.note_exiled_from_library(seat, pick, events);
             self.grant_any_type_play(pick, ctx.controller);
         }
         let dest = if rest_to_graveyard {

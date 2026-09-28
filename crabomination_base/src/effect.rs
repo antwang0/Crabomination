@@ -3380,11 +3380,12 @@ pub enum EventKind {
     /// `IsTurnOf(You)` for "whenever one or more cards are put into exile
     /// during your turn" (Stonebinder's Familiar).
     CardExiled,
-    /// "Whenever one or more cards are put into exile from graveyards and/or
-    /// the battlefield" (Ketramose, the New Dawn) — the origin-scoped sibling
-    /// of `CardExiled`. Fires per card off `move_card_to`'s battlefield and
-    /// graveyard branches.
-    CardExiledFromPlayOrGraveyard,
+    /// "Whenever one or more cards are put into exile from [zones]" — the
+    /// origin-scoped sibling of `CardExiled` (CR 400.7). The payload is a mask
+    /// of [`exile_from`] origins: Ketramose, the New Dawn reads the battlefield
+    /// and graveyards, Laelia, the Blade Reforged your library and graveyard.
+    /// One kind-mask bit for every mask.
+    CardExiledFrom(u8),
     /// A permanent became the target of a spell or activated ability.
     /// Fires once per Permanent target at announce-time (when the spell
     /// hits the stack or the activated ability is pushed). Multi-target
@@ -3680,6 +3681,13 @@ impl EventKind {
     pub const fn fold_bits(bits: u128) -> u64 {
         (bits as u64) | ((bits >> 64) as u64)
     }
+}
+
+/// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).
+pub mod exile_from {
+    pub const BATTLEFIELD: u8 = 1;
+    pub const GRAVEYARD: u8 = 2;
+    pub const LIBRARY: u8 = 4;
 }
 
 /// Whose events does this trigger listen for?

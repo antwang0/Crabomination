@@ -507,9 +507,13 @@ across nine precons.
 - ✅ New for Lorehold Legacies: `PreventAllCombatDamageToMatching` (Losheel),
   `RevealUntilOneToBattlefieldRestBottom` (Audacious Reshapers); return-all from the
   graveyard records its cards for `Selector::LastMoved` (Wake the Past).
-- ⚠ Open: no event announces a card exiled **from a library** (Laelia, the Blade
-  Reforged; `PermanentExiled` / `CardExiledFromPlayOrGraveyard` cover play and
-  graveyards only, across ~90 emission sites).
+- ✅ A card exiled **from a library** is announced: `EventKind::CardExiledFrom(mask)`
+  (`exile_from::{BATTLEFIELD, GRAVEYARD, LIBRARY}`) replaced
+  `CardExiledFromPlayOrGraveyard`, carrying the owner/last controller. Library sites
+  call `note_exiled_from_library`; `move_card_to` covers the rest. Laelia's attack
+  counter now rides it (`cr_400_7_laelia_counts_library_and_graveyard_exiles_only`).
+  Residual: a direct `place_card_in_dest(.., Exile)` of a card taken off a library
+  by its caller reports no origin.
 - ✅ New for Quantum Quandrix: Esix's first-tokens copy replacement, Crafty Cutpurse's
   token steal, `WheneverCreatureEntersThisTurn`, Study Hall's `CommanderCastScry`
   rider, Oversimplify's `ExileAllThenTokenPerPlayerByPower`.

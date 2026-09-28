@@ -2982,7 +2982,7 @@ impl From<&GameEvent> for GameEventWire {
             // only needs "this card was exiled", which `PermanentExiled`
             // already carries in the same batch.
             GameEvent::PermanentExiled { card_id }
-            | GameEvent::CardExiledFromPlayOrGraveyard { card_id } => {
+            | GameEvent::CardExiledFrom { card_id, .. } => {
                 GameEventWire::PermanentExiled { card_id: *card_id }
             }
             GameEvent::DamageDealt { amount, to_player, to_card, .. } => GameEventWire::DamageDealt {

@@ -707,7 +707,7 @@ _KIND_CLASS = {
     "PermanentReturnedToHand": "leaves",
     "PutIntoGraveyard": "to_graveyard", "LandPutIntoGraveyard": "to_graveyard", "CardMilled": "to_graveyard",
     "CardLeftGraveyard": "leaves_graveyard", "PutIntoHandFromGraveyard": "leaves_graveyard",
-    "CardExiled": "exiled", "CardExiledFromPlayOrGraveyard": "exiled",
+    "CardExiled": "exiled", "CardExiledFrom": "exiled",
     "SpellCast": "cast", "SpellCopied": "copied", "SpellCountered": "countered",
     "Attacks": "attacks", "YouAttack": "attacks", "AttacksAndIsntBlocked": "attacks",
     "Blocks": "blocks", "BlocksNOrMore": "blocks",

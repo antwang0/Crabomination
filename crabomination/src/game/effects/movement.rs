@@ -1538,6 +1538,7 @@ impl GameState {
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                        self.note_exiled_from_library(p, cid, events);
                     }
                     return;
                 }
@@ -2080,6 +2081,7 @@ impl GameState {
         // Graveyard exiles get leaves-graveyard bookkeeping.
         let mut swept: Vec<crate::card::CardInstance> = Vec::new();
         let mut from_gy: Vec<CardId> = Vec::new();
+        let mut from_lib: Vec<CardId> = Vec::new();
         // Re-borrow the seat per zone: `Player` is a CoW handle, so three
         // `&mut` zone borrows can't be live at once.
         for zi in 0..3 {
@@ -2106,6 +2108,8 @@ impl GameState {
                 if zone[i].definition.name == name.as_str() {
                     if zi == 0 {
                         from_gy.push(zone[i].id);
+                    } else if zi == 2 {
+                        from_lib.push(zone[i].id);
                     }
                     swept.push(zone.remove(i));
                 } else {
@@ -2120,6 +2124,9 @@ impl GameState {
         }
         for cid in from_gy {
             self.note_exiled_from_graveyard(owner, cid, events);
+        }
+        for cid in from_lib {
+            self.note_exiled_from_library(owner, cid, events);
         }
         
         self.shuffle_library(owner, events);
@@ -2260,7 +2267,11 @@ impl GameState {
                 if let Some(seat) = self.resolution_causer {
                     self.note_exiled_from_hand_or_by(seat);
                 }
-                events.push(GameEvent::CardExiledFromPlayOrGraveyard { card_id: cid });
+                events.push(GameEvent::CardExiledFrom {
+                    card_id: cid,
+                    player: card.controller,
+                    from: crate::effect::exile_from::BATTLEFIELD,
+                });
                 // Vren, the Relentless counts creatures exiled from under each
                 // player's control this turn.
                 if card.definition.is_creature() {
@@ -2295,7 +2306,11 @@ impl GameState {
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: cid });
                 // CR 400.7 — "put into exile from a graveyard" (Ketramose).
                 if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
-                    events.push(GameEvent::CardExiledFromPlayOrGraveyard { card_id: cid });
+                    events.push(GameEvent::CardExiledFrom {
+                        card_id: cid,
+                        player: p,
+                        from: crate::effect::exile_from::GRAVEYARD,
+                    });
                 }
                 // Prized Amalgam's gate — record gy→battlefield entries.
                 if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
@@ -2353,6 +2368,9 @@ impl GameState {
             if let Some(pos) = self.players[p].library.iter().position(|c| c.id == cid) {
                 let card = self.players[p].library.remove(pos);
                 self.place_card_in_dest(card, p, &resolved_dest, events);
+                if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
+                    self.note_exiled_from_library(p, cid, events);
+                }
                 return;
             }
         }
