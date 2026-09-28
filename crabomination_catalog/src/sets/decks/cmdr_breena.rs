@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_breena.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Breena, the Demagogue** — the two counters go on your greatest-power
-//!   creature (the engine's pick).
 //! - **Author of Shadows** — the castable card is the first nonland card
 //!   exiled, not a chosen one.
 //! - **Bloodthirsty Blade** / **Parasitic Impetus** — the goad is renewed at
@@ -92,10 +90,15 @@ pub fn breena_the_demagogue() -> CardDefinition {
             )),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
-                Effect::AddCounter {
-                    what: Selector::GreatestPowerControlledMatching(R::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
+                Effect::ChooseOneAmong {
+                    what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::AddCounter {
+                        what: Selector::SeparatedPile { chosen: true },
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    }),
+                    other: Box::new(Effect::Noop),
                 },
             ]),
         }],

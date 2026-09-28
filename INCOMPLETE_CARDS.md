@@ -1923,8 +1923,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
-| 🟡 Zimone, Mystery Unraveler | Jump Scare! (DSC) | the permanent turned face up is the engine's pick. |
-| 🟡 Zimone's Hypothesis | Jump Scare! (DSC) | the creature given the counter is chosen as a target. |
 | 🟡 Kamiz, Obscura Oculus | Obscura Operation (NCC) | the lesser-power attacker given double strike is the engine's pick. |
 | 🟡 Obscura Confluence | Obscura Operation (NCC) | the third mode returns a creature card from your graveyard (the engine's pick), not a target player's choice. |
 | 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
@@ -1989,7 +1987,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Suffer the Past | Witherbloom Witchcraft (C21) | the X cards are chosen as it resolves (from the target player's graveyard), not targeted. |
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
-| 🟡 Breena, the Demagogue | Silverquill Statement (C21) | the two +1/+1 counters go on your greatest-power creature (the engine's pick). |
 | 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the engine's pick (the greatest mana value among the nonland cards exiled), not a prompt. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
 | 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
@@ -2094,7 +2091,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Arbor Adherent | Abzan Armor (TDC) | X counts its own toughness too ("other creatures" isn't honored). |
 | 🟡 Baldin, Century Herdmaster | Abzan Armor (TDC) | the +0/+X goes on each creature you control rather than up to one hundred targets. |
 | 🟡 Betor, Ancestor's Voice | Abzan Armor (TDC) | the counters go on your greatest-power other creature and the reanimation takes the greatest-power card; neither is targeted. |
-| 🟡 Tip the Scales | Abzan Armor (TDC) | the creature sacrificed is the engine's pick. |
+| 🟡 Tip the Scales | Abzan Armor (TDC) | the -X/-X resolves with the spell, not as a reflexive "when you do" trigger. |
 | 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
@@ -2184,7 +2181,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
-| 🟡 Divine Reckoning | Feline Ferocity (C17) | each player keeps their highest-mana-value creature (the engine's pick, as Deadly Vanity). |
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |

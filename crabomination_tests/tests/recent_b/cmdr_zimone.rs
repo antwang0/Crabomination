@@ -343,15 +343,35 @@ fn zimones_hypothesis_bounces_a_parity() {
     let mut g = main_phase(2);
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![mine]),
+        DecisionAnswer::Mode(0),
+    ]));
     let h = g.add_card_to_hand(0, catalog::zimones_hypothesis());
-    cast_at(&mut g, h, &[Target::Permanent(mine)]).expect("cast");
+    cast_at(&mut g, h, &[]).expect("cast");
     assert!(g.players[0].hand.iter().any(|c| c.id == mine), "3/3: odd");
     assert!(g.battlefield_find(theirs).is_some(), "2/2: even");
 }
 
+/// CR 608.2d: the Hypothesis's creature is chosen on resolution, not
+/// targeted — an opponent's hexproof creature can take the counter.
+#[test]
+fn zimones_hypothesis_counter_is_not_targeted() {
+    let mut g = main_phase(2);
+    let scout = g.add_card_to_battlefield(1, catalog::gladecover_scout());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![scout]),
+        DecisionAnswer::Mode(0),
+    ]));
+    let h = g.add_card_to_hand(0, catalog::zimones_hypothesis());
+    cast_at(&mut g, h, &[]).expect("cast with no target");
+    assert_eq!(pt(&g, scout), (2, 2), "the hexproof Scout took the counter and stayed (even)");
+}
+
 /// Zimone: the first land each turn manifests dread, the second may turn a
-/// face-down creature up.
+/// face-down permanent up — the one its controller picks (CR 608.2d).
 #[test]
 fn zimone_manifests_then_reveals() {
     let mut g = main_phase(2);
@@ -362,8 +382,15 @@ fn zimone_manifests_then_reveals() {
     let fd = face_down(&g, 0);
     assert_eq!(fd.len(), 1);
     g.players[0].lands_played_this_turn = 0;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // A second face-down 2/2 from outside; pick it, not the manifest.
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).expect("bears").turn_face_down();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![other]),
+    ]));
     let b = g.add_card_to_hand(0, catalog::island());
     act(&mut g, GameAction::PlayLand(b)).expect("land two");
-    assert!(g.battlefield_find(fd[0]).is_some_and(|c| !c.face_down));
+    assert!(g.battlefield_find(other).is_some_and(|c| !c.face_down), "the picked one turned up");
+    assert!(g.battlefield_find(fd[0]).is_some_and(|c| c.face_down), "the other stays down");
 }

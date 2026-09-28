@@ -108,6 +108,23 @@ fn breena_rewards_attacks_on_the_healthier_opponent() {
     assert_eq!(g2.battlefield_find(breena).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+/// Breena: "a creature you control" is chosen as the trigger resolves (CR
+/// 608.2d) — here the Bears, not Breena.
+#[test]
+fn breena_counters_go_on_the_chosen_creature() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    let breena = g.add_card_to_battlefield(0, catalog::breena_the_demagogue());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].life = 30;
+    g.players[2].life = 20;
+    let b = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![mine])]));
+    declare(&mut g, 2, vec![(b, 1)]).expect("attack");
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(breena).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
 /// Combat Calligrapher gives any player attacking an opponent of yours a
 /// tapped Inkling attacking that opponent — and Inklings can't attack you.
 #[test]

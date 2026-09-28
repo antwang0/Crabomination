@@ -20987,9 +20987,16 @@ impl GameState {
                     .collect();
                 // "Choose up to one …, destroy the rest" (Duneblast): the pick
                 // is the survivor, so it is a gain — ours first, the biggest —
-                // and choosing none is legal.
+                // and choosing none is legal. A +1/+1 counter or a free
+                // turn-face-up on the pick (Zimone's Hypothesis) is a gain too.
                 let keeps = matches!(**chosen, Effect::Noop);
-                let default = if keeps {
+                let gain = keeps
+                    || matches!(
+                        **chosen,
+                        Effect::AddCounter { kind: CounterType::PlusOnePlusOne, .. }
+                            | Effect::TurnFaceUpFree { .. }
+                    );
+                let default = if gain {
                     ids.iter()
                         .copied()
                         .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.controller == seat))
@@ -21005,7 +21012,7 @@ impl GameState {
                     source,
                     candidates,
                     1,
-                    if keeps { PickValue::Gain } else { PickValue::Cost },
+                    if gain { PickValue::Gain } else { PickValue::Cost },
                     effect,
                     default,
                 ) else {

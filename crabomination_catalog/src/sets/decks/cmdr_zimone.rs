@@ -9,9 +9,6 @@
 //!   offered.
 //! - **Disorienting Choice** — the targets' controllers decide through the
 //!   engine's may-prompt, and the lands found are the engine's pick.
-//! - **Zimone, Mystery Unraveler** and **Zimone's Hypothesis** — the
-//!   permanent turned face up / the creature given the counter is the
-//!   engine's pick, not a free choice (the Hypothesis targets it).
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
@@ -542,9 +539,8 @@ pub fn whisperwood_elemental() -> CardDefinition {
 
 /// Zimone's Hypothesis — you may put a +1/+1 counter on a creature, then
 /// choose odd or even: each creature with power of that parity returns to
-/// its owner's hand.
-///
-/// ⚠ Residual: the counter's creature is chosen as a target.
+/// its owner's hand. The counter's creature is chosen on resolution (CR
+/// 608.2d), not targeted.
 pub fn zimones_hypothesis() -> CardDefinition {
     let bounce = |odd: bool| Effect::Move {
         what: Selector::EachPermanent(R::Creature.and(R::PowerParity { odd })),
@@ -555,12 +551,17 @@ pub fn zimones_hypothesis() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::OptionalTargets {
-                min: 0,
-                body: Box::new(Effect::AddCounter {
-                    what: target_filtered(R::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
+            Effect::MayDo {
+                description: "Put a +1/+1 counter on a creature?".into(),
+                body: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(R::Creature),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::AddCounter {
+                        what: Selector::SeparatedPile { chosen: true },
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    other: Box::new(Effect::Noop),
                 }),
             },
             Effect::ChooseMode(vec![bounce(true), bounce(false)]),
@@ -570,9 +571,8 @@ pub fn zimones_hypothesis() -> CardDefinition {
 }
 
 /// Zimone, Mystery Unraveler — landfall: the first resolution each turn
-/// manifests dread; later ones may turn a permanent you control face up.
-///
-/// ⚠ Residual: the permanent turned up is the engine's pick.
+/// manifests dread; later ones may turn a permanent you control face up
+/// (your pick, CR 608.2d).
 pub fn zimone_mystery_unraveler() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -582,15 +582,14 @@ pub fn zimone_mystery_unraveler() -> CardDefinition {
                     manifest_dread(),
                     Effect::MayDo {
                         description: "Turn a permanent you control face up?".into(),
-                        body: Box::new(Effect::TurnFaceUpFree {
-                            what: Selector::Take {
-                                inner: Box::new(Selector::ControlledBy {
-                                    who: PlayerRef::You,
-                                    filter: R::FaceDown.and(R::Creature),
-                                }),
-                                count: Box::new(Value::ONE),
-                            },
-                            if_cant: None,
+                        body: Box::new(Effect::ChooseOneAmong {
+                            what: Selector::ControlledBy { who: PlayerRef::You, filter: R::FaceDown },
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::TurnFaceUpFree {
+                                what: Selector::SeparatedPile { chosen: true },
+                                if_cant: None,
+                            }),
+                            other: Box::new(Effect::Noop),
                         }),
                     },
                 ],
