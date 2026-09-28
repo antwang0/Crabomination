@@ -480,6 +480,13 @@ fn florian_digs_for_the_total_life_lost() {
     drain_stack(&mut g);
     assert_eq!(g.exile.len(), exiled + 1, "one card exiled out of the top three");
     assert_eq!(g.players[0].library.len(), 5);
+    // "You may play the exiled card this turn" — face up, a this-turn window.
+    let card = g.exile.last().unwrap();
+    assert!(!card.face_down, "exiled face up");
+    assert_eq!(
+        card.may_play_until.map(|p| p.duration),
+        Some(crabomination::card::MayPlayDuration::EndOfThisTurn),
+    );
 }
 
 /// Elenda's Hierophant grows on lifegain and splits on death.

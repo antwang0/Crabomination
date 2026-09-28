@@ -46990,6 +46990,7 @@ pub fn gonti_lord_of_luxury() -> CardDefinition {
             Effect::LookTopExileOneMayPlay {
                 count: Value::Const(4),
                 who: PlayerRef::Target(0),
+                grant: crate::effect::LookExileGrant::AnyTypeWhileExiled,
             },
         )],
         ..Default::default()

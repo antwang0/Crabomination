@@ -25706,7 +25706,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopExileOneMayPlay { count, who } => {
+            Effect::LookTopExileOneMayPlay { count, who, grant } => {
+                use crate::effect::LookExileGrant as G;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let opp = self.resolve_player(who, ctx).or_else(|| {
                     self.default_hostile_opponent(ctx.controller)
@@ -25717,47 +25718,78 @@ impl GameState {
                 if top.is_empty() {
                     return Ok(());
                 }
+                // The Key to the Vault exiles a nonland card, and may exile none.
                 let pick = top
                     .iter()
                     .copied()
-                    .max_by_key(|id| {
-                        self.players[opp]
-                            .library
-                            .iter()
-                            .find(|c| c.id == *id)
-                            .map(|c| c.definition.cost.cmc())
-                            .unwrap_or(0)
-                    })
-                    .unwrap();
-                let mut card = Self::take_card(&mut self.players[opp].library, pick)
-                    .expect("pick chosen from the top of this library just above");
-                card.exiled_with = ctx.source;
-                card.face_down = true;
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
-                    player: ctx.controller,
-                    granted_turn: self.turn_number,
-                    duration: crate::card::MayPlayDuration::WhileExiled,
-                    exile_after: false,
-                    miracle: false,
-                    pay_life: false,
-                });
-                // Gonti's "spend mana as though it were mana of any type"
-                // (CR 609.4b) — the pay-to-cast cost is the MV as generic.
-                card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
-                    crate::mana::generic(card.definition.cost.cmc()),
-                ]));
-                let cid = card.id;
-                self.exile.push(card);
-                events.push(GameEvent::PermanentExiled { card_id: cid });
+                    .filter_map(|id| self.players[opp].library.iter().find(|c| c.id == id))
+                    .filter(|c| *grant != G::CastFreeNonland || !c.definition.is_land())
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(pick) = pick {
+                    let mut card = Self::take_card(&mut self.players[opp].library, pick)
+                        .expect("pick chosen from the top of this library just above");
+                    card.exiled_with = ctx.source;
+                    let (face_down, duration) = match grant {
+                        G::AnyTypeWhileExiled | G::CreatureWhileExiled => {
+                            (true, crate::card::MayPlayDuration::WhileExiled)
+                        }
+                        G::PlayThisTurn | G::CastFreeNonland => {
+                            (false, crate::card::MayPlayDuration::EndOfThisTurn)
+                        }
+                    };
+                    card.face_down = face_down;
+                    // Vivien: "you may cast it if it's a creature spell" — a
+                    // card in exile keeps its types, so the card decides now.
+                    let grants = match grant {
+                        G::CreatureWhileExiled => card.definition.is_creature(),
+                        G::CastFreeNonland => false,
+                        _ => true,
+                    };
+                    if grants {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            cast_only: false,
+                            locks_further_casts: false,
+                            one_cast_group: None,
+                            player: ctx.controller,
+                            granted_turn: self.turn_number,
+                            duration,
+                            exile_after: false,
+                            miracle: false,
+                            pay_life: false,
+                        });
+                    }
+                    // Gonti's "spend mana as though it were mana of any type"
+                    // (CR 609.4b) — the pay-to-cast cost is the MV as generic.
+                    if *grant == G::AnyTypeWhileExiled {
+                        card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
+                            crate::mana::generic(card.definition.cost.cmc()),
+                        ]));
+                    }
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    if *grant == G::CastFreeNonland {
+                        self.scratch.exiled_card_ids_this_resolution.push(cid);
+                    }
+                }
                 // Bottom the rest in a random order.
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
-                    top.into_iter().filter(|id| *id != pick).collect();
+                    top.into_iter().filter(|id| Some(*id) != pick).collect();
                 rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[opp].library, id) {
                         self.players[opp].library.push(card);
                     }
+                }
+                if *grant == G::CastFreeNonland && pick.is_some() {
+                    return self.cast_exiled_free(
+                        &Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Nonland },
+                        false,
+                        ctx,
+                        events,
+                    );
                 }
                 Ok(())
             }

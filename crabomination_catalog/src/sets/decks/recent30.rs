@@ -596,7 +596,8 @@ pub fn endrider_spikespitter() -> CardDefinition {
                 },
                 then: Box::new(Effect::LookTopExileOneMayPlay {
                     count: Value::ONE,
-                    who: PlayerRef::Target(0),
+                    who: PlayerRef::You,
+                    grant: crate::effect::LookExileGrant::PlayThisTurn,
                 }),
                 else_: Box::new(Effect::Noop),
             },

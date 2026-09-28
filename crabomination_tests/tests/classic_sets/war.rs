@@ -2395,6 +2395,25 @@ fn vivien_champion_flash_and_grant() {
     assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Reach), "granted vigilance + reach");
 }
 
+/// Vivien's −2: "you may cast it if it's a creature spell" — a noncreature
+/// card exiled this way carries no permission; a creature card does.
+#[test]
+fn vivien_champion_minus_two_casts_only_a_creature() {
+    for (top, castable) in [(catalog::lightning_bolt as fn() -> _, false), (catalog::grizzly_bears, true)] {
+        let mut g = two_player_game();
+        let vivien = g.add_card_to_battlefield(0, catalog::vivien_champion_of_the_wilds());
+        let id = g.add_card_to_library(0, top());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: vivien, ability_index: 1, target: None, x_value: None }).expect("-2");
+        drain_stack(&mut g);
+        let card = g.exile.iter().find(|c| c.id == id).expect("exiled");
+        assert!(card.face_down);
+        assert_eq!(card.may_play_until.is_some(), castable);
+    }
+}
+
 /// The Elderspell destroys planeswalkers and pumps your own two loyalty each.
 #[test]
 fn the_elderspell_destroys_and_pumps() {

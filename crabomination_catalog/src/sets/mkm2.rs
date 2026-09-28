@@ -162,6 +162,7 @@ pub fn case_of_the_burning_masks() -> CardDefinition {
                 effect: Effect::LookTopExileOneMayPlay {
                     count: Value::Const(3),
                     who: PlayerRef::You,
+                    grant: crate::effect::LookExileGrant::PlayThisTurn,
                 },
                 ..Default::default()
             }],

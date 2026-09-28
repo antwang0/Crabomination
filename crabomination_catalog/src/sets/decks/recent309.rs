@@ -1431,8 +1431,8 @@ pub fn tinybones_the_pickpocket() -> CardDefinition {
 }
 
 /// The Key to the Vault — {1}{U} legendary Equipment, equip {2}{U}. Combat
-/// damage from the equipped creature digs that many deep, exiles a card and
-/// lets you cast it for free.
+/// damage from the equipped creature digs that many deep, exiles a nonland
+/// card and lets you cast it for free.
 pub fn the_key_to_the_vault() -> CardDefinition {
     CardDefinition {
         name: "The Key to the Vault",
@@ -1450,6 +1450,7 @@ pub fn the_key_to_the_vault() -> CardDefinition {
                 effect: Effect::LookTopExileOneMayPlay {
                     count: Value::TriggerEventAmount,
                     who: PlayerRef::You,
+                    grant: crate::effect::LookExileGrant::CastFreeNonland,
                 },
             }],
             ..Default::default()

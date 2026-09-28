@@ -749,8 +749,12 @@ fn the_key_to_the_vault_digs_on_combat_damage() {
     for _ in 0..4 {
         g.add_card_to_library(0, catalog::lightning_bolt());
     }
+    let life = g.players[1].life;
     swing(&mut g, bear);
     assert_eq!(g.players[0].library.len(), 3, "two seen, one exiled, one bottomed");
+    // "You may cast the exiled card without paying its mana cost."
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Lightning Bolt").count(), 1, "cast for free");
+    assert!(g.players[1].life < life - 2, "the free Bolt hit too");
 }
 
 /// Bucolic Ranch's second ability makes Mount-only mana that casts a Mount.

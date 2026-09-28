@@ -1219,7 +1219,7 @@ impl Effect {
             Effect::DestroyEachNonlandWithManaValue { .. } => false,
             Effect::DestroyEachCreatureWithManaValue { .. } => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
-            Effect::LookTopExileOneMayPlay { count, who } => {
+            Effect::LookTopExileOneMayPlay { count, who, .. } => {
                 value_has_target(count) || player_has_target(who)
             }
             Effect::LookTopDeployLandOrHand { .. } => false,

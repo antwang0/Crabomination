@@ -4143,8 +4143,7 @@ pub fn the_elderspell() -> CardDefinition {
 /// Vivien, Champion of the Wilds — {2}{G} loyalty 4. Static: cast creature
 /// spells as though they had flash. +1: up to one target creature gains
 /// vigilance and reach until your next turn. −2: look at the top three, exile
-/// one face down, cast it while it stays exiled (the creature-only limit on that
-/// cast is not enforced).
+/// one face down, cast it while it stays exiled if it's a creature spell.
 pub fn vivien_champion_of_the_wilds() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -4170,7 +4169,11 @@ pub fn vivien_champion_of_the_wilds() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::LookTopExileOneMayPlay { count: Value::Const(3), who: PlayerRef::You },
+                effect: Effect::LookTopExileOneMayPlay {
+                    count: Value::Const(3),
+                    who: PlayerRef::You,
+                    grant: crate::effect::LookExileGrant::CreatureWhileExiled,
+                },
                 ..Default::default()
             },
         ],

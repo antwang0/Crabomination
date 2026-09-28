@@ -869,7 +869,7 @@ pub fn oathsworn_vampire() -> CardDefinition {
 /// look at the top X cards of your library, where X is the total amount of
 /// life your opponents lost this turn. Exile one of those cards and put the
 /// rest on the bottom of your library in a random order. You may play the
-/// exiled card this turn." (The permission lasts while the card is exiled.)
+/// exiled card this turn."
 pub fn florian_voldaren_scion() -> CardDefinition {
     legend(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -880,6 +880,7 @@ pub fn florian_voldaren_scion() -> CardDefinition {
             effect: Effect::LookTopExileOneMayPlay {
                 count: Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent),
                 who: PlayerRef::You,
+                grant: crate::effect::LookExileGrant::PlayThisTurn,
             },
         }],
         ..creature(

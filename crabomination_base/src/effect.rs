@@ -5993,15 +5993,16 @@ pub enum Effect {
     /// (Misleading Signpost). Ignores attack restrictions and costs, and is
     /// not a new attack (no "whenever … attacks" trigger) — the rulings.
     ReselectAttackTarget { what: Selector },
-    /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of `who`'s
-    /// library, exile one face down (auto-pick: highest MV) with a
-    /// while-exiled cast permission for you, and bottom the rest randomly.
-    /// `who` defaults to an opponent (Gonti); The Key to the Vault points it
-    /// at `PlayerRef::You`. (The any-color spend clause is dropped.)
+    /// Look at the top `count` cards of `who`'s library, exile one (auto-pick:
+    /// highest MV) and bottom the rest randomly; `grant` says what the exiled
+    /// card may then do (Gonti, Vivien's −2, Florian, The Key to the Vault).
+    /// `who` defaults to an opponent (Gonti).
     LookTopExileOneMayPlay {
         count: Value,
         #[serde(default = "player_ref_target_zero")]
         who: PlayerRef,
+        #[serde(default)]
+        grant: LookExileGrant,
     },
     /// "Look at the top `count` cards. You may put a land card from among them
     /// onto the battlefield tapped. If you don't, put a card from among them
@@ -12235,6 +12236,21 @@ mod query;
 /// deserialize cleanly.
 pub fn zero_value() -> Value {
     Value::Const(0)
+}
+
+/// What `Effect::LookTopExileOneMayPlay`'s exiled card may do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum LookExileGrant {
+    /// Gonti: face down; cast it while it stays exiled, with mana of any type.
+    #[default]
+    AnyTypeWhileExiled,
+    /// Vivien, Champion of the Wilds' −2: face down; cast it while it stays
+    /// exiled if it's a creature spell, paying its cost.
+    CreatureWhileExiled,
+    /// Florian, Case of the Burning Masks: face up; play it this turn.
+    PlayThisTurn,
+    /// The Key to the Vault: a nonland card, cast now without paying its cost.
+    CastFreeNonland,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).
