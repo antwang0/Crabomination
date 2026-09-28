@@ -2496,6 +2496,13 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-28 (Judith, the Scourge Diva pings on her own
+        // death — ruling; `git bisect` over bc45fd069..c9adf798b names that
+        // commit alone, and every later commit to 42b269a1e reads the same
+        // rows): seed 0xC0FFEE seat 2 → seat 1, 68→58 turns; seed 43 seat 2
+        // → seat 0, 86→54 turns; 4242 same winner and turns, 2962→2970
+        // actions. Pod smoke after it: 3,000 strict debug-assertion games
+        // (4/6/8 seats, seeds 2004000+), all decided.
         // Re-blessed 2026-09-27 (`server/pre_combat_tap.rs`, a pod bot taps
         // an opponent's biggest would-be attacker at their beginning of
         // combat): seed 4242 74→61 turns, same winner; the other two
@@ -2705,9 +2712,9 @@ mod tests {
         // Aggregate within noise (3,000 games, seed 43: 43.0/17.3/14.3/25.4
         // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 68, 3132),
-            (43, Some(2), 86, 4176),
-            (4242, Some(3), 61, 2962),
+            (0xC0FFEE, Some(1), 58, 2583),
+            (43, Some(0), 54, 2838),
+            (4242, Some(3), 61, 2970),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
