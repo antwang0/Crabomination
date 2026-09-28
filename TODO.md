@@ -686,6 +686,13 @@ of it is a rules-correctness argument first and a perf change second.
 
 ## Bot / AI
 
+### One net for every mode, Commander included (2026-09-28)
+The plan, its gates and the per-step code locations are ML_NOTES "One net
+for every mode". Step 1 (the table net, `server::encode_table`,
+`server::card_tokens`, parity in both crates) is built and untrained; next
+is step 2, the any-seat recorder and mode mixer. No training run without
+the user's go-ahead.
+
 ### Instant-Speed Responses
 ~~The bot never responds to spells on the stack.~~ `pick_stack_response`
 now counters an opponent's spell when it targets the bot's permanents /

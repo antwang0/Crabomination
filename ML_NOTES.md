@@ -5395,6 +5395,10 @@ taken on the net leaf either).
 
 ## Commander — what an N-seat observation encoding would have to change (2026-09-18, design note only, nothing built)
 
+> **Superseded 2026-09-28** by "One net for every mode" (below): a separate
+> table net with its own layout, rather than the appended block this note
+> recommends. The analysis here still stands and is what that plan built on.
+
 Written because the Commander run kept bumping into the encoder and the right
 answer every time was "don't touch it". Recorded so the next run doesn't
 re-derive it, and so nobody widens it by accident.
@@ -5788,3 +5792,85 @@ optional heads; the search and the determinizer consume them, so they come
 with step 5), the AVX2 wrapper the play net's forward has, any cost reading
 of the forward (unmeasured), the name vocabulary's growth to the pod pool
 (step 2), and any wiring into `net_eval` / pilots (step 6).
+
+### Steps 2-6 — where each lands in the code, and what is still open (2026-09-29)
+
+Written so the next session starts from the code, not from this plan's
+one-liners. Function names, not line numbers — the branch moves daily.
+
+**Step 2 — data.**
+
+- *Recorder.* `selfplay::play_recorded_game` / `play_recorded_game_mcts`
+  are two-seat by type (`[EvalWeights; 2]`, `sealed_game_template`,
+  `players[1 - seat]`, `traj = seed << 1 | seat`). The any-seat recorder is
+  a new function beside them, not a widening: build the state from a mode
+  (sealed / cube / SoS / modern templates, or `pod::build_pod_template` over
+  dealt decks), drive it the way `pod::play_pod_game` does (one bot per
+  seat, `next_action_settled`), and at each snapshot `encode_table` every
+  living seat. A seat's trajectory ends when it leaves the game — its last
+  row is labelled then, not at game end.
+- *Labels* (`TableRow`): `win` = one-hot on the winner in the row's slot
+  order; a draw or a stall splits the share across the seats still in
+  (today's recorder drops draws — pods must not, or long stalled pods
+  vanish from the data); `life` = final life / starting life, clamped
+  [0, 1.5], 0 for a seat that lost; `game_len` as the play net's.
+- *λ-returns are scalar today* (`SampleWindow::relabel_lambda`,
+  `lambda_targets`, both over `TrainRow`). The table version bootstraps on
+  the net's per-slot softmax of the *successor row of the same trajectory*
+  — whose slots can differ (a seat left), so map by seat id, not by slot
+  index, and renormalise over the seats still in. Needs the seat ids on the
+  row: add them to `TableRow` (a shard version bump) before the first
+  shard is written, not after.
+- *Mixer.* Sample a mode per game, weight by the rows it will produce
+  (a four-seat pod ~5x a duel). Decks: the ladder's sources for duels;
+  `pod::target_decks()` dealt by `pod::power` tier (as the client's
+  `resolve_pod_decks` does) for pods. Hold ~20 precons out by *deck index*,
+  fixed and listed in the pre-registration, never dealt to actors.
+- *Vocabulary.* Append the pod pool's names to `VOCAB_SNAPSHOT` the frozen
+  way (end of the array, a coverage test like `vocab_covers_the_sos_pool`),
+  so `Vocab::sos_sealed` covers them. That grows the v5 champion's padded
+  table too — harmless (zero rows = unknown, as today) but it moves
+  `vocab_fit`'s upper bound, so run its tests.
+- *Trainer loop.* `selfplay_train` is `TrainRow`-only; the table run is a
+  second loop (or binary) on `TableTrainer`. Fix the two learner leads
+  first (ML_NOTES "Throughput", 2026-09-25): relabel outside the window lock,
+  and generation ~5x consumption.
+
+**Step 3 — G1 / G2 need a table pilot in the ladder.** A `bot_ladder`
+profile whose leaf is a `TableNet` (its own registry slot beside
+`SLOT_BEST`, loaded from a file named on the command line — the v5
+`nets/champion.safetensors` stays where it is). Scored and search variants,
+so G3 reuses the scored one.
+
+**Step 5 — the pod search.** Today, in `server/mcts.rs`: `MctsBot::reward`
+is material for the searching seat against every hostile seat summed and
+squashed (a paranoid reward — the table as one opponent); the horizon is
+`horizon_turns` (3), less than one lap at four seats; rollouts run one
+`HeuristicBot` per seat. In `server/bot.rs`: `determinize_hidden` redeals
+every other seat uniformly, and `determinize_hidden_belief` applies ONE
+belief vector to every opponent. The step: reward = the table net's slot-0
+probability at the leaf; horizon counted in laps (`turns x living seats`);
+a per-opponent belief — the belief head, when it is added, predicts a hand
+per slot — and the policy head for priors. Budget read first: at ~52
+CPU-s a game (material leaf, 256 iterations), a client pod decision needs
+the latency number before any iteration count is chosen.
+
+**Step 6 — the refusals to lift, for table nets only.**
+`net_eval::net_for_state` (answers `None` unless two seats),
+`lobby::default_bot` and the client's `menu::local_bot` (heuristic above
+two seats), and `bot_ladder --commander`'s refusal of any `net_slot != 0`
+profile above two seats. v5 nets keep all four refusals — they cannot read
+a pod.
+
+**Open decisions, none taken yet:**
+
+- Duel lobby: if G1 passes but reads under +1, the lobby keeps the v5
+  champion for duels and the table net serves pods only — two nets loaded.
+  Acceptable, or wait for a table net that clears +1?
+- Whether 2HG gets training rows: no driver seats it today (engine-only),
+  so it has no data source until one exists.
+- The exile zone: face-up exile (impulse draw, adventures, foretell counts)
+  is a count per seat, not objects. Add a zone only if a census says the
+  bots trade on it.
+- `encode_state`'s face-down leak (step-1 note): fix when the v5 champion
+  retires, not before.
