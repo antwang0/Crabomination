@@ -273,7 +273,7 @@ fn untapped_sources(g: &GameState) -> [Vec<[bool; 5]>; 2] {
 /// consumers agree about where a board number stops being readable. No state
 /// inside `±10,000` encodes differently.
 #[inline]
-fn scaled(n: i32) -> f32 {
+pub(super) fn scaled(n: i32) -> f32 {
     n.clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING) as f32
 }
 
@@ -282,7 +282,7 @@ fn scaled(n: i32) -> f32 {
 /// counters, so a loop reaches `u32::MAX` the way Exponential Growth reaches
 /// `i32::MAX`, and `n as f32 / 4.0` would carry it straight into the net.
 #[inline]
-fn scaled_u(n: u32) -> f32 {
+pub(super) fn scaled_u(n: u32) -> f32 {
     n.min(crate::player::SCALE_CEILING as u32) as f32
 }
 
@@ -294,6 +294,150 @@ fn damage_i32(c: &CardInstance) -> i32 {
     c.damage.min(i32::MAX as u32) as i32
 }
 
+/// A permanent's effective power and toughness net of damage, both floored
+/// at zero — what a combat counterpart trades on. `None` off the battlefield.
+fn eff_pt(g: &GameState, id: crate::card::CardId) -> Option<(i32, i32)> {
+    g.battlefield.find_by_id(id).and_then(|c| {
+        let cp = g.computed_permanent_on(c)?;
+        Some((cp.power.max(0), cp.toughness.saturating_sub(damage_i32(c)).max(0)))
+    })
+}
+
+/// The board-wide edges a battlefield object's relation and combat features
+/// summarise from one endpoint's side (OBJ_FEATS 28..=39), gathered once per
+/// encoded state. Shared by the duel encoder and `encode_table`.
+pub(super) struct BoardContext {
+    pub(super) no_rel: bool,
+    pub(super) no_combat: bool,
+    /// Permanents something on the stack targets.
+    targeted: crate::fxhash::HashSet<crate::card::CardId>,
+    /// (host id, attachment's controller) — resolved against the host's
+    /// own controller at encode time, because "who controls the aura on
+    /// this creature" is what separates a buff from a Pacifism.
+    attachments: Vec<(crate::card::CardId, usize)>,
+    /// Attacker → summed P/T of its blockers (`block_map` is blocker →
+    /// attackers, so this is the map inverted).
+    pub(super) blocker_sums: HashMap<crate::card::CardId, (i32, i32)>,
+}
+
+impl BoardContext {
+    pub(super) fn new(g: &GameState) -> Self {
+        // Relation context (round 12): unary summaries of edges the pooled
+        // representation cannot carry — see the OBJ_FEATS doc, 28..=36.
+        let no_rel = ablated(ABLATE_RELATIONS);
+        let mut targeted: crate::fxhash::HashSet<crate::card::CardId> = Default::default();
+        let mut attachments: Vec<(crate::card::CardId, usize)> = Vec::new();
+        if !no_rel {
+            use crate::game::types::{StackItem, Target};
+            for item in g.stack.iter() {
+                let (target, extra): (&Option<Target>, &[Target]) = match item {
+                    StackItem::Spell { target, additional_targets, .. } => {
+                        (target, additional_targets)
+                    }
+                    StackItem::Trigger { target, .. } => (target, &[]),
+                };
+                for t in target.iter().chain(extra) {
+                    if let Target::Permanent(id) = t {
+                        targeted.insert(*id);
+                    }
+                }
+            }
+            for c in g.battlefield.iter() {
+                if let Some(host) = c.attached_to {
+                    attachments.push((host, c.controller));
+                }
+            }
+        }
+
+        // Combat structure (round 28): the round-12 flags said a creature is
+        // blocked; these say by what. Effective P/T of one combat's
+        // counterparties, summed — a pooling-safe unary summary of the edge,
+        // like the relation flags, but carrying the numbers the block sims
+        // actually trade on.
+        let no_combat = ablated(ABLATE_COMBAT);
+        let mut blocker_sums: HashMap<crate::card::CardId, (i32, i32)> = HashMap::default();
+        if !no_combat {
+            for (blocker, attackers) in g.block_map.iter() {
+                if let Some((p, t)) = eff_pt(g, *blocker) {
+                    for a in attackers {
+                        let e = blocker_sums.entry(*a).or_insert((0, 0));
+                        e.0 = e.0.saturating_add(p);
+                        e.1 = e.1.saturating_add(t);
+                    }
+                }
+            }
+        }
+        Self { no_rel, no_combat, targeted, attachments, blocker_sums }
+    }
+}
+
+/// One battlefield object, whole: [`encode_battlefield_object_into`]'s
+/// printed and live state, then the combat (37..=39) and relation (28..=33)
+/// features off `ctx`. Returns its `(is_land, is_creature, power)` for the
+/// caller's board totals.
+pub(super) fn encode_board_object_into(
+    g: &GameState,
+    c: &CardInstance,
+    vocab: &Vocab,
+    ctx: &BoardContext,
+    o: &mut EncodedObject,
+) -> (bool, bool, i32) {
+    let totals = encode_battlefield_object_into(g, c, vocab, o);
+    if !ctx.no_combat {
+        // An object is never both an attacker and a blocker in one
+        // combat, so one feature pair serves both endpoints.
+        let counterpart = ctx.blocker_sums.get(&c.id).copied().or_else(|| {
+            g.block_map.get(&c.id).map(|attackers| {
+                attackers.iter().filter_map(|a| eff_pt(g, *a)).fold((0i32, 0i32), |acc, (p, t)| {
+                    (acc.0.saturating_add(p), acc.1.saturating_add(t))
+                })
+            })
+        });
+        if let Some((p, t)) = counterpart {
+            o.feats[37] = scaled(p) / 8.0;
+            o.feats[38] = scaled(t) / 8.0;
+        }
+        if g.attacking.iter().any(|a| {
+            a.attacker == c.id && !matches!(a.target, crate::game::types::AttackTarget::Player(_))
+        }) {
+            o.feats[39] = 1.0;
+        }
+    }
+    if !ctx.no_rel {
+        if g.block_map.contains_key(&c.id) {
+            o.feats[28] = 1.0;
+        }
+        // CR 509.1b: an attacker that became blocked stays blocked
+        // when its blockers leave combat (first-strike deaths,
+        // post-block removal) — `block_map` forgets that the moment
+        // `remove_permanent_from_combat` runs, `blocked_attackers`
+        // doesn't, and the damage step reads the latter. The union
+        // also keeps synthetically built states (tests, hand-rolled
+        // sims) that fill only the map reading as blocked.
+        if g.blocked_attackers().contains(&c.id)
+            || g.block_map.values().any(|attackers| attackers.contains(&c.id))
+        {
+            o.feats[29] = 1.0;
+        }
+        if c.attached_to.is_some() {
+            o.feats[30] = 1.0;
+        }
+        for (host, attach_ctl) in &ctx.attachments {
+            if *host == c.id {
+                if *attach_ctl == c.controller {
+                    o.feats[31] = 1.0;
+                } else {
+                    o.feats[32] = 1.0;
+                }
+            }
+        }
+        if ctx.targeted.contains(&c.id) {
+            o.feats[33] = 1.0;
+        }
+    }
+    totals
+}
+
 fn encode_state_inner(
     g: &GameState,
     seat: usize,
@@ -303,62 +447,9 @@ fn encode_state_inner(
     let opp = 1 - seat;
     let mut s = EncodedState::default();
 
-    // Relation context (round 12): unary summaries of edges the pooled
-    // representation cannot carry — see the OBJ_FEATS doc, 28..=36.
-    let no_rel = ablated(ABLATE_RELATIONS);
-    let mut targeted: crate::fxhash::HashSet<crate::card::CardId> = Default::default();
-    // (host id, attachment's controller) — resolved against the host's
-    // own controller at encode time, because "who controls the aura on
-    // this creature" is what separates a buff from a Pacifism.
-    let mut attachments: Vec<(crate::card::CardId, usize)> = Vec::new();
-    if !no_rel {
-        use crate::game::types::{StackItem, Target};
-        for item in g.stack.iter() {
-            let (target, extra): (&Option<Target>, &[Target]) = match item {
-                StackItem::Spell { target, additional_targets, .. } => {
-                    (target, additional_targets)
-                }
-                StackItem::Trigger { target, .. } => (target, &[]),
-            };
-            for t in target.iter().chain(extra) {
-                if let Target::Permanent(id) = t {
-                    targeted.insert(*id);
-                }
-            }
-        }
-        for c in g.battlefield.iter() {
-            if let Some(host) = c.attached_to {
-                attachments.push((host, c.controller));
-            }
-        }
-    }
-
-    // Combat structure (round 28): the round-12 flags said a creature is
-    // blocked; these say by what. Effective P/T of one combat's
-    // counterparties, summed — a pooling-safe unary summary of the edge,
-    // like the relation flags, but carrying the numbers the block sims
-    // actually trade on.
-    let no_combat = ablated(ABLATE_COMBAT);
-    let eff_pt = |id: crate::card::CardId| {
-        g.battlefield.find_by_id(id).and_then(|c| {
-            let cp = g.computed_permanent_on(c)?;
-            Some((cp.power.max(0), cp.toughness.saturating_sub(damage_i32(c)).max(0)))
-        })
-    };
-    // Attacker → summed P/T of its blockers (`block_map` is blocker →
-    // attackers, so this is the map inverted).
-    let mut blocker_sums: HashMap<crate::card::CardId, (i32, i32)> = HashMap::default();
-    if !no_combat {
-        for (blocker, attackers) in g.block_map.iter() {
-            if let Some((p, t)) = eff_pt(*blocker) {
-                for a in attackers {
-                    let e = blocker_sums.entry(*a).or_insert((0, 0));
-                    e.0 = e.0.saturating_add(p);
-                    e.1 = e.1.saturating_add(t);
-                }
-            }
-        }
-    }
+    let ctx = BoardContext::new(g);
+    let no_rel = ctx.no_rel;
+    let no_combat = ctx.no_combat;
 
     // All eight groups share one buffer (PERF `(-107)`), so the whole state
     // is one reserve and one allocation. Every group's size is known before
@@ -390,7 +481,7 @@ fn encode_state_inner(
             // Push an empty object and fill it in place: see
             // `encode_card_object_into` for what the by-value form cost.
             let o = s.push_default(group);
-            let (is_land, is_creature, pw) = encode_battlefield_object_into(g, c, vocab, o);
+            let (is_land, is_creature, pw) = encode_board_object_into(g, c, vocab, &ctx, o);
             if is_land {
                 lands[side] += 1;
                 if !c.tapped {
@@ -400,59 +491,6 @@ fn encode_state_inner(
             if is_creature {
                 creatures[side] += 1;
                 power[side] = power[side].saturating_add(pw);
-            }
-            if !no_combat {
-                // An object is never both an attacker and a blocker in one
-                // combat, so one feature pair serves both endpoints.
-                let counterpart = blocker_sums.get(&c.id).copied().or_else(|| {
-                    g.block_map.get(&c.id).map(|attackers| {
-                        attackers.iter().filter_map(|a| eff_pt(*a)).fold((0i32, 0i32), |acc, (p, t)| {
-                            (acc.0.saturating_add(p), acc.1.saturating_add(t))
-                        })
-                    })
-                });
-                if let Some((p, t)) = counterpart {
-                    o.feats[37] = scaled(p) / 8.0;
-                    o.feats[38] = scaled(t) / 8.0;
-                }
-                if g.attacking.iter().any(|a| {
-                    a.attacker == c.id
-                        && !matches!(a.target, crate::game::types::AttackTarget::Player(_))
-                }) {
-                    o.feats[39] = 1.0;
-                }
-            }
-            if !no_rel {
-                if g.block_map.contains_key(&c.id) {
-                    o.feats[28] = 1.0;
-                }
-                // CR 509.1b: an attacker that became blocked stays blocked
-                // when its blockers leave combat (first-strike deaths,
-                // post-block removal) — `block_map` forgets that the moment
-                // `remove_permanent_from_combat` runs, `blocked_attackers`
-                // doesn't, and the damage step reads the latter. The union
-                // also keeps synthetically built states (tests, hand-rolled
-                // sims) that fill only the map reading as blocked.
-                if g.blocked_attackers().contains(&c.id)
-                    || g.block_map.values().any(|attackers| attackers.contains(&c.id))
-                {
-                    o.feats[29] = 1.0;
-                }
-                if c.attached_to.is_some() {
-                    o.feats[30] = 1.0;
-                }
-                for (host, attach_ctl) in &attachments {
-                    if *host == c.id {
-                        if *attach_ctl == c.controller {
-                            o.feats[31] = 1.0;
-                        } else {
-                            o.feats[32] = 1.0;
-                        }
-                    }
-                }
-                if targeted.contains(&c.id) {
-                    o.feats[33] = 1.0;
-                }
             }
         }
     }
@@ -573,7 +611,7 @@ fn encode_state_inner(
                 // wrong signal at exactly the settled combat states the
                 // search evaluates most.
                 let blocked = g.blocked_attackers().contains(&a.attacker)
-                    || blocker_sums.contains_key(&a.attacker)
+                    || ctx.blocker_sums.contains_key(&a.attacker)
                     || g.block_map.values().any(|att| att.contains(&a.attacker));
                 let Some(c) = g.battlefield.find_by_id(a.attacker) else {
                     continue;
@@ -591,7 +629,7 @@ fn encode_state_inner(
                 let through = if !blocked {
                     pw
                 } else if trample {
-                    let (_, t) = blocker_sums.get(&a.attacker).copied().unwrap_or((0, 0));
+                    let (_, t) = ctx.blocker_sums.get(&a.attacker).copied().unwrap_or((0, 0));
                     (pw - t).max(0)
                 } else {
                     0
@@ -660,6 +698,32 @@ fn encode_state_inner(
     s
 }
 
+/// `seat`'s library grouped by vocabulary index — `(index, first card of
+/// that index, copies)` in index order, so the shuffle never shows.
+///
+/// ⚠ Grouped by *index*, so every off-vocabulary card (index 0) folds into
+/// one entry represented by the first of them. The duel encoder has always
+/// read it this way; `encode_table` groups by name instead
+/// (`library_by_name`), because most of a Commander library is off the
+/// vocabulary.
+pub(super) fn library_counts<'a>(
+    g: &'a GameState,
+    seat: usize,
+    vocab: &Vocab,
+) -> smallvec::SmallVec<[(u16, &'a CardInstance, u32); 32]> {
+    let mut counts: smallvec::SmallVec<[(u16, &CardInstance, u32); 32]> = smallvec::SmallVec::new();
+    for c in g.players[seat].library.iter() {
+        let idx = c.vocab_index(|d| vocab.index_of(d.name));
+        match counts.iter_mut().find(|e| e.0 == idx) {
+            // First card of a name wins, exactly as `or_insert` did.
+            Some(e) => e.2 += 1,
+            None => counts.push((idx, c, 1)),
+        }
+    }
+    counts.sort_unstable_by_key(|e| e.0);
+    counts
+}
+
 /// The seat's own library, deduplicated by card name.
 ///
 /// One object per distinct name with its remaining count in feature 27,
@@ -682,18 +746,7 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
     // unique, so the sort is a total order and the emitted sequence is
     // byte-identical to the map's. Only the actor pays this at all; `--bench`
     // never encodes a state.
-    let lib = &g.players[seat].library;
-    let mut counts: smallvec::SmallVec<[(u16, &CardInstance, u32); 32]> =
-        smallvec::SmallVec::new();
-    for c in lib.iter() {
-        let idx = c.vocab_index(|d| vocab.index_of(d.name));
-        match counts.iter_mut().find(|e| e.0 == idx) {
-            // First card of a name wins, exactly as `or_insert` did.
-            Some(e) => e.2 += 1,
-            None => counts.push((idx, c, 1)),
-        }
-    }
-    counts.sort_unstable_by_key(|e| e.0);
+    let counts = library_counts(g, seat, vocab);
     // By reference: this buffer is 32 x 24 bytes inline, so a by-value
     // `IntoIter` would move 768 bytes out of the frame on every encoded
     // state — PERF's hundred-and-third pass (3).
@@ -714,59 +767,75 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
 /// the top of the stack (the item that resolves first) lands in feature
 /// 36, because pooling would otherwise erase resolution order.
 fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
-    use crate::game::types::StackItem;
     let n = g.stack.len();
     // Two filtered passes, like the battlefield: the shared buffer is laid
     // out group by group, and `i` stays the item's index in the real stack
     // so the depth feature is unchanged.
     for (group, mine) in [(G_STACK_SELF, true), (G_STACK_OPP, false)] {
         for (i, item) in g.stack.iter().enumerate() {
-            let controller = match item {
-                StackItem::Spell { caster, .. } => *caster,
-                StackItem::Trigger { controller, .. } => *controller,
-            };
-            if (controller == seat) != mine {
+            if (stack_item_controller(item) == seat) != mine {
                 continue;
             }
-            let mut o = match item {
-                StackItem::Spell { card, .. } => encode_card_object(card, vocab),
-                StackItem::Trigger { source, .. } => {
-                    // Battlefield first (the common, previously-only
-                    // case); then CR 603.10 LKI, which carries the source
-                    // as it last existed on the battlefield; then the
-                    // graveyard, where a dies-trigger's source actually
-                    // is. Exile is deliberately skipped: it mixes
-                    // face-down (hidden) cards in, and a trigger source
-                    // there is rare enough to take the unknown object
-                    // instead of auditing the leak.
-                    let inst = g
-                        .battlefield
-                        .iter()
-                        .find(|c| c.id == *source)
-                        .or_else(|| g.died_card_snapshots.get(source))
-                        .or_else(|| g.leaves_bf_lki.get(source))
-                        .or_else(|| {
-                            g.players
-                                .iter()
-                                .flat_map(|p| p.graveyard.iter())
-                                .find(|c| c.id == *source)
-                        });
-                    inst.map(|c| encode_card_object(c, vocab)).unwrap_or_else(|| {
-                        let mut o = EncodedObject::default();
-                        // The multiplicity baseline every other object
-                        // gets from `encode_card_object`; without it the
-                        // unknown trigger was the one object class
-                        // off-distribution on feature 27.
-                        o.feats[27] = 1.0 / 4.0;
-                        o
-                    })
-                }
-            };
+            let mut o = stack_item_object(g, item, vocab);
             // The stack is a Vec used LIFO: the last element is the top.
             o.feats[36] = (n - 1 - i) as f32 / 4.0;
             s.push(group, o);
         }
     }
+}
+
+/// Who controls a stack item: the caster of a spell, the controller of a
+/// trigger.
+pub(super) fn stack_item_controller(item: &crate::game::types::StackItem) -> usize {
+    use crate::game::types::StackItem;
+    match item {
+        StackItem::Spell { caster, .. } => *caster,
+        StackItem::Trigger { controller, .. } => *controller,
+    }
+}
+
+/// The card a stack item shows: a spell's own card, or a trigger's source —
+/// from the battlefield (the common, previously-only case); then CR 603.10
+/// LKI, which carries the source as it last existed on the battlefield;
+/// then the graveyard, where a dies-trigger's source actually is. Exile is
+/// deliberately skipped: it mixes face-down (hidden) cards in, and a
+/// trigger source there is rare enough to take the unknown object instead
+/// of auditing the leak.
+pub(super) fn stack_item_card<'a>(
+    g: &'a GameState,
+    item: &'a crate::game::types::StackItem,
+) -> Option<&'a CardInstance> {
+    use crate::game::types::StackItem;
+    match item {
+        StackItem::Spell { card, .. } => Some(card.as_ref()),
+        StackItem::Trigger { source, .. } => g
+            .battlefield
+            .iter()
+            .find(|c| c.id == *source)
+            .or_else(|| g.died_card_snapshots.get(source))
+            .or_else(|| g.leaves_bf_lki.get(source))
+            .or_else(|| {
+                g.players.iter().flat_map(|p| p.graveyard.iter()).find(|c| c.id == *source)
+            }),
+    }
+}
+
+/// One stack item as an object, without its depth (feature 36, the
+/// caller's): [`stack_item_card`] encoded, or an unknown object when no
+/// readable zone has the source.
+pub(super) fn stack_item_object(
+    g: &GameState,
+    item: &crate::game::types::StackItem,
+    vocab: &Vocab,
+) -> EncodedObject {
+    stack_item_card(g, item).map(|c| encode_card_object(c, vocab)).unwrap_or_else(|| {
+        let mut o = EncodedObject::default();
+        // The multiplicity baseline every other object gets from
+        // `encode_card_object`; without it the unknown trigger was the one
+        // object class off-distribution on feature 27.
+        o.feats[27] = 1.0 / 4.0;
+        o
+    })
 }
 
 /// Can `cost` be paid right now off `sources`, one mana per source?
@@ -797,7 +866,7 @@ fn affordable(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
 /// it again. `encode_state` called `affordable` 11,630 times over
 /// twenty `selfplay_train` games for 11.3 M Ir (0.86 % of an actor), 5.8 per
 /// state against one hand's worth of sources.
-fn source_cover(sources: &[[bool; 5]]) -> [u32; 32] {
+pub(super) fn source_cover(sources: &[[bool; 5]]) -> [u32; 32] {
     let mut have = [0u32; 32];
     for s in sources {
         let m: usize = (0..5).filter(|i| s[*i]).fold(0, |a, i| a | 1 << i);
@@ -811,7 +880,7 @@ fn source_cover(sources: &[[bool; 5]]) -> [u32; 32] {
 }
 
 /// [`affordable`] against a prebuilt [`source_cover`].
-fn affordable_covered(cost: &ManaCost, n_sources: u32, have: &[u32; 32]) -> bool {
+pub(super) fn affordable_covered(cost: &ManaCost, n_sources: u32, have: &[u32; 32]) -> bool {
     let mut pips = [0u32; 5];
     for c in cost.colored_symbols() {
         pips[color_index(c)] += 1;
@@ -837,7 +906,7 @@ fn affordable_covered(cost: &ManaCost, n_sources: u32, have: &[u32; 32]) -> bool
 /// the seat has not taken yet. It intersects every non-empty mask, so each
 /// entry gains exactly one; the old form pushed `[true; 5]` onto a **clone**
 /// of the whole source slice, per hand card.
-fn cover_with_extra(have: &[u32; 32]) -> [u32; 32] {
+pub(super) fn cover_with_extra(have: &[u32; 32]) -> [u32; 32] {
     let mut out = *have;
     for h in out.iter_mut().skip(1) {
         *h += 1;
@@ -978,7 +1047,7 @@ fn object_keyword_bits(c: &CardInstance) -> u16 {
     m
 }
 
-fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
+pub(super) fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     let mut o = EncodedObject::default();
     encode_card_object_into(c, vocab, &mut o);
     o
@@ -1457,7 +1526,7 @@ fn encode_battlefield_object_into(
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::catalog;
     use crate::player::Player;
@@ -1471,7 +1540,7 @@ mod tests {
     /// be running beside it.
     static ENCODE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-    fn encode_guard() -> std::sync::MutexGuard<'static, ()> {
+    pub(in crate::server) fn encode_guard() -> std::sync::MutexGuard<'static, ()> {
         // A panicking test poisons the lock; that failure is already
         // reported, and propagating it would mask every other test here.
         ENCODE_LOCK.lock().unwrap_or_else(|e| e.into_inner())

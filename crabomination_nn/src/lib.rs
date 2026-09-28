@@ -46,6 +46,8 @@
 
 use std::collections::BTreeMap;
 
+pub mod table;
+
 /// Zone groups, in trunk-input order. Seat-relative: "self" is the seat
 /// being evaluated.
 pub const NUM_GROUPS: usize = 8;
@@ -1279,6 +1281,85 @@ struct TBlock {
     ffn2_b: Vec<f32>,
 }
 
+impl TBlock {
+    /// Every tensor sized for a residual stream of width `h`.
+    fn shapes_fit(&self, h: usize) -> bool {
+        let square = [&self.q_w, &self.k_w, &self.v_w, &self.o_w].iter().all(|t| t.rows == h && t.cols == h);
+        let vecs = [&self.ln1_w, &self.ln1_b, &self.ln2_w, &self.ln2_b, &self.q_b, &self.k_b, &self.v_b, &self.o_b]
+            .iter()
+            .all(|v| v.len() == h);
+        let ffn = self.ffn1_w.cols == h
+            && self.ffn1_b.len() == self.ffn1_w.rows
+            && self.ffn2_w.cols == self.ffn1_w.rows
+            && self.ffn2_w.rows == h
+            && self.ffn2_b.len() == h;
+        square && vecs && ffn
+    }
+}
+
+/// [`get_tensor`] for a name built at runtime (a block index), reporting a
+/// failure against the `family` name the caller's error carries.
+fn get_tensor_dyn(
+    st: &safetensors::SafeTensors<'_>,
+    family: &'static str,
+    name: &str,
+) -> Result<Tensor2, NnError> {
+    let Ok(view) = st.tensor(name) else {
+        return Err(NnError::BadTensor(family, format!("missing {name}")));
+    };
+    if view.dtype() != safetensors::Dtype::F32 {
+        return Err(NnError::BadTensor(family, format!("{name}: dtype {:?}, want F32", view.dtype())));
+    }
+    let (rows, cols) = match *view.shape() {
+        [r, c] => (r, c),
+        [n] => (1, n),
+        _ => {
+            return Err(NnError::BadTensor(family, format!("{name}: rank {} shape", view.shape().len())));
+        }
+    };
+    let data = view.data().chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
+    Ok(Tensor2::new(rows, cols, data))
+}
+
+/// How many `tblocks.{i}` blocks a file carries: counted while
+/// `tblocks.{i}.ln1.weight` exists.
+fn count_tblocks(st: &safetensors::SafeTensors<'_>) -> usize {
+    let mut n = 0;
+    while st.tensor(&format!("tblocks.{n}.ln1.weight")).is_ok() {
+        n += 1;
+    }
+    n
+}
+
+/// The first `n` transformer blocks, each with its full tensor set — a gap
+/// is a trainer/inference mismatch and fails the load.
+fn load_tblocks(st: &safetensors::SafeTensors<'_>, n: usize) -> Result<Vec<TBlock>, NnError> {
+    let getd = |name: &str| get_tensor_dyn(st, "tblocks.*", name);
+    let mut blocks = Vec::with_capacity(n);
+    for i in 0..n {
+        let p = |suffix: &str| format!("tblocks.{i}.{suffix}");
+        blocks.push(TBlock {
+            ln1_w: getd(&p("ln1.weight"))?.data,
+            ln1_b: getd(&p("ln1.bias"))?.data,
+            q_w: getd(&p("attn.q.weight"))?,
+            q_b: getd(&p("attn.q.bias"))?.data,
+            k_w: getd(&p("attn.k.weight"))?,
+            k_b: getd(&p("attn.k.bias"))?.data,
+            v_w: getd(&p("attn.v.weight"))?,
+            v_b: getd(&p("attn.v.bias"))?.data,
+            o_w: getd(&p("attn.o.weight"))?,
+            o_b: getd(&p("attn.o.bias"))?.data,
+            ln2_w: getd(&p("ln2.weight"))?.data,
+            ln2_b: getd(&p("ln2.bias"))?.data,
+            ffn1_w: getd(&p("ffn1.weight"))?,
+            ffn1_b: getd(&p("ffn1.bias"))?.data,
+            ffn2_w: getd(&p("ffn2.weight"))?,
+            ffn2_b: getd(&p("ffn2.bias"))?.data,
+        });
+    }
+    Ok(blocks)
+}
+
 /// Layer norm over one row, eps matching candle's `LayerNormConfig`
 /// default.
 #[inline(always)]
@@ -1289,6 +1370,73 @@ fn layer_norm_row(x: &[f32], w: &[f32], b: &[f32], out: &mut [f32]) {
     let inv = 1.0 / (var + 1e-5).sqrt();
     for i in 0..d {
         out[i] = (x[i] - mean) * inv * w[i] + b[i];
+    }
+}
+
+/// The pre-LN transformer blocks over `n` objects' hidden rows (`hs`,
+/// `n × h`), in place. Shared by [`PlayNet`]'s `tblocks.*` stack and the
+/// table net ([`table::TableNet`]): the group / zone tags are the callers'
+/// business and are already in `hs` by the time this runs.
+#[inline(always)]
+fn run_tblocks(blocks: &[TBlock], hs: &mut [f32], n: usize, h_obj: usize) {
+    let mut xn = vec![0.0f32; n * h_obj];
+    let mut proj = vec![0.0f32; n * h_obj];
+    let mut ctx = vec![0.0f32; n * h_obj];
+    for blk in blocks {
+        // x += attn(ln1(x))
+        for i in 0..n {
+            layer_norm_row(
+                &hs[i * h_obj..(i + 1) * h_obj],
+                &blk.ln1_w,
+                &blk.ln1_b,
+                &mut xn[i * h_obj..(i + 1) * h_obj],
+            );
+        }
+        let project = |w: &Tensor2, b: &[f32]| {
+            let mut out = vec![0.0f32; n * h_obj];
+            w.matmul_t(&xn, n, &mut out);
+            for row in out.chunks_exact_mut(h_obj) {
+                for (v, bb) in row.iter_mut().zip(b) {
+                    *v += bb;
+                }
+            }
+            out
+        };
+        let q = project(&blk.q_w, &blk.q_b);
+        let k = project(&blk.k_w, &blk.k_b);
+        let v = project(&blk.v_w, &blk.v_b);
+        attention_core(&q, &k, &v, n, h_obj, &mut ctx);
+        blk.o_w.matmul_t(&ctx, n, &mut proj);
+        for i in 0..n {
+            for j in 0..h_obj {
+                hs[i * h_obj + j] += proj[i * h_obj + j] + blk.o_b[j];
+            }
+        }
+
+        // x += ffn2(relu(ffn1(ln2(x)))) — rows are independent, so the
+        // two layers run over all of them at once.
+        for i in 0..n {
+            layer_norm_row(
+                &hs[i * h_obj..(i + 1) * h_obj],
+                &blk.ln2_w,
+                &blk.ln2_b,
+                &mut xn[i * h_obj..(i + 1) * h_obj],
+            );
+        }
+        let f = blk.ffn1_w.rows;
+        let mut f1 = vec![0.0f32; n * f];
+        blk.ffn1_w.matmul_t(&xn, n, &mut f1);
+        for row in f1.chunks_exact_mut(f) {
+            for (v, b) in row.iter_mut().zip(&blk.ffn1_b) {
+                *v = (*v + b).max(0.0);
+            }
+        }
+        blk.ffn2_w.matmul_t(&f1, n, &mut proj);
+        for i in 0..n {
+            for j in 0..h_obj {
+                hs[i * h_obj + j] += proj[i * h_obj + j] + blk.ffn2_b[j];
+            }
+        }
     }
 }
 
@@ -1440,39 +1588,8 @@ impl PlayNet {
         // the stack: blocks are counted while `tblocks.{i}.ln1.weight`
         // exists, and each counted block must then carry its full tensor
         // set — a gap means a trainer/inference mismatch.
-        let getd = |name: &str| -> Result<Tensor2, NnError> {
-            match st.tensor(name) {
-                Ok(_) => {}
-                Err(_) => return Err(NnError::BadTensor("tblocks.*", format!("missing {name}"))),
-            }
-            let view = st.tensor(name).unwrap();
-            if view.dtype() != safetensors::Dtype::F32 {
-                return Err(NnError::BadTensor(
-                    "tblocks.*",
-                    format!("{name}: dtype {:?}, want F32", view.dtype()),
-                ));
-            }
-            let (rows, cols) = match *view.shape() {
-                [r, c] => (r, c),
-                [n] => (1, n),
-                _ => {
-                    return Err(NnError::BadTensor(
-                        "tblocks.*",
-                        format!("{name}: rank {} shape", view.shape().len()),
-                    ));
-                }
-            };
-            let data = view
-                .data()
-                .chunks_exact(4)
-                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
-                .collect();
-            Ok(Tensor2::new(rows, cols, data))
-        };
-        let mut n_blocks = 0;
-        while st.tensor(&format!("tblocks.{n_blocks}.ln1.weight")).is_ok() {
-            n_blocks += 1;
-        }
+        let getd = |name: &str| get_tensor_dyn(&st, "tblocks.*", name);
+        let n_blocks = count_tblocks(&st);
         let has_group = st.tensor("tblocks.group.weight").is_ok();
         let net = if n_blocks > 0 || has_group {
             if net.attn.is_some() {
@@ -1487,28 +1604,7 @@ impl PlayNet {
                     "group tag and blocks must both be present".into(),
                 ));
             }
-            let mut blocks = Vec::with_capacity(n_blocks);
-            for i in 0..n_blocks {
-                let p = |suffix: &str| format!("tblocks.{i}.{suffix}");
-                blocks.push(TBlock {
-                    ln1_w: getd(&p("ln1.weight"))?.data,
-                    ln1_b: getd(&p("ln1.bias"))?.data,
-                    q_w: getd(&p("attn.q.weight"))?,
-                    q_b: getd(&p("attn.q.bias"))?.data,
-                    k_w: getd(&p("attn.k.weight"))?,
-                    k_b: getd(&p("attn.k.bias"))?.data,
-                    v_w: getd(&p("attn.v.weight"))?,
-                    v_b: getd(&p("attn.v.bias"))?.data,
-                    o_w: getd(&p("attn.o.weight"))?,
-                    o_b: getd(&p("attn.o.bias"))?.data,
-                    ln2_w: getd(&p("ln2.weight"))?.data,
-                    ln2_b: getd(&p("ln2.bias"))?.data,
-                    ffn1_w: getd(&p("ffn1.weight"))?,
-                    ffn1_b: getd(&p("ffn1.bias"))?.data,
-                    ffn2_w: getd(&p("ffn2.weight"))?,
-                    ffn2_b: getd(&p("ffn2.bias"))?.data,
-                });
-            }
+            let blocks = load_tblocks(&st, n_blocks)?;
             PlayNet {
                 tstack: Some(TStack { group: getd("tblocks.group.weight")?, blocks }),
                 ..net
@@ -1611,17 +1707,7 @@ impl PlayNet {
                 ));
             }
             for (i, blk) in ts.blocks.iter().enumerate() {
-                let square =
-                    [&blk.q_w, &blk.k_w, &blk.v_w, &blk.o_w].iter().all(|t| t.rows == h_obj && t.cols == h_obj);
-                let vecs = [&blk.ln1_w, &blk.ln1_b, &blk.ln2_w, &blk.ln2_b, &blk.q_b, &blk.k_b, &blk.v_b, &blk.o_b]
-                    .iter()
-                    .all(|v| v.len() == h_obj);
-                let ffn = blk.ffn1_w.cols == h_obj
-                    && blk.ffn1_b.len() == blk.ffn1_w.rows
-                    && blk.ffn2_w.cols == blk.ffn1_w.rows
-                    && blk.ffn2_w.rows == h_obj
-                    && blk.ffn2_b.len() == h_obj;
-                if !(square && vecs && ffn) {
+                if !blk.shapes_fit(h_obj) {
                     return Err(NnError::BadTensor(
                         "tblocks.*",
                         format!("block {i} shapes inconsistent with obj_hidden {h_obj}"),
@@ -1744,65 +1830,7 @@ impl PlayNet {
             }
         }
 
-        let mut xn = vec![0.0f32; n * h_obj];
-        let mut proj = vec![0.0f32; n * h_obj];
-        let mut ctx = vec![0.0f32; n * h_obj];
-        for blk in &ts.blocks {
-            // x += attn(ln1(x))
-            for i in 0..n {
-                layer_norm_row(
-                    &hs[i * h_obj..(i + 1) * h_obj],
-                    &blk.ln1_w,
-                    &blk.ln1_b,
-                    &mut xn[i * h_obj..(i + 1) * h_obj],
-                );
-            }
-            let project = |w: &Tensor2, b: &[f32]| {
-                let mut out = vec![0.0f32; n * h_obj];
-                w.matmul_t(&xn, n, &mut out);
-                for row in out.chunks_exact_mut(h_obj) {
-                    for (v, bb) in row.iter_mut().zip(b) {
-                        *v += bb;
-                    }
-                }
-                out
-            };
-            let q = project(&blk.q_w, &blk.q_b);
-            let k = project(&blk.k_w, &blk.k_b);
-            let v = project(&blk.v_w, &blk.v_b);
-            attention_core(&q, &k, &v, n, h_obj, &mut ctx);
-            blk.o_w.matmul_t(&ctx, n, &mut proj);
-            for i in 0..n {
-                for j in 0..h_obj {
-                    hs[i * h_obj + j] += proj[i * h_obj + j] + blk.o_b[j];
-                }
-            }
-
-            // x += ffn2(relu(ffn1(ln2(x)))) — rows are independent, so the
-            // two layers run over all of them at once.
-            for i in 0..n {
-                layer_norm_row(
-                    &hs[i * h_obj..(i + 1) * h_obj],
-                    &blk.ln2_w,
-                    &blk.ln2_b,
-                    &mut xn[i * h_obj..(i + 1) * h_obj],
-                );
-            }
-            let f = blk.ffn1_w.rows;
-            let mut f1 = vec![0.0f32; n * f];
-            blk.ffn1_w.matmul_t(&xn, n, &mut f1);
-            for row in f1.chunks_exact_mut(f) {
-                for (v, b) in row.iter_mut().zip(&blk.ffn1_b) {
-                    *v = (*v + b).max(0.0);
-                }
-            }
-            blk.ffn2_w.matmul_t(&f1, n, &mut proj);
-            for i in 0..n {
-                for j in 0..h_obj {
-                    hs[i * h_obj + j] += proj[i * h_obj + j] + blk.ffn2_b[j];
-                }
-            }
-        }
+        run_tblocks(&ts.blocks, hs, n, h_obj);
     }
 
     /// Win probability for the seat the state was encoded for, in [0, 1].

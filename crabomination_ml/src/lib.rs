@@ -18,6 +18,8 @@
 
 use std::collections::{HashMap, VecDeque};
 
+pub mod table;
+
 use candle_core::{DType, Device, Result as CResult, Tensor};
 use candle_nn::{
     AdamW, Embedding, LayerNorm, LayerNormConfig, Linear, Module, Optimizer, ParamsAdamW,
@@ -173,17 +175,7 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
             let vbt = vb.pp("tblocks");
             let mut blocks = Vec::with_capacity(cfg.blocks);
             for i in 0..cfg.blocks {
-                let vbb = vbt.pp(i.to_string());
-                blocks.push(TBlockLayer {
-                    ln1: layer_norm(d, LayerNormConfig::default(), vbb.pp("ln1"))?,
-                    q: linear(d, d, vbb.pp("attn.q"))?,
-                    k: linear(d, d, vbb.pp("attn.k"))?,
-                    v: linear(d, d, vbb.pp("attn.v"))?,
-                    o: linear(d, d, vbb.pp("attn.o"))?,
-                    ln2: layer_norm(d, LayerNormConfig::default(), vbb.pp("ln2"))?,
-                    ffn1: linear(d, 2 * d, vbb.pp("ffn1"))?,
-                    ffn2: linear(2 * d, d, vbb.pp("ffn2"))?,
-                });
+                blocks.push(TBlockLayer::build(d, vbt.pp(i.to_string()))?);
             }
             Some(TStackLayer { group: embedding(NUM_GROUPS, d, vbt.pp("group"))?, blocks })
         } else {
@@ -427,6 +419,45 @@ impl AttnLayer {
     }
 }
 
+impl TBlockLayer {
+    /// One block's tensors under `vb` (`tblocks.{i}`), for a residual
+    /// stream of width `d`.
+    fn build(d: usize, vb: VarBuilder) -> CResult<TBlockLayer> {
+        Ok(TBlockLayer {
+            ln1: layer_norm(d, LayerNormConfig::default(), vb.pp("ln1"))?,
+            q: linear(d, d, vb.pp("attn.q"))?,
+            k: linear(d, d, vb.pp("attn.k"))?,
+            v: linear(d, d, vb.pp("attn.v"))?,
+            o: linear(d, d, vb.pp("attn.o"))?,
+            ln2: layer_norm(d, LayerNormConfig::default(), vb.pp("ln2"))?,
+            ffn1: linear(d, 2 * d, vb.pp("ffn1"))?,
+            ffn2: linear(2 * d, d, vb.pp("ffn2"))?,
+        })
+    }
+
+    /// `x += attn(ln1(x)); x += ffn2(relu(ffn1(ln2(x))))` over `[B, N, D]`,
+    /// padding keys excluded by `keybias` (`[B, 1, 1, N]`, 0 real / -1e9
+    /// padding — see [`AttnLayer::apply`] for why not -inf).
+    fn forward(&self, x: &Tensor, keybias: &Tensor) -> CResult<Tensor> {
+        let (b, n, d) = x.dims3()?;
+        let hd = d / ATTN_HEADS;
+        let scale = 1.0 / (hd as f64).sqrt();
+        let xn = self.ln1.forward(x)?;
+        let split = |t: Tensor| -> CResult<Tensor> {
+            t.reshape((b, n, ATTN_HEADS, hd))?.transpose(1, 2)?.contiguous()
+        };
+        let q = split(self.q.forward(&xn)?)?;
+        let k = split(self.k.forward(&xn)?)?;
+        let v = split(self.v.forward(&xn)?)?;
+        let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?.broadcast_add(keybias)?;
+        let attn = candle_nn::ops::softmax_last_dim(&scores)?;
+        let ctx = attn.matmul(&v)?.transpose(1, 2)?.contiguous()?.reshape((b, n, d))?;
+        let x = x.add(&self.o.forward(&ctx)?)?;
+        let xn = self.ln2.forward(&x)?;
+        x.add(&self.ffn2.forward(&self.ffn1.forward(&xn)?.relu()?)?)
+    }
+}
+
 impl TStackLayer {
     /// The transformer stack over all groups concatenated, mirroring the
     /// engine's `PlayNet::transform`. Same masking contract as
@@ -434,7 +465,7 @@ impl TStackLayer {
     /// underflows to exactly zero; padding *rows* accumulate garbage that
     /// pooling masks out, which the engine (no padding at all) never sees.
     fn apply(&self, hs: &[Tensor], mask: &[Tensor]) -> CResult<Vec<Tensor>> {
-        let (b, _, d) = hs[0].dims3()?;
+        let b = hs[0].dim(0)?;
         let dev = hs[0].device();
         let sizes: Vec<usize> = hs.iter().map(|h| h.dim(1).unwrap()).collect();
 
@@ -449,25 +480,10 @@ impl TStackLayer {
         let mrefs: Vec<&Tensor> = mask.iter().collect();
         let m = Tensor::cat(&mrefs, 1)?; // [B,N,1]
         let n: usize = sizes.iter().sum();
-        let hd = d / ATTN_HEADS;
-        let scale = 1.0 / (hd as f64).sqrt();
         let keybias = ((m.reshape((b, 1, 1, n))? - 1.0)? * 1e9)?;
 
         for blk in &self.blocks {
-            let xn = blk.ln1.forward(&x)?;
-            let split = |t: Tensor| -> CResult<Tensor> {
-                t.reshape((b, n, ATTN_HEADS, hd))?.transpose(1, 2)?.contiguous()
-            };
-            let q = split(blk.q.forward(&xn)?)?;
-            let k = split(blk.k.forward(&xn)?)?;
-            let v = split(blk.v.forward(&xn)?)?;
-            let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?.broadcast_add(&keybias)?;
-            let attn = candle_nn::ops::softmax_last_dim(&scores)?;
-            let ctx = attn.matmul(&v)?.transpose(1, 2)?.contiguous()?.reshape((b, n, d))?;
-            x = x.add(&blk.o.forward(&ctx)?)?;
-
-            let xn = blk.ln2.forward(&x)?;
-            x = x.add(&blk.ffn2.forward(&blk.ffn1.forward(&xn)?.relu()?)?)?;
+            x = blk.forward(&x, &keybias)?;
         }
 
         let mut split_out = Vec::with_capacity(hs.len());
@@ -2453,7 +2469,7 @@ mod tests {
     /// **It is not the whole cause, and under `nextest` it is not any of it**:
     /// nextest runs every test in its own process, so this mutex is never
     /// contended there. What is left is [`reseed_params`], below.
-    static TRAIN_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    pub(crate) static TRAIN_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// Replace every trained parameter with a deterministic draw from `seed`.
     ///
@@ -2475,7 +2491,7 @@ mod tests {
     /// (layer-norm scale and shift) is already deterministic and is left
     /// alone. Names are sorted so a `HashMap`'s walk order cannot reach the
     /// draw.
-    fn reseed_params(varmap: &VarMap, dev: &Device, seed: u64) {
+    pub(crate) fn reseed_params(varmap: &VarMap, dev: &Device, seed: u64) {
         let mut rng = StdRng::seed_from_u64(seed);
         let data = varmap.data().lock().unwrap();
         let mut names: Vec<&String> = data.keys().collect();

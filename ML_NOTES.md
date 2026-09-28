@@ -5604,3 +5604,187 @@ token-swarm board (399 s for one declaration at 897 permanents). Fixed by
 every group.
 
 
+
+## One net for every mode — the plan (2026-09-28)
+
+The user's goal: one model that plays every game mode, Commander pods
+included. This section is the plan as agreed; the step-1 subsection below
+records what was built. It supersedes the 2026-09-18 design note's
+*order* ("append a block, retrain, then pool the opponents") but not its
+analysis — see "Why one layout break" below.
+
+**Where the program stood when this was written.**
+
+- The value net only runs in two-seat games. `encode_state` is two-seat by
+  type (`let opp = 1 - seat`), and `net_eval::net_for_state` answers `None`
+  at any other seat count, so every pod bot is the heuristic.
+- The champion is a v5 net with a **164-row** name embedding, trained only
+  on SoS sealed. The 183 pod precons use **~6,750 distinct cards**; the
+  frozen snapshot has 874 of them and the champion's table 23 — every
+  other card reaches the net as index 0 plus its 59 generic features.
+- Nothing Commander-specific reaches the encoder: commander damage, tax,
+  the command zone, monarch, initiative, poison. Life is scaled by 20 and
+  library by 40.
+- Where the net pays: as the 256-search's leaf, +4.25 in duels (r74); as a
+  scored pilot +1.1, not adopted (r69). In pods the material-leaf search
+  reads 0.87x its due share at ~52 CPU-s a game (2026-09-26) — so a pod net
+  needs a consumer that pays, or it is round 62 again.
+- The client's two-seat Commander game already searches on the sealed net,
+  which cannot see commander damage.
+- Pod self-play is cheap: `dflt` runs ~160 four-seat games/s.
+
+**The model: one set of weights for 2..8 seats, the duel as the N = 2 case.**
+
+1. *Seat-relative table encoding.* Slot 0 is the encoded seat, then every
+   living seat in turn order. One shared object encoder; objects are
+   grouped by (slot, zone) — battlefield, graveyard, stack, command zone,
+   and for slot 0 only hand and library. Opponents' hidden zones are
+   counts. A slot tag (turn-order distance) and a zone tag let attention
+   tell whose object is whose; a duel is exactly one opponent slot.
+2. *Per-seat features scaled by the format*: life over starting life (and
+   over 20), library, poison, commander damage taken / dealt, commander
+   tax, commanders at home / on the battlefield, monarch, initiative,
+   teammate, deck size (40 / 60 / 100 names the format without a flag).
+   Game globals: seats alive, turn and round, step, commander game.
+3. *Cards by description as well as by name.* A per-card bag of
+   descriptor tokens derived from the definition, embedded and averaged,
+   beside the name embedding: the ~5,900 unnamed precon cards get an
+   identity, and a new set no longer waits on the vocabulary freeze.
+4. *Value head per seat*: one logit per living seat, softmax = each seat's
+   chance to win. At two seats that is exactly a sigmoid of the logit
+   difference, i.e. today's head. Target: the winner (a draw splits).
+
+**Why one layout break, not the 2026-09-18 note's appended block.** That
+note kept old checkpoints readable by appending. But the description
+embedding changes the object layer's input anyway, the champion only knows
+164 names, and two layout changes are two retrains. So the new format is a
+separate net (`TableNet`, its own tensor names and shard magic) beside the
+old one; the v5 champion keeps the duel leaf until the new net beats it.
+
+**Steps.**
+
+1. The encoder and the model in both crates (`crabomination_nn` inference,
+   the candle trainer) with parity tests. **Built — see below.**
+2. Data: an any-seat recorder (a pilot per seat, snapshots from every
+   living seat's view, λ-returns per seat trajectory); a mode mixer balanced
+   by *rows*, not games (a four-seat pod makes ~5x a duel's rows), roughly
+   40 % duels (sealed, cube, SoS colleges, modern) and 60 % Commander
+   (2 / 3 / 4 / 6 seats, decks dealt by power tier); ~20 precons held out
+   entirely to read unseen decks; the name vocabulary grown to the pod pool
+   (appended the frozen way); actors on `dflt`. First fix the two recorded
+   learner leads (relabel under the window lock, 5x overgeneration).
+3. Train four seeds; gates G1 and G2.
+4. Gate G3. If it passes, pods get net-aware scored bots.
+5. The pod search on the per-seat value (reward = my win chance at the
+   leaf, horizon in laps of the table), and gate G4.
+6. Wiring: `net_for_state`, the lobby, the client and `bot_ladder
+   --commander` accept table nets at any seat count; v5 nets keep refusing.
+
+**Gates** (pre-registered, four training seeds, paired, house rules):
+
+- **G1, duels don't get worse**: `mcts-<table>-256` vs `mcts-net67-256` on
+  sealed, 500 x 12, seeds 43 / 97. Pass at pooled >= -0.5; above +1 the new
+  net replaces the champion. Also read cube and modern, which the champion
+  never trained on.
+- **G2, two-seat Commander**: the same comparison at two seats.
+- **G3, pods with the heuristic**: `dflt` + the table leaf in one seat vs a
+  `dflt` field (`run_pod_hero_games`), 4 and 6 seats. The net's "my chance
+  to win" replaces the material-vs-all-opponents score. Minutes a cell, so
+  it is the early warning.
+- **G4, pods with the search**: >= 1.05x its due share at 4 and 6 seats, at
+  a decision latency the client can accept.
+
+**Risks named up front.** Retraining cost ~0.5 in the duel in r69; a mixed
+net might too — G1's floor catches it, and the fallback is a duel-tuned
+checkpoint of the same architecture, not giving up on N seats. If G3 and G4
+both read flat, pods have no consumer yet (rounds 62 / 69's shape). The deck
+net stays separate: Commander decks are fixed lists.
+
+### Step 1 — built (2026-09-28): the table net, its encoder, and parity
+
+Nothing here trains, loads a net at play time, or changes a duel: the v5
+champion, `encode_state`, every pilot and every golden trace are untouched.
+The duel encoder's refactor is code motion, and measured as such: 4,310
+`encode_state` outputs (both seats, every action of four seeded two-seat
+pods) hash identically before and after (FNV over the `Debug` text). Files:
+
+- `crabomination_nn/src/table.rs` — `TableState` (slots x six zones, seat
+  rows, a per-state descriptor table), `TableRow` and the `CRTB` shard
+  (version 1, its own magic so a play-net shard can never decode as one),
+  and `TableNet`: load (shape-checked, stack all-or-nothing, training-only
+  heads ignored) and forward (per-slot probabilities; `win_prob` = slot 0).
+- `crabomination_ml/src/table.rs` — the candle mirror: `TableConfig`,
+  `TableModel`, `make_table_batch` (a batch mixes seat counts, padded with a
+  seat mask), `TableTrainer` (AdamW; value loss = cross-entropy of the
+  per-slot softmax against the result share, plus 0.25 x per-slot life MSE
+  and game-length MSE).
+- `crabomination/src/server/encode_table.rs` — `encode_table(g, seat,
+  vocab)` and `table_slots`; the seat and global feature tables are in its
+  module doc.
+- `crabomination/src/server/card_tokens.rs` — descriptor tokens.
+- Shared, not duplicated: the transformer blocks (`run_tblocks` /
+  `load_tblocks` in the nn crate, `TBlockLayer::{build, forward}` in the
+  trainer), and the duel encoder's board object (`BoardContext`,
+  `encode_board_object_into`), stack item and library helpers.
+
+**The layout.** Slot 0 = the encoded seat, then living seats in turn order
+(reversed turn order honoured, departed seats absent). Zones per slot:
+battlefield, graveyard, stack (items the seat controls), command zone, and
+for slot 0 only hand and library. Objects: the duel encoder's 59 features
+verbatim, plus 59 is-a-commander, 60 command-zone tax, 61 attacking the
+encoded seat (or its planeswalker), 62 goaded — `TABLE_OBJ_FEATS` 63.
+`SEAT_FEATS` 38, `TABLE_GLOBAL_FEATS` 16. Standard sizes: emb 32, obj 64,
+seat 128, trunk 512 / 256, value 64, `DESC_BUCKETS` 16,384, 8 slot tags
+(slots past the eighth share the last).
+
+**Architecture.** `relu(obj · [name ⊕ mean(desc tokens) ⊕ feats])`;
+optional pre-LN blocks over every object at the table with zone + slot tags
+added at entry; mean/max pool per (slot, zone); a shared seat layer plus a
+per-slot row; trunk over `[me ⊕ mean(opps) ⊕ max(opps) ⊕ globals]`; per-slot
+logit `value2 · relu(value1 · [trunk ⊕ seat])`, softmax over the living
+slots. Two slots = `sigmoid(l0 − l1)` (a test holds it).
+
+**Descriptors.** The definition's `Debug` text lexed into capitalised
+identifiers (bare and qualified by their field: `keywords.Flying`,
+`effect.DealDamage`), non-zero integers under their field (bucketed 0-10,
+11-20, 21+), and `field=true`; `None`, zeroes and the three wrapper structs
+every card prints are dropped. FNV-1a into 16,383 buckets, sorted set,
+memoized per thread by (name literal, P/T, ability counts). Sample: Sigarda,
+Host of Herons is 39 words before the noise cut (`keywords.Hexproof`,
+`supertypes.Legendary`, `effect.OpponentsCantMakeYouSacrifice`, ...).
+Caveats, both documented in the module: an engine rename moves a word's
+bucket (a trained net then reads an untrained row), and two different
+tokens with the same name, stats and ability counts share the first-seen
+descriptor on a thread.
+
+**A hidden-information fix the duel encoder does not have.** An opponent's
+face-down permanent (or face-down spell) encodes as card 0 with no
+descriptor, mana value and pips zeroed — the nameless 2/2 CR 708.5 says it
+is. `encode_state` still reads a face-down card's printed identity; left
+alone because it moves the champion's inputs, and morph is ~absent from the
+SoS pool it was trained on.
+
+**The library groups by name, not by vocabulary index.** The duel
+encoder's `library_counts` folds every off-vocabulary card into one entry
+(index 0); in a Commander library that is most of the deck.
+
+**Tests.** nn: hand-computed forward (descriptor mean, the softmax), two
+slots = sigmoid of the gap, opponents are a set under equal slot tags,
+shard round trip, partial stacks and cross-format files rejected, vocab
+padding. Trainer: parity at 1e-4 on random tables of 2-6 seats *in one
+batch* (with and without blocks) and on **engine-encoded** four-seat pod
+states; padded slots take no probability; one trainer learns "highest seat
+feature 0 wins" across 2-6 seats (373 / 400 fresh winners, chance ~116;
+768 training tables reached only 272 — 37 noise features a seat overfit a
+small set). Engine: slot order (reversed, eliminated), a duel's table
+objects equal `encode_state`'s objects, face-down hiding, Commander state
+(tax, damage both ways, monarch, 40-life scales), and a real four-seat pod
+at turn 6 encoding deterministically from every seat through two random
+table nets. Descriptors: deterministic sorted sets, Bolt ~ Shock closer
+than Bolt ~ Bears, numbers bucketed, noise dropped.
+
+**Deliberately not in step 1**: a policy or belief head (the play net's
+optional heads; the search and the determinizer consume them, so they come
+with step 5), the AVX2 wrapper the play net's forward has, any cost reading
+of the forward (unmeasured), the name vocabulary's growth to the pod pool
+(step 2), and any wiring into `net_eval` / pilots (step 6).

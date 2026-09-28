@@ -125,6 +125,8 @@ mod x_counter_sink;
 mod generic_sink;
 mod renewal_guard;
 pub mod encode;
+pub mod encode_table;
+pub mod card_tokens;
 pub mod vocab_snapshot;
 pub mod decision_capture;
 pub mod leaf_capture;
