@@ -2246,3 +2246,30 @@ fn dropped_trigger_halves_fire() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 2, "1 combat damage, 1 discard");
 }
+
+/// Time Elemental — "When this creature attacks or blocks, at end of combat,
+/// sacrifice it and it deals 5 damage to you": the block half was missing.
+#[test]
+fn time_elemental_dooms_itself_on_a_block() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let te = g.add_card_to_battlefield(1, catalog::time_elemental());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(te, attacker)])).expect("block");
+    let life = g.players[1].life;
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(te).is_none(), "sacrificed at end of combat");
+    assert_eq!(g.players[1].life, life - 5);
+}

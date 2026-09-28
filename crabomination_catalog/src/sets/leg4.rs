@@ -535,18 +535,20 @@ pub fn rabid_wombat() -> CardDefinition {
     }
 }
 
-/// Time Elemental — bounces anything unenchanted, and dies for swinging.
+/// Time Elemental — bounces anything unenchanted, and dies for attacking or
+/// blocking.
 pub fn time_elemental() -> CardDefinition {
+    let doom = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: Effect::AtEndOfCombat {
+            body: Box::new(Effect::Seq(vec![
+                Effect::SacrificePermanent { what: Selector::This },
+                Effect::DealDamage { to: you(), amount: Value::Const(5) },
+            ])),
+        },
+    };
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::AtEndOfCombat {
-                body: Box::new(Effect::Seq(vec![
-                    Effect::SacrificePermanent { what: Selector::This },
-                    Effect::DealDamage { to: you(), amount: Value::Const(5) },
-                ])),
-            },
-        }],
+        triggered_abilities: vec![doom(EventKind::Attacks), doom(EventKind::Blocks)],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2), u(), u()]),
@@ -823,27 +825,23 @@ pub fn venarian_gold() -> CardDefinition {
     }
 }
 
-/// Infinite Authority — the host eats small creatures and grows.
+/// Infinite Authority — the host eats small creatures it blocks or is blocked
+/// by, and grows.
 pub fn infinite_authority() -> CardDefinition {
+    let eat = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: Effect::AtEndOfCombat {
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: Selector::EachPermanent(R::Creature.and(R::InCombatWithSource).and(R::ToughnessAtMost(3))),
+                },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ])),
+        },
+    };
     CardDefinition {
         equipped_bonus: Some(EquipBonus {
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-                effect: Effect::AtEndOfCombat {
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Destroy {
-                            what: Selector::EachPermanent(
-                                R::Creature.and(R::InCombatWithSource).and(R::ToughnessAtMost(3)),
-                            ),
-                        },
-                        Effect::AddCounter {
-                            what: Selector::This,
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::ONE,
-                        },
-                    ])),
-                },
-            }],
+            triggered_abilities: vec![eat(EventKind::Blocks), eat(EventKind::BecomesBlocked)],
             ..Default::default()
         }),
         ..aura("Infinite Authority", cost(&[w(), w(), w()]), R::Creature)
