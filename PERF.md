@@ -3074,6 +3074,13 @@ exact-X sinks are pods only. The fixed pool holds none of the touched cards.
 two-player pools cube / sos / sealed x 300, seeds 6200001 and 6300001: all decided
                  bar 2 legal cube draws
 pod              12,800 release games at 3-8 seats, zero panics, one CR 104.4a draw
+closing tip      f9e0a992b: --bench 196,176 / 27.64 / 613.0 byte-identical; pods 11,880
+                 (3/4/5/6/8 x every deck x 60, seeds 6733000+ … 6783000+) all decided;
+                 sos 1,500 / sealed 3,600 decided; cube seed 6700001: 2,388 decided,
+                 12 BOARD caps — every one Liliana, the Last Hope's emblem (X = two
+                 plus your Zombies since 706c77b7e, exponential as printed) behind
+                 Ensnaring Bridge, where no 2/2 can attack: a legit lock the
+                 MAX_BATTLEFIELD cap ends, not a loop
 ```
 
 ### 2026-09-28 (Commander session `01Jhcydf`) — the `--bench` invariant MOVES: 197,136 -> 196,176
