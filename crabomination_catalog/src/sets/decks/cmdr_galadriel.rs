@@ -486,7 +486,7 @@ pub fn mirkwood_trapper() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_batch: true,
-                ..EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
+                ..EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent)
             },
             // The attack dispatch binds the attacking player into slot 0, so
             // the target is chosen reflexively as the trigger resolves.

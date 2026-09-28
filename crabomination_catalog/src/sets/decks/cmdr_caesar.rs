@@ -571,7 +571,7 @@ pub fn maccready_lamplight_mayor() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PowerAtLeast(4) },
                 ),
                 effect: Effect::Seq(vec![

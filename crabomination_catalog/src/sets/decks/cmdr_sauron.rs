@@ -555,10 +555,9 @@ pub fn revenge_of_ravens() -> CardDefinition {
         name: "Revenge of Ravens",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![
-            toll(EventScope::ControllerAttackedByOpponent),
-            toll(EventScope::ControllerPlaneswalkerAttackedByOpponent),
-        ],
+        // "Attacks you or a planeswalker you control" is one scope: a second
+        // planeswalker-only trigger drained twice for one attacker.
+        triggered_abilities: vec![toll(EventScope::ControllerAttackedByOpponent)],
         ..Default::default()
     }
 }

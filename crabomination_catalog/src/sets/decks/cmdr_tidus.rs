@@ -288,7 +288,7 @@ pub fn lord_jyscal_guado() -> CardDefinition {
 pub fn lulu_stern_guardian() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).once_per_batch(),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).once_per_batch(),
             // The attack dispatch binds the attacking player into slot 0, so
             // the creature is picked as the trigger resolves.
             effect: Effect::Reflexive { body: Box::new(stun(target_filtered(R::Creature.and(R::IsAttackingYou)))) },

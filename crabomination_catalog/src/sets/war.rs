@@ -3825,7 +3825,11 @@ pub fn oath_of_kaya() -> CardDefinition {
                 },
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                // "Whenever an opponent attacks a planeswalker you control
+                // with one or more creatures" — planeswalker attacks only, once
+                // a declaration (CR 506.3, 603.2c).
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerPlaneswalkerAttackedByOpponent)
+                    .once_per_batch(),
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
                         to: Selector::Player(PlayerRef::Triggerer),

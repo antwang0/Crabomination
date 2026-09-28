@@ -257,7 +257,7 @@ pub fn mirris_guile() -> CardDefinition {
 pub fn orims_prayer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent),
             effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
         }],
         ..enchantment("Orim's Prayer", cost(&[generic(1), w(), w()]), vec![])

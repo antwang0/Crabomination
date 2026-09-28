@@ -538,7 +538,7 @@ pub fn reveille_squad() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::Attacks,
-                EventScope::ControllerAttackedByOpponent,
+                EventScope::ControllerAttackedDirectlyByOpponent,
             )
             .with_filter(crate::card::Predicate::EntityMatches {
                 what: Selector::This,

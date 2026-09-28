@@ -361,7 +361,7 @@ pub fn trouble_in_pairs() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::Attacks,
-                    EventScope::ControllerAttackedByOpponent,
+                    EventScope::ControllerAttackedDirectlyByOpponent,
                 )
                 .once_per_batch(),
                 effect: Effect::If {

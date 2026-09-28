@@ -1118,7 +1118,7 @@ pub fn barbed_foliage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsAttackingYou },
                 ),
                 effect: Effect::LoseKeyword {
@@ -1128,7 +1128,7 @@ pub fn barbed_foliage() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).with_filter(
                     Predicate::EntityMatchesAny {
                         what: Selector::TriggerSource,
                         filter: R::Not(Box::new(R::HasKeyword(Keyword::Flying))).and(R::IsAttackingYou),

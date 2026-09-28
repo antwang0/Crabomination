@@ -351,7 +351,7 @@ pub fn genestealer_locus() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent),
                 effect: pump(-1, 0),
             },
             TriggeredAbility {

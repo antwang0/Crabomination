@@ -152,7 +152,7 @@ pub fn hissing_miasma() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::ONE,

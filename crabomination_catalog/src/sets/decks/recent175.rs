@@ -104,7 +104,7 @@ pub fn sabotage_strategist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent),
             effect: Effect::PumpPT {
                 what: Selector::TriggerSource,
                 power: Value::Const(-1),

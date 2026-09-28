@@ -764,7 +764,7 @@ pub fn storm_queen_of_wakanda() -> CardDefinition {
                 },
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::HasKeyword(Keyword::Flying).and(R::IsAttackingYou),

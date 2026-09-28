@@ -7251,3 +7251,31 @@ fn cr_506_3_attacks_you_is_not_an_attack_on_your_planeswalker() {
     attack(&mut g, AttackTarget::Planeswalker(pw));
     assert_eq!(g.players[0].life, life + 2);
 }
+
+/// CR 506.3 — the three attack scopes on real cards, one planeswalker attack
+/// and one player attack each: Hissing Miasma ("attacks you") charges only
+/// the player attack, Oath of Kaya ("attacks a planeswalker you control")
+/// only the planeswalker attack, and Revenge of Ravens ("you or a
+/// planeswalker you control") each once — it drained twice for a
+/// planeswalker attack.
+#[test]
+fn cr_506_3_attack_scopes_on_miasma_oath_and_ravens() {
+    let run = |card: fn() -> crabomination::card::CardDefinition, target_pw: bool| -> i32 {
+        let mut g = multi_player_game(3);
+        g.add_card_to_battlefield(0, card());
+        let pw = g.add_card_to_battlefield(0, catalog::professor_onyx());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::DeclareAttackers;
+        let before = g.players[1].life;
+        let target = if target_pw { AttackTarget::Planeswalker(pw) } else { AttackTarget::Player(0) };
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target }])).expect("attack");
+        drain_stack(&mut g);
+        before - g.players[1].life
+    };
+    assert_eq!((run(catalog::hissing_miasma, false), run(catalog::hissing_miasma, true)), (1, 0));
+    assert_eq!((run(catalog::oath_of_kaya, false), run(catalog::oath_of_kaya, true)), (0, 2));
+    assert_eq!((run(catalog::revenge_of_ravens, false), run(catalog::revenge_of_ravens, true)), (1, 1));
+}

@@ -888,7 +888,7 @@ pub fn struggle_for_project_purity() -> CardDefinition {
                 label: "Enclave",
                 triggered_abilities: vec![TriggeredAbility {
                     // Fires once per attacking creature: two rad counters each.
-                    event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                    event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent),
                     effect: Effect::AddRadCounters {
                         who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                         amount: Value::Const(2),
