@@ -7502,6 +7502,22 @@ pub fn secluded_starforge() -> CardDefinition {
                 },
                 ..Default::default()
             },
+            // "{2}, {T}, Tap X untapped artifacts you control: Target creature
+            // gets +X/+0 until end of turn. Activate only as a sorcery."
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                tap_n_filter: Some((SelectionRequirement::Artifact, 0)),
+                tap_n_x: true,
+                sorcery_speed: true,
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::XFromCost,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
             ActivatedAbility {
                 mana_cost: cost(&[generic(5)]),
                 tap_cost: true,

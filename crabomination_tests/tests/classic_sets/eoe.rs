@@ -3083,10 +3083,30 @@ fn secluded_starforge_makes_a_robot() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forge, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        card_id: forge, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate robot maker");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Robot").count(), 1);
+}
+
+/// Secluded Starforge — "{2}, {T}, Tap X untapped artifacts you control:
+/// Target creature gets +X/+0": X = 2 taps two artifacts for +2/+0.
+#[test]
+fn secluded_starforge_taps_x_artifacts_for_power() {
+    let mut g = two_player_game();
+    let forge = g.add_card_to_battlefield(0, catalog::secluded_starforge());
+    let arts: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::ornithopter())).collect();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: Some(2), mode: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(arts.iter().all(|a| g.battlefield_find(*a).unwrap().tapped), "both artifacts tapped");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
 
 /// Command Bridge enters tapped and taps for any color.
