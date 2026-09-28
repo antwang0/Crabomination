@@ -27846,7 +27846,7 @@ impl GameState {
                         self.players[opp].eliminated = true;
                     }
                 }
-                self.check_state_based_actions_mid_resolution(events);
+                self.settle_then_sweep_mid_resolution(events);
                 Ok(())
             }
 
@@ -32818,7 +32818,7 @@ impl GameState {
                         self.players[p]
                             .loss_cause
                             .get_or_insert(crate::player::LossCause::Other);
-                        self.check_state_based_actions_mid_resolution(events);
+                        self.settle_then_sweep_mid_resolution(events);
                     }
                 }
                 Ok(())
@@ -39627,6 +39627,8 @@ impl GameState {
                                 .get_or_insert(crate::player::LossCause::Other);
                         }
                     }
+                    // CR 104.2a — the win is immediate, not the next sweep's.
+                    self.settle_game_over_if_decided(events);
                 }
                 Ok(())
             }
@@ -39659,7 +39661,7 @@ impl GameState {
                                     .get_or_insert(crate::player::LossCause::Other);
                             }
                         }
-                        self.check_state_based_actions_mid_resolution(events);
+                        self.settle_then_sweep_mid_resolution(events);
                     }
                     [_] => {}
                     _ => self.game_over = Some(None),
@@ -39674,7 +39676,7 @@ impl GameState {
                     && !self.player_cant_lose_game(loser)
                 {
                     self.players[loser].eliminated = true;
-                    self.check_state_based_actions_mid_resolution(events);
+                    self.settle_then_sweep_mid_resolution(events);
                 }
                 Ok(())
             }

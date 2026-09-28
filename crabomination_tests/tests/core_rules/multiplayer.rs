@@ -6927,3 +6927,18 @@ fn cr_104_2a_the_last_opponent_conceding_wins_before_a_pending_state_based_loss(
     g.concede(2);
     assert_eq!(g.game_over, Some(Some(0)), "seat 0 won as seat 2 left");
 }
+
+/// CR 104.2a / 104.3a — "target player loses the game" leaving one player
+/// in it wins that game at once; the same resolution having dropped the
+/// winner to 0 life does not make it a draw at the sweep.
+#[test]
+fn cr_104_2a_a_lose_the_game_effect_wins_before_the_sweep() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(3);
+    g.concede(2);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].life = 0; // paid mid-resolution, before any sweep
+    g.stack.push(TriggerPush::new(src, 0, Effect::LoseGame { who: PlayerRef::Seat(1) }).build());
+    resolve_answering(&mut g);
+    assert_eq!(g.game_over, Some(Some(0)));
+}

@@ -7925,6 +7925,16 @@ impl GameState {
         self.settle_game_over_if_decided(events);
     }
 
+    /// An effect that makes a player lose or win (CR 104.3a / 104.2a) settles
+    /// the game at once, then sweeps only if it is still going: a survivor at
+    /// 0 life mid-resolution has already won when the last opponent is gone.
+    pub(crate) fn settle_then_sweep_mid_resolution(&mut self, events: &mut Vec<GameEvent>) {
+        self.settle_game_over_if_decided(events);
+        if self.game_over.is_none() {
+            self.check_state_based_actions_mid_resolution(events);
+        }
+    }
+
     /// CR 104.2a / 104.4a — the game ends once no more than one team has a
     /// seat still in it: that team wins, or, if every seat is out, it is a
     /// draw. Run by every state-based sweep and, immediately, by a
