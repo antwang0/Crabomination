@@ -254,6 +254,7 @@ pub fn sync_combat_chips(
         let (at, size) = placed.get(&card).copied().unwrap_or((Vec2::splat(-1000.0), 16.0));
         commands.spawn((
             CombatChip { card, role },
+            crate::systems::focus::CardOverlay(card),
             Text::new(role.glyph()),
             ui_fonts.tf(size),
             TextColor(ink(role.colour())),

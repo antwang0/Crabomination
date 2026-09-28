@@ -33,7 +33,18 @@ use crate::net_plugin::CurrentView;
 #[derive(Resource)]
 pub struct CounterCoinAssets {
     material: Handle<StandardMaterial>,
+    /// The same, darkened, for the chips on a card focus dims
+    /// (`systems::focus`).
+    dimmed: Handle<StandardMaterial>,
     chips: HashMap<CounterType, Handle<Mesh>>,
+}
+
+impl CounterCoinAssets {
+    /// The material a chip takes: the shared one, or its darkened twin on a
+    /// dimmed card.
+    pub fn material(&self, dimmed: bool) -> &Handle<StandardMaterial> {
+        if dimmed { &self.dimmed } else { &self.material }
+    }
 }
 
 /// Marker on each spawned coin-mesh entity, with its kind so a card's
@@ -78,8 +89,13 @@ fn pile_top(slot: usize, count: u32) -> Vec3 {
 }
 
 pub fn init_counter_coin_assets(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>) {
+    let dimmed = StandardMaterial {
+        base_color: crate::systems::focus::dimmed_tint(),
+        ..super::coin_mesh::chip_material()
+    };
     commands.insert_resource(CounterCoinAssets {
         material: materials.add(super::coin_mesh::chip_material()),
+        dimmed: materials.add(dimmed),
         chips: HashMap::new(),
     });
 }
@@ -735,6 +751,7 @@ pub fn sync_counter_labels(
         commands
             .spawn((
                 CounterLabel { card_id: id, kind },
+                crate::systems::focus::CardOverlay(id),
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(-1000.0),

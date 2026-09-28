@@ -202,6 +202,35 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Drag to act, and focus fades the overlays (2026-09-28) — shipped
+
+- ✅ **Drag to act** (`systems::drag_act`). Drag a spell from the hand
+  onto its target, an attacker onto the player (their HUD panel), the
+  planeswalker or the battle it attacks, a blocker onto the attacker. A
+  drag is the two clicks these always took in one gesture: the press is
+  the first click, unchanged; letting go over something else is taken as
+  a click there (`DragAct::release_click`, or the player's panel through
+  `ButtonState::player_chip`) — by the input handler's own paths, so a
+  drop is legal exactly when the click would be. A press and release in
+  place is still just a click. Letting go over one of the viewer's own
+  creatures while sending an attacker does nothing (a click there would
+  add it to the attack), and dragging an attacker already in the plan
+  keeps it there (its press took it out). While an attacker or blocker is
+  dragged an arrow follows the pointer, snapping to what the release would
+  pick (`gizmos::draw_drag_arrow`); the picked-up blocker's candidate
+  arrows step aside for it.
+  - Checked in a headless app (press, drag, release over a target) and
+    end to end in the harness (`--combat drag`, a staged drag, whose
+    release the input handler turned into the block). Not checked with a
+    real mouse: the harness can't drive one.
+- ✅ **Focus fades a dimmed card's overlays** (`focus::fade_card_overlays`):
+  its P/T badge, keyword strip, counter labels, pile count and combat chip
+  drop to 35 % opacity, and its 3-D counter chips take a darkened twin of
+  their material. Left bright, they held the eye on the very cards that
+  weren't choices. Overlays carry `CardOverlay(CardId)`; the fade scales
+  from the opacities they had before it, so their own systems repainting
+  them mid-fade doesn't compound it.
+
 ## Focus while choosing, a felt table, hover tilt (2026-09-28) — shipped
 
 Read off layout-harness screenshots (`--combat target|blocks|plan`,
@@ -213,8 +242,8 @@ Read off layout-harness screenshots (`--combat target|blocks|plan`,
   fading in and out. The choices: the target's legal set; the server's
   `legal_attackers` and the planeswalkers and battles an attack may aim
   at; its `legal_blockers` and the attackers. With no legal set to go by
-  nothing dims. The hand doesn't dim, and neither do a dimmed card's
-  overlays (P/T badge, counter chips): they stay readable.
+  nothing dims. The hand doesn't dim. (A dimmed card's overlays stayed
+  bright at first; they fade with it since — "Drag to act" above.)
 - ✅ **A felt table** (`systems::table_cloth`). The ground and the seat tints
   share a generated, tiling felt texture (mottling, fibres, a faint weave,
   with its mip chain), and their vertex colours carry a pool of light
@@ -753,8 +782,8 @@ and `A` / the Attack button submits the picked plan (falling back to
 attackers show their ⚔ chip (`combat_badge.rs`) and an arrow to their
 defender.
 
-⏳ Bigger lift still open: **drag an arrow** from attacker to defender /
-planeswalker as an alternative to click-to-assign.
+✅ Drag an attacker onto its defender (player panel, planeswalker, battle)
+as an alternative to click-to-assign (`systems::drag_act`, 2026-09-28).
 
 ### Hover-Dwell Card Preview
 Today the only way to read full rules text is to hold Alt while hovering
@@ -787,9 +816,10 @@ off-screen. Clamp total fan width to a viewport-relative target and
 reduce spacing proportionally when hand size > 7.
 
 ### Drag-and-Drop for Hand → Battlefield
-Hand cards play via click. Drag-to-position or drag-to-target would add
-tactile feel for both casting and selecting targets. Lower priority than
-the in-place fixes; capture the intent here.
+✅ Drag-to-target shipped (`systems::drag_act`, 2026-09-28): drag a spell
+onto its target. Hand cards still play on the press (a creature or land
+casts the moment it's pressed), so there's no drag-to-position; the card
+itself doesn't follow the pointer, the aiming arrow does.
 
 ### Settings Menu
 The animation-speed slider is currently wedged into the quality panel

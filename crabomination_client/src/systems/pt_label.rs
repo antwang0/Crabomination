@@ -232,6 +232,7 @@ pub fn sync_pt_labels(
         commands
             .spawn((
                 PtLabel(id),
+                crate::systems::focus::CardOverlay(id),
                 Text::new(lead.0),
                 ui_fonts.tf(16.0),
                 // Each run in its stat's tone, on a white background that

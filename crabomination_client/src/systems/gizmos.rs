@@ -331,6 +331,65 @@ pub fn draw_legal_target_rings(
     }
 }
 
+/// While the viewer drags an attacker or a blocker (`drag_act`), an arrow
+/// from it to the pointer — snapped to the card or player the release would
+/// pick, as the aiming arrow snaps to its target. An aimed spell's drag has
+/// that arrow already.
+#[allow(clippy::too_many_arguments)]
+pub fn draw_drag_arrow(
+    drag: Res<crate::systems::drag_act::DragAct>,
+    view: Res<CurrentView>,
+    (targeting, blocking): (Res<TargetingState>, Res<BlockingState>),
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    board: BoardSpots,
+    hovered_bf: Query<&GameCardId, (With<CardHovered>, With<BattlefieldCard>)>,
+    chips: Query<(&Interaction, &PlayerHudPanel)>,
+    mut arrows: ResMut<Arrows>,
+) {
+    use crate::systems::drag_act::{DragMode, drag_mode, release_clicks};
+    let (Some(card), Some(cv)) = (drag.dragged(), view.0.as_ref()) else { return };
+    let mode = match drag_mode(cv, &targeting, &blocking) {
+        Some(mode @ (DragMode::Attack | DragMode::Block)) => mode,
+        _ => return,
+    };
+    let spots = board.spots();
+    let Some((from, clear)) = spots.chip(card, 0.18) else { return };
+    const DRAG_Y: f32 = 0.3;
+    let (viewer, n_seats) = (cv.your_seat, cv.players.len());
+    // What letting go here would pick, else the pointer on the table.
+    let over_card = hovered_bf.iter().map(|g| g.0).find(|id| *id != card && release_clicks(mode, cv, *id));
+    let over_seat = (mode == DragMode::Attack)
+        .then(|| chips.iter().find(|(i, _)| **i == Interaction::Hovered).map(|(_, p)| p.seat))
+        .flatten()
+        .filter(|seat| *seat < n_seats && *seat != cv.active_player);
+    let (to, snapped) = if let Some(id) = over_card {
+        match spots.chip(id, 0.18) {
+            Some((at, _)) => (at, true),
+            None => return,
+        }
+    } else if let Some(seat) = over_seat {
+        let mut at = player_hand_anchor(seat, viewer, n_seats);
+        at.y = DRAG_Y;
+        (at, true)
+    } else {
+        let Some(at) = cursor_on_plane(DRAG_Y, &windows, &camera_q) else { return };
+        (at, false)
+    };
+    if from.distance(to) < 0.3 {
+        return;
+    }
+    let colour = match mode {
+        DragMode::Block => Color::srgb(0.0, 0.9, 0.3),
+        _ => Color::srgb(1.0, 0.84, 0.1),
+    };
+    // Faint until it points at something the release would pick.
+    let colour = if snapped { colour } else { colour.with_alpha(0.6) };
+    // One key for the whole drag, so the arrow doesn't regrow as it snaps.
+    let key = ArrowKey::new(Cue::Drag, End::Card(card), End::Cursor);
+    arrows.arrow_trimmed(key, from, to, colour, 1.0, [clear, 0.0]);
+}
+
 /// Blocks as arrows from each blocker to the attacker it blocks. Declared
 /// blocks draw for every seat for as long as combat lasts; while the viewer
 /// picks blocks, their plan draws too, and the blocker they have picked up
@@ -339,6 +398,7 @@ pub fn draw_legal_target_rings(
 pub fn draw_block_arrows(
     view: Res<CurrentView>,
     blocking: Res<BlockingState>,
+    drag: Res<crate::systems::drag_act::DragAct>,
     board: BoardSpots,
     mut arrows: ResMut<Arrows>,
 ) {
@@ -385,8 +445,10 @@ pub fn draw_block_arrows(
         arrow(Cue::BlockPlan, blocker, attacker, Color::srgb(0.0, 0.9, 0.3), 0.9);
     }
     // The picked-up blocker's options: thin, so a board of attackers
-    // doesn't bury the plan under candidates.
-    if let Some(blocker) = blocking.selected_blocker {
+    // doesn't bury the plan under candidates. Not while it's being dragged:
+    // its own arrow goes where the pointer does (`draw_drag_arrow`), and
+    // lay over the candidate to the attacker it points at.
+    if let Some(blocker) = blocking.selected_blocker.filter(|b| drag.dragged() != Some(*b)) {
         for attacker in cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id) {
             if !blocking.assignments.iter().any(|(_, a)| *a == attacker) {
                 arrow(Cue::BlockCandidate, blocker, attacker, Color::srgba(1.0, 0.84, 0.1, 0.85), 0.6);

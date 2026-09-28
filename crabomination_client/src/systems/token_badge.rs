@@ -159,6 +159,7 @@ pub fn sync_token_pile_badges(
         let (at, size) = placed.get(&id).copied().unwrap_or((Vec2::splat(-1000.0), 16.0));
         commands.spawn((
             TokenPileBadge(id),
+            crate::systems::focus::CardOverlay(id),
             Text::new(chip_label(count)),
             ui_fonts.tf(size),
             TextColor(CHIP_INK),

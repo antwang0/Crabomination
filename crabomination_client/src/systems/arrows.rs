@@ -56,6 +56,9 @@ pub enum Cue {
     LegalTarget,
     /// The ring on the permanent whose decision is waiting on the viewer.
     DecisionSource,
+    /// A creature being dragged onto what it attacks or blocks, to the
+    /// pointer.
+    Drag,
 }
 
 /// One end of a mark, for its key.

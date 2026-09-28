@@ -91,6 +91,7 @@ pub fn sync_lock_badges(
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             LockBadge(*id),
+            crate::systems::focus::CardOverlay(*id),
             Text::new("⊘"),
             ui_fonts.tf(13.0),
             TextColor(theme::TEXT_DANGER),

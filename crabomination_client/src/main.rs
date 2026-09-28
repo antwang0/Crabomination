@@ -444,6 +444,9 @@ fn main() {
         // After `Update`, whose systems despawn the nodes it rebuilds (a
         // tooltip closing), and before the UI lays the new rows out.
         .add_systems(PostUpdate, mana_text::sync_mana_text.before(bevy::ui::UiSystems::Prepare))
+        // A card focus dims fades its overlays with it, after their own
+        // systems have painted them (`systems::focus`).
+        .add_systems(PostUpdate, systems::focus::fade_card_overlays.before(bevy::ui::UiSystems::Prepare))
         // Combat, targeting and stack arrows, as geometry (`systems::arrows`).
         .init_resource::<systems::arrows::Arrows>()
         .add_systems(PostUpdate, systems::arrows::render_arrows)
@@ -529,10 +532,12 @@ fn main() {
         // can fill the chip slot that the action-button poll first cleared.
         .add_systems(
             Update,
-            (poll_action_buttons, poll_player_chip_clicks)
+            (poll_action_buttons, poll_player_chip_clicks, systems::drag_act::track_drag)
                 .chain()
+                .before(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
         )
+        .init_resource::<systems::drag_act::DragAct>()
         // Escape arbitration. `compute_esc_focus` names the one surface
         // that owns this frame's press; it runs in `PreUpdate` so every
         // consumer is order-independent and nothing in the `Update` graph
@@ -874,6 +879,7 @@ fn main() {
                 draw_attack_plan_arrows,
                 draw_legal_target_rings,
                 draw_target_arrow,
+                crate::systems::gizmos::draw_drag_arrow,
                 draw_attachment_tethers,
                 draw_active_seat_glow,
             )

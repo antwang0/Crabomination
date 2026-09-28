@@ -104,6 +104,7 @@ pub fn sync_regen_badges(
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             RegenBadge(*id),
+            crate::systems::focus::CardOverlay(*id),
             Text::new(chip_text(*shields)),
             ui_fonts.tf(13.0),
             TextColor(theme::ACCENT_GREEN),

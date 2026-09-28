@@ -12,6 +12,7 @@ pub mod counter_coins;
 pub mod counter_tooltip;
 pub mod debug_console;
 pub mod decision_ui;
+pub mod drag_act;
 pub mod esc;
 pub mod focus;
 pub mod draft;

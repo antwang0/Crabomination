@@ -117,6 +117,9 @@ pub struct GameInputResources<'w> {
     /// (blocker plan, attacker plan, targeting) so one press cancels one
     /// thing. Right-click keeps its own unarbitrated path.
     pub esc: Res<'w, crate::systems::esc::EscFocus>,
+    /// A drag let go over what it acts on: taken as a click there
+    /// (`systems::drag_act`).
+    pub drag: Res<'w, crate::systems::drag_act::DragAct>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -2183,7 +2186,7 @@ pub fn update_combat_preview_panel(
 /// longer in the game (CR 800.4a) and can't be attacked - without the
 /// filter, a 4-player game whose first opponent has died defaults every
 /// attack at the dead seat and the declaration bounces.
-fn default_attack_target_seat(cv: &crabomination::net::ClientView) -> usize {
+pub(crate) fn default_attack_target_seat(cv: &crabomination::net::ClientView) -> usize {
     cv.players
         .iter()
         .filter(|p| !p.eliminated)
@@ -3707,7 +3710,8 @@ pub fn handle_game_input(
         // gameplay paths as the mouse.
         let activate = mouse.just_pressed(MouseButton::Left)
             || keyboard.just_pressed(KeyCode::Enter)
-            || keyboard.just_pressed(KeyCode::NumpadEnter);
+            || keyboard.just_pressed(KeyCode::NumpadEnter)
+            || r.drag.release_click;
 
         // ── Blocking (defending against any opponent's attack) ──────────────
         // `!blocking.declared`: after the declaration is submitted the rest

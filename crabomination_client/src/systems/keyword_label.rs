@@ -748,6 +748,7 @@ pub fn sync_keyword_labels(
         }
         commands.spawn((
             KeywordLabel(*id),
+            crate::systems::focus::CardOverlay(*id),
             Text::new(strip.clone()),
             ui_fonts.tf(12.0),
             TextColor(Color::srgb(0.96, 0.94, 0.80)),

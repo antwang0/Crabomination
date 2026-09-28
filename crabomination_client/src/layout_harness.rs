@@ -558,6 +558,9 @@ pub enum CombatScene {
     /// `target`: the viewer is casting Lightning Bolt and pointing it at
     /// seat 1's Serra Angel.
     Target,
+    /// `drag`: as `blocks`, with the picked-up blocker being dragged onto
+    /// seat 1's Shivan Dragon.
+    Drag,
 }
 
 impl CombatScene {
@@ -567,6 +570,7 @@ impl CombatScene {
             "declared" => Some(Self::Declared),
             "plan" => Some(Self::Plan),
             "target" => Some(Self::Target),
+            "drag" => Some(Self::Drag),
             _ => None,
         }
     }
@@ -594,6 +598,8 @@ fn stage_view(cv: &mut crabomination::net::ClientView, scene: CombatScene) {
     // client's auto-pass on its own.
     let (step, active, priority) = match scene {
         CombatScene::Blocks => (TurnStep::DeclareBlockers, 1, 1),
+        // Priority with the viewer, as for a real drag; auto-pass is held.
+        CombatScene::Drag => (TurnStep::DeclareBlockers, 1, 0),
         CombatScene::Declared => (TurnStep::DeclareBlockers, viewer, 1),
         CombatScene::Plan => (TurnStep::DeclareAttackers, viewer, viewer),
         CombatScene::Target => (TurnStep::PreCombatMain, viewer, viewer),
@@ -611,11 +617,11 @@ fn stage_view(cv: &mut crabomination::net::ClientView, scene: CombatScene) {
         .collect();
     match scene {
         CombatScene::Plan => cv.legal_attackers = untapped,
-        CombatScene::Blocks => cv.legal_blockers = untapped,
+        CombatScene::Blocks | CombatScene::Drag => cv.legal_blockers = untapped,
         _ => {}
     }
     let (attacker_seat, defender): (usize, fn(usize, usize) -> usize) = match scene {
-        CombatScene::Blocks => (1, |_, _| 0),
+        CombatScene::Blocks | CombatScene::Drag => (1, |_, _| 0),
         CombatScene::Declared => (viewer, defender_for),
         CombatScene::Plan | CombatScene::Target => return,
     };
@@ -651,7 +657,7 @@ pub fn stage_combat_for_screenshot(
     mut view: ResMut<crate::net_plugin::CurrentView>,
     (mut blocking, mut attacking): (ResMut<crate::game::BlockingState>, ResMut<crate::game::AttackingState>),
     (mut targeting, mut legal): (ResMut<crate::game::TargetingState>, ResMut<crate::game::LegalTargets>),
-    mut ff: ResMut<crate::systems::game_ui::FastForward>,
+    (mut ff, mut drag): (ResMut<crate::systems::game_ui::FastForward>, ResMut<crate::systems::drag_act::DragAct>),
     cards: Query<(Entity, &crate::card::GameCardId), With<crate::card::BattlefieldCard>>,
     mut hovered: Local<bool>,
 ) {
@@ -669,6 +675,25 @@ pub fn stage_combat_for_screenshot(
     let (viewer, seats) = (cv.your_seat, cv.players.len());
     let mine = |name: &str| permanent_id(cv, viewer, name);
     match scene {
+        CombatScene::Drag => {
+            let selected = mine("Serra Angel");
+            if blocking.selected_blocker != selected {
+                blocking.selected_blocker = selected;
+            }
+            if let Some(angel) = selected
+                && drag.dragged() != Some(angel)
+            {
+                drag.stage(angel);
+            }
+            // The pointer over the attacker the release would block.
+            if !*hovered
+                && let Some(dragon) = permanent_id(cv, 1, "Shivan Dragon")
+                && let Some((e, _)) = cards.iter().find(|(_, g)| g.0 == dragon)
+            {
+                commands.entity(e).insert(crate::card::CardHovered);
+                *hovered = true;
+            }
+        }
         CombatScene::Blocks => {
             let theirs = |name: &str| permanent_id(cv, 1, name);
             let assignments: Vec<_> = mine("Tarmogoyf").zip(theirs("Tarmogoyf")).into_iter().collect();
