@@ -42,10 +42,9 @@ pub fn servo_schematic() -> CardDefinition {
         triggered_abilities: vec![
             etb(make_servo()),
             TriggeredAbility {
-                // "Put into a graveyard from the battlefield" — modeled via the
-                // leaves-battlefield event (the artifact-death-cantrip idiom).
+                // "Put into a graveyard from the battlefield" — not an exile.
                 event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
+                    EventKind::PermanentDied,
                     EventScope::SelfSource,
                 ),
                 effect: make_servo(),

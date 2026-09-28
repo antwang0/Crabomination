@@ -6218,7 +6218,7 @@ pub fn stalwart_aven() -> CardDefinition {
     }
 }
 
-/// Skyraker Giant — {2}{R}{R} 4/3 Giant Warrior with Reach, Renown 4.
+/// Skyraker Giant — {2}{R}{R} 4/3 Giant with reach.
 pub fn skyraker_giant() -> CardDefinition {
     CardDefinition {
         name: "Skyraker Giant",
@@ -6231,7 +6231,6 @@ pub fn skyraker_giant() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![crate::effect::shortcut::renown(4)],
         ..Default::default()
     }
 }

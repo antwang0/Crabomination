@@ -75,8 +75,8 @@ pub fn absolver_thrull() -> CardDefinition {
     }
 }
 
-/// Shrieking Grotesque — {2}{W} 2/1 Gargoyle. Flying, haunt. When the creature
-/// it haunts dies, target player discards a card.
+/// Shrieking Grotesque — {2}{W} 2/1 Gargoyle. Flying. When it enters, if {B}
+/// was spent to cast it, target player discards a card.
 pub fn shrieking_grotesque() -> CardDefinition {
     CardDefinition {
         name: "Shrieking Grotesque",
@@ -90,10 +90,6 @@ pub fn shrieking_grotesque() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            // "When this creature enters, if {B} was spent to cast it, target
-            // player discards a card" (the half shipped missing — the `cnt`
-            // audit column, 2026-09-10; the haunted creature's death half is
-            // still the Haunt trigger's alone).
             crate::effect::shortcut::etb(Effect::If {
                 cond: crate::card::Predicate::SourceCastWithColorSpent { color: Color::Black, at_least: 1 },
                 then: Box::new(Effect::Discard {
@@ -103,15 +99,6 @@ pub fn shrieking_grotesque() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             }),
-            on_dies(Effect::HauntCreature {
-            // The haunt half prints the same "**target player** discards a
-            // card" as the entry half above.
-            body: Box::new(Effect::Discard {
-                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
-                amount: Value::Const(1),
-                random: false,
-            }),
-        }),
         ],
         ..Default::default()
     }
@@ -143,8 +130,7 @@ pub fn cry_of_contrition() -> CardDefinition {
 }
 
 /// Douse in Gloom — {2}{B} Instant. Deal 2 to target creature, gain 2 life.
-/// Haunt — when the creature it haunts dies, deal 2 to each opponent, gain 2
-/// (printed "that creature's controller"; modeled as each opponent).
+/// (It shipped with an invented haunt.)
 pub fn douse_in_gloom() -> CardDefinition {
     CardDefinition {
         name: "Douse in Gloom",
@@ -152,55 +138,32 @@ pub fn douse_in_gloom() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(2),
             },
             Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::HauntCreature {
-                body: Box::new(Effect::Seq(vec![
-                    Effect::DealDamage {
-                        to: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(2),
-                    },
-                    Effect::GainLife {
-                        who: Selector::You,
-                        amount: Value::Const(2),
-                    },
-                ])),
-            },
         ]),
         ..Default::default()
     }
 }
 
-/// Castigate — {W}{B} Sorcery. Target opponent reveals their hand; exile a
-/// nonland card from it. Haunt — repeat when the creature it haunts dies.
+/// Castigate — {W}{B} Sorcery. Target opponent reveals their hand; you exile a
+/// nonland card from it. (It shipped with an invented haunt.)
 pub fn castigate() -> CardDefinition {
     CardDefinition {
         name: "Castigate",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ExileChosenFromHand {
-                from: Selector::Player(PlayerRef::Target(0)),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
-                link_to_source: false,
-                face_down: false,
-            },
-            Effect::HauntCreature {
-                body: Box::new(Effect::ExileChosenFromHand {
-                    from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Nonland,
-                    link_to_source: false,
-                    face_down: false,
-                }),
-            },
-        ]),
+        effect: Effect::ExileChosenFromHand {
+            from: crate::effect::shortcut::target_filtered(SelectionRequirement::OpponentPlayer),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland,
+            link_to_source: false,
+            face_down: false,
+        },
         ..Default::default()
     }
 }

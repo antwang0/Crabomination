@@ -2566,7 +2566,7 @@ pub fn mephitic_draught() -> CardDefinition {
             etb(payoff()),
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
+                    EventKind::PermanentDied,
                     EventScope::SelfSource,
                 ),
                 effect: payoff(),

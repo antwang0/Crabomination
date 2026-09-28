@@ -22,32 +22,28 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
 }
 
 /// A haunt creature is exiled (not graveyard'd) when it dies, then its haunt
-/// body fires when the haunted creature dies.
+/// body fires when the haunted creature dies. (Blind Hunter; this test used
+/// Shrieking Grotesque, whose haunt was invented — it prints none.)
 #[test]
-fn shrieking_grotesque_haunts_then_payoff_on_death() {
+fn blind_hunter_haunts_then_drains_on_death() {
     let mut g = two_player_game();
-    // The default bot profile aims a hostile player slot at an
-    // opponent (`EvalWeights::default()`); a bare test seat does not.
     g.players[0].hostile_player_targets = true;
-    let grotesque = g.add_card_to_battlefield(0, catalog::shrieking_grotesque());
+    let hunter = g.add_card_to_battlefield(0, catalog::blind_hunter());
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4, survives
-    g.add_card_to_hand(1, catalog::grizzly_bears()); // the one card to discard
 
-    // Kill the Grotesque → it's exiled haunting the opponent's creature.
-    g.battlefield_find_mut(grotesque).unwrap().damage = 1; // lethal vs 2/1
+    g.battlefield_find_mut(hunter).unwrap().damage = 2; // lethal vs 2/2
     let evs = g.check_state_based_actions();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == grotesque), "exiled haunting");
-    assert!(!g.players[0].graveyard.iter().any(|c| c.id == grotesque), "not in graveyard");
-    assert_eq!(g.players[1].hand.len(), 1, "payoff not fired yet");
+    assert!(g.exile.iter().any(|c| c.id == hunter), "exiled haunting");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == hunter), "not in graveyard");
+    let life = g.players[1].life;
 
-    // The haunted creature dies → opponent discards a card.
     g.battlefield_find_mut(foe).unwrap().damage = 4;
     let evs = g.check_state_based_actions();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), 0, "haunt payoff: opponent discarded");
+    assert_eq!(g.players[1].life, life - 2, "haunt payoff: drained 2");
 }
 
 /// Mourning Thrull — "whenever this creature deals damage, you gain that
@@ -77,38 +73,35 @@ fn mourning_thrull_gains_life_equal_to_the_damage_it_deals() {
     assert_eq!(g.players[0].hand.len(), hand, "no card is drawn — that was invented");
 }
 
-/// A haunt instant resolves its main effect, is exiled haunting a creature
-/// (not graveyard'd), then fires its haunt body when that creature dies.
+/// A haunt spell resolves its main effect, is exiled haunting a creature (not
+/// graveyard'd), then fires its haunt body when that creature dies. (Cry of
+/// Contrition; this test used Douse in Gloom, whose haunt was invented.)
 #[test]
-fn douse_in_gloom_instant_haunts() {
+fn cry_of_contrition_sorcery_haunts() {
     let mut g = two_player_game();
+    g.players[0].hostile_player_targets = true;
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
-    let douse = g.add_card_to_hand(0, catalog::douse_in_gloom());
-    g.players[0].mana_pool.add_colorless(2);
+    for _ in 0..2 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let cry = g.add_card_to_hand(0, catalog::cry_of_contrition());
     g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, cry, Target::Player(1));
+    assert_eq!(g.players[1].hand.len(), 1, "discarded one");
+    assert!(g.exile.iter().any(|c| c.id == cry), "spell exiled haunting");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == cry), "not graveyard'd");
 
-    let life = g.players[0].life;
-    cast_at(&mut g, douse, Target::Permanent(foe));
-    assert_eq!(g.battlefield_find(foe).unwrap().damage, 2, "dealt 2");
-    assert_eq!(g.players[0].life, life + 2, "gained 2");
-    assert!(g.exile.iter().any(|c| c.id == douse), "spell exiled haunting");
-    assert!(!g.players[0].graveyard.iter().any(|c| c.id == douse), "not graveyard'd");
-
-    // Kill the haunted creature → haunt body: 2 to the opponent, gain 2.
-    let p1_life = g.players[1].life;
-    let p0_life = g.players[0].life;
     g.battlefield_find_mut(foe).unwrap().damage = 4;
     let evs = g.check_state_based_actions();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 2, "haunt dealt 2 to opponent");
-    assert_eq!(g.players[0].life, p0_life + 2, "haunt gained 2");
+    assert_eq!(g.players[1].hand.len(), 0, "haunt payoff: discarded the second");
 }
 
-/// Castigate exiles a nonland from the opponent's hand on cast and again when
-/// the haunted creature dies.
+/// Castigate exiles a nonland card from the opponent's hand (it shipped with
+/// an invented haunt that repeated it).
 #[test]
-fn castigate_haunt_repeats_hand_exile() {
+fn castigate_exiles_a_nonland_card() {
     let mut g = two_player_game();
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
     g.add_card_to_hand(1, catalog::grizzly_bears());
@@ -119,12 +112,8 @@ fn castigate_haunt_repeats_hand_exile() {
 
     cast_at(&mut g, cast_id, Target::Player(1));
     assert_eq!(g.players[1].hand.len(), 1, "cast exiled one nonland");
-
-    g.battlefield_find_mut(foe).unwrap().damage = 4;
-    let evs = g.check_state_based_actions();
-    g.dispatch_triggers_for_events(&evs);
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), 0, "haunt exiled the second nonland");
+    assert!(!g.exile.iter().any(|c| c.id == cast_id), "no haunt: Castigate isn't exiled");
+    let _ = foe;
 }
 
 /// Absolver Thrull's enters-or-haunt trigger destroys an enchantment.

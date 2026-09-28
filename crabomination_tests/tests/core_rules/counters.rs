@@ -255,12 +255,11 @@ fn plaxcaster_frogling_enters_with_three_counters() {
     assert_eq!((view.power, view.toughness), (3, 3), "Graft 3 → 0/0 + three counters");
 }
 
+/// Stalwart Aven's renown 1 lands on its first connection. (Skyraker Giant
+/// sat in this table with an invented renown 4 — it prints only reach.)
 #[test]
-fn stalwart_aven_and_skyraker_giant_renown_on_connect() {
-    for (factory, renown, base, kw) in [
-        (catalog::stalwart_aven as fn() -> _, 1, (1, 3), Keyword::Flying),
-        (catalog::skyraker_giant as fn() -> _, 4, (4, 3), Keyword::Reach),
-    ] {
+fn stalwart_aven_renown_on_connect() {
+    for (factory, renown, base, kw) in [(catalog::stalwart_aven as fn() -> _, 1, (1, 3), Keyword::Flying)] {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, factory());
         g.clear_sickness(id);
