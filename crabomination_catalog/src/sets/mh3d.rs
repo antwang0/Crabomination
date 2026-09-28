@@ -57,7 +57,7 @@ pub fn ugins_binding() -> CardDefinition {
                             zone: ZoneRef::Battlefield,
                             filter: R::Permanent.and(R::Nonland).and(R::ControlledByOpponent),
                         },
-                        to: ZoneDest::Hand(PlayerRef::EachOpponent),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     },
                 ])),
             },

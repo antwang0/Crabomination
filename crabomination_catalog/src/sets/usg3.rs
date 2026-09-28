@@ -216,10 +216,14 @@ pub fn veiled_crocodile() -> CardDefinition {
                     Value::HandSizeOf(PlayerRef::You),
                     Value::Const(0),
                 ),
-                Predicate::ValueAtMost(
-                    Value::HandSizeOf(PlayerRef::EachOpponent),
-                    Value::Const(0),
-                ),
+                // "a player": any one opponent with an empty hand.
+                Predicate::ForAnyPlayer {
+                    who: PlayerRef::EachOpponent,
+                    pred: Box::new(Predicate::ValueAtMost(
+                        Value::HandSizeOf(PlayerRef::Triggerer),
+                        Value::Const(0),
+                    )),
+                },
             ]),
             4,
             4,

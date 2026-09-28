@@ -39625,9 +39625,12 @@ pub fn stormbreath_dragon() -> CardDefinition {
             Keyword::Protection(Color::White),
         ],
         activated_abilities: vec![monstrosity(cost(&[generic(5), r(), r()]), 3)],
-        triggered_abilities: vec![on_becomes_monstrous(Effect::DealDamage {
-            to: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::HandSizeOf(PlayerRef::EachOpponent),
+        // "…to each opponent equal to the number of cards in that player's hand."
+        triggered_abilities: vec![on_becomes_monstrous(Effect::ForEachOpponent {
+            body: Box::new(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::HandSizeOf(PlayerRef::Triggerer),
+            }),
         })],
         ..Default::default()
     }

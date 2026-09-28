@@ -6475,3 +6475,58 @@ fn defending_player_clauses_reach_only_the_attacked_seat() {
     assert_eq!(g.players[1].library.len(), 2, "Reef Pirates milled the damaged player");
     assert_eq!(g.players[2].library.len(), 3, "and nobody else");
 }
+
+/// CR 800.4 / 102.2 — a value read "per opponent" or "for all players" must
+/// not collapse to one seat: Stormbreath Dragon dealt every opponent the
+/// largest hand's count, Realm Seekers counted your hand plus the largest
+/// opponent's instead of every hand, and Riverchurn Monument's exhaust milled
+/// everyone by one seat's graveyard. (Veiled Crocodile's "a player has no
+/// cards in hand" needed every opponent empty; Ugin's Binding returned every
+/// bounced permanent to one opponent's hand.)
+#[test]
+fn per_player_values_read_each_player() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..2 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    for _ in 0..3 {
+        g.add_card_to_hand(2, catalog::island());
+    }
+    let dragon = g.add_card_to_battlefield(0, catalog::stormbreath_dragon());
+    let monstrous = catalog::stormbreath_dragon()
+        .triggered_abilities
+        .last()
+        .expect("the becomes-monstrous trigger")
+        .effect
+        .clone();
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    g.resolve_effect(&monstrous, &EffectContext::for_ability(dragon, 0, None)).unwrap();
+    assert_eq!((l1 - g.players[1].life, l2 - g.players[2].life), (2, 3), "each opponent by their own hand");
+
+    let seekers = g.add_card_to_hand(0, catalog::realm_seekers());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: seekers, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Realm Seekers");
+    drain_stack(&mut g);
+    let counters = g.battlefield_find(seekers).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 5, "every hand: 0 + 2 + 3");
+
+    for seat in [1, 2] {
+        for _ in 0..8 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_graveyard(1, catalog::island());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(2, catalog::island());
+    }
+    let exhaust = catalog::riverchurn_monument().activated_abilities[1].effect.clone();
+    g.resolve_effect(&exhaust, &EffectContext::for_ability(dragon, 0, None)).unwrap();
+    assert_eq!((g.players[1].graveyard.len(), g.players[2].graveyard.len()), (2, 6), "each mills its own graveyard's size");
+}

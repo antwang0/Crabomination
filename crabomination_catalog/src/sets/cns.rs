@@ -611,10 +611,12 @@ pub fn realm_seekers() -> CardDefinition {
         },
         enters_with_counters: Some((
             crate::card::CounterType::PlusOnePlusOne,
-            Value::Sum(vec![
-                Value::HandSizeOf(PlayerRef::You),
-                Value::HandSizeOf(PlayerRef::EachOpponent),
-            ]),
+            // "the total number of cards in all players' hands"
+            Value::CountOf(Box::new(Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: crate::card::Zone::Hand,
+                filter: R::Any,
+            })),
         )),
         activated_abilities: vec![counter_cost(
             cost(&[generic(2), g()]),

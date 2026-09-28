@@ -597,9 +597,12 @@ pub fn riverchurn_monument() -> CardDefinition {
                 tap_cost: true,
                 exhaust: true,
                 mana_cost: cost(&[generic(2), u(), u()]),
-                effect: Effect::Mill {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::GraveyardSizeOf(PlayerRef::EachOpponent),
+                // "…each mill cards equal to the number of cards in their graveyard."
+                effect: Effect::ForEachOpponent {
+                    body: Box::new(Effect::Mill {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::GraveyardSizeOf(PlayerRef::Triggerer),
+                    }),
                 },
                 ..Default::default()
             },
