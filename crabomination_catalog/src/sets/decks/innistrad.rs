@@ -275,8 +275,8 @@ pub fn spellrune_painter() -> CardDefinition {
 }
 
 /// Wolfkin Outcast // Wedding Crasher — {5}{G} 5/4 Werewolf; costs {2} less if
-/// you control a Wolf or Werewolf. Back: 6/5; a Wolf/Werewolf you control
-/// dying → draw a card.
+/// you control a Wolf or Werewolf. Back: 6/5; it or another Wolf/Werewolf you
+/// control dying → draw a card.
 pub fn wolfkin_outcast() -> CardDefinition {
     let wolf_or_werewolf = SelectionRequirement::HasCreatureType(CreatureType::Wolf).or(
         SelectionRequirement::HasCreatureType(CreatureType::Werewolf),
@@ -291,10 +291,10 @@ pub fn wolfkin_outcast() -> CardDefinition {
         "Wedding Crasher",
         (6, 5),
         vec![],
-        // "this creature or another Wolf/Werewolf you control dies" — modeled
-        // as the "another of yours" leave-trigger (the self case is rare).
+        // "this creature or another Wolf or Werewolf you control dies" — the
+        // back face is a Werewolf, so one YourControl scope covers both.
         vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: wolf_or_werewolf.clone(),

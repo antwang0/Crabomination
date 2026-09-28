@@ -1006,6 +1006,24 @@ fn wolfkin_outcast_cost_reduction() {
     assert!(g.battlefield_find(id).is_some(), "resolved onto the battlefield");
 }
 
+/// Wedding Crasher — "Whenever this creature or another Wolf or Werewolf you
+/// control dies, draw a card": its own death draws (it listened only for
+/// another's).
+#[test]
+fn wedding_crasher_draws_on_its_own_death() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let id = g.add_card_to_battlefield(0, catalog::wolfkin_outcast());
+    let mut ev = Vec::new();
+    g.transform_permanent(id, &mut ev);
+    let hand = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
 /// Galedrifter's disturb back is the 2/2 flying Waildrifter.
 #[test]
 fn galedrifter_disturb_back() {
