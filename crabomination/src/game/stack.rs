@@ -4474,17 +4474,21 @@ impl GameState {
         }
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
-        // creature so the must-attack requirement lifts.
+        // creature so the must-attack requirement lifts. CR 800.4m — a
+        // departed goader's turn "would have begun" at this boundary, so
+        // their goad lifts here too rather than never (zero in a duel).
+        let departed = self.departed_seats_skipped_into_this_turn();
+        let ends = |g: usize| g == p || departed & (1u64 << (g & 63)) != 0;
         // Every write below is gated on the field not already holding the
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.
         for card in self.battlefield.iter_mut() {
-            if card.cold_any(|k| k.goaded_by.contains(&p) && !k.goad_for_the_game) {
-                card.goaded_by.retain(|&g| g != p);
+            if card.cold_any(|k| k.goaded_by.iter().any(|&g| ends(g)) && !k.goad_for_the_game) {
+                card.goaded_by.retain(|&g| !ends(g));
             }
             // CR 701.35 — detain lasts "until your next turn"; lift it when the
             // detaining player's (= active player p's) turn begins.
-            if card.detained_by == Some(p) {
+            if card.detained_by.is_some_and(ends) {
                 card.detained_by = None;
             }
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.

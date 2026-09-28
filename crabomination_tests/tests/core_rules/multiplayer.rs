@@ -6645,3 +6645,33 @@ fn cr_800_4a_a_departed_players_until_exile_ends_but_a_leave_trigger_does_not_fi
     assert_eq!(back.controller, 2, "under its owner's control");
     assert!(g.exile.iter().any(|c| c.id == ringed), "the Oblivion Ring's card stays exiled");
 }
+
+/// CR 800.4m — "until that player's next turn" lasts until that turn *would
+/// have begun*, neither ending at once nor lasting for ever. A goad (CR
+/// 701.15) from a player who then left the game was lifted only when its
+/// goader's turn began, which never happens, so the creature stayed goaded
+/// for the rest of the game.
+#[test]
+fn cr_800_4m_a_departed_goaders_goad_lifts_when_their_turn_would_have_begun() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = multi_player_game(4);
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().goaded_by.push(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.concede(1);
+    assert!(g.is_goaded(g.battlefield_find(bear).unwrap()), "still goaded after its goader left");
+    for _ in 0..400 {
+        if g.active_player_idx == 2 {
+            break;
+        }
+        let who = g.priority.player_with_priority;
+        if g.pending_decision.is_some() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap_or_else(|e| panic!("seat {who}: {e:?}"));
+    }
+    assert_eq!(g.active_player_idx, 2, "seat 1's turn was skipped");
+    assert!(!g.is_goaded(g.battlefield_find(bear).unwrap()), "the goad ended where seat 1's turn would have begun");
+}
