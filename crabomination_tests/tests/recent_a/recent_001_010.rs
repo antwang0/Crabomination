@@ -3743,6 +3743,15 @@ mod recent {
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == gy), "exiled the gy creature");
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "dug a card to hand");
+
+        // "If a card is put into exile this way": no creature card, no dig.
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.move_card_to_battlefield_for_test(0, catalog::corpse_appraiser());
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].library.len(), 3, "nothing exiled, nothing looked at");
     }
 
     /// The Wandering Rescuer gives other tapped creatures you control hexproof.

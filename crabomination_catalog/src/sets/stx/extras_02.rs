@@ -2384,35 +2384,38 @@ pub fn awesome_presentation() -> CardDefinition {
 // ── Rise of Extus (STX 2021 Lorehold rare sorcery) ──────────────────────────
 
 /// Rise of Extus — {4}{W/B}{W/B} Sorcery. "Exile target creature. Exile up to
-/// one target instant or sorcery card from a graveyard. Learn." (The second,
-/// optional exile auto-picks an instant/sorcery from any graveyard.)
+/// one target instant or sorcery card from a graveyard. Learn." The graveyard
+/// card is optional target slot 1.
 pub fn rise_of_extus() -> CardDefinition {
     let wb = || hybrid(Color::White, Color::Black);
     CardDefinition {
         name: "Rise of Extus",
         cost: cost(&[generic(4), wb(), wb()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Exile target creature.
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: ZoneDest::Exile,
-            },
-            // Exile up to one instant/sorcery card from a graveyard.
-            Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::EachPlayer,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                }),
-                to: ZoneDest::Exile,
-            },
-            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn {
-                who: PlayerRef::You,
-            },
-        ]),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                // Exile target creature.
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Exile,
+                },
+                // Exile up to one target instant or sorcery card from a graveyard.
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .from_any_graveyard(),
+                    },
+                    to: ZoneDest::Exile,
+                },
+                // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
+                Effect::Learn {
+                    who: PlayerRef::You,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

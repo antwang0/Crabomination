@@ -2960,7 +2960,7 @@ fn rise_of_extus_exiles_a_creature_and_a_graveyard_spell_then_learns() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(crabomination::game::types::Target::Permanent(opp_bear)),
-        additional_targets: vec![],
+        additional_targets: vec![crabomination::game::types::Target::Permanent(bolt)],
         mode: None,
         x_value: None,
     }).expect("Rise of Extus castable for {4}{W/B}{W/B}");

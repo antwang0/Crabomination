@@ -2395,17 +2395,12 @@ pub fn angelic_quartermaster() -> CardDefinition {
 /// return up to three target land cards from your graveyard to your hand.
 pub fn slogurk_the_overslime() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
-    // "up to three target land cards from your graveyard" — auto-pulled.
-    let return_lands = Effect::Move {
-        what: Selector::Take {
-            inner: Box::new(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: crate::card::Zone::Graveyard,
-                filter: SelectionRequirement::Land,
-            }),
-            count: Box::new(Value::Const(3)),
-        },
-        to: ZoneDest::Hand(PlayerRef::You),
+    // "up to three target land cards from your graveyard".
+    let return_lands = Effect::ApplyToTargets {
+        max_targets: 3,
+        min_targets: 0,
+        filter: SelectionRequirement::Land.from_your_graveyard(),
+        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
     };
     CardDefinition {
         name: "Slogurk, the Overslime",
@@ -10190,10 +10185,9 @@ pub fn voltage_surge() -> CardDefinition {
     }
 }
 
-/// Corpse Appraiser — {U}{B}{R} 3/3 Vampire Rogue. ETB exile a creature card
-/// from a graveyard, then dig three (one to hand, the rest to your graveyard).
-/// (The "only if a card was exiled" gate is approximated — the dig is
-/// unconditional.)
+/// Corpse Appraiser — {U}{B}{R} 3/3 Vampire Rogue. ETB exile up to one target
+/// creature card from a graveyard; if one was exiled, dig three (one to hand,
+/// the rest to your graveyard).
 pub fn corpse_appraiser() -> CardDefinition {
     CardDefinition {
         name: "Corpse Appraiser",
@@ -10205,22 +10199,25 @@ pub fn corpse_appraiser() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::EachPlayer,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
-                }),
-                to: ZoneDest::Exile,
-            },
-            Effect::LookPickToHand(Box::new(LookPick {
-                who: PlayerRef::You,
-                count: Value::Const(3),
-                rest_to_graveyard: true,
-    ..Default::default()
-})),
-        ]))],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature.from_any_graveyard()),
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::LastMoved),
+                    then: Box::new(Effect::LookPickToHand(Box::new(LookPick {
+                        who: PlayerRef::You,
+                        count: Value::Const(3),
+                        rest_to_graveyard: true,
+                        ..Default::default()
+                    }))),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
         ..Default::default()
     }
 }
