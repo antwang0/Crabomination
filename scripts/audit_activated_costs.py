@@ -28,12 +28,18 @@ COST_WORD = re.compile(
 
 def faces():
     out = {}
-    with gzip.open(ORACLE, "rt") as f:
-        for line in f:
-            d = json.loads(line)
-            for face in d.get("card_faces") or [d]:
-                if "oracle_text" in face:
-                    out.setdefault(face["name"], face["oracle_text"])
+    try:
+        with gzip.open(ORACLE, "rt") as f:
+            cards = [json.loads(line) for line in f]
+    except FileNotFoundError:
+        # Offline: the committed per-card cache (scripts/oracle.py's).
+        import os
+        cache = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".scryfall_cache.json")
+        cards = [v for v in json.load(open(cache)).values() if isinstance(v, dict)]
+    for d in cards:
+        for face in d.get("card_faces") or [d]:
+            if "oracle_text" in face:
+                out.setdefault(face["name"], face["oracle_text"])
     return out
 
 
