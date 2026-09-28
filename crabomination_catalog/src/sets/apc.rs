@@ -1337,7 +1337,7 @@ pub fn urborg_uprising() -> CardDefinition {
             Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
-                filter: R::InGraveyard.and(R::Creature),
+                filter: R::InYourGraveyard.and(R::Creature),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),

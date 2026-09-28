@@ -828,7 +828,7 @@ pub fn font_of_return() -> CardDefinition {
         Effect::ApplyToTargets {
             max_targets: 3,
             min_targets: 0,
-            filter: R::Creature.and(R::InGraveyard),
+            filter: R::Creature.and(R::InYourGraveyard),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Hand(PlayerRef::You),
