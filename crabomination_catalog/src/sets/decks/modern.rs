@@ -15581,11 +15581,13 @@ pub fn wishclaw_talisman() -> CardDefinition {
                     filter: SelectionRequirement::Any,
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                // CR — an opponent gains control of Wishclaw afterward.
-                Effect::GainControl {
-                    what: Selector::This,
-                    to: Some(PlayerRef::EachOpponent),
-                    duration: Duration::Permanent,
+                // An opponent (one, chosen) gains control of Wishclaw.
+                Effect::ChooseOpponentThen {
+                    then: Box::new(Effect::GainControl {
+                        what: Selector::This,
+                        to: Some(PlayerRef::ChosenPlayerOfSource),
+                        duration: Duration::Permanent,
+                    }),
                 },
             ]),
             condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),

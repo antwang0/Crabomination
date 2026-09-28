@@ -234,11 +234,14 @@ pub fn devastating_mastery() -> CardDefinition {
             awaken: false,
             mana_cost: cost(&[generic(2), w(), w()]),
             effect_override: Some(Effect::Seq(vec![
-                Effect::PlayerReturnsPermanentsToHand {
-                    who: PlayerRef::EachOpponent,
-                    count: Value::Const(2),
-                    filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                    up_to: true,
+                // "An opponent chooses up to two …": one opponent.
+                Effect::ChooseOpponentThen {
+                    then: Box::new(Effect::PlayerReturnsPermanentsToHand {
+                        who: PlayerRef::ChosenPlayerOfSource,
+                        count: Value::Const(2),
+                        filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                        up_to: true,
+                    }),
                 },
                 sweep(),
             ])),

@@ -7035,3 +7035,36 @@ fn your_graveyard_returns_target_only_your_graveyard() {
         assert_eq!(slot0, Some(Target::Permanent(mine)), "{}", def.name);
     }
 }
+
+/// CR 102.2 — "an opponent draws a card" is ONE opponent, chosen as it
+/// resolves, not each of them: Baleful Mastery's alternative cost fed every
+/// opponent a card (three at a four-seat table); Fervent Mastery, Devastating
+/// Mastery and Wishclaw Talisman had the same `EachOpponent`.
+#[test]
+fn an_opponent_is_one_opponent() {
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for seat in 1..4 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before: Vec<usize> = (1..4).map(|s| g.players[s].hand.len()).collect();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Baleful Mastery for {1}{B}");
+    resolve_answering(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    let drawn: usize = (1..4).map(|s| g.players[s].hand.len() - before[s - 1]).sum();
+    assert_eq!(drawn, 1, "one opponent drew one card");
+}

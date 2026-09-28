@@ -177,9 +177,13 @@ pub fn baleful_mastery() -> CardDefinition {
             return_to_hand: None,
             sacrifice_permanents: None,
             effect_override: Some(Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(1),
+                // "An opponent draws a card": one, chosen as it resolves
+                // (ruling), not each of them.
+                Effect::ChooseOpponentThen {
+                    then: Box::new(Effect::Draw {
+                        who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                        amount: Value::Const(1),
+                    }),
                 },
                 // Same target-filtered slot 0 as the base effect, so the
                 // alt-cast path surfaces the "target creature or planeswalker"
@@ -2474,19 +2478,23 @@ pub fn fervent_mastery() -> CardDefinition {
             },
         ]
     };
-    let opponent_loot = vec![
-        Effect::DiscardAnyNumber {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            filter: SelectionRequirement::Any,
-            max: None,
-        },
-        Effect::Draw {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {
+    // "An opponent discards …, then draws that many": one opponent, chosen
+    // as it resolves.
+    let opponent_loot = vec![Effect::ChooseOpponentThen {
+        then: Box::new(Effect::Seq(vec![
+            Effect::DiscardAnyNumber {
+                who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                 filter: SelectionRequirement::Any,
-            })),
-        },
-    ];
+                max: None,
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {
+                    filter: SelectionRequirement::Any,
+                })),
+            },
+        ])),
+    }];
     let alt_effect: Vec<Effect> = opponent_loot.into_iter().chain(base()).collect();
     CardDefinition {
         name: "Fervent Mastery",
