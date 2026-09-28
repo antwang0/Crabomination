@@ -7006,9 +7006,10 @@ fn your_graveyard_returns_target_only_your_graveyard() {
     use crabomination::card::CardDefinition;
     use crabomination::effect::Effect;
     type Pick = fn(&CardDefinition) -> Effect;
+    type Card = fn() -> CardDefinition;
     let spell: Pick = |d| d.effect.clone();
     let trig: Pick = |d| d.triggered_abilities[0].effect.clone();
-    let rows: [(fn() -> CardDefinition, Pick, fn() -> CardDefinition); 13] = [
+    let rows: [(Card, Pick, Card); 13] = [
         (catalog::blood_fountain, |d| d.activated_abilities[0].effect.clone(), catalog::grizzly_bears),
         (catalog::monastery_messenger, trig, catalog::sol_ring),
         (catalog::queens_bay_paladin, trig, catalog::vampire_nighthawk),
