@@ -535,6 +535,32 @@ fn flame_of_anor_can_destroy_an_artifact() {
     assert!(!g.battlefield.iter().any(|c| c.id == rock), "destroyed the artifact");
 }
 
+/// CR 700.2a — "if you control a Wizard as you cast this spell, you may
+/// choose two": refused without one, both modes with Snapcaster out.
+#[test]
+fn flame_of_anor_chooses_two_with_a_wizard() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::flame_of_anor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let two = || GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![1, 2],
+        target: Some(Target::Permanent(rock)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    };
+    assert!(g.perform_action(two()).is_err(), "no Wizard: one mode");
+    g.add_card_to_battlefield(0, catalog::snapcaster_mage());
+    g.perform_action(two()).expect("a Wizard: two modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none() && g.battlefield_find(bear).is_none());
+}
+
 #[test]
 fn crackling_doom_pings_and_forces_a_sacrifice() {
     let mut g = two_player_game();

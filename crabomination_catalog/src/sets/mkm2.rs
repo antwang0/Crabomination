@@ -943,7 +943,11 @@ pub fn expose_the_culprit() -> CardDefinition {
         name: "Expose the Culprit",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
             Effect::TurnFaceUpFree {
                 what: target_filtered(R::Creature.and(R::FaceDown)),
                 if_cant: None,
@@ -963,7 +967,8 @@ pub fn expose_the_culprit() -> CardDefinition {
                     from_hand: false,
                 },
             ]),
-        ]),
+        ],
+        },
         ..Default::default()
     }
 }

@@ -29581,18 +29581,24 @@ pub fn izzet_charm() -> CardDefinition {
     }
 }
 
-/// Flame of Anor — {1}{U}{R} Instant. Choose one — target player draws two
-/// cards; destroy target artifact; or deal 5 damage to target creature. (The
-/// "choose two if you control a Wizard" rider is dropped.)
+/// Flame of Anor — {1}{U}{R} Instant. Choose one (two if you control a Wizard
+/// as you cast it) — target player draws two cards; destroy target artifact;
+/// or deal 5 damage to target creature.
 pub fn flame_of_anor() -> CardDefinition {
     use crate::effect::shortcut::target_filtered as tf;
     CardDefinition {
         name: "Flame of Anor",
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
+        modes_widen: Some(crate::card::ModesWiden::If(crate::effect::Predicate::SelectorExists(
+            Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(crate::card::CreatureType::Wizard)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+        ))),
+        effect: Effect::ChooseModesCast { min: 1, max: 1, allow_repeats: false, modes: vec![
             Effect::Draw {
-                who: Selector::Player(PlayerRef::Target(0)),
+                who: tf(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
             Effect::Destroy {
@@ -29602,7 +29608,7 @@ pub fn flame_of_anor() -> CardDefinition {
                 to: tf(SelectionRequirement::Creature),
                 amount: Value::Const(5),
             },
-        ]),
+        ] },
         ..Default::default()
     }
 }
