@@ -223,6 +223,27 @@ fn cayth_fabricates_and_proliferates() {
     assert_eq!(g.players[0].energy, 2, "proliferate adds energy");
 }
 
+/// "Other nontoken creatures you control have fabricate 1" — a cast Bears
+/// fabricates; a Servo token (and an opponent's Bears) doesn't.
+#[test]
+fn cayth_grants_fabricate_to_other_nontoken_creatures() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::cayth_famed_mechanist());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, bear, None).expect("bears");
+    let counters = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    let servos = named(&g, 0, "Servo").len();
+    assert_eq!(counters as usize + servos, 1, "the Bears fabricated once");
+    if servos == 1 {
+        assert_eq!(named(&g, 0, "Servo").len(), 1, "the Servo token doesn't fabricate");
+    }
+    let theirs = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    cast(&mut g, 1, theirs, None).expect("their bears");
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert!(named(&g, 1, "Servo").is_empty());
+}
+
 /// Conversion Apparatus — energy for mana of any colors.
 #[test]
 fn conversion_apparatus_converts() {

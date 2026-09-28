@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_satya.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Cayth, Famed Mechanist** — other nontoken creatures don't gain
-//!   fabricate.
 //! - **Filigree Racer** — the granted "jump-start" is a flashback for the
 //!   card's mana cost (no discard).
 //! - **Hourglass of the Lost** — it removes all its time counters (X is that
@@ -257,13 +255,19 @@ pub fn blaster_hulk() -> CardDefinition {
     }
 }
 
-/// Cayth, Famed Mechanist — fabricate 1; {2}, {T}: populate or proliferate.
-///
-/// Residual: other nontoken creatures don't gain fabricate.
+/// Cayth, Famed Mechanist — fabricate 1; other nontoken creatures you control
+/// have fabricate 1; {2}, {T}: populate or proliferate.
 pub fn cayth_famed_mechanist() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![fabricate(1)],
+        static_abilities: vec![StaticAbility {
+            description: "Other nontoken creatures you control have fabricate 1.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou).and(R::NotToken).and(R::OtherThanSource),
+                ability: Box::new(fabricate(1)),
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,

@@ -148,7 +148,7 @@ lists were picked.
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 5 carry residuals (Parnesse, Sinister Concierge, Syrix, Xander's Pact, Zndrsplt's Judgment) |
-| **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
+| **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
@@ -1320,7 +1320,7 @@ missing (`cmdr_satya.rs`). New primitives: `StaticEffect::EnergyGainDoubles`
 Ripper, Blaster Hulk's `self_cost_reduction_per`); `R::PowerExactlyXFromCost`
 (Localized Destruction under `WithX`); `Effect::TokenCopyTappedAttacking`, a
 kept attacking copy chained into a `DelayUntilWithCapture` pay-or-sacrifice
-(Satya). Residuals: **Cayth** doesn't grant fabricate; **Filigree Racer**'s
+(Satya). Residuals: **Filigree Racer**'s
 jump-start is a flashback without the discard; **Hourglass of the Lost**
 spends all its time counters; **Overclocked Electromancer** gets no
 excess-damage {E}; **Razorfield Ripper** reconfigures for {2} only; **Sphinx of

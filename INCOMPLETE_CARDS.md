@@ -2066,7 +2066,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
 | 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
-| 🟡 Cayth, Famed Mechanist | Creative Energy (M3C) | other nontoken creatures you control don't gain fabricate 1. |
 | 🟡 Filigree Racer | Creative Energy (M3C) | the granted jump-start is a flashback for the card's mana cost, without the discard. |
 | 🟡 Hourglass of the Lost | Creative Energy (M3C) | it removes all its time counters (X is that number), not a chosen X. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
