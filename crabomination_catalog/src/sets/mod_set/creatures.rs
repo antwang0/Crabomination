@@ -1491,7 +1491,7 @@ pub fn lilianas_specter() -> CardDefinition {
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
-                random: true,
+                random: false,
             },
         }],
         ..Default::default()

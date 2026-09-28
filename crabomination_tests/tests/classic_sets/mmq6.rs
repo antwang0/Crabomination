@@ -309,7 +309,8 @@ fn spiritual_focus_triggers_on_an_opponents_discard_spell() {
     g.add_card_to_battlefield(0, catalog::spiritual_focus());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::grizzly_bears());
-    let coercion = g.add_card_to_hand(1, catalog::mind_rot());
+    // A random discard, so the only scripted answers are Spiritual Focus's.
+    let coercion = g.add_card_to_hand(1, catalog::hymn_to_tourach());
     script(&mut g, vec![DecisionAnswer::Bool(true)]);
     g.active_player_idx = 1;
     g.step = TurnStep::PreCombatMain;
@@ -318,7 +319,7 @@ fn spiritual_focus_triggers_on_an_opponents_discard_spell() {
 }
 
 /// **CR 603.6 fan-out — the payoff triggers once per card discarded, not once
-/// per batch.** Mind Rot discards two, so Spiritual Focus pays twice.
+/// per batch.** Hymn to Tourach discards two, so Spiritual Focus pays twice.
 ///
 /// Regression: `OpponentCausedYouToDiscard` was missing from the trigger
 /// dispatcher's fan-out list, so a two-card discard minted one trigger.
@@ -328,7 +329,7 @@ fn spiritual_focus_pays_once_per_card_the_discard_spell_takes() {
     g.add_card_to_battlefield(0, catalog::spiritual_focus());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     g.add_card_to_hand(0, catalog::grizzly_bears());
-    let rot = g.add_card_to_hand(1, catalog::mind_rot());
+    let rot = g.add_card_to_hand(1, catalog::hymn_to_tourach());
     script(&mut g, vec![DecisionAnswer::Bool(false), DecisionAnswer::Bool(false)]);
     g.active_player_idx = 1;
     g.step = TurnStep::PreCombatMain;

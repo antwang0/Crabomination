@@ -3590,9 +3590,8 @@ pub fn cast_down() -> CardDefinition {
 
 /// Mind Rot — {2}{B} Sorcery. Target player discards two cards.
 ///
-/// Discard-at-target shape — `Effect::Discard` aimed at `Target(0)` so the
-/// caster picks the player. Random=true matches Hymn-style discard since
-/// the engine's chosen-discard primitive is for the *caster* picker only.
+/// `Effect::Discard` aimed at `Target(0)`; the discarding player chooses
+/// (it shipped as a random discard).
 pub fn mind_rot() -> CardDefinition {
     CardDefinition {
         name: "Mind Rot",
@@ -3604,7 +3603,7 @@ pub fn mind_rot() -> CardDefinition {
         effect: Effect::Discard {
             who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(2),
-            random: true,
+            random: false,
         },
         ..Default::default()
     }
@@ -45221,7 +45220,7 @@ pub fn tourach_dread_cantor() -> CardDefinition {
                 then: Box::new(Effect::Discard {
                     who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(2),
-                    random: false,
+                    random: true,
                 }),
                 else_: Box::new(Effect::Noop),
             }),
