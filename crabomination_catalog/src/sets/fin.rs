@@ -9776,7 +9776,7 @@ pub fn garland_knight_of_cornelia() -> CardDefinition {
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Library {
-                    who: PlayerRef::You,
+                    who: PlayerRef::OwnerOfMoved,
                     pos: crate::effect::LibraryPosition::Bottom,
                 },
             },

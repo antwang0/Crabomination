@@ -362,7 +362,7 @@ pub fn wayward_soul() -> CardDefinition {
             mana_cost: cost(&[u()]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
             },
             ..Default::default()
         }],

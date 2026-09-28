@@ -205,7 +205,7 @@ pub fn fell_horseman() -> CardDefinition {
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Library {
-                    who: PlayerRef::You,
+                    who: PlayerRef::OwnerOfMoved,
                     pos: LibraryPosition::Bottom,
                 },
             },
