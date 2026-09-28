@@ -133,7 +133,7 @@ fn gyrus_counts_mana_spent_and_raises_an_attacking_copy() {
     cast(&mut g, gyrus, None, Some(2)).expect("cast Gyrus for X=2");
     assert_eq!(g.battlefield_find(gyrus).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
     let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.add_card_to_graveyard(0, catalog::shivan_dragon()); // power 5: not lesser — a decoy
     g.clear_sickness(gyrus);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;

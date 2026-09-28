@@ -10950,11 +10950,9 @@ pub fn phyrexian_missionary() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
-                }),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
             else_: Box::new(Effect::Noop),
@@ -10964,7 +10962,7 @@ pub fn phyrexian_missionary() -> CardDefinition {
 }
 
 /// Soul Transfer — {1}{B}{B} Sorcery. Exile target creature or planeswalker; or
-/// return a creature or planeswalker card from your graveyard to your hand. (The
+/// return target creature or planeswalker card from your graveyard to your hand. (The
 /// "choose both if you control an artifact and an enchantment" rider is omitted.)
 pub fn soul_transfer() -> CardDefinition {
     CardDefinition {
@@ -10979,11 +10977,11 @@ pub fn soul_transfer() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
             Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                }),
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),

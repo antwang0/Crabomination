@@ -1801,11 +1801,17 @@ fn pulse_of_murasa_returns_creature_and_gains_six() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[0].life;
-    g.perform_action(GameAction::CastSpell {
+    // "target creature or land card from A graveyard" — an opponent's too.
+    let theirs = g.add_card_to_graveyard(1, catalog::forest());
+    assert!(g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a target is required");
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pulse castable");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "bear returned to hand");
+    let _ = theirs;
     assert_eq!(g.players[0].life, life + 6, "gained 6 life");
 }
 

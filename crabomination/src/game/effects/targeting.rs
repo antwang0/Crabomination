@@ -280,15 +280,21 @@ impl GameState {
             // out over a graveyard (Celestial Gatekeeper's "up to two target
             // Bird and/or Cleric cards") re-picked the card it already claimed
             // and stalled after one slot.
+            // The highest mana value among the legal cards (the earliest on a
+            // tie): a reanimation or regrowth takes the best card, not the
+            // first to die — what `Selector::Take`'s resolution-time pick
+            // already did for the untargeted bodies.
             for &p in &[primary_player, secondary_player] {
-                if let Some(c) = self.players[p]
+                let best = self.players[p]
                     .graveyard
                     .iter()
-                    .filter(|c| !avoid.contains(&c.id))
-                    .map(|c| Target::Permanent(c.id))
-                    .find(|t| is_legal(t))
-                {
-                    return Some(c);
+                    .filter(|c| !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id)))
+                    .fold(None::<&CardInstance>, |best, c| match best {
+                        Some(b) if b.definition.cost.cmc() >= c.definition.cost.cmc() => Some(b),
+                        _ => Some(c),
+                    });
+                if let Some(c) = best {
+                    return Some(Target::Permanent(c.id));
                 }
             }
         }
@@ -964,7 +970,7 @@ impl GameState {
                 // permanent that happens to match the filter; sweep
                 // graveyards first for those.
                 if found.is_none() && eff.prefers_graveyard_target() {
-                    found = first_legal_graveyard_card(self, is_legal_gy);
+                    found = best_legal_graveyard_card(self, is_legal_gy);
                 }
                 // Battlefield: prefer one not already picked by slot 0 or
                 // earlier slots to avoid double-targeting when the filter is
@@ -1084,7 +1090,7 @@ impl GameState {
                 // target creature") has no graveyard fallback, or Doom Blade
                 // was aimed at a creature card that had already died.
                 if found.is_none() && (eff.may_target_offboard_card() || req.mentions_offboard_zone()) {
-                    found = first_legal_graveyard_card(self, is_legal_gy);
+                    found = best_legal_graveyard_card(self, is_legal_gy);
                 }
                 found
             };
@@ -1102,7 +1108,8 @@ impl GameState {
     }
 }
 
-/// The first graveyard card, in seat order, that `is_legal` accepts.
+/// The graveyard card `is_legal` accepts with the highest mana value — the
+/// earliest in seat order on a tie (reanimation takes the best body).
 ///
 /// Two call sites in `auto_targets_for_effect_all_slots_kicked` wrote this as
 /// `players.iter().flat_map(..).map(..).find(..)`; the walk is per graveyard
@@ -1113,18 +1120,19 @@ impl GameState {
 /// [`GameState::requirement_on_graveyard_card`], which skips the walker's
 /// battlefield miss and re-find for a card the loop already holds (PERF
 /// `(-185)`).
-fn first_legal_graveyard_card(
+fn best_legal_graveyard_card(
     state: &GameState,
     is_legal: impl Fn(&CardInstance) -> bool,
 ) -> Option<Target> {
+    let mut best: Option<&CardInstance> = None;
     for p in state.players.iter() {
         for c in p.graveyard.iter() {
-            if is_legal(c) {
-                return Some(Target::Permanent(c.id));
+            if best.is_none_or(|b| c.definition.cost.cmc() > b.definition.cost.cmc()) && is_legal(c) {
+                best = Some(c);
             }
         }
     }
-    None
+    best.map(|c| Target::Permanent(c.id))
 }
 
 

@@ -11609,7 +11609,7 @@ pub fn sudden_edict() -> CardDefinition {
 /// pays the card's mana cost (CR 702.34a — the flashback cost here). It used
 /// to cast for {0}.
 pub fn snapcaster_mage() -> CardDefinition {
-    use crate::card::{Keyword, Zone};
+    use crate::card::Keyword;
     CardDefinition {
         name: "Snapcaster Mage",
         cost: cost(&[generic(1), u()]),
@@ -11624,14 +11624,10 @@ pub fn snapcaster_mage() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::GrantMayPlay {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    },
-                    Value::Const(1),
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
@@ -39237,16 +39233,15 @@ pub fn wrenn_and_six() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: crate::card::Zone::Graveyard,
-                            filter: SelectionRequirement::Land,
-                        }),
-                        count: Box::new(Value::Const(1)),
-                    },
-                    to: ZoneDest::Hand(PlayerRef::You),
+                // "Return up to one target land card from your graveyard."
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: crate::effect::shortcut::target_filtered(
+                            SelectionRequirement::Land.and(SelectionRequirement::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 },
                 ..Default::default()
             },
@@ -39850,7 +39845,7 @@ pub fn bogardan_hellkite() -> CardDefinition {
 }
 
 /// Sheoldred, Whispering One — {5}{B}{B} 6/6 Praetor with swampwalk. At your
-/// upkeep, return a creature card from your graveyard to the battlefield. At
+/// upkeep, return target creature card from your graveyard to the battlefield. At
 /// each opponent's upkeep, that player sacrifices a creature.
 pub fn sheoldred_whispering_one() -> CardDefinition {
     use crate::card::Supertype;
@@ -39874,14 +39869,9 @@ pub fn sheoldred_whispering_one() -> CardDefinition {
                     EventScope::YourControl,
                 ),
                 effect: Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: crate::card::Zone::Graveyard,
-                            filter: SelectionRequirement::Creature,
-                        }),
-                        count: Box::new(Value::Const(1)),
-                    },
+                    what: crate::effect::shortcut::target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,

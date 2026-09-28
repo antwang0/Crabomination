@@ -3888,7 +3888,12 @@ fn dawn_evangel_reanimates_on_aura_wearer_death() {
     let events = g.check_state_based_actions();
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == buried), "small creature returned to hand");
+    // Either small creature card is a legal target; the auto-target takes the
+    // highest mana value (the Bears that just died, MV 2).
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == buried || c.id == victim),
+        "small creature returned to hand"
+    );
 }
 
 /// Minion's Return reanimates the enchanted creature under your control when

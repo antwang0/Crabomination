@@ -850,8 +850,9 @@ fn wrenn_and_six_plus_one_returns_land_from_graveyard() {
     let mut g = two_player_game();
     let wrenn = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
     let land = g.add_card_to_graveyard(0, catalog::mountain());
+    // "Return up to one TARGET land card from your graveyard to your hand."
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-        card_id: wrenn, ability_index: 0, target: None, x_value: None,
+        card_id: wrenn, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None,
     }).expect("Wrenn +1");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "returned a land to hand");

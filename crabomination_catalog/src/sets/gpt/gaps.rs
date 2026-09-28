@@ -74,11 +74,11 @@ pub fn izzet_chronarch() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::one_of(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-            }),
+            what: crate::effect::shortcut::target_filtered(
+                R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InYourGraveyard),
+            ),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()

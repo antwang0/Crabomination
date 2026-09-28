@@ -5,7 +5,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, LandType, SelectionRequirement, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TriggeredAbility, Value, Zone,
+    Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
@@ -141,8 +141,7 @@ pub fn archfiend_of_the_dross() -> CardDefinition {
 }
 
 /// Seeds of Renewal — {6}{G} Sorcery with Undaunted. Return up to two target
-/// cards from your graveyard to your hand, then exile Seeds of Renewal. (The
-/// two returns auto-pick from the graveyard — no multi-target prompt.)
+/// cards from your graveyard to your hand, then exile Seeds of Renewal.
 pub fn seeds_of_renewal() -> CardDefinition {
     CardDefinition {
         name: "Seeds of Renewal",
@@ -152,16 +151,11 @@ pub fn seeds_of_renewal() -> CardDefinition {
             description: "This spell costs {1} less to cast for each opponent.",
             effect: StaticEffect::SelfCostReducedPerOpponent { per: 1 },
         }],
-        effect: Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Any,
-                },
-                Value::Const(2),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: SelectionRequirement::InYourGraveyard,
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
         },
         exile_on_resolve: true,
         ..Default::default()

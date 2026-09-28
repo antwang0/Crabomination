@@ -429,14 +429,23 @@ mod recent13 {
     #[test]
     fn seeds_of_renewal_returns_two_from_graveyard() {
         let mut g = two_player_game();
-        g.add_card_to_graveyard(0, catalog::grizzly_bears());
-        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let b = g.add_card_to_graveyard(0, catalog::lightning_bolt());
         let id = g.add_card_to_hand(0, catalog::seeds_of_renewal());
         g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
         g.players[0].mana_pool.add_colorless(5); // {6}{G} - {1} undaunted = {5}{G}
         g.priority.player_with_priority = 0;
         let hand_before = g.players[0].hand.len();
-        cast(&mut g, id);
+        // "Up to two TARGET cards from your graveyard."
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(b)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Seeds of Renewal on two cards");
+        drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "two cards returned (spell left hand)");
         assert!(g.exile.iter().any(|c| c.definition.name == "Seeds of Renewal"), "self-exiled");
     }

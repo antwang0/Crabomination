@@ -4,7 +4,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
-    StaticEffect, Subtypes, TriggeredAbility, Value, WardCost, Zone,
+    StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{LookPick, Duration, Effect, PlayerRef};
@@ -268,13 +268,10 @@ pub fn sphinx_of_forgotten_lore() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![on_attack(Effect::GrantFlashbackThisTurn {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-                },
-                Value::ONE,
+            what: crate::effect::shortcut::target_filtered(
+                R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InYourGraveyard),
             ),
         })],
         ..Default::default()

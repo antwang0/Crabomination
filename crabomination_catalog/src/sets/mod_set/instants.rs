@@ -1534,18 +1534,17 @@ pub fn moments_peace() -> CardDefinition {
 /// Pulse of Murasa — {2}{G} Instant. "Return target creature or land card
 /// from a graveyard to its owner's hand. You gain 6 life."
 pub fn pulse_of_murasa() -> CardDefinition {
-    use crate::card::Zone;
     CardDefinition {
         name: "Pulse of Murasa",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    zone: Zone::Graveyard,
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
-                }),
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Land)
+                        .and(SelectionRequirement::InGraveyard),
+                ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             Effect::GainLife {
