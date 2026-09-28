@@ -285,14 +285,16 @@ pub fn nut_collector() -> CardDefinition {
     }
 }
 
-/// Spellbane Centaur — {2}{G} 3/2 that walls off blue targeting.
+/// Spellbane Centaur — {2}{G} 3/2. Your creatures can't be targeted by blue spells
+/// or abilities from blue sources (hexproof from blue: its own controller's blue
+/// spells, which the printed text also stops, still target).
 pub fn spellbane_centaur() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control can't be the targets of blue spells or abilities.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                keyword: Keyword::Protection(Color::Blue),
+                keyword: Keyword::HexproofFromColor(Color::Blue),
             },
         }],
         ..creature("Spellbane Centaur", cost(&[generic(2), g()]), vec![CreatureType::Centaur], 3, 2)

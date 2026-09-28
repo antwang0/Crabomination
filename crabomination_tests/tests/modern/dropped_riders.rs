@@ -1679,3 +1679,16 @@ fn fervent_champion_discounts_equips_onto_it() {
     g.perform_action(GameAction::Equip { equipment: hammer, target: champ }).expect("equip {3} for {0}");
     assert_eq!(g.battlefield_find(hammer).unwrap().attached_to, Some(champ));
 }
+
+/// Spellbane Centaur — "Creatures you control can't be the targets of blue
+/// spells or abilities from blue sources." It granted protection from blue,
+/// which also stopped blue blockers and blue damage.
+#[test]
+fn spellbane_centaur_is_targeting_only() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::spellbane_centaur());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords().contains(&Keyword::HexproofFromColor(Color::Blue)));
+    assert!(!cp.keywords().contains(&Keyword::Protection(Color::Blue)), "blue creatures still block it");
+}
