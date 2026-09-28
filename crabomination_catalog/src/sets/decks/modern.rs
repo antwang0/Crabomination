@@ -5365,20 +5365,24 @@ pub fn cultivate() -> CardDefinition {
     }
 }
 
-/// Farseek — {1}{G} Sorcery. Search your library for a basic land
-/// card, put it onto the battlefield tapped.
-///
-/// Real Oracle is "Plains, Island, Swamp, or Mountain" — non-basic
-/// duals matter for fixing in a 3+ color deck. The cube only ships
-/// basics in `IsBasicLand`-filterable form, so we collapse to "any
-/// basic" (Rampant Growth's filter) for parity. Distinct factory
-/// retained for cube identity.
+/// Farseek — {1}{G} Sorcery. Search your library for a Plains, Island,
+/// Swamp, or Mountain card, put it onto the battlefield tapped — any land
+/// with one of those types (a nonbasic dual too), never a Forest.
 pub fn farseek() -> CardDefinition {
+    let typed = |t| SelectionRequirement::HasLandType(t);
     CardDefinition {
         name: "Farseek",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+        effect: search_to_battlefield(
+            SelectionRequirement::Land.and(
+                typed(LandType::Plains)
+                    .or(typed(LandType::Island))
+                    .or(typed(LandType::Swamp))
+                    .or(typed(LandType::Mountain)),
+            ),
+            true,
+        ),
         ..Default::default()
     }
 }
@@ -18306,10 +18310,10 @@ pub fn loot_the_pathfinder() -> CardDefinition {
 
 /// Brightglass Gearhulk — {G}{G}{W}{W} Artifact Creature — Construct 4/4.
 /// First strike, trample. ETB: search for up to two artifact/creature/
-/// enchantment cards with mana value 1 or less, put them into your hand.
+/// enchantment cards with mana value exactly 1, put them into your hand.
 pub fn brightglass_gearhulk() -> CardDefinition {
     use crate::effect::shortcut::etb;
-    let low_mv_permanent = SelectionRequirement::ManaValueAtMost(1).and(
+    let low_mv_permanent = SelectionRequirement::ManaValueExactly(1).and(
         SelectionRequirement::Artifact
             .or(SelectionRequirement::Creature)
             .or(SelectionRequirement::Enchantment),
@@ -49521,7 +49525,7 @@ pub fn monstrous_carabid() -> CardDefinition {
 }
 
 /// Shefet Monitor — {5}{G} 6/5 Lizard. Cycling {3}{G}; cycling it may
-/// fetch a basic land onto the battlefield.
+/// fetch a basic land or a Desert onto the battlefield.
 pub fn shefet_monitor() -> CardDefinition {
     CardDefinition {
         name: "Shefet Monitor",
@@ -49537,10 +49541,11 @@ pub fn shefet_monitor() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "Search for a basic land onto the battlefield?".into(),
+                description: "Search for a basic land or a Desert onto the battlefield?".into(),
                 body: Box::new(Effect::Search {
                     who: PlayerRef::You,
-                    filter: SelectionRequirement::IsBasicLand,
+                    filter: SelectionRequirement::IsBasicLand
+                        .or(SelectionRequirement::HasLandType(LandType::Desert)),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,

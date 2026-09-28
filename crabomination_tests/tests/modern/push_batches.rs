@@ -3450,13 +3450,14 @@ fn brightglass_gearhulk_etb_fetches_two_low_mv_permanents() {
     use crabomination::card::Keyword;
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Two MV-0 artifact creatures (legal fetch targets) + chaff lands.
-    let m1 = g.add_card_to_library(0, catalog::memnite());
-    let m2 = g.add_card_to_library(0, catalog::memnite());
+    // Two MV-1 artifacts (legal fetch targets), a MV-0 Memnite (not: the
+    // oracle is "mana value 1", exactly) and chaff lands.
+    let m1 = g.add_card_to_library(0, catalog::sol_ring());
+    let m2 = g.add_card_to_library(0, catalog::sol_ring());
+    let memnite = g.add_card_to_library(0, catalog::memnite());
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
-    // Script both tutors (AutoDecider would decline each search).
     g.decider = Box::new(ScriptedDecider::new(vec![
         DecisionAnswer::Search(Some(m1)),
         DecisionAnswer::Search(Some(m2)),
@@ -3467,8 +3468,9 @@ fn brightglass_gearhulk_etb_fetches_two_low_mv_permanents() {
     cast(&mut g, id);
     let r = g.battlefield_find(id).expect("Gearhulk on bf");
     assert!(r.has_keyword(&Keyword::FirstStrike) && r.has_keyword(&Keyword::Trample));
-    let memnites = g.players[0].hand.iter().filter(|c| c.definition.name == "Memnite").count();
-    assert_eq!(memnites, 2, "ETB tutors up to two MV-≤1 permanents to hand");
+    let rings = g.players[0].hand.iter().filter(|c| c.definition.name == "Sol Ring").count();
+    assert_eq!(rings, 2, "ETB tutors up to two MV-1 permanents to hand");
+    assert!(g.players[0].library.iter().any(|c| c.id == memnite), "a MV-0 card is not MV 1");
 }
 
 /// Mossborn Hydra is a {2}{G} 0/0 that enters with **one** +1/+1 counter and

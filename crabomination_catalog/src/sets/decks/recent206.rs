@@ -95,7 +95,7 @@ pub fn micromancer() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))
-                    .and(R::ManaValueAtMost(1)),
+                    .and(R::ManaValueExactly(1)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],

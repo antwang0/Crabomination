@@ -2338,3 +2338,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Mister Fantastic | The Fantastic Four (MSC) | the copies keep the original's targets, and an activated ability of yours is a legal target too. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
+
+## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
+
+Fixed: Farseek (any basic → Plains/Island/Swamp/Mountain, nonbasics too), Gift of
+Estates (basic Plains → any Plains), Gatecreeper Vine (+ Gate), Shefet Monitor
+(+ Desert), Invasion of Theros (+ Aura, Demigod), Brightglass Gearhulk and
+Micromancer ("mana value 1" was ≤ 1). Residual: Tallowisp fetches any Aura, not
+only one "with enchant creature".

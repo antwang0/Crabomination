@@ -3,7 +3,8 @@
 //! transformed back face enters. Tests in `crabomination/src/tests/mom.rs`.
 
 use crate::card::{
-    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope,
+    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
+    EventKind, EventScope,
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
@@ -195,8 +196,7 @@ pub fn invasion_of_ravnica() -> CardDefinition {
 }
 
 /// Invasion of Theros // Ephara, Ever-Sheltering — {2}{W} Siege, defense 4.
-/// ETB: search your library for a God card to hand (the Aura/Demigod options
-/// are omitted). Back: a 4/4 God that draws when another enchantment you
+/// ETB: search your library for an Aura, God, or Demigod card to hand. Back: a 4/4 God that draws when another enchantment you
 /// control enters.
 pub fn invasion_of_theros() -> CardDefinition {
     let ephara = CardDefinition {
@@ -232,7 +232,9 @@ pub fn invasion_of_theros() -> CardDefinition {
         defense: 4,
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
-            filter: SelectionRequirement::HasCreatureType(CreatureType::God),
+            filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                .or(SelectionRequirement::HasCreatureType(CreatureType::God))
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Demigod)),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         back_face: Some(Box::new(ephara)),

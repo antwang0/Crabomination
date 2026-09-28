@@ -1638,8 +1638,7 @@ pub fn idyllic_tutor() -> CardDefinition {
 pub fn gift_of_estates() -> CardDefinition {
     let one_plains = || Effect::Search {
         who: PlayerRef::You,
-        filter: SelectionRequirement::IsBasicLand
-            .and(SelectionRequirement::HasLandType(LandType::Plains)),
+        filter: SelectionRequirement::HasLandType(LandType::Plains),
         to: ZoneDest::Hand(PlayerRef::You),
     };
     CardDefinition {

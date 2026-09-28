@@ -155,8 +155,8 @@ pub fn overgrown_battlement() -> CardDefinition {
 }
 
 /// Gatecreeper Vine — {1}{G} 0/2 Plant. Defender. ETB: you may search your
-/// library for a basic land card, reveal it, put it into your hand, then
-/// shuffle. (The "or a Gate card" clause is dropped.)
+/// library for a basic land card or a Gate card, reveal it, put it into your
+/// hand, then shuffle.
 pub fn gatecreeper_vine() -> CardDefinition {
     let mut c = wall(
         "Gatecreeper Vine",
@@ -168,7 +168,7 @@ pub fn gatecreeper_vine() -> CardDefinition {
     );
     c.triggered_abilities = vec![etb(Effect::Search {
         who: PlayerRef::You,
-        filter: R::IsBasicLand,
+        filter: R::IsBasicLand.or(R::HasLandType(crate::card::LandType::Gate)),
         to: ZoneDest::Hand(PlayerRef::You),
     })];
     c

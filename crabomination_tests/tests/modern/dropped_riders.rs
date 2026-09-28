@@ -2582,3 +2582,65 @@ fn block_only_flyers_and_boseiju_enters_tapped() {
     assert!(g.battlefield_find(bos).unwrap().tapped, "tapped as it entered");
     assert!(g.stack.is_empty(), "no enters-tapped trigger");
 }
+
+/// Search filters read against the oracle (`scripts/audit_search_filters.py`):
+/// Farseek takes a nonbasic Swamp–Mountain and never a Forest; Gift of Estates
+/// any Plains card; Gatecreeper Vine a Gate; Shefet Monitor a Desert; Invasion
+/// of Theros an Aura. The library holds only the bait and the printed type.
+#[test]
+fn search_filters_match_the_printed_card_types() {
+    // Farseek: Blood Crypt fetched, the Forest left behind.
+    let mut g = main_phase();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let crypt = g.add_card_to_library(0, catalog::blood_crypt());
+    let id = g.add_card_to_hand(0, catalog::farseek());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, id, None).expect("Farseek");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(crypt).is_some(), "a nonbasic Swamp Mountain");
+    assert!(g.players[0].library.iter().any(|c| c.id == forest), "never a Forest");
+
+    // Gift of Estates: a nonbasic Plains (Hallowed Fountain) is a Plains card.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::forest());
+    let fountain = g.add_card_to_library(0, catalog::hallowed_fountain());
+    let id = g.add_card_to_hand(0, catalog::gift_of_estates());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, id, None).expect("Gift of Estates");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fountain), "a nonbasic Plains");
+
+    // Gatecreeper Vine: a Gate card.
+    let mut g = main_phase();
+    let gate = g.add_card_to_library(0, catalog::azorius_guildgate());
+    let id = g.add_card_to_hand(0, catalog::gatecreeper_vine());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, id, None).expect("Gatecreeper Vine");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == gate), "a Gate card");
+
+    // Shefet Monitor: cycling fetches a Desert.
+    let mut g = main_phase();
+    // Cycling draws first: an Island on either end of the library.
+    g.add_card_to_library(0, catalog::island());
+    let desert = g.add_card_to_library(0, catalog::desert_of_the_fervent());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::shefet_monitor());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Search(Some(desert)),
+    ]));
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(desert).is_some(), "a Desert");
+
+    // Invasion of Theros: an Aura card.
+    let mut g = main_phase();
+    let aura = g.add_card_to_library(0, catalog::pacifism());
+    let id = g.add_card_to_hand(0, catalog::invasion_of_theros());
+    g.players[0].mana_pool.add(Color::White, 3);
+    cast(&mut g, id, None).expect("Invasion of Theros");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "an Aura card");
+}
