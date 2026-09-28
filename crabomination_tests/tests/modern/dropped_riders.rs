@@ -2428,3 +2428,92 @@ fn any_target_is_not_any_permanent() {
     })
     .expect("a creature and a player");
 }
+
+// ── "Whenever you discard / sacrifice one or more …" (CR 603.2c) ───────────
+
+/// Resolve `effect` as seat 0's ability of `src`, then dispatch its events —
+/// one batch.
+fn resolve_batch(g: &mut GameState, src: CardId, effect: crabomination::effect::Effect) {
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    let events = g.resolve_effect(&effect, &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(g);
+}
+
+fn discard_two() -> crabomination::effect::Effect {
+    crabomination::effect::Effect::Discard {
+        who: crabomination::effect::Selector::You,
+        amount: crabomination::effect::Value::Const(2),
+        random: false,
+    }
+}
+
+/// Inti, Seneschal of the Sun: a two-card discard exiles ONE library card.
+#[test]
+fn cr_603_2c_inti_exiles_one_card_for_a_two_card_discard() {
+    let mut g = main_phase();
+    let inti = g.add_card_to_battlefield(0, catalog::inti_seneschal_of_the_sun());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let exiled = g.exile.len();
+    resolve_batch(&mut g, inti, discard_two());
+    assert_eq!(g.players[0].graveyard.len(), 2, "both discarded");
+    assert_eq!(g.exile.len(), exiled + 1, "one trigger for the batch");
+}
+
+/// Captain Howler, Sea Scourge: one trigger, +2/+0 for each card discarded.
+#[test]
+fn cr_603_2c_captain_howler_pumps_by_the_batch_once() {
+    let mut g = main_phase();
+    let howler = g.add_card_to_battlefield(0, catalog::captain_howler_sea_scourge());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    resolve_batch(&mut g, howler, discard_two());
+    let power: i32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| g.computed_permanent(c.id).unwrap().power - c.definition.power)
+        .sum();
+    assert_eq!(power, 4, "+2/+0 per card, once");
+}
+
+/// Conspiracy Theorist: a two-card nonland discard is ONE "exile one of them"
+/// trigger.
+#[test]
+fn cr_603_2c_conspiracy_theorist_exiles_one_of_them() {
+    let mut g = main_phase();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(ct, 0, None);
+    let events = g.resolve_effect(&discard_two(), &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    assert_eq!(g.players[0].graveyard.len(), 2, "both discarded");
+    assert_eq!(g.stack.len(), 1, "one trigger for the batch, not one per card");
+}
+
+/// Camellia, the Seedmiser: two Foods sacrificed at once make one Squirrel.
+#[test]
+fn cr_603_2c_camellia_makes_one_squirrel_per_food_batch() {
+    let mut g = main_phase();
+    let cam = g.add_card_to_battlefield(0, catalog::camellia_the_seedmiser());
+    let food = crabomination::game::effects::food_token();
+    g.add_token_to_battlefield(0, &food);
+    g.add_token_to_battlefield(0, &food);
+    resolve_batch(
+        &mut g,
+        cam,
+        crabomination::effect::Effect::SacrificeAllMatching {
+            who: crabomination::effect::Selector::You,
+            filter: crabomination::card::SelectionRequirement::HasArtifactSubtype(
+                crabomination::card::ArtifactSubtype::Food,
+            ),
+        },
+    );
+    let squirrels = g.battlefield.iter().filter(|c| c.definition.name == "Squirrel").count();
+    assert_eq!(squirrels, 1);
+}

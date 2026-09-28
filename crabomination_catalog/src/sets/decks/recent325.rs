@@ -386,7 +386,9 @@ pub fn camellia_the_seedmiser() -> CardDefinition {
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasArtifactSubtype(ArtifactSubtype::Food),
-                }),
+                })
+                // CR 603.2c — "one or more Foods": one Squirrel.
+                .once_per_batch(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

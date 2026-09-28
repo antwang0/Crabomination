@@ -788,7 +788,13 @@ pub fn captain_howler_sea_scourge() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::ManaAndLife(cost(&[generic(2)]), 2))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            // CR 603.2c — one trigger for the discard, +2/+0 per card.
+            event: {
+                let mut spec =
+                    EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl).once_per_batch();
+                spec.batch_counts_subjects = true;
+                spec
+            },
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::TargetFiltered { slot: 0, filter: R::Creature },

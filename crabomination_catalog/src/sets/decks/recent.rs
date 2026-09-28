@@ -5364,7 +5364,8 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+                // CR 603.2c — "one or more cards": one card exiled.
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl).once_per_batch(),
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),

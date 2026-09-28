@@ -1470,9 +1470,9 @@ pub fn professor_onyx() -> CardDefinition {
 /// discard" compound cost is modeled as nested `MayPay {1}` →
 /// `MayDiscard 1` (a player could pay the {1} then decline the discard,
 /// wasting the mana — the draw is still correctly gated on the
-/// discard); (2) the discard trigger fires once per nonland card
-/// discarded rather than once per one-or-more batch, so a multi-card
-/// discard offers the exile choice per card instead of "one of them".
+/// discard); (2) the discard trigger fires once per batch (CR 603.2c)
+/// and offers the batch's first nonland card as "one of them" — the
+/// player doesn't pick which.
 /// The exile + cast permission is Move→Exile + `GrantMayPlay`
 /// (pay-own-cost, this turn) on the just-moved card.
 pub fn conspiracy_theorist() -> CardDefinition {
@@ -1513,7 +1513,9 @@ pub fn conspiracy_theorist() -> CardDefinition {
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Nonland,
-                    }),
+                    })
+                    // CR 603.2c — one trigger for the discard.
+                    .once_per_batch(),
                 effect: Effect::MayDo {
                     description: "Exile the discarded card? You may cast it this turn.".into(),
                     body: Box::new(Effect::Seq(vec![
