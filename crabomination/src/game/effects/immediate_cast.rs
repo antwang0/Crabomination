@@ -117,11 +117,15 @@ impl GameState {
             .find_card_anywhere(card_id)
             .map(|c| c.definition.arc());
         let Some(card_def) = card_def else { return Ok(()); };
-        let auto_target = self.auto_target_for_effect_avoiding(
-            &card_def.effect,
-            ctx.controller,
-            Some(card_id),
-        );
+        // CR 601.2c — an untargeted spell names no target. The auto-picker
+        // guesses one for a mass effect too, and a stale `target` on the
+        // stack item made Devastation Tide a "spell with a single target"
+        // for Radiant Performer (an 8-seat pod copied it 431 times).
+        let auto_target = if card_def.effect.requires_target() {
+            self.auto_target_for_effect_avoiding(&card_def.effect, ctx.controller, Some(card_id))
+        } else {
+            None
+        };
         // CR 707.12 — `copy` casts a materialized copy (the original
         // stays put); the copy ceases to exist off the stack.
         let cast_id = if *copy {

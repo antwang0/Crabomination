@@ -5638,12 +5638,20 @@ impl GameState {
                     }),
                     // CR 115.7 — "target spell with a single target": exactly
                     // one filled slot (Ricochet Trap).
-                    R::SpellWithSingleTarget => self.stack.iter().any(|si| {
-                        matches!(
-                            si,
-                            StackItem::Spell { card: c, target: Some(_), additional_targets, .. }
-                                if c.id == card.id && additional_targets.is_empty()
-                        )
+                    // "Targets only a single permanent or player" (Radiant
+                    // Performer): the spell must actually target, once, and
+                    // at a permanent on the battlefield or a player.
+                    R::SpellWithSingleTarget => self.stack.iter().any(|si| match si {
+                        StackItem::Spell { card: c, target: Some(t), additional_targets, .. }
+                            if c.id == card.id && additional_targets.is_empty() =>
+                        {
+                            c.definition.effect.requires_target()
+                                && match t {
+                                    Target::Player(_) => true,
+                                    Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                                }
+                        }
+                        _ => false,
                     }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).

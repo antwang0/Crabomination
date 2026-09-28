@@ -5934,6 +5934,42 @@ fn cr_707_10_radiant_performer_copies_for_every_other_target() {
     assert_eq!(g.players[1].life, 18, "and the opponent");
 }
 
+/// CR 601.2c — a spell cast for free from a graveyard (Diluvian Primordial)
+/// names no target when it has none, so Radiant Performer can't take an
+/// untargeted Devastation Tide as "a spell with a single target". The free
+/// cast used to auto-pick one, and an 8-seat pod copied the Tide 431 times
+/// (seed 3308021).
+#[test]
+fn cr_601_2c_a_free_cast_untargeted_spell_names_no_target() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tide = g.add_card_to_graveyard(1, catalog::devastation_tide());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let prim = g.add_card_to_hand(0, catalog::diluvian_primordial());
+    flood(&mut g, 0);
+    cast_with(&mut g, 0, prim, None).expect("Primordial");
+    let on_stack = |g: &GameState| {
+        g.stack.iter().find_map(|si| match si {
+            StackItem::Spell { card, target, .. } if card.id == tide => Some(target.clone()),
+            _ => None,
+        })
+    };
+    for _ in 0..40 {
+        if on_stack(&g).is_some() || g.stack.is_empty() && g.battlefield_find(prim).is_some() && g.players[1].graveyard.iter().all(|c| c.id != tide) {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(on_stack(&g), Some(None), "the Tide is on the stack with no target");
+    let rp = g.add_card_to_hand(0, catalog::radiant_performer());
+    flood(&mut g, 0);
+    let _ = cast_with(&mut g, 0, rp, None);
+    let tides = g.stack.iter().filter(|si| matches!(si, StackItem::Spell { card, .. } if card.definition.name == "Devastation Tide")).count();
+    assert!(tides <= 1, "no copies of an untargeted spell: {tides}");
+}
+
 /// CR 208.2 — Living Lore's P/T is the exiled card's mana value.
 #[test]
 fn cr_208_2_living_lore_is_as_big_as_the_card_it_exiled() {
