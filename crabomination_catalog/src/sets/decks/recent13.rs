@@ -125,13 +125,12 @@ pub fn archfiend_of_the_dross() -> CardDefinition {
                 ]),
             },
             TriggeredAbility {
-                // "Its controller loses 2 life." The scope already restricts to
-                // opponents' creatures, so the loser is an opponent; `EachOpponent`
-                // is exact in 1v1 (a dead creature's `ControllerOf` no longer
-                // resolves from the graveyard).
+                // "Its controller loses 2 life" — that one opponent, not the
+                // table (CR 603.10: `ControllerOf` reads the dead creature's
+                // last-known controller, else its owner).
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                     amount: Value::Const(2),
                 },
             },

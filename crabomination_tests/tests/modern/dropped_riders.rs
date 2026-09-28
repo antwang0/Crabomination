@@ -3150,3 +3150,24 @@ fn owners_hand_bounces_go_to_the_owner() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == lions), "the stolen Lions go home");
 }
+
+/// Archfiend of the Dross: "whenever a creature an opponent controls dies,
+/// its controller loses 2 life" — that seat only. It was `EachOpponent`,
+/// exact in a duel and the whole table in a pod.
+#[test]
+fn archfiend_of_the_dross_drains_only_the_dead_creatures_controller() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = crabomination::game::multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::archfiend_of_the_dross());
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let theirs = crabomination::card::SelectionRequirement::Creature
+        .and(crabomination::card::SelectionRequirement::ControlledByOpponent);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::EachPermanent(theirs) }, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_none());
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    assert_eq!(life[2], life[1] - 2, "seat 2 lost 2");
+    assert_eq!(life[1], life[3], "the other opponents didn't");
+}
