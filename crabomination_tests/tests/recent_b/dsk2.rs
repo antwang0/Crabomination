@@ -48,24 +48,26 @@ fn stock_delirium(g: &mut GameState) {
     }
 }
 
-/// Let's Play a Game runs one mode bare and every mode on delirium.
+/// CR 700.2a — Let's Play a Game chooses one mode bare and any number on
+/// delirium, as it is cast.
 #[test]
 fn lets_play_a_game_escalates_on_delirium() {
     let mut g = main_phase();
     for _ in 0..2 {
         g.add_card_to_hand(1, catalog::island());
     }
-    stock_delirium(&mut g);
     let spell = g.add_card_to_hand(0, catalog::lets_play_a_game());
     flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpell {
+    let two = |spell| GameAction::CastSpellSpree {
         card_id: spell,
+        spree_modes: vec![1, 2],
         target: None,
         additional_targets: vec![],
-        mode: None,
         x_value: None,
-    })
-    .expect("cast");
+    };
+    assert!(g.perform_action(two(spell)).is_err(), "no delirium: one mode");
+    stock_delirium(&mut g);
+    g.perform_action(two(spell)).expect("delirium: both");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "the discard mode ran");
     assert_eq!(g.players[1].life, 17, "and so did the drain mode");

@@ -32,7 +32,8 @@ fn legend(
 }
 
 /// Let's Play a Game — {3}{B} Sorcery. Delirium turns the single mode into
-/// "choose one or more".
+/// "choose one or more" — checked as it is cast, when the modes are chosen
+/// (CR 700.2a).
 pub fn lets_play_a_game() -> CardDefinition {
     let modes = || {
         vec![
@@ -58,11 +59,8 @@ pub fn lets_play_a_game() -> CardDefinition {
         name: "Let's Play a Game",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::If {
-            cond: Predicate::DeliriumActive { who: PlayerRef::You },
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1, 2], modes: modes() }),
-            else_: Box::new(Effect::ChooseMode(modes())),
-        },
+        modes_widen: Some(crate::card::ModesWiden::If(Predicate::DeliriumActive { who: PlayerRef::You })),
+        effect: Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false },
         ..Default::default()
     }
 }
