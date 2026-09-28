@@ -339,10 +339,19 @@ pub fn blatant_thievery() -> CardDefinition {
     sorcery(
         "Blatant Thievery",
         cost(&[generic(4), u(), u(), u()]),
-        Effect::GainControl {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Permanent },
-            to: None,
-            duration: Duration::Permanent,
+        // "For each opponent, gain control of target permanent that player
+        // controls" — one target per opponent (CR 601.2c).
+        Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 15,
+                min_targets: 1,
+                filter: R::Permanent.and(R::ControlledByOpponent),
+                effect: Box::new(Effect::GainControl {
+                    what: Selector::Target(0),
+                    to: None,
+                    duration: Duration::Permanent,
+                }),
+            }),
         },
     )
 }

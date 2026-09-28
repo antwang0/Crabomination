@@ -7122,3 +7122,51 @@ fn cr_115_1_ink_eyes_targets_the_damaged_players_graveyard() {
     assert!(g.battlefield_find(victims).is_some_and(|c| c.controller == 0), "the damaged player's card");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bystander), "the bystander's stays");
 }
+
+/// CR 601.2c — Blatant Thievery takes "target permanent that player
+/// controls" for EACH opponent: at 3 seats it steals one from each, and two
+/// targets under the same opponent are not a legal choice.
+#[test]
+fn cr_601_2c_blatant_thievery_takes_one_per_opponent() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::craw_wurm());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let fund = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.players[0].mana_pool.add_colorless(4);
+    };
+    let same = g.add_card_to_hand(0, catalog::blatant_thievery());
+    fund(&mut g);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: same,
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(a2)],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "two targets under one opponent"
+    );
+    g.players[0].mana_pool = Default::default();
+    let spell = g.add_card_to_hand(0, catalog::blatant_thievery());
+    fund(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("one per opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(a2).unwrap().controller, 1);
+}
