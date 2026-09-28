@@ -609,6 +609,31 @@ mod answer_log_tests {
 }
 
 #[cfg(test)]
+mod departed_library_tests {
+    use super::*;
+    use crate::decision::DecisionAnswer;
+
+    /// CR 800.4a — a seat ordering another player's peeked library (scry,
+    /// surveil, the Index family) may answer after that player has left and
+    /// taken the library with them. The answer drained `..count` of an empty
+    /// library and panicked (an 8-seat pod under `CRAB_POD_CONCEDE`, seed
+    /// 5508005 game 59); the peek now clamps to what is left.
+    #[test]
+    fn cr_800_4a_a_peek_answered_after_its_library_left_does_nothing() {
+        let mut g = crate::game::two_player_game();
+        g.players[1].library.clear();
+        for state in [
+            PendingEffectState::ScryPeeked { count: 2, player: 1 },
+            PendingEffectState::SurveilPeeked { count: 2, player: 1 },
+        ] {
+            let answer = DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] };
+            assert!(g.apply_pending_effect_answer_inner(state, &answer).is_ok());
+        }
+        assert!(g.players[1].library.is_empty());
+    }
+}
+
+#[cfg(test)]
 mod event_scratch_tests {
     use super::*;
 
@@ -26878,6 +26903,9 @@ impl GameState {
                 let DecisionAnswer::ScryOrder { kept_top, bottom } = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // CR 800.4a — the peeked library may have left the game with
+                // its owner while the answer was pending.
+                let count = count.min(self.players[player].library.len());
                 let mut remaining: Vec<CardInstance> =
                     self.players[player].library.drain(..count).collect();
                 let mut top_cards = Vec::with_capacity(kept_top.len());
@@ -26918,6 +26946,9 @@ impl GameState {
                 let DecisionAnswer::ScryOrder { kept_top, bottom } = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // CR 800.4a — the peeked library may have left the game with
+                // its owner while the answer was pending.
+                let count = count.min(self.players[player].library.len());
                 let mut remaining: Vec<CardInstance> =
                     self.players[player].library.drain(..count).collect();
                 let mut top_cards = Vec::with_capacity(count);
@@ -26942,6 +26973,9 @@ impl GameState {
                 else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // CR 800.4a — the peeked library may have left the game with
+                // its owner while the answer was pending.
+                let count = count.min(self.players[player].library.len());
                 let mut remaining: Vec<CardInstance> =
                     self.players[player].library.drain(..count).collect();
                 let mut top_cards = Vec::with_capacity(kept_top.len());
