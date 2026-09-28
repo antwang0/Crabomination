@@ -6600,3 +6600,21 @@ fn opponents_life_lost_sums_and_per_seat_losses() {
     g.resolve_effect(&warlock_l3, &ctx).unwrap();
     assert_eq!((l1 - g.players[1].life, l2 - g.players[2].life), (2, 3), "each loses what they lost");
 }
+
+/// "Target player …" is one seat: Consume (Consecrate // Consume) made every
+/// opponent sacrifice their biggest creature, and Ordeal of Erebos's
+/// sacrifice made every opponent discard two.
+#[test]
+fn target_player_clauses_are_one_seat() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let consume = catalog::consecrate_consume().split.expect("split").right.effect;
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&consume, &ctx).unwrap();
+    assert!(g.battlefield_find(b1).is_none(), "the targeted seat sacrificed");
+    assert!(g.battlefield_find(b2).is_some(), "the other opponent kept theirs");
+}

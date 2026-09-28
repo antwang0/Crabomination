@@ -506,8 +506,9 @@ pub fn ordeal_of_erebos() -> CardDefinition {
     ordeal(
         "Ordeal of Erebos",
         cost(&[generic(1), b()]),
+        // "target player discards two cards" — one seat, not every opponent.
         Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: Selector::TargetFiltered { slot: 0, filter: R::Player },
             amount: Value::Const(2),
             random: false,
         },

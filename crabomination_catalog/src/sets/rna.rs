@@ -3304,8 +3304,9 @@ pub fn consecrate_consume() -> CardDefinition {
                 cost: cost(&[generic(2), w(), b()]),
                 card_types: vec![CardType::Sorcery],
                 effect: Effect::Seq(vec![
+                    // "Target player sacrifices …" — one seat, not every opponent.
                     Effect::SacrificeGreatestMV {
-                        who: Selector::Player(PlayerRef::EachOpponent),
+                        who: Selector::TargetFiltered { slot: 0, filter: R::Player },
                         count: Value::ONE,
                         filter: R::Creature,
                         by_power: true,
