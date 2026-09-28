@@ -354,6 +354,7 @@ pub(super) fn opponent_row_bg(eliminated: bool) -> Color {
 pub(super) fn spawn_opponent_summary(
     row: &mut ChildSpawnerCommands,
     ui_fonts: &UiFonts,
+    ticker: &super::life_ticker::LifeTicker,
     p: &PlayerView,
     cv: &ClientView,
 ) -> bool {
@@ -387,7 +388,26 @@ pub(super) fn spawn_opponent_summary(
     let name = if active { format!("▶ {}", p.name) } else { p.name.clone() };
     spawn_text_chip(row, ui_fonts, name, 13.0, name_bg, name_fg);
     let (life_bg, life_fg) = life_badge_style(p.life);
-    spawn_text_chip(row, ui_fonts, big_life_label(p.life, p.starting_life), 22.0, life_bg, life_fg);
+    let readout = super::life_ticker::LifeReadout {
+        seat: p.seat,
+        starting: p.starting_life,
+        style: super::life_ticker::LifeStyle::Row,
+        ink: life_fg,
+    };
+    row.spawn((
+        Node {
+            padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            border_radius: BorderRadius::all(Val::Px(4.0)),
+            ..default()
+        },
+        BackgroundColor(life_bg),
+        Pickable::IGNORE,
+    ))
+    .with_children(|chip| {
+        chip.spawn(super::life_ticker::readout_text(ticker, readout, p.life, ui_fonts, 22.0));
+    });
     let vitals_bg = if p.library.size <= LOW_LIBRARY_WARN {
         Color::srgba(0.40, 0.26, 0.10, 1.0)
     } else {

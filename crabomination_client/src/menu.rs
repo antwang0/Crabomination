@@ -2154,6 +2154,9 @@ fn spawn_layout_fixture(world: &mut World, seats: usize) {
     if args.stack {
         crate::layout_harness::put_spells_on_stack(&mut state);
     }
+    if args.tokens {
+        crate::layout_harness::add_token_piles(&mut state);
+    }
     if args.viewer_out {
         crate::layout_harness::knock_out_viewer(&mut state);
     }

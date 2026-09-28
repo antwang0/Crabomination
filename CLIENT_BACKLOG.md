@@ -202,6 +202,44 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Life that counts, compact token piles, a phase rail (2026-09-28) — shipped, with a residual
+
+Read off layout-harness screenshots (`--life-change`, `--tokens`; duel and
+pod, 1920x1080 and 1280x720).
+
+- ✅ **Life totals count to their new value** (`game_ui::life_ticker`).
+  Every readout — the viewer's badge, each opponent's row, a pod's seat
+  plates — jumped to the new total. It now counts there over 0.75 s,
+  lit red for a loss or green for a gain and swelling as it starts; a
+  change landing mid-count carries on from what shows. The rows are
+  rebuilt on each view, so the count starts before they are and they're
+  built on its first frame.
+- ✅ **A life numeral by the seat**, in the creature damage numerals' style
+  (outlined, landing big; `impact::spawn_numeral`). The old one was a thin
+  bare "-5" at fixed offsets from the screen corners that the HUD had
+  since moved out from under: it printed over the hand and deck chips. In
+  a pod it rises off the seat's name plate on the table (below the plate
+  where the rise would run into a HUD panel); in a duel, beside the seat's
+  HUD panel, level with its life. Beside the panels, a small window's
+  top-left panel ran into the top-right one and the numerals overlapped.
+- ✅ **Token piles stay compact** (`layout::stack_stagger`). Identical
+  tokens already shared a pile with a ×N chip, but fanned like a land
+  stack — each card a step out — so ten Goblins ran three and a half
+  card-lengths over the neighbouring slots. A token pile fans three steps
+  and stacks up from there. The chip is cream with dark print like the
+  counter chips, on the top card's upper-right corner as seen, sized to
+  the card, and swells when the count changes.
+  - ⏳ Residual: a token with no art on disk (the harness's "Goblin",
+    "Treasure") draws as a blank white card with its name in faint grey,
+    and a pile of them reads poorly. See Token Labeling below.
+- ✅ **The phase chart shows the turn's progress.** A rail down its left
+  edge fills through the steps passed, in the colour of the seat whose turn
+  it is (the viewer's own on their turn, an opponent's on theirs), with the
+  current row lit in it; steps passed recede.
+- ✅ **Layout harness:** `--tokens` adds piles to two seats;
+  `--life-change` swings every seat's life a moment before the
+  screenshot.
+
 ## Combat and targeting arrows as geometry (2026-09-28) — shipped
 
 Read off layout-harness screenshots of every combat and targeting state
@@ -481,21 +519,11 @@ with "top of graveyard" effects.
 
 ### Token Labeling
 Token cards in the 3D view use the Scryfall-fetched art path, which often
-resolves to a generic back image.  A text overlay (name + P/T) on token cards
-would disambiguate multiple different tokens on the battlefield.
-
-### Life-Total Animation + Damage Feedback
-Life changes are instantaneous text mutations in `update_player_text` /
-`update_p1_text`. Lerp the displayed life toward the true value over
-~0.5s and spawn a floating "−4" / "+2" near the player portrait that
-drifts up and fades. Hook off `GameEventWire::DamageDealt`, `LifeLost`,
-`LifeGained`. Pulse the life text red on lethal threat.
-
-### Phase Chart Progress Indicator
-`update_phase_chart` highlights only the current step in yellow. Add a
-filled vertical bar growing through the steps (or a left-edge arrow) so
-turn progression is visible at a glance. Optional: tint the chart
-differently when it's the opponent's turn vs yours.
+resolves to a generic back image, or (no art on disk) to a blank white face
+with the name in faint grey — a pile of them reads poorly
+(`--layout-fixture 2 --tokens`).  A text overlay (name + P/T) on token cards,
+or a drawn token frame, would disambiguate multiple different tokens on the
+battlefield.
 
 ### Card Hover Polish
 `animate_hover_lift` currently only translates the card on Y. Modern MTG
@@ -613,10 +641,8 @@ entries instead of duplicating; tiers ordered by start-here leverage.
 
 **Player Crest track** — promote 3-D disc into stat readout + state
 indicator + click target. Slims the 2-D chip strip.
-- Phase 3 ⏳ NEXT — damage/heal floaters. New `life_floaters.rs`:
-  `PreviousLifeTotals` resource + `LifeFloater` component +
-  `detect_life_changes` + `animate_life_floaters`. Re-uses Phase 1
-  projection helper. Data already in `ClientView`.
+- Phase 3 ✅ — damage/heal floaters: counting readouts and a numeral by
+  each seat (`game_ui::life_ticker`, 2026-09-28).
 - Phase 4 ⏳ — slim corner chip strips to `name · ♥ · ✋`, move mana pips
   to a bottom detail bar.
 - Phase 5 ⏳ — team-coloured tint from `GameState.teams`; commander emblem
@@ -639,7 +665,8 @@ indicator + click target. Slims the 2-D chip strip.
   (scry/search/put-on-library/discard/mulligan/color). Refactor into one
   `Picker { items, min, max, ordered, confirm_label }`. See Decision
   Modal vs 3-D Hand Consistency.
-- Token stacking ⏳ — group identical tokens with count badge.
+- Token stacking ✅ — identical tokens pile with a ×N chip; piles fan
+  only three steps (2026-09-28).
 - Valid-target affordance ⏳ — make `ValidTarget` pulse, dim non-targets.
 - Card-name → log preview ⏳ — hover region pops Scryfall image. See
   Hover-Dwell Card Preview.

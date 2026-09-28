@@ -1,11 +1,12 @@
-//! "×N" count badge floated over each token pile.
+//! "×N" count chip on each token pile.
 //!
-//! `creature_card_transform` cascades identical tokens (same name, P/T,
-//! tapped state) into one pile so wide boards stay legible; this floats a
-//! small count chip at the pile's top card so the player doesn't have to
-//! count card edges. Mechanism mirrors `pt_label`: a screen-space node
-//! reprojected from the card's world position every frame, reconciled
-//! against the engine view.
+//! `creature_card_transform` piles identical tokens (same name, P/T,
+//! tapped state) so wide boards stay legible, fanning only the first few
+//! (`layout::TOKEN_PILE_STEPS`); this puts the count on a chip at the pile's
+//! top card, cream with dark print like the counter chips, on its upper-right
+//! corner as seen and swelling as the count changes. Mechanism mirrors
+//! `pt_label`: a screen-space node reprojected from the card's world
+//! position every frame, reconciled against the engine view.
 
 use std::collections::{HashMap, HashSet};
 
@@ -16,14 +17,38 @@ use crate::MainCamera;
 use crate::card::{BattlefieldCard, CARD_HEIGHT, CARD_WIDTH, GameCardId};
 use crate::net_plugin::CurrentView;
 use crate::systems::game_ui::InGameRoot;
-use crate::theme::{self, UiFonts};
+use crate::theme::UiFonts;
 
 /// Renders below default-z (0) UI so popups / tooltips / modals win —
 /// same band as the P/T badge.
 const BADGE_Z: i32 = crate::theme::layer::CARD_OVERLAY;
-/// Tuck the chip just inside the card's projected top-right corner.
-const BADGE_OFFSET_X: f32 = 30.0;
-const BADGE_OFFSET_Y: f32 = -4.0;
+/// The count's ink and the chip's rim: the counter chips' dark print on
+/// their cream face (`coin_mesh::INLAY`).
+const CHIP_INK: Color = Color::srgb(0.12, 0.10, 0.08);
+
+/// The card's corners, in card-local space: top-right, top-left,
+/// bottom-left, bottom-right.
+const CORNERS: [Vec3; 4] = [
+    Vec3::new(CARD_WIDTH / 2.0, CARD_HEIGHT / 2.0, 0.0),
+    Vec3::new(-CARD_WIDTH / 2.0, CARD_HEIGHT / 2.0, 0.0),
+    Vec3::new(-CARD_WIDTH / 2.0, -CARD_HEIGHT / 2.0, 0.0),
+    Vec3::new(CARD_WIDTH / 2.0, -CARD_HEIGHT / 2.0, 0.0),
+];
+
+/// How far up and to the right a point on screen is (UI px, y down): the
+/// corner that scores highest is the upper-right one as seen.
+fn upper_right(at: Vec2) -> f32 {
+    at.x - at.y
+}
+
+/// The count's size on a card `card_width` UI px across.
+fn chip_font_size(card_width: f32) -> f32 {
+    (card_width * 0.15).round().clamp(15.0, 30.0)
+}
+
+fn chip_label(count: usize) -> String {
+    format!("×{count}")
+}
 
 /// Screen-space pile-count chip anchored to the pile's top card.
 #[derive(Component)]
@@ -40,10 +65,10 @@ pub fn sync_token_pile_badges(
     cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
-    mut badges: Query<(Entity, &TokenPileBadge, &mut Node, &mut Text)>,
+    mut badges: Query<(Entity, &TokenPileBadge, &mut Node, &mut Text, &mut TextFont)>,
 ) {
     let Some(cv) = &view.0 else {
-        for (e, _, _, _) in &mut badges {
+        for (e, ..) in &mut badges {
             commands.entity(e).despawn();
         }
         return;
@@ -77,44 +102,53 @@ pub fn sync_token_pile_badges(
         }
     }
 
-    // card_id → world position of the card's top-right corner.
-    let top_right_local = Vec3::new(CARD_WIDTH / 2.0, CARD_HEIGHT / 2.0, 0.0);
-    let mut card_corner: HashMap<CardId, Vec3> = HashMap::new();
+    // card_id → where the pile's chip goes on screen and its glyph size: the
+    // top card's upper-right corner as seen (an opponent's cards are turned
+    // to face them), unless another card lies over it.
+    let mut placed: HashMap<CardId, (Vec2, f32)> = HashMap::new();
     for (e, gid, gtf) in &cards {
-        if desired.contains_key(&gid.0) && !cover.hides_local(e, gtf, top_right_local * 0.85) {
-            card_corner.insert(gid.0, gtf.transform_point(top_right_local));
+        if !desired.contains_key(&gid.0) {
+            continue;
         }
-    }
-
-    fn anchor(
-        camera: &Camera,
-        cam_xform: &GlobalTransform,
-        ui_scale: &UiScale,
-        world: Vec3,
-    ) -> Option<(f32, f32)> {
-        crate::theme::project_to_ui(camera, cam_xform, ui_scale, world)
-            .map(|v| (v.x - BADGE_OFFSET_X, v.y - BADGE_OFFSET_Y))
+        let project =
+            |local: Vec3| crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(local));
+        let Some((corner, at)) = CORNERS
+            .iter()
+            .filter_map(|&c| project(c).map(|at| (c, at)))
+            .max_by(|a, b| upper_right(a.1).total_cmp(&upper_right(b.1)))
+        else {
+            continue;
+        };
+        if cover.hides_local(e, gtf, corner * 0.85) {
+            continue;
+        }
+        let (Some(left), Some(right)) = (project(CORNERS[3]), project(CORNERS[0])) else { continue };
+        placed.insert(gid.0, (at, chip_font_size(left.distance(right))));
     }
 
     let mut seen: HashSet<CardId> = HashSet::new();
-    for (e, badge, mut node, mut text) in &mut badges {
-        match desired.get(&badge.0) {
-            Some(&count) => {
-                seen.insert(badge.0);
-                if let Some(world) = card_corner.get(&badge.0).copied()
-                    && let Some((x, y)) = anchor(camera, cam_xform, &ui_scale, world)
-                {
-                    node.display = Display::Flex;
-                    node.left = Val::Px(x);
-                    node.top = Val::Px(y);
-                } else {
-                    node.display = Display::None;
+    for (e, badge, mut node, mut text, mut font) in &mut badges {
+        let Some(&count) = desired.get(&badge.0) else {
+            commands.entity(e).despawn();
+            continue;
+        };
+        seen.insert(badge.0);
+        let label = chip_label(count);
+        if text.0 != label {
+            text.0 = label;
+            // The count swells as it changes, as a counter chip's does.
+            commands.entity(e).try_insert(crate::theme::OverlayPulse::default());
+        }
+        match placed.get(&badge.0) {
+            Some(&(at, size)) => {
+                node.display = Display::Flex;
+                node.left = Val::Px(at.x);
+                node.top = Val::Px(at.y);
+                if font.font_size != FontSize::Px(size) {
+                    font.font_size = FontSize::Px(size);
                 }
-                *text = Text::new(format!("×{count}"));
             }
-            None => {
-                commands.entity(e).despawn();
-            }
+            None => node.display = Display::None,
         }
     }
 
@@ -122,30 +156,34 @@ pub fn sync_token_pile_badges(
         if seen.contains(&id) {
             continue;
         }
-        let (left, top) = card_corner
-            .get(&id)
-            .copied()
-            .and_then(|world| anchor(camera, cam_xform, &ui_scale, world))
-            .unwrap_or((-1000.0, -1000.0));
+        let (at, size) = placed.get(&id).copied().unwrap_or((Vec2::splat(-1000.0), 16.0));
         commands.spawn((
             TokenPileBadge(id),
-            Text::new(format!("×{count}")),
-            ui_fonts.tf(16.0),
-            TextColor(theme::ACCENT_GOLD),
-            BackgroundColor(Color::srgba(0.05, 0.05, 0.10, 0.92)),
+            Text::new(chip_label(count)),
+            ui_fonts.tf(size),
+            TextColor(CHIP_INK),
+            // Faux bold: the UI face is a Light cut.
+            TextShadow { offset: Vec2::new(0.7, 0.0), color: CHIP_INK },
+            BackgroundColor(crate::systems::coin_mesh::INLAY),
+            BorderColor::all(CHIP_INK),
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(left),
-                top: Val::Px(top),
-                padding: UiRect::axes(Val::Px(5.0), Val::Px(1.0)),
+                left: Val::Px(at.x),
+                top: Val::Px(at.y),
+                padding: UiRect::axes(Val::Px(7.0), Val::Px(1.0)),
+                border: UiRect::all(Val::Px(2.0)),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                border_radius: BorderRadius::all(Val::Px(8.0)),
+                border_radius: BorderRadius::all(Val::Px(999.0)),
+                display: if placed.contains_key(&id) { Display::Flex } else { Display::None },
                 ..default()
             },
+            // Centred on the corner: left/top are the corner.
+            UiTransform::from_translation(Val2::percent(-50.0, -50.0)),
             Pickable::IGNORE,
             GlobalZIndex(BADGE_Z),
             InGameRoot,
+            crate::theme::OverlayPulse::default(),
         ));
     }
 }

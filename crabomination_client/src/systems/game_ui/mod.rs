@@ -8,6 +8,7 @@
 mod buttons;
 pub mod hand_menu;
 mod life_graph;
+pub mod life_ticker;
 mod player_stats;
 mod popups;
 pub mod table_awareness;
@@ -22,9 +23,8 @@ pub use buttons::{
 pub use hand_menu::{handle_hand_menu, spawn_hand_menu, HandMenuState};
 pub use life_graph::{record_life_history, sync_life_graph, toggle_life_graph, LifeHistory};
 pub use player_stats::{
-    animate_life_flash, sync_player_hud_seat, trigger_life_flash, update_mana_pips,
-    update_opponent_panel_tint, update_opponent_stats_rows, update_player_chip_target_outline,
-    update_player_stats_chips, LifeFlashTracker,
+    sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
+    update_player_chip_target_outline, update_player_stats_chips,
 };
 pub use table_awareness::TableAwarenessPlugin;
 pub use popups::{
@@ -670,6 +670,20 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         PhaseStepLabel(*step),
                     ))
                     .with_children(|row| {
+                        // This step's segment of the progress rail
+                        // (`update_phase_chart`).
+                        row.spawn((
+                            Node {
+                                width: Val::Px(3.0),
+                                align_self: AlignSelf::Stretch,
+                                margin: UiRect::right(Val::Px(4.0)),
+                                border_radius: BorderRadius::all(Val::Px(1.5)),
+                                ..default()
+                            },
+                            BackgroundColor(PHASE_RAIL_AHEAD),
+                            PhaseRail,
+                            Pickable::IGNORE,
+                        ));
                         row.spawn((
                             Text::new(format!("   {}", step_short_label(*step))),
                             tf(12.0),
@@ -1244,16 +1258,42 @@ fn step_short_label(step: TurnStep) -> &'static str {
         .unwrap_or("")
 }
 
-/// Subtle row background for the currently-active phase. Sits between
-/// `HUD_BG` and `BUTTON_INFO_BG` so the active row reads as "lit up"
-/// without competing with the action buttons.
-const PHASE_ROW_ACTIVE_BG: Color = Color::srgba(0.18, 0.18, 0.28, 0.85);
+/// A phase chart row's segment of the progress rail down the chart's left
+/// edge.
+#[derive(Component)]
+pub struct PhaseRail;
+
+/// The rail's colour for a step the turn has yet to reach.
+const PHASE_RAIL_AHEAD: Color = Color::srgba(1.0, 1.0, 1.0, 0.10);
+
+/// Where a phase chart row's step stands in the turn.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum StepProgress {
+    Done,
+    Current,
+    Ahead,
+}
+
+/// Where `row` stands when the turn is at `current`. First-strike damage
+/// has no row of its own: the turn is at the damage row.
+fn step_progress(row: TurnStep, current: TurnStep) -> StepProgress {
+    let at = |step: TurnStep| {
+        let step = if step == TurnStep::FirstStrikeDamage { TurnStep::CombatDamage } else { step };
+        PHASE_CHART_STEPS.iter().position(|(s, _)| *s == step)
+    };
+    match (at(row), at(current)) {
+        (Some(r), Some(c)) if r < c => StepProgress::Done,
+        (Some(r), Some(c)) if r == c => StepProgress::Current,
+        _ => StepProgress::Ahead,
+    }
+}
 
 pub fn update_phase_chart(
     view: Res<CurrentView>,
     stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
     ff: Option<Res<FastForward>>,
-    mut rows: Query<(&PhaseStepLabel, &Children, &mut BackgroundColor)>,
+    mut rows: Query<(&PhaseStepLabel, &Children, &mut BackgroundColor), Without<PhaseRail>>,
+    mut rails: Query<&mut BackgroundColor, With<PhaseRail>>,
     mut texts: Query<(&mut Text, &mut TextColor)>,
 ) {
     use crate::systems::phase_bar::StopMode;
@@ -1261,13 +1301,30 @@ pub fn update_phase_chart(
     let current = cv.step;
     let my_turn = cv.active_player == cv.your_seat;
     let pass_target = ff.as_ref().and_then(|f| f.pass_until);
+    // The turn's progress runs down the rail in the colour of the seat whose
+    // turn it is — the viewer's own on their turn, an opponent's on theirs —
+    // and the current row is lit in it.
+    let turn_colour = table_awareness::seat_color(cv.active_player);
     for (label, children, mut bg) in &mut rows {
+        let progress = step_progress(label.0, current);
         let active = label.0 == current;
         let mode = stops
             .as_ref()
             .map(|s| s.mode(my_turn, label.0))
             .unwrap_or_default();
-        *bg = BackgroundColor(if active { PHASE_ROW_ACTIVE_BG } else { Color::NONE });
+        *bg = BackgroundColor(match progress {
+            StepProgress::Current => turn_colour.with_alpha(0.32),
+            _ => Color::NONE,
+        });
+        for child in children.iter() {
+            if let Ok(mut rail) = rails.get_mut(child) {
+                rail.0 = match progress {
+                    StepProgress::Done => turn_colour.with_alpha(0.55),
+                    StepProgress::Current => turn_colour.lighter(0.15),
+                    StepProgress::Ahead => PHASE_RAIL_AHEAD,
+                };
+            }
+        }
         // Each row has exactly one Text child — rewrite its content + colour.
         // A configured stop reads as a suffix tag scoped to the kind of turn
         // currently shown (clicking the row cycles it — see
@@ -1295,6 +1352,8 @@ pub fn update_phase_chart(
                     (true, _) => theme::ACCENT_YELLOW,
                     (false, StopMode::Always) => theme::ACCENT_ORANGE,
                     (false, StopMode::Skip) => theme::TEXT_MUTED.with_alpha(0.5),
+                    // Steps the turn has passed recede.
+                    (false, StopMode::Auto) if progress == StepProgress::Done => theme::TEXT_MUTED.with_alpha(0.6),
                     (false, StopMode::Auto) => theme::TEXT_MUTED,
                 });
             }
@@ -5103,5 +5162,21 @@ pub fn sync_command_zone(
             owner: *owner,
             slot: *slot,
         });
+    }
+}
+
+#[cfg(test)]
+mod phase_chart_tests {
+    use super::*;
+
+    #[test]
+    fn the_rail_fills_through_the_turn() {
+        use StepProgress::*;
+        let at_blocks: Vec<_> = PHASE_CHART_STEPS.iter().map(|(s, _)| step_progress(*s, TurnStep::DeclareBlockers)).collect();
+        assert_eq!(&at_blocks[..7], &[Done, Done, Done, Done, Done, Done, Current]);
+        assert!(at_blocks[7..].iter().all(|p| *p == Ahead));
+        // First-strike damage lights the damage row, the blockers done.
+        assert_eq!(step_progress(TurnStep::CombatDamage, TurnStep::FirstStrikeDamage), Current);
+        assert_eq!(step_progress(TurnStep::DeclareBlockers, TurnStep::FirstStrikeDamage), Done);
     }
 }

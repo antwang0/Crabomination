@@ -1,5 +1,5 @@
-//! Per-turn life-history sparkline. The floating `±N` numerals
-//! ([`super::player_stats::trigger_life_flash`]) show the *last* swing; this
+//! Per-turn life-history sparkline. The counting readouts and floating `±N`
+//! numerals ([`super::life_ticker`]) show the *last* swing; this
 //! shows the shape of the whole game — one column per turn per seat, so a
 //! slow drain reads differently from a single burn spell.
 //!

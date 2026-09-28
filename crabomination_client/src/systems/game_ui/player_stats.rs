@@ -13,7 +13,7 @@ use crate::systems::kb_cursor::{KbSelection, KeyboardCursor};
 use crate::theme::{self, UiFonts};
 
 use super::{
-    InGameRoot, ManaPipRow, OpponentStatsContainer, OpponentStatusPanel, PlayerHudPanel,
+    ManaPipRow, OpponentStatsContainer, OpponentStatusPanel, PlayerHudPanel,
     PlayerStatsRow,
 };
 
@@ -574,17 +574,17 @@ pub(super) fn life_badge_style(life: i32) -> (Color, Color) {
 fn spawn_life_badge(
     parent: &mut ChildSpawnerCommands,
     ui_fonts: &UiFonts,
+    ticker: &super::life_ticker::LifeTicker,
+    seat: usize,
     life: i32,
     starting_life: i32,
 ) {
     let (bg, fg) = life_badge_style(life);
-    // A "(+N)"/"(−N)" suffix relative to the starting total contextualizes
-    // life-threshold cards (Speaker of the Heavens, Righteous Valkyrie).
-    let delta = life - starting_life;
-    let label = match delta {
-        0 => format!("\u{2665} {life}"),
-        d if d > 0 => format!("\u{2665} {life} (+{d})"),
-        d => format!("\u{2665} {life} ({d})"),
+    let readout = super::life_ticker::LifeReadout {
+        seat,
+        starting: starting_life,
+        style: super::life_ticker::LifeStyle::Badge,
+        ink: fg,
     };
     parent
         .spawn((
@@ -599,13 +599,19 @@ fn spawn_life_badge(
             Pickable::IGNORE,
         ))
         .with_children(|chip| {
-            chip.spawn((
-                Text::new(label),
-                ui_fonts.tf(18.0),
-                TextColor(fg),
-                Pickable::IGNORE,
-            ));
+            chip.spawn(super::life_ticker::readout_text(ticker, readout, life, ui_fonts, 18.0));
         });
+}
+
+/// The viewer's life badge: "♥ 17", with a "(+N)"/"(−N)" suffix relative to
+/// the starting total that contextualizes life-threshold cards (Speaker of
+/// the Heavens, Righteous Valkyrie).
+pub(super) fn badge_life_label(life: i32, starting_life: i32) -> String {
+    match life - starting_life {
+        0 => format!("\u{2665} {life}"),
+        d if d > 0 => format!("\u{2665} {life} (+{d})"),
+        d => format!("\u{2665} {life} ({d})"),
+    }
 }
 
 // ── Commander damage (CR 903.10a) ─────────────────────────────────────────────
@@ -787,7 +793,7 @@ pub fn sync_player_hud_seat(
 
 /// Border colours for the player-chip "I am a click target" affordance.
 /// Pulses the same yellow used by [`crate::card::ValidTarget`] permanent
-/// outlines and the blocker-selection diamond so the visual vocabulary
+/// outlines and the picked-up blocker's chip so the visual vocabulary
 /// is consistent across the targeting flow.
 const PLAYER_CHIP_BORDER_IDLE: Color = Color::NONE;
 /// Active player's panel — soft gold, mirrors the crest ring's
@@ -929,6 +935,7 @@ pub fn update_player_stats_chips(
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
     row_q: Query<Entity, With<PlayerStatsRow>>,
+    ticker: Res<super::life_ticker::LifeTicker>,
     mut checked: Local<CheckedConditions>,
 ) {
     if !view.is_changed() {
@@ -943,12 +950,12 @@ pub fn update_player_stats_chips(
     commands.entity(row).with_children(|row| {
         // Out of a pod that goes on: the dimmed "☠ OUT · cause" summary an
         // opponent's row collapses to, not a live-looking status bar.
-        if p.eliminated && super::table_awareness::spawn_opponent_summary(row, &ui_fonts, p, cv) {
+        if p.eliminated && super::table_awareness::spawn_opponent_summary(row, &ui_fonts, &ticker, p, cv) {
             return;
         }
         spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-        spawn_life_badge(row, &ui_fonts, p.life, p.starting_life);
+        spawn_life_badge(row, &ui_fonts, &ticker, p.seat, p.life, p.starting_life);
         // CR 903.10a commander damage taken — surfaced right next to life
         // since 21 from a single commander is its own loss condition. Only
         // present in Commander games (the vec is empty otherwise).
@@ -1650,6 +1657,7 @@ pub fn update_opponent_stats_rows(
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
     container_q: Query<Entity, With<OpponentStatsContainer>>,
+    ticker: Res<super::life_ticker::LifeTicker>,
 ) {
     if !view.is_changed() {
         return;
@@ -1691,7 +1699,7 @@ pub fn update_opponent_stats_rows(
                 // Avatar, name, large life, hand/library, clickable
                 // graveyard/exile — or a dimmed "☠ OUT" for a dead seat,
                 // whose remaining chips no longer matter.
-                if super::table_awareness::spawn_opponent_summary(row, &ui_fonts, p, cv) {
+                if super::table_awareness::spawn_opponent_summary(row, &ui_fonts, &ticker, p, cv) {
                     return;
                 }
                 // CR 903.10a commander damage taken — see the viewer row.
@@ -1800,124 +1808,6 @@ pub fn update_opponent_stats_rows(
             });
         }
     });
-}
-
-// ── Life-change flash ─────────────────────────────────────────────────────────
-
-/// Tracks each seat's last-seen life so [`trigger_life_flash`] fires a
-/// floating delta only on an actual change. Primes silently on the first
-/// view so connecting mid-game doesn't flash the starting totals.
-#[derive(Resource, Default)]
-pub struct LifeFlashTracker {
-    last: std::collections::HashMap<usize, i32>,
-    primed: bool,
-}
-
-/// A floating "+N" / "−N" life-change numeral that rises and fades next to
-/// a player's HUD corner. Driven by [`animate_life_flash`].
-#[derive(Component)]
-pub struct LifeFlash {
-    remaining: f32,
-    total: f32,
-    /// Spawn-time `top` in px; the numeral rises from here as it fades.
-    base_top: f32,
-}
-
-const LIFE_FLASH_SECS: f32 = 1.3;
-/// How far (px) the numeral floats upward over its lifetime.
-const LIFE_FLASH_RISE: f32 = 30.0;
-
-/// Spawn a floating life-delta numeral whenever a player's life total
-/// changes between views — restoring the change feedback that the removed
-/// 3-D life crest used to give, as a 2-D element anchored to each seat's
-/// HUD corner (viewer top-left, opponents stacked top-right).
-pub fn trigger_life_flash(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    mut tracker: ResMut<LifeFlashTracker>,
-    ui_fonts: Res<UiFonts>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Some(cv) = &view.0 else { return };
-
-    // Opponent ordering, for vertical stagger in the top-right strip.
-    let mut opponents: Vec<usize> =
-        cv.players.iter().map(|p| p.seat).filter(|s| *s != cv.your_seat).collect();
-    opponents.sort_unstable();
-
-    let was_primed = tracker.primed;
-    let mut deltas: Vec<(usize, i32)> = Vec::new();
-    for p in &cv.players {
-        let prev = tracker.last.insert(p.seat, p.life);
-        if was_primed && prev.is_some_and(|prev| prev != p.life) {
-            deltas.push((p.seat, p.life - prev.unwrap()));
-        }
-    }
-    tracker.primed = true;
-
-    for (seat, delta) in deltas {
-        let (text, color) = if delta < 0 {
-            (format!("{delta}"), theme::TEXT_DANGER)
-        } else {
-            (format!("+{delta}"), theme::TEXT_GOOD)
-        };
-        let base_top = if seat == cv.your_seat {
-            36.0
-        } else {
-            let idx = opponents.iter().position(|s| *s == seat).unwrap_or(0);
-            36.0 + idx as f32 * 52.0
-        };
-        let mut node = Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(base_top),
-            ..default()
-        };
-        // Anchor just outside the seat's corner panel.
-        if seat == cv.your_seat {
-            node.left = Val::Px(276.0);
-        } else {
-            node.right = Val::Px(286.0);
-        }
-        commands
-            .spawn((
-                node,
-                Pickable::IGNORE,
-                InGameRoot,
-                LifeFlash { remaining: LIFE_FLASH_SECS, total: LIFE_FLASH_SECS, base_top },
-            ))
-            .with_children(|p| {
-                p.spawn((Text::new(text), ui_fonts.tf(30.0), TextColor(color), Pickable::IGNORE));
-            });
-    }
-}
-
-/// Float each life-flash numeral upward and fade it out, despawning when
-/// elapsed.
-pub fn animate_life_flash(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut flashes: Query<(Entity, &mut LifeFlash, &mut Node, &Children)>,
-    mut texts: Query<&mut TextColor>,
-) {
-    for (entity, mut flash, mut node, children) in &mut flashes {
-        flash.remaining -= time.delta_secs();
-        if flash.remaining <= 0.0 {
-            commands.entity(entity).despawn();
-            continue;
-        }
-        let frac = (flash.remaining / flash.total).clamp(0.0, 1.0); // 1 → 0
-        node.top = Val::Px(flash.base_top - (1.0 - frac) * LIFE_FLASH_RISE);
-        // Hold full opacity, then ease out over the final 60%.
-        let alpha = (frac / 0.6).min(1.0);
-        for child in children.iter() {
-            if let Ok(mut tc) = texts.get_mut(child) {
-                let c = tc.0.to_srgba();
-                tc.0 = Color::srgba(c.red, c.green, c.blue, alpha);
-            }
-        }
-    }
 }
 
 #[cfg(test)]

@@ -17,7 +17,9 @@
 //! stack; `--mana-gallery` lays every kind of mana symbol over the board;
 //! `--hover-card NAME` hovers one of the viewer's battlefield cards (a
 //! screenshot run ignores the real mouse); `--combat SCENE` stages a combat
-//! or a targeting pick ([`CombatScene`]).
+//! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
+//! ([`add_token_piles`]); `--life-change` swings every seat's life total a
+//! moment before the screenshot, catching the life feedback in flight.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -72,6 +74,11 @@ pub struct HarnessArgs {
     pub hover_card: Option<String>,
     /// `--combat SCENE`: a combat or a targeting pick, staged client-side.
     pub combat: Option<CombatScene>,
+    /// `--tokens`: piles of identical tokens on two seats.
+    pub tokens: bool,
+    /// `--life-change`: every seat's life total swings, client-side, a
+    /// moment before the screenshot.
+    pub life_change: bool,
 }
 
 impl HarnessArgs {
@@ -105,6 +112,8 @@ impl HarnessArgs {
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
             hover_card: value("--hover-card"),
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
+            tokens: args.iter().any(|a| a == "--tokens"),
+            life_change: args.iter().any(|a| a == "--life-change"),
         }
     }
 
@@ -239,6 +248,39 @@ pub fn put_spells_on_stack(g: &mut GameState) {
         };
         if let Err(e) = g.perform_action(cast) {
             eprintln!("--stack: casting {spell}: {e:?}");
+        }
+    }
+}
+
+/// `--tokens`: seven Goblins and three tapped ones, two Soldiers and four
+/// Treasures for seat 0, five Spirits for seat 1 — piles of each size a
+/// token-making deck leaves, in both rows.
+pub fn add_token_piles(g: &mut GameState) {
+    use crabomination::card::{CardType, Keyword, TokenDefinition};
+    let creature = |name: &str, keywords: Vec<Keyword>| TokenDefinition {
+        name: name.into(),
+        power: 1,
+        toughness: 1,
+        keywords,
+        card_types: vec![CardType::Creature],
+        ..Default::default()
+    };
+    let treasure = TokenDefinition { name: "Treasure".into(), card_types: vec![CardType::Artifact], ..Default::default() };
+    let piles = [
+        (0, creature("Goblin", vec![]), 10),
+        (0, creature("Soldier", vec![]), 2),
+        (0, treasure, 4),
+        (1, creature("Spirit", vec![Keyword::Flying]), 5),
+    ];
+    for (seat, token, n) in piles {
+        for i in 0..n {
+            let id = g.add_token_to_battlefield(seat, &token);
+            g.clear_sickness(id);
+            // Three of the Goblins have attacked: a tapped pile beside the
+            // untapped one.
+            if token.name == "Goblin" && i >= 7 && let Some(c) = g.battlefield_find_mut(id) {
+                c.tapped = true;
+            }
         }
     }
 }
@@ -469,6 +511,35 @@ pub fn hover_card_for_screenshot(
     lift.target_lift = crate::card::BF_HOVER_LIFT;
     commands.entity(entity).insert(crate::card::CardHovered);
     *done = true;
+}
+
+/// How each seat's life swings under `--life-change`: the viewer loses 3,
+/// seat 1 loses 5, seat 2 gains 4 and seat 3 loses 12.
+const LIFE_SWINGS: [i32; 4] = [-3, -5, 4, -12];
+
+/// `--life-change`: swing each seat's life by [`LIFE_SWINGS`] once, in the
+/// view only, most of a second before the screenshot — the count and the
+/// floating numerals are caught part-way. Runs after `poll_net`.
+pub fn swing_life_for_screenshot(
+    args: Res<HarnessArgs>,
+    time: Res<Time>,
+    mut view: ResMut<crate::net_plugin::CurrentView>,
+    mut since_view: Local<f32>,
+    mut done: Local<bool>,
+) {
+    if !args.life_change || *done || view.0.is_none() {
+        return;
+    }
+    *since_view += time.delta_secs();
+    if *since_view < args.screenshot_delay - 0.35 {
+        return;
+    }
+    *done = true;
+    if let Some(cv) = view.0.as_mut() {
+        for (p, swing) in cv.players.iter_mut().zip(LIFE_SWINGS) {
+            p.life += swing;
+        }
+    }
 }
 
 /// What `--combat` stages. The match itself stays paused in the viewer's

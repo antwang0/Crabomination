@@ -51,14 +51,25 @@ pub struct HitVignette {
 
 /// A floating "−N" numeral that punches in over a creature that was just
 /// dealt damage, then rises and fades. Screen-space after spawn (no
-/// per-frame card tracking), the same pattern as the HUD life-flash
-/// numerals.
+/// per-frame card tracking). A life change's "−5" / "+3" beside a seat's HUD
+/// row is one too (`game_ui::life_ticker`).
 #[derive(Component)]
 pub struct DamageNumeral {
     remaining: f32,
     total: f32,
     /// Spawn-time `top` in px; the numeral rises from here as it fades.
     base_top: f32,
+    /// How far (px) it rises.
+    rise: f32,
+}
+
+impl DamageNumeral {
+    /// Rise `rise` px through `level` (UI px) instead, for a numeral that
+    /// follows what it hangs from.
+    pub(crate) fn rebase(&mut self, level: f32, rise: f32) {
+        self.base_top = level + rise / 2.0;
+        self.rise = rise;
+    }
 }
 
 /// A glowing mana-coloured mote that arcs from a player's land row toward the
@@ -110,7 +121,7 @@ const DMG_NUMERAL_PUNCH: f32 = 1.8;
 const DMG_NUMERAL_PUNCH_SECS: f32 = 0.14;
 const DMG_NUMERAL_FONT: f32 = 32.0;
 /// A bright red that holds up over any card art inside its dark outline.
-const DMG_NUMERAL_RED: Color = Color::srgb(1.0, 0.32, 0.26);
+pub(crate) const DMG_NUMERAL_RED: Color = Color::srgb(1.0, 0.32, 0.26);
 /// The outline: the numeral drawn in near-black at each of these offsets
 /// (px) under the red one. The UI font is a thin Light cut, and a bare red
 /// numeral all but vanished into the card art.
@@ -230,8 +241,9 @@ pub fn spawn_impact_effects(
                     );
                 }
                 // Floating "−N" on a struck creature, so the player reads how
-                // much it took. Player damage already surfaces via the
-                // life-loss flash numeral + vignette, so only creatures here.
+                // much it took. A player's life change has its own numeral
+                // beside their HUD row (`game_ui::life_ticker`), so only
+                // creatures here.
                 if *amount > 0
                     && let Some(id) = to_card
                 {
@@ -416,7 +428,13 @@ fn spawn_burst(
 }
 
 fn spawn_damage_numeral(commands: &mut Commands, fonts: &UiFonts, amount: u32, screen: Vec2) {
-    let text = format!("-{amount}");
+    spawn_numeral(commands, fonts, format!("-{amount}"), DMG_NUMERAL_RED, screen);
+}
+
+/// A numeral in the damage numerals' style — outlined, landing big, rising
+/// and fading ([`animate_damage_numerals`]) — centred on `screen` (UI px).
+/// Life changes use it too (`game_ui::life_ticker`).
+pub(crate) fn spawn_numeral(commands: &mut Commands, fonts: &UiFonts, text: String, colour: Color, screen: Vec2) -> Entity {
     commands
         .spawn((
             Node {
@@ -434,7 +452,12 @@ fn spawn_damage_numeral(commands: &mut Commands, fonts: &UiFonts, amount: u32, s
             GlobalZIndex(theme::layer::HUD),
             Pickable::IGNORE,
             InGameRoot,
-            DamageNumeral { remaining: DMG_NUMERAL_SECS, total: DMG_NUMERAL_SECS, base_top: screen.y },
+            DamageNumeral {
+                remaining: DMG_NUMERAL_SECS,
+                total: DMG_NUMERAL_SECS,
+                base_top: screen.y,
+                rise: DMG_NUMERAL_RISE,
+            },
         ))
         .with_children(|p| {
             for (dx, dy) in DMG_NUMERAL_OUTLINE {
@@ -448,8 +471,9 @@ fn spawn_damage_numeral(commands: &mut Commands, fonts: &UiFonts, amount: u32, s
             }
             // Last, so it draws over its outline; in the flow, so the node
             // takes its size.
-            p.spawn((Text::new(text), fonts.tf(DMG_NUMERAL_FONT), TextColor(DMG_NUMERAL_RED), Pickable::IGNORE));
-        });
+            p.spawn((Text::new(text), fonts.tf(DMG_NUMERAL_FONT), TextColor(colour), Pickable::IGNORE));
+        })
+        .id()
 }
 
 /// A damage numeral's scale `elapsed` seconds in: it lands at
@@ -551,7 +575,7 @@ pub fn animate_damage_numerals(
         transform.scale = Vec2::splat(damage_numeral_scale(numeral.total - numeral.remaining));
         // Rise easing out: quick off the hit, settling as it fades.
         let risen = 1.0 - frac * frac;
-        node.top = Val::Px(numeral.base_top - risen * DMG_NUMERAL_RISE);
+        node.top = Val::Px(numeral.base_top - risen * numeral.rise);
         // Hold full opacity, then ease out over the final 50%.
         let alpha = (frac / 0.5).min(1.0);
         for child in children.iter() {

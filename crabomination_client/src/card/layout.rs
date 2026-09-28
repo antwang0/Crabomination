@@ -105,6 +105,22 @@ const COMMAND_Z_MULTI: f32 = 15.0;
 pub const LAND_STACK_OFFSET_X: f32 = 0.18;
 pub const LAND_STACK_OFFSET_Z: f32 = 0.35;
 
+/// How many steps a token pile fans out before the rest of it stacks square
+/// under its top step. A land stack fans every card, so each land's name
+/// shows; a pile of identical tokens has nothing to tell apart and its count
+/// on a chip (`token_badge`), and fanned the same way ten Goblins ran three
+/// and a half card-lengths out over the neighbouring slots.
+pub const TOKEN_PILE_STEPS: usize = 3;
+
+/// The seat-local offset of the `index`th card of a stack from its slot:
+/// each card a step to the side and back, and a card's thickness up, so a
+/// stack stands as tall as its cards. A token pile (`token`) fans only
+/// [`TOKEN_PILE_STEPS`] steps and piles up from there.
+pub fn stack_stagger(index: usize, token: bool) -> Vec3 {
+    let fanned = if token { index.min(TOKEN_PILE_STEPS) } else { index } as f32;
+    Vec3::new(fanned * LAND_STACK_OFFSET_X, index as f32 * CARD_THICKNESS * 1.5, fanned * LAND_STACK_OFFSET_Z)
+}
+
 /// X spread per opponent slot when there are multiple opponents.
 const OPP_X_SPREAD: f32 = 14.0;
 
@@ -999,12 +1015,8 @@ pub fn creature_card_transform(
         creature_group_info_from_view(battlefield, owner, card_id)?;
     let base =
         bf_card_transform(owner, viewer, n_seats, group_slot, total_groups, false, tapped);
-    let stagger = seat_rotation(owner, viewer, n_seats)
-        * Vec3::new(
-            index as f32 * LAND_STACK_OFFSET_X,
-            index as f32 * CARD_THICKNESS * 1.5,
-            index as f32 * LAND_STACK_OFFSET_Z,
-        );
+    // Only tokens share a front-row group.
+    let stagger = seat_rotation(owner, viewer, n_seats) * stack_stagger(index, true);
     Some(Transform {
         translation: base.translation + stagger,
         rotation: base.rotation,
@@ -1103,13 +1115,10 @@ pub fn back_row_card_transform(
         back_row_group_info_from_view(battlefield, owner, card_id)?;
     let base = bf_card_transform(owner, viewer, n_seats, group_slot, total_groups, true, false);
     // Stagger pulls subsequent cards toward the back of the row (toward the
-    // owner's edge of the table) so each card's name strip stays visible.
-    let stagger = seat_rotation(owner, viewer, n_seats)
-        * Vec3::new(
-            index as f32 * LAND_STACK_OFFSET_X,
-            index as f32 * CARD_THICKNESS * 1.5,
-            index as f32 * LAND_STACK_OFFSET_Z,
-        );
+    // owner's edge of the table) so each land's name strip stays visible; a
+    // token pile (Treasures, Clues) fans a few steps and piles up.
+    let token = battlefield.iter().any(|c| c.id == card_id && c.is_token && !c.is_land());
+    let stagger = seat_rotation(owner, viewer, n_seats) * stack_stagger(index, token);
     Some(Transform {
         translation: base.translation + stagger,
         rotation: base.rotation,
@@ -1120,6 +1129,17 @@ pub fn back_row_card_transform(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_token_pile_fans_a_few_steps_and_piles_up() {
+        let (land, token) = (stack_stagger(9, false), stack_stagger(9, true));
+        // Ten lands fan all the way; ten tokens only as far as the fourth...
+        assert_eq!(land.z, 9.0 * LAND_STACK_OFFSET_Z);
+        assert_eq!(token, Vec3::new(3.0 * LAND_STACK_OFFSET_X, token.y, 3.0 * LAND_STACK_OFFSET_Z));
+        assert_eq!(token.x, stack_stagger(4, true).x);
+        // ...and still stand in order, the top card highest.
+        assert!(token.y > stack_stagger(8, true).y && token.y == land.y);
+    }
 
     #[test]
     fn two_player_layout_is_unchanged() {

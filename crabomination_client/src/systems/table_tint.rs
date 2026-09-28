@@ -76,9 +76,11 @@ pub struct SeatNamePlate(pub usize);
 
 /// The plate's text: the seat's name ("You" for the viewer) and life, or
 /// the name under a skull once the seat is out. Pure helper.
-fn plate_label(cv: &crabomination::net::ClientView, p: &crabomination::net::PlayerView) -> String {
+/// A seat plate's text: its name and life total, counting as the HUD's does
+/// (`life_ticker`).
+fn plate_label(cv: &crabomination::net::ClientView, p: &crabomination::net::PlayerView, life: i32) -> String {
     let name = crate::systems::game_ui::table_awareness::seat_label(&cv.players, cv.your_seat, p.seat);
-    if p.eliminated { format!("\u{2620} {name}") } else { format!("{name}  \u{2665} {}", p.life) }
+    if p.eliminated { format!("\u{2620} {name}") } else { format!("{name}  \u{2665} {life}") }
 }
 
 /// Keep a name plate on every seat's deck pile in a pod (3+ seats; a duel's
@@ -90,6 +92,7 @@ pub fn sync_seat_name_plates(
     ui_fonts: Res<crate::theme::UiFonts>,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     ui_scale: Res<UiScale>,
+    ticker: Res<crate::systems::game_ui::life_ticker::LifeTicker>,
     mut plates: Query<(Entity, &SeatNamePlate, &mut Node, &mut Text, &bevy::ui::ComputedNode)>,
 ) {
     let pod = view.0.as_ref().filter(|cv| cv.players.len() > 2);
@@ -114,7 +117,7 @@ pub fn sync_seat_name_plates(
             continue;
         };
         placed[p.seat.min(n - 1)] = true;
-        let label = plate_label(cv, p);
+        let label = plate_label(cv, p, ticker.shown(p.seat, p.life));
         if text.0 != label {
             text.0 = label;
         }
@@ -135,7 +138,7 @@ pub fn sync_seat_name_plates(
         // Parked off screen for the frame before layout has sized it.
         commands.spawn((
             SeatNamePlate(p.seat),
-            Text::new(plate_label(cv, p)),
+            Text::new(plate_label(cv, p, ticker.shown(p.seat, p.life))),
             ui_fonts.tf(13.0),
             TextColor(crate::theme::TEXT_PRIMARY),
             BackgroundColor(crate::theme::HUD_BG),

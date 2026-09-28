@@ -81,8 +81,7 @@ use systems::game_ui::{
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
     animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
-    animate_life_flash, record_life_history, sync_life_graph, toggle_life_graph,
-    trigger_life_flash, LifeFlashTracker, LifeHistory,
+    record_life_history, sync_life_graph, toggle_life_graph, LifeHistory,
     update_combat_preview_panel,
     fit_player_hud_width, position_left_column_below_hud, position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
@@ -375,7 +374,7 @@ fn main() {
         .add_message::<ChangeQuality>()
         .insert_resource(GameLog::default())
         .insert_resource(PhaseBannerTracker::default())
-        .insert_resource(LifeFlashTracker::default())
+        .init_resource::<systems::game_ui::life_ticker::LifeTicker>()
         .insert_resource(LifeHistory::default())
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
@@ -435,6 +434,7 @@ fn main() {
             (
                 layout_harness::inject_damage_for_screenshot,
                 layout_harness::stage_combat_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::swing_life_for_screenshot.run_if(in_state(AppState::InGame)),
             )
                 .after(crate::net_plugin::poll_net),
         )
@@ -613,6 +613,21 @@ fn main() {
                 .after(sync_game_visuals)
                 .run_if(in_state(AppState::InGame)),
         )
+        // Life totals count to their new value, with a numeral beside the
+        // seat's HUD row (`life_ticker`). The count starts before the rows
+        // are rebuilt, so they're built on its first frame.
+        .add_systems(
+            Update,
+            (
+                systems::game_ui::life_ticker::track_life_changes
+                    .before(update_player_stats_chips)
+                    .before(update_opponent_stats_rows),
+                systems::game_ui::life_ticker::tick_life_readouts,
+                systems::game_ui::life_ticker::place_life_numerals,
+            )
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(OnExit(AppState::InGame), systems::game_ui::life_ticker::reset_life_ticker)
         // HUD refresh (after game logic)
         .add_systems(
             Update,
@@ -679,8 +694,6 @@ fn main() {
                 toggle_shortcut_help.run_if(not(text_input_active)),
                 trigger_phase_banner,
                 animate_phase_banner,
-                trigger_life_flash,
-                animate_life_flash,
                 record_life_history,
                 toggle_life_graph.run_if(not(text_input_active)),
                 sync_life_graph,
