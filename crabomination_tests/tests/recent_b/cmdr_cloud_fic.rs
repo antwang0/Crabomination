@@ -334,3 +334,33 @@ fn hojo_discounts_a_targeted_activation() {
     .expect("{4} less {2}");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// SOLDIER Military Program — "If you control a commander, you may choose
+/// both instead." It read the cast-time stamp the Will cycle uses, which a
+/// triggered ability never carries, so the both-modes branch was dead.
+#[test]
+fn soldier_military_program_chooses_both_with_a_commander_out() {
+    for with_commander in [false, true] {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::soldier_military_program());
+        let soldier = g.add_card_to_battlefield(0, catalog::elite_vanguard());
+        if with_commander {
+            let cmd = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.players[0].commanders.push(cmd);
+        }
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::BeginCombat {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+        let tokens = g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token).count();
+        let counters = g.battlefield_find(soldier).unwrap().counter_count(CounterType::PlusOnePlusOne);
+        if with_commander {
+            assert_eq!((tokens, counters), (1, 1), "both modes: a Soldier and a counter");
+        } else {
+            assert_eq!(tokens + counters as usize, 1, "one mode only");
+        }
+    }
+}

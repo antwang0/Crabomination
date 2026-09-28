@@ -446,8 +446,10 @@ pub fn soldier_military_program() -> CardDefinition {
         ]
     };
     CardDefinition {
+        // A trigger, not a spell: the cast-time stamp is never set on it, so
+        // the board is read (any player's commander counts — ruling).
         triggered_abilities: vec![begin_combat_on_your_turn(Effect::If {
-            cond: Predicate::YouControlledACommanderAsCast,
+            cond: Predicate::YouControlACommander,
             then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         })],
