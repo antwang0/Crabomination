@@ -21356,6 +21356,10 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
 pub fn fiend_hunter() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Fiend Hunter",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Creature],
@@ -21429,6 +21433,10 @@ pub fn banisher_priest() -> CardDefinition {
 pub fn oblivion_ring() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Oblivion Ring",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
@@ -25459,6 +25467,10 @@ pub fn leonin_relic_warder() -> CardDefinition {
     use crate::card::ExileReturnZone;
     use crate::effect::shortcut::{etb, target_filtered};
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Leonin Relic-Warder",
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Creature],
@@ -52269,6 +52281,10 @@ pub fn burgeoning() -> CardDefinition {
 /// target nonland permanent (other than this) until it leaves.
 pub fn admonition_angel() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Admonition Angel",
         cost: cost(&[generic(3), w(), w(), w()]),
         supertypes: vec![],

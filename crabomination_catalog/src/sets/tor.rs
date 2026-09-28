@@ -836,6 +836,10 @@ pub fn enslaved_dwarf() -> CardDefinition {
 /// Faceless Butcher — {2}{B}{B} 2/3. Jails another creature while it lives.
 pub fn faceless_butcher() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(R::Creature.and(R::OtherThanSource)),
             return_to: crate::card::ExileReturnZone::Battlefield,
@@ -926,6 +930,10 @@ pub fn ghostly_wings() -> CardDefinition {
 /// Gravegouger — {2}{B} 2/2. Holds two graveyard cards hostage.
 pub fn gravegouger() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 0,
@@ -1495,6 +1503,10 @@ pub fn tainted_wood() -> CardDefinition {
 /// Petravark — {3}{R} 2/2. Sits on a land until it leaves.
 pub fn petravark() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(R::Land),
             return_to: crate::card::ExileReturnZone::Battlefield,
@@ -1513,6 +1525,10 @@ pub fn petravark() -> CardDefinition {
 /// creature an opponent controls.
 pub fn slithery_stalker() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         keywords: vec![Keyword::Landwalk(crate::card::LandType::Swamp)],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(

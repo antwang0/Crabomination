@@ -1924,6 +1924,10 @@ fn wormfang(
     back_to: crate::card::ExileReturnZone,
 ) -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: hostage,
             return_to: back_to,
@@ -1987,6 +1991,10 @@ pub fn wormfang_turtle() -> CardDefinition {
 /// hostage.
 pub fn wormfang_drake() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExileUntilSourceLeaves {
@@ -2026,6 +2034,10 @@ pub fn wormfang_drake() -> CardDefinition {
 pub fn worldgorger_dragon() -> CardDefinition {
     wormfang(
         CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
             keywords: vec![Keyword::Flying, Keyword::Trample],
             ..creature(
                 "Worldgorger Dragon",

@@ -357,6 +357,10 @@ pub fn mage_hunter_defender() -> CardDefinition {
 pub fn detention_sphere() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Detention Sphere",
         cost: cost(&[generic(1), w(), u()]),
         card_types: vec![CardType::Enchantment],

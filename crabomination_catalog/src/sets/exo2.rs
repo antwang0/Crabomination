@@ -1293,6 +1293,10 @@ pub fn volraths_dungeon() -> CardDefinition {
 /// Wall of Nets — {1}{W}{W} 0/7 defender. Everything it blocks is exiled with it.
 pub fn wall_of_nets() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),

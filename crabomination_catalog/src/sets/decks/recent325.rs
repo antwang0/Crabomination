@@ -198,6 +198,10 @@ pub fn dissection_tools() -> CardDefinition {
 /// Unidentified Hovership — exiles a small creature until the ship leaves.
 pub fn unidentified_hovership() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Crew(1)],

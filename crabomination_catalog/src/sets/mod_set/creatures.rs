@@ -1178,6 +1178,10 @@ pub fn hushbringer() -> CardDefinition {
 pub fn journey_to_nowhere() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Journey to Nowhere",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],

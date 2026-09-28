@@ -5575,7 +5575,7 @@ impl GameState {
     /// are removed directly (not via the death/exile pipelines) since a
     /// departing player's objects "cease to exist" rather than being
     /// destroyed or sacrificed.
-    pub(crate) fn objects_leave_with_player(&mut self, p: usize) {
+    pub(crate) fn objects_leave_with_player(&mut self, p: usize, events: &mut Vec<GameEvent>) {
         // The one place CR 800.4a is applied, and the flag that says so —
         // `check_state_based_actions` drives it off this for every seat, no
         // matter which rule or effect put them out.
@@ -5600,6 +5600,23 @@ impl GameState {
         for id in orphaned {
             self.remove_permanent_from_combat(id);
         }
+        // CR 610.3 — an "until this leaves the battlefield" exile or
+        // phase-out ends when its source leaves, and leaving with its owner
+        // is leaving (Cast Out's ruling). Read before the sources go; the
+        // returns run once the departed seat's own cards are gone, so only
+        // other players' cards come back.
+        let durations: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.owner == p)
+            .filter(|c| {
+                !c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExileReturnIsLeaveTrigger))
+            })
+            .map(|c| c.id)
+            .collect();
         self.battlefield.retain(|c| c.owner != p);
         let reverts: Vec<(CardId, usize)> = self
             .battlefield
@@ -5634,6 +5651,23 @@ impl GameState {
         // left with them).
         retain_cold!(self.hands_revealed_to, |(a, b)| *a != p && *b != p);
         self.exile.retain(|c| c.owner != p);
+        for id in durations {
+            // A token in the card's place (Skyclave Apparition, Severance
+            // Priest) is a leave TRIGGER's doing — CR 800.4a drops it.
+            for c in self.exile.iter_mut() {
+                if c.exiled_by.is_some_and(|l| {
+                    l.source == id
+                        && matches!(
+                            l.return_to,
+                            crate::card::ExileReturnZone::IllusionToken | crate::card::ExileReturnZone::SpiritToken
+                        )
+                }) {
+                    c.exiled_by = None;
+                }
+            }
+            self.return_linked_exiles(id, events);
+            self.phase_in_held_by(id, events);
+        }
         self.players[p].hand.clear();
         self.players[p].library.clear();
         self.players[p].graveyard.clear();
@@ -7825,7 +7859,7 @@ impl GameState {
         // revert to their owners' control.
         self.stamp_departures(&newly_eliminated);
         for &p in &newly_eliminated {
-            self.objects_leave_with_player(p);
+            self.objects_leave_with_player(p, events);
             // A concession announced itself (`PlayerConceded`); every other
             // way out is announced here, so a pod's log says who went out.
             let cause = self.players[p].loss_cause.unwrap_or(crate::player::LossCause::Other);

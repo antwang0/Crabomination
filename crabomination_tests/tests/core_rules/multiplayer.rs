@@ -6618,3 +6618,30 @@ fn target_player_clauses_are_one_seat() {
     assert!(g.battlefield_find(b1).is_none(), "the targeted seat sacrificed");
     assert!(g.battlefield_find(b2).is_some(), "the other opponent kept theirs");
 }
+
+/// CR 800.4a + 610.3 — a player leaving takes their permanents with them, and
+/// an "exile … until this leaves the battlefield" duration ends when its
+/// source leaves that way (Cast Out's ruling: "if Cast Out's owner leaves the
+/// game, the exiled card will return … it isn't an ability that goes on the
+/// stack"). An Oblivion Ring's return is its own leave TRIGGER, which a
+/// departed player can't put on the stack, so its card stays exiled. The
+/// departure path removed the permanents without the leave hook, so neither
+/// card came back.
+#[test]
+fn cr_800_4a_a_departed_players_until_exile_ends_but_a_leave_trigger_does_not_fire() {
+    use crabomination::card::{ExileLink, ExileReturnZone};
+    let mut g = multi_player_game(4);
+    let light = g.add_card_to_battlefield(1, catalog::banishing_light());
+    let ring = g.add_card_to_battlefield(1, catalog::oblivion_ring());
+    let held = g.add_card_to_exile(2, catalog::grizzly_bears());
+    let ringed = g.add_card_to_exile(3, catalog::grizzly_bears());
+    for (card, source) in [(held, light), (ringed, ring)] {
+        g.exile.iter_mut().find(|c| c.id == card).unwrap().exiled_by =
+            Some(ExileLink { source, return_to: ExileReturnZone::Battlefield, monarch_guard: None });
+    }
+    g.concede(1);
+    assert!(g.battlefield_find(light).is_none() && g.battlefield_find(ring).is_none(), "seat 1's permanents left");
+    let back = g.battlefield_find(held).expect("the Banishing Light's card returned");
+    assert_eq!(back.controller, 2, "under its owner's control");
+    assert!(g.exile.iter().any(|c| c.id == ringed), "the Oblivion Ring's card stays exiled");
+}

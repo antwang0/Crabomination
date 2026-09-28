@@ -64,6 +64,10 @@ pub fn grave_betrayal() -> CardDefinition {
 /// graveyards until it leaves (then they return to their owners' hands).
 pub fn angel_of_serenity() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         name: "Angel of Serenity",
         cost: cost(&[generic(4), w(), w(), w()]),
         card_types: vec![CardType::Creature],

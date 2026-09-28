@@ -369,6 +369,10 @@ pub fn laquatuss_champion() -> CardDefinition {
 /// Hypnox — {8}{B}{B}{B} 8/8 flier that holds an opponent's hand hostage.
 pub fn hypnox() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             TriggeredAbility {
@@ -397,6 +401,10 @@ pub fn hypnox() -> CardDefinition {
 /// Petradon — {6}{R}{R} 5/6 that sits on two lands until it leaves.
 pub fn petradon() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "The exiled card returns by this permanent's own leave trigger.",
+            effect: crate::effect::StaticEffect::ExileReturnIsLeaveTrigger,
+        }],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 0,

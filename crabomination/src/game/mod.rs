@@ -19814,7 +19814,7 @@ impl GameState {
         // CR 800.4a — the conceding player's objects leave with them. SBAs
         // skip already-eliminated seats, so this won't fire for them there.
         self.stamp_departures(&[seat]);
-        self.objects_leave_with_player(seat);
+        self.objects_leave_with_player(seat, &mut events);
         // Resolve the game-over / surviving-team determination.
         self.check_state_based_actions_into(&mut events);
         events
@@ -31593,6 +31593,8 @@ fn static_effect_to_effects(
             // Fist of Suns — consulted by `effective_alternative_cost` at cast
             // time; no layer effect.
             | StaticEffect::FiveColorAlternativeCost
+            // Read by `objects_leave_with_player` only.
+            | StaticEffect::ExileReturnIsLeaveTrigger
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }

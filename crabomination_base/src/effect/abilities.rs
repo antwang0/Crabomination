@@ -3393,6 +3393,13 @@ pub enum StaticEffect {
     /// for spells you cast" (Fist of Suns). Surfaces a WUBRG alternative cost
     /// on every spell the controller casts.
     FiveColorAlternativeCost,
+    /// A marker: this permanent's `ExileUntilSourceLeaves` return is printed
+    /// as its own triggered ability ("When this leaves the battlefield,
+    /// return the exiled card" — Oblivion Ring, Fiend Hunter), not as the
+    /// duration "until this leaves". CR 800.4a: when its owner leaves the
+    /// game that trigger never goes on the stack, so the card stays exiled;
+    /// a duration-worded card's exile ends (Cast Out's ruling).
+    ExileReturnIsLeaveTrigger,
     /// CR 702.76 — "[filter] spells you cast have prowl [cost]" (Hunting
     /// Velociraptor). Read by `effective_alternative_cost`, which builds the
     /// prowl alternative cost against the spell's own printed creature types.
