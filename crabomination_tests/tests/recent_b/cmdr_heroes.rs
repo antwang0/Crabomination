@@ -461,3 +461,32 @@ fn a_crowded_board_moves_a_self_aimed_copy_off_its_target() {
         assert_eq!(*target == Some(Target::Permanent(mage)), keeps, "{lands} lands: {target:?} (other {other:?})");
     }
 }
+
+/// CR 601.2c — Special Move's Foot Toss owns two target slots: the creature
+/// you control that is flung and sacrificed (it was your greatest-power one,
+/// untargeted) and the "any other target" it hits — here after Jump Kick's
+/// artifact slot.
+#[test]
+fn special_move_foot_toss_targets_the_flung_creature() {
+    let mut g = pod(2);
+    g.priority.player_with_priority = 0;
+    let big = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let sm = g.add_card_to_hand(0, catalog::special_move());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: sm,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Permanent(rock)),
+        additional_targets: vec![Target::Permanent(bear), Target::Player(1)],
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "Jump Kick");
+    assert_eq!(g.players[1].life, life - 2, "the Bears' power, at the player");
+    assert!(g.battlefield_find(bear).is_none(), "the flung Bears is sacrificed");
+    assert!(g.battlefield_find(big).is_some(), "not the biggest");
+}

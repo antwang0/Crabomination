@@ -1905,8 +1905,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
-| 🟡 Dromoka's Command | Call for Backup (MOC) | the fight mode targets only your creature; it fights the greatest-power creature you don't control. |
-| 🟡 Inscription of Abundance | Call for Backup (MOC) | no kicker (one mode only); the fight mode's second creature is the greatest-power one you don't control. |
+| 🟡 Inscription of Abundance | Call for Backup (MOC) | no kicker (one mode only). |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
 | 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
@@ -2313,7 +2312,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Second Doctor | Blast from the Past (WHO) | an opponent who draws has only its current creatures barred from attacking you. |
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
-| 🟡 Special Move | Turtle Power! (TMC) | Foot Toss's creature is your greatest-power creature, chosen on resolution rather than targeted. |
 | 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
 | 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |

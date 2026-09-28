@@ -169,6 +169,33 @@ fn dromokas_command_chooses_two() {
     assert_eq!(plus(&g, bear), 1);
 }
 
+/// CR 601.2c — Dromoka's Command's fight mode owns TWO target slots: with the
+/// counter mode first, slot 1 is your creature (validated against the fight's
+/// own slot 0, not its slot 1) and slot 2 the one it fights. The fight used to
+/// take the greatest-power creature you don't control.
+#[test]
+fn dromokas_command_fight_mode_targets_both_creatures() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let dc = g.add_card_to_hand(0, catalog::dromokas_command());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: dc,
+        spree_modes: vec![2, 3],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(small)],
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.battlefield_find(small).is_none(), "the named 2/2 died to the 3/3");
+    assert!(g.battlefield_find(big).is_some_and(|c| c.damage == 0), "not the biggest");
+    assert!(g.battlefield_find(bear).is_some());
+}
+
 /// Emergent Woodwurm's attack puts a permanent with mana value up to its
 /// power onto the battlefield.
 #[test]

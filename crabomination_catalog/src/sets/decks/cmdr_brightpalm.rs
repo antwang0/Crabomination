@@ -3,9 +3,7 @@
 //! `tests/recent_b/cmdr_brightpalm.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Dromoka's Command** and **Inscription of Abundance** — the fight mode
-//!   targets only your creature; it fights the greatest-power creature you
-//!   don't control. The Inscription is never kicked (one mode only).
+//! - **Inscription of Abundance** — never kicked (one mode only).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
@@ -55,15 +53,11 @@ fn plus_one(what: Selector, n: i32) -> Effect {
 }
 
 /// "Target creature you control fights target creature you don't control" —
-/// one target slot per mode, so the second creature is the greatest-power
-/// one you don't control.
+/// a mode that owns two target slots.
 fn fight_mode() -> Effect {
     Effect::Fight {
         attacker: target_filtered(R::Creature.and(R::ControlledByYou)),
-        defender: Selector::TakeGreatestPower {
-            inner: Box::new(Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::ControlledByYou))))),
-            count: Box::new(Value::ONE),
-        },
+        defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::Not(Box::new(R::ControlledByYou))) },
     }
 }
 
@@ -185,9 +179,6 @@ pub fn bretagard_stronghold() -> CardDefinition {
 
 /// Dromoka's Command — choose two: prevent a spell's damage; a player
 /// sacrifices an enchantment; a +1/+1 counter; your creature fights.
-///
-/// ⚠ Residual: the fight's second creature is the greatest-power one you
-/// don't control.
 pub fn dromokas_command() -> CardDefinition {
     CardDefinition {
         name: "Dromoka's Command",
@@ -340,8 +331,7 @@ pub fn high_sentinels_of_arashin() -> CardDefinition {
 /// Inscription of Abundance — choose one: two +1/+1 counters; a player gains
 /// life equal to their greatest power; your creature fights.
 ///
-/// ⚠ Residual: no kicker (one mode only); the fight's second creature is the
-/// greatest-power one you don't control.
+/// ⚠ Residual: no kicker (one mode only).
 pub fn inscription_of_abundance() -> CardDefinition {
     CardDefinition {
         name: "Inscription of Abundance",

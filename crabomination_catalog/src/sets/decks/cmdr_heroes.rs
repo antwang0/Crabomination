@@ -1207,10 +1207,7 @@ pub fn shellshock() -> CardDefinition {
 }
 
 /// Special Move — choose two: destroy an artifact; two counters on a
-/// combatant of yours; fling a creature.
-///
-/// ⚠ Residual: Foot Toss's creature is your greatest-power creature, chosen
-/// on resolution rather than targeted (a mode binds one target slot).
+/// combatant of yours; fling a creature (Foot Toss owns two target slots).
 pub fn special_move() -> CardDefinition {
     spell(
         "Special Move",
@@ -1221,8 +1218,14 @@ pub fn special_move() -> CardDefinition {
                 Effect::Destroy { what: target_filtered(R::Artifact) },
                 plus(target_filtered(yours(R::Creature).and(R::IsAttacking.or(R::IsBlocking))), Value::Const(2)),
                 Effect::Seq(vec![
-                    Effect::DealDamageEqualToPower { source: Selector::GreatestPowerYouControl, target: target_any() },
-                    Effect::SacrificePermanent { what: Selector::GreatestPowerYouControl },
+                    Effect::DealDamageEqualToPower {
+                        source: target_filtered(yours(R::Creature)),
+                        target: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: R::any_target().and(R::OtherThanTargetSlot(0)),
+                        },
+                    },
+                    Effect::SacrificePermanent { what: Selector::Target(0) },
                 ]),
             ],
             min: 2,
