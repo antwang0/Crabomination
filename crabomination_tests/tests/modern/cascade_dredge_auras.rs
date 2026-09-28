@@ -219,7 +219,15 @@ fn life_from_the_loam_returns_lands_from_graveyard() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
-    cast(&mut g, loam);
+    // "Up to three TARGET land cards" — the caster names them.
+    g.perform_action(GameAction::CastSpell {
+        card_id: loam,
+        target: Some(Target::Permanent(l1)),
+        additional_targets: vec![Target::Permanent(l2), Target::Permanent(l3)],
+        mode: None,
+        x_value: None,
+    }).expect("Life from the Loam on three lands");
+    drain_stack(&mut g);
     for id in [l1, l2, l3] {
         assert!(g.players[0].hand.iter().any(|c| c.id == id),
             "each land card returns to hand");
