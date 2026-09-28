@@ -335,6 +335,22 @@ fn aerial_extortionist_exiles_castably() {
     assert!(exiled.may_play_until.is_some(), "its owner may cast it");
 }
 
+/// CR 601.2c — "up to one target nonland permanent": with only your own
+/// permanents around, Aerial Extortionist exiles nothing.
+#[test]
+fn cr_601_2c_aerial_extortionist_spares_your_own_board() {
+    let mut g = pod(2);
+    let rock = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let ae = g.add_card_to_hand(0, catalog::aerial_extortionist());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ae, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_some(), "declined the target");
+    assert!(g.battlefield_find(ae).is_some());
+}
+
 /// Bennie Bracks — any end step after you made a token draws a card.
 #[test]
 fn bennie_bracks_draws_after_a_token() {

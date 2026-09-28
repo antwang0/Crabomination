@@ -2155,7 +2155,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wakanda Forever! | Wakanda Forever (MSC) | the battlefield and hand picks are the two highest-mana-value permanent cards revealed, not the player's choice. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
-| 🟡 General Leo Cristophe | Revival Trance (FIC) | the "up to one" return target is required whenever a legal card exists. |
 | 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
 | 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles the first instant or sorcery card of each graveyard rather than a chosen one. |
@@ -2195,7 +2194,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
-| 🟡 Star Athlete | Endless Punishment (DSC) | "up to one target" always takes a target when one exists. |
 | 🟡 Brudiclad, Telchor Engineer | Exquisite Invention (C18) | the token the others copy is your greatest-power token, not a free choice. |
 | 🟡 Prototype Portal | Exquisite Invention (C18) | the imprint takes the first artifact card in hand. |
 | 🟡 Tawnos, Urza's Apprentice | Exquisite Invention (C18) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
@@ -2251,7 +2249,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
 | 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the ability copy is Strionic Resonator's: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
-| 🟡 Glint Raker | Mishra's Burnished Banner (BRC) | the reveal isn't optional. |
 | 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the cast offer is the first matching card of the six, not a choice; the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Cosmic Intervention | Phantom Premonition (KHC) | the exile-instead replacement covers the permanents you control as it resolves (not ones that arrive later that turn); the end-step return takes the cards you own that a this-turn "exile it instead" moved. |
@@ -2261,7 +2258,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
 | 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |
-| 🟡 Aerial Extortionist | Deep Clue Sea (MKC) | "up to one target nonland permanent" always takes a target. |
 | 🟡 Alandra, Sky Dreamer | Deep Clue Sea (MKC) | the fifth-card trigger is "five or more drawn, once a turn", so it fires on a later draw when Alandra arrived after the fifth. |
 | 🟡 Erdwal Illuminator | Deep Clue Sea (MKC) | "you investigate" reads a Clue token created under your control; "first time each turn" counts Clues made before it arrived. |
 | 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |

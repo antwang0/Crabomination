@@ -322,3 +322,17 @@ fn locke_mugs_one_spell_from_the_milled_cards() {
     assert_eq!(named(&g, 0, "Goblin Piker").len(), 1);
     assert!(act(&mut g, from_gy(mine)).is_err(), "one spell among them");
 }
+
+/// CR 601.2c / 603.3d — General Leo's return is "up to one target": with no
+/// creature card in the graveyard the trigger still resolves and he takes a
+/// counter per creature you control (it used to be removed for lack of a
+/// target, losing the counters).
+#[test]
+fn cr_603_3d_general_leo_counts_creatures_with_an_empty_graveyard() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let leo = g.add_card_to_hand(0, catalog::general_leo_cristophe());
+    flood(&mut g, 0);
+    cast(&mut g, leo, &[]).expect("cast");
+    assert_eq!(g.battlefield_find(leo).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}

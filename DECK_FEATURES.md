@@ -75,7 +75,7 @@ lists were picked.
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | ✅ all 100 implemented |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -110,7 +110,7 @@ lists were picked.
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | ✅ complete |
 | **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -151,7 +151,7 @@ lists were picked.
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
-| **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
+| **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 2 carry residuals (Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
@@ -191,14 +191,14 @@ lists were picked.
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
 | **Wakanda Forever** (MSC precon) GW | T'Challa, the Black Panther | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Ancestral Communion, Heart-Shaped Herb, Panther Habit, Wakanda Forever!) |
-| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 8 carry residuals (Edgar, Espers to Magicite, General Leo, Gogo, Legions to Ashes, Esper Valigarmanda, The Warring Triad, Umaro) |
+| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 7 carry residuals (Edgar, Espers to Magicite, Gogo, Legions to Ashes, Esper Valigarmanda, The Warring Triad, Umaro) |
 | **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Professor Hojo, Helitrooper, Yuffie) |
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
@@ -786,8 +786,7 @@ creatures you control") and `Effect::RevealUntilOneToBattlefieldRestBottom`
 naming X ("an artifact card with mana value X") was evaluated unresolved and
 refused every card; it now reads the activation's X. Wake the Past's "they gain
 haste" needed `ReturnAllMatchingFromGraveyardToBattlefield` to record its cards
-for `Selector::LastMoved`. Residuals: **Key to the City**'s "up to
-one" always targets; **Laelia** counts only her own attack's library exile (no
+for `Selector::LastMoved`. Residuals: **Laelia** counts only her own attack's library exile (no
 event announces a library exile), and a battlefield exile beside the graveyard.
 Four-seat pods beside Mizzix / Adrix / Daxos (seed 10123, 1,000 games, all
 decided): Osgir 19.4 %; the 300-game census (seed 10124) leaves no card of the
@@ -1050,8 +1049,7 @@ The **fifty-ninth** is Duskmourn Commander's **Endless Punishment**
 Pain found spell-cast triggers blind to their caster** (CR 603.2): the cast
 trigger aimed with no event player set and stamped none on the stack item, so
 "another target player" could never exclude the caster — now both are the
-caster. Residuals: **Star Athlete**'s "up to
-one" always takes a target; **Torture Pit**'s +2 also reaches opponents'
+caster. Residuals: **Torture Pit**'s +2 also reaches opponents'
 permanents (Barbflare Gremlin's and Enchanter's Bane's damage now comes from
 the land / the enchantment, through Open Hostility's `Effect::DealDamageFrom`).
 Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
@@ -1648,7 +1646,7 @@ wording, so it is `Keyword::Skulk`. Pods (seed 160, 1,000 each): 4 seats
 Prossh / Nalia precons 1,000 decided, 12.0 %; 8 seats (seats 4-10) 1,000
 decided, 19.7 %. Residuals (INCOMPLETE_CARDS): Edgar's recast artifact enters
 untapped; Espers to Magicite copies the first exiled creature card as a
-layer-4 artifact; General Leo's return is required; Gogo takes the copied
+layer-4 artifact; Gogo takes the copied
 name; Legions to Ashes exiles every player's namesake tokens; Esper Valigarmanda's chapter I takes the first
 instant or sorcery; The Warring Triad mills in its effect and pays you;
 Umaro's mode and target are picked as it resolves. Census: no card of the
@@ -2208,8 +2206,7 @@ Eminent One. Seventeen cards were missing; the primitives:
 animates (CR 613.8) — ENGINE_BACKLOG. Residuals: **Mishra**'s Warform keeps the
 artifact's name; **Ashnod** can't copy an ability whose source was the thing
 sacrificed; **Smelting Vat** caps each card, not the pair's total; **Lithoform Engine**
-copies abilities as Strionic Resonator does; **Workshop Elders** (above);
-**Glint Raker**'s reveal isn't optional.
+copies abilities as Strionic Resonator does; **Workshop Elders** (above).
 Four-seat pods beside Ms. Bumbleflower / Derevi / Lord Windgrace (seed 10170, 1,000 games, all decided): Mishra 14.6 %; a 300-game census (seed 10171) leaves no card of the four unplayed; 12 seats (85..74, seed 10192): 200 / 200 decided. `--bench` byte-identical. ⚠ The first gate, on a binary built before rebasing over the Insatiable Frugivore / Chatterfang loop fixes, ran 1h45m on one 1,000-game block without finishing; the rebuilt binary does it in 6.6 s — the hang was not this list's.
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
 (`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the

@@ -311,7 +311,10 @@ pub fn star_athlete() -> CardDefinition {
         alternative_cost: Some(blitz(cost(&[generic(3), r()]))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: sacrifice_or_take(target_filtered(R::Nonland.and(R::Permanent)), Value::Const(5), false),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(sacrifice_or_take(target_filtered(R::Nonland.and(R::Permanent)), Value::Const(5), false)),
+            },
         }],
         ..creature("Star Athlete", cost(&[generic(1), r(), r()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 2)
     }

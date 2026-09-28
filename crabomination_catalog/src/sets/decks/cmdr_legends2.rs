@@ -219,9 +219,12 @@ pub fn gargos_vicious_watcher() -> CardDefinition {
                 causer_filter: Some(R::IsSpellOnStack),
                 ..EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
             },
-            effect: Effect::Fight {
-                attacker: Selector::This,
-                defender: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::This,
+                    defender: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+                }),
             },
         }],
         ..legend("Gargos, Vicious Watcher", cost(&[generic(3), g(), g(), g()]), vec![CreatureType::Hydra], 8, 7)

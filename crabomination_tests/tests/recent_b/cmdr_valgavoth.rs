@@ -312,6 +312,24 @@ fn star_athlete_forces_a_choice() {
     );
 }
 
+/// CR 601.2c — "up to one target nonland permanent": with only its own
+/// controller's permanents around, Star Athlete targets nothing, so its
+/// controller neither sacrifices nor takes 5.
+#[test]
+fn cr_601_2c_star_athlete_needs_no_target() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::star_athlete());
+    let rock = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.clear_sickness(a);
+    let life = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: a, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_some());
+    assert_eq!(g.players[0].life, life);
+}
+
 /// Destroy an opponent's creature, they lose 3, and it suspends itself.
 #[test]
 fn suspended_sentence_returns() {

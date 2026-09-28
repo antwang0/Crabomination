@@ -339,18 +339,20 @@ pub fn dispellers_capsule() -> CardDefinition {
     }
 }
 
-/// Key to the City — {T}, discard a card: target creature can't be blocked
-/// this turn ("up to one" always takes a target); untapping, you may pay {2}
-/// to draw.
+/// Key to the City — {T}, discard a card: up to one target creature can't be
+/// blocked this turn; untapping, you may pay {2} to draw.
 pub fn key_to_the_city() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             discard_cost: Some((R::Any, 1)),
-            effect: Effect::GrantKeyword {
-                what: target_filtered(R::Creature),
-                keyword: Keyword::Unblockable,
-                duration: Duration::EndOfTurn,
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                }),
             },
             ..Default::default()
         }],

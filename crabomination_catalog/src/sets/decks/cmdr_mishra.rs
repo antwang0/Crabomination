@@ -305,13 +305,16 @@ pub fn glint_raker() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::LookPickToHand(Box::new(LookPick {
-                who: PlayerRef::You,
-                count: Value::TriggerEventAmount,
-                rest_to_graveyard: true,
-                pick_filter: Some(R::Artifact),
-                ..Default::default()
-            })),
+            effect: Effect::MayDo {
+                description: "Reveal that many cards from the top of your library?".into(),
+                body: Box::new(Effect::LookPickToHand(Box::new(LookPick {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    rest_to_graveyard: true,
+                    pick_filter: Some(R::Artifact),
+                    ..Default::default()
+                }))),
+            },
         }],
         ..creature("Glint Raker", cost(&[generic(3), u()]), vec![CreatureType::Drake], 1, 3)
     }

@@ -278,10 +278,10 @@ pub fn knowledge_is_power() -> CardDefinition {
 /// Aerial Extortionist — flying; entering or hitting a player exiles up to one
 /// target nonland permanent its owner may cast while it stays exiled; another
 /// player casting a spell from anywhere but their hand draws you a card.
-/// ⚠ "Up to one" always takes a target.
 pub fn aerial_extortionist() -> CardDefinition {
-    let extort = || {
-        Effect::Seq(vec![
+    let extort = || Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::Seq(vec![
             Effect::Move { what: target_filtered(R::Permanent.and(R::Nonland)), to: ZoneDest::Exile },
             Effect::GrantMayPlay {
                 what: Selector::LastMoved,
@@ -291,7 +291,7 @@ pub fn aerial_extortionist() -> CardDefinition {
                 pay_own_cost: true,
                 any_color: false,
             },
-        ])
+        ])),
     };
     CardDefinition {
         keywords: vec![Keyword::Flying],

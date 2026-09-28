@@ -338,20 +338,23 @@ pub fn gau_feral_youth() -> CardDefinition {
 }
 
 /// General Leo Cristophe — returns a small creature, then a counter per
-/// creature you control. Residual: the return target is required.
+/// creature you control.
 pub fn general_leo_cristophe() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).and(R::InYourGraveyard)),
-                to: to_battlefield(false),
-            },
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::count(Selector::EachPermanent(yours(R::Creature))),
-            },
-        ]))],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).and(R::InYourGraveyard)),
+                    to: to_battlefield(false),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::count(Selector::EachPermanent(yours(R::Creature))),
+                },
+            ])),
+        })],
         ..creature(
             "General Leo Cristophe",
             cost(&[generic(4), w()]),
