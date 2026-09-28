@@ -3889,6 +3889,9 @@ impl GameState {
             Predicate::ArtifactEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].artifacts_entered_this_turn > 0),
+            Predicate::FoodEnteredThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].foods_entered_this_turn > 0),
             Predicate::OwnsSourceNamedCardInEveryZone { who } => {
                 let (Some(seat), Some(src)) = (self.resolve_player(who, ctx), ctx.source) else {
                     return false;

@@ -2734,6 +2734,9 @@ impl GameState {
                 if card.definition.is_artifact() {
                     self.players[p].artifacts_entered_this_turn += 1;
                 }
+                if card.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food) {
+                    self.players[p].foods_entered_this_turn += 1;
+                }
                 if !card.definition.is_land() {
                     self.players[p].nonland_permanents_entered_this_turn += 1;
                 }

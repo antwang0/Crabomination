@@ -2788,6 +2788,9 @@ pub enum Predicate {
     /// CR 606.3 — "`who` activated a loyalty ability of a planeswalker this
     /// turn." The Chain Veil's end-step upkeep tax reads its negation.
     ActivatedLoyaltyThisTurn { who: PlayerRef },
+    /// "If a Food entered the battlefield under `who`'s control this turn"
+    /// (Motivated Pony). Reads `Player.foods_entered_this_turn`.
+    FoodEnteredThisTurn { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

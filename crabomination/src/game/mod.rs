@@ -10218,6 +10218,9 @@ impl GameState {
         if inst.definition.is_artifact() {
             self.players[ctrl].artifacts_entered_this_turn += 1;
         }
+        if inst.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food) {
+            self.players[ctrl].foods_entered_this_turn += 1;
+        }
         if inst.definition.is_land() {
             self.players[ctrl].lands_entered_this_turn += 1;
         } else {

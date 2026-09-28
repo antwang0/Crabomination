@@ -5282,6 +5282,7 @@ impl GameState {
             let pl = &mut **pl;
             pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
             pl.artifacts_entered_this_turn = 0;
+            pl.foods_entered_this_turn = 0;
             pl.planeswalkers_entered_this_turn = 0;
             pl.nonland_permanents_entered_this_turn = 0;
             pl.mounts_vehicles_entered_this_turn = 0;

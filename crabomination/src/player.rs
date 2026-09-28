@@ -612,6 +612,10 @@ pub struct PlayerData {
     /// active player's turn boundary.
     #[serde(default)]
     pub artifacts_entered_this_turn: u32,
+    /// The Food subset of `artifacts_entered_this_turn` — "if a Food entered
+    /// under your control this turn" (Motivated Pony).
+    #[serde(default)]
+    pub foods_entered_this_turn: u32,
     /// Count of planeswalkers that entered under this player's control this
     /// turn — the `Predicate::PlaneswalkerEnteredThisTurn` gate (Oath of
     /// Chandra). Reset at the active player's turn boundary.
@@ -1547,6 +1551,7 @@ impl Player {
             creatures_entered_this_turn: Default::default(),
             creatures_entered_last_turn: Default::default(),
             artifacts_entered_this_turn: 0,
+            foods_entered_this_turn: 0,
             planeswalkers_entered_this_turn: 0,
             nonland_permanents_entered_this_turn: 0,
             mounts_vehicles_entered_this_turn: 0,
