@@ -684,8 +684,7 @@ found Clever Concealment castable by no bot path**: nothing answered a
 sweeper with a protective instant. `pick_sweeper_shield` resolves the
 opponent's top spell in a clone and, when it would take two or more of our
 nonland permanents, casts a phase-out / indestructible instant aimed at every
-own-side slot. Residuals: **Collective Effort**'s escalate is paid at
-resolution, **Goldwardens' Gambit** hands each token your best unattached
+own-side slot. Residuals: **Goldwardens' Gambit** hands each token your best unattached
 Equipment (no pick). Four-seat pods beside Adriana / Giada / Gisela (seed
 10131, 1,000 games, 999 decided + 1 draw, every card played): Neyali 13.0 %.
 Seed 10141, 300 games at 43 seats: **299 decided + 1 draw, 0 caps, zero

@@ -608,18 +608,18 @@ pub fn bloodsoaked_insight() -> CardDefinition {
 
 /// Collective Resistance — {1}{G} instant, Escalate {G}. Choose one or more:
 /// destroy target artifact; destroy target enchantment; target creature gains
-/// hexproof and indestructible until end of turn. (The escalate cost is modeled
-/// as a per-extra-mode {G} payment at resolution.)
+/// hexproof and indestructible until end of turn. Escalate is paid as it is
+/// cast (CR 702.120a).
 pub fn collective_resistance() -> CardDefinition {
     CardDefinition {
         name: "Collective Resistance",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Escalate {
-            cost: Box::new(Effect::PayManaOrElse {
-                mana_cost: cost(&[g()]),
-                otherwise: Box::new(Effect::Noop),
-            }),
+        escalate: Some(crate::card::Escalate::Mana(cost(&[g()]))),
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 3,
+            allow_repeats: false,
             modes: vec![
                 Effect::Destroy {
                     what: target_filtered(R::Artifact),

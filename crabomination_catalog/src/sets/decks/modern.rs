@@ -12719,35 +12719,36 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
     }
 }
 
-/// Collective Brutality — {1}{B} Sorcery. Escalate — Discard a card
-/// (CR 702.119). Choose one or more:
+/// Collective Brutality — {1}{B} Sorcery. Escalate—Discard a card (CR
+/// 702.120a). Choose one or more:
+/// - Target opponent reveals their hand; you choose an instant or sorcery
+///   card from it and they discard it.
 /// - Target creature gets -2/-2 until end of turn.
-/// - Target player discards a card.
 /// - Target opponent loses 2 life and you gain 2 life.
 pub fn collective_brutality() -> CardDefinition {
     CardDefinition {
         name: "Collective Brutality",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Escalate {
-            cost: Box::new(Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            }),
+        escalate: Some(crate::card::Escalate::Cost(crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        })),
+        // Each target-bearing mode owns a slot in printed order, so each names
+        // slot 0 of its own mode.
+        effect: Effect::ChooseModesCast {
             modes: vec![
+                Effect::DiscardChosen {
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
                     power: Value::Const(-2),
                     toughness: Value::Const(-2),
                     duration: Duration::EndOfTurn,
-                },
-                // Each target-bearing mode owns a slot in run order, so each
-                // names slot 0 of its own mode.
-                Effect::Discard {
-                    who: target_filtered(SelectionRequirement::OpponentPlayer),
-                    amount: Value::Const(1),
-                    random: false,
                 },
                 Effect::Drain {
                     from: target_filtered(SelectionRequirement::OpponentPlayer),
@@ -12755,6 +12756,9 @@ pub fn collective_brutality() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             ],
+            min: 1,
+            max: 3,
+            allow_repeats: false,
         },
         ..Default::default()
     }
@@ -20560,10 +20564,11 @@ pub fn planar_nexus() -> CardDefinition {
 
 // ── Push XVII: Additional Modern burn/modal spells ─────────────────────────
 
-/// Collective Defiance — {1}{R}{R} Sorcery. Choose one:
+/// Collective Defiance — {1}{R}{R} Sorcery. Escalate {1} (CR 702.120a).
+/// Choose one or more:
+/// - Target player discards their hand, then draws that many cards.
 /// - Deal 4 damage to target creature.
-/// - Target player discards their hand, then draws that many cards (approx: discard 3, draw 3).
-/// - Deal 3 damage to target opponent.
+/// - Deal 3 damage to target opponent or planeswalker.
 pub fn collective_defiance() -> CardDefinition {
     CardDefinition {
         name: "Collective Defiance",
@@ -20574,11 +20579,11 @@ pub fn collective_defiance() -> CardDefinition {
         // then draws three" for "target player discards their hand, then
         // draws that many", and "3 damage to each opponent" for "target
         // opponent or planeswalker".
-        effect: Effect::Escalate {
-            cost: Box::new(Effect::PayManaOrElse {
-                mana_cost: cost(&[generic(1)]),
-                otherwise: Box::new(Effect::Noop),
-            }),
+        escalate: Some(crate::card::Escalate::Mana(cost(&[generic(1)]))),
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 3,
+            allow_repeats: false,
             modes: vec![
                 Effect::DiscardHandDrawThatMany {
                     who: target_filtered(SelectionRequirement::Player),

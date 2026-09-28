@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
 //! Residuals (each also on its card):
-//! - **Collective Effort** — escalate is paid as it resolves (the engine's
-//!   standing `Escalate` approximation), tapping your first untapped creature.
 //! - **Goldwardens' Gambit** — each token takes your highest-mana-value
 //!   *unattached* Equipment (no pick); an attached one is never moved.
 
@@ -153,21 +151,22 @@ pub fn call_the_coppercoats() -> CardDefinition {
     }
 }
 
-/// Collective Effort — escalate (tap an untapped creature you control):
-/// destroy a power 4+ creature; destroy an enchantment; +1/+1 counters on a
-/// target player's creatures.
+/// Collective Effort — escalate (tap an untapped creature you control, paid as
+/// it is cast — CR 702.120a): destroy a power 4+ creature; destroy an
+/// enchantment; +1/+1 counters on a target player's creatures.
 pub fn collective_effort() -> CardDefinition {
     CardDefinition {
         name: "Collective Effort",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Escalate {
-            cost: Box::new(Effect::TapUpToValue {
-                count: Value::ONE,
-                filter: R::Creature.and(R::ControlledByYou).and(R::Untapped),
-                skip_untap: false,
-                exact: true,
-            }),
+        escalate: Some(crate::card::Escalate::Cost(crate::card::AdditionalCastCost::TapPermanents {
+            filter: R::Creature,
+            count: 1,
+        })),
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 3,
+            allow_repeats: false,
             modes: vec![
                 Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
                 Effect::Destroy { what: target_filtered(R::Enchantment) },

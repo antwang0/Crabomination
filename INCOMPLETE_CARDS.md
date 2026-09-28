@@ -2181,7 +2181,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
-| 🟡 Collective Effort | Rebellion Rising (ONC) | escalate is paid as it resolves (the standing `Escalate` approximation), tapping your first untapped creature. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |
 | 🟡 Divine Reckoning | Feline Ferocity (C17) | each player keeps their highest-mana-value creature (the engine's pick, as Deadly Vanity). |

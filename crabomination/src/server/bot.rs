@@ -20874,6 +20874,24 @@ mod tests {
         }
     }
 
+    /// CR 702.120a — an escalate spell is offered with every mode (the bot
+    /// never escalated: the cost was asked at resolution and AutoDecider
+    /// declined). Collective Defiance with {1}{R}{R} + {2}.
+    #[test]
+    fn bot_offers_an_escalated_cast() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.add_card_to_hand(1, catalog::island());
+        let id = g.add_card_to_hand(0, catalog::collective_defiance());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 3);
+        g.players[0].mana_pool.add_colorless(2);
+        let offered = cast_candidates(&g, 0, &EvalWeights::default(), None).into_iter().any(|(a, _)| {
+            matches!(a, GameAction::CastSpellSpree { card_id, ref spree_modes, .. }
+                if card_id == id && spree_modes.len() == 3)
+        });
+        assert!(offered, "all three modes offered");
+    }
+
     /// Chandra, Torch of Defiance's "+1: exile the top card, you may cast it"
     /// beats her "+1: Add {R}{R}" (the mana always won and the impulse was
     /// never activated in 183 pod decks — `server/loyalty_pick.rs`).

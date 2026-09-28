@@ -11,34 +11,56 @@ use crate::Factory;
 
 // ── New cube cards (push claude/modern_decks) ──────────────────────────
 
+/// CR 702.120a — escalate is an additional cost paid as the spell is cast,
+/// once for each mode beyond the first (it was paid at resolution).
 #[test]
 fn collective_brutality_escalate_runs_two_modes_paying_discard() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // The default bot profile aims a hostile player slot at an
-    // opponent (`EvalWeights::default()`); a bare test seat does not.
-    g.players[0].hostile_player_targets = true;
     // P0 needs a spare card to pay the escalate "discard a card" cost.
     let fodder = g.add_card_to_hand(0, catalog::island());
-    // P1 holds a card to be discarded by mode 1.
-    g.add_card_to_hand(1, catalog::island());
+    // P1 holds an instant for mode 0 to take, and a land it can't.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let land = g.add_card_to_hand(1, catalog::island());
     let id = g.add_card_to_hand(0, catalog::collective_brutality());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
-    // Escalate to modes 1 (opp discards) + 2 (drain). Base mode = 1.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1, 2])]));
-    g.perform_action(GameAction::CastSpell {
-        // Both chosen modes target now, and each owns a slot in run order.
-        card_id: id, target: Some(Target::Player(1)),
-        additional_targets: vec![Target::Player(1)], mode: Some(1), x_value: None,
+    // Modes 0 (reveal, discard an instant or sorcery) + 2 (drain), each
+    // target-bearing mode owning a slot in printed order.
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
     }).expect("Collective Brutality castable");
+    // CR 702.120a — the escalate cost is paid as the spell is cast.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "escalate discarded on cast");
     drain_stack(&mut g);
-    // Escalate cost discarded P0's spare card.
-    assert!(!g.players[0].hand.iter().any(|c| c.id == fodder), "escalate cost discarded a card");
-    // Mode 1 made the opponent discard their card; mode 2 drained 2.
-    assert!(g.players[1].hand.is_empty(), "opponent discarded to mode 1");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "mode 0 took the instant");
+    assert!(g.players[1].hand.iter().any(|c| c.id == land), "and not the land");
     assert_eq!(g.players[1].life, 18, "mode 2 drains opponent for 2");
     assert_eq!(g.players[0].life, 22, "mode 2 gains controller 2");
+
+    // Collective Defiance: escalate {1} per extra mode, or no second mode.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::collective_defiance());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let two = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::CastSpellSpree {
+            card_id: id,
+            spree_modes: vec![1, 2],
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![Target::Player(1)],
+            x_value: None,
+        })
+    };
+    assert!(two(&mut g).is_err(), "{{1}}{{R}}{{R}} doesn't pay the escalate {{1}}");
+    g.players[0].mana_pool.add_colorless(1);
+    two(&mut g).expect("{1}{R}{R} + {1}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].life, 17);
 }
 
 #[test]

@@ -4758,9 +4758,10 @@ Still deferred:
   `KnownCard.spree_single_mode`) and casts `CastSpellSpree`. Remaining:
   per-mode *target* picking for multi-target mode sets (today the single
   armed targeting pass covers one target).
-- **Spree/Escalate cast-time mode selection** for bots/auto-target — bots don't
-  yet choose Spree modes, so a bot casting a Spree spell resolves the default
-  (cheapest) mode only.
+- **Spree cast-time mode selection** for bots/auto-target — bots don't yet
+  choose Spree modes, so a bot casting a Spree spell resolves the default
+  (cheapest) mode only. (Escalate is cast-time since `01P3edJz`, and the bot
+  offers the every-mode escalation.)
 - **Trash the Town mode 3 / Final Showdown mode 1** — grant-a-triggered-ability
   and lose-all-abilities Spree modes need those effect primitives before those
   two Spree cards can ship faithfully.

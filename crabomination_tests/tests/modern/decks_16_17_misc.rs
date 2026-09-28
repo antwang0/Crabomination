@@ -55,7 +55,7 @@ fn electrolyze_divides_damage_across_creature_and_player_then_draws() {
 }
 
 #[test]
-fn collective_brutality_mode_zero_shrinks_creature() {
+fn collective_brutality_shrink_mode_kills_a_two_two() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::collective_brutality());
@@ -63,7 +63,7 @@ fn collective_brutality_mode_zero_shrinks_creature() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
     }).expect("Collective Brutality castable");
     drain_stack(&mut g);
 
