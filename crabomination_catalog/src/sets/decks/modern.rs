@@ -39178,16 +39178,15 @@ pub fn sword_of_light_and_shadow() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Move {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    }),
-                    count: Box::new(Value::Const(1)),
-                },
-                to: ZoneDest::Hand(PlayerRef::You),
+            // "you may return up to one target creature card from your graveyard".
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
             },
         ]),
     )
