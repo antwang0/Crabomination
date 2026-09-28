@@ -359,7 +359,7 @@ fn devil_1_1_token() -> TokenDefinition {
             ..Default::default()
         },
         triggered_abilities: vec![on_dies(Effect::DealDamage {
-            to: target(),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(1),
         })],
         ..Default::default()
