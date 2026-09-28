@@ -286,3 +286,28 @@ fn cr_702_103b_a_bestowed_spell_is_not_a_creature_spell() {
     assert_eq!(g.battlefield_find(monk).unwrap().power(), 2, "prowess saw a noncreature spell");
 }
 
+/// CR 115.1 / 603.7 — a delayed trigger's captured object is not a target: the
+/// body's slot 0 names what the capture recorded. Nahiri, the Harbinger's −8
+/// ("search … it gains haste; return it to your hand at the beginning of the
+/// next end step") declares no target, so it activates with none.
+#[test]
+fn cr_115_1_a_captured_delayed_body_declares_no_target() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let nahiri = g.add_card_to_battlefield(0, catalog::nahiri_the_harbinger());
+    g.battlefield_find_mut(nahiri).unwrap().counters.insert(CounterType::Loyalty, 8);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nahiri,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("the −8 has no target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "fetched onto the battlefield");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(in_hand(&g, 0, bears), "returned to hand at the next end step");
+}

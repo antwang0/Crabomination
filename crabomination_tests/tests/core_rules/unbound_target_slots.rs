@@ -124,6 +124,17 @@ const DEFERRED_FIRE: &[&str] = &["HauntCreature", "ReplaceYourNextDrawThisTurn"]
 /// A serialized nested ability definition (a granted trigger, a token's
 /// ability, a Room half). It is cast or triggered in its own right, so its
 /// slots are numbered and bound by *that* resolution, not this one.
+/// CR 603.7 — a `DelayUntilWithCapture` whose capture is not a target
+/// (`LastMoved`, `TriggerSource`, …) binds its body's slot 0 to the captured
+/// object when it fires; the body declares no cast-time slot.
+fn captures_a_non_target(k: &str, inner: &Value) -> bool {
+    k == "DelayUntilWithCapture"
+        && inner.get("capture").is_some_and(|c| {
+            let s = c.to_string();
+            !s.contains("\"Target\"") && !s.contains("\"TargetFiltered\"")
+        })
+}
+
 fn is_nested_ability(map: &serde_json::Map<String, Value>) -> bool {
     map.contains_key("effect")
         && (map.contains_key("event") || map.contains_key("mana_cost") || map.contains_key("cost"))
@@ -147,6 +158,7 @@ fn unbound_slots(v: &Value, owner: &str, out: &mut Vec<(u64, String)>) {
                 if RESOLUTION_TIME_TARGETING.contains(&k.as_str())
                     || CAST_TIME_MODAL.contains(&k.as_str())
                     || DEFERRED_FIRE.contains(&k.as_str())
+                    || captures_a_non_target(k, inner)
                 {
                     continue;
                 }

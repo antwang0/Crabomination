@@ -702,97 +702,6 @@ impl Effect {
     /// references `Selector::Target(_)` anywhere). Used for cast-time
     /// validation.
     pub fn requires_target(&self) -> bool {
-        fn sel_has_target(s: &Selector) -> bool {
-            match s {
-                Selector::Target(_) | Selector::TargetFiltered { .. } => true,
-                Selector::AttachedTo(i)
-                | Selector::AttachedToMe(i)
-                | Selector::RadianceGroup { subject: i }
-                | Selector::CreaturesInCombatWith(i)
-                | Selector::SharingNameWith(i)
-                | Selector::SharingColorWith(i) => sel_has_target(i),
-                Selector::Both(a, b) => sel_has_target(a) || sel_has_target(b),
-                Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
-                Selector::PowerAbove { inner, than } => {
-                    sel_has_target(inner) || value_has_target(than)
-                }
-                Selector::Take { inner, count }
-                | Selector::TakeRandom { inner, count }
-                | Selector::TakeGreatestPower { inner, count }
-                | Selector::TakeGreatestManaValue { inner, count } => {
-                    sel_has_target(inner) || value_has_target(count)
-                }
-                Selector::TakeWithSumCap {
-                    inner,
-                    cap,
-                    value_of_each,
-                } => {
-                    sel_has_target(inner)
-                        || value_has_target(cap)
-                        || value_has_target(value_of_each)
-                }
-                _ => selector_player_ref(s).is_some_and(player_has_target),
-            }
-        }
-        fn player_has_target(p: &PlayerRef) -> bool {
-            match p {
-                PlayerRef::Target(_) => true,
-                PlayerRef::OpponentOf(inner) => player_has_target(inner),
-                // Every ref that reads a player *out of* a selector, from the
-                // one list — see [`player_ref_selector`].
-                _ => player_ref_selector(p).is_some_and(sel_has_target),
-            }
-        }
-        fn value_has_target(v: &Value) -> bool {
-            match v {
-                Value::CountOf(s)
-                | Value::PowerOf(s)
-                | Value::ToughnessOf(s)
-                | Value::MarkedDamageOn(s) => sel_has_target(s),
-                Value::CountersOn { what, .. } => sel_has_target(what),
-                Value::LifeOf(p)
-                | Value::HandSizeOf(p)
-                | Value::GraveyardSizeOf(p)
-                | Value::LibrarySizeOf(p)
-                | Value::PlayerSpeed(p)
-                | Value::PermanentCountControlledBy(p)
-                // Same shape as `PermanentCountControlledBy` with a filter
-                // riding along (Honorable Scout's "2 life for each black or
-                // red creature *target opponent* controls"). The filter can't
-                // hold a target; the player ref can.
-                | Value::PermanentCountControlledByMatching(p, _)
-                | Value::CreatureCountControlledBy(p) => player_has_target(p),
-                // "…for each Island *target opponent* controls" (Carpet of
-                // Flowers): the target hides in the counted selector.
-                Value::CountMatching { sel, .. } => sel_has_target(sel),
-                Value::TotalManaValueOf(s) => sel_has_target(s),
-                Value::Sum(vs) => vs.iter().any(value_has_target),
-                Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
-                    value_has_target(a) || value_has_target(b)
-                }
-                Value::NonNeg(v) => value_has_target(v),
-                Value::ManaValueOf(s) => sel_has_target(s),
-                Value::ColorCountOf(s) => sel_has_target(s),
-                Value::LoyaltyOf(s) => sel_has_target(s),
-                _ => false,
-            }
-        }
-        fn pred_has_target(p: &Predicate) -> bool {
-            match p {
-                Predicate::Not(q) => pred_has_target(q),
-                Predicate::All(v) | Predicate::Any(v) => v.iter().any(pred_has_target),
-                Predicate::SelectorExists(s) => sel_has_target(s),
-                Predicate::SelectorCountAtLeast { sel, n } => {
-                    sel_has_target(sel) || value_has_target(n)
-                }
-                Predicate::ValueAtLeast(a, b)
-                | Predicate::ValueAtMost(a, b)
-                | Predicate::ValueEquals(a, b) => value_has_target(a) || value_has_target(b),
-                Predicate::IsTurnOf(p) => player_has_target(p),
-                Predicate::EntityMatches { what, .. } => sel_has_target(what),
-                _ => false,
-            }
-        }
         match self {
             Effect::Voyage { .. }
             | Effect::ShuffleIntoTopPile { .. }
@@ -2200,10 +2109,10 @@ impl Effect {
             Effect::ChooseSector { body } => body.requires_target(),
             // The captured selector is a target too — a delayed trigger that
             // remembers "target creature" (`capture: Target(0)`) picks it at
-            // cast time, not at the delayed resolution.
-            Effect::DelayUntilWithCapture { capture, body, .. } => {
-                sel_has_target(capture) || body.requires_target()
-            }
+            // cast time, not at the delayed resolution. The body's slot 0 IS
+            // the captured object, so it declares no target of its own (a
+            // `capture: LastMoved` body's `Target(0)` is not a cast target).
+            Effect::DelayUntilWithCapture { capture, .. } => sel_has_target(capture),
             Effect::DelayUntil { body, .. } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. } => true,
@@ -3028,9 +2937,10 @@ impl Effect {
                 .or_else(|| else_.primary_target_filter())
                 // Tithe names its target player only inside the condition.
                 .or_else(|| implicit_player_in_predicate(cond)),
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => {
-                body.primary_target_filter()
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                body.primary_target_filter().filter(|_| sel_has_target(capture))
             }
+            Effect::DelayUntil { body, .. } => body.primary_target_filter(),
             Effect::OptionalTargets { body, .. } => body.primary_target_filter(),
             Effect::WithX { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
@@ -3456,9 +3366,12 @@ impl Effect {
                     .collect::<Vec<_>>()
                     .as_slice(),
             ),
-            Effect::DelayUntilWithCapture { body, .. }
-            | Effect::DelayUntil { body, .. }
-            | Effect::Repeat { body, .. } => body.prefers_friendly_target(),
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                sel_has_target(capture) && body.prefers_friendly_target()
+            }
+            Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
+                body.prefers_friendly_target()
+            }
             Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
@@ -3572,8 +3485,10 @@ impl Effect {
             // every_reachable_reanimation_is_visible_to_the_offboard_gate`.
             Effect::OptionalTargets { body, .. } => body.prefers_graveyard_target(),
             Effect::WithX { body, .. } => body.prefers_graveyard_target(),
-            Effect::DelayUntilWithCapture { body, .. }
-            | Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                sel_has_target(capture) && body.prefers_graveyard_target()
+            }
+            Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
@@ -3669,8 +3584,10 @@ impl Effect {
                 then.may_target_offboard_card() || else_.may_target_offboard_card()
             }
             Effect::ApplyToTargets { effect, .. } => effect.may_target_offboard_card(),
-            Effect::DelayUntilWithCapture { body, .. }
-            | Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                sel_has_target(capture) && body.may_target_offboard_card()
+            }
+            Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
@@ -4477,8 +4394,10 @@ impl Effect {
                     then.accepts_player_target_by_body() || else_.accepts_player_target_by_body()
                 }
             }
-            Effect::DelayUntilWithCapture { body, .. }
-            | Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                sel_has_target(capture) && body.accepts_player_target_by_body()
+            }
+            Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target_by_body(),
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
@@ -5463,8 +5382,10 @@ impl Effect {
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }
                 | Effect::WithX { body, .. }
-                | Effect::DelayUntilWithCapture { body, .. }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
+                Effect::DelayUntilWithCapture { capture, body, .. } if sel_has_target(capture) => {
+                    eff_find(body, slot, mode, kicked)
+                }
                 Effect::PayEnergy { then, .. }
                 | Effect::PayEnergyValue { then, .. }
                 | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
@@ -5651,8 +5572,10 @@ impl Effect {
             | Effect::OnMatchingAttacksThisTurn { body, .. }
             | Effect::OnMatchingBlocksThisTurn { body, .. }
             | Effect::DelayUntil { body, .. }
-            | Effect::DelayUntilWithCapture { body, .. }
             | Effect::AtEachCombatThisTurn { body, .. } => body.min_targets_in_mode(mode),
+            Effect::DelayUntilWithCapture { capture, body, .. } if sel_has_target(capture) => {
+                body.min_targets_in_mode(mode)
+            }
             _ => None,
         }
     }
@@ -5894,5 +5817,99 @@ impl Effect {
             _ => {}
         }
         out
+    }
+}
+
+
+// The target walkers `Effect::requires_target` shares with its siblings.
+fn sel_has_target(s: &Selector) -> bool {
+    match s {
+        Selector::Target(_) | Selector::TargetFiltered { .. } => true,
+        Selector::AttachedTo(i)
+        | Selector::AttachedToMe(i)
+        | Selector::RadianceGroup { subject: i }
+        | Selector::CreaturesInCombatWith(i)
+        | Selector::SharingNameWith(i)
+        | Selector::SharingColorWith(i) => sel_has_target(i),
+        Selector::Both(a, b) => sel_has_target(a) || sel_has_target(b),
+        Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
+        Selector::PowerAbove { inner, than } => {
+            sel_has_target(inner) || value_has_target(than)
+        }
+        Selector::Take { inner, count }
+        | Selector::TakeRandom { inner, count }
+        | Selector::TakeGreatestPower { inner, count }
+        | Selector::TakeGreatestManaValue { inner, count } => {
+            sel_has_target(inner) || value_has_target(count)
+        }
+        Selector::TakeWithSumCap {
+            inner,
+            cap,
+            value_of_each,
+        } => {
+            sel_has_target(inner)
+                || value_has_target(cap)
+                || value_has_target(value_of_each)
+        }
+        _ => selector_player_ref(s).is_some_and(player_has_target),
+    }
+}
+fn player_has_target(p: &PlayerRef) -> bool {
+    match p {
+        PlayerRef::Target(_) => true,
+        PlayerRef::OpponentOf(inner) => player_has_target(inner),
+        // Every ref that reads a player *out of* a selector, from the
+        // one list — see [`player_ref_selector`].
+        _ => player_ref_selector(p).is_some_and(sel_has_target),
+    }
+}
+fn value_has_target(v: &Value) -> bool {
+    match v {
+        Value::CountOf(s)
+        | Value::PowerOf(s)
+        | Value::ToughnessOf(s)
+        | Value::MarkedDamageOn(s) => sel_has_target(s),
+        Value::CountersOn { what, .. } => sel_has_target(what),
+        Value::LifeOf(p)
+        | Value::HandSizeOf(p)
+        | Value::GraveyardSizeOf(p)
+        | Value::LibrarySizeOf(p)
+        | Value::PlayerSpeed(p)
+        | Value::PermanentCountControlledBy(p)
+        // Same shape as `PermanentCountControlledBy` with a filter
+        // riding along (Honorable Scout's "2 life for each black or
+        // red creature *target opponent* controls"). The filter can't
+        // hold a target; the player ref can.
+        | Value::PermanentCountControlledByMatching(p, _)
+        | Value::CreatureCountControlledBy(p) => player_has_target(p),
+        // "…for each Island *target opponent* controls" (Carpet of
+        // Flowers): the target hides in the counted selector.
+        Value::CountMatching { sel, .. } => sel_has_target(sel),
+        Value::TotalManaValueOf(s) => sel_has_target(s),
+        Value::Sum(vs) => vs.iter().any(value_has_target),
+        Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
+            value_has_target(a) || value_has_target(b)
+        }
+        Value::NonNeg(v) => value_has_target(v),
+        Value::ManaValueOf(s) => sel_has_target(s),
+        Value::ColorCountOf(s) => sel_has_target(s),
+        Value::LoyaltyOf(s) => sel_has_target(s),
+        _ => false,
+    }
+}
+fn pred_has_target(p: &Predicate) -> bool {
+    match p {
+        Predicate::Not(q) => pred_has_target(q),
+        Predicate::All(v) | Predicate::Any(v) => v.iter().any(pred_has_target),
+        Predicate::SelectorExists(s) => sel_has_target(s),
+        Predicate::SelectorCountAtLeast { sel, n } => {
+            sel_has_target(sel) || value_has_target(n)
+        }
+        Predicate::ValueAtLeast(a, b)
+        | Predicate::ValueAtMost(a, b)
+        | Predicate::ValueEquals(a, b) => value_has_target(a) || value_has_target(b),
+        Predicate::IsTurnOf(p) => player_has_target(p),
+        Predicate::EntityMatches { what, .. } => sel_has_target(what),
+        _ => false,
     }
 }
