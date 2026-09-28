@@ -971,6 +971,8 @@ pub enum CounterType {
     Brain,
     /// Cosima, God of the Voyage's tally while it is exiled on its voyage.
     Voyage,
+    /// Heirloom Mirror's tally toward transforming.
+    Ritual,
 }
 
 /// Every zone a card can occupy.
@@ -7100,6 +7102,7 @@ impl CardDefinition {
             devoid: self.keywords.has_kw(&Keyword::Devoid),
             foretell: self.foretell_cost.is_some(),
             equipment: self.is_equipment(),
+            vehicle: self.is_vehicle(),
             aura: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura),
             colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),

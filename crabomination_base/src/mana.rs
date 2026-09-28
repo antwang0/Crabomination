@@ -754,6 +754,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Aura and/or Equipment spells."
     /// (Codsworth, Handy Helper.) Spells only — an equip ability is not one.
     AuraOrEquipmentSpells,
+    /// "Spend this mana only to cast Mount or Vehicle spells." (Intrepid
+    /// Stablemaster.) Spells only; a changeling spell is a Mount.
+    MountOrVehicleSpells,
     /// "If this mana is spent to cast a creature spell, that creature enters
     /// with an additional +1/+1 counter on it." (Biophagus.) Unrestricted
     /// spend; one counter per funding pip rides the cast card's
@@ -798,6 +801,7 @@ impl SpendRestriction {
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
+            SpendRestriction::MountOrVehicleSpells => "only Mount and Vehicle spells",
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
                 "only spells and abilities of the two listed creature types"
             }
@@ -912,6 +916,12 @@ impl SpendRestriction {
             SpendRestriction::AuraOrEquipmentSpells => {
                 !kind.activating_ability && (kind.equipment || kind.aura)
             }
+            SpendRestriction::MountOrVehicleSpells => {
+                !kind.activating_ability
+                    && (kind.vehicle
+                        || kind.changeling
+                        || kind.creature_types.contains(&crate::card::CreatureType::Mount))
+            }
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(a, b) => {
                 (kind.creature || kind.creature_ability)
                     && (kind.changeling || kind.creature_types.contains(&a) || kind.creature_types.contains(&b))
@@ -1025,6 +1035,8 @@ pub struct SpellKind {
     pub equipment: bool,
     /// Casting an Aura spell (Codsworth's "Aura and/or Equipment spells").
     pub aura: bool,
+    /// Casting a Vehicle spell (Intrepid Stablemaster's "Mount or Vehicle").
+    pub vehicle: bool,
     /// Casting a colorless spell (Sage of the Unknowable's "spend this mana
     /// only to cast a colorless spell or to activate an ability").
     pub colorless: bool,
