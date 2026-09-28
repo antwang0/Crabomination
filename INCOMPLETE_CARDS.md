@@ -388,6 +388,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 |---|---|---|
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
+| Vivien, Champion of the Wilds (pod) | the −2's exiled card may be cast even if it isn't a creature spell | `LookTopExileOneMayPlay` grants an unfiltered while-exiled cast (the look-three and face-down halves shipped) |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
