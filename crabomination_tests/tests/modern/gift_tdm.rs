@@ -1207,6 +1207,19 @@ fn silk_web_weaver_tokens_on_creature_cast() {
     drain_stack(&mut g);
     let tokens = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Human Citizen").count();
     assert_eq!(tokens, 1, "Silk minted a Citizen on the creature cast");
+    // "{3}{G}{W}: Creatures you control get +2/+2 and gain vigilance" — the
+    // vigilance shipped dropped.
+    let silk = g.battlefield.iter().find(|c| c.definition.name == "Silk, Web Weaver").unwrap().id;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: silk, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance));
 }
 
 /// Spider-Man India puts a +1/+1 counter on a creature you control and grants

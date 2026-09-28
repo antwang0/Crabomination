@@ -1208,8 +1208,8 @@ pub fn voyager_glidecar() -> CardDefinition {
 }
 
 /// Kickoff Celebrations — {1}{R} Enchantment. Start your engines! When it enters,
-/// you may discard a card; if you do, draw two. (The "max speed — sacrifice:
-/// team gains haste" ability is dropped.)
+/// you may discard a card; if you do, draw two. Max speed — sacrifice it:
+/// creatures and Vehicles you control gain haste until end of turn.
 pub fn kickoff_celebrations() -> CardDefinition {
     CardDefinition {
         name: "Kickoff Celebrations",
@@ -1225,6 +1225,21 @@ pub fn kickoff_celebrations() -> CardDefinition {
             }),
             else_: None,
         })],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            sac_cost: true,
+            condition: Some(crate::card::Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    crate::card::SelectionRequirement::ControlledByYou.and(
+                        crate::card::SelectionRequirement::Creature
+                            .or(crate::card::SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)),
+                    ),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

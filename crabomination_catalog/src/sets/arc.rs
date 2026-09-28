@@ -154,12 +154,24 @@ pub fn kneel_before_my_legions() -> CardDefinition {
                     ..Default::default()
                 }),
             },
-            Effect::PumpPT {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                power: Value::Const(3),
-                toughness: Value::Const(3),
-                duration: Duration::EndOfTurn,
-            },
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         ]),
     )
 }

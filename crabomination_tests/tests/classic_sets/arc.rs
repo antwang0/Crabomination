@@ -196,6 +196,8 @@ fn kneel_before_my_legions_pumps_on_mode_one() {
     to_main(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance), "and vigilance");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample), "and trample");
 }
 
 /// Embrace My Diabolical Vision refills both sides.

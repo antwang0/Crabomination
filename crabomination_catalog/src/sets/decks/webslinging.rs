@@ -122,14 +122,23 @@ pub fn silk_web_weaver() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), g(), w()]),
-            effect: Effect::PumpPT {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

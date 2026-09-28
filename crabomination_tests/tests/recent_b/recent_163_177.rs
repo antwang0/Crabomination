@@ -867,6 +867,36 @@ mod recent166 {
         // Discard 1, draw 2 → net +1 card in hand.
         assert_eq!(g.players[0].hand.len(), before + 1, "looted: -1 discard, +2 draw");
     }
+
+    /// Kickoff Celebrations' "Max speed — Sacrifice this enchantment:
+    /// creatures and Vehicles you control gain haste" (it shipped dropped):
+    /// refused below speed 4, then hastes the team.
+    #[test]
+    fn kickoff_celebrations_max_speed_sac_grants_haste() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = crabomination::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let kc = g.add_card_to_battlefield(0, catalog::kickoff_celebrations());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let act = |g: &mut GameState| {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: kc,
+                ability_index: 0,
+                target: None,
+                additional_targets: vec![],
+                x_value: None,
+                mode: None,
+            })
+        };
+        g.players[0].speed = 3;
+        assert!(act(&mut g).is_err(), "not at max speed");
+        g.players[0].speed = 4;
+        act(&mut g).expect("max speed");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(kc).is_none(), "sacrificed");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
+    }
 }
 
 mod recent167 {
