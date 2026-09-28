@@ -1725,6 +1725,12 @@ pub struct ColdState {
     /// registrant's turn begins.
     #[serde(default)]
     pub(crate) staggered_damage_players: Vec<(usize, usize)>,
+    /// Jeska, Thrice Reborn — `(creature, registrant)` pairs: until the
+    /// registrant's next turn, the creature's combat damage to one of the
+    /// registrant's opponents is tripled (`scale_combat_damage`). Cleared as
+    /// the registrant's turn begins.
+    #[serde(default)]
+    pub(crate) tripled_combat_damage_to_opponents: Vec<(CardId, usize)>,
     /// Overblaze — sources whose damage is doubled for the rest of the turn
     /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
     #[serde(default)]

@@ -5326,7 +5326,19 @@ impl GameState {
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
             AttackTarget::Battle(b) => EntityRef::Permanent(b),
         };
-        self.attached_combat_damage_doubling(source, self.scale_damage_to(source, ent, amount))
+        let scaled = self.attached_combat_damage_doubling(source, self.scale_damage_to(source, ent, amount));
+        // Jeska, Thrice Reborn — triple to one of the registrant's opponents.
+        match (source, target) {
+            (Some(src), AttackTarget::Player(p)) if !self.tripled_combat_damage_to_opponents.is_empty() => {
+                let n = self
+                    .tripled_combat_damage_to_opponents
+                    .iter()
+                    .filter(|(c, reg)| *c == src && !self.same_team(*reg, p))
+                    .count() as u32;
+                scaled.saturating_mul(3u32.saturating_pow(n))
+            }
+            _ => scaled,
+        }
     }
 
     fn prevent_combat_to_target(

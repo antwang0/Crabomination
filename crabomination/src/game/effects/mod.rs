@@ -12711,6 +12711,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutCommandersFromCommandZonesOntoBattlefield => {
+                self.put_commanders_onto_battlefield(ctx.controller, events);
+                Ok(())
+            }
+
             Effect::CastCommanderWithoutPaying => {
                 self.cast_commander_without_paying(ctx.controller, events);
                 Ok(())
@@ -30573,6 +30578,15 @@ impl GameState {
                     fires_once: false,
                     expires_after_turn: None,
                 });
+                Ok(())
+            }
+
+            Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.tripled_combat_damage_to_opponents.push((cid, ctx.controller));
+                    }
+                }
                 Ok(())
             }
 

@@ -1119,6 +1119,9 @@ pub enum Value {
     /// resolution) sacrificed — "for each creature sacrificed this way"
     /// (Vicious Betrayal). Reads `GameState.sacrificed_count`.
     SacrificedCount,
+    /// Commanders (any player's, CR 903.3) sacrificed during this resolution
+    /// (Tevesh Szat's "if the sacrificed permanent was a commander").
+    CommandersSacrificedThisResolution,
     /// Permanents `who` sacrificed during this resolution that matched
     /// `filter` as they were sacrificed — "for each land sacrificed this way,
     /// its controller may search …" (Wave of Vitriol).
@@ -4707,6 +4710,11 @@ pub enum Effect {
     /// Overblaze — each resolved permanent's damage is doubled for the rest of
     /// the turn (CR 614.2), via `doubled_damage_sources_this_turn`.
     DoubleDamageFromSourceThisTurn { what: Selector },
+    /// Jeska, Thrice Reborn's 0 — until your next turn, if the creature `what`
+    /// resolves to would deal combat damage to one of your opponents, it deals
+    /// triple that damage instead (CR 614.1a), via
+    /// `tripled_combat_damage_to_opponents`.
+    TripleCombatDamageToYourOpponentsUntilYourNextTurn { what: Selector },
     /// Whims of the Fates — starting with the controller, each player splits
     /// the permanents they control into `piles` piles and sacrifices one
     /// chosen at random. The split is round-robin over a shuffled list (no
@@ -6652,6 +6660,10 @@ pub enum Effect {
     /// (Command Beacon). With two commanders the controller chooses one.
     /// Does nothing when no commander of `who`'s is in the command zone.
     CommanderToHand { who: PlayerRef },
+    /// CR 903 — "Put all commanders from the command zone onto the battlefield
+    /// under your control" (Tevesh Szat's −10): every player's commanders in
+    /// their command zone, in seat order. Not a cast, so no tax.
+    PutCommandersFromCommandZonesOntoBattlefield,
     /// "Put a commander you own from the command zone onto the battlefield"
     /// (Hellkite Courser). Not a cast: no commander tax, no cast-count bump.
     /// With two commanders there the owner chooses; with none it does nothing.

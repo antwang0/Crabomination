@@ -4551,6 +4551,7 @@ impl GameState {
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).
         retain_cold!(self.staggered_damage_players, |(_, reg)| *reg != p);
+        retain_cold!(self.tripled_combat_damage_to_opponents, |(_, reg)| *reg != p);
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {

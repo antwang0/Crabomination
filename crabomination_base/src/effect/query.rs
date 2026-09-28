@@ -863,6 +863,7 @@ impl Effect {
             | Effect::EachPlayerChoosesToDestroy { .. }
             | Effect::PlayerChoosesToDestroy { .. }
             | Effect::CastCommanderWithoutPaying
+            | Effect::PutCommandersFromCommandZonesOntoBattlefield
             | Effect::NextSpellHasAffinityForArtifacts => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
@@ -1805,7 +1806,8 @@ impl Effect {
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
             Effect::ExchangeCreatureControlWith { who, .. } => sel_has_target(who),
-            Effect::DoubleDamageFromSourceThisTurn { what } => sel_has_target(what),
+            Effect::DoubleDamageFromSourceThisTurn { what }
+            | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_has_target(what),
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. }
@@ -2872,7 +2874,8 @@ impl Effect {
                 sel_filter(opponent).or_else(|| implicit_player_if_bare_player_field(opponent))
             }
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
-            Effect::DoubleDamageFromSourceThisTurn { what } => sel_filter(what),
+            Effect::DoubleDamageFromSourceThisTurn { what }
+            | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_filter(what),
             Effect::CounterSpellDiscardSplicedNames { what } => sel_filter(what),
             Effect::ExchangeCreatureControlWith { who, .. } => sel_filter(who),
             Effect::RedirectYourDamageToChosen { what }
@@ -5031,7 +5034,8 @@ impl Effect {
                 | Effect::TopChosenFromHand { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
-                Effect::DoubleDamageFromSourceThisTurn { what } => sel_find(what, slot),
+                Effect::DoubleDamageFromSourceThisTurn { what }
+                | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_find(what, slot),
                 Effect::CounterSpellDiscardSplicedNames { what } => sel_find(what, slot),
                 Effect::ExchangeCreatureControlWith { who, .. } => sel_find(who, slot),
                 Effect::RedirectYourDamageToChosen { what }

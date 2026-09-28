@@ -136,6 +136,25 @@ impl GameState {
         self.offboard_keyword_grants = true;
     }
 
+    /// Tevesh Szat's −10: every commander in any command zone enters under
+    /// `controller`'s control, seat order (deterministic).
+    pub(crate) fn put_commanders_onto_battlefield(&mut self, controller: usize, events: &mut Vec<crate::game::GameEvent>) {
+        let dest = crate::effect::ZoneDest::Battlefield { controller: PlayerRef::Seat(controller), tapped: false };
+        for p in 0..self.players.len() {
+            let ids: Vec<CardId> = self.players[p]
+                .command
+                .iter()
+                .filter(|c| self.players[p].commanders.contains(&c.id))
+                .map(|c| c.id)
+                .collect();
+            for id in ids {
+                let Some(pos) = self.players[p].command.iter().position(|c| c.id == id) else { continue };
+                let card = self.players[p].command.remove(pos);
+                self.place_card_in_dest(card, p, &dest, events);
+            }
+        }
+    }
+
     /// One of `seat`'s commanders that is in the command zone: the only one,
     /// or — with two (Partner) — the one the decider picks (`ChooseCards`,
     /// `min == 1`; a headless seat takes the first). `None` when neither is

@@ -1346,6 +1346,12 @@ impl GameState {
                 .unwrap_or(0),
             Value::SacrificedTotalPower => self.sacrificed_total_power,
             Value::SacrificedCount => self.sacrificed_count as i32,
+            Value::CommandersSacrificedThisResolution => self
+                .scratch
+                .cards_sacrificed_this_resolution
+                .iter()
+                .filter(|id| self.is_commander(**id))
+                .count() as i32,
             Value::SacrificedThisResolutionBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 self.scratch
