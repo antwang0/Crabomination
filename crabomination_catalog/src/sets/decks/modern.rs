@@ -33218,8 +33218,8 @@ pub fn cleric_of_chill_depths() -> CardDefinition {
 }
 
 /// Anticognition — {1}{U} Instant. Counter target creature or planeswalker spell
-/// unless its controller pays {2}. (The delirium "hard counter + scry 2" upgrade
-/// is dropped.)
+/// unless its controller pays {2}. If an opponent — any of them — has eight or
+/// more cards in their graveyard, instead counter it, then scry 2.
 pub fn anticognition() -> CardDefinition {
     CardDefinition {
         name: "Anticognition",
@@ -33233,7 +33233,7 @@ pub fn anticognition() -> CardDefinition {
         // about it whichever arm the classifier reaches first.
         effect: Effect::If {
             cond: Predicate::ValueAtLeast(
-                Value::GraveyardSizeOf(PlayerRef::OpponentOf(Box::new(PlayerRef::You))),
+                Value::GreatestGraveyardSizeAmong(PlayerRef::EachOpponent),
                 Value::Const(8),
             ),
             then: Box::new(Effect::Seq(vec![

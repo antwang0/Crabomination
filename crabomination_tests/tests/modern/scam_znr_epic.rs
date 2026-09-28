@@ -1329,6 +1329,41 @@ fn anticognition_hard_counters_off_a_full_graveyard() {
     assert_eq!(g.players[0].library.len(), lib, "scry 2 does not draw");
 }
 
+/// "If **an** opponent has eight or more cards in their graveyard": in a pod
+/// the full graveyard can be a third player's. The check read the first
+/// opponent's graveyard only (`GraveyardSizeOf(OpponentOf(You))`), so the
+/// caster's {2} paid its way past it.
+#[test]
+fn anticognition_reads_every_opponents_graveyard() {
+    let mut g = crabomination::game::multi_player_game(3);
+    for _ in 0..8 {
+        g.add_card_to_graveyard(2, catalog::island());
+    }
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("seat 1 casts a bear");
+    let ac = g.add_card_to_hand(0, catalog::anticognition());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, ac, Target::Permanent(spell));
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == spell),
+        "countered outright off seat 2's graveyard"
+    );
+}
+
 /// Pride of the Clouds grows for each other flyer on the battlefield.
 #[test]
 fn pride_of_the_clouds_scales_with_flyers() {
