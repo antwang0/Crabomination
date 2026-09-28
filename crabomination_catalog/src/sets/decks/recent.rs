@@ -11250,9 +11250,8 @@ pub fn bloodvial_purveyor() -> CardDefinition {
 }
 
 /// Croaking Counterpart — {1}{G}{U} Sorcery. Create a token that's a copy of
-/// target creature, except it's a 1/1 Frog. Flashback {3}{G}{U}. (The copy's
-/// recolor to green is approximated — it keeps the original's colors plus the
-/// Frog type and 1/1 body.)
+/// target non-Frog creature, except it's a 1/1 green Frog. Flashback
+/// {3}{G}{U}. Residual: the copy keeps its other creature types beside Frog.
 pub fn croaking_counterpart() -> CardDefinition {
     CardDefinition {
         name: "Croaking Counterpart",
@@ -11263,13 +11262,16 @@ pub fn croaking_counterpart() -> CardDefinition {
             extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
-            source: target_filtered(SelectionRequirement::Creature),
+            source: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasCreatureType(CreatureType::Frog)))),
+            ),
             extra_creature_types: vec![CreatureType::Frog],
             extra_card_types: vec![],
             override_pt: Some((1, 1)),
-            override_colors: None,
+            override_colors: Some(vec![crate::mana::Color::Green]),
             enters_tapped: false,
-            non_legendary: true,
+            non_legendary: false,
             legendary: false,
         },
         ..Default::default()

@@ -510,13 +510,12 @@ pub fn drown_in_ichor() -> CardDefinition {
     }
 }
 
-/// Paradoxical Outcome — {3}{U} Instant. Return any number of non-land
-/// permanents you control to their owners' hands. Draw a card for each
-/// card returned this way.
+/// Paradoxical Outcome — {3}{U} Instant. Return any number of target nonland,
+/// nontoken permanents you control to their owners' hands. Draw a card for
+/// each card returned to your hand this way.
 ///
-/// Implemented via `ForEach { non-land permanents you control: bounce + draw 1 }`.
-/// The selector is resolved once at the start, so cards moved to hand
-/// don't affect later iterations of the loop.
+/// "Any number" is every nonland, nontoken permanent you control and own
+/// (one returned to an opponent's hand draws nothing and gives it back).
 pub fn paradoxical_outcome() -> CardDefinition {
     CardDefinition {
         name: "Paradoxical Outcome",
@@ -524,7 +523,10 @@ pub fn paradoxical_outcome() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
-                SelectionRequirement::ControlledByYou.and(SelectionRequirement::Nonland),
+                SelectionRequirement::ControlledByYou
+                    .and(SelectionRequirement::OwnedByYou)
+                    .and(SelectionRequirement::NotToken)
+                    .and(SelectionRequirement::Nonland),
             ),
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {

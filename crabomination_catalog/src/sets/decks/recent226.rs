@@ -6,7 +6,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
     StaticAbility, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{battalion, each_opponent, investigate, on_other_dies};
+use crate::effect::shortcut::{battalion, each_opponent, investigate};
 use crate::effect::{Duration, Effect, Selector, StaticEffect, Value, ZoneRef};
 use crate::mana::{b, cost, generic, r, w};
 
@@ -134,10 +134,15 @@ pub fn all_out_assault() -> CardDefinition {
 }
 
 /// Homicide Investigator — {1}{B} 2/2 Human Detective. Whenever one or more
-/// creatures you control die, investigate. Only once each turn.
+/// nontoken creatures you control die (itself included), investigate. Only
+/// once each turn.
 pub fn homicide_investigator() -> CardDefinition {
-    let mut trig = on_other_dies(investigate(1));
-    trig.event = trig.event.once_per_turn();
+    let trig = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+            .with_filter(crate::card::Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken })
+            .once_per_turn(),
+        effect: investigate(1),
+    };
     CardDefinition {
         name: "Homicide Investigator",
         cost: cost(&[generic(1), b()]),

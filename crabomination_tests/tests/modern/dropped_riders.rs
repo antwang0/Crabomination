@@ -2098,3 +2098,72 @@ fn vile_redeemer_counts_only_your_nontoken_deaths() {
     let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
     assert_eq!(scions, 1);
 }
+
+/// "Nontoken" filters that shipped dropped (nontoken oracle scan): Homicide
+/// Investigator ignores a dying token but sees itself die; Hamlet Vanguard
+/// doesn't count a Human token; Paradoxical Outcome leaves a token.
+#[test]
+fn nontoken_filters_skip_tokens() {
+    let clues = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Clue").count();
+    let mut g = main_phase();
+    let inv = g.add_card_to_battlefield(0, catalog::homicide_investigator());
+    let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(tok))).expect("bolt the token");
+    drain_stack(&mut g);
+    assert_eq!(clues(&g), 0, "a token died");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(inv))).expect("bolt the Investigator");
+    drain_stack(&mut g);
+    assert_eq!(clues(&g), 1, "it sees itself die");
+
+    let mut g = main_phase();
+    let human = g.add_card_to_battlefield(0, catalog::hamlet_vanguard());
+    g.battlefield_find_mut(human).unwrap().is_token = true;
+    g.add_card_to_battlefield(0, catalog::hamlet_vanguard());
+    let hv = g.add_card_to_hand(0, catalog::hamlet_vanguard());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, hv, None).expect("vanguard");
+    drain_stack(&mut g);
+    let n = g.battlefield_find(hv).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+    assert_eq!(n, 2, "one nontoken Human");
+
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.battlefield_find_mut(ring).unwrap().is_token = true;
+    let signet = g.add_card_to_battlefield(0, catalog::arcane_signet());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let po = g.add_card_to_hand(0, catalog::paradoxical_outcome());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, po, None).expect("paradoxical outcome");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_some(), "the token stays");
+    assert!(g.battlefield_find(signet).is_none(), "the Signet returns");
+    assert_eq!(g.players[0].hand.len(), 2, "the Signet and one draw");
+}
+
+/// Croaking Counterpart — "target non-Frog creature … except it's a 1/1
+/// green Frog": the copy is green and keeps a legend's supertype.
+#[test]
+fn croaking_counterpart_copy_is_green_and_stays_legendary() {
+    let mut g = main_phase();
+    let legend = g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+    let cc = g.add_card_to_hand(0, catalog::croaking_counterpart());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, cc, Some(Target::Permanent(legend))).expect("croak");
+    drain_stack(&mut g);
+    let frog = g.battlefield.iter().find(|c| c.controller == 0 && c.is_token).map(|c| c.id).expect("a copy");
+    let cp = g.computed_permanent(frog).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.colors.contains(Color::Green) && !cp.colors.contains(Color::White));
+    assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+}

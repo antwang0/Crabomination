@@ -2036,7 +2036,7 @@ pub fn rural_recruit() -> CardDefinition {
 }
 
 /// Hamlet Vanguard — {2}{G} */* Human Warrior. Ward {2}. Enters with two +1/+1
-/// counters for each other Human you control.
+/// counters for each other nontoken Human you control.
 pub fn hamlet_vanguard() -> CardDefinition {
     CardDefinition {
         name: "Hamlet Vanguard",
@@ -2056,6 +2056,7 @@ pub fn hamlet_vanguard() -> CardDefinition {
                 Box::new(Value::count(Selector::EachPermanent(
                     SelectionRequirement::OtherThanSource
                         .and(SelectionRequirement::HasCreatureType(CreatureType::Human))
+                        .and(SelectionRequirement::NotToken)
                         .and(SelectionRequirement::ControlledByYou),
                 ))),
             ),
