@@ -173,6 +173,13 @@ fn walk(v: &Value, out: &mut ColorSet) {
             }
         }
         Value::Array(a) => a.iter().for_each(|e| walk(e, out)),
+        // "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost" (Jodah,
+        // Fist of Suns): a unit variant, so its five symbols are the name.
+        Value::String(s) if s == "FiveColorAlternativeCost" => {
+            for c in Color::ALL {
+                out.insert(c);
+            }
+        }
         _ => {}
     }
 }
@@ -247,6 +254,13 @@ mod tests {
     /// `Protection(Color)` keyword serializes as `{"Protection":"White"}` and
     /// must not read as identity; this pins that the tags we *do* match are
     /// not reused. Regenerate by grepping the variant names if it fails.
+    /// CR 903.4 — "You may pay {W}{U}{B}{R}{G} rather than pay the mana
+    /// cost" is a rules-text cost: Jodah is five colors, not his {1}{U}{R}{W}.
+    #[test]
+    fn cr_903_4_a_five_color_alternative_cost_is_five_colors() {
+        assert_eq!(color_identity(&catalog::jodah_archmage_eternal()).len(), 5);
+    }
+
     #[test]
     fn tag_names_are_unambiguous() {
         // Protection from a color is not color identity (CR 903.4 counts mana

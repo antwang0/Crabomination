@@ -697,14 +697,13 @@ is real and the fix belongs with the bot's fight evaluation, not the filter.
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /
 `catalog_registration.rs`) compares every implemented card's computed identity
-against Scryfall's `color_identity`: **18,058 cards resolved, 5 divergences**,
+against Scryfall's `color_identity`: **18,058 cards resolved, 3 divergences**,
 each a card gap rather than an identity-walk gap. The list in that test is the
 ratchet; this is the engineering view of it.
 
 | Card | Gap | What it needs |
 |---|---|---|
 | Balduvian Fallen | the "+1/+0 for each {R} spent to pay cumulative upkeep" payoff is dropped | a per-color read of what paid a cumulative upkeep; no primitive |
-| Fist of Suns, Leyline of Mutation | "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost for spells you cast" | no primitive for a static alternative cost granted to *other* spells |
 | Maraxus of Keld, Bounty Hunter | not card gaps — the Scryfall cache resolves the name to a different card (one Vanguard avatar, one creature) than the catalog holds | nothing; the rows document the collision |
 
 ## The INVENTED-ability columns (2026-09-19) — residuals only

@@ -3681,8 +3681,6 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     ("Balduvian Fallen", "the \"+1/+0 for each {R} spent\" cumulative-upkeep payoff is dropped"),
     // A printed face the catalog has not implemented at all.
     // No primitive for "pay {W}{U}{B}{R}{G} rather than the mana cost".
-    ("Fist of Suns", "the five-color alternative cost for other spells is unimplemented"),
-    ("Leyline of Mutation", "same five-color alternative cost as Fist of Suns"),
     // Scryfall resolves the name to a different card than the catalog's.
     ("Maraxus of Keld", "the catalog card is the Vanguard avatar; the cache holds the creature"),
     ("Bounty Hunter", "the cache entry is the Vanguard avatar; the catalog holds the creature"),
