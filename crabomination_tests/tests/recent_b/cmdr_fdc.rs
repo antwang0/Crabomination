@@ -6216,6 +6216,34 @@ fn cr_702_125a_durnans_exiled_creature_has_undaunted() {
     assert!(g.battlefield_find(tusk).is_some());
 }
 
+/// Durnan looks at the top four and the controller picks the creature card to
+/// exile (it exiled the first creature it revealed); a land is not a pick, and
+/// the other three go to the bottom.
+#[test]
+fn durnan_exiles_the_creature_card_its_controller_picks() {
+    let mut g = multi_player_game(4);
+    let durnan = g.add_card_to_battlefield(0, catalog::durnan_of_the_yawning_portal());
+    g.clear_sickness(durnan);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let tusk = g.add_card_to_library(0, catalog::thragtusk());
+    g.add_card_to_library(0, catalog::island());
+    let fifth = g.add_card_to_library(0, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: durnan,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear && !c.face_down), "the picked Bears, face up");
+    assert!(g.players[0].library.iter().any(|c| c.id == tusk), "Thragtusk stays in the library");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(fifth), "the fifth card is on top");
+}
+
 /// Neyali, Suns' Vanguard — "Whenever one or more tokens you control attack a
 /// player" triggers once for EACH player attacked with tokens (ruling), not
 /// once per declaration.

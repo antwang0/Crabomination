@@ -223,12 +223,12 @@ pub fn dire_fleet_daredevil() -> CardDefinition {
     }
 }
 
-/// Durnan of the Yawning Portal — on attack, exile a creature card from the
-/// top four of your library; you may cast it while it stays exiled.
+/// Durnan of the Yawning Portal — on attack, look at the top four; you may
+/// exile a creature card from among them and cast it while it stays exiled.
 ///
-/// Approximation: the first creature card among the four is exiled (no
-/// choice), and its undaunted discount (CR 702.125a, `per_opponent`) lasts
-/// only while Durnan is on the battlefield.
+/// Approximation: its undaunted discount (CR 702.125a, `per_opponent`) lasts
+/// only while Durnan is on the battlefield, and the rest go to the bottom in
+/// a random order rather than one you choose.
 pub fn durnan_of_the_yawning_portal() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -239,29 +239,13 @@ pub fn durnan_of_the_yawning_portal() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::RevealUntilFind {
-                    who: PlayerRef::You,
-                    find: R::Creature,
-                    to: ZoneDest::Exile,
-                    cap: Value::Const(4),
-                    life_per_revealed: 0,
-                    miss_dest: RevealMissDest::BottomRandom,
-                },
-                // Linked, so the undaunted discount below finds it.
-                Effect::ExileLinkedTo {
-                    what: Selector::ExiledThisResolution { filter: R::Creature },
-                    link: Selector::This,
-                },
-                Effect::GrantMayPlay {
-                    what: Selector::ExiledThisResolution { filter: R::Creature },
-                    duration: MayPlayDuration::WhileExiled,
-                    to_owner: false,
-                    exile_after: false,
-                    pay_own_cost: true,
-                    any_color: false,
-                },
-            ]),
+            // The exiled card is linked to Durnan (`exiled_with`), so the
+            // undaunted discount above finds it.
+            effect: Effect::LookTopExileOneMayPlay {
+                count: Value::Const(4),
+                who: PlayerRef::You,
+                grant: crate::effect::LookExileGrant::CreatureMayWhileExiled,
+            },
         }],
         ..creature(
             "Durnan of the Yawning Portal",
