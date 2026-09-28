@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_wilhelt.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Shadow Kin** — copies the greatest-power creature card milled (the
-//!   engine's pick).
 //! - **Rooftop Storm** — Zombie creature spells cast from hand or the command
 //!   zone only.
 
@@ -479,7 +477,7 @@ pub fn ruthless_deathfang() -> CardDefinition {
 
 /// Shadow Kin — {3}{U} 2/2 flash Shapeshifter. Your upkeep: each player mills
 /// three; you may exile a creature card milled this way and become a copy of
-/// it, keeping this ability. (Residual: the engine picks the greatest power.)
+/// it, keeping this ability.
 pub fn shadow_kin() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -490,23 +488,27 @@ pub fn shadow_kin() -> CardDefinition {
                 Effect::MayDo {
                     description: "Exile a milled creature card and become a copy of it?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Move {
-                            what: Selector::TakeGreatestPower {
-                                inner: Box::new(Selector::MatchingAmong {
-                                    inner: Box::new(Selector::LastMoved),
-                                    filter: R::Creature.and(R::InGraveyard),
-                                }),
-                                count: Box::new(Value::ONE),
+                        Effect::ChooseOneAmong {
+                            what: Selector::MatchingAmong {
+                                inner: Box::new(Selector::LastMoved),
+                                filter: R::Creature.and(R::InGraveyard),
                             },
-                            to: ZoneDest::Exile,
-                        },
-                        Effect::BecomeCopyOf {
-                            what: Selector::This,
-                            source: Selector::ExiledThisResolution { filter: R::Creature },
-                            extra_creature_types: vec![],
-                            keep_own_triggered: true,
-                            keep_own_activated: false,
-                            keep_name: false,
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::Seq(vec![
+                                Effect::Move {
+                                    what: Selector::SeparatedPile { chosen: true },
+                                    to: ZoneDest::Exile,
+                                },
+                                Effect::BecomeCopyOf {
+                                    what: Selector::This,
+                                    source: Selector::ExiledThisResolution { filter: R::Creature },
+                                    extra_creature_types: vec![],
+                                    keep_own_triggered: true,
+                                    keep_own_activated: false,
+                                    keep_name: false,
+                                },
+                            ])),
+                            other: Box::new(Effect::Noop),
                         },
                     ])),
                 },

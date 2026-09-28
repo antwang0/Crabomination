@@ -1935,7 +1935,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
-| 🟡 Shadow Kin | Undead Unleashed (MIC) | copies the greatest-power creature card milled (the engine's pick). |
 | 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand or the command zone (tax still owed), not from a graveyard or exile. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
@@ -2066,7 +2065,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dune Chanter | Desert Bloom (OTC) | land cards off the battlefield aren't Deserts (lands you control are). |
 | 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
-| 🟡 Grave Endeavor | Dungeons of Death (AFC) | the creature card returned is the greatest-power one, not a free choice, and its counters are put on after it enters. |
+| 🟡 Grave Endeavor | Dungeons of Death (AFC) | its counters are put on after the creature enters. |
 | 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |
 | 🟡 Phantom Steed | Dungeons of Death (AFC) | the attacking token copy isn't an Illusion in addition to its other types. |
 | 🟡 Rod of Absorption | Dungeons of Death (AFC) | every instant or sorcery resolving while it is on the battlefield is exiled, including one cast before it arrived. |
@@ -2094,7 +2093,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
-| 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the engine's pick (the greatest-mana-value linked instant or sorcery), not a prompt. |
 | 🟡 Nimble Obstructionist | Timeless Wisdom (C20) | "you don't control" reads the ability's source permanent's controller. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
 | 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
@@ -2181,7 +2179,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
-| 🟡 Brudiclad, Telchor Engineer | Exquisite Invention (C18) | the token the others copy is your greatest-power token, not a free choice. |
 | 🟡 Prototype Portal | Exquisite Invention (C18) | the imprint takes the first artifact card in hand. |
 | 🟡 Tawnos, Urza's Apprentice | Exquisite Invention (C18) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |

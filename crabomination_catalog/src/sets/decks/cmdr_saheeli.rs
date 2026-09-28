@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_saheeli.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Brudiclad, Telchor Engineer** — the token the others copy is your
-//!   greatest-power token, not a free choice.
 //! - **Prototype Portal** — the imprint takes the first artifact card in hand.
 //! - **Tawnos, Urza's Apprentice** — Gogo's `CopyAbility`: the target is the
 //!   ability's source permanent, and the copy keeps the original's targets.
@@ -111,7 +109,7 @@ pub fn saheeli_the_gifted() -> CardDefinition {
 
 /// Brudiclad, Telchor Engineer — your creature tokens have haste; each combat
 /// on your turn a 2/1 Phyrexian Myr, then your other tokens may all become
-/// copies of one of them. Residual: the model is your greatest-power token.
+/// copies of the one you choose.
 pub fn brudiclad_telchor_engineer() -> CardDefinition {
     let mut myr = artifact_token("Phyrexian Myr", vec![CreatureType::Phyrexian, CreatureType::Myr], 2, 1, vec![]);
     myr.colors = vec![Color::Blue];
@@ -132,15 +130,21 @@ pub fn brudiclad_telchor_engineer() -> CardDefinition {
                 mint(myr),
                 Effect::MayDo {
                     description: "Have each other token you control become a copy of one of them?".into(),
-                    body: Box::new(Effect::ForEach {
-                        selector: Selector::EachPermanent(yours()),
-                        body: Box::new(Effect::BecomeCopyOf {
-                            what: Selector::TriggerSource,
-                            source: Selector::GreatestPowerControlledMatching(yours()),
-                            extra_creature_types: vec![],
-                            keep_own_triggered: false,
-                            keep_own_activated: false,
-                            keep_name: false,
+                    // "Choose a token you control": the rest become copies of it.
+                    body: Box::new(Effect::ChooseOneAmong {
+                        what: Selector::EachPermanent(yours()),
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::Noop),
+                        other: Box::new(Effect::ForEach {
+                            selector: Selector::SeparatedPile { chosen: false },
+                            body: Box::new(Effect::BecomeCopyOf {
+                                what: Selector::TriggerSource,
+                                source: Selector::SeparatedPile { chosen: true },
+                                extra_creature_types: vec![],
+                                keep_own_triggered: false,
+                                keep_own_activated: false,
+                                keep_name: false,
+                            }),
                         }),
                     }),
                 },

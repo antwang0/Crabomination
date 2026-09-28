@@ -8,8 +8,6 @@
 //!   Akim is on the battlefield: tokens made earlier that turn don't use it up.
 //! - **Crystalline Resonance** — the copy lasts until it copies again, not
 //!   until your next turn.
-//! - **Ethereal Forager** — the returned card is the first linked instant or
-//!   sorcery, not a chosen one.
 //! - **Nimble Obstructionist** — "you don't control" reads the ability's
 //!   source permanent's controller.
 
@@ -217,24 +215,24 @@ pub fn shabraz_the_skyshark() -> CardDefinition {
 }
 
 /// Ethereal Forager — delve, flying; attacking, it may return an instant or
-/// sorcery card it delved to its owner's hand.
-/// Residual: the returned card is the first linked instant or sorcery, not a
-/// chosen one.
+/// sorcery card it delved to its owner's hand (your choice).
 pub fn ethereal_forager() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Delve, Keyword::Flying],
         links_delved_cards: true,
         triggered_abilities: vec![on_attack(Effect::MayDo {
             description: "Return an instant or sorcery card exiled with Ethereal Forager to its owner's hand?".into(),
-            body: Box::new(Effect::Move {
-                what: Selector::TakeGreatestManaValue {
-                    inner: Box::new(Selector::MatchingAmong {
-                        inner: Box::new(Selector::CardExiledWithSource),
-                        filter: instant_or_sorcery(),
-                    }),
-                    count: Box::new(Value::ONE),
+            body: Box::new(Effect::ChooseOneAmong {
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::CardExiledWithSource),
+                    filter: instant_or_sorcery(),
                 },
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::Move {
+                    what: Selector::SeparatedPile { chosen: true },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+                other: Box::new(Effect::Noop),
             }),
         })],
         ..creature(

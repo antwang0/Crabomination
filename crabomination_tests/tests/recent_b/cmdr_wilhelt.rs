@@ -298,6 +298,24 @@ fn shadow_kin_becomes_a_milled_creature() {
     assert!(g.exile.iter().any(|c| c.definition.name == "Serra Angel"));
 }
 
+/// Shadow Kin: the milled creature card it copies is its controller's pick
+/// (CR 608.2d) — the Bears over the Angel.
+#[test]
+fn shadow_kin_copies_the_chosen_card() {
+    let mut g = pod(2);
+    let kin = g.add_card_to_battlefield(0, catalog::shadow_kin());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(0, catalog::serra_angel());
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![bears])]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kin).unwrap().definition.name, "Grizzly Bears");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Serra Angel"));
+}
+
 /// Tomb Tyrant's return needs three Zombie creature cards in the graveyard.
 #[test]
 fn tomb_tyrant_needs_three_zombies_in_the_graveyard() {

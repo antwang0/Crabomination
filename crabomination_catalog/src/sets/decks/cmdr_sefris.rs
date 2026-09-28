@@ -4,9 +4,8 @@
 //! `tests/recent_b/cmdr_sefris.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Grave Endeavor** — the returned creature is the greatest-power one,
-//!   not a free choice, and its counters go on after it enters rather than
-//!   with it.
+//! - **Grave Endeavor** — its counters go on after the creature enters
+//!   rather than with it.
 //! - **Nihiloor** — the creature tapped for the steal is always Nihiloor
 //!   itself, and only one opponent's creature is taken.
 //! - **Phantom Steed** — the attacking token copy isn't an Illusion in
@@ -158,8 +157,7 @@ pub fn bucknards_everfull_purse() -> CardDefinition {
 /// Grave Endeavor — two d10: reanimate a creature card with one result in
 /// +1/+1 counters, then drain each opponent by the other.
 ///
-/// Residual: the creature returned is the greatest-power one, and its
-/// counters are put on after it enters rather than with it.
+/// Residual: the counters are put on after it enters rather than with it.
 pub fn grave_endeavor() -> CardDefinition {
     spell(
         "Grave Endeavor",
@@ -167,27 +165,25 @@ pub fn grave_endeavor() -> CardDefinition {
         CardType::Instant,
         Effect::RollTwoDiceAssign {
             sides: 10,
-            // "A creature card" — a choice, not a target (the targeted form
-            // hid its slot inside the dice branch, where the cast couldn't
-            // see it). The pick is the greatest power.
-            first: Box::new(Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::TakeGreatestPower {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: R::Creature,
-                        }),
-                        count: Box::new(Value::ONE),
+            // "A creature card" — a choice on resolution (CR 608.2d), not a
+            // target (the targeted form hid its slot inside the dice branch,
+            // where the cast couldn't see it).
+            first: Box::new(Effect::ChooseOneAmong {
+                what: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::LastDieRoll,
-                },
-            ])),
+                    Effect::AddCounter {
+                        what: Selector::LastMoved,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::LastDieRoll,
+                    },
+                ])),
+                other: Box::new(Effect::Noop),
+            }),
             second: Box::new(Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,

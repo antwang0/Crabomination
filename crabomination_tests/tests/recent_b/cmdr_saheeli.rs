@@ -115,17 +115,21 @@ fn saheeli_makes_servos_and_discounts_the_next_spell() {
 }
 
 /// Brudiclad makes a Myr each combat and may turn every other token into a
-/// copy of the biggest one.
+/// copy of one of them — the one its controller chooses (CR 608.2d).
 #[test]
-fn brudiclad_makes_every_token_the_biggest() {
+fn brudiclad_makes_every_token_the_chosen_one() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::brudiclad_telchor_engineer());
     let foundry = g.add_card_to_battlefield(0, catalog::retrofitter_foundry());
     activate(&mut g, foundry, 1, None).expect("a Servo");
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let servo = named(&g, 0, "Servo")[0];
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![servo]),
+    ]));
     step(&mut g, TurnStep::BeginCombat);
-    assert_eq!(named(&g, 0, "Phyrexian Myr").len(), 2, "the Servo became a 2/1 Myr");
-    assert!(named(&g, 0, "Servo").is_empty());
+    assert_eq!(named(&g, 0, "Servo").len(), 2, "the Myr became a Servo");
+    assert!(named(&g, 0, "Phyrexian Myr").is_empty());
 }
 
 /// Echo Storm copies itself once per command-zone cast of your commander.
