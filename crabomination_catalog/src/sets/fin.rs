@@ -1795,13 +1795,9 @@ pub fn ambrosia_whiteheart() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::MayDo {
                 description: "return another permanent you control to hand".into(),
-                body: Box::new(Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent
-                            .and(SelectionRequirement::ControlledByYou)
-                            .and(SelectionRequirement::OtherThanSource),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                body: Box::new(Effect::ReturnOneYouControl {
+                    filter: SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource),
+                    keep_best: false,
                 }),
             }),
             TriggeredAbility {

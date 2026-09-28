@@ -142,3 +142,39 @@ fn cr_605_1a_a_library_move_is_not_a_mana_ability() {
     .expect("Mind Stone");
     assert!(g.stack.is_empty(), "a plain mana ability doesn't use the stack");
 }
+
+/// CR 602.2b / 601.2c-h — an ability's targets are chosen before its costs
+/// are paid, so a "sacrifice this" cost can't make the source its own
+/// graveyard target (Priest of Fell Rites' ruling).
+#[test]
+fn cr_602_2b_a_sacrificed_source_is_not_its_own_graveyard_target() {
+    let mut g = main_phase();
+    let priest = g.add_card_to_battlefield(0, catalog::priest_of_fell_rites());
+    g.clear_sickness(priest);
+    let attempt = g.perform_action(GameAction::ActivateAbility {
+        card_id: priest,
+        ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(priest)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(attempt.is_err(), "the Priest is on the battlefield as its target is chosen");
+    assert!(g.battlefield_find(priest).is_some(), "and no cost was paid");
+}
+
+/// Mistbreath Elder: "return another creature you control … If you do, put a
+/// +1/+1 counter on this creature" — the other creature is chosen on
+/// resolution, and the counter follows only a return.
+#[test]
+fn cr_608_2d_mistbreath_elder_returns_another_then_grows() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::mistbreath_elder());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(in_hand(&g, 0, bears));
+    let elder = g.battlefield_find(elder).unwrap();
+    assert_eq!(elder.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}

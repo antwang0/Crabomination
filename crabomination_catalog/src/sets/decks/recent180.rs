@@ -98,8 +98,8 @@ pub fn hired_claw() -> CardDefinition {
 }
 
 /// Mistbreath Elder — {G} 2/2 Frog Warrior. At your upkeep, return another
-/// creature you control to its owner's hand; if you do, put a +1/+1 counter on
-/// it. (The "otherwise return this" fallback is approximated as a no-op.)
+/// creature you control to its owner's hand (chosen on resolution); if you
+/// do, put a +1/+1 counter on it, otherwise you may return it.
 pub fn mistbreath_elder() -> CardDefinition {
     CardDefinition {
         name: "Mistbreath Elder",
@@ -116,17 +116,28 @@ pub fn mistbreath_elder() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::ActivePlayer,
             ),
+            // Chosen on resolution (CR 608.2d); "if you do" a counter,
+            // "otherwise" it may bounce itself.
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(
-                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                Effect::ClearLastMoved,
+                Effect::ReturnOneYouControl {
+                    filter: R::Creature.and(R::OtherThanSource),
+                    keep_best: false,
                 },
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::LastMoved),
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::MayDo {
+                        description: "Return this creature to its owner's hand?".into(),
+                        body: Box::new(Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        }),
+                    }),
                 },
             ]),
         }],
