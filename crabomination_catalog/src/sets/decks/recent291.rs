@@ -8,7 +8,6 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, Value,
-    Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
@@ -702,11 +701,9 @@ pub fn necromantic_thirst() -> CardDefinition {
                     description: "Return a creature card from your graveyard to your hand"
                         .to_string(),
                     body: Box::new(Effect::Move {
-                        what: Selector::one_of(Selector::CardsInZone {
-                            zone: Zone::Graveyard,
-                            who: PlayerRef::You,
-                            filter: R::Creature,
-                        }),
+                        what: crate::effect::shortcut::target_filtered(
+                            R::Creature.and(R::InYourGraveyard),
+                        ),
                         to: ZoneDest::Hand(PlayerRef::You),
                     }),
                 },

@@ -168,20 +168,20 @@ fn cut_the_earthly_bond_bounces_the_enchanted_permanent() {
 #[test]
 fn death_denied_returns_x_creatures() {
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    }
-    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bears: Vec<_> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::grizzly_bears())).collect();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let denied = g.add_card_to_hand(0, catalog::death_denied());
     g.players[0].mana_pool.add(Color::Black, 4);
-    g.perform_action(GameAction::CastSpell {
+    // "X target creature cards" — never the Bolt.
+    let cast = |g: &mut GameState, t: Vec<Target>| g.perform_action(GameAction::CastSpell {
         card_id: denied,
-        target: None,
-        additional_targets: vec![],
+        target: t.first().cloned(),
+        additional_targets: t[1..].to_vec(),
         mode: None,
         x_value: Some(2),
-    })
-    .expect("cast");
+    });
+    assert!(cast(&mut g, vec![Target::Permanent(bears[0]), Target::Permanent(bolt)]).is_err(), "a Bolt");
+    cast(&mut g, vec![Target::Permanent(bears[0]), Target::Permanent(bears[1])]).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.is_creature()).count(), 2);
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"));

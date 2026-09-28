@@ -233,7 +233,8 @@ pub fn rhystic_tutor() -> CardDefinition {
     )
 }
 
-/// Soul Strings — {X}{B}. Two creatures back unless they pay X.
+/// Soul Strings — {X}{B}. Return two target creature cards from your graveyard
+/// to your hand unless any player pays {X} (an opponent is asked).
 pub fn soul_strings() -> CardDefinition {
     CardDefinition {
         name: "Soul Strings",
@@ -242,16 +243,14 @@ pub fn soul_strings() -> CardDefinition {
         effect: Effect::UnlessPlayerPays {
             who: PlayerRef::EachOpponent,
             cost: WardCost::GenericXFromCost,
-            then: Box::new(Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: R::Creature,
-                    },
-                    Value::Const(2),
-                ),
-                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            then: Box::new(Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 2,
+                filter: R::Creature.and(R::InYourGraveyard),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                }),
             }),
             if_paid: None,
         },

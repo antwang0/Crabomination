@@ -477,16 +477,14 @@ pub fn death_denied() -> CardDefinition {
     arcane_instant(
         "Death Denied",
         cost(&[x(), b(), b()]),
-        Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: R::Creature,
-                },
-                Value::XFromCost,
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        // "Return X target creature cards from your graveyard to your hand."
+        Effect::TargetsExactlyX {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature.and(R::InYourGraveyard),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+            }),
         },
     )
 }
