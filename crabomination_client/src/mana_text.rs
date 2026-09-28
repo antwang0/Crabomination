@@ -212,11 +212,17 @@ pub fn mana_text(text: impl Into<String>, size: f32, color: Color) -> (Node, Man
 
 /// Spawn `text` under `parent`: plain text, as it would have been, or —
 /// when it carries a mana symbol — mana text that wraps between words.
-pub fn spawn_text(parent: &mut ChildSpawnerCommands, fonts: &UiFonts, text: &str, size: f32, color: Color) {
+pub fn spawn_text<'a>(
+    parent: &'a mut ChildSpawnerCommands,
+    fonts: &UiFonts,
+    text: &str,
+    size: f32,
+    color: Color,
+) -> EntityCommands<'a> {
     if has_pips(text) {
-        parent.spawn((Node::default(), ManaText::new(text, size, color).wrapping()));
+        parent.spawn((Node::default(), ManaText::new(text, size, color).wrapping()))
     } else {
-        parent.spawn((Text::new(text), fonts.tf(size), TextColor(color)));
+        parent.spawn((Text::new(text), fonts.tf(size), TextColor(color)))
     }
 }
 

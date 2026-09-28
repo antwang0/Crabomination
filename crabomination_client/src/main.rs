@@ -433,6 +433,7 @@ fn main() {
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
+                layout_harness::hover_card_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::zoom_on_card_for_screenshot
                     .after(crate::systems::camera_zoom::camera_zoom)
                     .run_if(in_state(AppState::InGame)),
@@ -442,10 +443,13 @@ fn main() {
             PreUpdate,
             layout_harness::inject_damage_for_screenshot.after(crate::net_plugin::poll_net),
         )
+        // The stack panel sits beside the 3-D stack lane.
+        .add_systems(Update, crate::systems::game_ui::place_stack_panel.run_if(in_state(AppState::InGame)))
         // Mana symbols in UI text, in every state (the draft shows costs too).
         // After `Update`, whose systems despawn the nodes it rebuilds (a
         // tooltip closing), and before the UI lays the new rows out.
         .add_systems(PostUpdate, mana_text::sync_mana_text.before(bevy::ui::UiSystems::Prepare))
+        .add_systems(Startup, layout_harness::ignore_mouse_for_screenshot)
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every

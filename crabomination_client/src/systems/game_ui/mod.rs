@@ -52,7 +52,6 @@ use crate::card::{
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
     creature_card_transform, hand_card_transform, back_row_card_transform, in_back_row, spawn_single_card,
-    stack_card_transform,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -947,8 +946,10 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             });
         });
 
-    // Bottom-center: stack panel (hidden when stack is empty; rebuilt each frame).
-    // Outer node is full-width and transparent — it just centers its child.
+    // Stack panel (hidden when the stack is empty; rebuilt on change),
+    // beside the 3-D stack lane (`place_stack_panel`); bottom-centre until
+    // a camera fit has placed the lane. The outer node is transparent — it
+    // just positions its child.
     commands
         .spawn((
             Node {
@@ -961,6 +962,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             InGameRoot,
+            StackPanelAnchor,
         ))
         .with_children(|p| {
             p.spawn((
@@ -969,8 +971,8 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     flex_direction: FlexDirection::Column,
                     padding: UiRect::all(Val::Px(10.0)),
                     row_gap: Val::Px(3.0),
-                    min_width: Val::Px(420.0),
-                    max_width: Val::Px(560.0),
+                    min_width: Val::Px(300.0),
+                    max_width: Val::Px(400.0),
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
@@ -1722,6 +1724,40 @@ pub fn handle_stack_resolve_button(
     }
 }
 
+/// The stack panel's outer node, placed by [`place_stack_panel`].
+#[derive(Component)]
+pub struct StackPanelAnchor;
+
+/// Put the stack panel beside the 3-D stack lane (`framing::StackLane`),
+/// top-aligned with it on its left, so the stack reads in one place beside
+/// the table. Bottom-centre, it lay over the viewer's lands — at 1280x720,
+/// over their creatures.
+pub fn place_stack_panel(
+    home: Res<crate::systems::camera_zoom::CameraHome>,
+    ui_scale: Res<UiScale>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    mut anchors: Query<&mut Node, With<StackPanelAnchor>>,
+) {
+    if !home.is_changed() && !ui_scale.is_changed() {
+        return;
+    }
+    let lane = home.stack_lane.screen;
+    let Ok(window) = windows.single() else { return };
+    if lane.is_empty() {
+        return;
+    }
+    // Logical px → UI px.
+    let s = ui_scale.0;
+    for mut node in &mut anchors {
+        node.top = Val::Px(lane.min.y / s);
+        node.bottom = Val::Auto;
+        node.left = Val::Auto;
+        node.right = Val::Px((window.width() - lane.min.x) / s + 8.0);
+        node.justify_content = JustifyContent::FlexEnd;
+        node.align_items = AlignItems::FlexStart;
+    }
+}
+
 /// Rebuild the `StackPanel` children whenever the view changes.
 /// Stack is LIFO: the last element resolves next.  We show top-of-stack
 /// first, as a card-art tile pile: the top item gets a large gold-framed
@@ -1733,7 +1769,6 @@ pub fn update_stack_panel(
     view: Res<CurrentView>,
     mut commands: Commands,
     mut panel_q: Query<(Entity, &mut Node), With<StackPanel>>,
-    asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
 ) {
     if !view.is_changed() {
@@ -1839,8 +1874,9 @@ pub fn update_stack_panel(
                 if mine { "You".to_string() } else { player_name(cv, ctrl_seat) };
             let edge = if mine { theme::ACCENT_GREEN } else { theme::ACCENT_ORANGE };
             let name_color = if is_trigger { theme::ACCENT_BLUE } else { theme::TEXT_PRIMARY };
-            // Card-aspect thumbnail; the resolving item is ~2× the rest.
-            let (art_w, art_h) = if is_top { (54.0, 75.0) } else { (30.0, 42.0) };
+            // The rows carry no art: the 3-D stack lane beside the panel
+            // shows the cards, and a row's hover opens the full one.
+            let strip_h = if is_top { 34.0 } else { 26.0 };
 
             let row_bg = if is_top {
                 Color::srgba(0.16, 0.14, 0.06, 0.85)
@@ -1880,21 +1916,11 @@ pub fn update_stack_panel(
                 row.spawn((
                     Node {
                         width: Val::Px(3.0),
-                        height: Val::Px(art_h),
+                        height: Val::Px(strip_h),
                         border_radius: BorderRadius::all(Val::Px(2.0)),
                         ..default()
                     },
                     BackgroundColor(edge),
-                ));
-                // Art thumbnail.
-                row.spawn((
-                    Node {
-                        width: Val::Px(art_w),
-                        height: Val::Px(art_h),
-                        border_radius: BorderRadius::all(Val::Px(3.0)),
-                        ..default()
-                    },
-                    ImageNode { image: asset_server.load(&art_path), ..default() },
                 ));
                 // Texts: name row (badge + name), then controller/target line.
                 row.spawn(Node {
@@ -2117,7 +2143,8 @@ pub fn sync_game_visuals(
     view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    card_assets: Option<Res<CardMeshAssets>>,
+    // Paired: a system takes at most sixteen parameters.
+    (card_assets, camera_home): (Option<Res<CardMeshAssets>>, Res<crate::systems::camera_zoom::CameraHome>),
     removed_animating: RemovedComponents<Animating>,
     hand_cards: Query<
         (
@@ -2568,12 +2595,12 @@ pub fn sync_game_visuals(
                     target_translation: target.translation,
                     target_rotation: target.rotation,
                     start_scale: transform.scale.x,
+                    target_scale: 1.0,
                 });
         } else if stack_spell_ids.contains(&game_id.0) {
             if stack_card.is_none() {
                 let idx = cv.stack.iter().position(|item| matches!(item, StackItemView::Known(k) if k.source == game_id.0)).unwrap_or(0);
-                let total = stack_ids.len();
-                let target = stack_card_transform(idx, total);
+                let target = camera_home.stack_lane.card(idx);
                 commands
                     .entity(entity)
                     .remove::<CardHovered>()
@@ -2587,6 +2614,7 @@ pub fn sync_game_visuals(
                         target_translation: target.translation,
                         target_rotation: target.rotation,
                         start_scale: transform.scale.x,
+                        target_scale: camera_home.stack_lane.scale,
                     });
             }
         } else if !hand_ids.contains(&game_id.0) {
@@ -2832,6 +2860,7 @@ pub fn sync_game_visuals(
                     target_rotation: target.rotation,
                     // Opponent hand visual → battlefield: never zoomed.
                     start_scale: 1.0,
+                    target_scale: 1.0,
                 },
             ));
         }
@@ -2861,8 +2890,7 @@ pub fn sync_game_visuals(
         if visual_bf_ids.contains(&k.source) { continue; }
 
         let seat = k.controller;
-        let total = stack_ids.len();
-        let target = stack_card_transform(idx, total);
+        let target = camera_home.stack_lane.card(idx);
 
         let pool = hand_pool_by_owner.entry(seat).or_default();
         let (start_pos, start_rot) = if seat == viewer {
@@ -2902,6 +2930,7 @@ pub fn sync_game_visuals(
                 target_translation: target.translation,
                 target_rotation: target.rotation,
                 start_scale: 1.0,
+                target_scale: camera_home.stack_lane.scale,
             },
         ));
     }
@@ -2938,8 +2967,9 @@ pub fn sync_game_visuals(
                 start_rotation: transform.rotation,
                 target_translation: target.translation,
                 target_rotation: target.rotation,
-                // Stack cards are unscaled.
-                start_scale: 1.0,
+                // From the stack lane's size (`framing::StackLane`).
+                start_scale: transform.scale.x,
+                target_scale: 1.0,
             });
     }
 
@@ -3017,6 +3047,7 @@ pub fn sync_game_visuals(
                             target_rotation: target.rotation,
                             // Opponent hand visual — unscaled.
                             start_scale: 1.0,
+                            target_scale: 1.0,
                         },
                     ))
                     .with_children(|parent| {
@@ -3126,6 +3157,7 @@ pub fn sync_game_visuals(
                 target_rotation: target.rotation,
                 // From viewer's deck (unscaled) — straight to battlefield (unscaled).
                 start_scale: 1.0,
+                target_scale: 1.0,
             },
         ));
     }

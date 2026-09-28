@@ -8,7 +8,8 @@ use crate::card::{
     CardFlipAnimation, CardHoverLift, CombatLurch, DeckCard, DeckShuffleAnimation,
     DrawCardAnimation, GameCardId, HandCard, HandSlideAnimation, MdfcFlipAnimation,
     PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
-    SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
+    SendToGraveyardAnimation, ShufflePhase, TapAnimation, BF_HOVER_GROW, BF_HOVER_LIFT, CARD_WIDTH,
+    HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
 use crabomination::card::CardId;
@@ -36,7 +37,7 @@ pub fn animate_hover_lift(
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
     mut cards: Query<
-        (&mut Transform, &mut CardHoverLift),
+        (&mut Transform, &mut CardHoverLift, Option<&BattlefieldCard>),
         (
             Without<DrawCardAnimation>,
             Without<DeckShuffleAnimation>,
@@ -52,10 +53,18 @@ pub fn animate_hover_lift(
     >,
 ) {
     let dt = time.delta_secs() * speed.0;
-    for (mut transform, mut lift) in &mut cards {
+    for (mut transform, mut lift, battlefield) in &mut cards {
         let spd = HOVER_LIFT_SPEED * dt;
         lift.current_lift += (lift.target_lift - lift.current_lift) * spd.min(1.0);
         transform.translation = lift.base_translation + Vec3::Y * lift.current_lift;
+        // A battlefield card grows with its lift. (A hand card's scale is
+        // the hand zoom's; a stack card's the lane's.)
+        if battlefield.is_some() {
+            let grown = 1.0 + BF_HOVER_GROW * (lift.current_lift / BF_HOVER_LIFT).clamp(0.0, 1.0);
+            if transform.scale.x != grown {
+                transform.scale = Vec3::splat(grown);
+            }
+        }
     }
 }
 
@@ -394,15 +403,15 @@ pub fn animate_play_card(
         pos.y += arc_y;
         transform.translation = pos;
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
-        // Smooth scale from hand size → battlefield size (1.0). Hand
-        // zoom can make `start_scale` > 1 on small displays.
-        let scale = anim.start_scale + (1.0 - anim.start_scale) * t;
+        // Smooth scale from hand size → where it lands (1 on the table).
+        // Hand zoom can make `start_scale` > 1 on small displays.
+        let scale = anim.start_scale + (anim.target_scale - anim.start_scale) * t;
         transform.scale = Vec3::splat(scale);
 
         if anim.progress >= 1.0 {
             transform.translation = anim.target_translation;
             transform.rotation = anim.target_rotation;
-            transform.scale = Vec3::ONE;
+            transform.scale = Vec3::splat(anim.target_scale);
             lift.base_translation = anim.target_translation;
             lift.current_lift = 0.0;
             lift.target_lift = 0.0;

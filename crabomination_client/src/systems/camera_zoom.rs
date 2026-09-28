@@ -32,6 +32,9 @@ pub struct CameraHome {
     pub pose: Transform,
     /// The table point the home pose looks at.
     pub target: Vec3,
+    /// Where the 3-D stack hangs for this pose (`framing::stack_lane`):
+    /// beside the table, so a spell doesn't cover what it targets.
+    pub stack_lane: crate::card::framing::StackLane,
     /// `(seats, logical window size, UiScale bits)` the pose was fit for.
     fitted_for: Option<(usize, UVec2, u32)>,
 }
@@ -39,7 +42,7 @@ pub struct CameraHome {
 impl Default for CameraHome {
     fn default() -> Self {
         let pose = crate::card::framing::legacy_pose(2);
-        Self { pose, target: Vec3::ZERO, fitted_for: None }
+        Self { pose, target: Vec3::ZERO, stack_lane: Default::default(), fitted_for: None }
     }
 }
 
@@ -66,7 +69,8 @@ pub fn adjust_camera_home_for_seats(
     // The fit looks down the pose's forward axis at the table plane.
     let forward = pose.forward();
     let target = pose.translation + forward * (-pose.translation.y / forward.y);
-    *home = CameraHome { pose, target, fitted_for: Some(key) };
+    let stack_lane = crate::card::framing::stack_lane(key.0, size, ui_scale.0, &pose);
+    *home = CameraHome { pose, target, stack_lane, fitted_for: Some(key) };
 }
 
 /// Seat the camera is parked on via the seat-focus hotkeys (`1`–`6`).

@@ -1090,17 +1090,6 @@ pub fn seat_region(seat: usize, viewer: usize, n_seats: usize) -> Rect {
 
 // ── Stack cards ──────────────────────────────────────────────────────────────
 
-/// World transform for a card occupying slot `idx` of a stack of `total`
-/// cards. Cards spread horizontally, centred on the table, hovering above
-/// the battlefield and facing the camera.
-pub fn stack_card_transform(idx: usize, total: usize) -> Transform {
-    let spacing = CARD_WIDTH + 0.5;
-    let total_width = (total.saturating_sub(1) as f32) * spacing;
-    let x = (idx as f32) * spacing - total_width / 2.0;
-    Transform::from_translation(Vec3::new(x, 0.8, 0.0))
-        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
-}
-
 /// World transform for a back-row card (lands and support permanents),
 /// with stacking offsets for identical lands and token piles.
 pub fn back_row_card_transform(

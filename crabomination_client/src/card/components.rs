@@ -25,6 +25,12 @@ pub fn pile_height(size: usize) -> f32 {
 
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
 pub const HOVER_LIFT_SPEED: f32 = 8.0;
+/// A hovered battlefield card rises this far off the table (its shadow
+/// slides out from under it) and grows by [`BF_HOVER_GROW`] at the top of
+/// the lift. The board didn't answer the cursor at all: only a hand card
+/// lifted, and a battlefield card sat still while its preview appeared.
+pub const BF_HOVER_LIFT: f32 = 0.35;
+pub const BF_HOVER_GROW: f32 = 0.06;
 
 /// Resolution-driven scale factor for the viewer's hand cards. At 4K
 /// (≥1440 logical pixels tall) hands render at their original world
@@ -379,6 +385,9 @@ pub struct PlayCardAnimation {
     /// to 1.0 over the flight; a hand card may be zoomed >1 by the
     /// resolution-driven hand-zoom system.
     pub start_scale: f32,
+    /// The scale it lands at: 1 on the table, the lane's on the stack
+    /// (`framing::StackLane`).
+    pub target_scale: f32,
 }
 
 /// Three-phase peek animation for deck cards: flip face-up, hold briefly, flip back.

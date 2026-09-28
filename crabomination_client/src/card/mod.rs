@@ -19,13 +19,12 @@ pub use components::{
     PlayerTargetZone, RevealPeekAnimation,
     ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
     ShufflePhase, StackCard, SwapFrontMaterial, TapAnimation, TapState,
-    ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, pile_height, pile_step,
+    ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
     exile_position,
     creature_card_transform, graveyard_position, hand_card_transform, back_row_card_transform, in_back_row,
-    stack_card_transform,
 };
 pub use mesh::{create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS};
 pub use spawn::{card_back_face_material, card_front_material, init_shared_assets, spawn_single_card};

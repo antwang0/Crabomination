@@ -14,7 +14,9 @@
 //! look at what sits on it (counter chips, badges); `--demo-damage` feeds the
 //! client a batch of combat damage just before the screenshot, so it catches
 //! the damage numerals in flight; `--stack` starts with two spells on the
-//! stack; `--mana-gallery` lays every kind of mana symbol over the board.
+//! stack; `--mana-gallery` lays every kind of mana symbol over the board;
+//! `--hover-card NAME` hovers one of the viewer's battlefield cards (a
+//! screenshot run ignores the real mouse).
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -65,6 +67,8 @@ pub struct HarnessArgs {
     pub stack: bool,
     /// `--mana-gallery`: a panel of sample costs over the board.
     pub mana_gallery: bool,
+    /// `--hover-card NAME`: that card of the viewer's is hovered.
+    pub hover_card: Option<String>,
 }
 
 impl HarnessArgs {
@@ -96,6 +100,7 @@ impl HarnessArgs {
             demo_damage: args.iter().any(|a| a == "--demo-damage"),
             stack: args.iter().any(|a| a == "--stack"),
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
+            hover_card: value("--hover-card"),
         }
     }
 
@@ -371,6 +376,7 @@ pub fn spawn_mana_gallery(
     mut commands: Commands,
     args: Res<HarnessArgs>,
     view: Res<crate::net_plugin::CurrentView>,
+    ui_fonts: Res<crate::theme::UiFonts>,
     mut done: Local<bool>,
 ) {
     if !args.mana_gallery || *done || view.0.is_none() {
@@ -400,6 +406,77 @@ pub fn spawn_mana_gallery(
                 }
             }
         });
+    // A real decision modal with costs in its title and options, to see
+    // them lay out (and wrap) where a game shows them.
+    let ballot = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Percent(30.0),
+                top: Val::Px(560.0),
+                // As `decision_ui::spawn_modal_panel`: a floor, not a cap.
+                min_width: Val::Px(380.0),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(12.0),
+                padding: UiRect::all(Val::Px(20.0)),
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(crate::theme::PANEL_BG),
+            GlobalZIndex(crate::theme::layer::MODAL),
+            crate::systems::game_ui::InGameRoot,
+        ))
+        .id();
+    crate::systems::decision_ui::fill_option_ballot(
+        &mut commands,
+        ballot,
+        &ui_fonts,
+        "Kitesail Freebooter — pay {2} for ward, or the spell is countered",
+        &[
+            "Pay {2}".to_string(),
+            "Pay {1}{U} and sacrifice a creature, then draw a card and scry {E}{E}".to_string(),
+            "Decline".to_string(),
+        ],
+    );
+}
+
+/// `--hover-card NAME`: hover that card as the pointer would
+/// (`card::observers::on_card_over`), once its entity is up and settled.
+pub fn hover_card_for_screenshot(
+    mut commands: Commands,
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    mut cards: Query<
+        (Entity, &crate::card::GameCardId, &Transform, &mut crate::card::CardHoverLift),
+        (With<crate::card::BattlefieldCard>, Without<crate::card::Animating>),
+    >,
+    mut done: Local<bool>,
+) {
+    let (Some(name), Some(cv)) = (args.hover_card.as_deref(), view.0.as_ref()) else { return };
+    if *done {
+        return;
+    }
+    let Some(id) = cv.battlefield.iter().find(|p| p.controller == cv.your_seat && p.name == name).map(|p| p.id)
+    else {
+        return;
+    };
+    let Some((entity, _, transform, mut lift)) = cards.iter_mut().find(|(_, g, ..)| g.0 == id) else { return };
+    lift.base_translation = transform.translation - Vec3::Y * lift.current_lift;
+    lift.target_lift = crate::card::BF_HOVER_LIFT;
+    commands.entity(entity).insert(crate::card::CardHovered);
+    *done = true;
+}
+
+/// A screenshot run ignores the mouse: the desktop's cursor, wherever it
+/// happens to sit over the window, hovered a card and popped its preview
+/// into the shot.
+pub fn ignore_mouse_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut pointer: ResMut<bevy::picking::input::PointerInputSettings>,
+) {
+    if args.screenshot.is_some() {
+        pointer.is_mouse_enabled = false;
+    }
 }
 
 /// Seconds since the first view arrived; `None` until then.

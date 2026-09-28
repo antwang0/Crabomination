@@ -3749,10 +3749,8 @@ fn spawn_choose_modes_modal(
             (i as u8, mode_label(i, mode_texts), selected.contains(&(i as u8)))
         })
         .collect();
-    let fonts18 = ui_fonts.tf(18.0);
-    let fonts14 = ui_fonts.tf(14.0);
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        crate::mana_text::spawn_text(p, ui_fonts, &title_owned, 18.0, theme::TEXT_PRIMARY);
         for (idx, label, is_on) in rows {
             let bg = if is_on { theme::BUTTON_SELECTED_BG } else { theme::BUTTON_NEUTRAL_BG };
             p.spawn((
@@ -3767,12 +3765,8 @@ fn spawn_choose_modes_modal(
                 ChooseModesToggle(idx),
             ))
             .with_children(|b| {
-                b.spawn((
-                    Text::new(label),
-                    fonts14.clone(),
-                    TextColor(theme::TEXT_PRIMARY),
-                    bevy::picking::Pickable::IGNORE,
-                ));
+                crate::mana_text::spawn_text(b, ui_fonts, &label, 14.0, theme::TEXT_PRIMARY)
+                    .insert(bevy::picking::Pickable::IGNORE);
             });
         }
         spawn_confirm_button(p, ui_fonts);
@@ -3789,10 +3783,8 @@ fn spawn_choose_trigger_mode_modal(
     let panel = spawn_modal_panel(commands, 380.0);
     let title_owned = format!("{title} — choose one");
     let labels: Vec<String> = (0..num_modes).map(|i| mode_label(i, mode_texts)).collect();
-    let fonts18 = ui_fonts.tf(18.0);
-    let fonts14 = ui_fonts.tf(14.0);
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        crate::mana_text::spawn_text(p, ui_fonts, &title_owned, 18.0, theme::TEXT_PRIMARY);
         for (idx, label) in labels.into_iter().enumerate() {
             p.spawn((
                 Button,
@@ -3807,12 +3799,8 @@ fn spawn_choose_trigger_mode_modal(
                 TriggerModeButton(idx),
             ))
             .with_children(|b| {
-                b.spawn((
-                    Text::new(label),
-                    fonts14.clone(),
-                    TextColor(theme::TEXT_PRIMARY),
-                    bevy::picking::Pickable::IGNORE,
-                ));
+                crate::mana_text::spawn_text(b, ui_fonts, &label, 14.0, theme::TEXT_PRIMARY)
+                    .insert(bevy::picking::Pickable::IGNORE);
             });
         }
     });
@@ -3826,12 +3814,23 @@ fn spawn_option_ballot_modal(
     options: &[String],
 ) {
     let panel = spawn_modal_panel(commands, 380.0);
-    let fonts18 = ui_fonts.tf(18.0);
-    let fonts14 = ui_fonts.tf(14.0);
+    fill_option_ballot(commands, panel, ui_fonts, title, options);
+}
+
+/// The ballot's title and one button per option, under `panel` (the layout
+/// harness fills a panel of its own: a `DecisionModal` with no decision
+/// pending is despawned).
+pub(crate) fn fill_option_ballot(
+    commands: &mut Commands,
+    panel: Entity,
+    ui_fonts: &UiFonts,
+    title: &str,
+    options: &[String],
+) {
     let title_owned = title.to_string();
     let options: Vec<String> = options.to_vec();
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        crate::mana_text::spawn_text(p, ui_fonts, &title_owned, 18.0, theme::TEXT_PRIMARY);
         for (idx, label) in options.into_iter().enumerate() {
             p.spawn((
                 Button,
@@ -3846,12 +3845,8 @@ fn spawn_option_ballot_modal(
                 TriggerModeButton(idx),
             ))
             .with_children(|b| {
-                b.spawn((
-                    Text::new(label),
-                    fonts14.clone(),
-                    TextColor(theme::TEXT_PRIMARY),
-                    bevy::picking::Pickable::IGNORE,
-                ));
+                crate::mana_text::spawn_text(b, ui_fonts, &label, 14.0, theme::TEXT_PRIMARY)
+                    .insert(bevy::picking::Pickable::IGNORE);
             });
         }
     });
@@ -3867,11 +3862,10 @@ fn spawn_choose_amount_modal(
 ) {
     let panel = spawn_modal_panel(commands, 320.0);
     let prompt_owned = format!("{prompt} (0–{max})");
-    let fonts18 = ui_fonts.tf(18.0);
     let fonts16 = ui_fonts.tf(16.0);
     let fonts22 = ui_fonts.tf(22.0);
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(prompt_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        crate::mana_text::spawn_text(p, ui_fonts, &prompt_owned, 18.0, theme::TEXT_PRIMARY);
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
             column_gap: Val::Px(12.0),
@@ -3938,7 +3932,6 @@ fn spawn_divide_damage_modal(
     let label = if noun == "damage" { format!("{total} damage") } else { format!("{total} {noun}s") };
     let title_owned = format!("{title} — divide {label}");
     let assigned: u32 = amounts.iter().sum();
-    let fonts18 = ui_fonts.tf(18.0);
     let fonts16 = ui_fonts.tf(16.0);
     let fonts14 = ui_fonts.tf(14.0);
     let rows: Vec<(usize, String, u32)> = target_names
@@ -3947,7 +3940,7 @@ fn spawn_divide_damage_modal(
         .map(|(i, n)| (i, n.clone(), amounts.get(i).copied().unwrap_or(0)))
         .collect();
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        crate::mana_text::spawn_text(p, ui_fonts, &title_owned, 18.0, theme::TEXT_PRIMARY);
         for (index, name, amount) in rows {
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,

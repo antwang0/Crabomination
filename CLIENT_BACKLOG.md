@@ -202,6 +202,40 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## The stack beside the table, and a board that answers the cursor (2026-09-28) — shipped
+
+- ✅ **The 3-D stack hangs in a lane beside the table**
+  (`framing::stack_lane`, `CameraHome::stack_lane`). It lay flat across
+  the table's centre, where a spell covered the creatures it was aimed at.
+  Each camera fit searches the right half of the window, as the fit
+  itself does, for the pile of three cards that covers the least of the
+  representative board, clear of the HUD — then the larger card, the spot
+  further right. The cards face the camera, well in front of the table so
+  nothing on it draws through them; the oldest item is at the top and
+  each newer one a step lower and on top, so what resolves next is wholly
+  in view. A duel's table leaves the right side empty and the lane covers
+  nothing (`framing::tests::the_stack_lane_hangs_clear_of_the_board`); a
+  pod's table fills the window and the lane takes its least-used edge.
+  Target arrows run from the lane.
+  - The 2-D stack panel sits beside the lane, top-aligned on its left
+    (`place_stack_panel`), without its card thumbnails — the lane shows the
+    cards, and a row's hover still opens one. Bottom-centre it lay over
+    the viewer's lands, and at 1280x720 over their creatures.
+  - `PlayCardAnimation` lands at a `target_scale` (1 on the table, the
+    lane's on the stack); it always ended at 1, so a lane card flew in at
+    table size and ran off the window's edge.
+- ✅ **A hovered battlefield card lifts and grows** (`BF_HOVER_LIFT`,
+  `BF_HOVER_GROW`): it rises off the table — its shadow slides out — and
+  scales up 6 %, and what sits on it (chips, badges) follows. Only a hand
+  card lifted; a battlefield card sat still while its preview appeared.
+  - Not done: a tilt toward the camera. A card's rotation is written by the
+    tap animation, the layout and more; a tilt needs a pivot between the
+    card and its face meshes (and the borders and chips parented to it).
+- ✅ **Layout harness:** a `--screenshot` run ignores the mouse (the
+  desktop cursor over the window hovered a card and popped its preview
+  into the shot); `--hover-card NAME` hovers one on purpose;
+  `--mana-gallery` also lays out a real option-ballot modal.
+
 ## Mana symbols (2026-09-27) — shipped, with residuals
 
 - ✅ **Costs draw as mana pips** (`mana_text`). The engine writes every
@@ -228,9 +262,11 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
     as a box until Greek was added. `every_ui_symbol_has_a_glyph` now checks
     each symbol's script too (`icu_properties`, a dev-dependency already in
     the tree through parley).
-  - ⏳ The other decision prompts (X picker, mode lists, pay-life
-    choices) print any cost as text; convert them with
-    `mana_text::spawn_text` as they turn up.
+  - ✅ The decision modals' titles and option buttons draw costs as
+    pips too (`ChooseOption` ballots — "Pay {2}" for ward —, the X
+    picker's prompt, both mode pickers), through `mana_text::spawn_text`:
+    plain text as before, wrapping mana text when there is a symbol.
+    ⏳ A target prompt's description reaches the hint chip as text.
 
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
