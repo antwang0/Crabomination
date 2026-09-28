@@ -98,8 +98,8 @@ pub fn overgrown_zealot() -> CardDefinition {
     }
 }
 
-/// Intrepid Stablemaster — {1}{G} 2/2 Reach. {T}: add {G}. (The Mount/Vehicle
-/// ramp mode is omitted — the engine has no such spend gate.)
+/// Intrepid Stablemaster — {1}{G} 2/2 Reach. {T}: add {G}; {T}: add two mana
+/// of any one color, spent only on Mount or Vehicle spells.
 pub fn intrepid_stablemaster() -> CardDefinition {
     CardDefinition {
         name: "Intrepid Stablemaster",
@@ -112,14 +112,24 @@ pub fn intrepid_stablemaster() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Reach],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::OfColor(Color::Green, Value::ONE),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
+                        crate::mana::SpendRestriction::MountOrVehicleSpells,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

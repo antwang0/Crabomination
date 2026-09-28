@@ -1501,10 +1501,8 @@ speed trigger absent), Master Pakku (the tap trigger absent) — **four the
 auditor cannot see**: Chains of Mephistopheles (`StaticEffect`, the mill
 is in the engine), Grist (`Effect::GristPlusOne`), Six (`LookPick` with
 `rest_to_graveyard`, an approximation of "mill three, take a land"), and
-Heirloom Mirror, a DFC stub whose oracle the cache does not carry — **that
-one is still open**: it ships as a mana rock with a sac-draw, the printed
-card is "{1}, {T}, pay 1 life, discard: draw, mill, ritual counter,
-transform at three". Devourer's trigger fires per milled card where the
+Heirloom Mirror (✅ `01PdWYgx`: now the printed DFC, ritual counters and
+Inherited Fiend). Devourer's trigger fires per milled card where the
 printed "one or more" fires once a batch (no per-event batching in
 `EventSpec`; `DiscardedOneOrMore` is the one kind that has it).
 
@@ -3230,9 +3228,6 @@ Real cards confirmed absent, deferred for want of a mechanic:
   `ZoneDest`/effect that bounces a permanent to its owner's library with a
   top-or-bottom decision (the countered-spell `OwnerLibraryTopOrBottom` zone
   exists but isn't reachable from a generic `Move`).
-- **Spend-restricted "cast from your graveyard" mana** — Rootcoil Creeper's
-  second ability (its ramp half is currently dropped); add a
-  `SpendRestriction::GraveyardCastOnly` to `mana.rs`.
 - **Both-dynamic-P/T tokens** — Seize the Storm's `*/*` Elemental (P=T= I/S in
   gy + flashback-in-exile). `DynamicPt::InstantsSorceriesInGraveyardAndExile`
   only drives power; want a variant (or token CDA) that sets both.

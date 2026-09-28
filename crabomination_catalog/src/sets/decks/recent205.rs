@@ -63,6 +63,7 @@ pub fn keys_to_the_house() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
                 sac_cost: true,
+                sorcery_speed: true,
                 effect: Effect::LockOrUnlockRoomDoor {
                     what: target_filtered(
                         R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Room)

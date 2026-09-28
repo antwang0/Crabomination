@@ -628,7 +628,6 @@ modelled at all, so there is no filter to correct.
 
 | Card | Residual |
 | --- | --- |
-| Rootcoil Creeper | 🟡 two of its three abilities are missing: the graveyard-restricted "add two mana of any one color", and "{G}{U}, {T}, Exile this creature: Return **target card with flashback you own from exile** to your hand". Only the any-colour mana ability ships. |
 | Bloodthirsty Adversary | 🟡 the kicker payoff ships (exile, copy, cast free) but the cards are the engine's pick in graveyard order, not targets. |
 | Rydia, Summoner of Mist | 🟡 the **Summon** ability ("{X}, {T}: Return target Saga card with mana value X from your graveyard to the battlefield with a finality counter on it") is not modelled; only the landfall loot ships. |
 

@@ -5290,9 +5290,10 @@ pub fn unblinking_observer() -> CardDefinition {
     }
 }
 
-/// Rootcoil Creeper — {G}{U} 2/2 Plant Horror. {T}: add one mana of any color.
-/// (Its second, graveyard-cast-restricted ramp ability is dropped — the engine
-/// has no "spend only to cast from your graveyard" restriction yet.)
+/// Rootcoil Creeper — {G}{U} 2/2 Plant Horror. {T}: add one mana of any color;
+/// {T}: add two of any one color, spent only on spells cast from your
+/// graveyard; {G}{U}, {T}, exile it: return a card with flashback you own from
+/// exile to your hand.
 pub fn rootcoil_creeper() -> CardDefinition {
     use crate::effect::shortcut::add_any_one_color;
     CardDefinition {
@@ -5305,11 +5306,34 @@ pub fn rootcoil_creeper() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: add_any_one_color(1),
-            ..Default::default()
-        }],
+        activated_abilities: vec![
+            ActivatedAbility { tap_cost: true, effect: add_any_one_color(1), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: crate::effect::PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::AnyOneColor(Value::Const(2))),
+                        crate::mana::SpendRestriction::SpellFromGraveyard,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g(), u()]),
+                tap_cost: true,
+                exile_self_cost: true,
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InExile
+                            .and(SelectionRequirement::HasFlashback)
+                            .and(SelectionRequirement::OwnedByYou),
+                    ),
+                    to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

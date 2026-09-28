@@ -1935,69 +1935,59 @@ pub fn mage_mauler() -> CardDefinition {
 
 // ── Heirloom Mirror (STX-flavor common artifact) ────────────────────────────
 
-/// Heirloom Mirror — {1}{B} Artifact (STX-flavor utility rock).
-///
-/// "{T}: Add one mana of any color. / {3}, {T}, Sacrifice this
-/// artifact: Draw a card."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A 3-mana rainbow rock
-/// that converts into a card. Same shape as Letter of Acceptance's
-/// {2}, sac → draw activation but on a generic body. Both abilities
-/// are pure engine primitives.
+/// Heirloom Mirror // Inherited Fiend — {1}, {T}, pay 1 life, discard a
+/// card: draw, mill, then a ritual counter; at three, remove them and
+/// transform. Sorcery speed. The back is a 4/4 flying Demon that exiles
+/// creature cards from graveyards to grow.
 pub fn heirloom_mirror() -> CardDefinition {
-    use crate::effect::PlayerRef as PR;
+    let fiend = CardDefinition {
+        name: "Inherited Fiend",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature.from_any_graveyard()),
+                    to: ZoneDest::Exile,
+                },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let rituals = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Ritual };
     CardDefinition {
         name: "Heirloom Mirror",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PR::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            life_cost: 1,
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Mill { who: Selector::You, amount: Value::ONE },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Ritual, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(rituals(), Value::Const(3)),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::Ritual, amount: rituals() },
+                        Effect::Transform { what: Selector::This },
+                    ])),
+                    else_: Box::new(Effect::Noop),
                 },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-                self_counter_cost_reduction: None,
-                sac_other_filter: None,
-                tap_other_filter: None,
-                from_hand: false,
-                ..Default::default()
-            },
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                tap_cost: true,
-                mana_cost: cost(&[generic(3)]),
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: true,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-                self_counter_cost_reduction: None,
-                sac_other_filter: None,
-                tap_other_filter: None,
-                from_hand: false,
-                ..Default::default()
-            },
-        ],
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(fiend)),
         ..Default::default()
     }
 }

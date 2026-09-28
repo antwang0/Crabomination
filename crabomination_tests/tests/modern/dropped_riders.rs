@@ -1,5 +1,6 @@
-//! Pod-deck cards whose printed rider shipped dropped: each test asserts the
-//! rider, not the card's already-covered body.
+//! Cards whose printed rider shipped dropped (pod decks first, then the
+//! `audit_activated_costs.py` finds): each test asserts the rider, not the
+//! card's already-covered body.
 
 use crabomination::card::{CardId, CreatureType, Keyword};
 use crabomination::catalog;
@@ -1762,4 +1763,75 @@ fn fearless_swashbuckler_needs_a_pirate_and_a_vehicle() {
         .expect("attack");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "a Pirate alone draws nothing");
+}
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<Vec<GameEvent>, GameError> {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: index, target, additional_targets: vec![], x_value: None, mode: None,
+    })
+}
+
+/// Heirloom Mirror shipped as an invented mana rock. Printed: {1}, {T}, pay 1
+/// life, discard a card — draw, mill, a ritual counter; at three, remove them
+/// and transform into Inherited Fiend.
+#[test]
+fn heirloom_mirror_transforms_on_its_third_ritual() {
+    let mut g = main_phase();
+    let mirror = g.add_card_to_battlefield(0, catalog::heirloom_mirror());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for turn in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+        g.players[0].mana_pool.add_colorless(1);
+        g.battlefield_find_mut(mirror).unwrap().tapped = false;
+        activate(&mut g, mirror, 0, None).expect("activate the Mirror");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(mirror).unwrap().transformed, turn == 2);
+    }
+    assert_eq!(g.players[0].life, 17, "1 life a ritual");
+    assert_eq!(g.players[0].graveyard.len(), 6, "three discards, three mills");
+    let fiend = g.computed_permanent(mirror).unwrap();
+    assert!(fiend.keywords().contains(&Keyword::Flying) && fiend.power == 4, "a 4/4 flying Inherited Fiend");
+}
+
+/// Rootcoil Creeper's two dropped abilities: two mana that only a spell cast
+/// from your graveyard may spend, and exiling itself to return a card with
+/// flashback you own from exile.
+#[test]
+fn rootcoil_creeper_graveyard_mana_and_flashback_return() {
+    let mut g = main_phase();
+    let rc = g.add_card_to_battlefield(0, catalog::rootcoil_creeper());
+    g.clear_sickness(rc);
+    activate(&mut g, rc, 1, None).expect("the graveyard mana");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(cast(&mut g, bear, None).is_err(), "a hand-cast Bears can't spend it");
+
+    let mut g = main_phase();
+    let rc = g.add_card_to_battlefield(0, catalog::rootcoil_creeper());
+    g.clear_sickness(rc);
+    let tt = g.add_card_to_exile(0, catalog::think_twice());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    activate(&mut g, rc, 2, Some(Target::Permanent(tt))).expect("exile the Creeper");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == tt), "Think Twice returned to hand");
+    assert!(g.battlefield_find(rc).is_none());
+}
+
+/// Intrepid Stablemaster's dropped mode: two mana that only a Mount or
+/// Vehicle spell may spend.
+#[test]
+fn intrepid_stablemaster_funds_vehicles_only() {
+    let mut g = main_phase();
+    let sm = g.add_card_to_battlefield(0, catalog::intrepid_stablemaster());
+    g.clear_sickness(sm);
+    activate(&mut g, sm, 1, None).expect("the restricted mana");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(cast(&mut g, bear, None).is_err(), "Bears is neither");
+    let copter = g.add_card_to_hand(0, catalog::smugglers_copter());
+    cast(&mut g, copter, None).expect("a Vehicle spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copter).is_some());
 }
