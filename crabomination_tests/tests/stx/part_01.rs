@@ -5218,7 +5218,9 @@ fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
 fn selfless_glyphweaver_back_deadly_vanity_one_survivor_destroy_rest() {
     let mut g = two_player_game();
     // P0 controls three creatures, P1 controls two.
-    let keeper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // The survivor is chosen on resolution (CR 608.2d), not targeted: the
+    // caster keeps its biggest creature.
+    let keeper = g.add_card_to_battlefield(0, catalog::serra_angel());
     for _ in 0..2 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
     for _ in 0..2 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
     let id = g.add_card_to_hand(0, catalog::selfless_glyphweaver());
@@ -5227,7 +5229,7 @@ fn selfless_glyphweaver_back_deadly_vanity_one_survivor_destroy_rest() {
 
     g.perform_action(GameAction::CastSpellBack {
         card_id: id,
-        target: Some(Target::Permanent(keeper)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,

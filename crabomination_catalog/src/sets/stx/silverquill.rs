@@ -629,9 +629,8 @@ pub fn tenured_inkcaster() -> CardDefinition {
 ///
 /// MDFC Selfless Glyphweaver // Deadly Vanity. The back face (Deadly Vanity —
 /// {4}{B}{B}{B} Sorcery: "Choose a creature or planeswalker. Destroy the
-/// rest.") picks the single survivor as target slot 0, then destroys every
-/// OTHER creature and planeswalker via
-/// `Selector::EachPermanentExceptTargets`. Castable from hand through
+/// rest.") names the survivor on resolution (`ChooseOneAmong`) and destroys
+/// every other creature and planeswalker. Castable from hand through
 /// `GameAction::CastSpellBack`.
 ///
 /// The front's activation is an *exile-self*-cost activated ability whose
@@ -646,21 +645,14 @@ pub fn selfless_glyphweaver() -> CardDefinition {
         name: "Deadly Vanity",
         cost: cost(&[generic(5), b(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Slot 0: the chosen survivor. The ForEach body is a Noop —
-            // the slot exists only to declare the choice; the survivor is
-            // exempted from the sweep below.
-            Effect::ForEach {
-                selector: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: cre_or_pw.clone(),
-                },
-                body: Box::new(Effect::Noop),
-            },
-            Effect::Destroy {
-                what: Selector::EachPermanentExceptTargets(cre_or_pw),
-            },
-        ]),
+        // "Choose a creature or planeswalker" is made on resolution (CR
+        // 608.2d), not targeted — a hexproof survivor is fine; the rest die.
+        effect: Effect::ChooseOneAmong {
+            what: Selector::EachPermanent(cre_or_pw),
+            chooser: PlayerRef::You,
+            chosen: Box::new(Effect::Noop),
+            other: Box::new(Effect::Destroy { what: Selector::SeparatedPile { chosen: false } }),
+        },
         ..Default::default()
     };
     CardDefinition {
