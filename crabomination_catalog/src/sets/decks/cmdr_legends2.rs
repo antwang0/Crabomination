@@ -8,7 +8,7 @@
 //! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
 //! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
 //! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
-//! Fools and Sivitri, Dragon Master.
+//! Fools, Sivitri, Dragon Master and Elminster.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -779,6 +779,57 @@ pub fn sivitri_dragon_master() -> CardDefinition {
             cost(&[generic(2), u(), b()]),
             crate::card::PlaneswalkerSubtype::Sivitri,
             4,
+        )
+    }
+}
+
+/// Elminster — whenever you scry, your next instant or sorcery this turn
+/// costs {X} less (X = cards looked at); +2: draw, then scry 2; −3: exile the
+/// library top and make a 1/1 flying Faerie Dragon per point of its mana
+/// value. Can be your commander.
+pub fn elminster() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let faerie_dragon = std::sync::Arc::new(TokenDefinition {
+        name: "Faerie Dragon".into(),
+        colors: vec![Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie, CreatureType::Dragon], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
+            effect: Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount: Value::TriggerEventAmount },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                        to: crate::effect::ZoneDest::Exile,
+                    },
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::LastExiledManaValue, definition: faerie_dragon },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..walker_commander(
+            "Elminster",
+            cost(&[generic(3), w(), u()]),
+            crate::card::PlaneswalkerSubtype::Elminster,
+            5,
         )
     }
 }

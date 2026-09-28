@@ -478,3 +478,24 @@ fn sivitri_taxes_attackers_in_life() {
     let taxed = picked.iter().filter(|a| a.target == AttackTarget::Player(0)).count() as i32;
     assert!(2 * taxed < 3, "the bot keeps the tax under its life: {picked:?}");
 }
+
+/// Elminster's +2 draws and scries 2; the scry makes the next instant cost
+/// {2} less. −3 makes a Faerie Dragon per point of the exiled card's mana
+/// value.
+#[test]
+fn elminster_scry_discount_and_faerie_dragons() {
+    let mut g = pod(3);
+    let elminster = g.add_card_to_battlefield(0, catalog::elminster());
+    activate_loyalty(&mut g, elminster, 0, None, None);
+    let tt = g.add_card_to_hand(0, catalog::think_twice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, 0, tt, None).expect("Think Twice for {U} after scry 2");
+
+    let mut g = pod(3);
+    let elminster = g.add_card_to_battlefield(0, catalog::elminster());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::serra_angel());
+    let before = g.battlefield.len();
+    activate_loyalty(&mut g, elminster, 1, None, None);
+    assert_eq!(g.battlefield.len(), before + 5, "Serra Angel is mana value 5");
+}
