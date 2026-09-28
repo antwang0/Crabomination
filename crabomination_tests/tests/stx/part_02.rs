@@ -1905,9 +1905,10 @@ fn valor_in_graveyard_grants_first_strike_with_plains() {
 
 // ── Triskaidekaphile (STX 2021) ────────────────────────────────────────────
 
-/// Triskaidekaphile's ETB lifts the maximum hand size — and draws NOTHING.
-/// It shipped with an invented cantrip on the ETB, on a card whose whole
-/// point is hand size. Found by `scripts/audit_invented_trigger.py`.
+/// CR 402.2: Triskaidekaphile's "no maximum hand size" is a static — it lasts
+/// while it's on the battlefield and ends when it leaves (it shipped as a
+/// one-shot ETB flag that outlived it). Casting it draws NOTHING (it once
+/// had an invented cantrip; `scripts/audit_invented_trigger.py`).
 #[test]
 fn triskaidekaphile_etb_lifts_max_hand_size_and_draws_nothing() {
     let mut g = two_player_game();
@@ -1924,12 +1925,13 @@ fn triskaidekaphile_etb_lifts_max_hand_size_and_draws_nothing() {
     .expect("Triskaidekaphile castable for {1}{U}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].max_hand_size, None,
-        "Triskaidekaphile ETB should remove the maximum hand size");
+    assert_eq!(g.effective_max_hand_size(0), None,
+        "Triskaidekaphile removes the maximum hand size");
     assert_eq!(g.players[0].hand.len(), hand_before - 1,
         "the cast left the hand; nothing replaced it");
-    assert!(g.battlefield.iter().any(|c| c.id == id),
-        "Triskaidekaphile stays on the battlefield");
+    g.remove_from_battlefield_to_graveyard_raw(id);
+    assert_eq!(g.effective_max_hand_size(0), Some(7),
+        "the static ends when Triskaidekaphile leaves");
 }
 
 #[test]

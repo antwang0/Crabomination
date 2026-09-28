@@ -26330,14 +26330,15 @@ pub fn profts_eidetic_memory() -> CardDefinition {
         name: "Proft's Eidetic Memory",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
         triggered_abilities: vec![
-            etb(Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::SetNoMaxHandSize { who: Selector::You },
-            ])),
+            etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::BeginCombat),

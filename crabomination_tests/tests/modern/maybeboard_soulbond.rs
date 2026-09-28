@@ -243,7 +243,10 @@ fn profts_eidetic_memory_etb_draws_and_grants_no_max_hand() {
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draws one");
-    assert_eq!(g.players[0].max_hand_size, None, "no maximum hand size");
+    // CR 402.2: a static, so it ends when the enchantment leaves.
+    assert_eq!(g.effective_max_hand_size(0), None, "no maximum hand size");
+    g.remove_from_battlefield_to_graveyard_raw(id);
+    assert_eq!(g.effective_max_hand_size(0), Some(7), "ends when Proft's leaves");
 }
 
 #[test]

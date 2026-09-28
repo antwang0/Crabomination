@@ -1244,25 +1244,8 @@ pub fn anger() -> CardDefinition {
 ///  your hand, you win the game.
 ///  {3}{U}: Draw a card."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): combines existing engine
-/// primitives:
-/// - **Static "no maximum hand size"** → `Effect::SetNoMaxHandSize`
-///   fires on ETB so the controller can hoard cards above 7. The
-///   cleanup-step discard (CR 514.1) sees `Player.max_hand_size == None`
-///   and skips the loop.
-/// - **Upkeep win** → `EventKind::StepBegins(Upkeep) / ActivePlayer`
-///   trigger gated on `ValueEquals(HandSizeOf(You), Const(13))`. On
-///   exactly 13 cards in hand at the controller's upkeep, the trigger
-///   resolves `Effect::WinGame { who: You }` (CR 104.2a — "you win the
-///   game" sets every other player's `eliminated = true`, then the
-///   SBA sweep promotes `game_over = Some(winner)`).
-///
-/// The "you have no maximum hand size" rider is approximated as a
-/// one-shot ETB flip rather than a continuous static effect — once
-/// Triskaidekaphile resolves, the flag stays set even if the source
-/// later leaves the battlefield, matching the printed Oracle's "for
-/// the rest of the game" semantics (Wisdom of Ages also flips the
-/// flag this way; the engine has no LTB cleanup for the flag).
+/// "No maximum hand size" is a static (CR 402.2): it ends when this leaves.
+/// The upkeep win is an intervening-if on `HandSizeOf(You) == 13`.
 pub fn triskaidekaphile() -> CardDefinition {
     use crate::card::Predicate;
     use crate::effect::PlayerRef as PR;
@@ -1276,15 +1259,11 @@ pub fn triskaidekaphile() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
         triggered_abilities: vec![
-            // ETB: flip the "no maximum hand size" flag. ⚠ It also drew a
-            // card, which the printed card does not do — an invented cantrip
-            // on a card whose whole point is hand size. Found by
-            // `scripts/audit_invented_trigger.py`.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::SetNoMaxHandSize { who: Selector::You },
-            },
             // Upkeep: if you have exactly 13 cards in hand, you win.
             TriggeredAbility {
                 event: EventSpec::new(
