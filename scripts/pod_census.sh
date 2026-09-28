@@ -14,6 +14,8 @@
 #   cargo build --profile release-fast -p crabomination --bin bot_ladder
 #   scripts/pod_census.sh target/release-fast/bot_ladder 4 91000 500 > census.log
 #   grep '^seed' census.log | grep -v 'rc 0 undecided 0'
+# POD_CENSUS_ARGS is appended to every run (`--a dflt`, another pilot);
+# CRAB_POD_CONCEDE=<n> in the environment adds random concessions (CR 104.3a).
 BIN=$1; N=$2; SEED0=$3; GAMES=$4; ND=${5:-183}
 GROUP_LIST=$(python3 - "$N" "$SEED0" "$ND" <<'PY'
 import sys, random
@@ -25,7 +27,7 @@ PY
 )
 seed=$SEED0
 for g in $GROUP_LIST; do
-  out=$(timeout "${POD_CENSUS_TIMEOUT:-1800}" "$BIN" --commander --pod-decks "$g" --games "$GAMES" --seed "$seed" 2>&1); rc=$?
+  out=$(timeout "${POD_CENSUS_TIMEOUT:-1800}" "$BIN" --commander --pod-decks "$g" --games "$GAMES" --seed "$seed" $POD_CENSUS_ARGS 2>&1); rc=$?
   und=$(echo "$out" | grep -o "undecided [0-9]*" | head -1)
   echo "seed $seed decks $g rc $rc $und"
   if [ $rc -ne 0 ] || ! echo "$out" | grep -q "undecided 0 "; then
