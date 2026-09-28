@@ -15,3 +15,47 @@ impl GameState {
         cost.symbols.extend(super::actions::colored_spell_tax_for_spell(self, p, card).symbols);
     }
 }
+
+/// The spell a half-card cast puts on the stack, as the cost walks read it:
+/// the half's name, cost and card types only (CR 709.3 split halves, 715.3
+/// an Adventure, an Omen). The card stays whole on the stack — only the
+/// cost filters (Thalia's "noncreature", an instant/sorcery discount) see
+/// this.
+pub(crate) fn half_spell_probe(
+    card: &CardInstance,
+    name: Option<crate::static_str_serde::StaticStr>,
+    cost: &ManaCost,
+    types: &[crate::card::CardType],
+) -> CardInstance {
+    let mut def = (*card.definition.arc()).clone();
+    if let Some(n) = name {
+        def.name = n;
+    }
+    def.cost = cost.clone();
+    def.card_types = types.to_vec();
+    def.subtypes = Default::default();
+    def.supertypes = Vec::new();
+    let mut probe = CardInstance::new(card.id, def, card.owner);
+    probe.controller = card.controller;
+    probe
+}
+
+impl GameState {
+    /// CR 601.2f for a half-card cast: the taxes, then the generic and
+    /// colored reductions, read against [`half_spell_probe`].
+    pub(crate) fn apply_half_cast_cost_modifiers(
+        &self,
+        p: usize,
+        probe: &CardInstance,
+        target: Option<&Target>,
+        from_graveyard: bool,
+        cost: &mut ManaCost,
+    ) {
+        self.add_spell_taxes(p, probe, target, cost);
+        let less = super::actions::cost_reduction_for_spell_full(self, p, probe, target, from_graveyard, false);
+        if less > 0 {
+            cost.reduce_generic(less);
+        }
+        super::actions::apply_colored_cost_statics(self, p, probe, cost);
+    }
+}

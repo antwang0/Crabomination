@@ -1239,3 +1239,29 @@ fn cr_601_2f_flashback_pays_thalias_tax() {
     fb(&mut g).expect("{3}{U} pays the taxed flashback");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// CR 601.2f / 715.3 — an Adventure is a noncreature spell with only the
+/// adventure's characteristics, so Thalia taxes Stomp though Bonecrusher
+/// Giant is a creature card. The half-card paths (adventure, omen, split,
+/// aftermath) paid neither taxes nor reductions.
+#[test]
+fn cr_715_3_thalia_taxes_an_adventure() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+    let giant = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    let stomp = |g: &mut GameState| {
+        g.perform_action(GameAction::CastAdventure {
+            card_id: giant, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(stomp(&mut g).is_err(), "Stomp's {{1}}{{R}} alone no longer pays under Thalia");
+    g.players[0].mana_pool.add_colorless(1);
+    stomp(&mut g).expect("{2}{R} pays the taxed Stomp");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

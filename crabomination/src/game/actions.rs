@@ -8127,6 +8127,11 @@ impl GameState {
         } else {
             adv.cost.clone()
         };
+        // CR 601.2f / 715.3 — the Adventure spell's taxes and discounts.
+        if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
+            let probe = super::cast_cost::half_spell_probe(card, Some(adv.name), &adv.cost, &adv.card_types);
+            self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
@@ -8192,6 +8197,10 @@ impl GameState {
         } else {
             omen.cost.clone()
         };
+        if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
+            let probe = super::cast_cost::half_spell_probe(card, Some(omen.name), &omen.cost, &omen.card_types);
+            self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
         // The Omen half is a noncreature instant/sorcery cast; flag it so
@@ -8383,6 +8392,17 @@ impl GameState {
         if cost.has_x() {
             cost = cost.with_x_value(x_value.unwrap_or(0));
         }
+        // CR 601.2f / 709.3 — the half (or, fused, both halves: CR 702.102c)
+        // is what the cost filters read.
+        if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
+            let mut types = split.right.card_types.clone();
+            if fused {
+                types.extend(card.definition.card_types.iter().filter(|t| !split.right.card_types.contains(t)).cloned());
+            }
+            let printed = cost.clone();
+            let probe = super::cast_cost::half_spell_probe(card, None, &printed, &types);
+            self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
@@ -8454,6 +8474,10 @@ impl GameState {
         } else {
             split.right.cost.clone()
         };
+        if let Some(card) = self.players[p].graveyard.iter().find(|c| c.id == card_id) {
+            let probe = super::cast_cost::half_spell_probe(card, None, &split.right.cost, &split.right.card_types);
+            self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), true, &mut cost);
+        }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
         // The aftermath half is an instant or sorcery cast from the graveyard.
