@@ -3066,7 +3066,7 @@ pub struct GameState {
     /// group's ~3,300-Ir unshare for one push (PERF `(-282)`).
     #[serde(skip)]
     pub(crate) life_gain_flag_pending: u64,
-    /// CR 505.1b — additional combat phases banked for the active player.
+    /// CR 500.8 — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
     /// to Begin Combat (decrementing) instead of advancing to the postcombat
@@ -3078,7 +3078,7 @@ pub struct GameState {
     /// at both declaration steps. Reset at cleanup.
     #[serde(default)]
     pub combat_chooser: Option<usize>,
-    /// CR 505.1b — combat phases banked by `AdditionalCombatPhaseAfterMain`
+    /// CR 500.8 — combat phases banked by `AdditionalCombatPhaseAfterMain`
     /// (Relentless Assault): when the active player leaves a main phase with
     /// one banked, the turn enters Begin Combat instead of the next phase
     /// (the follow-up main comes from the normal EndCombat → PostMain flow).

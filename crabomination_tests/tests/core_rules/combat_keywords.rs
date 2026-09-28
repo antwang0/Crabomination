@@ -1009,7 +1009,7 @@ fn cr_725_3_is_monarch_predicate() {
     assert!(!g.evaluate_predicate(&Predicate::IsMonarch { who: PlayerRef::EachOpponent }, &ctx));
 }
 
-// ── CR 505.1b additional combat phase ─────────────────────────────────────────
+// ── CR 500.8 additional combat phase ─────────────────────────────────────────
 
 #[test]
 fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {

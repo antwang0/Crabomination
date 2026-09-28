@@ -578,7 +578,7 @@ pub fn tergrid_god_of_fright() -> CardDefinition {
 /// attacks, you may have its controller create a 1/1 white Warrior token
 /// tapped and attacking (CR 508.3a). {W}{U}{B}{R}{G}: untap all attacking
 /// creatures; they gain trample, lifelink and haste until end of turn; after
-/// this phase there is an additional combat phase (CR 505.1b). Activate
+/// this phase there is an additional combat phase (CR 500.8). Activate
 /// only during combat.
 ///
 /// The "you may" is taken for your own Warriors and declined for an

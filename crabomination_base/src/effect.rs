@@ -11276,7 +11276,7 @@ pub enum Effect {
     /// to the battlefield (front face up)". Used by the FIN Dominants' Saga
     /// chapter III to reset the flip cycle.
     ExileSelfReturnFrontFace,
-    /// CR 505.1b — "there is an additional combat phase after this one."
+    /// CR 500.8 — "there is an additional combat phase after this one."
     /// Banks `count` onto `GameState.additional_combat_phases`; when the
     /// active player leaves the End of Combat step with the counter set, the
     /// turn loops back to Begin Combat (a fresh combat phase) instead of
@@ -11295,7 +11295,7 @@ pub enum Effect {
     /// block" (Berserker's Frenzy) — `ChooseCombatThisTurn`'s block half: the
     /// resolving controller submits every block declaration this turn.
     ChooseBlocksThisTurn,
-    /// CR 505.1b — "After this main phase, there is an additional combat
+    /// CR 500.8 — "After this main phase, there is an additional combat
     /// phase followed by an additional main phase." Banks a combat phase
     /// that begins when the active player leaves their current main phase;
     /// the following main phase comes from the normal EndCombat → PostMain
