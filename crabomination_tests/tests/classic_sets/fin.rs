@@ -3135,7 +3135,8 @@ fn seifer_almasy_lone_attacker_and_recast() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "the recast Bolt was exiled after resolving");
 }
 
-/// Raubahn has Ward (pay life = power) and attaches an Equipment when it attacks.
+/// Raubahn has Ward (pay life = power) and, attacking, attaches an Equipment
+/// to target attacking creature — the other attacker here, not only itself.
 #[test]
 fn raubahn_wards_and_attaches_on_attack() {
     use crabomination::game::types::{Attack, AttackTarget};
@@ -3145,14 +3146,17 @@ fn raubahn_wards_and_attaches_on_attack() {
     assert!(g.computed_permanent(raubahn).unwrap().keywords()
         .contains(&Keyword::Ward(WardCost::LifeSourcePower)), "Ward—pay life = power");
     let sword = g.add_card_to_battlefield(0, catalog::bonesplitter()); // unattached Equipment
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
     g.clear_sickness(raubahn);
+    g.clear_sickness(giant);
     advance_to(&mut g, TurnStep::DeclareAttackers);
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: raubahn, target: AttackTarget::Player(1),
-    }])).expect("Raubahn attacks");
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: raubahn, target: AttackTarget::Player(1) },
+        Attack { attacker: giant, target: AttackTarget::Player(1) },
+    ])).expect("both attack");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(raubahn),
-        "the Equipment attached to Raubahn on attack");
+    let host = g.battlefield_find(sword).unwrap().attached_to;
+    assert!(host == Some(raubahn) || host == Some(giant), "the Equipment went to an attacker");
 }
 
 /// Golbez surveils when an artifact enters, and at end step with 4+ artifacts

@@ -6959,17 +6959,26 @@ mod recent {
         assert!(g.legal_attackers(0).contains(&pb), "attacks with delirium");
     }
 
-    /// Fervent Champion pumps another attacking Knight.
+    /// Fervent Champion pumps another *attacking* Knight: the Knight left home
+    /// is not a legal target.
     #[test]
     fn fervent_champion_pumps_knight() {
+        use crabomination::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let champ = g.add_card_to_battlefield(0, catalog::fervent_champion());
-        let ally = g.add_card_to_battlefield(0, catalog::fervent_champion());
-        let eff = catalog::fervent_champion().triggered_abilities[0].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_trigger(champ, 0, Some(Target::Permanent(ally)), 0);
-        g.resolve_effect(&eff, &ctx).unwrap();
-        let cp = g.computed_permanent(ally).unwrap();
-        assert_eq!(cp.power, 2, "+1/+0");
+        let home = g.add_card_to_battlefield(0, catalog::white_knight());
+        let ally = g.add_card_to_battlefield(0, catalog::white_knight());
+        g.clear_sickness(ally);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: champ, target: AttackTarget::Player(1) },
+            Attack { attacker: ally, target: AttackTarget::Player(1) },
+        ])).expect("attack");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "the attacking Knight got +1/+0");
+        assert_eq!(g.computed_permanent(home).unwrap().power, 2, "the one at home didn't");
     }
 
     /// Porcelain Legionnaire can be cast paying life for its Phyrexian pip.

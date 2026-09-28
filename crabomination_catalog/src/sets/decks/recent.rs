@@ -13237,7 +13237,8 @@ pub fn fervent_champion() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::HasCreatureType(CreatureType::Knight)
                         .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::IsAttacking),
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(0),

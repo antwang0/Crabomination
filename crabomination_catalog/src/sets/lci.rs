@@ -459,8 +459,8 @@ pub fn inverted_iceberg() -> CardDefinition {
 }
 
 /// Oteclan Landmark // Oteclan Levitator — {W} Artifact; ETB scry 2. Craft with
-/// artifact {2}{W} → Oteclan Levitator (1/4 Golem with flying). (The
-/// attack grant-flying rider is omitted.)
+/// artifact {2}{W} → Oteclan Levitator (1/4 flying Golem; attacking, target
+/// attacking creature without flying gains flying).
 pub fn oteclan_landmark() -> CardDefinition {
     let levitator = CardDefinition {
         name: "Oteclan Levitator",
@@ -472,6 +472,18 @@ pub fn oteclan_landmark() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsAttacking)
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
         ..Default::default()
     };
     CardDefinition {

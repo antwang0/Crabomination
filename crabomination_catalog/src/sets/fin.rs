@@ -6061,12 +6061,20 @@ pub fn raubahn_bull_of_ala_mhigo() -> CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::LifeSourcePower)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            // "Attach up to one target Equipment you control to target
+            // attacking creature": slot 0 the Equipment, slot 1 the attacker.
+            // With no Equipment the trigger has nothing to attach, so the
+            // "up to one" is a mandatory slot here (an optional one the
+            // picker won't spend on your own permanent).
             effect: Effect::Attach {
                 what: target_filtered(
                     SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
                         .and(SelectionRequirement::ControlledByYou),
                 ),
-                to: Selector::This,
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                },
             },
         }],
         ..Default::default()
