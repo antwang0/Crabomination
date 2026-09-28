@@ -572,3 +572,25 @@ fn siren_stormtamer_counters_an_ability_aimed_at_your_creature() {
     assert!(g.battlefield_find(siren).is_none(), "sacrificed");
     assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the ping was countered");
 }
+
+/// Francisco, Fowl Marauder — "Whenever one or more Pirates you control deal
+/// damage to a player" is any damage (its ruling names Lightning-Rig Crew's
+/// ping); the trigger listened to combat damage only.
+#[test]
+fn francisco_explores_off_a_pirates_noncombat_damage() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let francisco = g.add_card_to_battlefield(0, catalog::francisco_fowl_marauder());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(francisco, 0, None);
+    let evs = g
+        .resolve_effect(&Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let explored = g.battlefield_find(francisco).unwrap().counter_count(CounterType::PlusOnePlusOne) > 0
+        || g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears")
+        || g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears");
+    assert!(explored, "Francisco explored");
+}

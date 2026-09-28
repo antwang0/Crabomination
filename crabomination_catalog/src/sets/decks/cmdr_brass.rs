@@ -73,11 +73,14 @@ fn pirate_enters(effect: Effect) -> TriggeredAbility {
 }
 
 /// "Whenever one or more Pirates you control deal combat damage to a player".
-fn pirates_connect(effect: Effect) -> TriggeredAbility {
+/// "Whenever one or more Pirates you control deal [combat] damage to a
+/// player": `kind` is `DealsDamageToPlayer` for any damage (Francisco,
+/// Breeches), `DealsCombatDamageToPlayer` for combat (Ramirez).
+fn pirates_connect(kind: EventKind, effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec {
             once_per_batch: true,
-            ..EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+            ..EventSpec::new(kind, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: pirate() })
         },
         effect,
@@ -242,7 +245,7 @@ pub fn blood_money() -> CardDefinition {
 pub fn breeches_brazen_plunderer() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Menace, Keyword::Partner],
-        triggered_abilities: vec![pirates_connect(Effect::ExileTopAndGrantMayPlay {
+        triggered_abilities: vec![pirates_connect(EventKind::DealsDamageToPlayer, Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::TriggerEventPlayer,
             count: Value::ONE,
             duration: MayPlayDuration::EndOfThisTurn,
@@ -399,7 +402,7 @@ pub fn fathom_fleet_captain() -> CardDefinition {
 pub fn francisco_fowl_marauder() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::CantBlock, Keyword::Partner],
-        triggered_abilities: vec![pirates_connect(Effect::Explore { who: Selector::This })],
+        triggered_abilities: vec![pirates_connect(EventKind::DealsDamageToPlayer, Effect::Explore { who: Selector::This })],
         ..creature(
             "Francisco, Fowl Marauder",
             cost(&[generic(1), b()]),
@@ -553,7 +556,7 @@ pub fn ramirez_depietro_pillager() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Seq(vec![Effect::LoseLife { who: Selector::You, amount: Value::Const(2) }, treasures(2, false)])),
-            pirates_connect(Effect::ExileTopAndGrantMayPlay {
+            pirates_connect(EventKind::DealsCombatDamageToPlayer, Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::TriggerEventPlayer,
                 count: Value::ONE,
                 duration: MayPlayDuration::WhileExiled,
