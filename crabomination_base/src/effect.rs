@@ -654,6 +654,17 @@ impl Selector {
     pub fn one_of(inner: Selector) -> Self {
         Selector::take(inner, Value::Const(1))
     }
+
+    /// `Selector::TakeGreatestManaValue { inner, count }` — the engine's
+    /// pick for a choice the controller would spend on their best card.
+    pub fn take_priciest(inner: Selector, count: Value) -> Self {
+        Selector::TakeGreatestManaValue { inner: Box::new(inner), count: Box::new(count) }
+    }
+
+    /// The priciest one of `inner` (`take_priciest` with a count of one).
+    pub fn best_of(inner: Selector) -> Self {
+        Selector::take_priciest(inner, Value::Const(1))
+    }
 }
 
 // ── Value ────────────────────────────────────────────────────────────────────
