@@ -6426,3 +6426,43 @@ fn siege_dragon_sweeps_only_the_defending_players_ground() {
         assert!(g.battlefield_find(bystander).is_some(), "not the defending player's");
     }
 }
+
+/// CR 506.2 — "defending player" is the one seat being attacked. Agate-Blade
+/// Assassin drained every opponent, Kogla's attack could destroy a
+/// bystander's artifact, and Nicol Bolas made every opponent discard their
+/// hand on any damage it dealt (also Bloodvial Purveyor, Reaper of Night,
+/// Rust Scarab, Spectral Bears, Siege Dragon).
+#[test]
+fn defending_player_clauses_reach_only_the_attacked_seat() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    let assassin = g.add_card_to_battlefield(0, catalog::agate_blade_assassin());
+    let kogla = g.add_card_to_battlefield(0, catalog::kogla_the_titan_ape());
+    let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas());
+    for c in [assassin, kogla, bolas] {
+        g.clear_sickness(c);
+    }
+    let bystander_ring = g.add_card_to_battlefield(2, catalog::sol_ring());
+    for seat in [1, 2] {
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    g.perform_action(GameAction::DeclareAttackers(
+        [assassin, kogla, bolas].iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack seat 1");
+    for _ in 0..40 {
+        if g.step == TurnStep::PostCombatMain || g.is_game_over() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.battlefield_find(bystander_ring).is_some(), "Kogla found no artifact on the defending seat");
+    assert_eq!(g.players[2].life, l2, "the bystander lost nothing");
+    assert!(g.players[1].life < l1 - 1, "the drain and the damage hit seat 1");
+    assert!(g.players[1].hand.is_empty(), "Nicol Bolas emptied the damaged player's hand");
+    assert_eq!(g.players[2].hand.len(), 1, "and only that player's");
+}

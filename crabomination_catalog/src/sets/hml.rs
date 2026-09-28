@@ -1228,7 +1228,7 @@ pub fn spectral_bears() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
                 Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::DefendingPlayer,
                     filter: R::HasColor(Color::Black).and(R::IsToken.negate()),
                 }))),
             ),

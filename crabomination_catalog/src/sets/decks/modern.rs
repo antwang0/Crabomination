@@ -22065,7 +22065,7 @@ pub fn reaper_of_night() -> CardDefinition {
         // printed flying, and Harvest Fear's discard as a random one (the
         // `cnt` audit column, 2026-09-10).
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::If {
-            cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::EachOpponent), Value::Const(2)),
+            cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::DefendingPlayer), Value::Const(2)),
             then: Box::new(Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Flying,
@@ -63138,7 +63138,7 @@ pub fn kogla_the_titan_ape() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Artifact
                         .or(SelectionRequirement::Enchantment)
-                        .and(SelectionRequirement::ControlledByOpponent),
+                        .and(SelectionRequirement::ControlledByDefendingPlayer),
                 ),
             }),
         ],

@@ -5604,7 +5604,7 @@ mod recent {
         assert_eq!(g.computed_permanent(ss).unwrap().power, 4, "2 base +2");
     }
 
-    /// Bloodvial Purveyor's attack trigger pumps +1/+0 per Blood the opponent has.
+    /// Bloodvial Purveyor's attack trigger pumps +1/+0 per Blood the defending player has.
     #[test]
     fn bloodvial_purveyor_pumps_per_opponent_blood() {
         use crabomination::effect::{Effect, Value};
@@ -5616,9 +5616,17 @@ mod recent {
             who: crabomination::effect::PlayerRef::You, count: Value::Const(2),
             definition: std::sync::Arc::new(crabomination_base::tokens::blood_token()),
         }, &ctx0).unwrap();
-        let trig = catalog::bloodvial_purveyor().triggered_abilities[1].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_trigger(bv, 0, None, 0);
-        g.resolve_effect(&trig, &ctx).unwrap();
+        // "…for each Blood token defending player controls": attack for real.
+        g.clear_sickness(bv);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = crabomination::game::types::TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: bv,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        drain_stack(&mut g);
         assert_eq!(g.computed_permanent(bv).unwrap().power, 7, "5 base +2 for two Blood");
     }
 

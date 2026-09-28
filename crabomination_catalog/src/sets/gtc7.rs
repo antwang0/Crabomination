@@ -513,7 +513,7 @@ pub fn fortress_cyclops() -> CardDefinition {
 // ── Green / Orzhov ────────────────────────────────────────────────────────────
 
 /// Rust Scarab — {4}{G} 4/5 Insect. Whenever it becomes blocked, you may
-/// destroy target artifact or enchantment an opponent controls.
+/// destroy target artifact or enchantment defending player controls.
 pub fn rust_scarab() -> CardDefinition {
     CardDefinition {
         name: "Rust Scarab",
@@ -525,10 +525,10 @@ pub fn rust_scarab() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "Destroy target artifact or enchantment an opponent controls?".into(),
+                description: "Destroy target artifact or enchantment defending player controls?".into(),
                 body: Box::new(Effect::Destroy {
                     what: target_filtered(
-                        R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                        R::Artifact.or(R::Enchantment).and(R::ControlledByDefendingPlayer),
                     ),
                 }),
             },

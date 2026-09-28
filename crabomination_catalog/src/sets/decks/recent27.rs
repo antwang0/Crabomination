@@ -8,7 +8,7 @@ use crate::card::{
     SelectionRequirement, Selector, StaticAbility, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{
-    etb, etb_draw, on_attack, on_attack_drain, on_attack_gain_life, on_dies, target_filtered,
+    etb, etb_draw, on_attack, on_attack_gain_life, on_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, hybrid, u, w};
@@ -151,7 +151,11 @@ pub fn moonrise_cleric() -> CardDefinition {
 /// loses 1 life and you gain 1 life.
 pub fn agate_blade_assassin() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack_drain(1)],
+        triggered_abilities: vec![on_attack(Effect::Drain {
+            from: Selector::Player(PlayerRef::DefendingPlayer),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
         ..creature(
             "Agate-Blade Assassin",
             cost(&[generic(1), crate::mana::b()]),

@@ -11208,7 +11208,7 @@ pub fn storm_skreelix() -> CardDefinition {
 /// Bloodvial Purveyor — {2}{B}{B} 5/6 Vampire. Flying, trample. Whenever an
 /// opponent casts a spell, that player creates a Blood token. Whenever it
 /// attacks, it gets +1/+0 until end of turn for each Blood token the defending
-/// player controls (read as Blood an opponent controls).
+/// player controls.
 pub fn bloodvial_purveyor() -> CardDefinition {
     CardDefinition {
         name: "Bloodvial Purveyor",
@@ -11238,7 +11238,7 @@ pub fn bloodvial_purveyor() -> CardDefinition {
                         SelectionRequirement::HasArtifactSubtype(
                             crate::card::ArtifactSubtype::Blood,
                         )
-                        .and(SelectionRequirement::ControlledByOpponent),
+                        .and(SelectionRequirement::ControlledByDefendingPlayer),
                     ))),
                     toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,

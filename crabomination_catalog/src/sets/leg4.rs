@@ -187,11 +187,19 @@ pub fn nicol_bolas() -> CardDefinition {
                 event: upkeep(EventScope::YourControl),
                 effect: Effect::SacrificeSourceUnlessPay { cost: cost(&[u(), b(), r()]) },
             },
+            // "Whenever Nicol Bolas deals damage to an opponent, that player
+            // discards their hand" — the damaged player (`Target(0)`), not
+            // every opponent, and not on damage to a creature.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(
+                    crate::effect::Predicate::EntityMatches {
+                        what: Selector::Player(PlayerRef::Target(0)),
+                        filter: crate::card::SelectionRequirement::OpponentPlayer,
+                    },
+                ),
                 effect: Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::HandSizeOf(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
                     random: false,
                 },
             },
