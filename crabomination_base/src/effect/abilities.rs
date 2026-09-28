@@ -2091,6 +2091,11 @@ pub enum StaticEffect {
     /// (Puresteel Paladin's metalcraft). The {0} equip is always the cheaper
     /// of the two, so `GameState::equip` pays it in place of the printed one.
     EquipmentYouControlEquipZeroWhile { condition: crate::effect::Predicate },
+    /// CR 702.6c — "Equipment you control have equip [quality] {0}": a second
+    /// equip ability that only targets a creature matching `filter` (Syr
+    /// Gwyn's "equip Knight {0}"). `GameState::equip` pays {0} when the target
+    /// matches.
+    EquipmentYouControlEquipZeroFor { filter: crate::card::SelectionRequirement },
     /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
     /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,

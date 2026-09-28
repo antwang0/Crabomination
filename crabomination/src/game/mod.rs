@@ -21530,15 +21530,17 @@ impl GameState {
             .sum()
     }
 
-    /// Puresteel Paladin — does a static `player` controls give their
-    /// Equipment equip {0} right now?
-    fn equipment_equips_free(&self, player: usize) -> bool {
+    /// Puresteel Paladin / Syr Gwyn — does a static `player` controls give
+    /// their Equipment equip {0} onto `target` right now?
+    fn equipment_equips_free(&self, player: usize, target: crate::card::CardId) -> bool {
         self.battlefield.iter().filter(|c| c.controller == player).any(|c| {
             c.definition.static_abilities.iter().any(|sa| match &sa.effect {
                 crate::effect::StaticEffect::EquipmentYouControlEquipZeroWhile { condition } => {
                     let ctx = crate::game::effects::EffectContext::for_ability(c.id, player, None);
                     self.evaluate_predicate(condition, &ctx)
                 }
+                crate::effect::StaticEffect::EquipmentYouControlEquipZeroFor { filter } => self
+                    .evaluate_requirement_static(filter, &crate::game::Target::Permanent(target), player, Some(c.id)),
                 _ => false,
             })
         })
@@ -21649,7 +21651,7 @@ impl GameState {
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
         }
-        if fortify.is_none() && self.equipment_equips_free(p) {
+        if fortify.is_none() && self.equipment_equips_free(p, target) {
             equip_cost = crate::mana::ManaCost::default();
         }
         // The target must be a creature (equip, CR 702.6c) — or a land
@@ -31792,6 +31794,7 @@ fn static_effect_to_effects(
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::EquipmentYouControlEquipZeroWhile { .. }
+            | StaticEffect::EquipmentYouControlEquipZeroFor { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::LifeTaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn

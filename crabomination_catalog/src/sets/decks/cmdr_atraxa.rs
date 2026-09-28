@@ -4,9 +4,8 @@
 //! Power's, `cmdr_mimeoplasm.rs`). Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
-//! Residuals (each also on its card):
-//! - **Duneblast** — the survivor is the chooser's pick among all creatures,
-//!   and one always survives when any exist ("up to one" never picks none).
+//! Duneblast's "choose up to one" keeps the caster's pick, or none
+//! (`Effect::ChooseOneAmong` with a no-op `chosen` branch).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnterMode, Keyword,
