@@ -47546,8 +47546,8 @@ pub fn zealous_persecution() -> CardDefinition {
     }
 }
 
-/// Exalted Angel — {4}{W}{W} 4/5 Angel, flying. Damage it deals gains you
-/// that much life (modeled as lifelink). Morph {2}{W}{W}.
+/// Exalted Angel — {4}{W}{W} 4/5 Angel, flying. Whenever it deals damage, you
+/// gain that much life (a trigger, not lifelink). Morph {2}{W}{W}.
 pub fn exalted_angel() -> CardDefinition {
     CardDefinition {
         name: "Exalted Angel",
@@ -47559,11 +47559,11 @@ pub fn exalted_angel() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        keywords: vec![
-            Keyword::Flying,
-            Keyword::Lifelink,
-            Keyword::Morph(cost(&[generic(2), w(), w()])),
-        ],
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(2), w(), w()]))],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
         ..Default::default()
     }
 }

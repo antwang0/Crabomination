@@ -4452,6 +4452,25 @@ fn lurking_predators_drops_creature_when_opp_casts() {
 
     assert!(g.battlefield.iter().any(|c| c.id == bear),
         "creature off top should land via Lurking Predators trigger");
+
+    // "Otherwise, you may put that card on the bottom of your library."
+    let under = g.add_card_to_library(0, catalog::forest());
+    let top = g.add_card_to_library(0, catalog::island());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(top));
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let opp_spell = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: opp_spell,
+        target: Some(crabomination::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(under), "the land went to the bottom");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(top));
 }
 
 // ── Prowling Caracal ───────────────────────────────────────────────────────

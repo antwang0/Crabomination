@@ -1858,9 +1858,8 @@ pub fn soul_shatter() -> CardDefinition {
 /// reveal-and-cheat reanimator engine. Wired via an
 /// `EventKind::SpellCast / OpponentControl` trigger that conditionally
 /// moves the top of the controller's library to the battlefield when
-/// the top is a creature. The "or put on bottom" half is approximated
-/// as "leave on top" (no reveal-and-may-move primitive); the engine's
-/// next draw step naturally rotates the library. Tests:
+/// the top is a creature; otherwise the controller may put it on the
+/// bottom. Tests:
 /// `lurking_predators_drops_creature_when_opp_casts`,
 /// `lurking_predators_is_a_six_mana_green_enchantment`.
 pub fn lurking_predators() -> CardDefinition {
@@ -1888,7 +1887,16 @@ pub fn lurking_predators() -> CardDefinition {
                         tapped: false,
                     },
                 }),
-                else_: Box::new(Effect::Noop),
+                else_: Box::new(Effect::MayDo {
+                    description: "Put the revealed card on the bottom of your library?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::TopOfLibrary {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                        },
+                        to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+                    }),
+                }),
             },
         }],
         ..Default::default()
