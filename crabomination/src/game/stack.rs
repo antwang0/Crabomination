@@ -7940,6 +7940,7 @@ impl GameState {
     /// draw. Run by every state-based sweep and, immediately, by a
     /// concession (a player still in the game wins the moment the last
     /// opponent leaves, whatever else is pending).
+    #[inline]
     pub(crate) fn settle_game_over_if_decided(&mut self, events: &mut Vec<GameEvent>) {
         if self.game_over.is_none() {
             // One seat walk, no allocation. This block built two `Vec`s and
