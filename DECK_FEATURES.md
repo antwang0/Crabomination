@@ -1381,7 +1381,7 @@ next face-down cast, and `StaticEffect::DoubleControllerTurnedFaceUpTriggers`
 over a new `triggered_by_face_up` candidate flag (Panoptic Projektor); and
 `CardDefinition.turned_face_up_counters`, applied inside
 `CardInstance::turn_face_up`, so Hooded Hydra is never a face-up 0/0 for state-based actions to kill. Residuals: **Boltbender** re-aims one
-target spell; **Tesak** doesn't grant unleash; **Veiled
+target spell; **Tesak**'s granted unleash counter comes by trigger; **Veiled
 Ascension**'s entering flying counter comes from a trigger. Pods (1,000 games
 each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11108) Kaust
 20.5 %, census: no card of the four unplayed; 6 seats beside Zimone / Sefris /

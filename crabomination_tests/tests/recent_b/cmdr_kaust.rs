@@ -291,6 +291,22 @@ fn tesak_hastes_and_adds_mana() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
 }
 
+/// CR 702.98a — Tesak gives other Dogs you control unleash: a Dog cast
+/// under it may take a +1/+1 counter, and then it can't block.
+#[test]
+fn tesak_gives_other_dogs_unleash() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::tesak_judiths_hellhound());
+    let mut dog = catalog::grizzly_bears();
+    dog.subtypes.creature_types = vec![crabomination::card::CreatureType::Dog];
+    let dog = g.add_card_to_hand(0, dog);
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, 0, dog, None).expect("cast the Dog");
+    assert_eq!(g.battlefield_find(dog).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.computed_permanent(dog).unwrap().keywords().contains(&Keyword::CantBlock));
+}
+
 /// True Identity — turning it (disguised) up scries and draws, once a turn.
 #[test]
 fn true_identity_draws_once_a_turn() {

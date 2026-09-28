@@ -2073,7 +2073,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Phantom Steed | Dungeons of Death (AFC) | the attacking token copy isn't an Illusion in addition to its other types. |
 | 🟡 Rod of Absorption | Dungeons of Death (AFC) | every instant or sorcery resolving while it is on the battlefield is exiled, including one cast before it arrived. |
 | 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
-| 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | other Dogs you control don't gain unleash. |
+| 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
 | 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
