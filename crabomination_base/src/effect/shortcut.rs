@@ -345,6 +345,17 @@ pub fn on_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// CR 506.2 — "whenever this creature attacks a player": attacking a
+/// planeswalker or battle doesn't trigger it (Elder Brain, Shredder).
+pub fn on_attack_player(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::EntityMatches {
+            what: Selector::This,
+            filter: SelectionRequirement::IsAttackingOpponentPlayer,
+        }),
+        effect,
+    }
+}
 /// CR 701.43d — the **exert bonus**: "you may exert this creature as it
 /// attacks. When you do, `effect`." The two are a linked pair (CR 607.2h), so
 /// this rides `EventKind::Exerted` rather than `Attacks`: an attack without
