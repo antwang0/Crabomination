@@ -1086,6 +1086,7 @@ impl GameState {
             | EventScope::YouPutCounters => false, // event-based
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent
+            | EventScope::ControllerAttackedDirectlyByOpponent
         | EventScope::OpponentOfYoursAttacked
         | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false, // combat-based

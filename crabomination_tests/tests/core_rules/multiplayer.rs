@@ -7209,3 +7209,45 @@ fn cr_601_2c_demonic_junker_destroys_one_per_player() {
     assert!(g.battlefield_find(mine).is_none());
     assert_eq!(g.battlefield_find(junker).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "yours died");
 }
+
+/// CR 506.3 — "whenever a creature attacks you" is an attack on the PLAYER:
+/// `EventScope::ControllerAttackedDirectlyByOpponent` stays quiet when the
+/// creature attacks a planeswalker that player controls, where the "you or a
+/// planeswalker you control" scope (`ControllerAttackedByOpponent`) fires.
+#[test]
+fn cr_506_3_attacks_you_is_not_an_attack_on_your_planeswalker() {
+    use crabomination::card::TriggeredAbility;
+    use crabomination::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
+    let listener = |scope| {
+        let mut d = catalog::grizzly_bears();
+        d.triggered_abilities = vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, scope),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }];
+        d
+    };
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, listener(EventScope::ControllerAttackedDirectlyByOpponent));
+    let pw = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let life = g.players[0].life;
+    let attack = |g: &mut GameState, target| {
+        g.set_attacking(vec![]);
+        g.battlefield_find_mut(bear).unwrap().tapped = false;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target }])).expect("attack");
+        drain_stack(g);
+    };
+    attack(&mut g, AttackTarget::Planeswalker(pw));
+    assert_eq!(g.players[0].life, life, "a planeswalker was attacked, not you");
+    attack(&mut g, AttackTarget::Player(0));
+    assert_eq!(g.players[0].life, life + 1, "you were attacked");
+    // The "you or a planeswalker you control" scope fires for both.
+    g.add_card_to_battlefield(0, listener(EventScope::ControllerAttackedByOpponent));
+    attack(&mut g, AttackTarget::Planeswalker(pw));
+    assert_eq!(g.players[0].life, life + 2);
+}

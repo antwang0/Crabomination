@@ -1126,6 +1126,7 @@ fn event_matches_spec_rest(
         // slot), so the unified dispatcher must not also fire it.
         EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        | EventScope::ControllerAttackedDirectlyByOpponent
         | EventScope::OpponentOfYoursAttacked
         | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false,
@@ -1586,6 +1587,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        | EventScope::ControllerAttackedDirectlyByOpponent
         | EventScope::OpponentOfYoursAttacked
         | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false,

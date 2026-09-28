@@ -2242,7 +2242,10 @@ impl GameState {
                         && (t.event.scope == crate::effect::EventScope::ControllerAttackedByOpponent
                             || (is_pw_attack
                                 && t.event.scope
-                                    == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
+                                    == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent)
+                            || (!is_pw_attack
+                                && t.event.scope
+                                    == crate::effect::EventScope::ControllerAttackedDirectlyByOpponent))
                 };
                 // By value into whichever walk runs, so the body inlines
                 // (a `&mut` closure is an out-of-line call per permanent).

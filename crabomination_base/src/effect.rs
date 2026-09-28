@@ -3752,7 +3752,9 @@ pub enum EventScope {
     /// Used with `EventKind::BecameTarget` — Nadu, Winged Wisdom.
     YourCreatureTargeted,
     /// A creature an **opponent** controls attacks the source's controller
-    /// (or a planeswalker they control). Used with `EventKind::Attacks`; the
+    /// or a planeswalker they control — the "attacks you or a planeswalker
+    /// you control" wording (a bare "attacks you" is
+    /// `ControllerAttackedDirectlyByOpponent`). Used with `EventKind::Attacks`; the
     /// dispatcher binds the attacking creature's controller into the
     /// trigger's target slot (so "that creature's controller gains control"
     /// resolves via `PlayerRef::Target(0)` — Coveted Jewel).
@@ -3799,6 +3801,13 @@ pub enum EventScope {
     /// placer (CR 122.6) is the trigger's controller, whoever controls the
     /// permanent; a `.with_filter` on `TriggerSource` restricts the subject.
     YouPutCounters,
+    /// CR 506.3 — a creature an opponent controls attacks the source's
+    /// controller **directly** ("whenever a creature attacks you" — Hissing
+    /// Miasma, Orim's Prayer): an attack on a planeswalker they control is
+    /// not an attack on them. `ControllerAttackedByOpponent` is the "you or a
+    /// planeswalker you control" wording; same dispatcher, gated on the
+    /// attack target.
+    ControllerAttackedDirectlyByOpponent,
 }
 
 impl EventScope {
