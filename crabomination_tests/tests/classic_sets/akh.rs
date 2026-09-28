@@ -325,3 +325,43 @@ fn greater_sandwurm_power_evasion_enforced() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(big, sw)])).is_ok(),
         "power-4 creature may block it");
 }
+
+/// Printed keyword costs (keyword-cost scan): Honored Hydra's embalm is
+/// {3}{G}, Timeless Witness's eternalize {5}{G}{G} (it shipped as an embalm),
+/// Sunscourge Champion's {2}{W}{W}, Dreamstealer's {4}{B}{B}. Each is
+/// payable with exactly its printed mana and not with a mana less.
+#[test]
+fn embalm_eternalize_costs_are_the_printed_ones() {
+    type Case = (fn() -> crabomination::card::CardDefinition, &'static [Color], u32, (i32, i32));
+    let cases: &[Case] = &[
+        (catalog::honored_hydra, &[Color::Green], 3, (6, 6)),
+        (catalog::timeless_witness, &[Color::Green, Color::Green], 5, (4, 4)),
+        (catalog::sunscourge_champion, &[Color::White, Color::White], 2, (4, 4)),
+        (catalog::dreamstealer, &[Color::Black, Color::Black], 4, (4, 4)),
+    ];
+    for &(f, colors, generic, pt) in cases {
+        let name = f().name;
+        for short in [true, false] {
+            let mut g = two_player_game();
+            let id = g.add_card_to_graveyard(0, f());
+            g.add_card_to_hand(0, catalog::island());
+            for &c in colors {
+                g.players[0].mana_pool.add(c, 1);
+            }
+            g.players[0].mana_pool.add_colorless(generic - u32::from(short));
+            g.priority.player_with_priority = 0;
+            g.step = TurnStep::PreCombatMain;
+            let r = g.perform_action(GameAction::ActivateAbility {
+                card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+            });
+            if short {
+                assert!(r.is_err(), "{name}: one mana short");
+                continue;
+            }
+            r.unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            drain_stack(&mut g);
+            let tok = g.battlefield.iter().find(|c| c.is_token).unwrap_or_else(|| panic!("{name}: a token"));
+            assert_eq!((tok.power(), tok.toughness()), pt, "{name}");
+        }
+    }
+}

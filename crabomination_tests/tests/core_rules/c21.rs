@@ -160,7 +160,7 @@ fn myriad_landscape_second_basic_shares_a_land_type() {
     }
 }
 
-/// Barren Moor can be cycled from hand for {2}.
+/// Barren Moor can be cycled from hand for {B} (the cycle shipped at {2}).
 #[test]
 fn barren_moor_cycles() {
     let mut g = two_player_game();
@@ -169,6 +169,8 @@ fn barren_moor_cycles() {
     assert!(catalog::barren_moor().keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
     let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).is_err(), "{{2}} isn't {{B}}");
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle Barren Moor");
     drain_stack(&mut g);
     // -1 (cycled away) + 1 (drew) = net 0; the land is in the graveyard.

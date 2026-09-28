@@ -233,7 +233,7 @@ fn cycling_land(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        keywords: vec![Keyword::Cycling(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Colored(color)]))],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
             effect: StaticEffect::EntersTapped { applies_to: Selector::This },

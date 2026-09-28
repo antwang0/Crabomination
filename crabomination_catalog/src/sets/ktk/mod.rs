@@ -42,7 +42,7 @@ pub fn mardu_scout() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        alternative_cost: Some(dash(cost(&[r()]))),
+        alternative_cost: Some(dash(cost(&[generic(1), r()]))),
         ..Default::default()
     }
 }
@@ -85,13 +85,14 @@ pub fn goblin_heelcutter() -> CardDefinition {
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         })],
-        alternative_cost: Some(dash(cost(&[generic(1), r()]))),
+        alternative_cost: Some(dash(cost(&[generic(2), r()]))),
         ..Default::default()
     }
 }
 
-/// Ponyback Brigade — {3}{R}{W}{B} 2/2 Goblin. When this enters, create three
-/// 1/1 red Goblin creature tokens. Dash {4}{B}{R}.
+/// Ponyback Brigade — {3}{R}{W}{B} 2/2 Goblin Warrior. When it enters or is
+/// turned face up, create three 1/1 red Goblin creature tokens. Morph
+/// {2}{R}{W}{B}.
 pub fn ponyback_brigade() -> CardDefinition {
     let goblin = TokenDefinition {
         name: "Goblin".into(),
@@ -115,12 +116,25 @@ pub fn ponyback_brigade() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(3),
-            definition: std::sync::Arc::new(goblin),
-        })],
-        alternative_cost: Some(dash(cost(&[generic(4), b(), r()]))),
+        // "When this creature enters or is turned face up, create three 1/1
+        // red Goblin creature tokens. Morph {2}{R}{W}{B}" — it shipped with an
+        // invented dash {4}{B}{R} and no morph.
+        keywords: vec![Keyword::Morph(cost(&[generic(2), r(), w(), b()]))],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: std::sync::Arc::new(goblin.clone()),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: std::sync::Arc::new(goblin),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

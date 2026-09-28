@@ -426,7 +426,7 @@ pub fn augury_raven() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        foretell_cost: Some(cost(&[generic(2), u()])),
+        foretell_cost: Some(cost(&[generic(1), u()])),
         ..Default::default()
     }
 }
@@ -497,7 +497,7 @@ pub fn sarulfs_packmate() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        foretell_cost: Some(cost(&[generic(2), g()])),
+        foretell_cost: Some(cost(&[generic(1), g()])),
         ..Default::default()
     }
 }
@@ -641,7 +641,13 @@ pub fn tenacious_underdog() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
-        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[generic(2), b()]))),
+        // "Blitz—{2}{B}{B}, Pay 2 life. You may cast this card from your
+        // graveyard using its blitz ability."
+        alternative_cost: Some(crate::card::AlternativeCost {
+            life_cost: 2,
+            also_from_graveyard: true,
+            ..crate::effect::shortcut::blitz(cost(&[generic(2), b(), b()]))
+        }),
         ..Default::default()
     }
 }
@@ -1063,7 +1069,7 @@ pub fn doomskar_titan() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
-        foretell_cost: Some(cost(&[generic(2), r()])),
+        foretell_cost: Some(cost(&[generic(4), r()])),
         ..Default::default()
     }
 }
@@ -1446,8 +1452,8 @@ pub fn ravenform() -> CardDefinition {
 pub fn unburial_rites() -> CardDefinition {
     let flashback_cost = ManaCost {
         symbols: vec![
+            ManaSymbol::Generic(3),
             ManaSymbol::Colored(Color::White),
-            ManaSymbol::Colored(Color::Black),
         ],
     };
     CardDefinition {
@@ -19217,7 +19223,7 @@ pub fn reckless_wurm() -> CardDefinition {
         keywords: vec![
             Keyword::Trample,
             Keyword::Madness(ManaCost::new(vec![
-                ManaSymbol::Generic(1),
+                ManaSymbol::Generic(2),
                 ManaSymbol::Colored(Color::Red),
             ])),
         ],

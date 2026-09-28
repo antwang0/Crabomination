@@ -711,12 +711,12 @@ fn kickable_hand_cards_lists_affordable_kickers() {
 fn dashable_hand_cards_lists_affordable_dash_creatures() {
     let mut g = two_player_game();
     g.priority.player_with_priority = 0;
-    let scout = g.add_card_to_hand(0, catalog::mardu_scout()); // Dash {R}
+    let scout = g.add_card_to_hand(0, catalog::mardu_scout()); // Dash {1}{R}
     g.add_card_to_hand(0, catalog::grizzly_bears()); // no dash
-    // No red yet → can't afford the dash cost.
-    assert!(g.dashable_hand_cards(0).is_empty(), "no red → not dashable");
     g.players[0].mana_pool.add(Color::Red, 1);
-    assert_eq!(g.dashable_hand_cards(0), vec![scout], "Mardu Scout is dashable for one red");
+    assert!(g.dashable_hand_cards(0).is_empty(), "one red can't pay {{1}}{{R}}");
+    g.players[0].mana_pool.add_colorless(1);
+    assert_eq!(g.dashable_hand_cards(0), vec![scout], "Mardu Scout is dashable for {{1}}{{R}}");
 }
 
 #[test]

@@ -6286,7 +6286,7 @@ pub fn tuskguard_captain() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), g()]))],
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[g()]))],
         static_abilities: vec![counter_anthem(
             Keyword::Trample,
             "Each creature you control with a +1/+1 counter on it has trample.",
@@ -6330,7 +6330,7 @@ pub fn mer_ek_nightblade() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), b()]))],
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[b()]))],
         static_abilities: vec![counter_anthem(
             Keyword::Deathtouch,
             "Each creature you control with a +1/+1 counter on it has deathtouch.",
@@ -6464,7 +6464,7 @@ pub fn abzan_battle_priest() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(2), w()]))],
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[w()]))],
         static_abilities: vec![counter_anthem(
             Keyword::Lifelink,
             "Each creature you control with a +1/+1 counter on it has lifelink.",

@@ -141,7 +141,7 @@ pub fn honored_hydra() -> CardDefinition {
         6,
         6,
         vec![Keyword::Trample],
-        embalm(cost(&[generic(3), g(), g()])),
+        embalm(cost(&[generic(3), g()])),
     )
 }
 
@@ -155,7 +155,7 @@ pub fn timeless_witness() -> CardDefinition {
         2,
         1,
         vec![],
-        embalm(cost(&[generic(3), g(), g()])),
+        eternalize(cost(&[generic(5), g(), g()])),
     );
     // ETB: return target card from your graveyard to hand (Eternal Witness).
     c.triggered_abilities = vec![etb(Effect::Move {
@@ -177,7 +177,7 @@ pub fn sunscourge_champion() -> CardDefinition {
         2,
         3,
         vec![],
-        eternalize(cost(&[generic(3), w(), w()])),
+        eternalize(cost(&[generic(2), w(), w()])),
     );
     c.triggered_abilities = vec![etb(Effect::GainLife {
         who: Selector::You,

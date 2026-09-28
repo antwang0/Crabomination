@@ -287,7 +287,7 @@ pub fn marshmist_titan() -> CardDefinition {
 pub fn nyxborn_eidolon() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        bestow: Some(cost(&[generic(3), b()])),
+        bestow: Some(cost(&[generic(4), b()])),
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 1,

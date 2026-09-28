@@ -7121,7 +7121,7 @@ pub fn perigee_beckoner() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         })],
-        alternative_cost: Some(warp(cost(&[generic(2), b()]))),
+        alternative_cost: Some(warp(cost(&[generic(1), b()]))),
         ..Default::default()
     }
 }

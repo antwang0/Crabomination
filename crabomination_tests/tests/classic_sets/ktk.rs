@@ -61,29 +61,35 @@ fn normal_cast_does_not_dash_bounce() {
     assert!(g.battlefield.iter().any(|c| c.id == id), "normal-cast creature stays on the battlefield");
 }
 
+/// Ponyback Brigade — "When this creature enters or is turned face up, create
+/// three 1/1 red Goblin creature tokens. Morph {2}{R}{W}{B}." It shipped with
+/// an invented dash {4}{B}{R} and no morph.
 #[test]
-fn ponyback_brigade_dash_makes_three_goblins() {
+fn ponyback_brigade_goblins_when_turned_face_up() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::ponyback_brigade());
-    // Dash {4}{B}{R}.
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    dash(&mut g, id);
-
-    let goblins = g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.definition.name == "Goblin")
-        .count();
-    assert_eq!(goblins, 3, "Ponyback Brigade ETBs three Goblin tokens");
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("face down for {3}");
+    drain_stack(&mut g);
+    let goblins = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Goblin").count();
+    assert_eq!(goblins(&g), 0, "a face-down 2/2 has no abilities");
+    for c in [Color::Red, Color::White, Color::Black] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("morph {2}{R}{W}{B}");
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g), 3, "turned face up: three Goblins");
 }
 
 #[test]
-fn mardu_scout_dashes_for_a_single_red() {
+fn mardu_scout_dashes_for_one_and_red() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mardu_scout());
     g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
     dash(&mut g, id);
-    assert!(g.battlefield.iter().any(|c| c.id == id), "Mardu Scout dashes for one red");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Mardu Scout dashes for {{1}}{{R}}");
 }
 
 #[test]

@@ -168,9 +168,11 @@ fn blitz_grants_haste_then_sacrifices_with_death_draw() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::shock()); // a card to draw on death
     let id = g.add_card_to_hand(0, catalog::tenacious_underdog());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2); // Blitz {2}{B}
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2); // Blitz {2}{B}{B}, pay 2 life
+    let life = g.players[0].life;
     blitz(&mut g, id);
+    assert_eq!(g.players[0].life, life - 2, "blitz's 2 life");
     let c = g.battlefield_find(id).expect("blitzed creature on battlefield");
     assert!(c.granted_keywords_eot.contains(&Keyword::Haste), "blitz grants haste");
     let hand_before = g.players[0].hand.len();
