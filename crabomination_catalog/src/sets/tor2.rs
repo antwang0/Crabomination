@@ -377,7 +377,7 @@ pub fn hypnox() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::TriggerSourceEnteredByCast),
+                    .with_filter(Predicate::SourceCastFromOwnersHand),
                 effect: Effect::ExileUntilSourceLeaves {
                     what: Selector::CardsInZone {
                         who: PlayerRef::Target(0),

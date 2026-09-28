@@ -101,7 +101,7 @@ pub fn furnace_dragon() -> CardDefinition {
         affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                .with_filter(Predicate::SourceWasCast),
+                .with_filter(Predicate::SourceCastFromOwnersHand),
             effect: Effect::Exile {
                 what: Selector::EachPermanent(R::Artifact),
             },

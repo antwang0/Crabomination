@@ -334,7 +334,7 @@ pub fn scion_of_vitu_ghazi() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::SourceWasCast,
+            cond: Predicate::SourceCastFromOwnersHand,
             then: Box::new(Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,

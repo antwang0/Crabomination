@@ -1429,3 +1429,38 @@ fn reap_intellect_strips_a_name() {
     );
     assert_eq!(g.players[1].hand.len(), 1, "the Bears stayed");
 }
+
+/// Scion of Vitu-Ghazi — "if you cast it FROM YOUR HAND" (CR 603.4): cast
+/// from hand it makes a Bird and populates (two Birds); returned from the
+/// graveyard it makes nothing.
+#[test]
+fn scion_of_vitu_ghazi_needs_a_hand_cast() {
+    let birds = |g: &GameState| g.battlefield.iter().filter(|c| c.is_token && c.controller == 0).count();
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::TurnStep::PreCombatMain;
+    let scion = g.add_card_to_hand(0, catalog::scion_of_vitu_ghazi());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: scion, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(birds(&g), 2, "a Bird, then populate");
+    let body = g.add_card_to_graveyard(0, catalog::scion_of_vitu_ghazi());
+    let back = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::ExactObjects(vec![body]),
+        to: crabomination::effect::ZoneDest::Battlefield {
+            controller: crabomination::effect::PlayerRef::You,
+            tapped: false,
+        },
+    };
+    let evs = g
+        .resolve_effect(&back, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0))
+        .expect("reanimate");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(birds(&g), 2, "not cast from hand: no Bird");
+}
