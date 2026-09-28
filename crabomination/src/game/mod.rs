@@ -20015,15 +20015,18 @@ impl GameState {
         card.has_face_view() || card.definition.cost.has_x()
     }
 
-    /// A card's mana value in its current zone: a permanent's printed cost,
-    /// else its zone face's (CR 709.4b split cards combined, CR 715.3b an
-    /// Adventure spell's own).
+    /// A card's mana value in its current zone: a permanent's printed cost
+    /// (a Room's unlocked doors', CR 709.5), else its zone face's (CR 709.4b
+    /// split cards combined, CR 715.3b an Adventure spell's own).
     pub(crate) fn zone_mana_value(&self, card: &CardInstance) -> u32 {
-        if Self::may_have_zone_face(card)
-            && self.battlefield_find(card.id).is_none()
-            && let Some(v) = self.face_view_of(card)
-        {
-            return v.definition.cost.cmc();
+        if Self::may_have_zone_face(card) {
+            let view = match self.battlefield_find(card.id) {
+                Some(bf) => bf.room_battlefield_view(),
+                None => self.face_view_of(card),
+            };
+            if let Some(v) = view {
+                return v.definition.cost.cmc();
+            }
         }
         card.definition.cost.cmc()
     }

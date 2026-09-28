@@ -9933,6 +9933,21 @@ impl CardInstance {
         card
     }
 
+    /// CR 709.5 — a Room on the battlefield has only its unlocked doors' mana
+    /// costs (neither door unlocked: no mana cost, mana value 0). `None` for a
+    /// non-Room. For readers only.
+    pub fn room_battlefield_view(&self) -> Option<CardInstance> {
+        let r = self.definition.room.as_deref()?;
+        let mut cost = ManaCost::default();
+        if self.unlocked_doors & 1 != 0 {
+            cost.symbols.extend(r.left.cost.symbols.iter().cloned());
+        }
+        if self.unlocked_doors & 2 != 0 {
+            cost.symbols.extend(r.right.cost.symbols.iter().cloned());
+        }
+        Some(self.view_with(|d| d.cost = cost))
+    }
+
     /// True when [`face_view`](Self::face_view) can differ from the card.
     #[inline]
     pub fn has_face_view(&self) -> bool {

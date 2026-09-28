@@ -509,3 +509,20 @@ fn cr_400_7_a_flickered_creature_sheds_pumps_and_control() {
     let cp = g.computed_permanent(back).unwrap();
     assert_eq!(cp.controller, 1, "it returns under its owner's control and stays there");
 }
+
+/// CR 709.5 — a Room permanent has only its unlocked doors' mana cost: none
+/// unlocked is mana value 0, the right door alone is that door's.
+#[test]
+fn cr_709_5_a_rooms_mana_value_is_its_unlocked_doors() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    let room = g.add_card_to_battlefield(0, catalog::bottomless_pool_locker_room());
+    g.battlefield_find_mut(room).unwrap().unlocked_doors = 0;
+    let mv0 = R::ManaValueAtMost(0);
+    assert!(g.evaluate_requirement_static(&mv0, &Target::Permanent(room), 0, None), "no door: MV 0");
+    g.battlefield_find_mut(room).unwrap().unlocked_doors = 0b10;
+    let right = catalog::bottomless_pool_locker_room().room.unwrap().right.cost.cmc();
+    let exact = R::ManaValueAtMost(right).and(R::ManaValueAtMost(right.saturating_sub(1)).negate());
+    assert!(g.evaluate_requirement_static(&exact, &Target::Permanent(room), 0, None), "the right door's");
+}

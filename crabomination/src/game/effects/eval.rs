@@ -4404,6 +4404,11 @@ impl GameState {
         gates: &PrintedGates,
     ) -> Option<bool> {
         use SelectionRequirement as R;
+        // A card whose zone face differs from its printed one (a split card,
+        // an X spell — `face_view_of`) is the walker's to answer.
+        if OFF && Self::may_have_zone_face(card) {
+            return None;
+        }
         let cid = card.id;
         let on_bf = !OFF;
         // The walker's `has_type`: on the battlefield, printed unless a
@@ -4994,6 +4999,14 @@ impl GameState {
                 let face;
                 let card = match bf_card {
                     None if Self::may_have_zone_face(card) => match self.face_view_of(card) {
+                        Some(v) => {
+                            face = v;
+                            &face
+                        }
+                        None => card,
+                    },
+                    // CR 709.5 — a Room permanent has its unlocked doors' cost.
+                    Some(bf) if bf.definition.room.is_some() => match bf.room_battlefield_view() {
                         Some(v) => {
                             face = v;
                             &face
