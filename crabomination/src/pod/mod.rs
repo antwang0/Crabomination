@@ -2762,6 +2762,11 @@ mod tests {
         // (0 → 2) change winner; aggregate within noise (3,000 games, seed
         // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
         // turns).
+        // Re-blessed 2026-09-28 (Dauthi Voidwalker, Judith's seat: "an exiled
+        // card AN OPPONENT OWNS", chosen on resolution — it could free its
+        // controller's own void card and targeted the first one): 4242
+        // 108→104 turns / 4818→4725 actions, same winner; the other two
+        // unmoved. Vesuva and Gideon's Sacrifice sit in no golden seat.
         // Re-blessed 2026-09-28 (CR 605.1a, 2026-09-25 text: an ability that
         // draws or mills beside its mana is not a mana ability — Sigarda's
         // Chromatic Sphere now uses the stack; bisected against the same
@@ -2783,7 +2788,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
             (43, Some(0), 54, 2838),
-            (4242, Some(3), 108, 4818),
+            (4242, Some(3), 104, 4725),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

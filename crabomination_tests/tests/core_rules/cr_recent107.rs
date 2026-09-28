@@ -372,4 +372,16 @@ fn cr_202_3e_a_countered_x_spells_mana_value_counts_its_x() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == blaze), "countered");
     assert_eq!(g.countered_spell_mana_value, 6, "X counts");
+/// CR 707.2 / 614.1c — Vesuva "enters tapped as a copy of any land": an
+/// as-enters choice (no target, no trigger to respond to), made as it enters.
+#[test]
+fn cr_707_2_vesuva_enters_as_a_copy() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::breeding_pool());
+    let vesuva = g.add_card_to_hand(0, catalog::vesuva());
+    g.perform_action(GameAction::PlayLand(vesuva)).expect("land drop");
+    assert!(g.stack.is_empty(), "no trigger");
+    let v = g.battlefield_find(vesuva).expect("on the battlefield");
+    assert_eq!(v.definition.name, "Breeding Pool");
+    assert!(v.tapped);
 }

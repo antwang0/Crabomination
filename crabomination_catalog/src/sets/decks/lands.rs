@@ -616,27 +616,18 @@ pub fn windbrisk_heights() -> CardDefinition {
 }
 
 /// Vesuva — Land. Enters tapped as a copy of any land on the battlefield
-/// (CR 707; the copy persists while Vesuva remains, via `BecomeCopyOfFor`
-/// with a Permanent duration — it reverts to printed Vesuva on leaving).
+/// (CR 707.2, the `enters_as_copy` hook).
 pub fn vesuva() -> CardDefinition {
-    use crate::effect::Duration;
     CardDefinition {
         name: "Vesuva",
         card_types: vec![CardType::Land],
-        static_abilities: vec![enters_tapped()],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::BecomeCopyOfFor {
-                    what: Selector::This,
-                    source: target_filtered(
-                        SelectionRequirement::Land.and(SelectionRequirement::OtherThanSource),
-                    ),
-                    duration: Duration::Permanent,
-                    non_legendary: false,
-                },
-            },
-        ],
+        // CR 707.2 / 614.1c — "enter tapped as a copy of any land": an
+        // as-enters choice, not a target (a hexproof land is fair game).
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: SelectionRequirement::Land,
+            tapped: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

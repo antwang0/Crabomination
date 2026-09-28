@@ -5660,10 +5660,17 @@ pub fn gideons_sacrifice() -> CardDefinition {
         name: "Gideon's Sacrifice",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::RedirectYourDamageToChosen {
-            what: target_filtered(
+        // "Choose a creature or planeswalker you control" — on resolution
+        // (CR 608.2d), not a target.
+        effect: Effect::ChooseOneAmong {
+            what: Selector::EachPermanent(
                 (R::Creature.or(R::HasCardType(CardType::Planeswalker))).and(R::ControlledByYou),
             ),
+            chooser: PlayerRef::You,
+            chosen: Box::new(Effect::RedirectYourDamageToChosen {
+                what: Selector::SeparatedPile { chosen: true },
+            }),
+            other: Box::new(Effect::Noop),
         },
         ..Default::default()
     }

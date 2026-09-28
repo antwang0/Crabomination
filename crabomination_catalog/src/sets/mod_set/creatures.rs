@@ -9912,11 +9912,18 @@ pub fn dauthi_voidwalker() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
+            // "Choose an exiled card an opponent owns with a void counter on
+            // it" — a choice on resolution (CR 608.2d), not a target: the
+            // priciest one.
             effect: Effect::GrantMayPlay {
-                what: target_filtered(SelectionRequirement::And(
-                    Box::new(SelectionRequirement::InExile),
-                    Box::new(SelectionRequirement::WithCounter(CounterType::Void)),
-                )),
+                what: Selector::TakeGreatestManaValue {
+                    inner: Box::new(Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Exile,
+                        filter: SelectionRequirement::WithCounter(CounterType::Void)
+                            .and(SelectionRequirement::OwnedByYou.negate()),
+                    }),
+                    count: Box::new(Value::ONE),
+                },
                 duration: MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: false,

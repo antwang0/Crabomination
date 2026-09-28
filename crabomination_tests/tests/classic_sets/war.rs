@@ -2985,7 +2985,8 @@ fn gideons_sacrifice_redirects_damage() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::White, 1);
-    g.perform_action(GameAction::CastSpell { card_id: cast, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    // The permanent is chosen on resolution (CR 608.2d), not targeted.
+    g.perform_action(GameAction::CastSpell { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
     drain_stack(&mut g);
     let life = g.players[0].life;
     // 2 damage aimed at player 0 → redirected to the bear (a 2/2 → dies).

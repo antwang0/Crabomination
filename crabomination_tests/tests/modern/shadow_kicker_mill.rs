@@ -767,8 +767,12 @@ fn dauthi_voidwalker_sac_frees_void_card() {
     // Opponent-owned card already in exile with a void counter.
     let stolen = g.add_card_to_exile(1, catalog::serra_angel());
     g.find_card_anywhere_mut(stolen).unwrap().add_counters(CounterType::Void, 1);
+    // Your own void card is never the pick ("an opponent owns"), and the
+    // choice is made on resolution — the priciest one (no target).
+    let mine = g.add_card_to_exile(0, catalog::lightning_bolt());
+    g.find_card_anywhere_mut(mine).unwrap().add_counters(CounterType::Void, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: walker, ability_index: 0, target: Some(Target::Permanent(stolen)), additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: walker, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac activation");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != walker), "walker sacrificed");
@@ -777,6 +781,10 @@ fn dauthi_voidwalker_sac_frees_void_card() {
     }).expect("free cast of the void card");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == stolen), "Angel enters under the activator");
+    let own = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: mine, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(own.is_err(), "your own void card was not granted");
 }
 
 // ── Urza's Saga (saga-granted activated abilities) ───────────────────────────
