@@ -30593,13 +30593,40 @@ impl GameState {
                 // `Value::SacrificedPower` / `Value::SacrificedToughness`
                 // can reference it (Thud, Tribute to Hunger).
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let candidate = self
+                let matching: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .find(|c| {
+                    .filter(|c| {
                         c.controller == p
                             && self.evaluate_requirement_static_on(filter, c, p, ctx.source)
                     })
+                    .map(|c| c.id)
+                    .collect();
+                // CR 608.2d — the sacrificing player picks which one; a bot
+                // takes the first match.
+                let pick = if matching.len() > 1 {
+                    let candidates = self.card_id_names(&matching);
+                    let Some(picked) = self.choose_up_to_cards(
+                        p,
+                        "Choose a permanent to sacrifice".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![matching[0]],
+                    ) else {
+                        return Ok(());
+                    };
+                    picked.first().copied().unwrap_or(matching[0])
+                } else {
+                    match matching.first() {
+                        Some(id) => *id,
+                        None => return Ok(()),
+                    }
+                };
+                let candidate = self
+                    .battlefield_find(pick)
                     .map(|c| (c.id, c.power(), c.toughness(), c.definition.cost.cmc()));
                 if let Some((cid, power, toughness, mv)) = candidate {
                     self.sacrificed_power = Some(power);

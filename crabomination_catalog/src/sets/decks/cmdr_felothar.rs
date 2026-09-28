@@ -9,7 +9,8 @@
 //! - **Betor, Ancestor's Voice** — the counters go on your greatest-power
 //!   other creature and the reanimation picks the greatest-power card; neither
 //!   is targeted.
-//! - **Tip the Scales** — the creature sacrificed is the engine's pick.
+//! - **Tip the Scales** — the -X/-X resolves with the spell, not as a
+//!   reflexive "when you do" trigger.
 
 use std::sync::Arc;
 
@@ -485,7 +486,7 @@ pub fn slaughter_the_strong() -> CardDefinition {
 /// Tip the Scales — sacrifice a creature; all creatures get -X/-X, X its
 /// toughness.
 ///
-/// Residual: the creature sacrificed is the engine's pick.
+/// Residual: the -X/-X is not a separate reflexive trigger.
 pub fn tip_the_scales() -> CardDefinition {
     spell(
         "Tip the Scales",

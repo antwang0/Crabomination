@@ -304,6 +304,23 @@ fn tip_the_scales_shrinks_everything() {
     assert!(g.battlefield_find(bears).is_none());
 }
 
+/// Tip the Scales — "sacrifice a creature" is the caster's pick (CR 608.2d):
+/// the Giant, not the first creature on the battlefield, so X is 3.
+#[test]
+fn tip_the_scales_sacrifices_the_chosen_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let first = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let ancients = g.add_card_to_battlefield(1, catalog::indomitable_ancients());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant])]));
+    let t = g.add_card_to_hand(0, catalog::tip_the_scales());
+    cast(&mut g, 0, t, None).expect("tip");
+    assert!(g.battlefield_find(giant).is_none(), "the chosen Giant was sacrificed");
+    assert!(g.battlefield_find(first).is_none(), "-3/-3 kills the Bears");
+    assert_eq!(pt(&g, ancients), (-1, 7), "X is the Giant's toughness");
+}
+
 /// Towering Titan — enters with your creatures' total toughness as counters.
 #[test]
 fn towering_titan_sizes_by_toughness() {
