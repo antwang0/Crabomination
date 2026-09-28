@@ -6,7 +6,6 @@
 //! Residuals (each also on its card):
 //! - **True-Name Nemesis** — the chosen player is the engine's most hostile
 //!   opponent, not the controller's pick.
-//! - **Eye of Doom** — each player's doom counter goes where the engine picks.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

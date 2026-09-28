@@ -73,7 +73,13 @@ impl GameState {
                 .into_iter()
                 .collect()
         } else {
-            vec![ids[0]]
+            // A harm on the pick (a doom counter, an exile, a steal) lands on
+            // an opponent's priciest permanent when there is one (Eye of Doom).
+            ids.iter()
+                .copied()
+                .filter(|id| self.battlefield_find(*id).is_some_and(|c| !self.same_team(c.controller, seat)))
+                .max_by_key(|id| self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()))
+                .map_or_else(|| vec![ids[0]], |id| vec![id])
         };
         let Some(picked) = self.choose_up_to_cards(
             seat,

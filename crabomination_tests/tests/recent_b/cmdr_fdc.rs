@@ -3526,6 +3526,22 @@ fn divine_reckoning_each_player_picks_their_keeper() {
     assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(their_giant).is_none());
 }
 
+/// Eye of Doom — each player's doom counter is that player's choice (CR
+/// 608.2d); a bot marks an opponent's priciest nonland permanent, never its
+/// own.
+#[test]
+fn eye_of_doom_bots_mark_an_opponents_best() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let eye = etb(&mut g, catalog::eye_of_doom());
+    let doom = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::Doom);
+    assert_eq!((doom(angel), doom(bears), doom(giant), doom(eye)), (2, 0, 1, 0));
+}
+
 /// The rest of Feline Ferocity, one assertion each.
 #[test]
 fn feline_ferocity_cards() {

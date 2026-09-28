@@ -2186,7 +2186,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
-| 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
 | 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
 | 🟡 Sizzling Soloist | Cabaretti Cacophony (NCC) | "attacks during its controller's next combat phase" is must-attack until your next turn. |
 | 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
