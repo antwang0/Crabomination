@@ -2124,8 +2124,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bladegriff Prototype | Grand Larceny (OTC) | the choosing opponent is the engine's pick, not necessarily the damaged player. |
 | 🟡 Extract Brain | Grand Larceny (OTC) | the opponent's X cards and your free cast are the engine's picks. |
 | 🟡 Nashi, Moon Sage's Scion | Grand Larceny (OTC) | any of the exiled cards may be played this turn, not only one. |
-| 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card is the engine's pick and may be cast with mana of any type. |
-| 🟡 Thief of Sanity | Grand Larceny (OTC) | the exiled card is the engine's pick (the highest mana value nonland). |
+| 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card may be cast with mana of any type. |
 | 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |

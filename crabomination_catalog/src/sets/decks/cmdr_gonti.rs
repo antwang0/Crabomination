@@ -11,8 +11,6 @@
 //!   only one.
 //! - **Siphon Insight** — the exiled card may be cast with mana of any type
 //!   (the printed "as though any color" excludes colorless).
-//! - **Thief of Sanity** / **Siphon Insight** — the exiled card is the
-//!   engine's pick.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EquipBonus, EventKind, EventScope,
@@ -301,7 +299,7 @@ pub fn savvy_trader() -> CardDefinition {
 /// Siphon Insight — {U}{B} instant. Look at the top two of target opponent's
 /// library, exile one face down (playable by you, any mana), the other to the
 /// bottom. Flashback {1}{U}{B}.
-/// Residual: the exiled card is the engine's pick and takes mana of any type.
+/// Residual: the exiled card takes mana of any type.
 pub fn siphon_insight() -> CardDefinition {
     CardDefinition {
         name: "Siphon Insight",
@@ -355,7 +353,6 @@ pub fn smirking_spelljacker() -> CardDefinition {
 /// Thief of Sanity — {1}{U}{B} 2/2 Specter, flying. Hitting a player, it
 /// looks at their top three, exiles one face down (castable by you, any
 /// mana), the rest to their graveyard.
-/// Residual: the exiled card is the engine's pick.
 pub fn thief_of_sanity() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],

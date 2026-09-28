@@ -113,6 +113,23 @@ fn thief_of_sanity_takes_one_of_three() {
     assert_eq!(g.players[1].graveyard.len(), 2);
 }
 
+/// Thief of Sanity: "exile one of them" is its controller's pick (CR
+/// 608.2d) — the Bears, not the bot's priciest.
+#[test]
+fn thief_of_sanity_exiles_the_chosen_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let t = g.add_card_to_battlefield(0, catalog::thief_of_sanity());
+    let ids: Vec<_> = [catalog::island, catalog::craw_wurm, catalog::grizzly_bears]
+        .into_iter()
+        .map(|f| g.add_card_to_library(1, f()))
+        .collect();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![ids[2]])]));
+    swing(&mut g, &[t]);
+    let taken = g.exile.iter().find(|c| c.may_play_until.is_some_and(|m| m.player == 0)).expect("exiled");
+    assert_eq!(taken.definition.name, "Grizzly Bears");
+}
+
 /// Heartless Conscription exiles every creature for you to play, then
 /// itself.
 #[test]

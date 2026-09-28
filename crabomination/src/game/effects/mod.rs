@@ -37144,7 +37144,7 @@ impl GameState {
             Effect::TakeContestedLand => self.take_contested_land(ctx, events),
             Effect::ExileSpellLinked { what } => self.exile_spell_linked(what, ctx, events),
             Effect::LookTopExileOneFaceDownMayPlay { who, count, rest_to_graveyard } => {
-                self.look_top_exile_one_face_down_may_play(who, count, *rest_to_graveyard, ctx, events)
+                self.look_top_exile_one_face_down_may_play(who, count, *rest_to_graveyard, ctx, events, effect)
             }
             Effect::OpponentChoosesXFromHandCastOneFree { who } => {
                 self.opponent_chooses_x_from_hand_cast_one_free(who, ctx, events)

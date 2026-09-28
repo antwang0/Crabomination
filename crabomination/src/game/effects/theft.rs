@@ -69,8 +69,8 @@ impl GameState {
         }
     }
 
-    /// The engine's pick among cards to take: the highest mana value
-    /// nonland, else a land.
+    /// A bot's pick among cards to take: the highest mana value nonland,
+    /// else a land.
     fn best_card_to_take<'a>(cards: impl Iterator<Item = &'a crate::card::CardInstance>) -> Option<CardId> {
         cards.max_by_key(|c| (!c.definition.is_land(), c.definition.cost.cmc())).map(|c| c.id)
     }
@@ -83,12 +83,38 @@ impl GameState {
         rest_to_graveyard: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
         let n = self.evaluate_value(count, ctx).max(0) as usize;
         let looked: Vec<CardId> = self.players[seat].library.iter().take(n).map(|c| c.id).collect();
-        let Some(pick) = Self::best_card_to_take(self.players[seat].library.iter().take(n)) else {
+        let Some(best) = Self::best_card_to_take(self.players[seat].library.iter().take(n)) else {
             return Ok(());
+        };
+        // CR 608.2d — "exile one of them" is the controller's pick; a bot
+        // takes the highest mana value nonland.
+        let pick = if looked.len() > 1 {
+            let candidates: Vec<(CardId, String)> = self.players[seat]
+                .library
+                .iter()
+                .take(n)
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            let Some(picked) = self.choose_up_to_cards(
+                ctx.controller,
+                "Exile one face down (you may play it)".into(),
+                ctx.source.unwrap_or(CardId(0)),
+                candidates,
+                1,
+                crate::decision::PickValue::Gain,
+                effect,
+                vec![best],
+            ) else {
+                return Ok(());
+            };
+            picked.first().copied().unwrap_or(best)
+        } else {
+            best
         };
         if let Some(mut card) = Self::take_card(&mut self.players[seat].library, pick) {
             card.exiled_with = ctx.source;
