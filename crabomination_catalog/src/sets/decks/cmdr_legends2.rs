@@ -2,7 +2,9 @@
 //! regenerated 2026-09-27): Reaper King, Shroofus Sproutsire, Kratos, God of
 //! War, Myrel, Shield of Argive, Doran, Besieged by Time, Gargos, Vicious
 //! Watcher, Syr Gwyn, Hero of Ashvale, Jodah, Archmage Eternal, Raggadragga,
-//! Goreguts Boss, Alexios, Deimos of Kosmos, and Narset, Enlightened Exile.
+//! Goreguts Boss, Alexios, Deimos of Kosmos, Narset, Enlightened Exile,
+//! Thalia and The Gitrog Monster, Rocco, Cabaretti Caterer, Anti-Venom,
+//! Horrifying Healer, Sonic the Hedgehog, and Iron Man, Titan of Innovation.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -366,6 +368,164 @@ pub fn narset_enlightened_exile() -> CardDefinition {
             cost(&[generic(1), u(), r(), w()]),
             vec![CreatureType::Human, CreatureType::Monk],
             3,
+            4,
+        )
+    }
+}
+
+/// Thalia and The Gitrog Monster — first strike, deathtouch; an additional
+/// land each turn; opponents' creatures and nonbasic lands enter tapped;
+/// attacking sacrifices a creature or land, then draws a card.
+pub fn thalia_and_the_gitrog_monster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+        static_abilities: vec![
+            StaticAbility { description: "You may play an additional land on each of your turns.", effect: StaticEffect::ExtraLandPerTurn },
+            StaticAbility {
+                description: "Creatures and nonbasic lands your opponents control enter tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(R::ControlledByOpponent.and(R::Creature.or(R::IsNonbasicLand))),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature.or(R::Land) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..legend(
+            "Thalia and The Gitrog Monster",
+            cost(&[generic(1), w(), b(), g()]),
+            vec![CreatureType::Human, CreatureType::Frog, CreatureType::Horror],
+            4,
+            4,
+        )
+    }
+}
+
+/// Rocco, Cabaretti Caterer — {X}{R}{G}{W}; entering, if cast, may search
+/// for a creature card with mana value X or less and put it onto the
+/// battlefield.
+pub fn rocco_cabaretti_caterer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::If {
+            cond: Predicate::SourceWasCast,
+            then: Box::new(Effect::MayDo {
+                description: "Search for a creature card with mana value X or less?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::ManaValueAtMostXFromCost),
+                    to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..legend(
+            "Rocco, Cabaretti Caterer",
+            cost(&[crate::mana::x(), r(), g(), w()]),
+            vec![CreatureType::Elf, CreatureType::Druid],
+            3,
+            1,
+        )
+    }
+}
+
+/// Anti-Venom, Horrifying Healer — entering, if cast, returns target
+/// creature card from your graveyard to the battlefield; damage to him
+/// becomes that many +1/+1 counters instead.
+pub fn anti_venom_horrifying_healer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to Anti-Venom, prevent that damage and put that many +1/+1 counters on him.",
+            effect: StaticEffect::ReplaceDamageToSelfWithCounters { kind: CounterType::PlusOnePlusOne },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::If {
+            cond: Predicate::SourceWasCast,
+            then: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard).and(R::OwnedByYou)),
+                to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..legend(
+            "Anti-Venom, Horrifying Healer",
+            cost(&[w(), w(), w(), w(), w()]),
+            vec![CreatureType::Symbiote, CreatureType::Hero],
+            5,
+            5,
+        )
+    }
+}
+
+/// Sonic the Hedgehog — haste; attacking puts a +1/+1 counter on each of
+/// your creatures with flash or haste; one of them being dealt damage makes
+/// a tapped Treasure.
+pub fn sonic_the_hedgehog() -> CardDefinition {
+    let fast = || R::HasKeyword(Keyword::Flash).or(R::HasKeyword(Keyword::Haste));
+    let mut treasure = crate::game::effects::treasure_token();
+    treasure.tapped = true;
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(fast())),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::YourControl)
+                    .with_filter(trigger_source_is(R::Creature.and(fast()))),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(treasure) },
+            },
+        ],
+        ..legend(
+            "Sonic the Hedgehog",
+            cost(&[generic(1), u(), r(), w()]),
+            vec![CreatureType::Hedgehog, CreatureType::Warrior],
+            2,
+            4,
+        )
+    }
+}
+
+/// Iron Man, Titan of Innovation — flying, haste; attacking makes a
+/// Treasure, then you may sacrifice a noncreature artifact to put an artifact
+/// card with mana value one greater onto the battlefield tapped.
+pub fn iron_man_titan_of_innovation() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
+                },
+                Effect::MayDo {
+                    description: "Sacrifice a noncreature artifact to tutor one a mana value higher?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Artifact.and(R::Noncreature) },
+                        Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::Artifact.and(R::ManaValueEqualsSacrificedPlus(1)),
+                            to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        },
+                    ])),
+                },
+            ]),
+        }],
+        ..legend(
+            "Iron Man, Titan of Innovation",
+            cost(&[generic(3), u(), r()]),
+            vec![CreatureType::Human, CreatureType::Hero],
+            4,
             4,
         )
     }

@@ -381,6 +381,8 @@ pub enum CreatureType {
     Cyberman,
     // Teenage Mutant Ninja Turtles Commander (Krang, the All-Powerful).
     Utrom,
+    // Sonic the Hedgehog (COMMANDER_BACKLOG §1).
+    Hedgehog,
 }
 
 /// Land subtypes (basic land types + others).

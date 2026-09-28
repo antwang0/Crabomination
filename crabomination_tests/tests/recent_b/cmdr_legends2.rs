@@ -233,3 +233,85 @@ fn cr_605_1a_battlefield_permanents_read_their_mana_abilities() {
     assert!(!g.evaluate_requirement_static(&without, &Target::Permanent(ring), 0, None), "Sol Ring has one");
     assert!(g.evaluate_requirement_static(&without, &Target::Permanent(thopter), 0, None));
 }
+
+/// Thalia and The Gitrog Monster: an opponent's creature enters tapped
+/// (CR 614.12), and attacking sacrifices a creature or land, then draws.
+#[test]
+fn thalia_and_gitrog_taps_their_entrants_and_trades_a_land_for_a_card() {
+    let mut g = pod(3);
+    let tg = g.add_card_to_battlefield(0, catalog::thalia_and_the_gitrog_monster());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    cast(&mut g, 1, bear, None).expect("their Bear");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "entered tapped");
+    g.active_player_idx = 0;
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    attack(&mut g, &[tg]);
+    assert!(g.battlefield_find(forest).is_none(), "the Forest was sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Rocco, Cabaretti Caterer cast for X = 2 puts a creature with mana value
+/// 2 or less onto the battlefield from the library.
+#[test]
+fn rocco_fetches_a_creature_up_to_x() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let rocco = g.add_card_to_hand(0, catalog::rocco_cabaretti_caterer());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Search(Some(elf))]));
+    for c in [Color::Red, Color::Green, Color::White] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: rocco, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("X = 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_some(), "the Elves came in");
+    assert!(g.battlefield_find(angel).is_none(), "the Angel is too big");
+}
+
+/// Anti-Venom: cast, he returns a creature card; damage to him becomes
+/// +1/+1 counters.
+#[test]
+fn anti_venom_reanimates_and_grows_from_damage() {
+    let mut g = pod(3);
+    let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let av = g.add_card_to_hand(0, catalog::anti_venom_horrifying_healer());
+    g.players[0].mana_pool.add(Color::White, 5);
+    cast(&mut g, 0, av, None).expect("cast Anti-Venom");
+    assert!(g.battlefield_find(dead).is_some(), "the Angel returned");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    cast(&mut g, 1, bolt, Some(Target::Permanent(av))).expect("Bolt him");
+    assert_eq!(pt(&g, av), (8, 8));
+}
+
+/// Sonic: attacking puts a counter on each creature of yours with haste
+/// (Sonic among them).
+#[test]
+fn sonic_counters_hasty_creatures_on_attack() {
+    let mut g = pod(3);
+    let sonic = g.add_card_to_battlefield(0, catalog::sonic_the_hedgehog());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack(&mut g, &[sonic]);
+    assert_eq!(pt(&g, sonic), (3, 5));
+    assert_eq!(pt(&g, bear), (2, 2), "no flash or haste");
+}
+
+/// Iron Man: attacking makes a Treasure; sacrificing a noncreature artifact
+/// (that Treasure, mana value 0) fetches a mana value 1 artifact, tapped.
+#[test]
+fn iron_man_climbs_the_artifact_ladder() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let im = g.add_card_to_battlefield(0, catalog::iron_man_titan_of_innovation());
+    let sol = g.add_card_to_library(0, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Search(Some(sol))]));
+    attack(&mut g, &[im]);
+    let ring = g.battlefield_find(sol).expect("Sol Ring (mana value 1) came in");
+    assert!(ring.tapped);
+}
