@@ -19945,8 +19945,9 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Elemental),
                 }),
+                // "3 damage to any target" (it hit every opponent at N seats).
                 effect: Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(3),
                 },
             },

@@ -2761,6 +2761,21 @@ fn more_activated_abilities_the_cnt_column_found() {
     assert!(g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
+/// Omnath, Locus of Rage deals 3 damage to ONE target (CR 115.1) — it hit
+/// every opponent, so a four-seat pod lost 9 life per Elemental death.
+#[test]
+fn omnath_locus_of_rage_burns_one_target_at_four_seats() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    let omnath = g.add_card_to_battlefield(0, catalog::omnath_locus_of_rage());
+    g.battlefield_find_mut(omnath).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let lost: i32 = (1..4).map(|p| 20 - g.players[p].life).sum();
+    assert_eq!(lost, 3, "one opponent took the 3");
+}
+
 // ── Triggered abilities the `cnt` audit column found missing, 2026-09-10 ────
 
 /// Omnath's damage fires for "Omnath or another Elemental you control" dying
