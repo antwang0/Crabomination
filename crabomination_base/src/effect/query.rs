@@ -3362,6 +3362,38 @@ impl Effect {
         self.slot_owner(slot, mode).is_some_and(hostile)
     }
 
+    /// Is target slot `slot` (in `mode`) removal-shaped against the permanent
+    /// it names — destroy, exile or bounce it, damage it, fight it, make its
+    /// controller sacrifice it, steal it, shrink it? The permanent-slot mirror
+    /// of [`player_slot_is_hostile`](Self::player_slot_is_hostile): only
+    /// shapes whose polarity is not in doubt are listed, so a neutral body
+    /// (double its counters, tap or untap it) answers false.
+    pub fn permanent_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
+        fn hostile(e: &Effect) -> bool {
+            match e {
+                Effect::Destroy { .. }
+                | Effect::ExileUntilSourceLeaves { .. }
+                | Effect::DealDamage { .. }
+                | Effect::Fight { .. }
+                | Effect::SacrificePermanent { .. }
+                | Effect::GainControl { .. }
+                | Effect::GainControlWhileSourceRemains { .. }
+                | Effect::GainControlWhileYouControlSource { .. }
+                | Effect::GainControlWhileSourceTapped { .. } => true,
+                Effect::Move { to, .. } => !matches!(to, ZoneDest::Battlefield { .. }),
+                Effect::PumpPT { power, toughness, .. } => {
+                    !(Effect::value_is_non_negative(power) && Effect::value_is_non_negative(toughness))
+                }
+                Effect::AddCounter { kind, .. } => matches!(kind, CounterType::MinusOneMinusOne),
+                Effect::PlayersMayAccept { on_accept, otherwise, .. } => hostile(on_accept) || hostile(otherwise),
+                Effect::ApplyToTargets { effect, .. } => hostile(effect),
+                Effect::Seq(v) => v.iter().any(hostile),
+                _ => false,
+            }
+        }
+        self.slot_owner(slot, mode).is_some_and(hostile)
+    }
+
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
             Effect::PumpPT {

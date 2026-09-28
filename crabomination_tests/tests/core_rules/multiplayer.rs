@@ -198,6 +198,21 @@ fn hostile_auto_target_falls_through_to_another_opponent() {
     assert_eq!(t, Some(Target::Permanent(theirs)), "not {mine:?}");
 }
 
+/// CR 601.2c — "up to one target": with only its own side's permanents to
+/// name, a removal-shaped optional slot is declined rather than aimed home.
+/// Drach'Nyen's entry exile took its controller's own Bear; a "target
+/// creature you control" slot still picks.
+#[test]
+fn cr_601_2c_an_optional_hostile_slot_declines_its_own_side() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let exile = catalog::drachnyen().triggered_abilities[0].effect.clone();
+    assert_eq!(g.auto_target_for_effect(&exile, 0), None, "not {mine:?}");
+    let theirs = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    assert_eq!(g.auto_target_for_effect(&exile, 0), Some(Target::Permanent(theirs)));
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────
 
 #[test]

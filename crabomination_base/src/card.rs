@@ -3901,6 +3901,19 @@ impl SelectionRequirement {
         }
     }
 
+    /// The mirror of [`excludes_your_side`](Self::excludes_your_side): true
+    /// when every match must be the evaluating player's own ("target land you
+    /// control") — an `And` holding `ControlledByYou`. An `Or` qualifies only
+    /// if both arms do.
+    pub fn excludes_opponents_side(&self) -> bool {
+        match self {
+            Self::ControlledByYou => true,
+            Self::And(a, b) => a.excludes_opponents_side() || b.excludes_opponents_side(),
+            Self::Or(a, b) => a.excludes_opponents_side() && b.excludes_opponents_side(),
+            _ => false,
+        }
+    }
+
     /// True when every match must be controlled by an opponent ("enchant
     /// creature an opponent controls") — an `And` holding
     /// `ControlledByOpponent`. An `Or` qualifies only if both arms do.
