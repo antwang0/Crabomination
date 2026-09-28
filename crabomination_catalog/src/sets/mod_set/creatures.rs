@@ -9698,9 +9698,9 @@ pub fn esper_sentinel() -> CardDefinition {
 
 /// Birgi, God of Storytelling // Harnfel, Horn of Bounty — {2}{R} Legendary
 /// Creature — God 3/3. "Whenever you cast a spell, add {R}." The DFC back face
-/// Harnfel ({5}{R} Legendary Artifact — "Whenever you discard a card, exile
-/// the top two cards of your library. Until the end of your next turn, you may
-/// play those cards.") is wired via `back_face` and cast from hand through
+/// Harnfel ({4}{R} Legendary Artifact — "Discard a card: Exile the top two
+/// cards of your library. You may play those cards this turn.") is wired via
+/// `back_face` and cast from hand through
 /// `GameAction::CastSpellBack` (it resolves onto the battlefield as an
 /// artifact, like any permanent spell).
 pub fn birgi_god_of_storytelling() -> CardDefinition {
@@ -9711,17 +9711,18 @@ pub fn birgi_god_of_storytelling() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            discard_cost: Some((crate::card::SelectionRequirement::Any, 1)),
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                duration: MayPlayDuration::EndOfControllersNextTurn,
+                duration: MayPlayDuration::EndOfThisTurn,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,
                 uncast_penalty: None,
             },
+            ..Default::default()
         }],
         ..Default::default()
     };

@@ -369,7 +369,9 @@ fn birgi_adds_red_on_cast() {
 }
 
 /// Birgi // Harnfel — the DFC back face Harnfel is cast from hand (resolving
-/// as an artifact); discarding a card then exiles the top two of your library.
+/// as an artifact); "Discard a card: Exile the top two cards of your library.
+/// You may play those cards this turn." (It shipped as a trigger on any
+/// discard, playable until the end of your next turn.)
 #[test]
 fn birgi_back_harnfel_castable_and_exiles_top_two_on_discard() {
     let mut g = two_player_game();
@@ -378,7 +380,7 @@ fn birgi_back_harnfel_castable_and_exiles_top_two_on_discard() {
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::CastSpellBack {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Harnfel (back face) castable for {5}{R}");
+    }).expect("Harnfel (back face) castable for {4}{R}");
     drain_stack(&mut g);
     assert!(
         g.battlefield.iter().any(|c| c.id == id && c.definition.name == "Harnfel, Horn of Bounty"),
@@ -392,12 +394,14 @@ fn birgi_back_harnfel_castable_and_exiles_top_two_on_discard() {
     let lib_before = g.players[0].library.len();
     let exile_before = g.exile.len();
 
-    // Discard a card → Harnfel triggers.
+    // Discard a card as the cost.
     let throwaway = g.add_card_to_hand(0, catalog::forest());
-    let card = g.players[0].remove_from_hand(throwaway).unwrap();
-    g.players[0].graveyard.push(card);
-    g.dispatch_triggers_for_events(&[GameEvent::CardDiscarded { player: 0, card_id: throwaway }]);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("Discard a card: exile the top two");
     drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == throwaway), "the cost discarded it");
 
     assert_eq!(g.players[0].library.len(), lib_before - 2, "the top two cards left the library");
     assert_eq!(g.exile.len(), exile_before + 2, "two cards were exiled");
