@@ -87,12 +87,14 @@ fn counter(what: Selector, n: Value) -> Effect {
     Effect::AddCounter { what, kind: CounterType::PlusOnePlusOne, amount: n }
 }
 
-/// The Vibranium token: an indestructible artifact with "{T}: Add {C}. This
-/// mana can't be spent to cast a nonartifact spell."
+/// The Vibranium token (CR 111.10w): a colorless Vibranium artifact with
+/// indestructible and "{T}: Add {C}. This mana can't be spent to cast a
+/// nonartifact spell."
 fn vibranium(tapped: bool) -> TokenDefinition {
     TokenDefinition {
         name: "Vibranium".into(),
         card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vibranium], ..Default::default() },
         keywords: vec![Keyword::Indestructible],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

@@ -81,6 +81,11 @@ fn tchalla_makes_vibranium_and_grows() {
     assert_eq!(v.len(), 1);
     let c = g.battlefield_find(v[0]).unwrap();
     assert!(c.tapped && c.definition.keywords.contains(&Keyword::Indestructible));
+    // CR 111.10w — "a colorless Vibranium artifact token".
+    assert_eq!(
+        c.definition.subtypes.artifact_subtypes,
+        vec![crabomination::card::ArtifactSubtype::Vibranium]
+    );
     let herb = g.add_card_to_hand(0, catalog::heart_shaped_herb());
     flood(&mut g, 0);
     cast(&mut g, herb, &[], None).expect("a four-mana artifact");

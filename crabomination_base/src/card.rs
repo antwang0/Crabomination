@@ -446,6 +446,8 @@ pub enum ArtifactSubtype {
     Junk,
     // Fallout: the Bobblehead cycle.
     Bobblehead,
+    // Marvel: the Vibranium token (CR 111.10w).
+    Vibranium,
 }
 
 /// Enchantment subtypes.
