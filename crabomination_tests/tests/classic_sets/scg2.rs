@@ -430,6 +430,19 @@ fn rock_jockey_fights_your_land_drop() {
     );
 }
 
+/// Rock Jockey's other half — "you can't play lands if this creature was
+/// cast this turn" — is a `WhileCondition` static the land-play check never
+/// peeled (CR 305.2 / 611.3a, the gate-peel sweep, 2026-09-28).
+#[test]
+fn rock_jockey_stops_the_land_drop_after_it() {
+    let mut g = main_phase();
+    let jockey = g.add_card_to_hand(0, catalog::rock_jockey());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    cast(&mut g, 0, jockey, None);
+    assert!(g.battlefield_find(jockey).is_some());
+    assert!(g.perform_action(GameAction::PlayLand(land)).is_err(), "no land this turn");
+}
+
 /// Grip of Chaos rerolls a single-target spell onto a random legal target.
 #[test]
 fn grip_of_chaos_rerolls_a_single_target() {

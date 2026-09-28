@@ -1265,3 +1265,71 @@ fn cr_715_3_thalia_taxes_an_adventure() {
     stomp(&mut g).expect("{2}{R} pays the taxed Stomp");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// CR 611.3a — a static ability's effect applies while its condition holds.
+/// Three read sites matched only the bare effect and never peeled the gate
+/// (`GameState::active_static`), so the gated abilities did nothing:
+/// Festival of Embers' "during your turn" graveyard casts, Artist's Talent's
+/// level-3 "+2 damage", and Gruul Spellbreaker's "you have hexproof".
+fn gate_game() -> GameState {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g
+}
+
+#[test]
+fn cr_611_3a_festival_of_embers_casts_from_the_graveyard_on_your_turn() {
+    use crabomination::mana::Color;
+    let mut g = gate_game();
+    g.add_card_to_battlefield(0, catalog::festival_of_embers());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let (me, them) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt from the graveyard for {R} and 1 life");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (me - 1, them - 3));
+}
+
+#[test]
+fn cr_611_3a_artists_talent_level_three_adds_two() {
+    use crabomination::mana::Color;
+    let mut g = gate_game();
+    let talent = g.add_card_to_battlefield(0, catalog::artists_talent());
+    g.battlefield_find_mut(talent).unwrap().class_level = 3;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let them = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, them - 5);
+}
+
+#[test]
+fn cr_611_3a_gruul_spellbreaker_gives_you_hexproof_on_your_turn() {
+    let mut g = gate_game();
+    g.add_card_to_battlefield(0, catalog::gruul_spellbreaker());
+    assert!(g.player_has_static_hexproof(0), "your turn");
+    g.active_player_idx = 1;
+    assert!(!g.player_has_static_hexproof(0), "not an opponent's");
+}
+
+/// CR 305.2 / 611.3a — Limited Resources: "players can't play lands as long
+/// as ten or more lands are on the battlefield". Its `WhileCondition` was
+/// invisible to the land-play lane and walk alike.
+#[test]
+fn cr_611_3a_limited_resources_locks_land_drops_at_ten() {
+    let mut g = gate_game();
+    g.add_card_to_battlefield(1, catalog::limited_resources());
+    for _ in 0..9 {
+        g.add_card_to_battlefield(1, catalog::plains());
+    }
+    assert!(g.can_player_play_land(0), "nine lands: no lock");
+    g.add_card_to_battlefield(0, catalog::plains());
+    assert!(!g.can_player_play_land(0), "ten lands: locked");
+}

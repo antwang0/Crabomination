@@ -9299,7 +9299,8 @@ impl GameState {
         {
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
-                    match &sa.effect {
+                    let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                    match eff {
                         StaticEffect::AddDamageFromColorSpells { color, amount: bonus }
                             if spell_colors.contains(color) =>
                         {
@@ -9322,9 +9323,12 @@ impl GameState {
             // Stagger (Lightning, Army of One): damage to a staggered player
             // or their permanents is doubled until the registrant's next turn.
             d += self.staggered_damage_players.iter().filter(|(v, _)| *v == p).count() as u32;
+            // Through `active_static`: Artist's Talent's level-3 "+2 to an
+            // opponent" is Class-gated and was never read.
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
-                    match &sa.effect {
+                    let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                    match eff {
                         StaticEffect::DoubleDamageToOpponents
                             if !self.same_team(c.controller, p) =>
                         {
@@ -21512,11 +21516,13 @@ impl GameState {
     /// creature cost {N} less" is the same discount, gated on `target` being
     /// the creature the Aura enchants.
     fn equip_cost_reduction_for(&self, player: usize, target: crate::card::CardId) -> u32 {
+        // Through `active_static`: Nahiri, Storm of Stone's discount is
+        // "as long as it's your turn" (`WhileYourTurn`) and was never read.
         self.battlefield
             .iter()
             .filter(|c| c.controller == player)
-            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-            .filter_map(|(c, sa)| match sa.effect {
+            .flat_map(|c| c.definition.static_abilities.iter().filter_map(move |sa| self.active_static(&sa.effect, c).map(|e| (c, e))))
+            .filter_map(|(c, e)| match *e {
                 crate::effect::StaticEffect::EquipCostReduction { amount } => Some(amount),
                 crate::effect::StaticEffect::EquipCostReductionTargetingSelf { amount } if c.id == target => {
                     Some(amount)

@@ -151,7 +151,7 @@ fn cant_be_spilled_at(state: &GameState, d: usize) -> bool {
             && c.definition
                 .static_abilities
                 .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::CreaturesCantAttackController { .. }))
+                .any(|sa| matches!(sa.effect.ungated(), StaticEffect::CreaturesCantAttackController { .. }))
     })
 }
 

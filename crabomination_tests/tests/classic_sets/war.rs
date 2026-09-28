@@ -2046,6 +2046,23 @@ fn nahiri_first_strike_and_burn() {
     assert!(g.battlefield_find(foe).is_none(), "2 damage kills the 2/2");
 }
 
+/// Nahiri's "during your turn … equip abilities you activate cost {1} less"
+/// is a `WhileYourTurn` static; the equip discount walk read only bare
+/// statics, so it never applied (the gate-peel sweep, 2026-09-28).
+#[test]
+fn nahiri_discounts_equip_on_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nahiri_storm_of_stone());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hammer = g.add_card_to_battlefield(0, catalog::loxodon_warhammer());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).expect("equip {3} for {2}");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
 /// Mizzium Tank animates and pumps when you cast a noncreature spell.
 #[test]
 fn mizzium_tank_animates_on_noncreature() {

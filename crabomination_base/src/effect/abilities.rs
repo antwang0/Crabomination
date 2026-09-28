@@ -3611,6 +3611,25 @@ pub enum StaticEffect {
     },
 }
 
+impl StaticEffect {
+    /// The effect under every gate wrapper (`While*`), gates ignored — for a
+    /// definition-only lane that must see a gated static at all (the live
+    /// read is `GameState::active_static`).
+    pub fn ungated(&self) -> &StaticEffect {
+        let mut e = self;
+        loop {
+            match e {
+                Self::WhileClassLevelAtLeast { inner, .. }
+                | Self::WhileYourTurn { inner }
+                | Self::WhileNotYourTurn { inner }
+                | Self::WhileCondition { inner, .. }
+                | Self::WhileCountersAtLeast { inner, .. } => e = inner,
+                _ => return e,
+            }
+        }
+    }
+}
+
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

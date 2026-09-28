@@ -3652,13 +3652,13 @@ impl crate::game::GameState {
         let land_statics = self.battlefield.has_land_play_static();
         // CR 305.1 — "You can't play lands" (Aggressive Mining) is absolute.
         if land_statics && self.battlefield.iter().any(|c| {
+            // Through `active_static`: Limited Resources' lock is "as long as
+            // there are ten or more lands on the battlefield".
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::NoPlayerCanPlayLands)
+                let eff = self.active_static(&sa.effect, c);
+                matches!(eff, Some(crate::effect::StaticEffect::NoPlayerCanPlayLands))
                     || (c.controller == player
-                        && matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::ControllerCantPlayLands
-                        ))
+                        && matches!(eff, Some(crate::effect::StaticEffect::ControllerCantPlayLands)))
             })
         }) {
             return false;
@@ -6444,9 +6444,10 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(|c| c.controller == p)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .chain(card.definition.static_abilities.iter())
-            .find_map(|sa| match &sa.effect {
+            // Festival of Embers' permission is "during your turn".
+            .flat_map(|c| c.definition.static_abilities.iter().filter_map(move |sa| self.active_static(&sa.effect, c)))
+            .chain(card.definition.static_abilities.iter().map(|sa| &sa.effect))
+            .find_map(|e| match e {
                 StaticEffect::GraveyardCastWithLifeSurcharge { filter, life }
                     if self.evaluate_requirement_on_card(filter, card, p)
                         && self.players[p].life >= *life as i32 =>
@@ -6615,7 +6616,8 @@ impl GameState {
         let mut sac = None;
         for c in self.battlefield.iter().filter(|c| c.controller == p) {
             for sa in &c.definition.static_abilities {
-                match &sa.effect {
+                let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                match eff {
                     StaticEffect::PlayFromLibraryTop { filter }
                     | StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
                         if self.evaluate_requirement_on_card(filter, card, p) =>
@@ -6670,7 +6672,8 @@ impl GameState {
         let mut capped = false;
         for c in self.battlefield.iter().filter(|c| c.controller == p) {
             for sa in &c.definition.static_abilities {
-                match &sa.effect {
+                let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                match eff {
                     StaticEffect::PlayFromLibraryTop { filter }
                         if self.evaluate_requirement_on_card(
                             &filter.resolve_chosen_creature_type(c.chosen_creature_type),
@@ -14802,10 +14805,10 @@ impl GameState {
         self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn || p.hexproof_this_turn)
             || self.battlefield.iter().any(|c| {
                 c.controller == player
-                    && c.definition
-                        .static_abilities
-                        .iter()
-                        .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        // Gruul Spellbreaker's is "as long as it's your turn".
+                        matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ControllerHasHexproof))
+                    })
             })
     }
 
