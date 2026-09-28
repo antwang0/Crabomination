@@ -6387,7 +6387,7 @@ pub fn self_destruct() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: (SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)).and(SelectionRequirement::OtherThanTargetSlot(0)),
+                    filter: (SelectionRequirement::any_target()).and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
                     slot: 0,

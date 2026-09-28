@@ -981,9 +981,7 @@ pub fn lorehold_excavator() -> CardDefinition {
             mana_cost: cost(&[generic(2), r(), w()]),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },

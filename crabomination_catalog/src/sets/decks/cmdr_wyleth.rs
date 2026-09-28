@@ -67,7 +67,7 @@ fn equipped() -> Selector {
 }
 
 fn any_target() -> Selector {
-    target_filtered(R::Creature.or(R::Player).or(R::Planeswalker))
+    target_filtered(R::any_target())
 }
 
 /// Blazing Sunsteel — equipped creature gets +1/+0 per opponent; whenever it
@@ -208,7 +208,7 @@ pub fn jayas_immolating_inferno() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             max_targets: 3,
             min_targets: 0,
-            filter: R::Creature.or(R::Player).or(R::Planeswalker),
+            filter: R::any_target(),
             effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost }),
         },
         ..Default::default()

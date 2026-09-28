@@ -851,7 +851,7 @@ pub fn everything_pizza() -> CardDefinition {
                     Effect::DealDamage {
                         to: Selector::TargetFiltered {
                             slot: 1,
-                            filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                            filter: R::any_target(),
                         },
                         amount: Value::Const(3),
                     },

@@ -4081,9 +4081,7 @@ pub fn idol_of_the_deep_king() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         })],
@@ -4479,9 +4477,7 @@ pub fn volcanic_geyser() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::XFromCost,
         },
@@ -5422,9 +5418,7 @@ pub fn sunfire_torch() -> CardDefinition {
                 count: Value::Const(1),
                 then: Box::new(Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 }),

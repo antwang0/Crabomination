@@ -1024,7 +1024,7 @@ pub fn violent_eruption() -> CardDefinition {
             cost(&[generic(1), r(), r(), r()]),
             Effect::DealDamageDivided {
                 total: Value::Const(4),
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 max_targets: 4,
                 retaliate_to_source: false,
             },

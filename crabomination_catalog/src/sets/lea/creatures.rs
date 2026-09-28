@@ -345,9 +345,7 @@ pub fn samite_healer() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::PreventNextDamage {
                 target: target_filtered(
-                    SelectionRequirement::Player
-                        .or(SelectionRequirement::Creature)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },

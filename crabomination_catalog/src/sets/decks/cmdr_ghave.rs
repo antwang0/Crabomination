@@ -64,7 +64,7 @@ pub fn acorn_catapult() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
-                    to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                    to: target_filtered(R::any_target()),
                     amount: Value::Const(1),
                 },
                 Effect::CreateToken {

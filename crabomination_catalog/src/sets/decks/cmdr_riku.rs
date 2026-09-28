@@ -389,7 +389,7 @@ pub fn vengeful_rebirth() -> CardDefinition {
                 then: Box::new(Effect::DealDamage {
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                        filter: R::any_target(),
                     },
                     amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
                 }),

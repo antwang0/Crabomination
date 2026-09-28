@@ -818,9 +818,7 @@ pub fn keranos_god_of_storms() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(3),
                 }),

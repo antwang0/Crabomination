@@ -204,7 +204,7 @@ pub fn fireblade_charger() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                to: target_filtered(R::any_target()),
                 amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
             },
         }],

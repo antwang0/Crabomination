@@ -471,9 +471,7 @@ pub fn bombastic_strixhaven_mage() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -1071,9 +1069,7 @@ pub fn prismari_flameseeker() -> CardDefinition {
             effect: Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::Const(2),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 max_targets: 2,
             },
         }],
@@ -1236,9 +1232,7 @@ pub fn magecraft_volley() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },

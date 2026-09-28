@@ -1023,7 +1023,7 @@ pub fn magma_burst() -> CardDefinition {
                     then: Box::new(Effect::DealDamage {
                         to: Selector::TargetFiltered {
                             slot: 1,
-                            filter: R::Creature.or(R::Player).or(R::Planeswalker).and(R::OtherThanTargetSlot(0)),
+                            filter: R::any_target().and(R::OtherThanTargetSlot(0)),
                         },
                         amount: Value::Const(3),
                     }),
@@ -1074,7 +1074,7 @@ pub fn pollen_remedy() -> CardDefinition {
                     then: Box::new(Value::Const(6)),
                     else_: Box::new(Value::Const(3)),
                 },
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 max_targets: 3,
             },
         )

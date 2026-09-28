@@ -265,9 +265,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
                 Effect::DealDamage {
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        filter: SelectionRequirement::any_target(),
                     },
                     amount: Value::Const(2),
                 },
@@ -955,9 +953,7 @@ pub fn prismari_conjurer() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -1975,9 +1971,7 @@ pub fn lorehold_historian() -> CardDefinition {
                     },
                     Effect::DealDamage {
                         to: target_filtered(
-                            SelectionRequirement::Creature
-                                .or(SelectionRequirement::Player)
-                                .or(SelectionRequirement::Planeswalker),
+                            SelectionRequirement::any_target(),
                         ),
                         amount: Value::Const(2),
                     },

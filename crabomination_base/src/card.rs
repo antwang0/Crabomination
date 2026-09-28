@@ -3599,6 +3599,14 @@ impl SelectionRequirement {
         SelectionRequirement::Any
     }
 
+    /// CR 115.4 — "any target": a creature, player, planeswalker, or battle.
+    pub fn any_target() -> Self {
+        Self::Creature
+            .or(Self::Player)
+            .or(Self::Planeswalker)
+            .or(Self::HasCardType(CardType::Battle))
+    }
+
     pub fn and(self, other: Self) -> Self {
         Self::And(Box::new(self), Box::new(other))
     }

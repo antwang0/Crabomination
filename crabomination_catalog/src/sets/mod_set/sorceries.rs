@@ -66,9 +66,7 @@ pub fn chandras_pyrohelix() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 2,
         },
         ..Default::default()
@@ -102,7 +100,7 @@ pub fn arc_lightning() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(3),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
+            filter: SelectionRequirement::any_target(),
             max_targets: 3,
         },
         ..Default::default()
@@ -750,9 +748,7 @@ pub fn arc_trail() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker)
+                    filter: SelectionRequirement::any_target()
                         .and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(1),
@@ -778,7 +774,7 @@ pub fn cone_of_flame() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)
+                    filter: SelectionRequirement::any_target()
                         .and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(2),
@@ -788,7 +784,7 @@ pub fn cone_of_flame() -> CardDefinition {
                     slot: 2,
                     // "1 damage to any target, 2 to **another** target, and 3
                     // to **a third** target": three different objects.
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)
+                    filter: SelectionRequirement::any_target()
                         .and(SelectionRequirement::OtherThanTargetSlot(0))
                         .and(SelectionRequirement::OtherThanTargetSlot(1)),
                 },
@@ -1072,7 +1068,7 @@ pub fn fireball() -> CardDefinition {
         cost_per_extra_target: Some(cost(&[generic(1)])),
         effect: Effect::DealDamageDividedEvenly {
             total: Value::XFromCost,
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 10,
         },
         ..Default::default()
@@ -1463,9 +1459,7 @@ pub fn conflagrate() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::XFromCost,
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 4,
         },
         keywords: vec![Keyword::Flashback(cost(&[r(), r()]))],

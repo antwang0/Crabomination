@@ -21,7 +21,7 @@ pub fn aurelias_fury() -> CardDefinition {
             Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::XFromCost,
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 max_targets: 20,
             },
             // `DamagedThisResolution` yields only creatures + players; Tap

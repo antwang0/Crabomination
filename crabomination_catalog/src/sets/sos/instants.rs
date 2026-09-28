@@ -860,9 +860,7 @@ pub fn vibrant_outburst() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -930,9 +928,7 @@ pub fn traumatic_critique() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::XFromCost,
             },
@@ -1600,9 +1596,7 @@ pub fn prismari_charm() -> CardDefinition {
             Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 1,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 effect: Box::new(Effect::DealDamage {
                     to: Selector::Target(0),
                     amount: Value::Const(1),

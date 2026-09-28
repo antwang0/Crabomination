@@ -222,7 +222,7 @@ pub fn volley_of_boulders() -> CardDefinition {
             cost(&[generic(8), r()]),
             Effect::DealDamageDivided {
                 total: Value::Const(6),
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 max_targets: 6,
                 retaliate_to_source: false,
             },

@@ -317,7 +317,7 @@ pub fn expansion_explosion() -> CardDefinition {
                 card_types: vec![CardType::Instant],
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
-                        to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                        to: target_filtered(R::any_target()),
                         amount: Value::XFromCost,
                     },
                     Effect::Draw {

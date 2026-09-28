@@ -994,7 +994,7 @@ pub fn serras_hymn() -> CardDefinition {
             sac_cost: true,
             effect: Effect::PreventNextDamageDivided {
                 total: verses(),
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 max_targets: 4,
             },
             ..Default::default()

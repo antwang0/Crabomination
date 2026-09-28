@@ -249,7 +249,7 @@ pub fn batroc_the_leaper() -> CardDefinition {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 8,
                 min_targets: 0,
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
                 effect: Box::new(Effect::DealDamage {
                     to: Selector::Target(0),
                     amount: Value::PowerOf(Box::new(Selector::This)),

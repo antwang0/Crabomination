@@ -1880,7 +1880,7 @@ pub fn twin_bolt() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 2,
         },
         ..Default::default()

@@ -732,9 +732,7 @@ pub fn prismari_pyromage() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             amount: Value::Const(1),
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
         })],
         ..Default::default()

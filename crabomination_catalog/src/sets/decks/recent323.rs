@@ -173,7 +173,7 @@ pub fn loxodon_anchorite() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::PreventNextDamage {
-                target: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                target: target_filtered(R::any_target()),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -243,7 +243,7 @@ pub fn vulshok_sorcerer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                to: target_filtered(R::any_target()),
                 amount: Value::ONE,
             },
             ..Default::default()

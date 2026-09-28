@@ -684,7 +684,7 @@ pub fn acolytes_reward() -> CardDefinition {
             target: target_filtered(R::Creature),
             to: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
             },
             amount: Value::DevotionTo(vec![Color::White]),
         },

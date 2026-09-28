@@ -278,7 +278,7 @@ pub fn shower_of_coals() -> CardDefinition {
     let spread = |n: i32| Effect::ApplyToTargets {
         max_targets: 3,
         min_targets: 0,
-        filter: R::Creature.or(R::Player).or(R::Planeswalker),
+        filter: R::any_target(),
         effect: Box::new(Effect::DealDamage {
             to: Selector::Target(0),
             amount: Value::Const(n),

@@ -563,36 +563,25 @@ fn thriving_rhino_counters_when_energy_paid_on_attack() {
     assert_eq!(g.players[0].energy, 0);
 }
 
+/// Harnessed Lightning: "Choose target creature. You get {E}{E}{E}, then you
+/// may pay any amount of {E}. Harnessed Lightning deals that much damage to
+/// that creature." It shipped as a flat 3 to any target with energy on a hit;
+/// a player is no target, and the bot pays exactly lethal and banks the rest.
 #[test]
-fn harnessed_lightning_gives_energy_when_hitting_a_creature() {
+fn harnessed_lightning_pays_energy_into_a_creature() {
     let mut g = two_player_game();
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(crabomination::game::types::Target::Permanent(foe)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast");
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let cast = |g: &mut GameState, target| g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(target), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(cast(&mut g, crabomination::game::types::Target::Player(1)).is_err(), "a creature only");
+    cast(&mut g, crabomination::game::types::Target::Permanent(foe)).expect("cast");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
-    assert_eq!(g.players[0].energy, 3, "you get {{E}}{{E}}{{E}} for hitting a permanent");
-}
-
-#[test]
-fn harnessed_lightning_to_face_gives_no_energy() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let p1_life = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(crabomination::game::types::Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 3);
-    assert_eq!(g.players[0].energy, 0, "damage to a player grants no energy");
+    assert!(g.battlefield_find(foe).is_none(), "2 energy paid killed the 2/2");
+    assert_eq!(g.players[0].energy, 1, "three gained, two paid");
 }
 
 #[test]

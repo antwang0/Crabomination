@@ -995,7 +995,7 @@ pub fn kuldotha_flamefiend() -> CardDefinition {
                     filter: R::Artifact,
                 },
                 Effect::DealDamageDivided {
-                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                    filter: R::any_target(),
                     total: Value::Const(4),
                     max_targets: 4,
                     retaliate_to_source: false,

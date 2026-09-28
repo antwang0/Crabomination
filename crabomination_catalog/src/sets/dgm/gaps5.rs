@@ -97,7 +97,7 @@ pub fn goblin_test_pilot() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::RandomAmong(R::Creature.or(R::Player).or(R::Planeswalker)),
+                to: Selector::RandomAmong(R::any_target()),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -216,7 +216,7 @@ pub fn flesh_blood() -> CardDefinition {
                     source: target_filtered(R::Creature.and(R::ControlledByYou)),
                     target: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                        filter: R::any_target(),
                     },
                 },
             },

@@ -221,9 +221,7 @@ pub fn igneous_inspiration() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -1274,9 +1272,7 @@ pub fn crackle_with_power() -> CardDefinition {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 5,
                 min_targets: 0,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 effect: Box::new(Effect::DealDamage {
                     to: Selector::Target(0),
                     amount: Value::Times(Box::new(Value::Const(5)), Box::new(Value::XFromCost)),
@@ -1507,9 +1503,7 @@ pub fn magma_opus() -> CardDefinition {
             Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::Const(4),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 max_targets: 4,
             },
             Effect::TapUpToValue {
@@ -1799,9 +1793,7 @@ pub fn sacred_fire() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1879,9 +1871,7 @@ pub fn sparkmage_apprentice() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::ONE,
             },

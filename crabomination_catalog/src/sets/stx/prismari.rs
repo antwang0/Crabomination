@@ -188,9 +188,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -225,9 +223,7 @@ pub fn prismari_command() -> CardDefinition {
                 // Mode 0: deal 2 damage to any target.
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -634,9 +630,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -758,9 +752,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -914,9 +906,7 @@ pub fn prismari_flarespark() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -947,9 +937,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -988,9 +976,7 @@ pub fn prismari_initiate() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -1370,9 +1356,7 @@ pub fn prismari_stormgaze() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -1535,9 +1519,7 @@ pub fn prismari_vorthos() -> CardDefinition {
                     cond: Predicate::ValueAtLeast(Value::CardsDiscardedThisEffect, Value::Const(1)),
                     then: Box::new(Effect::DealDamage {
                         to: target_filtered(
-                            SelectionRequirement::Creature
-                                .or(SelectionRequirement::Player)
-                                .or(SelectionRequirement::Planeswalker),
+                            SelectionRequirement::any_target(),
                         ),
                         amount: Value::Const(2),
                     }),
@@ -1564,9 +1546,7 @@ pub fn prismari_cinderspark() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -1643,9 +1623,7 @@ pub fn prismari_hotburst() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1684,9 +1662,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(1),
                 },
@@ -1778,9 +1754,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -1827,9 +1801,7 @@ pub fn prismari_spitfire() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1895,9 +1867,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -2089,9 +2059,7 @@ pub fn prismari_igniter() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -2244,9 +2212,7 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -2378,9 +2344,7 @@ pub fn prismari_splashcaster() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -2498,9 +2462,7 @@ pub fn prismari_burning_lesson() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -2567,9 +2529,7 @@ pub fn prismari_sparkflare() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -2736,9 +2696,7 @@ pub fn prismari_spellforge() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -2830,9 +2788,7 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -2923,9 +2879,7 @@ pub fn prismari_pyrocaster() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -2964,9 +2918,7 @@ pub fn prismari_sparkbolt() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -3094,9 +3046,7 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3147,9 +3097,7 @@ pub fn prismari_cinderdrake() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -3192,9 +3140,7 @@ pub fn prismari_stormblade() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3294,9 +3240,7 @@ pub fn prismari_quickcast() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3374,9 +3318,7 @@ pub fn prismari_inferno_v2() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -3608,9 +3550,7 @@ pub fn prismari_emberweaver() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         })],
@@ -3629,9 +3569,7 @@ pub fn prismari_skyflare() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3747,9 +3685,7 @@ pub fn prismari_embershout() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -3942,9 +3878,7 @@ pub fn prismari_flamewright() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3964,9 +3898,7 @@ pub fn prismari_cantrip_spark() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4294,9 +4226,7 @@ pub fn prismari_pyroceptor() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4346,9 +4276,7 @@ pub fn prismari_flashforge() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -4461,9 +4389,7 @@ pub fn prismari_firebrand() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4538,9 +4464,7 @@ pub fn prismari_inscribe() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -4631,9 +4555,7 @@ pub fn prismari_embertide() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -4780,9 +4702,7 @@ pub fn prismari_flamewriter() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4805,9 +4725,7 @@ pub fn prismari_cinderchant() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5010,9 +4928,7 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -5182,9 +5098,7 @@ pub fn prismari_glassblower() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -5331,9 +5245,7 @@ pub fn prismari_smiteforge() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5424,9 +5336,7 @@ pub fn prismari_echoflame() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5486,9 +5396,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -5578,9 +5486,7 @@ pub fn prismari_tidefurnace() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5702,9 +5608,7 @@ pub fn prismari_magmaforge() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -5742,9 +5646,7 @@ pub fn prismari_cinderspell() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -5858,9 +5760,7 @@ pub fn prismari_ember_surge() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -5935,9 +5835,7 @@ pub fn prismari_sparkshow_b125() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -6079,9 +5977,7 @@ pub fn prismari_coil_caller_b126() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6106,9 +6002,7 @@ pub fn prismari_sparkbolt_b127() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -6269,9 +6163,7 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -6436,9 +6328,7 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(3),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::CreateToken {
@@ -6480,9 +6370,7 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(2),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::Scry {
@@ -6546,9 +6434,7 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(3),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::Draw {
@@ -6599,9 +6485,7 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             amount: Value::Const(1),
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
         })],
         ..Default::default()
@@ -6682,9 +6566,7 @@ pub fn prismari_splash_b135() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6760,9 +6642,7 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6874,9 +6754,7 @@ pub fn prismari_surgebolt_b138() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -6913,9 +6791,7 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -6960,9 +6836,7 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -7046,9 +6920,7 @@ pub fn prismari_tidalstorm_b141() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -7113,9 +6985,7 @@ pub fn prismari_cinderwave_b142() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -7252,9 +7122,7 @@ pub fn prismari_cantriplord_b143() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -7431,9 +7299,7 @@ pub fn prismari_volcanic_spell_b146() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -7516,9 +7382,7 @@ pub fn prismari_charge_b146() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -7597,9 +7461,7 @@ pub fn prismari_surge_b146() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(4),
             },
@@ -8224,9 +8086,7 @@ pub fn prismari_sparkglyph_b154() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -8251,9 +8111,7 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -8436,9 +8294,7 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
         effect: deal(
             3,
             target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
         ),
         ..Default::default()
@@ -8694,9 +8550,7 @@ pub fn prismari_spellsign_b155() -> CardDefinition {
             deal(
                 2,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             Effect::Draw {
@@ -8844,9 +8698,7 @@ pub fn prismari_pyroglyph_b158() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -8883,9 +8735,7 @@ pub fn prismari_flickerflame_b158() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -9608,9 +9458,7 @@ pub fn prismari_flarewave_b166() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(4),
         },
@@ -9812,9 +9660,7 @@ pub fn prismari_inferno_b169() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(4),
             },
@@ -9863,9 +9709,7 @@ pub fn prismari_flamejet_b169() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -10006,9 +9850,7 @@ pub fn prismari_bonfire_b172() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -10097,9 +9939,7 @@ pub fn prismari_volley_b167() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -10184,9 +10024,7 @@ pub fn prismari_sparkflood_b174() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -10718,9 +10556,7 @@ pub fn prismari_lavaforge_b180() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -11077,9 +10913,7 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -11156,9 +10990,7 @@ pub fn prismari_pinger_b196() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -12011,9 +11843,7 @@ pub fn prismari_emberbolt_b205() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -12094,9 +11924,7 @@ pub fn prismari_inferno_b206() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(4),
         },

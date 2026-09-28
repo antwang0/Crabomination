@@ -2795,3 +2795,20 @@ fn attack_with_three_or_more_is_not_battalion() {
     assert_eq!(g.computed_permanent(ids[0]).unwrap().power, 3, "+1/+1");
     assert_eq!(g.computed_permanent(dog).unwrap().power, 4, "the Watchdog too, at home");
 }
+
+/// CR 115.4 — "any target" includes a battle. `SelectionRequirement::any_target`
+/// replaced ~290 hand-written creature/player/planeswalker filters that left
+/// battles out; Lightning Bolt now takes three defense counters off a Siege.
+#[test]
+fn cr_115_4_any_target_includes_a_battle() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let siege = g.add_card_to_battlefield(1, catalog::invasion_of_theros());
+    let before = g.battlefield_find(siege).unwrap().counter_count(CounterType::Defense);
+    assert!(before >= 4, "a Siege enters with its defense");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(siege))).expect("a battle is any target");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(siege).unwrap().counter_count(CounterType::Defense), before - 3);
+}

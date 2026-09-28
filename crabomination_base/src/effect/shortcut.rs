@@ -15,9 +15,7 @@ pub fn target_filtered(filter: SelectionRequirement) -> Selector {
 /// 192-197).
 pub fn target_any() -> Selector {
     target_filtered(
-        SelectionRequirement::Creature
-            .or(SelectionRequirement::Player)
-            .or(SelectionRequirement::Planeswalker),
+        SelectionRequirement::any_target(),
     )
 }
 pub fn trigger_source() -> Selector { Selector::TriggerSource }
@@ -1415,9 +1413,7 @@ pub fn magecraft_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     magecraft(Effect::DealDamage {
         to: target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            SelectionRequirement::any_target(),
         ),
         amount: Value::Const(amount),
     })
@@ -1671,9 +1667,7 @@ pub fn etb_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     etb(Effect::DealDamage {
         to: target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            SelectionRequirement::any_target(),
         ),
         amount: Value::Const(amount),
     })
@@ -1976,9 +1970,7 @@ pub fn on_attack_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     on_attack(Effect::DealDamage {
         to: target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            SelectionRequirement::any_target(),
         ),
         amount: Value::Const(amount),
     })
@@ -1999,9 +1991,7 @@ pub fn dies_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     on_dies(Effect::DealDamage {
         to: target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            SelectionRequirement::any_target(),
         ),
         amount: Value::Const(amount),
     })

@@ -693,7 +693,7 @@ pub fn lightning_diadem() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                filter: R::any_target(),
             },
             amount: Value::Const(2),
         })],

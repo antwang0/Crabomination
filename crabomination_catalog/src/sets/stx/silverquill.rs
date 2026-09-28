@@ -5149,9 +5149,7 @@ pub fn silverquill_maxim() -> CardDefinition {
             deal(
                 3,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             Effect::GainLife {

@@ -107,7 +107,7 @@ fn target_monarch() -> Effect {
 
 /// "Any target" in `slot`, after a player slot.
 fn any_target_at(slot: u8) -> Selector {
-    Selector::TargetFiltered { slot, filter: R::Creature.or(R::Player).or(R::Planeswalker) }
+    Selector::TargetFiltered { slot, filter: R::any_target() }
 }
 
 fn you_are_monarch() -> Predicate {

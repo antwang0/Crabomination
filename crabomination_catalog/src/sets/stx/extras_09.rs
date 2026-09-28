@@ -2044,9 +2044,7 @@ pub fn lorehold_bookburner() -> CardDefinition {
             mana_cost: cost(&[r(), w()]),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },

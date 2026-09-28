@@ -1110,7 +1110,7 @@ fn glorybringer_cannot_shoot_a_dragon() {
 }
 
 #[test]
-fn inferno_titan_etb_deals_3_damage_to_creature() {
+fn inferno_titan_etb_deals_3_damage_divided() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::inferno_titan());
@@ -1125,9 +1125,11 @@ fn inferno_titan_etb_deals_3_damage_to_creature() {
     })
     .expect("Inferno Titan castable");
     drain_stack(&mut g);
-    // Grizzly Bears has 2 toughness; 3 damage kills it
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_bear),
-        "Inferno Titan ETB should deal 3 damage, killing the bear");
+    // "3 damage divided as you choose among one, two, or three targets" —
+    // any targets, so the whole 3 may go to a player: the auto picker's split.
+    let dealt = (20 - g.players[1].life)
+        + if g.battlefield_find(opp_bear).is_none() { 3 } else { g.battlefield_find(opp_bear).unwrap().damage as i32 };
+    assert_eq!(dealt, 3, "Inferno Titan ETB deals 3 damage in all");
 }
 
 #[test]

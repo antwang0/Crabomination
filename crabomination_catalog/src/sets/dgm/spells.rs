@@ -312,7 +312,7 @@ pub fn morgue_burst() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                    filter: R::any_target(),
                 },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },

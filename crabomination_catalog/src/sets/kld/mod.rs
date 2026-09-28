@@ -802,27 +802,19 @@ pub fn thriving_rhino() -> CardDefinition {
     }
 }
 
-/// Harnessed Lightning — {1}{R} Instant. Deal 3 damage to any target; if it
-/// was dealt to a permanent, you get {E}{E}{E} (CR 107.16 — damage→energy).
+/// Harnessed Lightning — {1}{R} Instant. Choose target creature. You get
+/// {E}{E}{E}, then you may pay any amount of {E}; deal that much damage to
+/// that creature.
 pub fn harnessed_lightning() -> CardDefinition {
-    use crate::card::Predicate;
-    use crate::effect::shortcut::target_any;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Harnessed Lightning",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_any(),
-                amount: Value::Const(3),
-            },
-            Effect::If {
-                cond: Predicate::EntityMatches {
-                    what: Selector::Target(0),
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                },
-                then: Box::new(Effect::AddEnergy(Value::Const(3))),
-                else_: Box::new(Effect::Noop),
+            Effect::AddEnergy(Value::Const(3)),
+            Effect::PayAnyEnergyDealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
             },
         ]),
         ..Default::default()

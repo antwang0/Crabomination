@@ -896,9 +896,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
 pub fn burst_lightning() -> CardDefinition {
     let any_target = || {
         target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            SelectionRequirement::any_target(),
         )
     };
     CardDefinition {

@@ -1077,7 +1077,7 @@ pub fn fanning_the_flames() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Buyback(cost(&[generic(3)]))],
         effect: Effect::DealDamage {
-            to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+            to: target_filtered(R::any_target()),
             amount: Value::XFromCost,
         },
         ..Default::default()
@@ -2032,7 +2032,7 @@ pub fn bandage() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventNextDamage {
-                target: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                target: target_filtered(R::any_target()),
                 amount: Value::ONE,
             },
             draw(1),

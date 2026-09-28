@@ -450,9 +450,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -757,9 +755,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         })],
@@ -1061,9 +1057,7 @@ pub fn lorehold_ember_brand() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -1118,9 +1112,7 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1187,9 +1179,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1424,9 +1414,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -1623,9 +1611,7 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::any_target(),
                 },
                 amount: Value::Const(3),
             },
@@ -1676,9 +1662,7 @@ pub fn lorehold_volley() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1760,9 +1744,7 @@ pub fn lorehold_recital() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -1809,9 +1791,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
                 Effect::DealDamage {
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        filter: SelectionRequirement::any_target(),
                     },
                     amount: Value::Const(1),
                 },
@@ -1933,9 +1913,7 @@ pub fn lorehold_sparkflare() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -1977,9 +1955,7 @@ pub fn spirit_conduit() -> CardDefinition {
             once_per_turn: false,
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -2119,9 +2095,7 @@ pub fn lorehold_pyresurge() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -2286,9 +2260,7 @@ pub fn lorehold_flameherald() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -2429,9 +2401,7 @@ pub fn lorehold_spiritflame() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -2662,9 +2632,7 @@ pub fn lorehold_stoneglyph() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -2741,9 +2709,7 @@ pub fn lorehold_inscribe() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -3112,9 +3078,7 @@ pub fn lorehold_vow() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3327,9 +3291,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
             once_per_turn: false,
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -3442,9 +3404,7 @@ pub fn lorehold_soulburst() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -3720,9 +3680,7 @@ pub fn lorehold_pyremender() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -3859,9 +3817,7 @@ pub fn lorehold_sermonizer() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -3886,9 +3842,7 @@ pub fn lorehold_b35_lightning() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -4036,9 +3990,7 @@ pub fn lorehold_hellraiser() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -4084,9 +4036,7 @@ pub fn lorehold_bonfire() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -4303,9 +4253,7 @@ pub fn lorehold_ballad() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -4354,9 +4302,7 @@ pub fn spirit_pyremage() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -4437,9 +4383,7 @@ pub fn lorehold_recital_v2() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -4507,9 +4451,7 @@ pub fn lorehold_pyresummon() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4679,9 +4621,7 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -4885,9 +4825,7 @@ pub fn lorehold_veteran() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -4937,9 +4875,7 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -5088,9 +5024,7 @@ pub fn lorehold_refrain() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5192,9 +5126,7 @@ pub fn lorehold_lavabolt() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -5271,9 +5203,7 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -5294,9 +5224,7 @@ pub fn lorehold_pyreward() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5569,9 +5497,7 @@ pub fn lorehold_sparkshock() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5794,9 +5720,7 @@ pub fn lorehold_emberlock() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5891,9 +5815,7 @@ pub fn spirit_sparkmage() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -5974,9 +5896,7 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6019,9 +5939,7 @@ pub fn lorehold_sparkflame() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -6194,9 +6112,7 @@ pub fn lorehold_ember_strike() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6371,9 +6287,7 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -6653,9 +6567,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -6835,9 +6747,7 @@ pub fn lorehold_embertongue() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -6959,9 +6869,7 @@ pub fn lorehold_coinflinger() -> CardDefinition {
             count: Value::Const(1),
             on_heads: Box::new(Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             }),
@@ -7030,9 +6938,7 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -7269,9 +7175,7 @@ pub fn lorehold_spiritflare() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -7347,9 +7251,7 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -8017,9 +7919,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
             effect: Effect::DealDamage {
                 amount: Value::Const(2),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             once_per_turn: false,
@@ -8164,9 +8064,7 @@ pub fn lorehold_pyreverse_b129() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(2),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::GainLife {
@@ -8451,9 +8349,7 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(1),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::GainLife {
@@ -8805,9 +8701,7 @@ pub fn lorehold_crackleflame_b135() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -9356,9 +9250,7 @@ pub fn lorehold_spellfire_b142() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(4),
         },
@@ -9388,9 +9280,7 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -9551,9 +9441,7 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(3),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 3,
         },
         ..Default::default()
@@ -9590,9 +9478,7 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -9801,9 +9687,7 @@ pub fn lorehold_spirit_burst_b146() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -9964,9 +9848,7 @@ pub fn lorehold_pyrehowler_b147() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(5),
         },
@@ -9984,9 +9866,7 @@ pub fn lorehold_cinderscry_b147() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -10048,9 +9928,7 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         })],
@@ -10089,9 +9967,7 @@ pub fn lorehold_cinderlist_b148() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -10559,9 +10435,7 @@ pub fn lorehold_reflux_b154() -> CardDefinition {
             deal(
                 2,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             gain_life(2),
@@ -10643,9 +10517,7 @@ pub fn lorehold_memoryflame_b154() -> CardDefinition {
             deal(
                 3,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             Effect::Move {
@@ -10765,9 +10637,7 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
             deal(
                 2,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             Effect::CreateToken {
@@ -10819,9 +10689,7 @@ pub fn spirit_crusader_ii_b155() -> CardDefinition {
         triggered_abilities: vec![etb(deal(
             2,
             target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
         ))],
         ..Default::default()
@@ -11109,9 +10977,7 @@ pub fn lorehold_pyrescholar_b155() -> CardDefinition {
         triggered_abilities: vec![etb(deal(
             1,
             target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
         ))],
         ..Default::default()
@@ -11166,9 +11032,7 @@ pub fn lorehold_battlechant_b155() -> CardDefinition {
             deal(
                 2,
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             ),
             Effect::GainLife {
@@ -11450,9 +11314,7 @@ pub fn lorehold_spellsong_b158() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -11541,9 +11403,7 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -12451,9 +12311,7 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(1),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
         ]))],
@@ -12928,9 +12786,7 @@ pub fn lorehold_boltmage_b166() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         },
@@ -13992,9 +13848,7 @@ pub fn lorehold_sparkscholar_b178() -> CardDefinition {
             mana_cost: cost(&[generic(3), r()]),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -14292,9 +14146,7 @@ pub fn lorehold_bolt_b194() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -15369,9 +15221,7 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![enrage(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -15653,9 +15503,7 @@ pub fn lorehold_emberbolt_b207() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -15775,9 +15623,7 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(2),
         })],

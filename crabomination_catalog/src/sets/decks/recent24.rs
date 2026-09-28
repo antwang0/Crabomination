@@ -1926,9 +1926,7 @@ pub fn sawblade_skinripper() -> CardDefinition {
             }),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::PermanentsSacrificedThisTurn(PlayerRef::You),
             },

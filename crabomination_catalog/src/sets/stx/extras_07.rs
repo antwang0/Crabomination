@@ -401,9 +401,7 @@ pub fn lorehold_spark() -> CardDefinition {
             Effect::DealDamage {
                 amount: Value::Const(2),
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
             },
             Effect::GainLife {
@@ -497,9 +495,7 @@ pub fn prismari_maelstrom() -> CardDefinition {
                 amount: Value::Const(2),
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::any_target(),
                 },
             },
         ]),
@@ -1162,9 +1158,7 @@ pub fn lorehold_sparkmage() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -1322,9 +1316,7 @@ pub fn lorehold_spellsage() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },

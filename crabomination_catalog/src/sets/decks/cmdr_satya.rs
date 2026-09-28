@@ -245,7 +245,7 @@ pub fn blaster_hulk() -> CardDefinition {
                 amount: 8,
                 then: Box::new(Effect::DealDamageDivided {
                     total: Value::Const(8),
-                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                    filter: R::any_target(),
                     max_targets: 8,
                     retaliate_to_source: false,
                 }),

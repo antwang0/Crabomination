@@ -95,7 +95,7 @@ pub fn avacyns_judgment() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
             total: Value::Const(2),
-            filter: R::Creature.or(R::Player).or(R::Planeswalker),
+            filter: R::any_target(),
             max_targets: 2,
             retaliate_to_source: false,
         },

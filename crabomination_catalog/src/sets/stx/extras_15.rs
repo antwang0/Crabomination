@@ -354,7 +354,7 @@ pub fn explosive_welcome() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::any_target(),
                 },
                 amount: Value::Const(3),
             },

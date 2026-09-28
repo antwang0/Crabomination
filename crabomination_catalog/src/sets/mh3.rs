@@ -178,9 +178,7 @@ pub fn mogg_mob() -> CardDefinition {
             effect: Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::Const(3),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 max_targets: 3,
             },
             ..Default::default()

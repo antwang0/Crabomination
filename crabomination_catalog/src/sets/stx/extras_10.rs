@@ -149,9 +149,7 @@ pub fn prismari_fireshaper() -> CardDefinition {
             },
             magecraft(Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             }),
@@ -410,9 +408,7 @@ pub fn lorehold_pyresmith() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -673,9 +669,7 @@ pub fn prismari_wave_mage() -> CardDefinition {
                 },
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(1),
                 },
@@ -1153,9 +1147,7 @@ pub fn strixhaven_sorcerer() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1671,9 +1663,7 @@ pub fn lorehold_battlemage_b103() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             }),
@@ -1788,9 +1778,7 @@ pub fn lorehold_lecturer() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },

@@ -1470,9 +1470,7 @@ pub fn lorehold_battlescryer_b122() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![on_attack(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         })],
@@ -1515,9 +1513,7 @@ pub fn prismari_inferno_b122() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(4),
             },

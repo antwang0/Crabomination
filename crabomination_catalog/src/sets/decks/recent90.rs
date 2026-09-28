@@ -616,7 +616,7 @@ pub fn needle_drop() -> CardDefinition {
                 to: Selector::TargetFiltered {
                     slot: 0,
                     filter: R::DealtDamageThisTurn
-                        .and(R::Creature.or(R::Player).or(R::Planeswalker)),
+                        .and(R::any_target()),
                 },
                 amount: Value::Const(1),
             },

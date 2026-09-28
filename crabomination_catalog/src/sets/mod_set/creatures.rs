@@ -4491,12 +4491,14 @@ pub fn glorybringer() -> CardDefinition {
 
 // ── Inferno Titan ──────────────────────────────────────────────────────────
 
-/// Inferno Titan — {4}{R}{R}, 6/6 Giant. ETB + whenever this attacks:
-/// deal 3 damage to target creature.
+/// Inferno Titan — {4}{R}{R}, 6/6 Giant. ETB + whenever this attacks: 3
+/// damage divided as you choose among one, two, or three targets.
 pub fn inferno_titan() -> CardDefinition {
-    let burn = Effect::DealDamage {
-        to: target_filtered(SelectionRequirement::Creature),
-        amount: Value::Const(3),
+    let burn = Effect::DealDamageDivided {
+        total: Value::Const(3),
+        filter: SelectionRequirement::any_target(),
+        max_targets: 3,
+        retaliate_to_source: false,
     };
     CardDefinition {
         name: "Inferno Titan",

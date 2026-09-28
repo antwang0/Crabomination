@@ -503,7 +503,7 @@ pub fn syrix_carrier_of_the_flame() -> CardDefinition {
                     source: target_filtered(phoenix().and(R::ControlledByYou)),
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                        filter: R::any_target(),
                     },
                     amount: Value::PowerOf(Box::new(Selector::Target(0))),
                 },

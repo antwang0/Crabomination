@@ -333,7 +333,7 @@ pub fn heliophial() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             sac_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                to: target_filtered(R::any_target()),
                 amount: Value::CountersOn {
                     what: Box::new(Selector::This),
                     kind: CounterType::Charge,
@@ -443,7 +443,7 @@ pub fn healers_headdress() -> CardDefinition {
             activated_abilities: vec![ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::PreventNextDamage {
-                    target: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                    target: target_filtered(R::any_target()),
                     amount: Value::ONE,
                 },
                 ..Default::default()
@@ -491,7 +491,7 @@ pub fn goblin_cannon() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
-                    to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                    to: target_filtered(R::any_target()),
                     amount: Value::ONE,
                 },
                 Effect::SacrificeSource,
@@ -751,7 +751,7 @@ pub fn ion_storm() -> CardDefinition {
                 R::Permanent,
             )),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                to: target_filtered(R::any_target()),
                 amount: Value::Const(2),
             },
             ..Default::default()

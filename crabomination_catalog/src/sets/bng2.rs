@@ -795,7 +795,7 @@ pub fn pinnacle_of_rage() -> CardDefinition {
         Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 2,
-            filter: R::Creature.or(R::Player).or(R::Planeswalker),
+            filter: R::any_target(),
             effect: Box::new(Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::Const(3),

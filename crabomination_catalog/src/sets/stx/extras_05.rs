@@ -1408,9 +1408,7 @@ pub fn lorehold_wand() -> CardDefinition {
             mana_cost: cost(&[generic(2), r()]),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(2),
             },
@@ -1775,9 +1773,7 @@ pub fn prismari_surge() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },

@@ -3647,9 +3647,7 @@ pub fn healing_salve() -> CardDefinition {
             },
             Effect::PreventNextDamage {
                 target: target_filtered(
-                    SelectionRequirement::Player
-                        .or(SelectionRequirement::Creature)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -12670,9 +12668,7 @@ pub fn kolaghans_command() -> CardDefinition {
                 // Mode 3: deal 2 damage to any target.
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::Const(2),
                 },
@@ -14651,9 +14647,7 @@ pub fn fire_ice() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 2,
         },
         split: Some(Box::new(SplitCard {
@@ -16619,9 +16613,7 @@ pub fn carbonize() -> CardDefinition {
             Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -16641,9 +16633,7 @@ pub fn rolling_thunder() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::XFromCost,
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 6,
         },
         ..Default::default()
@@ -17813,9 +17803,7 @@ pub fn flames_of_the_firebrand() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(3),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 3,
         },
         ..Default::default()
@@ -24918,7 +24906,7 @@ pub fn mudbrawler_cohort() -> CardDefinition {
 /// target.
 pub fn goblin_bomb() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::shortcut::target_any;
+
     use crate::game::types::TurnStep;
     CardDefinition {
         name: "Goblin Bomb",
@@ -24963,7 +24951,7 @@ pub fn goblin_bomb() -> CardDefinition {
                     amount: Value::Const(5),
                 },
                 Effect::DealDamage {
-                    to: target_any(),
+                    to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
                     amount: Value::Const(20),
                 },
             ]),
@@ -32282,9 +32270,7 @@ pub fn kazuuls_fury() -> CardDefinition {
         }],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::SacrificedPower,
         },
@@ -35005,9 +34991,7 @@ pub fn cacophony_scamp() -> CardDefinition {
             },
             on_dies(Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::PowerOf(Box::new(Selector::This)),
             }),
@@ -39875,7 +39859,7 @@ pub fn bogardan_hellkite() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(5),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
+            filter: SelectionRequirement::any_target(),
             max_targets: 5,
         })],
         ..Default::default()
@@ -43477,9 +43461,7 @@ pub fn phlage_titan_of_fires_fury() -> CardDefinition {
     let bolt = Effect::Seq(vec![
         Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(3),
         },
@@ -43731,9 +43713,7 @@ pub fn tribal_flames() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::DomainCount(PlayerRef::You),
         },
@@ -43850,9 +43830,7 @@ pub fn prophetic_bolt() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(4),
             },
@@ -44049,9 +44027,7 @@ pub fn niv_mizzet_parun() -> CardDefinition {
                 event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
                 effect: Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::any_target(),
                     ),
                     amount: Value::ONE,
                 },
@@ -44095,9 +44071,7 @@ pub fn aria_of_flame() -> CardDefinition {
                 },
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Player)
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
                     ),
                     amount: Value::CountersOn {
                         what: Box::new(Selector::This),
@@ -44916,9 +44890,7 @@ pub fn orcish_bowmasters() -> CardDefinition {
         Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -47583,7 +47555,7 @@ pub fn shrapnel_blast() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Player)),
+            to: target_filtered(SelectionRequirement::any_target()),
             amount: Value::Const(5),
         },
         ..Default::default()
@@ -48166,7 +48138,7 @@ pub fn valakut_the_molten_pinnacle() -> CardDefinition {
                 ])),
             effect: Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Player),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(3),
             },
@@ -51928,7 +51900,7 @@ pub fn den_of_the_bugbear() -> CardDefinition {
 /// Sunscorched Desert — Desert land. Enters dealing 1 damage to any
 /// target; taps for {C}.
 pub fn sunscorched_desert() -> CardDefinition {
-    use crate::effect::shortcut::{etb, target_any};
+    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Sunscorched Desert",
         card_types: vec![CardType::Land],
@@ -51945,7 +51917,7 @@ pub fn sunscorched_desert() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_any(),
+            to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
             amount: Value::Const(1),
         })],
         ..Default::default()
@@ -63855,9 +63827,7 @@ pub fn inspired_ultimatum() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::any_target(),
                 },
                 amount: Value::Const(5),
             },
@@ -66311,9 +66281,7 @@ pub fn rangers_guile() -> CardDefinition {
 pub fn brimstone_volley() -> CardDefinition {
     let any_target = || Selector::TargetFiltered {
         slot: 0,
-        filter: SelectionRequirement::Creature
-            .or(SelectionRequirement::Player)
-            .or(SelectionRequirement::Planeswalker),
+        filter: SelectionRequirement::any_target(),
     };
     CardDefinition {
         name: "Brimstone Volley",
@@ -67174,9 +67142,7 @@ pub fn psionic_blast() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(4),
             },
@@ -67307,9 +67273,7 @@ pub fn kaerveks_torch() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::XFromCost,
         },
@@ -67343,9 +67307,7 @@ pub fn boulderfall() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(5),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 5,
         },
         ..Default::default()
@@ -67653,9 +67615,7 @@ pub fn flame_jab() -> CardDefinition {
         keywords: vec![Keyword::Retrace],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::any_target(),
             ),
             amount: Value::Const(1),
         },

@@ -110,9 +110,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::any_target(),
                 ),
                 amount: Value::Const(1),
             },
@@ -228,9 +226,7 @@ pub fn electrolyze() -> CardDefinition {
             Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::Const(2),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::any_target(),
                 max_targets: 2,
             },
             Effect::Draw {
@@ -513,9 +509,7 @@ pub fn forked_bolt() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
-            filter: SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::any_target(),
             max_targets: 2,
         },
         ..Default::default()
