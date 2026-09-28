@@ -38,9 +38,14 @@ def main():
         if "ExileTopAndGrantMayPlay" not in d or "RestrictMayPlayToCasting" in d:
             continue
         entry = cache.get(name)
-        raw = oracle_of(entry) if isinstance(entry, dict) else ""
-        # "play" anywhere (a Junk token's reminder text included) is a play grant.
-        if re.search(r"\bplay\b", raw) or not re.search(r"\bcast\b", re.sub(r"\([^)]*\)", "", raw)):
+        if not isinstance(entry, dict):
+            continue
+        # `oracle_of` drops reminder text; "play" in it (a Junk token's
+        # granted ability) is still a play grant, so read the raw text too.
+        raw = (entry.get("oracle_text") or "") + " ".join(
+            f.get("oracle_text", "") for f in entry.get("card_faces") or []
+        )
+        if re.search(r"\bplay\b", raw) or not re.search(r"\bcast\b", oracle_of(entry)):
             continue
         rows.append(name)
     for r in sorted(rows):
