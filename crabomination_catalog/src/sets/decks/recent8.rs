@@ -50,7 +50,8 @@ pub fn badgermole_cub() -> CardDefinition {
     }
 }
 
-/// Badgermole — {4}{G} 4/4. When it enters, earthbend 2.
+/// Badgermole — {4}{G} 4/4. When it enters, earthbend 2. Creatures you control
+/// with +1/+1 counters on them have trample.
 pub fn badgermole() -> CardDefinition {
     CardDefinition {
         name: "Badgermole",
@@ -63,11 +64,23 @@ pub fn badgermole() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Creatures you control with +1/+1 counters on them have trample.",
+            effect: crate::effect::StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
         ..Default::default()
     }
 }
 
-/// Earthbending Student — {2}{G} 1/3. When it enters, earthbend 2.
+/// Earthbending Student — {2}{G} 1/3. When it enters, earthbend 2. Land
+/// creatures you control have vigilance.
 pub fn earthbending_student() -> CardDefinition {
     CardDefinition {
         name: "Earthbending Student",
@@ -84,6 +97,17 @@ pub fn earthbending_student() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Land creatures you control have vigilance.",
+            effect: crate::effect::StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Land)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Vigilance,
+            },
+        }],
         ..Default::default()
     }
 }

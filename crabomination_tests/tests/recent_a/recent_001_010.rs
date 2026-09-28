@@ -10762,6 +10762,8 @@ mod recent8 {
             g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne),
             2
         );
+        assert!(g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Trample), "a creature you control with a +1/+1 counter has trample");
+        assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Trample), "no counter");
     }
 
     /// Earthbending Student earthbends 2 on ETB.
@@ -10777,6 +10779,8 @@ mod recent8 {
             g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne),
             2
         );
+        assert!(g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Vigilance), "land creatures have vigilance");
+        assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance));
     }
 
     /// Earth Village Ruffians earthbends 2 when it dies.
