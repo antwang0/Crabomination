@@ -91,7 +91,7 @@ lists were picked.
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Nature's Vengeance** (C18 precon) BRG | Lord Windgrace | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | ✅ complete |
-| **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
@@ -3299,7 +3299,7 @@ the CR 803 attack-left/right walk so the declaration gate and the bot's
 `Selector::TopOfLibrary` fanning out over "each player" (Naya Soulbeast).
 ⚠ **No bot path spent Marath's counters**: "{X}, remove X counters" had no X
 chooser; `server/x_counter_sink.rs` dry-runs every mode at every payable X.
-Residuals: **Fiery Justice**, **Magus of the Arena**, **Naya Soulbeast**.
+Residuals: **Magus of the Arena**, **Naya Soulbeast**.
 A 200-game census beside Ms. Bumbleflower / Hearthhull / Bright-Palm (seed
 9561) decided 200/200 with zero panics; Marath won 4-6 %, and **Fireball
 went uncast** — the bot's any-target burn goes face-first and fires only for
