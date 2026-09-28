@@ -6,7 +6,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Keyword, MayPlayDuration, Predicate,
     SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{deal, etb, on_attack, target, target_filtered};
+use crate::effect::shortcut::{deal, etb, on_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest, ZoneRef,
 };
@@ -199,7 +199,7 @@ pub fn flick_a_coin() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            deal(1, target()),
+            deal(1, crate::effect::shortcut::target_any()),
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

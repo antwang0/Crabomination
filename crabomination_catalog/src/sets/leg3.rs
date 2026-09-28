@@ -1073,7 +1073,7 @@ pub fn subdue() -> CardDefinition {
         Effect::Seq(vec![
             Effect::PreventCombatDamageByTargetThisTurn { target: target() },
             Effect::PumpPT {
-                what: target(),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 power: Value::ZERO,
                 toughness: Value::ManaValueOf(Box::new(target())),
                 duration: Duration::EndOfTurn,

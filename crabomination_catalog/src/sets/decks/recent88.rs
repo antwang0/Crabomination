@@ -5,7 +5,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes,
 };
-use crate::effect::shortcut::{deal, target};
+use crate::effect::shortcut::deal;
 use crate::effect::{Effect, Predicate, PlayerRef, Selector, Value};
 use crate::mana::{cost, g, generic, r, x};
 
@@ -15,7 +15,7 @@ pub fn searing_wind() -> CardDefinition {
         name: "Searing Wind",
         cost: cost(&[generic(8), r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(10, target()),
+        effect: deal(10, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }
@@ -28,7 +28,7 @@ pub fn lava_burst() -> CardDefinition {
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target(),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::XFromCost,
         },
         ..Default::default()

@@ -267,7 +267,7 @@ pub fn lava_dart() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(1),
         },
         ..Default::default()
@@ -754,7 +754,7 @@ pub fn skewer_the_critics() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         alternative_cost: Some(crate::effect::shortcut::spectacle(cost(&[r()]))),
@@ -984,7 +984,7 @@ pub fn play_with_fire() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             Effect::Scry {
@@ -1099,7 +1099,7 @@ pub fn ulcerate() -> CardDefinition {
 /// turn if it's your turn, otherwise +2/+2.
 pub fn might_of_old_krosa() -> CardDefinition {
     let pump = |n| Effect::PumpPT {
-        what: Selector::Target(0),
+        what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
         power: Value::Const(n),
         toughness: Value::Const(n),
         duration: Duration::EndOfTurn,
@@ -1125,7 +1125,7 @@ pub fn aspect_of_hydra() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
-            what: Selector::Target(0),
+            what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
             power: Value::DevotionTo(vec![Color::Green]),
             toughness: Value::DevotionTo(vec![Color::Green]),
             duration: Duration::EndOfTurn,
@@ -1247,7 +1247,7 @@ pub fn gut_shot() -> CardDefinition {
         },
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(1),
         },
         ..Default::default()
@@ -2311,7 +2311,7 @@ pub fn lightning_strike() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -2345,7 +2345,7 @@ pub fn goblin_bombardment() -> CardDefinition {
                 1,
             )),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             once_per_turn: false,
@@ -3035,7 +3035,7 @@ pub fn fireblast() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         alternative_cost: Some(AlternativeCost {
@@ -3256,7 +3256,7 @@ pub fn magma_jet() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             Effect::Scry {
@@ -3468,7 +3468,7 @@ pub fn volcanic_hammer() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -3901,7 +3901,7 @@ pub fn stoke_the_flames() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Convoke],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         ..Default::default()
@@ -4948,7 +4948,7 @@ pub fn banefire() -> CardDefinition {
         // this keyword at cast time instead of matching on the name.
         keywords: vec![Keyword::CantBeCounteredIfXAtLeast(5)],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::XFromCost,
         },
         ..Default::default()
@@ -5123,7 +5123,7 @@ pub fn incinerate() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
         ]),
         ..Default::default()
     }
@@ -5138,7 +5138,7 @@ pub fn searing_spear() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -7504,7 +7504,7 @@ pub fn mayhem_devil() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::AnyPlayer),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
         }],
@@ -7668,7 +7668,7 @@ pub fn goblin_grenade() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(5),
         },
         ..Default::default()
@@ -7802,7 +7802,7 @@ pub fn staggershock() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Rebound],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         },
         ..Default::default()
@@ -7872,7 +7872,7 @@ pub fn beacon_of_destruction() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(5),
             },
             Effect::ShuffleSelfIntoLibrary,
@@ -10480,7 +10480,7 @@ pub fn grapeshot() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Storm],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(1),
         },
         ..Default::default()
@@ -10601,11 +10601,11 @@ pub fn galvanic_blast() -> CardDefinition {
                 who: PlayerRef::You,
             },
             then: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(4),
             }),
             else_: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             }),
         },
@@ -10624,7 +10624,7 @@ pub fn seal_of_fire() -> CardDefinition {
             discard_cost: None,
             sac_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -11004,7 +11004,7 @@ pub fn fling() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::SacrificedPower,
         },
         ..Default::default()
@@ -19158,7 +19158,7 @@ pub fn cunning_sparkmage() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -19219,7 +19219,7 @@ pub fn fiery_temper() -> CardDefinition {
             Color::Red,
         )]))],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -19389,7 +19389,7 @@ pub fn reckless_abandon() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         ..Default::default()
@@ -20669,7 +20669,7 @@ pub fn char() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(4),
             },
             Effect::DealDamage {
@@ -21482,7 +21482,7 @@ pub fn fanatical_firebrand() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -22634,7 +22634,7 @@ pub fn pillar_of_flame() -> CardDefinition {
                 what: Selector::Target(0),
             },
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
         ]),
@@ -25335,12 +25335,12 @@ pub fn kozileks_predator() -> CardDefinition {
 
 /// Hornet Sting — {G} Instant. "Deals 1 damage to any target."
 pub fn hornet_sting() -> CardDefinition {
-    use crate::effect::shortcut::{deal, target};
+    use crate::effect::shortcut::deal;
     CardDefinition {
         name: "Hornet Sting",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        effect: deal(1, target()),
+        effect: deal(1, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }
@@ -25383,7 +25383,7 @@ pub fn reprisal() -> CardDefinition {
 /// (charge) counter. "{T}, Remove a counter: deal 1 damage to any target."
 pub fn icatian_javelineers() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::shortcut::{deal, target};
+    use crate::effect::shortcut::deal;
     CardDefinition {
         name: "Icatian Javelineers",
         cost: cost(&[w()]),
@@ -25411,7 +25411,7 @@ pub fn icatian_javelineers() -> CardDefinition {
                     kind: CounterType::Charge,
                     amount: Value::Const(1),
                 },
-                deal(1, target()),
+                deal(1, crate::effect::shortcut::target_any()),
             ]),
             ..Default::default()
         }],
@@ -30442,7 +30442,7 @@ pub fn goblin_arsonist() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Goblin Arsonist deals 1 damage to any target?".to_string(),
                 body: Box::new(Effect::DealDamage {
-                    to: Selector::Target(0),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(1),
                 }),
             },
@@ -30745,7 +30745,7 @@ pub fn wild_slash() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
         ]),
@@ -39253,7 +39253,7 @@ pub fn wrenn_and_six() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -1,
                 effect: Effect::DealDamage {
-                    to: Selector::Target(0),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(1),
                 },
                 ..Default::default()
@@ -40761,7 +40761,7 @@ pub fn pyromatics() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Replicate(cost(&[generic(1), r()]))],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(1),
         },
         ..Default::default()
@@ -44721,7 +44721,7 @@ pub fn tainted_strike() -> CardDefinition {
 /// land entered under your control this turn (landfall, CR 305).
 pub fn groundswell() -> CardDefinition {
     let pump = |n: i32| Effect::PumpPT {
-        what: Selector::Target(0),
+        what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
         power: Value::Const(n),
         toughness: Value::Const(n),
         duration: Duration::EndOfTurn,
@@ -46514,7 +46514,7 @@ pub fn springjaw_trap() -> CardDefinition {
             sac_cost: true,
             mana_cost: cost(&[generic(4)]),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(3),
             },
             ..Default::default()
@@ -46576,7 +46576,7 @@ pub fn cackling_flames() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::IfAtLeast {
                 value: Box::new(Value::HandSizeOf(PlayerRef::You)),
                 threshold: 1,
@@ -54115,7 +54115,7 @@ pub fn ugin_the_spirit_dragon() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 2,
                 effect: Effect::DealDamage {
-                    to: Selector::Target(0),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(3),
                 },
                 ..Default::default()
@@ -54423,7 +54423,7 @@ pub fn sorin_imperious_bloodlord() -> CardDefinition {
                             filter: SelectionRequirement::Creature.and(vampire.clone()),
                         },
                         Effect::DealDamage {
-                            to: Selector::Target(0),
+                            to: crate::effect::shortcut::target_any(),
                             amount: Value::Const(3),
                         },
                         Effect::GainLife {
@@ -54642,7 +54642,7 @@ pub fn spikefield_hazard() -> CardDefinition {
                 what: Selector::Target(0),
             },
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
         ]),
@@ -57514,13 +57514,13 @@ pub fn cao_cao_lord_of_wei() -> CardDefinition {
 
 /// Sudden Shock — {1}{R} Instant. Split second; deals 2 damage to any target.
 pub fn sudden_shock() -> CardDefinition {
-    use crate::effect::shortcut::{deal, target};
+    use crate::effect::shortcut::deal;
     CardDefinition {
         name: "Sudden Shock",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::SplitSecond],
-        effect: deal(2, target()),
+        effect: deal(2, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }

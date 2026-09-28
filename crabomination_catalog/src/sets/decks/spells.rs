@@ -192,7 +192,7 @@ pub fn thud() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::SacrificedPower,
         },
         ..Default::default()

@@ -641,7 +641,7 @@ pub fn sudden_breakthrough() -> CardDefinition {
         effect: Effect::Seq(vec![
             pump_target(2, 0),
             Effect::GrantKeyword {
-                what: target(),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::FirstStrike,
                 duration: Duration::EndOfTurn,
             },

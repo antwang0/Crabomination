@@ -848,7 +848,7 @@ pub fn scorching_lava() -> CardDefinition {
             "Scorching Lava",
             cost(&[generic(1), r()]),
             Effect::Seq(vec![
-                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
                 Effect::If {
                     cond: Predicate::SpellWasKicked,
                     then: Box::new(Effect::Seq(vec![
@@ -1445,7 +1445,7 @@ pub fn zap() -> CardDefinition {
         "Zap",
         cost(&[generic(2), r()]),
         Effect::Seq(vec![
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE },
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
             draw(1),
         ]),
     )

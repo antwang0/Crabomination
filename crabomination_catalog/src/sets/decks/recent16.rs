@@ -110,7 +110,7 @@ pub fn aeolipile() -> CardDefinition {
             sac_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             ..Default::default()

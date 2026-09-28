@@ -1,7 +1,7 @@
 use crate::card::{CardDefinition, CardType, SelectionRequirement, Selector, Value};
 use crate::effect::Effect;
 use crate::effect::shortcut::{
-    add_mana, counter_target_spell, deal, pump_target, target, target_filtered,
+    add_mana, counter_target_spell, deal, pump_target, target_filtered,
 };
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -89,7 +89,7 @@ pub fn lightning_bolt() -> CardDefinition {
         name: "Lightning Bolt",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(3, target()),
+        effect: deal(3, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }

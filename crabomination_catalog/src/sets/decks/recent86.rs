@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, SelectionRequirement as R, StaticAbility,
     StaticEffect,
 };
-use crate::effect::shortcut::{deal, etb, target};
+use crate::effect::shortcut::{deal, etb};
 use crate::effect::{Effect, Selector};
 use crate::mana::{cost, generic, r};
 
@@ -80,7 +80,7 @@ pub fn seismic_assault() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Land, 1)),
-            effect: deal(2, target()),
+            effect: deal(2, crate::effect::shortcut::target_any()),
             ..Default::default()
         }],
         ..Default::default()

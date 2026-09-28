@@ -668,7 +668,7 @@ pub fn walking_ballista() -> CardDefinition {
                 // over-activated off the stack.
                 remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
                 effect: Effect::DealDamage {
-                    to: Selector::Target(0),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(1),
                 },
                 ..Default::default()
@@ -708,7 +708,7 @@ pub fn triskelion() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -1549,7 +1549,7 @@ pub fn aetherflux_reservoir() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             life_cost: 50,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(50),
             },
             ..Default::default()

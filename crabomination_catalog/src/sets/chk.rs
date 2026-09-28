@@ -847,7 +847,7 @@ pub fn rend_flesh() -> CardDefinition {
 /// Yamabushi's Flame — {2}{R} Instant. 3 damage to any target; if a creature
 /// dealt damage this way would die this turn, exile it instead.
 pub fn yamabushis_flame() -> CardDefinition {
-    use crate::effect::shortcut::{deal, target};
+    use crate::effect::shortcut::deal;
     CardDefinition {
         name: "Yamabushi's Flame",
         cost: cost(&[generic(2), r()]),
@@ -856,7 +856,7 @@ pub fn yamabushis_flame() -> CardDefinition {
             Effect::ExileIfWouldDieThisTurn {
                 what: Selector::Target(0),
             },
-            deal(3, target()),
+            deal(3, crate::effect::shortcut::target_any()),
         ]),
         ..Default::default()
     }
@@ -2771,7 +2771,7 @@ pub fn ember_fist_zubera() -> CardDefinition {
         "Ember-Fist Zubera",
         r(),
         Effect::DealDamage {
-            to: crate::effect::shortcut::target(),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::ZuberasDiedThisTurnTotal,
         },
     )
@@ -2915,7 +2915,7 @@ pub fn hanabi_blast() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            crate::effect::shortcut::deal(2, crate::effect::shortcut::target()),
+            crate::effect::shortcut::deal(2, crate::effect::shortcut::target_any()),
             Effect::Discard {
                 who: Selector::You,
                 amount: Value::ONE,
@@ -2940,7 +2940,7 @@ pub fn frostwielder() -> CardDefinition {
         damage_exiles_if_dies: true,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),
+            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target_any()),
             ..Default::default()
         }],
         ..Default::default()
@@ -3190,7 +3190,7 @@ pub fn kumano_master_yamabushi() -> CardDefinition {
         damage_exiles_if_dies: true,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
-            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),
+            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target_any()),
             ..Default::default()
         }],
         ..Default::default()

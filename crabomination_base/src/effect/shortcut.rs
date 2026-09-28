@@ -87,9 +87,10 @@ pub fn return_target_creature_to_hand() -> Effect {
         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target()))),
     }
 }
+/// "Target creature gets +P/+T until end of turn."
 pub fn pump_target(power: i32, toughness: i32) -> Effect {
     Effect::PumpPT {
-        what: target(),
+        what: target_filtered(SelectionRequirement::Creature),
         power: Value::Const(power),
         toughness: Value::Const(toughness),
         duration: Duration::EndOfTurn,

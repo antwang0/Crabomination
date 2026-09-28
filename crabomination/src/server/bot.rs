@@ -10634,9 +10634,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
             let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
-            // Must be an untyped "any target" slot (a creature-only filter
-            // can't be pointed at a player).
-            if !matches!(to, Selector::Target(_)) {
+            // A targeted slot; whether it can name a player ("any target",
+            // not a creature-only filter) is `would_accept`'s call below.
+            if !matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. }) {
                 continue;
             }
             // A repeatable life-paid shot (Aetherflux Reservoir) is lethal too

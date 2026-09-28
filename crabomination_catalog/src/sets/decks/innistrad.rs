@@ -463,7 +463,7 @@ pub fn moonragers_slash() -> CardDefinition {
         card_types: vec![CardType::Instant],
         self_cost_reduction_if_night: Some(2),
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()

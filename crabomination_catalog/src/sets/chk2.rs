@@ -1195,7 +1195,7 @@ pub fn blood_rites() -> CardDefinition {
             mana_cost: cost(&[generic(1), r()]),
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -1689,7 +1689,7 @@ pub fn soulblast() -> CardDefinition {
             filter: R::Creature.and(R::ControlledByYou),
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::SacrificedTotalPower,
         },
         ..Default::default()

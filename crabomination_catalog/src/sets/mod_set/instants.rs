@@ -1035,7 +1035,7 @@ pub fn flame_javelin() -> CardDefinition {
         ]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         ..Default::default()
@@ -1150,7 +1150,7 @@ pub fn volt_charge() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(3),
             },
             Effect::Proliferate,

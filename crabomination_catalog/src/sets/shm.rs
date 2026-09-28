@@ -4,7 +4,7 @@
 //! `GameAction::CastSpellConspire`.
 
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
-use crate::effect::shortcut::{deal, pump_target, target, target_filtered};
+use crate::effect::shortcut::{deal, pump_target, target_filtered};
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{Color, cost, g, generic, hybrid, r, u, w};
 
@@ -16,7 +16,7 @@ pub fn burn_trail() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Conspire],
-        effect: deal(3, target()),
+        effect: deal(3, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }

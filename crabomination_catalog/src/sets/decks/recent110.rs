@@ -686,7 +686,7 @@ pub fn runeflare_trap() -> CardDefinition {
             ..Default::default()
         }),
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
             amount: Value::HandSizeOf(PlayerRef::Target(0)),
         },
         ..Default::default()

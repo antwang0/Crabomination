@@ -12265,7 +12265,7 @@ pub fn lorehold_command() -> CardDefinition {
                 ]),
                 Effect::Seq(vec![
                     Effect::DealDamage {
-                        to: Selector::Target(0),
+                        to: crate::effect::shortcut::target_any(),
                         amount: Value::Const(3),
                     },
                     Effect::GainLife {

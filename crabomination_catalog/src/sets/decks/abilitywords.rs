@@ -385,11 +385,11 @@ pub fn bring_low() -> CardDefinition {
                 filter: R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne)),
             },
             then: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 amount: Value::Const(5),
             }),
             else_: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 amount: Value::Const(3),
             }),
         },

@@ -2366,7 +2366,10 @@ mod recent59 {
         // Cast a mana-value-3 instant (Divination is MV 3? use a known IS spell).
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // MV 1
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
-        cast_sorcery(&mut g, 0, bolt, None);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(&mut g);
         let con = g.battlefield.iter().find(|c| c.definition.name == "Construct").map(|c| c.id);
         assert!(con.is_some(), "cast an I/S → a Construct token");
         let cp = g.compute_battlefield();

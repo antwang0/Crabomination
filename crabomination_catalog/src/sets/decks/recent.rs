@@ -12749,7 +12749,7 @@ pub fn implement_of_combustion() -> CardDefinition {
             mana_cost: cost(&[r()]),
             sac_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player.or(crate::card::SelectionRequirement::Planeswalker)),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -13444,7 +13444,7 @@ pub fn slaying_fire() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::IfPred {
                 pred: Box::new(Predicate::ManaSpentOfColorAtLeast {
                     color: crate::mana::Color::Red,

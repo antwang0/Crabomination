@@ -127,7 +127,7 @@ pub fn skeleton_archer() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(deal(1, Selector::Target(0)))],
+        triggered_abilities: vec![etb(deal(1, crate::effect::shortcut::target_any()))],
         ..Default::default()
     }
 }

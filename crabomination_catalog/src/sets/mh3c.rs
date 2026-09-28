@@ -1137,7 +1137,7 @@ pub fn imskir_iron_eater() -> CardDefinition {
             mana_cost: cost(&[generic(3), r()]),
             sac_other_filter: Some((R::Artifact, 1)),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::SacrificedManaValue,
             },
             ..Default::default()

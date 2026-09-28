@@ -78,7 +78,7 @@ pub fn flame_lash() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         ..Default::default()

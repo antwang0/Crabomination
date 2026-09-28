@@ -59,7 +59,7 @@ pub fn bestow_greatness() -> CardDefinition {
         effect: Effect::Seq(vec![
             pump_target(4, 4),
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
@@ -1296,7 +1296,7 @@ pub fn give_in_to_violence() -> CardDefinition {
         effect: Effect::Seq(vec![
             pump_target(2, 2),
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::Lifelink,
                 duration: Duration::EndOfTurn,
             },

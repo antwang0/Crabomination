@@ -8,7 +8,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
     Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{add_mana, each_opponent, etb, target, target_filtered};
+use crate::effect::shortcut::{add_mana, each_opponent, etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect};
 use crate::mana::{Color, b, cost, generic, r, u, w};
 
@@ -338,9 +338,6 @@ pub fn kelpie_guide() -> CardDefinition {
 
 /// Explosive Welcome — {7}{R} Instant. "Explosive Welcome deals 5 damage
 /// to any target and 3 damage to any other target. Add {R}{R}{R}."
-/// (Slot 1's "other" restriction — must differ from slot 0 — isn't
-/// expressible in the target-filter language yet; both slots are
-/// otherwise unrestricted, matching "any target".)
 pub fn explosive_welcome() -> CardDefinition {
     CardDefinition {
         name: "Explosive Welcome",
@@ -348,13 +345,13 @@ pub fn explosive_welcome() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target(),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(5),
             },
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::any_target(),
+                    filter: SelectionRequirement::any_target().and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(3),
             },

@@ -473,7 +473,7 @@ pub fn staff_of_nin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::ONE,
             },
             ..Default::default()

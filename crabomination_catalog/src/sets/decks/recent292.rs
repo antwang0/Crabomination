@@ -165,7 +165,7 @@ pub fn fiery_conclusion() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: Selector::Target(0),
+            to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
             amount: Value::Const(5),
         },
         ..Default::default()

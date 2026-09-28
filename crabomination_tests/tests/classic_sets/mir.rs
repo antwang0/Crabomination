@@ -804,13 +804,14 @@ fn forsaken_wastes_locks_lifegain_and_taxes_targeting() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "no life gained");
 
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
+    let naturalize = g.add_card_to_hand(1, catalog::naturalize());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
     g.active_player_idx = 1;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
+        card_id: naturalize,
         target: Some(Target::Permanent(wastes)),
         additional_targets: vec![],
         mode: None,

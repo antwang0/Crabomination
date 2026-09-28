@@ -469,7 +469,7 @@ pub fn rolling_hamsphere() -> CardDefinition {
             effect: Effect::Seq(vec![
                 make(3, token("Hamster", Color::Red, CreatureType::Hamster)),
                 Effect::DealDamage {
-                    to: Selector::Target(0),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::PermanentCountControlledByMatching(PlayerRef::You, hamster),
                 },
             ]),

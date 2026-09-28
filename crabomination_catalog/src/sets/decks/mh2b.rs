@@ -982,7 +982,7 @@ pub fn kaleidoscorch() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
         effect: Effect::DealDamage {
-            to: crate::effect::shortcut::target(),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::ConvergedValue,
         },
         ..Default::default()

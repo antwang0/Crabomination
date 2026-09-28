@@ -90,7 +90,7 @@ pub fn retreat_to_hagra() -> CardDefinition {
             Effect::Seq(vec![
                 pump_target(1, 0),
                 Effect::GrantKeyword {
-                    what: Selector::Target(0),
+                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                     keyword: Keyword::Deathtouch,
                     duration: Duration::EndOfTurn,
                 },

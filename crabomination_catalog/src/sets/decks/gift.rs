@@ -86,7 +86,7 @@ pub fn crumb_and_get_it() -> CardDefinition {
 /// controller.
 pub fn blooming_blast() -> CardDefinition {
     let bolt = Effect::DealDamage {
-        to: Selector::Target(0),
+        to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
         amount: Value::Const(2),
     };
     CardDefinition {

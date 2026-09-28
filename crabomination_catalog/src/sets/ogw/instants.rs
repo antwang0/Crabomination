@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
 use crate::effect::shortcut::{
-    awaken, deal, pump_target, return_target_creature_to_hand, surge, target, target_filtered,
+    awaken, deal, pump_target, return_target_creature_to_hand, surge, target_filtered,
 };
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{ManaCost, b, colorless, cost, g, generic, r, u};
@@ -459,7 +459,7 @@ pub fn unnatural_endurance() -> CardDefinition {
         keywords: vec![Keyword::Devoid],
         effect: Effect::Seq(vec![
             pump_target(2, 0),
-            Effect::Regenerate { what: target() },
+            Effect::Regenerate { what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature) },
         ]),
         ..Default::default()
     }
@@ -488,7 +488,7 @@ pub fn reality_hemorrhage() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Devoid],
-        effect: deal(2, target()),
+        effect: deal(2, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }
@@ -501,7 +501,7 @@ pub fn touch_of_the_void() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Devoid],
-        effect: deal(3, target()),
+        effect: deal(3, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }
@@ -584,7 +584,6 @@ pub fn flaying_tendrils() -> CardDefinition {
 /// until end of turn.
 pub fn mighty_leap() -> CardDefinition {
     use crate::effect::Duration;
-    use crate::effect::shortcut::target;
     CardDefinition {
         name: "Mighty Leap",
         cost: cost(&[generic(1), crate::mana::w()]),
@@ -592,7 +591,7 @@ pub fn mighty_leap() -> CardDefinition {
         effect: Effect::Seq(vec![
             pump_target(2, 2),
             Effect::GrantKeyword {
-                what: target(),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
             },
@@ -604,13 +603,12 @@ pub fn mighty_leap() -> CardDefinition {
 /// Boulder Salvo — {4}{R} Sorcery. Deals 4 damage to target creature.
 /// Surge {1}{R}.
 pub fn boulder_salvo() -> CardDefinition {
-    use crate::effect::shortcut::target;
     CardDefinition {
         name: "Boulder Salvo",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target(),
+            to: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
         alternative_cost: Some(surge(cost(&[generic(1), r()]), false)),

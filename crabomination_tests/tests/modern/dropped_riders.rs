@@ -2812,3 +2812,39 @@ fn cr_115_4_any_target_includes_a_battle() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(siege).unwrap().counter_count(CounterType::Defense), before - 3);
 }
+
+/// CR 115.4 — the other spelling of the same class: ~80 "any target"
+/// damage effects named a BARE slot (`Target(0)` / `target()`), which no
+/// filter bounds at all, so Lightning Bolt could target a Forest or a Sol
+/// Ring. Each now names `target_any()`; a land is refused, a creature and a
+/// player are not.
+#[test]
+fn cr_115_4_bare_any_target_slots_refuse_a_land() {
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let spells: [Factory; 8] = [
+        catalog::lightning_bolt,
+        catalog::shock,
+        catalog::lightning_helix,
+        catalog::hornet_sting,
+        catalog::volcanic_hammer,
+        catalog::searing_spear,
+        catalog::incinerate,
+        catalog::wild_slash,
+    ];
+    for spell in spells {
+        let name = spell().name;
+        let mut g = main_phase();
+        let land = g.add_card_to_battlefield(1, catalog::forest());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        for (target, legal) in [(Target::Permanent(land), false), (Target::Permanent(bear), true), (Target::Player(1), true)] {
+            let id = g.add_card_to_hand(0, spell());
+            for c in [Color::Red, Color::White, Color::Green] {
+                g.players[0].mana_pool.add(c, 3);
+            }
+            g.players[0].mana_pool.add_colorless(6);
+            g.priority.player_with_priority = 0;
+            assert_eq!(cast(&mut g, id, Some(target.clone())).is_ok(), legal, "{name} at {target:?}");
+            drain_stack(&mut g);
+        }
+    }
+}

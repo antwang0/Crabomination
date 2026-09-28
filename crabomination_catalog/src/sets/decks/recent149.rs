@@ -135,7 +135,7 @@ pub fn playful_shove() -> CardDefinition {
             // Bare `Target(0)` is an any-target (creature / player / walker), as
             // Lightning Strike models direct burn.
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: crate::card::Value::ONE,
             },
             Effect::Draw {

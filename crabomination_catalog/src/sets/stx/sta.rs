@@ -100,11 +100,11 @@ pub fn urzas_rage() -> CardDefinition {
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(10),
             }),
             else_: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(3),
             }),
         },

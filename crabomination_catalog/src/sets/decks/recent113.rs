@@ -627,12 +627,12 @@ pub fn fists_of_flame() -> CardDefinition {
                 amount: Value::Const(1),
             },
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 power: Value::CardsDrawnThisTurn(PlayerRef::You),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,

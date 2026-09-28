@@ -273,6 +273,10 @@ fn different_seeds_produce_different_games() {
 // the five seeded games legitimately take different lines. Deliberate
 // behaviour change, not drift.
 const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
+    // Re-blessed 2026-09-28 (CR 115.4): the red deck's burn named a bare
+    // slot that also accepted lands and artifacts; its target lists shrank,
+    // so seeds 1, 3 and 4 take different arbitrary lines. Every winner, turn
+    // count and action count is unchanged.
     // Re-blessed 2026-09-25 for the lockdown-Aura fix: the bot read a 0/0
     // Aura granting any keyword as beneficial, so the skies deck's three
     // Pacifisms went on its OWN best creature (or, with none, were never
@@ -305,7 +309,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // seed 4 keeps its winner and runs shorter (24 -> 22, 580 -> 541);
     // seed 5 keeps its winner and races faster (9 -> 7, 223 -> 181).
     // Seeds 2 and 3 and the full committed trace are untouched.
-    (1, Some(1), 24, 589, 0xa436_7fe4_25aa_b301),
+    (1, Some(1), 24, 589, 0x6694_967e_96b1_ccbd),
     // Re-blessed Aug 2026 for the CR 510.4/510.5 combat-damage fix: the step
     // loop used to skip a whole attacker/blocker pairing whenever the attacker
     // dealt no damage in that step, so a first striker that failed to kill its
@@ -358,7 +362,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // line let the skies deck win the long game; seed 4 keeps its winner
     // and ends two turns sooner (22 -> 20, 541 -> 504). Seeds 1, 2 and 5
     // are untouched; the full committed trace moves.
-    (3, Some(1), 42, 892, 0x59e2_dc03_2b3c_6a8c),
+    (3, Some(1), 42, 892, 0xe769_6fe0_33fa_5e35),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an
@@ -367,7 +371,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // ordering, and seed 4's game ends in two fewer actions (330 -> 328).
     // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
     // which is what a targeting fix rather than a rules change looks like.
-    (4, Some(1), 18, 462, 0x183a_cb2a_2d92_3b7a),
+    (4, Some(1), 18, 462, 0x0650_2a57_9f97_ec5c),
     (5, Some(0), 9, 235, 0x4231_212b_3b36_c9a5),
 ];
 

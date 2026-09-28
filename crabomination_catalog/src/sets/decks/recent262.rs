@@ -2,7 +2,6 @@
 //! Izzet loot-and-burn. Tests in `tests/recent_b/recent262.rs`.
 
 use crate::card::{CardDefinition, CardType, SelectionRequirement as R};
-use crate::effect::shortcut::target;
 use crate::effect::{Effect, Selector, Value};
 use crate::mana::{cost, g, generic, r, u, x};
 
@@ -16,7 +15,7 @@ pub fn worldsouls_rage() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target(),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::XFromCost,
             },
             Effect::DeployLandsFromHandAndGraveyard {

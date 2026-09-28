@@ -4,7 +4,7 @@
 use crate::card::{
     CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes,
 };
-use crate::effect::shortcut::{deal, etb, target};
+use crate::effect::shortcut::{deal, etb};
 use crate::effect::{Effect, PlayerRef, Selector, Value};
 use crate::mana::{cost, generic, r};
 
@@ -32,7 +32,7 @@ pub fn lightning_blast() -> CardDefinition {
         name: "Lightning Blast",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(4, target()),
+        effect: deal(4, crate::effect::shortcut::target_any()),
         ..Default::default()
     }
 }

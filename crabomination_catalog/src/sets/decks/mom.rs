@@ -8,7 +8,7 @@ use crate::card::{
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target, target_filtered};
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -266,7 +266,14 @@ pub fn invasion_of_tarkir() -> CardDefinition {
         subtypes: siege(),
         defense: 5,
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target(),
+            // "any other target": every any-target kind but this Siege.
+            to: target_filtered(
+                crate::card::SelectionRequirement::Creature
+                    .or(crate::card::SelectionRequirement::Player)
+                    .or(crate::card::SelectionRequirement::Planeswalker)
+                    .or(crate::card::SelectionRequirement::HasCardType(CardType::Battle)
+                        .and(crate::card::SelectionRequirement::OtherThanSource)),
+            ),
             amount: Value::Const(2),
         })],
         back_face: Some(Box::new(thundermaw)),

@@ -4,7 +4,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, LandType, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{deal, etb_gain_life, target, target_filtered};
+use crate::effect::shortcut::{deal, etb_gain_life, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -92,7 +92,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: deal(1, target()),
+            effect: deal(1, crate::effect::shortcut::target_any()),
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,

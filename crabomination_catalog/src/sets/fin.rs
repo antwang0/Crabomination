@@ -2980,7 +2980,7 @@ pub fn choco_comet() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::XFromCost,
             },
             crate::effect::shortcut::mint_token(bird, 1),

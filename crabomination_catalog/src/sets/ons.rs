@@ -208,9 +208,9 @@ pub fn inspirit() -> CardDefinition {
         "Inspirit",
         cost(&[generic(2), w()]),
         Effect::Seq(vec![
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap { what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature), up_to: None },
             Effect::PumpPT {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 power: Value::Const(2),
                 toughness: Value::Const(4),
                 duration: Duration::EndOfTurn,

@@ -233,7 +233,7 @@ pub fn looming_spires() -> CardDefinition {
         Effect::Seq(vec![
             crate::effect::shortcut::pump_target(1, 1),
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::FirstStrike,
                 duration: Duration::EndOfTurn,
             },
@@ -249,7 +249,7 @@ pub fn sandstone_bridge() -> CardDefinition {
         Effect::Seq(vec![
             crate::effect::shortcut::pump_target(1, 1),
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
                 keyword: Keyword::Vigilance,
                 duration: Duration::EndOfTurn,
             },

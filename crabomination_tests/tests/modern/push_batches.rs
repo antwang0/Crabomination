@@ -111,7 +111,7 @@ fn pyroblast_rejects_non_blue_spell_target() {
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable");
 
@@ -164,7 +164,7 @@ fn hydroblast_counters_a_red_spell() {
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable");
     let hydro = g.add_card_to_hand(0, catalog::hydroblast());
@@ -191,7 +191,7 @@ fn blue_elemental_blast_counters_a_red_spell() {
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable");
     let beb = g.add_card_to_hand(0, catalog::blue_elemental_blast());
