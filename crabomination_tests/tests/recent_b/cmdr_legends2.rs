@@ -372,3 +372,78 @@ fn jin_sakai_rewards_a_creature_alone_at_its_player() {
     assert_eq!(setup([1, 2]), (true, true), "each alone at its player");
     assert_eq!(setup([1, 1]), (false, false), "sharing a player");
 }
+
+fn activate_loyalty(g: &mut GameState, id: CardId, index: usize, target: Option<Target>, x: Option<u32>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: id, ability_index: index, target, x_value: x,
+    })
+    .expect("loyalty ability");
+    drain_stack(g);
+}
+
+/// CR 903.8 — Jeska enters with a loyalty counter per command-zone cast of
+/// her controller's commanders; her 0 triples a creature's combat damage to
+/// an opponent (CR 614.1a) until her controller's next turn.
+#[test]
+fn jeska_loyalty_counts_commander_casts_and_triples_combat_damage() {
+    let mut g = pod(3);
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    g.commander_cast_count.insert(cmd, 2);
+    let jeska = g.add_card_to_hand(0, catalog::jeska_thrice_reborn());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    cast(&mut g, 0, jeska, None).expect("cast Jeska");
+    assert_eq!(g.battlefield_find(jeska).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate_loyalty(&mut g, jeska, 0, Some(Target::Permanent(bear)), None);
+    let life = g.players[1].life;
+    attack(&mut g, &[bear]);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, life - 6, "2 power, tripled");
+}
+
+/// Jeska's −X: X damage to the target, X loyalty paid. (Slots 2 and 3 are
+/// the engine's auto-fill — INCOMPLETE_CARDS.)
+#[test]
+fn jeska_minus_x_pays_x_and_deals_x() {
+    let mut g = pod(3);
+    let jeska = g.add_card_to_battlefield(0, catalog::jeska_thrice_reborn());
+    g.battlefield_find_mut(jeska).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate_loyalty(&mut g, jeska, 1, Some(Target::Permanent(a)), Some(2));
+    assert!(g.battlefield_find(a).is_none(), "2 damage kills the Bears");
+    assert!(g.battlefield_find(mine).is_some_and(|c| c.damage == 0), "never her controller's");
+    assert_eq!(g.battlefield_find(jeska).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 1);
+}
+
+/// Tevesh Szat's +1 draws a third card when the sacrificed permanent was a
+/// commander (any player's, CR 903.3); the −10 takes every commander, on the
+/// battlefield and in each command zone.
+#[test]
+fn tevesh_szat_rewards_a_commander_sacrifice_and_steals_every_commander() {
+    let mut g = pod(3);
+    let mine = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == mine).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    let szat = g.add_card_to_battlefield(0, catalog::tevesh_szat_doom_of_fools());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    activate_loyalty(&mut g, szat, 1, None, None);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "two, and one for the commander");
+
+    let mut g = pod(3);
+    let theirs = g.seat_commanders(1, vec![catalog::serra_angel()])[0];
+    let other = g.seat_commanders(2, vec![catalog::craw_wurm()])[0];
+    let pos = g.players[2].command.iter().position(|c| c.id == other).unwrap();
+    let card = g.players[2].command.remove(pos);
+    g.battlefield.push(card);
+    g.battlefield_find_mut(other).unwrap().controller = 2;
+    let szat = g.add_card_to_battlefield(0, catalog::tevesh_szat_doom_of_fools());
+    g.battlefield_find_mut(szat).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 6);
+    activate_loyalty(&mut g, szat, 2, None, None);
+    for id in [theirs, other] {
+        assert_eq!(g.battlefield_find(id).map(|c| c.controller), Some(0), "{id:?} is ours");
+    }
+}

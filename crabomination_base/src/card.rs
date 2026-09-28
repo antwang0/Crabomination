@@ -514,6 +514,8 @@ pub enum PlaneswalkerSubtype {
     Estrid,
     // DMC planeswalker commander (Painbow).
     Jared,
+    // Commander Legends planeswalker commanders (Partner).
+    Jeska, Szat,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

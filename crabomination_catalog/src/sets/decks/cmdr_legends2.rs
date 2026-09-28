@@ -6,7 +6,9 @@
 //! Thalia and The Gitrog Monster, Rocco, Cabaretti Caterer, Anti-Venom,
 //! Horrifying Healer, Sonic the Hedgehog, Iron Man, Titan of Innovation, and
 //! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
-//! and Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`).
+//! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
+//! and the Partner planeswalker commanders Jeska, Thrice Reborn and Tevesh
+//! Szat, Doom of Fools.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -619,6 +621,126 @@ pub fn jin_sakai_ghost_of_tsushima() -> CardDefinition {
             cost(&[generic(1), w(), u(), b()]),
             vec![CreatureType::Human, CreatureType::Samurai],
             2,
+            4,
+        )
+    }
+}
+
+fn walker_commander(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    subtype: crate::card::PlaneswalkerSubtype,
+    loyalty: u32,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![subtype], ..Default::default() },
+        base_loyalty: loyalty,
+        can_be_commander: true,
+        ..Default::default()
+    }
+}
+
+/// Jeska, Thrice Reborn — enters with a loyalty counter per command-zone
+/// cast of your commanders (CR 903.8's count); 0: a creature's combat damage
+/// to your opponents is tripled until your next turn; −X: X damage to each of
+/// up to three targets. Partner; can be your commander.
+pub fn jeska_thrice_reborn() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        enters_with_counters: Some((CounterType::Loyalty, Value::CommanderCastsFromCommandZone(PlayerRef::You))),
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what: target_filtered(R::Creature) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                x_cost: true,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 3,
+                    min_targets: 0,
+                    filter: R::Creature.or(R::Planeswalker).or(R::Player),
+                    effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker_commander(
+            "Jeska, Thrice Reborn",
+            cost(&[generic(2), r()]),
+            crate::card::PlaneswalkerSubtype::Jeska,
+            0,
+        )
+    }
+}
+
+/// Tevesh Szat, Doom of Fools — +2: two 0/1 Thrulls; +1: you may sacrifice
+/// another creature or planeswalker to draw two, a third if it was a
+/// commander; −10: gain control of all commanders and put every commander in
+/// a command zone onto the battlefield. Partner; can be your commander.
+pub fn tevesh_szat_doom_of_fools() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let thrull = std::sync::Arc::new(TokenDefinition {
+        name: "Thrull".into(),
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        ..Default::default()
+    });
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: thrull },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MayDo {
+                    description: "Sacrifice another creature or planeswalker to draw two?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::You,
+                            count: Value::ONE,
+                            filter: R::Creature.or(R::Planeswalker).and(R::OtherThanSource),
+                        },
+                        Effect::If {
+                            cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                            then: Box::new(Effect::Seq(vec![
+                                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                                Effect::Draw { who: Selector::You, amount: Value::CommandersSacrificedThisResolution },
+                            ])),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: Selector::EachPermanent(R::IsCommander),
+                        to: None,
+                        duration: Duration::Permanent,
+                    },
+                    Effect::PutCommandersFromCommandZonesOntoBattlefield,
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..walker_commander(
+            "Tevesh Szat, Doom of Fools",
+            cost(&[generic(4), b()]),
+            crate::card::PlaneswalkerSubtype::Szat,
             4,
         )
     }

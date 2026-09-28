@@ -4499,6 +4499,8 @@ static DECKS: &[Factory] = &[
     super::decks::kratos_stoic_father,
     super::decks::atreus_impulsive_son,
     super::decks::jin_sakai_ghost_of_tsushima,
+    super::decks::jeska_thrice_reborn,
+    super::decks::tevesh_szat_doom_of_fools,
     super::decks::aragorn_the_uniter,
     super::decks::zur_the_enchanter,
     super::decks::flubs_the_fool,
