@@ -28402,13 +28402,11 @@ impl GameState {
         {
             let zoned_card_target = |t: &Target| {
                 matches!(t, Target::Permanent(_))
-                    && effect
-                        .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
+                    && resolving_slot_filter(effect, &card.spree_modes, 0, mode, card.kicked)
                         .is_some_and(|f| f.mentions_offboard_zone())
             };
             let filter_fails = |g: &Self| {
-                effect
-                    .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
+                resolving_slot_filter(effect, &card.spree_modes, 0, mode, card.kicked)
                     .is_some_and(|f| {
                         let f = f.resolve_x(x_value);
                         !g.evaluate_requirement_static(&f, t, caster, Some(card.id))
@@ -28452,7 +28450,7 @@ impl GameState {
             && !is_spree
             && let Some(t0) = &target
             && (card.cast_target_was_battlefield
-                || self.all_slots_zoned_card_targets(effect, mode, card.kicked, t0, &additional_targets))
+                || all_slots_zoned_card_targets(effect, &card.spree_modes, mode, card.kicked, t0, &additional_targets))
         {
             // CR 608.2b — a multi-target spell fizzles only if EVERY target
             // is illegal on resolution; effects already skip individual
@@ -28463,8 +28461,7 @@ impl GameState {
                 // A graveyard card target's zone is the filter's to check.
                 let gone = card.cast_target_was_battlefield
                     && matches!(t, Target::Permanent(tid) if g.battlefield_find(*tid).is_none());
-                let filter_fail = effect
-                    .target_filter_for_slot_in_mode_kicked(slot, Some(mode), card.kicked)
+                let filter_fail = resolving_slot_filter(effect, &card.spree_modes, slot, mode, card.kicked)
                     .is_some_and(|f| {
                         let f = f.resolve_x(x_value);
                         !g.evaluate_requirement_static(&f, t, caster, Some(card.id))
@@ -29037,25 +29034,6 @@ impl GameState {
             &mut events,
         )?;
         Ok(events)
-    }
-
-    /// CR 608.2b — every chosen target of a multi-target spell is a card
-    /// whose slot filter names its zone ("up to two target cards from your
-    /// graveyard"), so the all-targets-illegal re-check can read the filters.
-    fn all_slots_zoned_card_targets(
-        &self,
-        effect: &crate::effect::Effect,
-        mode: usize,
-        kicked: bool,
-        t0: &Target,
-        rest: &[Target],
-    ) -> bool {
-        std::iter::once(t0).chain(rest).enumerate().all(|(i, t)| {
-            matches!(t, Target::Permanent(_))
-                && effect
-                    .target_filter_for_slot_in_mode_kicked(i as u8, Some(mode), kicked)
-                    .is_some_and(|f| f.mentions_offboard_zone())
-        })
     }
 
     /// `continue_trigger_resolution_with_source` appending into a
@@ -33205,4 +33183,36 @@ mod dropped_static_ratchet {
         dropped.dedup();
         assert!(dropped.is_empty(), "{} statics reach no layer:\n{}", dropped.len(), dropped.join("\n"));
     }
+}
+
+/// CR 608.2b — the filter a resolving spell's `slot` is re-checked against: a
+/// multi-mode cast's slots belong to its chosen modes (`spree_modes`), each
+/// mode owning its own; otherwise the cast's single `mode`.
+fn resolving_slot_filter<'a>(
+    effect: &'a crate::effect::Effect,
+    spree_modes: &[u8],
+    slot: u8,
+    mode: usize,
+    kicked: bool,
+) -> Option<&'a crate::card::SelectionRequirement> {
+    crate::game::spree_targets::chosen_mode_slot_filter(effect, spree_modes, slot, kicked)
+        .unwrap_or_else(|| effect.target_filter_for_slot_in_mode_kicked(slot, Some(mode), kicked))
+}
+
+/// CR 608.2b — every chosen target of a multi-target spell is a card whose
+/// slot filter names its zone ("up to two target cards from your graveyard"),
+/// so the all-targets-illegal re-check can read the filters.
+fn all_slots_zoned_card_targets(
+    effect: &crate::effect::Effect,
+    spree_modes: &[u8],
+    mode: usize,
+    kicked: bool,
+    t0: &Target,
+    rest: &[Target],
+) -> bool {
+    std::iter::once(t0).chain(rest).enumerate().all(|(i, t)| {
+        matches!(t, Target::Permanent(_))
+            && resolving_slot_filter(effect, spree_modes, i as u8, mode, kicked)
+                .is_some_and(|f| f.mentions_offboard_zone())
+    })
 }

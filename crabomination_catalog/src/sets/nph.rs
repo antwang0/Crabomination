@@ -329,11 +329,10 @@ pub fn remember_the_fallen() -> CardDefinition {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
+                // Each mode owns its own slot 0 (it read slot 1, which a
+                // lone artifact mode never has).
                 Effect::Move {
-                    what: Selector::TargetFiltered {
-                        slot: 1,
-                        filter: R::Artifact.and(R::InYourGraveyard),
-                    },
+                    what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             ],

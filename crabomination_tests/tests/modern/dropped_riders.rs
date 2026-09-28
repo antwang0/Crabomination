@@ -3101,3 +3101,25 @@ fn corpse_dance_exiles_the_returned_creature() {
     assert!(g.battlefield_find(other).is_some(), "the other creature stays");
     assert!(g.exile.iter().any(|c| c.id == back), "the returned creature is exiled");
 }
+
+/// Remember the Fallen — each chosen mode owns its own slot 0: the artifact
+/// mode alone read slot 1 and returned nothing. CR 608.2b — the resolution
+/// re-check reads the CHOSEN mode's filter, not mode 0's "creature card".
+#[test]
+fn remember_the_fallen_artifact_mode_alone() {
+    let mut g = main_phase();
+    let relic = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::remember_the_fallen());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![1],
+        target: Some(Target::Permanent(relic)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == relic), "the artifact card returned");
+}
