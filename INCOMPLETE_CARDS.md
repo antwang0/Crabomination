@@ -2037,7 +2037,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
-| 🟡 Time Reaper | Masters of Evil (WHO) | the 3 life is gained whether or not a card moved. |
 | 🟡 Vislor Turlough | Masters of Evil (WHO) | goaded for the rest of the game, not only while the opponent controls it. |
 | 🟡 Weeping Angel | Masters of Evil (WHO) | its combat damage to a creature is dealt, then that creature is shuffled away (not prevented). |
 | 🟡 Zygon Infiltrator | Masters of Evil (WHO) | the copy lasts until end of turn, not while the target stays tapped. |
@@ -2050,9 +2049,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
-| 🟡 Roots of Wisdom | Elven Empire (KHC) | the land or Elf card comes from among the three milled, not from anywhere in the graveyard. |
 | 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
-| 🟡 Motivated Pony | Food and Fellowship (LTC) | the untap rider checks for any artifact entering under your control this turn, not a Food. |
 | 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |

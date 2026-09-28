@@ -341,3 +341,21 @@ fn cr_506_2_landroval_counts_attackers_per_player() {
     let (g, bears) = landroval_attack(false);
     assert_eq!(bears.iter().filter(|b| g.permanent_has_keyword(**b, &Keyword::Flying)).count(), 1);
 }
+
+/// Motivated Pony's rider reads "if a FOOD entered under your control this
+/// turn" — a Treasure (any artifact, as it read before) doesn't turn it on.
+#[test]
+fn motivated_pony_needs_a_food_not_any_artifact() {
+    use crabomination::effect::{Effect, PlayerRef, Predicate, Value};
+    let mut g = main_phase(2);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let make = |g: &mut GameState, def: crabomination::card::TokenDefinition| {
+        let e = Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(def) };
+        g.resolve_effect(&e, &ctx).expect("token");
+    };
+    let food = Predicate::FoodEnteredThisTurn { who: PlayerRef::You };
+    make(&mut g, crabomination::game::effects::treasure_token());
+    assert!(!g.evaluate_predicate(&food, &ctx), "a Treasure is not a Food");
+    make(&mut g, crabomination_base::tokens::food_token());
+    assert!(g.evaluate_predicate(&food, &ctx));
+}

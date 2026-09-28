@@ -1267,7 +1267,12 @@ pub fn time_reaper() -> CardDefinition {
                     what: target_filtered(R::InExile.and(R::OwnedByDefendingPlayer)),
                     to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))), pos: LibraryPosition::Bottom },
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                // "If you do, you gain 3 life."
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::LastMoved),
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+                    else_: Box::new(Effect::Noop),
+                },
             ]),
         }],
         ..creature("Time Reaper", cost(&[generic(3), b(), b()]), vec![CreatureType::Alien, CreatureType::Horror], 4, 4)

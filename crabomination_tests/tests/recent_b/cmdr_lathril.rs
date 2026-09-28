@@ -325,3 +325,17 @@ fn numa_distributes_at_a_prompting_seat() {
     assert_eq!(counters, 2, "X = 2 counters");
     let _ = elf;
 }
+
+/// Roots of Wisdom returns a land or Elf card from ANYWHERE in the
+/// graveyard (it read only the three milled), else draws.
+#[test]
+fn roots_of_wisdom_reaches_the_whole_graveyard() {
+    let mut g = two_player_game();
+    let old = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let roots = catalog::roots_of_wisdom();
+    g.resolve_effect(&roots.effect, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == old), "the Elf already there");
+}

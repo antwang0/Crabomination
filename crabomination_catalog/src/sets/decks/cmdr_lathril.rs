@@ -485,15 +485,24 @@ pub fn rhys_the_exiled() -> CardDefinition {
 ///
 /// ⚠ Residual: the card comes from among the three milled.
 pub fn roots_of_wisdom() -> CardDefinition {
+    let your_yard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land.or(elf()) };
     spell(
         "Roots of Wisdom",
         cost(&[generic(1), g()]),
         CardType::Sorcery,
-        Effect::MillThenToHand {
-            amount: Value::Const(3),
-            filter: R::Land.or(elf()),
-            otherwise: Some(Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE })),
-        },
+        // "Mill three cards, then return a land card or Elf card from your
+        // graveyard" — anywhere in it, not only the milled three.
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::If {
+                cond: Predicate::SelectorExists(your_yard()),
+                then: Box::new(Effect::Move {
+                    what: Selector::best_of(your_yard()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        ]),
     )
 }
 

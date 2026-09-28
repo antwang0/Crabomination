@@ -595,7 +595,8 @@ pub fn motivated_pony() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
             pump(1),
             Effect::If {
-                cond: Predicate::ArtifactEnteredThisTurn { who: PlayerRef::You },
+                // "If a Food entered under your control this turn" — a Food, not any artifact.
+                cond: Predicate::FoodEnteredThisTurn { who: PlayerRef::You },
                 then: Box::new(Effect::Seq(vec![Effect::Untap { what: attackers(), up_to: None }, pump(2)])),
                 else_: Box::new(Effect::Noop),
             },
