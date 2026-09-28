@@ -44981,8 +44981,8 @@ pub fn mirrorform() -> CardDefinition {
 
 // ── Staple batch (modern_decks) ───────────────────────────────────────────────
 
-/// Gravecrawler — {B} 2/1 Zombie. Can't block. Recast from your graveyard
-/// while you control a Zombie (modeled as a graveyard activation at {B}).
+/// Gravecrawler — {B} 2/1 Zombie. Can't block. You may cast it from your
+/// graveyard as long as you control a Zombie (a cast, so cast triggers see it).
 pub fn gravecrawler() -> CardDefinition {
     CardDefinition {
         name: "Gravecrawler",
@@ -44994,23 +44994,11 @@ pub fn gravecrawler() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::CantBlock],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[b()]),
-            effect: Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-            from_graveyard: true,
-            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
-                SelectionRequirement::HasCreatureType(CreatureType::Zombie)
-                    .and(SelectionRequirement::ControlledByYou),
-            ))),
-            ..Default::default()
-        }],
+        keywords: vec![Keyword::CantBlock, Keyword::GraveyardCast],
+        flashback_condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                .and(SelectionRequirement::ControlledByYou),
+        ))),
         ..Default::default()
     }
 }

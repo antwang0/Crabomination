@@ -1879,7 +1879,7 @@ fn shifting_woodland_delirium_copies_graveyard_permanent() {
 
 // ── Staple batch (modern_decks) ───────────────────────────────────────────────
 
-/// Gravecrawler recasts from the graveyard only while you control a Zombie.
+/// Gravecrawler is CAST from the graveyard, only while you control a Zombie.
 #[test]
 fn gravecrawler_recasts_from_graveyard_with_a_zombie() {
     let mut g = two_player_game();
@@ -1888,19 +1888,19 @@ fn gravecrawler_recasts_from_graveyard_with_a_zombie() {
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
-    assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: crawler, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no Zombie → stays dead");
     g.add_card_to_battlefield(0, catalog::gravecrawler()); // a Zombie
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    g.perform_action(GameAction::CastFlashback {
+        card_id: crawler, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("recast with a Zombie out");
     drain_stack(&mut g);
     assert!(g.battlefield_find(crawler).is_some(), "Gravecrawler returned");
 }
 
-/// The graveyard activation costs `{B}` **every time**, and the card is only
-/// on the stack once.
+/// The graveyard cast costs `{B}` **every time**, and the card is only on the
+/// stack once (it was an activation when this regression was found).
 ///
 /// Regression: a cube self-play game reached the 50,000-action cap at turn 15
 /// with **49,616 copies of this ability on the stack** and nine untapped
@@ -1916,12 +1916,12 @@ fn gravecrawler_graveyard_activation_is_paid_for_and_not_repeatable() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     let act = |g: &mut crabomination::game::GameState| {
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: crawler, ability_index: 0, target: None,
+        g.perform_action(GameAction::CastFlashback {
+            card_id: crawler, target: None,
             additional_targets: Vec::new(), x_value: None, mode: None,
         })
     };
-    act(&mut g).expect("first activation");
+    act(&mut g).expect("first cast");
     assert_eq!(g.stack.len(), 1, "one copy on the stack");
     assert_eq!(g.players[0].mana_pool.total(), 0, "the black mana was spent");
     assert!(act(&mut g).is_err(),
@@ -1930,7 +1930,7 @@ fn gravecrawler_graveyard_activation_is_paid_for_and_not_repeatable() {
 }
 
 /// The same, paid off *lands* rather than a pre-filled pool — the route the
-/// bot takes (`auto_tap_for_cost`). One Swamp buys one activation.
+/// bot takes (`auto_tap_for_cost`). One Swamp buys one cast.
 #[test]
 fn gravecrawler_graveyard_activation_taps_a_land_and_then_stops() {
     let mut g = two_player_game();
@@ -1941,12 +1941,12 @@ fn gravecrawler_graveyard_activation_taps_a_land_and_then_stops() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     let act = |g: &mut crabomination::game::GameState| {
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: crawler, ability_index: 0, target: None,
+        g.perform_action(GameAction::CastFlashback {
+            card_id: crawler, target: None,
             additional_targets: Vec::new(), x_value: None, mode: None,
         })
     };
-    act(&mut g).expect("first activation taps the Swamp");
+    act(&mut g).expect("first cast taps the Swamp");
     assert!(g.battlefield_find(swamp).unwrap().tapped, "the Swamp paid for it");
     assert_eq!(g.stack.len(), 1);
     assert!(act(&mut g).is_err(), "no untapped land left");
