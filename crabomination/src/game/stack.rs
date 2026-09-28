@@ -6293,6 +6293,11 @@ impl GameState {
                     Self::take_card(&mut self.exile, id)
                 };
                 if let Some(mut card) = card {
+                    if zone == Zone::Graveyard {
+                        let mut ev = Vec::new();
+                        self.note_left_graveyard(owner, id, &mut ev);
+                        self.scratch.pending_cost_events.extend(ev);
+                    }
                     // CR 400.7 — a new object in the command zone.
                     card.drop_counters_for_zone_change(Zone::Command);
                     card.exiled_with = None;

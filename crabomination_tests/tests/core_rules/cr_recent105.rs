@@ -301,3 +301,34 @@ fn cr_603_7b_viviens_stampede_draws_at_the_next_main_phase_this_turn_only() {
         assert_eq!(g.players[0].hand.len() - hand, draws, "cast in {cast_step:?}");
     }
 }
+
+/// CR 400.7 / CR 603.2c — a whole graveyard shuffled into its library (or
+/// swapped with it) leaves the graveyard: "whenever one or more cards leave
+/// your graveyard" (Attuned Hunter) fires once, and the per-turn tally counts
+/// every card. Mass graveyard moves skipped the report.
+#[test]
+fn cr_400_7_mass_graveyard_moves_report_the_cards_leaving() {
+    use crabomination::effect::{Effect, PlayerRef};
+    for effect in [
+        Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+        Effect::ExchangeGraveyardAndLibrary { who: PlayerRef::You },
+    ] {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let hunter = g.add_card_to_battlefield(0, catalog::attuned_hunter());
+        for _ in 0..3 {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        }
+        let ctx = crabomination::game::effects::EffectContext::for_ability(hunter, 0, None);
+        let events = g.resolve_effect(&effect, &ctx).expect("resolves");
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].cards_left_graveyard_this_turn, 3, "{effect:?}");
+        let counters = g
+            .battlefield_find(hunter)
+            .unwrap()
+            .counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+        assert_eq!(counters, 1, "{effect:?}: one trigger for the batch");
+    }
+}

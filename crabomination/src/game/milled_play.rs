@@ -64,7 +64,7 @@ impl GameState {
         let card = Self::take_card(&mut self.players[owner].graveyard, card_id)?;
         self.players[p].hand.push(card);
         self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-        let r = self.cast_spell_with_convoke(
+        let mut r = self.cast_spell_with_convoke(
             card_id,
             target,
             additional_targets,
@@ -75,15 +75,16 @@ impl GameState {
             CastFlags::default(),
         );
         self.casting_hop = None;
-        match &r {
+        match &mut r {
             Err(_) => {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[owner].send_to_graveyard(card);
                 }
             }
-            Ok(_) => {
+            Ok(evs) => {
                 self.players[p].milled_spell_cast_this_turn = true;
                 self.entered_from_graveyard_this_turn.insert(card_id);
+                self.note_left_graveyard(owner, card_id, evs);
             }
         }
         Some(r)
@@ -109,6 +110,10 @@ impl GameState {
         let card = Self::take_card(&mut self.players[owner].graveyard, card_id)?;
         self.players[p].milled_land_played_this_turn = true;
         self.entered_from_graveyard_this_turn.insert(card_id);
-        Some(self.place_land_card(p, card))
+        let mut r = self.place_land_card(p, card);
+        if let Ok(evs) = &mut r {
+            self.note_left_graveyard(owner, card_id, evs);
+        }
+        Some(r)
     }
 }

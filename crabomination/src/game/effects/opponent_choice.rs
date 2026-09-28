@@ -84,6 +84,7 @@ impl GameState {
             for &id in &ids {
                 if let Some(card) = Self::take_card(&mut self.players[s].graveyard, id) {
                     self.exile.push(card);
+                    self.note_exiled_from_graveyard(s, id, events);
                 }
             }
             exiled.push((s, ids));

@@ -245,7 +245,13 @@ impl GameState {
     /// bottom of their owner's library", `times` over (Jötun Grunt). Paid only
     /// when every installment can be; each takes an opponent's graveyard
     /// first (the fullest), your own last, and its highest-mana-value cards.
-    pub(crate) fn pay_graveyard_cards_to_bottom(&mut self, payer: usize, per: usize, times: usize) -> bool {
+    pub(crate) fn pay_graveyard_cards_to_bottom(
+        &mut self,
+        payer: usize,
+        per: usize,
+        times: usize,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) -> bool {
         let per = per.max(1);
         let capacity: usize = self.living_seats().map(|s| self.players[s].graveyard.len() / per).sum();
         if capacity < times {
@@ -265,6 +271,7 @@ impl GameState {
             for (id, _) in ids.into_iter().take(per) {
                 if let Some(card) = Self::take_card(&mut self.players[seat].graveyard, id) {
                     self.players[seat].library.push(card);
+                    self.note_left_graveyard(seat, id, events);
                 }
             }
         }

@@ -8202,7 +8202,7 @@ impl GameState {
                     true
                 }
                 CumulativeUpkeepCost::GraveyardCardsToBottom(per) => {
-                    self.pay_graveyard_cards_to_bottom(active, *per as usize, n as usize)
+                    self.pay_graveyard_cards_to_bottom(active, *per as usize, n as usize, &mut events)
                 }
                 CumulativeUpkeepCost::Sacrifice(filter) => {
                     // Need N matching permanents (other than the source) to pay.
@@ -10411,6 +10411,19 @@ impl GameState {
     ) {
         self.note_left_graveyard(p, card_id, events);
         events.push(crate::game::GameEvent::CardExiledFromPlayOrGraveyard { card_id });
+    }
+
+    /// `note_left_graveyard` for a card the move put into its owner's hand:
+    /// also "when this card is put into your hand from your graveyard"
+    /// (Golgari Brownscale), which `move_card_to` and dredge announce.
+    pub(crate) fn note_returned_to_hand_from_graveyard(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        self.note_left_graveyard(p, card_id, events);
+        events.push(crate::game::GameEvent::CardPutIntoHandFromGraveyard { player: p, card_id });
     }
 
     /// A spell removed from the stack by a counter / ward effect goes to
@@ -27643,11 +27656,15 @@ impl GameState {
                                     crate::card::Zone::Graveyard,
                                 )
                             });
-                        if gy_ok {
+                        let taken = if gy_ok {
                             Self::take_card(&mut self.players[player].graveyard, *cid)
                         } else {
                             None
+                        };
+                        if taken.is_some() {
+                            self.note_left_graveyard(player, *cid, &mut events);
                         }
+                        taken
                     };
                     if let Some(card) = card {
                         let dest = crate::effect::ZoneDest::Battlefield {
@@ -27701,6 +27718,9 @@ impl GameState {
                             };
                             if let Some(card) = taken {
                                 self.exile.push(card);
+                                if zone == "gy" {
+                                    self.note_exiled_from_graveyard(who, id, &mut events);
+                                }
                             }
                         }
                     }

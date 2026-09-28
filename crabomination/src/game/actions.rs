@@ -367,7 +367,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         self.players[p].hand.push(card);
         self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-        let r = self.cast_spell_alternative_from(
+        let mut r = self.cast_spell_alternative_from(
             AltCastZone::Hand, card_id, None, target, additional_targets, mode, x_value,
         );
         self.casting_hop = None;
@@ -375,6 +375,9 @@ impl GameState {
             && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
         {
             self.players[p].send_to_graveyard(card);
+        }
+        if let Ok(evs) = &mut r {
+            self.note_left_graveyard(p, card_id, evs);
         }
         r
     }
@@ -4685,7 +4688,8 @@ impl GameState {
         let card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::NotALand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
-        let events = self.place_land_card(p, card)?;
+        let mut events = self.place_land_card(p, card)?;
+        self.note_left_graveyard(p, card_id, &mut events);
         if let Some(grant) = once_grant {
             self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
             if let Some(life) = self.graveyard_play_rider_of(grant) {
@@ -5316,11 +5320,14 @@ impl GameState {
             {
                 card.may_cast_back_from_graveyard = false; // one-shot
                 self.players[p].hand.push(card);
-                let r = self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value);
+                let mut r = self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value);
                 if r.is_err()
                     && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
                 {
                     self.players[p].send_to_graveyard(card);
+                }
+                if let Ok(evs) = &mut r {
+                    self.note_left_graveyard(p, card_id, evs);
                 }
                 return r;
             }
@@ -5936,17 +5943,18 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
             self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-            let r = self.cast_spell_with_convoke(
+            let mut r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             self.casting_hop = None;
-            match &r {
+            match &mut r {
                 Err(_) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                         self.players[p].send_to_graveyard(card);
                     }
                 }
-                Ok(_) => {
+                Ok(evs) => {
+                    self.note_left_graveyard(p, card_id, evs);
                     if let Some(t) = used_type {
                         self.players[p].graveyard_cast_types_this_turn.push(t);
                     }
@@ -5970,18 +5978,19 @@ impl GameState {
             card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
             self.players[p].hand.push(card);
             self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-            let r = self.cast_spell_with_convoke(
+            let mut r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             self.casting_hop = None;
-            match &r {
+            match &mut r {
                 Err(_) => {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
                         card.pending_etb_counters.clear();
                         self.players[p].send_to_graveyard(card);
                     }
                 }
-                Ok(_) => {
+                Ok(evs) => {
+                    self.note_left_graveyard(p, card_id, evs);
                     self.pay_life_cost(p, life);
                     self.entered_from_graveyard_this_turn.insert(card_id);
                 }
@@ -6018,6 +6027,7 @@ impl GameState {
                     return Err(e);
                 }
                 Ok(mut evs) => {
+                    self.note_left_graveyard(p, card_id, &mut evs);
                     evs.append(&mut self.pay_forage(p));
                     self.entered_from_graveyard_this_turn.insert(card_id);
                     return Ok(evs);
@@ -6049,6 +6059,7 @@ impl GameState {
                 }
                 Ok(mut evs) => {
                     if !self.players[p].hand.iter().any(|c| c.id == card_id) {
+                        self.note_left_graveyard(p, card_id, &mut evs);
                         self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
                         if self.graveyard_grant_exiles(grant) {
                             self.mark_spell_exiles_on_resolve(card_id);
@@ -8097,15 +8108,18 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
             self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-            let r = self.cast_adventure(card_id, target, additional_targets, mode, x_value);
+            let mut r = self.cast_adventure(card_id, target, additional_targets, mode, x_value);
             self.casting_hop = None;
-            match &r {
+            match &mut r {
                 Err(_) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                         self.players[p].send_to_graveyard(card);
                     }
                 }
-                Ok(_) => self.players[p].adventure_graveyard_grants.retain(|&(c, _)| c != card_id),
+                Ok(evs) => {
+                    self.note_left_graveyard(p, card_id, evs);
+                    self.players[p].adventure_graveyard_grants.retain(|&(c, _)| c != card_id)
+                }
             }
             return r;
         }
@@ -8507,6 +8521,7 @@ impl GameState {
         card.split_cast = Some(1);
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.note_left_graveyard(p, card_id, &mut events);
         self.finalize_cast(
             p,
             card,
@@ -10321,6 +10336,7 @@ impl GameState {
         // them.
         let stamp = (card.definition.graveyard_exile_cost.is_some() || card.definition.links_delved_cards)
             .then_some(card.id);
+        let mut delved: Vec<CardId> = Vec::new();
         for cid in delve_cards {
             if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 // "Exiled with" the spell, which keeps its id as a permanent.
@@ -10329,6 +10345,7 @@ impl GameState {
                 }
                 self.exile.push(exiled);
                 self.players[p].cards_exiled_this_turn += 1;
+                delved.push(*cid);
             }
         }
 
@@ -10393,6 +10410,10 @@ impl GameState {
         }
 
         let mut auto_events = receipt.auto_events;
+        // The delved cards left the graveyard for exile (CR 400.7).
+        for cid in delved {
+            self.note_exiled_from_graveyard(p, cid, &mut auto_events);
+        }
         // CR 702.51 — tapping a creature to convoke taps it: its "becomes
         // tapped" triggers fire (Fallowsage, Saint Traft and Rem Karolus).
         if !convoke_creatures.is_empty() {
@@ -10799,6 +10820,7 @@ impl GameState {
                 self.exile.push(card);
                 self.players[p].cards_exiled_this_turn += 1;
                 events.push(GameEvent::PermanentExiled { card_id: id });
+                self.note_exiled_from_graveyard(p, id, &mut events);
             }
         }
         events.push(GameEvent::EvidenceCollected { player: p });
@@ -11032,6 +11054,7 @@ impl GameState {
                         if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: id });
+                            self.note_exiled_from_graveyard(p, id, &mut events);
                         }
                         if i == 0 {
                             sac_power = Some(mv);

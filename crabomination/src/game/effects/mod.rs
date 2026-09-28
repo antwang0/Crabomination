@@ -3715,6 +3715,7 @@ impl GameState {
                     && let Some(card) = Self::take_card(&mut self.players[p].graveyard, id)
                 {
                     self.players[p].library.insert(0, card);
+                    self.note_left_graveyard(p, id, events);
                 }
                 Ok(())
             }
@@ -10253,6 +10254,7 @@ impl GameState {
                 {
                     self.players[p].hand.push(card);
                     self.scratch.last_moved_cards.push(*cid);
+                    self.note_returned_to_hand_from_graveyard(p, *cid, events);
                 }
                 Ok(())
             }
@@ -10331,6 +10333,7 @@ impl GameState {
                             if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid)
                             {
                                 self.players[p].hand.push(card);
+                                self.note_returned_to_hand_from_graveyard(p, cid, events);
                                 taken += 1;
                             }
                         }
@@ -14147,6 +14150,7 @@ impl GameState {
                         .expect("in_gy located src in this graveyard just above");
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: src });
+                    self.note_exiled_from_graveyard(p, src, events);
                     self.delayed_triggers.push(DelayedTrigger {
                         controller: ctrl,
                         source: src,
@@ -21840,6 +21844,9 @@ impl GameState {
                                 };
                                 if let Some(c) = taken {
                                     self.exile.push(c);
+                                    if zone == "gy" {
+                                        self.note_exiled_from_graveyard(owner, id, events);
+                                    }
                                 }
                             }
                         }
@@ -24668,6 +24675,7 @@ impl GameState {
                     let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick)
                     else { break };
                     self.players[p].hand.push(card);
+                    self.note_returned_to_hand_from_graveyard(p, pick, events);
                     self.scratch.last_moved_cards.push(pick);
                 }
                 Ok(())
@@ -25869,6 +25877,7 @@ impl GameState {
                     card.exiled_with = ctx.source;
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.note_exiled_from_graveyard(seat, id, events);
                 }
                 Ok(())
             }
@@ -27563,6 +27572,7 @@ impl GameState {
                 for id in targeted.iter().filter(|id| !leave.contains(id)) {
                     if let Some(card) = Self::take_card(&mut self.players[p].graveyard, *id) {
                         self.players[p].hand.push(card);
+                        self.note_returned_to_hand_from_graveyard(p, *id, events);
                     }
                 }
                 Ok(())
@@ -27849,7 +27859,11 @@ impl GameState {
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let cards = std::mem::take(&mut *self.players[p].graveyard);
+                    let ids: Vec<CardId> = cards.iter().map(|c| c.id).collect();
                     self.players[p].library.extend(cards);
+                    for id in ids {
+                        self.note_left_graveyard(p, id, events);
+                    }
                     self.shuffle_library(p, events);
                 }
                 Ok(())
@@ -27862,7 +27876,11 @@ impl GameState {
                         .into_iter()
                         .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
                     self.players[p].graveyard = kept.into();
+                    let ids: Vec<CardId> = matched.iter().map(|c| c.id).collect();
                     self.players[p].library.extend(matched);
+                    for id in ids {
+                        self.note_left_graveyard(p, id, events);
+                    }
                     self.shuffle_library(p, events);
                 }
                 Ok(())
@@ -27876,7 +27894,11 @@ impl GameState {
                         .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
                     let moved = matched.len() as i32;
                     self.players[p].graveyard = kept.into();
+                    let ids: Vec<CardId> = matched.iter().map(|c| c.id).collect();
                     self.players[p].library.extend(matched);
+                    for id in ids {
+                        self.note_left_graveyard(p, id, events);
+                    }
                     self.shuffle_library(p, events);
                     if moved > 0 {
                         let applied = self.adjust_life_applied(p, moved);
@@ -27895,8 +27917,12 @@ impl GameState {
                 for p in self.resolve_players(who, ctx) {
                     let hand = std::mem::take(&mut *self.players[p].hand);
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
+                    for id in ids {
+                        self.note_left_graveyard(p, id, events);
+                    }
                     self.shuffle_library(p, events);
                 }
                 Ok(())
@@ -27922,8 +27948,12 @@ impl GameState {
                     }
                     let hand = std::mem::take(&mut *self.players[p].hand);
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
+                    for id in ids {
+                        self.note_left_graveyard(p, id, events);
+                    }
                     self.shuffle_library(p, events);
                 }
                 Ok(())
@@ -28097,8 +28127,12 @@ impl GameState {
                         std::mem::take(&mut *self.players[p].graveyard),
                     );
                     // Hand cards → graveyard; graveyard cards → hand.
+                    let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
                     self.players[p].graveyard = hand.into();
                     self.players[p].hand = gy.into();
+                    for id in ids {
+                        self.note_returned_to_hand_from_graveyard(p, id, events);
+                    }
                 }
                 Ok(())
             }
@@ -28888,6 +28922,7 @@ impl GameState {
                         let card_id = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id });
+                        self.note_exiled_from_graveyard(seat, card_id, events);
                     }
                     self.clear_answer_log();
                     return self.run_effect(then, ctx, events);
@@ -28899,8 +28934,12 @@ impl GameState {
             Effect::ExchangeGraveyardAndLibrary { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let gy = std::mem::take(&mut *self.players[p].graveyard);
+                let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
                 let lib = std::mem::replace(&mut *self.players[p].library, gy);
                 *self.players[p].graveyard = lib;
+                for id in ids {
+                    self.note_left_graveyard(p, id, events);
+                }
                 self.shuffle_library(p, events);
                 Ok(())
             }
@@ -28937,6 +28976,7 @@ impl GameState {
                         if let Some(card) = Self::take_card(&mut self.players[seat].graveyard, cid) {
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: cid });
+                            self.note_exiled_from_graveyard(seat, cid, events);
                         }
                     }
                 }
@@ -29087,6 +29127,7 @@ impl GameState {
                         card.exiled_with = Some(src);
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                        self.note_exiled_from_graveyard(p, cid, events);
                     }
                 }
                 Ok(())
@@ -29161,6 +29202,7 @@ impl GameState {
                 if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
+                    self.note_exiled_from_graveyard(p, cid, events);
                 }
                 Ok(())
             }
@@ -34266,6 +34308,7 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                        self.note_exiled_from_graveyard(p, cid, events);
                     }
                     let pick = match self.decider.decide(&Decision::ChooseMode {
                         source,
@@ -35624,20 +35667,28 @@ impl GameState {
                     return Ok(());
                 };
                 for id in pool.iter().filter(|id| !kept.contains(id)).copied().collect::<Vec<_>>() {
+                    let from_gy = !self.players[p].library.iter().any(|c| c.id == id);
                     let card = Self::take_card(&mut self.players[p].library, id)
                         .or_else(|| Self::take_card(&mut self.players[p].graveyard, id));
                     if let Some(card) = card {
                         self.exile.push(card);
                         self.players[p].cards_exiled_this_turn += 1;
                         events.push(GameEvent::PermanentExiled { card_id: id });
+                        if from_gy {
+                            self.note_exiled_from_graveyard(p, id, events);
+                        }
                     }
                 }
                 // Last inserted ends up on top, so place in reverse pick order.
                 for id in kept.into_iter().rev() {
+                    let from_gy = !self.players[p].library.iter().any(|c| c.id == id);
                     let card = Self::take_card(&mut self.players[p].library, id)
                         .or_else(|| Self::take_card(&mut self.players[p].graveyard, id));
                     if let Some(card) = card {
                         self.players[p].library.insert(0, card);
+                        if from_gy {
+                            self.note_left_graveyard(p, id, events);
+                        }
                     }
                 }
                 let half = self.players[p].life.div_euclid(2) + self.players[p].life.rem_euclid(2);
@@ -36347,9 +36398,15 @@ impl GameState {
                     }
                     c
                 } else {
-                    self.players.iter_mut().find_map(|p| {
-                        p.graveyard.iter().position(|c| c.id == id).map(|i| p.graveyard.remove(i))
-                    })
+                    let seat = (0..self.players.len())
+                        .find(|&s| self.players[s].graveyard.iter().any(|c| c.id == id));
+                    let c = seat.and_then(|s| Self::take_card(&mut self.players[s].graveyard, id));
+                    if let Some(s) = seat
+                        && c.is_some()
+                    {
+                        self.note_left_graveyard(s, id, events);
+                    }
+                    c
                 };
                 let Some(mut card) = taken else { return Ok(()) };
                 let back = card.definition.back_face.as_ref().map(|b| b.clone_arc()).unwrap();
@@ -36486,6 +36543,7 @@ impl GameState {
                     return Ok(());
                 }
                 let mut card = self.players[owner].graveyard.remove(pos);
+                self.note_left_graveyard(owner, src, events);
                 let back = card.definition.back_face.as_ref().map(|b| b.clone_arc()).unwrap();
                 card.front_face = Some(card.definition.arc());
                 card.set_definition(back);
@@ -37388,6 +37446,11 @@ impl GameState {
                         continue;
                     };
                     let card = self.players[owner].graveyard.remove(pos);
+                    if matches!(dest, crate::effect::ZoneDest::Exile) {
+                        self.note_exiled_from_graveyard(owner, id, events);
+                    } else {
+                        self.note_left_graveyard(owner, id, events);
+                    }
                     self.place_card_in_dest(card, ctx.controller, &dest, events);
                 }
                 Ok(())

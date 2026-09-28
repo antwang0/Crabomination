@@ -18,7 +18,7 @@ impl GameState {
         what: &Selector,
         depth: &Value,
         ctx: &EffectContext,
-        _events: &mut Vec<GameEvent>,
+        events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         use rand::seq::SliceRandom;
         let depth = self.evaluate_value(depth, ctx).max(0) as usize;
@@ -29,6 +29,8 @@ impl GameState {
             };
             let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == id) else { continue };
             let card = self.players[owner].graveyard.remove(pos);
+            // "Exile it, then shuffle it into the top N" — through exile.
+            self.note_exiled_from_graveyard(owner, id, events);
             let n = depth.min(self.players[owner].library.len());
             let mut pile: Vec<_> = self.players[owner].library.drain(..n).collect();
             pile.push(card);
