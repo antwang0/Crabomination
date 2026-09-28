@@ -41105,6 +41105,21 @@ impl GameState {
                 all
             }
 
+            Selector::TakeGreatestManaValue { inner, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut all = self.resolve_selector(inner, ctx);
+                // Stable sort: equal mana values keep resolution order.
+                all.sort_by_key(|e| {
+                    std::cmp::Reverse(
+                        e.as_card_id()
+                            .and_then(|id| self.find_card_anywhere(id))
+                            .map_or(0, |c| c.definition.cost.cmc()),
+                    )
+                });
+                all.truncate(n);
+                all
+            }
+
             Selector::TakeWithSumCap { inner, cap, value_of_each } => {
                 let cap_n = self.evaluate_value(cap, ctx).max(0);
                 if cap_n == 0 {

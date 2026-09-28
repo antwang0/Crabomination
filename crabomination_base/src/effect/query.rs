@@ -717,7 +717,8 @@ impl Effect {
                 }
                 Selector::Take { inner, count }
                 | Selector::TakeRandom { inner, count }
-                | Selector::TakeGreatestPower { inner, count } => {
+                | Selector::TakeGreatestPower { inner, count }
+                | Selector::TakeGreatestManaValue { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
                 Selector::TakeWithSumCap {
@@ -2543,7 +2544,8 @@ impl Effect {
                 | Selector::PowerAbove { inner, .. }
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. }
-                | Selector::TakeGreatestPower { inner, .. } => {
+                | Selector::TakeGreatestPower { inner, .. }
+                | Selector::TakeGreatestManaValue { inner, .. } => {
                     sel_filter(inner)
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
@@ -4616,7 +4618,8 @@ impl Effect {
                 Selector::MatchingAmong { inner, .. }
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. }
-                | Selector::TakeGreatestPower { inner, .. } => {
+                | Selector::TakeGreatestPower { inner, .. }
+                | Selector::TakeGreatestManaValue { inner, .. } => {
                     sel_find(inner, slot)
                 }
                 Selector::PowerAbove { inner, than } => {

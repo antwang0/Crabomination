@@ -628,6 +628,11 @@ pub enum Selector {
 
     /// No entities (placeholder/default).
     None,
+    /// Like `TakeGreatestPower` but keeps the `count` entities with the
+    /// greatest mana value (ties keep resolution order) — the auto-pick for
+    /// "choose a nonland card exiled this way; you may cast it" (Author of
+    /// Shadows), where the card worth casting is the priciest one.
+    TakeGreatestManaValue { inner: Box<Selector>, count: Box<Value> },
 }
 
 impl Selector {
