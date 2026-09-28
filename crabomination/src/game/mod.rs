@@ -19951,17 +19951,51 @@ impl GameState {
     /// [`CardInstance::face_view`] for a card off the battlefield, knowing
     /// whether it is a spell on the stack (CR 709.3b / 709.4 / 715.3b).
     pub(crate) fn face_view_of(&self, card: &CardInstance) -> Option<CardInstance> {
-        let on_stack = self.stack.iter().any(|si| {
-            matches!(si, crate::game::types::StackItem::Spell { card: c, .. } if c.id == card.id)
+        let stack_x = self.stack.iter().find_map(|si| match si {
+            crate::game::types::StackItem::Spell { card: c, x_value, .. } if c.id == card.id => {
+                Some(*x_value)
+            }
+            _ => None,
         });
-        card.face_view(on_stack)
+        let view = if card.has_face_view() { card.face_view(stack_x.is_some()) } else { None };
+        match stack_x {
+            Some(x) if x > 0 && view.as_ref().unwrap_or(card).definition.cost.has_x() => {
+                Some(view.as_ref().unwrap_or(card).view_with(|d| Self::count_stack_x(d, x)))
+            }
+            _ => view,
+        }
+    }
+
+    /// CR 202.3e — on the stack an X spell's mana value counts the chosen X
+    /// (Braingeyser for 3 is a 5). The `{X}` stays in the cost (CR 107.3: it
+    /// is still "a spell with {X} in its mana cost"); the chosen amount rides
+    /// along as generic mana, once per `{X}`.
+    fn count_stack_x(d: &mut CardDefinition, x: u32) {
+        let xs = d.cost.symbols.iter().filter(|s| matches!(s, crate::mana::ManaSymbol::X)).count() as u32;
+        d.cost.symbols.push(crate::mana::ManaSymbol::Generic(x * xs));
+    }
+
+    /// The mana value of `card` as a spell cast for `x_value` (CR 202.3e,
+    /// 709.3b, 715.3b) — for a spell just taken off the stack, where
+    /// [`face_view_of`](Self::face_view_of) no longer finds it.
+    pub(crate) fn spell_mana_value(card: &CardInstance, x_value: u32) -> u32 {
+        let face = if card.has_face_view() { card.face_view(true) } else { None };
+        let cost = &face.as_ref().unwrap_or(card).definition.cost;
+        let xs = cost.symbols.iter().filter(|s| matches!(s, crate::mana::ManaSymbol::X)).count() as u32;
+        cost.cmc() + x_value * xs
+    }
+
+    /// True when [`face_view_of`](Self::face_view_of) may differ from `card`.
+    #[inline]
+    pub(crate) fn may_have_zone_face(card: &CardInstance) -> bool {
+        card.has_face_view() || card.definition.cost.has_x()
     }
 
     /// A card's mana value in its current zone: a permanent's printed cost,
     /// else its zone face's (CR 709.4b split cards combined, CR 715.3b an
     /// Adventure spell's own).
     pub(crate) fn zone_mana_value(&self, card: &CardInstance) -> u32 {
-        if card.has_face_view()
+        if Self::may_have_zone_face(card)
             && self.battlefield_find(card.id).is_none()
             && let Some(v) = self.face_view_of(card)
         {

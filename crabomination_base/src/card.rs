@@ -9875,6 +9875,16 @@ impl CardInstance {
         self.adventuring || self.omen_casting
     }
 
+    /// This card with its definition rewritten by `f` — a read-only view
+    /// (the definition epoch is not bumped; nothing stores it).
+    pub fn view_with(&self, f: impl FnOnce(&mut CardDefinition)) -> CardInstance {
+        let mut v = (**self.definition).clone();
+        f(&mut v);
+        let mut card = self.clone();
+        card.definition = Definition::new(Arc::new(v));
+        card
+    }
+
     /// True when [`face_view`](Self::face_view) can differ from the card.
     #[inline]
     pub fn has_face_view(&self) -> bool {

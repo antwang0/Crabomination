@@ -311,3 +311,65 @@ fn cr_115_1_a_captured_delayed_body_declares_no_target() {
     drain_stack(&mut g);
     assert!(in_hand(&g, 0, bears), "returned to hand at the next end step");
 }
+
+/// CR 202.3e — on the stack a spell's mana value counts the X it was cast
+/// for: Blaze for 5 is a 6 to "target spell with mana value N" filters, in
+/// both requirement walkers. In the hand it is a 1.
+#[test]
+fn cr_202_3e_a_stack_x_spell_counts_its_x() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    let blaze = g.add_card_to_hand(0, catalog::blaze());
+    let in_hand = g.players[0].hand.iter().find(|c| c.id == blaze).unwrap().clone();
+    assert!(g.evaluate_requirement_on_card(&R::ManaValueAtMost(1), &in_hand, 0), "MV 1 in hand");
+    g.players[0].mana_pool.add(Color::Red, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blaze,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(5),
+    })
+    .expect("Blaze for 5");
+    let spell = stack_card(&g, blaze);
+    let at_most_5 = R::ManaValueAtMost(5);
+    assert!(!g.evaluate_requirement_on_card(&at_most_5, &spell, 1), "card walker: MV 6");
+    assert!(
+        !g.evaluate_requirement_static(&at_most_5, &Target::Permanent(blaze), 1, None),
+        "target walker: MV 6"
+    );
+    assert!(g.evaluate_requirement_static(&R::ManaValueAtMost(6), &Target::Permanent(blaze), 1, None));
+}
+
+/// CR 202.3e — "that spell's mana value" read after it is countered counts
+/// its X: Mana Drain on Blaze for 5 banks six.
+#[test]
+fn cr_202_3e_a_countered_x_spells_mana_value_counts_its_x() {
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    let blaze = g.add_card_to_hand(0, catalog::blaze());
+    g.players[0].mana_pool.add(Color::Red, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blaze,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(5),
+    })
+    .expect("Blaze for 5");
+    let drain = g.add_card_to_hand(1, catalog::mana_drain());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: drain,
+        target: Some(Target::Permanent(blaze)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mana Drain");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == blaze), "countered");
+    assert_eq!(g.countered_spell_mana_value, 6, "X counts");
+}

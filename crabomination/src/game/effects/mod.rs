@@ -15807,10 +15807,10 @@ impl GameState {
                     .collect();
                 let mut countered = 0u32;
                 for pos in to_remove.into_iter().rev() {
-                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, caster, x_value, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_controller = Some(caster);
-                        self.countered_spell_mana_value = card.definition.cost.cmc();
+                        self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                         self.countered_spell_off_stack(*card, ctx.controller, events);
                         countered += 1;
                     }
@@ -21818,14 +21818,14 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos)
+                    if let StackItem::Spell { card, mana_spent, caster, x_value, .. } = self.stack.remove(pos)
                     {
                         // Mana Sculpt — record the countered spell's paid
                         // mana for `Value::CounteredSpellManaSpent`; Fold into
                         // Aether reads the caster.
                         self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_controller = Some(caster);
-                        self.countered_spell_mana_value = card.definition.cost.cmc();
+                        self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                         self.countered_spell_off_stack(*card, ctx.controller, events);
                     }
                 }
@@ -21854,10 +21854,10 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, caster, x_value, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_controller = Some(caster);
-                        self.countered_spell_mana_value = card.definition.cost.cmc();
+                        self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                         let name = card.definition.name;
                         let owner = card.owner;
                         self.countered_spell_off_stack(*card, ctx.controller, events);
@@ -22491,10 +22491,10 @@ impl GameState {
                         si,
                         StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
                     )) {
-                        if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
+                        if let StackItem::Spell { card, mana_spent, caster, x_value, .. } = self.stack.remove(pos) {
                             self.countered_spell_mana_spent = mana_spent;
                             self.countered_spell_controller = Some(caster);
-                        self.countered_spell_mana_value = card.definition.cost.cmc();
+                            self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                             self.countered_spell_off_stack(*card, ctx.controller, events);
                         }
                     } else if let Some(pos) = self

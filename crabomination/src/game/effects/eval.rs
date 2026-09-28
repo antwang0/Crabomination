@@ -3063,19 +3063,10 @@ impl GameState {
                         ctx.source,
                     );
                 }
+                // CR 202.3e — the X a stack spell was cast for counts in its
+                // mana value (Braingeyser for 3 is a 5 to Leitmotif Composer):
+                // `face_view_of`, under the card walker.
                 self.stack.iter().any(|si| match si {
-                    // CR 202.3e — on the stack an X spell's mana value counts
-                    // the chosen X (Braingeyser for 3 is a 5 to Leitmotif
-                    // Composer).
-                    StackItem::Spell { card, x_value, .. }
-                        if card.id == cid && *x_value > 0 && card.definition.cost.has_x() =>
-                    {
-                        let mut with_x = (**card).clone();
-                        let mut def = (*card.definition.arc()).clone();
-                        def.cost = def.cost.with_x_value(*x_value);
-                        with_x.set_definition(std::sync::Arc::new(def));
-                        self.evaluate_requirement_on_card(filter, &with_x, ctx.controller)
-                    }
                     StackItem::Spell { card, .. } if card.id == cid => {
                         self.evaluate_requirement_on_card(filter, card, ctx.controller)
                     }
@@ -5003,7 +4994,7 @@ impl GameState {
                 // card off the battlefield is read with its zone's face.
                 let face;
                 let card = match bf_card {
-                    None if card.has_face_view() => match self.face_view_of(card) {
+                    None if Self::may_have_zone_face(card) => match self.face_view_of(card) {
                         Some(v) => {
                             face = v;
                             &face
@@ -6212,7 +6203,7 @@ impl GameState {
                     // The `_inner` form, not the public one: the public entry
                     // routes a battlefield permanent back here, and this arm
                     // is already inside that walk.
-                    _ => self.evaluate_requirement_on_card_inner(req, card, controller),
+                    _ => self.evaluate_requirement_on_card_walk(req, card, controller),
                 }
             }
         }
@@ -6234,7 +6225,7 @@ impl GameState {
         let scratch = CardInstance::new(CardId(u32::MAX), def, controller);
         // A bare definition is in no zone by construction, so the public
         // entry's battlefield gate would only pay a miss.
-        self.evaluate_requirement_on_card_inner(req, &scratch, controller)
+        self.evaluate_requirement_on_card_walk(req, &scratch, controller)
     }
 
     /// CR 700.9 + 603.10a — was `card`, which has left the battlefield,
@@ -6295,12 +6286,25 @@ impl GameState {
         card: &CardInstance,
         controller: usize,
     ) -> bool {
-        use SelectionRequirement as R;
-        if card.has_face_view()
+        // CR 709.3b / 709.4 / 715.3b / 202.3e — read the card as it is in its
+        // zone, once, before the walk.
+        if Self::may_have_zone_face(card)
             && let Some(v) = self.face_view_of(card)
         {
-            return self.evaluate_requirement_on_card_inner(req, &v, controller);
+            return self.evaluate_requirement_on_card_walk(req, &v, controller);
         }
+        self.evaluate_requirement_on_card_walk(req, card, controller)
+    }
+
+    /// The walk behind [`Self::evaluate_requirement_on_card_inner`], on a card
+    /// already read with its zone's face.
+    fn evaluate_requirement_on_card_walk(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+    ) -> bool {
+        use SelectionRequirement as R;
         match req {
             R::Any => true,
             R::ManaValueEqualsTriggerAmount => {
@@ -6320,14 +6324,14 @@ impl GameState {
             // already decided this card is not a battlefield permanent, and
             // re-asking per leaf would pay that lookup once a leaf.
             R::And(a, b) => {
-                self.evaluate_requirement_on_card_inner(a, card, controller)
-                    && self.evaluate_requirement_on_card_inner(b, card, controller)
+                self.evaluate_requirement_on_card_walk(a, card, controller)
+                    && self.evaluate_requirement_on_card_walk(b, card, controller)
             }
             R::Or(a, b) => {
-                self.evaluate_requirement_on_card_inner(a, card, controller)
-                    || self.evaluate_requirement_on_card_inner(b, card, controller)
+                self.evaluate_requirement_on_card_walk(a, card, controller)
+                    || self.evaluate_requirement_on_card_walk(b, card, controller)
             }
-            R::Not(inner) => !self.evaluate_requirement_on_card_inner(inner, card, controller),
+            R::Not(inner) => !self.evaluate_requirement_on_card_walk(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::ProtectedByOpponent => {
