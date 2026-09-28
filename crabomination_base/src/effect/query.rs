@@ -1734,7 +1734,9 @@ impl Effect {
             | Effect::BottomHandThenDrawThatMany { who } => {
                 matches!(who, PlayerRef::Target(_))
             }
-            Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
+            Effect::SetMaxHandSize { who, size } | Effect::ReduceMaxHandSize { who, by: size } => {
+                sel_has_target(who) || value_has_target(size)
+            }
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount }
@@ -2851,6 +2853,7 @@ impl Effect {
             | Effect::DiscardAnyNumber { who, .. }
             | Effect::SetNoMaxHandSize { who }
             | Effect::SetMaxHandSize { who, .. }
+            | Effect::ReduceMaxHandSize { who, .. }
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. }
             | Effect::MillUntilLands { who, .. }
@@ -4240,6 +4243,7 @@ impl Effect {
             | Effect::DiscardAnyNumber { .. }
             | Effect::SetNoMaxHandSize { .. }
             | Effect::SetMaxHandSize { .. }
+            | Effect::ReduceMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::MillUntilLands { .. }

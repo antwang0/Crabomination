@@ -11537,6 +11537,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReduceMaxHandSize { who, by } => {
+                let n = self.evaluate_value(by, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent
+                        && let Some(max) = self.players[p].max_hand_size.as_mut()
+                    {
+                        *max = max.saturating_sub(n);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetMaxHandSize { who, size } => {
                 let n = self.evaluate_value(size, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {

@@ -5130,6 +5130,10 @@ pub enum Effect {
     /// adjuncts. The cleanup-step CR 514.1 enforcement then discards down to
     /// `size`.
     SetMaxHandSize { who: Selector, size: Value },
+    /// CR 402.2 — "your maximum hand size is reduced by `by`" (for the rest
+    /// of the game): a player with no maximum hand size stays without one.
+    /// Inspired Idea's uncleaved half.
+    ReduceMaxHandSize { who: Selector, by: Value },
     Mill    { who: Selector, amount: Value },
     /// The controller mills `amount` cards, then puts one card matching
     /// `filter` from among those milled this way into their hand (the
