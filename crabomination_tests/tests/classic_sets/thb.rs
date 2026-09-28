@@ -4403,3 +4403,33 @@ fn pharikas_spawn_without_escape_edicts_nobody() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "a hard-cast Spawn edicts nothing");
 }
+
+/// Towering-Wave Mystic — "whenever this creature deals damage, target
+/// player mills that many": blocked by a Bear, it still mills the opponent
+/// two (the creature-damage half milled the Bear, i.e. nobody).
+#[test]
+fn towering_wave_mystic_mills_when_it_damages_a_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_battlefield(0, catalog::towering_wave_mystic());
+    g.clear_sickness(mystic);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let library = g.players[1].library.len();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: mystic, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, mystic)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].library.len(), library - 2);
+}

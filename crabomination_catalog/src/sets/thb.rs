@@ -3635,27 +3635,17 @@ pub fn towering_wave_mystic() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        // "Whenever this creature deals damage" — modeled on the two combat-
-        // damage events (engine has no non-combat damage source on this body).
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Mill {
-                    who: Selector::Player(PlayerRef::Target(0)),
-                    amount: Value::TriggerEventAmount,
-                },
+        // "Whenever this creature deals damage, target player mills that
+        // many cards": any damage, once per damage event, and the mill is a
+        // real player target (slot 0 was the damaged object — a creature on
+        // the creature-damage half, which milled nobody).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
+                amount: Value::TriggerEventAmount,
             },
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToCreature,
-                    EventScope::SelfSource,
-                ),
-                effect: Effect::Mill {
-                    who: Selector::Player(PlayerRef::Target(0)),
-                    amount: Value::TriggerEventAmount,
-                },
-            },
-        ],
+        }],
         ..Default::default()
     }
 }
