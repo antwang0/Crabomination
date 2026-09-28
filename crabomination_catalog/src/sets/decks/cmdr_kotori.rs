@@ -33,9 +33,7 @@ fn artifact() -> R {
 
 /// Historic (CR 700.6): artifacts, legendaries and Sagas.
 fn historic() -> R {
-    artifact()
-        .or(R::HasSupertype(Supertype::Legendary))
-        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+    R::historic()
 }
 
 fn vehicle_card(name: &'static str, mana: ManaCost, p: i32, t: i32, crew: u32) -> CardDefinition {

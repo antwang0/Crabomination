@@ -127,7 +127,7 @@ fn legendary() -> R {
 
 /// Artifacts, legendaries and Sagas (CR 700.6).
 fn historic() -> R {
-    R::Artifact.or(legendary()).or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+    R::historic()
 }
 
 fn doctors() -> R {

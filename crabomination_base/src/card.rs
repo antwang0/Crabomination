@@ -3609,6 +3609,13 @@ impl SelectionRequirement {
             .or(Self::HasCardType(CardType::Battle))
     }
 
+    /// CR 700.6 — "historic": an artifact, a legendary, or a Saga.
+    pub fn historic() -> Self {
+        Self::Artifact
+            .or(Self::HasSupertype(Supertype::Legendary))
+            .or(Self::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+    }
+
     pub fn and(self, other: Self) -> Self {
         Self::And(Box::new(self), Box::new(other))
     }

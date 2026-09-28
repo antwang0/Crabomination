@@ -60,9 +60,7 @@ fn equipment_or_vehicle() -> R {
 }
 
 fn historic() -> R {
-    R::Artifact
-        .or(R::HasSupertype(Supertype::Legendary))
-        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+    R::historic()
 }
 
 fn begin_combat_on_your_turn(effect: Effect) -> TriggeredAbility {
