@@ -85,15 +85,32 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
                 continue;
             }
             // `{X}`: the largest payable X first, at most three that find a
-            // target (Geth's X is its target's mana value).
-            let xs: Vec<Option<u32>> = if ab.mana_cost.has_x() {
+            // target (Geth's X is its target's mana value). Untargeted, the
+            // largest X is the one worth asking about — unless X names a mana
+            // value exactly (Steel Hellkite's "each nonland permanent with mana
+            // value X"), where each mana value on the board is its own answer.
+            let exact_x = !ab.effect.requires_target() && sweeps_by_x(&ab.effect);
+            let xs: Vec<Option<u32>> = if ab.mana_cost.has_x() && exact_x {
+                let max = budget.saturating_sub(cmc);
+                let mut mvs: Vec<u32> = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .map(|c| c.definition.cost.cmc())
+                    .filter(|&mv| mv <= max)
+                    .collect();
+                mvs.sort_unstable_by(|a, b| b.cmp(a));
+                mvs.dedup();
+                mvs.truncate(6);
+                mvs.into_iter().map(Some).collect()
+            } else if ab.mana_cost.has_x() {
                 (1..=budget.saturating_sub(cmc)).rev().map(Some).collect()
             } else {
                 vec![None]
             };
             let mut probes = 0;
             for x in xs {
-                if probes == 3 {
+                if probes == if exact_x { 6 } else { 3 } {
                     break;
                 }
                 let (target, additional_targets) = if ab.effect.requires_target() {
@@ -148,7 +165,7 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
                 }
                 // Without `{X}` there is one action to try; with it and no
                 // target, the largest X is the one worth asking about.
-                if x.is_none() || !ab.effect.requires_target() {
+                if x.is_none() || (!ab.effect.requires_target() && !exact_x) {
                     break;
                 }
             }
@@ -157,11 +174,43 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
     best.map(|(_, a)| a)
 }
 
+/// A sweep whose filter reads the ability's X ("destroy each nonland permanent
+/// with mana value X").
+fn sweeps_by_x(e: &Effect) -> bool {
+    match e {
+        Effect::Seq(v) => v.iter().any(sweeps_by_x),
+        Effect::Destroy { what: crate::effect::Selector::EachPermanent(f) }
+        | Effect::Exile { what: crate::effect::Selector::EachPermanent(f) } => f.names_x_or_converge(),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::card::{ActivatedAbility, CardDefinition, CardType};
     use crate::effect::{PlayerRef, Selector, Value};
+
+    /// Steel Hellkite's "{X}: destroy each nonland permanent with mana value X
+    /// whose controller it dealt combat damage" asks each mana value on the
+    /// board, not only the largest payable X (never activated in 183 decks).
+    #[test]
+    fn steel_hellkite_picks_the_x_that_destroys_something() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let kite = g.add_card_to_battlefield(0, crate::catalog::steel_hellkite());
+        let bears = g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        g.players[1].creatures_that_combat_damaged_me_this_turn.push(kite);
+        g.players[0].mana_pool.add_colorless(5);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(got, Some(GameAction::ActivateAbility { card_id, x_value: Some(2), .. }) if card_id == kite),
+            "got {got:?}"
+        );
+        let _ = bears;
+    }
 
     /// "Target player draws a card" auto-aims at an opponent; the sink also
     /// asks about its own seat and takes the draw for itself.
