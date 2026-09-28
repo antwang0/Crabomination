@@ -1280,3 +1280,34 @@ fn paroxysm_destroys_on_a_land_and_pumps_otherwise() {
         }
     }
 }
+
+/// Cunning — "When enchanted creature attacks OR BLOCKS, sacrifice this Aura
+/// at the beginning of the next cleanup step": a block schedules it too.
+#[test]
+fn cunning_goes_after_a_block() {
+    let mut g = two_player_game();
+    // A host that survives the block, so only the trigger can remove the Aura.
+    let host = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let cunning = g.add_card_to_battlefield(1, catalog::cunning());
+    g.battlefield_find_mut(cunning).unwrap().attached_to = Some(host);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(host, attacker)])).expect("block");
+    drain_stack(&mut g);
+    for _ in 0..40 {
+        if g.battlefield_find(cunning).is_none() || g.turn_number > 1 && g.active_player_idx == 1 {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(host).is_some(), "the Wurm survived");
+    assert!(g.battlefield_find(cunning).is_none(), "sacrificed after the block");
+}

@@ -221,6 +221,23 @@ fn ferocity_counters_up_on_a_block() {
     );
 }
 
+/// "Blocks or becomes blocked": an enchanted ATTACKER that gets blocked
+/// grows too.
+#[test]
+fn ferocity_counters_up_when_blocked() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ferocity());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    attack_and_block(&mut g, host, blocker);
+    assert_eq!(
+        g.battlefield_find(host).and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne)),
+        Some(&1)
+    );
+}
+
 /// Volcanic Wind's damage total is the creature count on resolution.
 #[test]
 fn volcanic_wind_scales_with_the_board() {

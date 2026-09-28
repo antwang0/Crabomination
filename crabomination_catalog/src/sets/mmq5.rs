@@ -250,17 +250,21 @@ pub fn ramosian_rally() -> CardDefinition {
 pub fn ferocity() -> CardDefinition {
     CardDefinition {
         equipped_bonus: Some(EquipBonus {
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-                effect: Effect::MayDo {
-                    description: "Put a +1/+1 counter on the enchanted creature?".into(),
-                    body: Box::new(Effect::AddCounter {
-                        what: Selector::This,
-                        kind: crate::card::CounterType::PlusOnePlusOne,
-                        amount: Value::ONE,
-                    }),
-                },
-            }],
+            // "Whenever enchanted creature blocks or becomes blocked".
+            triggered_abilities: [EventKind::Blocks, EventKind::BecomesBlocked]
+                .into_iter()
+                .map(|kind| TriggeredAbility {
+                    event: EventSpec::new(kind, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Put a +1/+1 counter on the enchanted creature?".into(),
+                        body: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        }),
+                    },
+                })
+                .collect(),
             ..Default::default()
         }),
         ..aura("Ferocity", cost(&[generic(1), g()]))

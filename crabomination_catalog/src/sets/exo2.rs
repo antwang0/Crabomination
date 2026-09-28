@@ -1034,10 +1034,14 @@ pub fn crashing_boars() -> CardDefinition {
 /// Cunning — {1}{U} Aura. +3/+3 until the host commits to combat.
 pub fn cunning() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
-            effect: Effect::SacrificeAtNextEndStep { what: Selector::This },
-        }],
+        // "When enchanted creature attacks or blocks" — both halves.
+        triggered_abilities: [EventKind::Attacks, EventKind::Blocks]
+            .into_iter()
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::EnchantedBySource),
+                effect: Effect::SacrificeAtNextEndStep { what: Selector::This },
+            })
+            .collect(),
         ..aura(
             "Cunning",
             cost(&[generic(1), u()]),
