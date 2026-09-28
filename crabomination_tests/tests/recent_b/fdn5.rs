@@ -798,6 +798,24 @@ fn mephidross_vampire_types_and_grows_the_team() {
     let _ = g.resolve_combat();
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // "Deals damage to a creature" is any damage, not only combat damage.
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(bear, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::DealDamage {
+                to: crabomination::effect::Selector::EachPermanent(
+                    crabomination::card::SelectionRequirement::HasName("Grizzly Bears".into()),
+                ),
+                amount: crabomination::effect::Value::Const(1),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let _ = other;
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "a noncombat hit grows it too");
 }
 
 /// Raksha Golden Cub only pumps the Cats while it's carrying Equipment.

@@ -625,7 +625,7 @@ pub fn mephidross_vampire() -> CardDefinition {
                     filter: R::Creature.and(R::ControlledByYou),
                     ability: Box::new(TriggeredAbility {
                         event: EventSpec::new(
-                            EventKind::DealsCombatDamageToCreature,
+                            EventKind::DealsDamageToCreature,
                             EventScope::SelfSource,
                         ),
                         effect: Effect::AddCounter {
