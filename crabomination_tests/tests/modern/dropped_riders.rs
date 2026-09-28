@@ -3171,3 +3171,29 @@ fn archfiend_of_the_dross_drains_only_the_dead_creatures_controller() {
     assert_eq!(life[2], life[1] - 2, "seat 2 lost 2");
     assert_eq!(life[1], life[3], "the other opponents didn't");
 }
+
+/// Garruk Wildspeaker's +1 untaps two TARGET lands (CR 115.1) — it used to
+/// take the first two lands you control, tapped or not, and gave no mana.
+#[test]
+fn garruk_wildspeaker_untaps_two_target_lands() {
+    let mut g = main_phase();
+    let garruk = g.add_card_to_battlefield(0, catalog::garruk_wildspeaker());
+    g.battlefield_find_mut(garruk).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    let fresh = g.add_card_to_battlefield(0, catalog::forest());
+    let a = g.add_card_to_battlefield(0, catalog::forest());
+    let b = g.add_card_to_battlefield(0, catalog::forest());
+    for id in [a, b] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: garruk,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(a).unwrap().tapped, "the target untapped");
+    assert!(!g.battlefield_find(fresh).unwrap().tapped);
+    assert!(!g.battlefield_find(b).unwrap().tapped, "the second target: the caster's other tapped land");
+}

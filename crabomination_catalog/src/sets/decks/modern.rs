@@ -50225,14 +50225,12 @@ pub fn garruk_wildspeaker() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Untap {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::EachPermanent(
-                            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                        )),
-                        count: Box::new(Value::Const(2)),
-                    },
-                    up_to: None,
+                // "Untap two target lands" — any two lands (CR 115.1).
+                effect: Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 2,
+                    filter: SelectionRequirement::Land,
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
                 },
                 x_cost: false,
             },
