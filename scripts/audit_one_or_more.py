@@ -21,10 +21,18 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_counter_kinds import CACHE, oracle_of  # noqa: E402
 
-PHRASE = re.compile(r"[Ww]henever one or more ([^,]*)")
+PHRASE = re.compile(
+    r"[Ww]henever (?:one or more ([^,]*)"
+    r"|(?:you|a player|an opponent) (?:discard|sacrifice|attacks?|attack with|roll|mill|get)"
+    r" (?:[^,.]{0,30} )?one or more ([^,.]*))"
+)
 # `CounterAdded` / `CounterRemoved` is one event per placement.
 COUNTERS = re.compile(r"counters? (are|is) (put|removed)")
-BATCH = re.compile(r"once_per_batch: true|batch_across_players: true|once_per_turn: true")
+BATCH = re.compile(
+    r"once_per_batch: true|batch_across_players: true|once_per_turn: true"
+    # Event kinds that are one per batch by construction.
+    r"|kind: (?:YouAttack|DiscardedOneOrMore|RolledDice|EnergyGained)\b"
+)
 # One event per batch already, or a repeat that changes nothing.
 ALLOWLIST = {
     # `YouAttack` / `YouAttackedPlayer` fire once per declaration / defender.
@@ -33,8 +41,10 @@ ALLOWLIST = {
     "Ancestor Dragon", "Clandestine Meddler", "Teo, Spirited Glider",
     "The Earth King", "Dollmaker's Shop // Porcelain Gallery",
     # Per attacker is the batch: "1 life for each attacking creature",
-    # "those creatures get -1/-0".
-    "Orim's Prayer", "Sabotage Strategist",
+    # "those creatures get -1/-0", "twice that many rad counters".
+    "Orim's Prayer", "Sabotage Strategist", "Struggle for Project Purity",
+    # Per discarded card, "that many" sums to the batch.
+    "Cryptcaller Chariot", "Marauding Mako", "Scrounging Skyray",
     # `BlocksNOrMore` is one event per declaration.
     "Tide of War",
     # `CardsExiledFromHandOrBy` is the dispatcher's per-batch tally.
@@ -67,7 +77,8 @@ def main():
         card = cache.get(name)
         if not isinstance(card, dict) or name in ALLOWLIST:
             continue
-        hits = [h for h in PHRASE.findall(oracle_of(card)) if not COUNTERS.search(h)]
+        hits = [a or b for a, b in PHRASE.findall(oracle_of(card))]
+        hits = [h for h in hits if not COUNTERS.search(h)]
         if hits and len(BATCH.findall(dbg)) < len(hits):
             out.append(f"{name}\t{hits[0][:100]}")
     for row in sorted(out):
