@@ -5,7 +5,7 @@ use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::effects::EffectContext;
-use crabomination::game::{GameState, drain_stack, two_player_game};
+use crabomination::game::{GameState, drain_stack, multi_player_game, two_player_game};
 use crabomination::mana::Color;
 
 fn flood(g: &mut GameState) {
@@ -124,6 +124,27 @@ fn hovership_exiles_until_it_leaves() {
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "back when the ship leaves");
+}
+
+/// Unidentified Hovership: only the exiled card's owner manifests dread, not
+/// every opponent.
+#[test]
+fn hovership_leaving_makes_only_the_owner_manifest() {
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let ship = g.add_card_to_hand(0, catalog::unidentified_hovership());
+    cast(&mut g, ship, Some(Target::Permanent(bear)));
+    let mut events = vec![];
+    g.destroy_permanent(ship, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let face_down = |p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.face_down).count();
+    assert_eq!((face_down(1), face_down(2)), (0, 1));
 }
 
 /// Thornvault Forager's forage ability pays two mana of any colors.

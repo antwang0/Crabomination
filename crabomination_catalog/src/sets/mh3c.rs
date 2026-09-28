@@ -322,13 +322,13 @@ pub fn boggart_trawler() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
-            what: Selector::CardsInZone {
-                who: PlayerRef::EachOpponent,
-                zone: Zone::Graveyard,
-                filter: R::Any,
-            },
-            to: ZoneDest::Exile,
+        // "Exile target player's graveyard" — one player (CR 115.1).
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::TargetPlayerThen {
+            filter: R::Player,
+            then: Box::new(Effect::Move {
+                what: Selector::CardsInZone { who: PlayerRef::Target(0), zone: Zone::Graveyard, filter: R::Any },
+                to: ZoneDest::Exile,
+            }),
         })],
         back_face: Some(Box::new(mdfc_pain_land("Boggart Bog", Color::Black))),
         ..Default::default()

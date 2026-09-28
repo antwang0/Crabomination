@@ -433,6 +433,29 @@ fn rakdos_the_muscle_impulses_on_a_sacrifice() {
     assert_eq!(g.exile.len(), 2, "two cards impulsed for the bear's mana value");
 }
 
+/// Rakdos, the Muscle exiles from ONE target player's library (CR 115.1),
+/// not from every opponent's.
+#[test]
+fn rakdos_the_muscle_exiles_from_one_library_in_a_pod() {
+    let mut g = multi_player_game(3);
+    g.step = TurnStep::PreCombatMain;
+    let rakdos = g.add_card_to_battlefield(0, catalog::rakdos_the_muscle());
+    g.clear_sickness(rakdos);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for seat in 1..3 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rakdos, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("sac a creature");
+    drain_stack(&mut g);
+    let left: Vec<usize> = (1..3).map(|p| g.players[p].library.len()).collect();
+    assert_eq!(left.iter().sum::<usize>(), 4, "two cards from one library: {left:?}");
+}
+
 /// Laughing Jasper Flint makes stolen creatures Mercenaries.
 #[test]
 fn laughing_jasper_flint_retypes_borrowed_creatures() {

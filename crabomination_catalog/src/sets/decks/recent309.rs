@@ -1114,14 +1114,18 @@ pub fn rakdos_the_muscle() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
                 }),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::EachOpponent,
-                count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
-                pay_any_color: true,
-                max_mana_value: None,
-                pay_own_cost: false,
-                uncast_penalty: None,
+            // "Target player's library" — one player (CR 115.1).
+            effect: Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
+                    pay_any_color: true,
+                    max_mana_value: None,
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -208,17 +208,24 @@ pub fn unidentified_hovership() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::OptionalTargets {
                 min: 0,
-                body: Box::new(Effect::ExileUntilSourceLeaves {
-                    what: Selector::TargetFiltered {
-                        slot: 0,
-                        filter: R::Creature.and(R::ToughnessAtMost(5)),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RememberPlayerOnSource {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     },
-                    return_to: ExileReturnZone::Battlefield,
-                }),
+                    Effect::ExileUntilSourceLeaves {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::Creature.and(R::ToughnessAtMost(5)),
+                        },
+                        return_to: ExileReturnZone::Battlefield,
+                    },
+                ])),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-                effect: Effect::ManifestDread { who: PlayerRef::EachOpponent },
+                // "The exiled card's owner manifests dread" — one player,
+                // remembered as it was exiled (the card is back by now).
+                effect: Effect::ManifestDread { who: PlayerRef::ChosenPlayerOfSource },
             },
         ],
         ..artifact("Unidentified Hovership", cost(&[generic(1), w(), w()]), ArtifactSubtype::Vehicle)

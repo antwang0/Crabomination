@@ -6447,7 +6447,6 @@ pub fn bloodfray_giant() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Trample, Keyword::Unleash],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(1)],
         ..Default::default()
     }
 }
