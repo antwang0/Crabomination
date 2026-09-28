@@ -3725,6 +3725,21 @@ impl GameState {
                 powers.iter().any(|(ctrl, pow)| *ctrl == p && *pow >= max)
             }
             Predicate::AttackingAlone => self.attacking.len() == 1,
+            Predicate::TriggerSourceAttacksItsPlayerAlone => {
+                let Some(id) = self
+                    .resolve_selector(&crate::effect::Selector::TriggerSource, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return false;
+                };
+                match self.attacking.iter().find(|a| a.attacker == id).map(|a| a.target) {
+                    Some(t @ crate::game::types::AttackTarget::Player(_)) => {
+                        self.attacking.iter().filter(|a| a.target == t).count() == 1
+                    }
+                    _ => false,
+                }
+            }
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::AttackedWithTotalPowerAtLeast { who, at_least } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };

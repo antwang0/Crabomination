@@ -5,7 +5,8 @@
 //! Goreguts Boss, Alexios, Deimos of Kosmos, Narset, Enlightened Exile,
 //! Thalia and The Gitrog Monster, Rocco, Cabaretti Caterer, Anti-Venom,
 //! Horrifying Healer, Sonic the Hedgehog, Iron Man, Titan of Innovation, and
-//! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son.
+//! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
+//! and Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`).
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -589,6 +590,34 @@ pub fn atreus_impulsive_son() -> CardDefinition {
             "Atreus, Impulsive Son",
             cost(&[generic(1), u(), r()]),
             vec![CreatureType::God, CreatureType::Archer],
+            2,
+            4,
+        )
+    }
+}
+
+/// Jin Sakai, Ghost of Tsushima — combat damage to a player draws a card; a
+/// creature of yours attacking a player no other creature is attacking gets
+/// the choice of double strike ("Standoff") or can't be blocked ("Ghost").
+pub fn jin_sakai_ghost_of_tsushima() -> CardDefinition {
+    let this_turn = |keyword| Effect::GrantKeyword { what: Selector::TriggerSource, keyword, duration: Duration::EndOfTurn };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                // CR 603.4 — "if no other creatures are attacking that player".
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::TriggerSourceAttacksItsPlayerAlone),
+                effect: Effect::ChooseMode(vec![this_turn(Keyword::DoubleStrike), this_turn(Keyword::Unblockable)]),
+            },
+        ],
+        ..legend(
+            "Jin Sakai, Ghost of Tsushima",
+            cost(&[generic(1), w(), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
             2,
             4,
         )

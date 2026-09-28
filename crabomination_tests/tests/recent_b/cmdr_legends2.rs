@@ -345,3 +345,30 @@ fn kratos_stoic_father_banks_experience_and_atreus_cashes_it() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew two, discarded one");
     assert_eq!(g.players[1].life, life - 2);
 }
+
+/// CR 506.2 — Jin Sakai counts attackers per player: two creatures attacking
+/// two different opponents each get the choice (the headless pick is double
+/// strike); two attacking the same opponent get nothing.
+#[test]
+fn jin_sakai_rewards_a_creature_alone_at_its_player() {
+    let setup = |targets: [usize; 2]| {
+        let mut g = pod(4);
+        g.add_card_to_battlefield(0, catalog::jin_sakai_ghost_of_tsushima());
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for id in [a, b] {
+            g.clear_sickness(id);
+        }
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: a, target: AttackTarget::Player(targets[0]) },
+            Attack { attacker: b, target: AttackTarget::Player(targets[1]) },
+        ]))
+        .expect("attack");
+        drain_stack(&mut g);
+        let ds = |id| g.computed_permanent(id).unwrap().keywords().has_kw(&Keyword::DoubleStrike);
+        (ds(a), ds(b))
+    };
+    assert_eq!(setup([1, 2]), (true, true), "each alone at its player");
+    assert_eq!(setup([1, 1]), (false, false), "sharing a player");
+}

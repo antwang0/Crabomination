@@ -2604,6 +2604,11 @@ pub enum Predicate {
     /// Exalted reminder ("Whenever a creature you control attacks
     /// alone, that creature gets +1/+1 until end of turn").
     AttackingAlone,
+    /// CR 506.2 — the trigger source is attacking a player and no other
+    /// creature is attacking that player (Jin Sakai's "if no other creatures
+    /// are attacking that player"). Unlike `AttackingAlone`, attackers aimed
+    /// at other players don't count — the distinction only exists in a pod.
+    TriggerSourceAttacksItsPlayerAlone,
     /// True when at least `n` creatures are attacking this combat. Powers
     /// the Battalion ability word ("Whenever this creature and at least two
     /// other creatures attack" → `n == 3`). Read from
