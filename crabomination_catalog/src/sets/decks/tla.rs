@@ -5706,12 +5706,13 @@ pub fn bitter_work() -> CardDefinition {
         cost: cost(&[generic(1), r(), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
-                Predicate::AttackedWithCreatureMatching {
-                    who: PlayerRef::You,
+            // CR 506.2 — once per player attacked by a power-4 creature.
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
                     filter: SelectionRequirement::PowerAtLeast(4).and(SelectionRequirement::IsAttackingOpponentPlayer),
-                },
-            ),
+                })
+                .once_per_batch_per_defender(),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

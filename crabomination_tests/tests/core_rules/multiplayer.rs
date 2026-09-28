@@ -213,6 +213,54 @@ fn cr_601_2c_an_optional_hostile_slot_declines_its_own_side() {
     assert_eq!(g.auto_target_for_effect(&exile, 0), Some(Target::Permanent(theirs)));
 }
 
+/// CR 506.2 — "whenever you attack a player with one or more …" / "one or
+/// more … attack a player" fire once per player attacked, and never for a
+/// planeswalker: Bitter Work draws twice for Craw Wurms split across two
+/// seats (once for both at one seat), Meriadoc Brandybuck makes no Food
+/// attacking a planeswalker.
+#[test]
+fn cr_506_2_attack_a_player_triggers_count_players_not_combats() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let fresh = || {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g
+    };
+    for (split, cards) in [(false, 1), (true, 2)] {
+        let mut g = fresh();
+        g.add_card_to_battlefield(0, catalog::bitter_work());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let wurms = [0, 1].map(|_| {
+            let w = g.add_card_to_battlefield(0, catalog::craw_wurm());
+            g.clear_sickness(w);
+            w
+        });
+        let hand = g.players[0].hand.len();
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: wurms[0], target: AttackTarget::Player(1) },
+            Attack { attacker: wurms[1], target: AttackTarget::Player(if split { 2 } else { 1 }) },
+        ]))
+        .expect("attack");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + cards, "split: {split}");
+    }
+    let mut g = fresh();
+    let merry = g.add_card_to_battlefield(0, catalog::meriadoc_brandybuck());
+    g.clear_sickness(merry);
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: merry,
+        target: AttackTarget::Planeswalker(walker),
+    }]))
+    .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "a planeswalker is not a player");
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────
 
 #[test]

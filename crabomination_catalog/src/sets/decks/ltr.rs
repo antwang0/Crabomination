@@ -1723,18 +1723,16 @@ pub fn meriadoc_brandybuck() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            // CR 603.2c — "whenever ONE OR MORE Halflings you control attack a
-            // player": one Food per declaration, however many Halflings went.
-            // ⚠ It carried `once_per_turn`, which is the stricter CR 603.3d cap
-            // and is not printed — a second combat (Aggravated Assault) made no
-            // Food at all. 🟡 Still one fire per *declaration* rather than per
-            // attacked player: the attack path's batch key is (listener,
-            // ability) with no defender in it, so a pod split across two seats
-            // makes one Food where the card makes two.
+            // CR 603.2c / 506.2 — "whenever ONE OR MORE Halflings you control
+            // attack a player": one Food per attacked player, however many
+            // Halflings went; an attack at a planeswalker makes none. (It
+            // carried `once_per_turn`, which is not printed — a second combat
+            // made no Food at all.)
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Halfling),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Halfling)
+                        .and(SelectionRequirement::IsAttackingOpponentPlayer),
                 })
                 .once_per_batch_per_defender(),
             effect: Effect::CreateToken {
