@@ -452,8 +452,8 @@ fn chandra_spark_hunter_builds_and_animates_a_vehicle() {
     assert!(view.card_types().contains(&CardType::Creature) && view.keywords().contains(&Keyword::Haste));
 }
 
-/// Ketramose is combat-locked until exile is seven deep, and draws off exiles
-/// from graveyards and the battlefield on your turn.
+/// Ketramose is combat-locked until exile is seven deep, and draws once per
+/// batch of exiles from graveyards and the battlefield on your turn.
 #[test]
 fn ketramose_gates_on_exile_and_draws_from_it() {
     let mut g = main_phase();
@@ -495,6 +495,27 @@ fn ketramose_gates_on_exile_and_draws_from_it() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew off the graveyard exile");
     assert_eq!(g.players[0].life, 19);
+
+    // CR 603.2c — "one or more cards": a whole graveyard exiled at once is
+    // one draw, not one per card.
+    for _ in 0..3 {
+        g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    }
+    let before = g.players[0].hand.len();
+    let events = g
+        .resolve_effect(
+            &crabomination::effect::Effect::ExilePlayerGraveyard {
+                who: crabomination::effect::PlayerRef::EachOpponent,
+                filter: None,
+            },
+            &EffectContext::for_ability(ket, 0, None),
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(), "the graveyard went to exile");
+    assert_eq!(g.players[0].hand.len(), before + 1, "one draw for the batch");
+    assert_eq!(g.players[0].life, 18);
 }
 
 /// Captain Howler pumps by two per discarded card and hangs a cantrip on the

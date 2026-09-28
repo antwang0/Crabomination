@@ -1589,7 +1589,7 @@ impl GameState {
                             let cid = card.id;
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: cid });
-                            self.note_left_graveyard(p, cid, events);
+                            self.note_exiled_from_graveyard(p, cid, events);
                         }
                     }
                     return;
@@ -2119,7 +2119,7 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id: cid });
         }
         for cid in from_gy {
-            self.note_left_graveyard(owner, cid, events);
+            self.note_exiled_from_graveyard(owner, cid, events);
         }
         
         self.shuffle_library(owner, events);

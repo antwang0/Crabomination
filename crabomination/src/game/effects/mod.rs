@@ -9641,7 +9641,7 @@ impl GameState {
                             self.scratch.exiled_card_ids_this_resolution.push(id);
                             self.players[p].cards_exiled_this_turn += 1;
                             events.push(GameEvent::PermanentExiled { card_id: id });
-                            self.note_left_graveyard(p, id, events);
+                            self.note_exiled_from_graveyard(p, id, events);
                         }
                     }
                 }
@@ -9658,7 +9658,7 @@ impl GameState {
                         self.scratch.exiled_card_ids_this_resolution.push(id);
                         self.players[p].cards_exiled_this_turn += 1;
                         events.push(GameEvent::PermanentExiled { card_id: id });
-                        self.note_left_graveyard(p, id, events);
+                        self.note_exiled_from_graveyard(p, id, events);
                     }
                 }
                 Ok(())
@@ -14316,7 +14316,7 @@ impl GameState {
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
-                        self.note_left_graveyard(p, cid, events);
+                        self.note_exiled_from_graveyard(p, cid, events);
                     }
                 }
                 Ok(())
@@ -14333,7 +14333,7 @@ impl GameState {
                             let cid = card.id;
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: cid });
-                            self.note_left_graveyard(p, cid, events);
+                            self.note_exiled_from_graveyard(p, cid, events);
                         } else {
                             self.players[p].graveyard.push(card);
                         }
@@ -14392,7 +14392,7 @@ impl GameState {
                         // Haunting Echoes' "for each card exiled this way".
                         self.scratch.exiled_card_ids_this_resolution.push(cid);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
-                        self.note_left_graveyard(p, cid, events);
+                        self.note_exiled_from_graveyard(p, cid, events);
                     }
                 }
                 Ok(())
@@ -37253,7 +37253,7 @@ impl GameState {
                     self.exile.push(card);
                     self.players[p].cards_exiled_this_turn += 1;
                     events.push(GameEvent::PermanentExiled { card_id: id });
-                    self.note_left_graveyard(p, id, events);
+                    self.note_exiled_from_graveyard(p, id, events);
                 }
                 Ok(())
             }
@@ -42800,7 +42800,7 @@ impl GameState {
                                     self.exile.push(card);
                                     self.players[payer].cards_exiled_this_turn += 1;
                                     events.push(GameEvent::PermanentExiled { card_id: id });
-                                    self.note_left_graveyard(payer, id, events);
+                                    self.note_exiled_from_graveyard(payer, id, events);
                                 }
                             }
                             true
@@ -42831,7 +42831,7 @@ impl GameState {
                                     self.exile.push(card);
                                     self.players[payer].cards_exiled_this_turn += 1;
                                     events.push(GameEvent::PermanentExiled { card_id: id });
-                                    self.note_left_graveyard(payer, id, events);
+                                    self.note_exiled_from_graveyard(payer, id, events);
                                 }
                                 true
                             }

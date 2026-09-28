@@ -10399,6 +10399,20 @@ impl GameState {
         events.push(crate::game::GameEvent::CardLeftGraveyard { player: p, card_id });
     }
 
+    /// `note_left_graveyard` for a card the move put into exile: also CR
+    /// 400.7's "put into exile from a graveyard" (Ketramose, Kaya, Laelia) —
+    /// the mass graveyard exiles (Bojuka Bog, delve-style costs, Living End)
+    /// skipped `move_card_to`, which is where that event was announced.
+    pub(crate) fn note_exiled_from_graveyard(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        self.note_left_graveyard(p, card_id, events);
+        events.push(crate::game::GameEvent::CardExiledFromPlayOrGraveyard { card_id });
+    }
+
     /// A spell removed from the stack by a counter / ward effect goes to
     /// its owner's graveyard — unless it's a copy (`is_token`), which
     /// simply ceases to exist (CR 707.10a): it never transits the
