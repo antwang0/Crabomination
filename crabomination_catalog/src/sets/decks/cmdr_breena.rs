@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_breena.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Author of Shadows** — the castable card is the first nonland card
-//!   exiled, not a chosen one.
 //! - **Bloodthirsty Blade** / **Parasitic Impetus** — the goad is renewed at
 //!   the beginning of each combat by a trigger, not a static.
 //! - **Bold Plagiarist** — copies +1/+1 counters only; an opponent's own
@@ -119,17 +117,19 @@ pub fn author_of_shadows() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent, filter: None },
-            Effect::GrantMayPlay {
-                // "Choose a nonland card exiled this way": the priciest.
-                what: Selector::TakeGreatestManaValue {
-                    inner: Box::new(Selector::ExiledThisResolution { filter: R::Nonland }),
-                    count: Box::new(Value::ONE),
-                },
-                duration: crate::card::MayPlayDuration::WhileExiled,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: true,
-                any_color: true,
+            // "Choose a nonland card exiled this way" (a bot: the priciest).
+            Effect::ChooseOneAmong {
+                what: Selector::ExiledThisResolution { filter: R::Nonland },
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::GrantMayPlay {
+                    what: Selector::SeparatedPile { chosen: true },
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: true,
+                }),
+                other: Box::new(Effect::Noop),
             },
         ]))],
         ..creature(

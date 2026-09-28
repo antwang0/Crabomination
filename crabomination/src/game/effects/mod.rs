@@ -20996,12 +20996,19 @@ impl GameState {
                 let keeps = matches!(**chosen, Effect::Noop);
                 let gain = keeps
                     || chosen.prefers_friendly_target()
-                    || matches!(**chosen, Effect::TurnFaceUpFree { .. });
+                    || matches!(**chosen, Effect::TurnFaceUpFree { .. } | Effect::GrantMayPlay { .. });
                 let default = if gain {
                     ids.iter()
                         .copied()
                         .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.controller == seat))
                         .max_by_key(|id| self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness)))
+                        // Cards off the battlefield (a play grant): the priciest.
+                        .or_else(|| {
+                            ids.iter()
+                                .copied()
+                                .filter(|id| self.battlefield_find(*id).is_none())
+                                .max_by_key(|id| self.find_card_anywhere(*id).map_or(0, |c| c.definition.cost.cmc()))
+                        })
                         .into_iter()
                         .collect()
                 } else {

@@ -305,6 +305,20 @@ fn author_of_shadows_steals_a_spell() {
     assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_none()));
 }
 
+/// Author of Shadows: "choose a nonland card exiled this way" is the
+/// controller's pick (CR 608.2d) — here the Bolt.
+#[test]
+fn author_of_shadows_grants_the_chosen_card() {
+    let mut g = pod(3);
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let dragon = g.add_card_to_graveyard(2, catalog::shivan_dragon());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
+    let au = g.add_card_to_hand(0, catalog::author_of_shadows());
+    cast(&mut g, 0, au, None).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_some()));
+    assert!(g.exile.iter().any(|c| c.id == dragon && c.may_play_until.is_none()));
+}
+
 /// Boreas Charger fetches the land gap to the landiest opponent in Plains.
 #[test]
 fn boreas_charger_closes_the_land_gap() {
