@@ -20,11 +20,15 @@ impl GameState {
     ) -> Result<(), GameError> {
         let seat = ctx.controller;
         let source = ctx.source.unwrap_or(CardId(0));
+        // Source-aware, so "another" (`OtherThanSource`) reads the source.
+        let gates = crate::game::effects::eval::PrintedGates::default();
         // (is the source, mana value, untapped) per candidate, battlefield order.
         let mut ranked: Vec<(CardId, bool, u32, bool)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == seat && self.evaluate_requirement_on_card(filter, c, seat))
+            .filter(|c| {
+                c.controller == seat && self.requirement_on_permanent(filter, c, seat, ctx.source, &gates)
+            })
             .map(|c| (c.id, c.id == source, c.definition.cost.cmc(), !c.tapped))
             .collect();
         if ranked.is_empty() {
