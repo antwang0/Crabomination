@@ -430,6 +430,29 @@ mod recent226 {
         assert!(cp.keywords().contains(&Keyword::Deathtouch));
     }
 
+    /// "When this enchantment enters, if it's your main phase" (CR 603.4): the
+    /// extra combat is offered only in your own main phase.
+    #[test]
+    fn all_out_assault_extra_combat_needs_your_main_phase() {
+        use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+        let enter = |active: usize, step: crabomination::TurnStep| {
+            let mut g = two_player_game();
+            g.active_player_idx = active;
+            g.step = step;
+            let card = g.add_card_to_graveyard(0, catalog::all_out_assault());
+            let put = Effect::Move {
+                what: Selector::ExactObjects(vec![card]),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            };
+            let evs = g.resolve_effect(&put, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+            g.dispatch_triggers_for_events(&evs);
+            g.stack.len()
+        };
+        assert_eq!(enter(0, crabomination::TurnStep::PreCombatMain), 1, "your main phase");
+        assert_eq!(enter(0, crabomination::TurnStep::End), 0, "your end step");
+        assert_eq!(enter(1, crabomination::TurnStep::PreCombatMain), 0, "an opponent's main phase");
+    }
+
     /// All-Out Assault's "when you next attack this turn, untap each creature
     /// you control" — dropped until 2026-09-08, which left the extra combat
     /// with nobody untapped to attack in it. One-shot: the second attack

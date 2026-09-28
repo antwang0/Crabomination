@@ -113,7 +113,10 @@ pub fn all_out_assault() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // "When this enchantment enters, if it's your main phase, …"
+            // (CR 603.4 — a flashed-in or blinked copy grants no combat).
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(crate::card::Predicate::YourMainPhase),
             // "When you next attack this turn, untap each creature you
             // control" — the half that makes the second combat a second
             // attack with the same team.
