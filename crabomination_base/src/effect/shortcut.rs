@@ -543,6 +543,16 @@ pub fn battalion(body: Effect) -> TriggeredAbility {
     }
 }
 
+/// "Whenever you attack with three or more creatures, `body`" — one trigger
+/// per declaration, whether or not this creature attacks (unlike battalion).
+pub fn you_attack_with_three_or_more(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
+            .with_filter(Predicate::AttackingWithAtLeast(3)),
+        effect: body,
+    }
+}
+
 /// Battle Cry shortcut (CR 702.92): "Whenever this creature attacks,
 /// each *other* attacking creature gets +`amount`/+0 until end of turn."
 /// An `Attacks / SelfSource` trigger that pumps every attacking

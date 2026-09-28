@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility,
 };
 use crate::effect::shortcut::{
-    attacks_while_saddled, battalion, investigate, mint_treasures, on_attack,
+    attacks_while_saddled, investigate, you_attack_with_three_or_more, mint_treasures, on_attack,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest, ZoneRef,
@@ -176,7 +176,7 @@ pub fn seasoned_consultant() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![battalion(Effect::PumpPT {
+        triggered_abilities: vec![you_attack_with_three_or_more(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(2),
             toughness: Value::Const(0),

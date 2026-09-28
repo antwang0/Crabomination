@@ -6,7 +6,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
     StaticAbility, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{battalion, each_opponent, investigate};
+use crate::effect::shortcut::{each_opponent, investigate, you_attack_with_three_or_more};
 use crate::effect::{Duration, Effect, Selector, StaticEffect, Value, ZoneRef};
 use crate::mana::{b, cost, generic, r, w};
 
@@ -212,7 +212,7 @@ pub fn karlov_watchdog() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![battalion(Effect::PumpPT {
+        triggered_abilities: vec![you_attack_with_three_or_more(Effect::PumpPT {
             what: Selector::EachMatching {
                 zone: ZoneRef::Battlefield,
                 filter: R::Creature.and(R::ControlledByYou),

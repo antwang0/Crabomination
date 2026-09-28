@@ -1198,7 +1198,7 @@ pub fn gallia_of_the_endless_dance() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
                 Predicate::ValueAtLeast(
                     Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
                     Value::Const(3),

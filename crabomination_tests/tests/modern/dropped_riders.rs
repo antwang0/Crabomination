@@ -2775,3 +2775,23 @@ fn whenever_you_attack_fires_once_per_declaration() {
     let power: i32 = [a, b].iter().map(|&id| g.computed_permanent(id).unwrap().power).sum();
     assert_eq!(power, 2 + 2 + 2, "one +2/+0, not one per attacker");
 }
+
+/// "Whenever you attack with three or more creatures" doesn't need the card
+/// itself among them (it was written as battalion): Karlov Watchdog stays
+/// home and still pumps the team.
+#[test]
+fn attack_with_three_or_more_is_not_battalion() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let dog = g.add_card_to_battlefield(0, catalog::karlov_watchdog());
+    let ids: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    for &id in &ids {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    let attacks = ids.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect();
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("three attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ids[0]).unwrap().power, 3, "+1/+1");
+    assert_eq!(g.computed_permanent(dog).unwrap().power, 4, "the Watchdog too, at home");
+}
