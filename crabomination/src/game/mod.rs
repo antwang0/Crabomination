@@ -22918,6 +22918,16 @@ impl GameState {
                 pl.rad_counters = pl.rad_counters.saturating_add(n);
             }
         }
+        // "Whenever you cast or copy an instant or sorcery spell" (Magecraft):
+        // a copy isn't cast (CR 707.10), so the cast walk never sees it — run
+        // it once per copy for the `EventSpec::or_copy` listeners.
+        for e in events {
+            if let GameEvent::SpellsCopied { original, count, controller } = *e {
+                for _ in 0..count {
+                    self.fire_spell_cast_triggers(controller, original, true, 0, 0, true);
+                }
+            }
+        }
         for e in events {
             if let GameEvent::PermanentTapped { card_id, .. } = e
                 && let Some(c) = self.battlefield_find_mut(*card_id)

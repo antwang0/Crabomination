@@ -11767,7 +11767,7 @@ impl GameState {
         // Threads `mana_spent` (and X / Converge) into the trigger context
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
-        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value);
+        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value, false);
         // CR 702.146e — a daybound spell cast while neither day nor night
         // makes it day.
         if casts_daybound && self.day_night.is_none() {
@@ -15123,6 +15123,7 @@ impl GameState {
         _is_noncreature: bool,
         mana_spent: u32,
         converged_value: u32,
+        copy_only: bool,
     ) {
         use crate::effect::{EventKind, EventScope};
         // CR 603.7e — one-shot "when you cast your next spell this turn"
@@ -15154,7 +15155,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(_)
                 )
         };
-        if self.delayed_triggers.iter().any(watches_cast) {
+        if !copy_only && self.delayed_triggers.iter().any(watches_cast) {
             // A `Copy` mask: the closures below must not borrow `self`.
             let mut cast_types = crate::card::CardTypeSet::empty();
             if let Some(c) = self.find_card_anywhere(cast_card) {
@@ -15226,7 +15227,7 @@ impl GameState {
         // CR 603.7e (filter-gated) — "when you next cast a [filter] spell this
         // turn" (Brass Infiniscope). Same read-only gate: the filter is read
         // only when such a watcher of the caster's is on the list.
-        if self.delayed_triggers.iter().any(|dt| {
+        if !copy_only && self.delayed_triggers.iter().any(|dt| {
             dt.controller == controller
                 && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(_))
         }) && let Some(cast) = self.find_card_anywhere(cast_card).cloned()
@@ -15281,7 +15282,7 @@ impl GameState {
             dt.controller == controller
                 && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
         };
-        if self.delayed_triggers.iter().any(watches_name) {
+        if !copy_only && self.delayed_triggers.iter().any(watches_name) {
             let cast_name: Option<&'static str> =
                 self.find_card_anywhere(cast_card).map(|c| c.definition.name);
             // Borrows the zone, not `self`: the partition below takes the
@@ -15380,6 +15381,7 @@ impl GameState {
                 // function from the battlefield; the command-zone walk below
                 // gathers it.
                 if t.event.kind == EventKind::SpellCast
+                    && (!copy_only || t.event.or_copy)
                     && scope_matches(t.event.scope, c_controller)
                     && !t.event.zone.command_zone_only()
                 {
@@ -15389,7 +15391,11 @@ impl GameState {
             if any_own_grant {
                 self.for_each_granted_trigger_matching(
                     cid,
-                    |t| t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller),
+                    |t| {
+                        t.event.kind == EventKind::SpellCast
+                            && (!copy_only || t.event.or_copy)
+                            && scope_matches(t.event.scope, c_controller)
+                    },
                     |t| candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false)),
                 );
             }
@@ -15408,7 +15414,10 @@ impl GameState {
                 .map(|t| (cid, *t))
                 .chain(equip_granted.iter().map(|(src, t)| (*src, t)));
             for (src, t) in granted {
-                if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
+                if t.event.kind == EventKind::SpellCast
+                    && (!copy_only || t.event.or_copy)
+                    && scope_matches(t.event.scope, c_controller)
+                {
                     candidates.push((
                         src,
                         c_controller,
@@ -15441,7 +15450,10 @@ impl GameState {
                     if !all_active && !t.event.zone.in_command_zone() {
                         continue;
                     }
-                    if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, seat) {
+                    if t.event.kind == EventKind::SpellCast
+                        && (!copy_only || t.event.or_copy)
+                        && scope_matches(t.event.scope, seat)
+                    {
                         candidates.push((
                             c.id,
                             seat,
@@ -15466,7 +15478,7 @@ impl GameState {
         if gy.has_graveyard_trigger() {
             for c in gy.iter() {
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == EventKind::SpellCast && t.event.scope.from_graveyard() {
+                    if t.event.kind == EventKind::SpellCast && !copy_only && t.event.scope.from_graveyard() {
                         candidates.push((c.id, controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
                     }
                 }

@@ -884,6 +884,15 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// Mark a cast trigger "whenever you cast **or copy** …" (`EventSpec::or_copy`):
+/// the printed Magecraft wording. `magecraft` itself stays cast-only — it is
+/// also the builder behind plain "whenever you cast an instant or sorcery
+/// spell" cards (Young Pyromancer, Talrand), which a copy must not trigger.
+pub fn with_copies(mut t: TriggeredAbility) -> TriggeredAbility {
+    t.event = t.event.or_copy();
+    t
+}
+
 /// Flurry (Tarkir: Dragonstorm): "Whenever you cast your second spell each
 /// turn, `effect`." Reuses the `SpellsCastThisTurnEquals` predicate
 /// (already incremented for the current cast at trigger time).

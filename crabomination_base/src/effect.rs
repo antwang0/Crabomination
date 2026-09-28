@@ -3919,6 +3919,13 @@ pub struct EventSpec {
     /// zone its card's abilities ordinarily work from. Eminence.
     #[serde(default)]
     pub zone: TriggerZone,
+    /// "Whenever you cast **or copy** …" (Magecraft): a `SpellCast` trigger
+    /// that also fires when its controller copies a matching spell — a copy
+    /// is not cast (CR 707.10), so the cast walk alone never sees it. The
+    /// dispatcher runs the cast walk once per copy for these
+    /// (`fire_spell_cast_triggers`' copy-only mode).
+    #[serde(default)]
+    pub or_copy: bool,
 }
 
 /// CR 113.6b — "an ability that states which zones it functions in functions
@@ -3978,7 +3985,13 @@ impl EventSpec {
             exclude_tap_cost_abilities: false,
             dealer_filter: None,
             causer_filter: None,
+            or_copy: false,
         }
+    }
+    /// "Whenever you cast or copy …" (Magecraft) — see `or_copy`.
+    pub fn or_copy(mut self) -> Self {
+        self.or_copy = true;
+        self
     }
     /// "…becomes tapped, if it isn't being declared as an attacker" (Verity Circle).
     pub fn not_as_attacker(mut self) -> Self {
