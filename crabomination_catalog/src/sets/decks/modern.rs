@@ -66384,16 +66384,13 @@ pub fn feed_the_swarm() -> CardDefinition {
 pub fn deadly_rollick() -> CardDefinition {
     CardDefinition {
         name: "Deadly Rollick",
-        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // CR 118.9 / 903.3 — "If you control a commander, you may cast this
         // spell without paying its mana cost": an alternative cost of nothing,
-        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
-        // caster's *own* designation list, so a stolen commander does not
-        // switch it on (CR 903.3 — the designation follows the card, control
-        // does not), and it is false for every seat in a non-Commander game.
+        // gated at cast time. Any player's commander counts (ruling: "It
+        // doesn't matter whose commander you control"); false for every seat
+        // in a non-Commander game.
         alternative_cost: Some(crate::card::AlternativeCost {
-            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
-                who: crate::effect::PlayerRef::You,
-            }),
+            condition: Some(crate::effect::Predicate::YouControlACommander),
             ..Default::default()
         }),
         cost: cost(&[generic(3), b()]),

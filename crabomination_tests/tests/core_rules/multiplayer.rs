@@ -3939,7 +3939,7 @@ fn command_beacon_moves_the_commander_from_the_command_zone_to_hand() {
 /// it — three of the four doc comments even said so — so the defining line of
 /// the cycle did nothing.
 ///
-/// It is an alternative cost of nothing gated on `ControlsOwnCommander`, and
+/// It is an alternative cost of nothing gated on `YouControlACommander`, and
 /// the gate is the whole point: with no commander on the battlefield the free
 /// cast must be refused, which is also why adding it cannot move a duel.
 #[test]
@@ -4001,6 +4001,37 @@ fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     }
     assert!(g.battlefield_find(victim).is_none(), "the Bears are exiled");
     assert_eq!(g.players[0].mana_pool.total(), 0, "and nothing was paid");
+}
+
+/// CR 903.3 — the cycle's "a commander" is ANY player's commander (ruling on
+/// all five: "It doesn't matter whose commander you control. Any one will
+/// do."). They were gated on the caster's own designation list, so a stolen
+/// commander didn't enable the free cast.
+#[test]
+fn cr_903_3_a_stolen_commander_enables_the_free_spell_cycle() {
+    use crabomination::game::types::Target;
+    let mut g = game_with_format(Format::Commander, 4);
+    let theirs = g.add_card_to_battlefield(1, catalog::sigarda_host_of_herons());
+    g.players[1].commanders = vec![theirs];
+    g.battlefield_find_mut(theirs).unwrap().controller = 0;
+    let victim = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let rollick = g.add_card_to_hand(0, catalog::deadly_rollick());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rollick,
+        pitch_card: None,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free: seat 0 controls a commander, seat 1's");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert!(g.battlefield_find(victim).is_none());
 }
 
 /// Obscuring Haze, the cycle's green member and the last to ship: free with a
