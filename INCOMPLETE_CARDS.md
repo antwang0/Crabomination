@@ -197,13 +197,12 @@ graveyard), Pull from the Grave / Rabid Attack ✅ (were stale rows). Remaining:
 Yosei (taps all of that player's permanents instead of "up to five target" —
 needs a player-slot-dependent permanent multi-slot).
 
-### 2. No "choose two of four" modal selection (player can't pick modes)
-**Sublime Epiphany** now has all five modes real (CounterAbility +
-CreateTokenCopyOf). The five STX guild Commands still resolve two fixed default
-modes: real fix needs **cast-time** mode choice (CR 601.2b) — the engine resolves
-`ChooseN` at resolution, so per-mode targets for arbitrary picks can't be supplied
-at cast. Tracked: Silverquill / Lorehold / Witherbloom / Quandrix / Prismari
-Commands · Moment of Reckoning · Vanquish the Horde.
+### 2. "Choose two of four" modal selection — ✅ closed 2026-09-28
+Spells choose their modes as they are cast (`ChooseModesCast`, CR 700.2a): 23
+former resolution-time `ChooseN` spells moved (Kolaghan's / Kozilek's / Austere
+/ Cryptic / Lorehold Command, Sublime Epiphany, …), the Will cycle and the
+Inscriptions via `CardDefinition::modes_widen`. `ChooseN` is left on modal
+*triggers* and on Steal the Show (the SOS pool's two-seat bot is single-mode).
 
 ### 3. MDFC back faces — **mechanism is fully wired** (`back_face` + `GameAction::CastSpellBack`/`PlayLandBack`; 71 cards use it)
 The "engine-wide ⏳" notes on these were stale. Status:
