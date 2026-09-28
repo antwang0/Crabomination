@@ -152,6 +152,7 @@ mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;
+mod cast_cost;
 mod own_creature_target;
 // CR 601.2c — a required target nothing could fill makes the cast illegal.
 mod required_target;

@@ -8023,6 +8023,7 @@ impl GameState {
         } else {
             foretell_cost
         };
+        self.add_spell_taxes(p, &self.exile[pos], target.as_ref(), &mut cost);
         let reduction =
             cost_reduction_for_spell_full(self, p, &self.exile[pos], target.as_ref(), false, true);
         if reduction > 0 {
@@ -8263,6 +8264,7 @@ impl GameState {
         } else {
             base
         };
+        self.add_spell_taxes(p, &self.exile[pos], target.as_ref(), &mut cost);
         let reduction =
             cost_reduction_for_spell_full(self, p, &self.exile[pos], target.as_ref(), false, true);
         if reduction > 0 {
@@ -12040,6 +12042,7 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
         let mut cost = disturb_cost;
+        self.add_spell_taxes(p, &card, None, &mut cost);
         let reduction = cost_reduction_for_spell_zoned(self, p, &card, None, true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
@@ -12251,6 +12254,7 @@ impl GameState {
         // Flashback IS a cast (CR 702.34a), so Killian-style target-aware
         // cost reductions apply the same as for hand casts. Drain
         // generic-only pips after substituting X.
+        self.add_spell_taxes(p, &card, target.as_ref(), &mut cost);
         let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
@@ -12416,6 +12420,7 @@ impl GameState {
         } else {
             harmonize_cost
         };
+        self.add_spell_taxes(p, &card, target.as_ref(), &mut cost);
         let reduction =
             tap_power + cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
@@ -12549,6 +12554,7 @@ impl GameState {
         } else {
             card.definition.cost.clone()
         };
+        self.add_spell_taxes(p, &card, target.as_ref(), &mut cost);
         let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
@@ -12657,6 +12663,7 @@ impl GameState {
         } else {
             escape_cost
         };
+        self.add_spell_taxes(p, &card, target.as_ref(), &mut cost);
         let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
@@ -13052,11 +13059,7 @@ impl GameState {
         // apply, as on `CastWithoutPayingImmediate`'s paid arm. Urianger's
         // linked-exile discount and a Thalia on the table both went unread.
         if let Some(cost) = alt_cast_cost.as_mut().filter(|c| !c.symbols.is_empty()) {
-            let tax = extra_cost_for_spell(self, p, card_ref, target.as_ref());
-            if tax > 0 {
-                cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
-            }
-            cost.symbols.extend(colored_spell_tax_for_spell(self, p, card_ref).symbols);
+            self.add_spell_taxes(p, card_ref, target.as_ref(), cost);
             let less = cost_reduction_for_spell_full(
                 self,
                 p,

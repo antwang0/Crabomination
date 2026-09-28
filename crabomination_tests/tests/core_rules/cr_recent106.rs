@@ -1210,3 +1210,32 @@ fn cr_601_2c_planeswalkers_favor_pumps_a_creature_not_the_opponent() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2 + 5, "Serra Angel is mana value 5");
 }
+
+/// CR 601.2f — a graveyard cast is a cast: flashback, escape, retrace,
+/// harmonize, disturb, foretell and an adventurer's creature half from exile
+/// pay cost increases. Every one of those paths applied the reductions and
+/// skipped the taxes, so Thalia never charged a flashed-back Think Twice.
+#[test]
+fn cr_601_2f_flashback_pays_thalias_tax() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let tt = g.add_card_to_graveyard(0, catalog::think_twice());
+    let fb = |g: &mut GameState| {
+        g.perform_action(GameAction::CastFlashback {
+            card_id: tt, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(fb(&mut g).is_err(), "flashback {{2}}{{U}} alone no longer pays under Thalia");
+    g.players[0].mana_pool.add_colorless(1);
+    fb(&mut g).expect("{3}{U} pays the taxed flashback");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
