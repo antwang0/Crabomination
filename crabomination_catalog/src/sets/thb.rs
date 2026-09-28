@@ -4913,10 +4913,11 @@ pub fn alirios_enraptured() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Alirios enters tapped.",
+            effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
         triggered_abilities: vec![
-            etb(Effect::Tap {
-                what: Selector::This,
-            }),
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

@@ -21682,8 +21682,8 @@ pub fn bonecrusher_giant() -> CardDefinition {
     }
 }
 
-/// Brazen Borrower — {1}{U}{U} Creature — Faerie Rogue 3/1, Flash, Flying.
-/// Adventure: Petty Theft {1}{U} Instant — return target nonland permanent
+/// Brazen Borrower — {1}{U}{U} Creature — Faerie Rogue 3/1, Flash, Flying; it
+/// can block only creatures with flying. Adventure: Petty Theft {1}{U} Instant — return target nonland permanent
 /// you don't control to its owner's hand.
 pub fn brazen_borrower() -> CardDefinition {
     CardDefinition {
@@ -21696,7 +21696,7 @@ pub fn brazen_borrower() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Flash, Keyword::Flying],
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::CanBlockOnlyFlying],
         adventure: Some(Box::new(Adventure {
             name: "Petty Theft",
             cost: cost(&[generic(1), u()]),

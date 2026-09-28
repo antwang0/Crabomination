@@ -1705,7 +1705,8 @@ pub fn elvish_warrior() -> CardDefinition {
     }
 }
 
-/// Welkin Tern — {1}{U}, 2/1 Flying. "Welkin Tern can't block." (ISD)
+/// Welkin Tern — {1}{U}, 2/1 Flying. "This creature can block only creatures
+/// with flying." (M11)
 pub fn welkin_tern() -> CardDefinition {
     CardDefinition {
         name: "Welkin Tern",
@@ -1717,7 +1718,7 @@ pub fn welkin_tern() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         ..Default::default()
     }
 }

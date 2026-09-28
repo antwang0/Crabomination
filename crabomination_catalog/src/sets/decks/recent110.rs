@@ -857,12 +857,7 @@ pub fn boseiju_who_shelters_all() -> CardDefinition {
             },
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
+        static_abilities: vec![crate::sets::enters_tapped()],
         ..Default::default()
     }
 }

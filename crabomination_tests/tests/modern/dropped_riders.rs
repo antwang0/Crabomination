@@ -2546,3 +2546,39 @@ fn zurgo_and_o_naginata_power_thresholds() {
     assert!(g.perform_action(GameAction::Equip { equipment: nag, target: elf }).is_err(), "power 1");
     g.perform_action(GameAction::Equip { equipment: nag, target: bear }).expect("power 4");
 }
+
+/// Self-restriction scan: Brazen Borrower "can block only creatures with
+/// flying" (dropped), Welkin Tern the same (shipped as "can't block"); and
+/// Boseiju, Who Shelters All enters tapped as a replacement (CR 614.1c), not
+/// by an ETB trigger that left a window to tap it first.
+#[test]
+fn block_only_flyers_and_boseiju_enters_tapped() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    for id in [bear, angel] {
+        g.clear_sickness(id);
+    }
+    let bb = g.add_card_to_battlefield(1, catalog::brazen_borrower());
+    let tern = g.add_card_to_battlefield(1, catalog::welkin_tern());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: angel, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bb, bear)])).is_err(), "a ground creature");
+    g.perform_action(GameAction::DeclareBlockers(vec![(bb, angel), (tern, angel)])).expect("both block the flyer");
+
+    let mut g = main_phase();
+    let bos = g.add_card_to_hand(0, catalog::boseiju_who_shelters_all());
+    g.perform_action(GameAction::PlayLand(bos)).expect("land drop");
+    assert!(g.battlefield_find(bos).unwrap().tapped, "tapped as it entered");
+    assert!(g.stack.is_empty(), "no enters-tapped trigger");
+}
