@@ -7185,3 +7185,27 @@ fn cr_601_2c_blatant_thievery_takes_one_per_opponent() {
     assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
     assert_eq!(g.battlefield_find(a2).unwrap().controller, 1);
 }
+
+/// CR 601.2c — Demonic Junker destroys up to one target creature FOR EACH
+/// PLAYER (not one of yours and one opponent's), and grows only when one of
+/// the creatures destroyed was yours.
+#[test]
+fn cr_601_2c_demonic_junker_destroys_one_per_player() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let junker = g.add_card_to_battlefield(0, catalog::demonic_junker());
+    let effect = catalog::demonic_junker().triggered_abilities[0].effect.clone();
+    let run = |g: &mut GameState, targets: Vec<Target>| {
+        let ctx = EffectContext { targets, ..EffectContext::for_trigger(junker, 0, None, 0) };
+        g.resolve_effect(&effect, &ctx).expect("resolve");
+    };
+    let (b1, b2) = (g.add_card_to_battlefield(1, catalog::grizzly_bears()), g.add_card_to_battlefield(2, catalog::grizzly_bears()));
+    run(&mut g, vec![Target::Permanent(b1), Target::Permanent(b2)]);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(), "one per opponent");
+    assert_eq!(g.battlefield_find(junker).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    run(&mut g, vec![Target::Permanent(mine)]);
+    assert!(g.battlefield_find(mine).is_none());
+    assert_eq!(g.battlefield_find(junker).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "yours died");
+}

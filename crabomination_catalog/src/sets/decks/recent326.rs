@@ -312,30 +312,33 @@ pub fn redshift_rocketeer_chief() -> CardDefinition {
 /// Demonic Junker — {6}{B} 4/3 Vehicle with affinity for artifacts; its ETB
 /// sweeps one creature per player and grows on your own casualty.
 pub fn demonic_junker() -> CardDefinition {
-    let mine = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
-    let theirs =
-        Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) };
     CardDefinition {
         affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
         keywords: vec![Keyword::Crew(2)],
-        triggered_abilities: vec![etb(Effect::OptionalTargets {
-            min: 0,
-            body: Box::new(Effect::Seq(vec![
-                Effect::Destroy { what: theirs },
-                Effect::If {
-                    cond: Predicate::SelectorExists(mine.clone()),
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::Destroy { what: mine },
-                        Effect::AddCounter {
-                            what: Selector::This,
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::Const(2),
-                        },
-                    ])),
-                    else_: Box::new(Effect::Noop),
-                },
-            ])),
-        })],
+        // "For each player, destroy up to one target creature that player
+        // controls. If a creature you controlled was destroyed this way, …"
+        // (CR 601.2c — one target per player).
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 15,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                }),
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::DestroyedThisResolution {
+                    filter: R::Creature.and(R::ControlledByYou),
+                }),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..vehicle("Demonic Junker", cost(&[generic(6), b()]), 4, 3)
     }
 }
@@ -374,17 +377,21 @@ pub fn riptide_gearhulk() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::DoubleStrike, Keyword::Prowess],
-        triggered_abilities: vec![etb(Effect::OptionalTargets {
-            min: 0,
-            body: Box::new(Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Not(Box::new(R::Land)).and(R::ControlledByOpponent),
-                },
-                to: ZoneDest::Library {
-                    who: PlayerRef::OwnerOfMoved,
-                    pos: LibraryPosition::FromTop(2),
-                },
+        // "For each opponent, put up to one target nonland permanent that
+        // player controls into its owner's library third from the top"
+        // (CR 601.2c — one target per opponent).
+        triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 15,
+                min_targets: 0,
+                filter: R::Not(Box::new(R::Land)).and(R::ControlledByOpponent),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: LibraryPosition::FromTop(2),
+                    },
+                }),
             }),
         })],
         ..creature(
