@@ -6792,3 +6792,66 @@ fn cr_800_4a_apnap_fan_outs_skip_a_departed_seat() {
     resolve_answering(&mut g);
     assert_eq!(g.players[2].life, 0, "the departed seat gained nothing");
 }
+
+/// CR 119.4 — paying 0 life is always legal: a seat at negative life kept
+/// in the game by Herald of Eternal Dawn (CR 104.3a) still casts a spell
+/// with no life cost. Every hand cast used to fail `InsufficientLife`.
+#[test]
+fn cr_119_4_a_seat_below_zero_life_still_casts() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::herald_of_eternal_dawn());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.players[0].life = -70;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let stp = g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.perform_action(GameAction::CastSpell {
+        card_id: stp,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a spell with no life cost is castable at negative life");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// CR 104.3a / 704.5a — a seat at 0 or less life that "can't lose the game"
+/// loses the moment that effect ends; a bot holding removal, itself below 0
+/// life behind its own Herald, takes the opponent's Herald out (a 3-seat pod
+/// sat 663 turns with Swords to Plowshares in hand — the CR 119.4 bug above).
+#[test]
+fn bot_removes_the_permanent_keeping_a_dead_seat_alive() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.add_card_to_battlefield(0, catalog::herald_of_eternal_dawn());
+    g.players[0].life = -70;
+    let herald = g.add_card_to_battlefield(1, catalog::herald_of_eternal_dawn());
+    g.add_card_to_battlefield(1, catalog::chaos_dragon());
+    g.players[1].life = -50;
+    g.players[2].eliminated = true;
+    let mut bot = HeuristicBot::new();
+    for _ in 0..10 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if pass || g.is_game_over() {
+            break;
+        }
+    }
+    assert!(g.battlefield_find(herald).is_none());
+    assert_eq!(g.game_over, Some(Some(0)));
+}

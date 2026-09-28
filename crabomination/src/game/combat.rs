@@ -1822,7 +1822,7 @@ impl GameState {
         // much life.
         let life_tax = self.attack_life_tax_for(&attacks);
         if life_tax > 0 {
-            if self.players[p].life < life_tax as i32 {
+            if !super::cast_cost::life_payable(self.players[p].life, life_tax) {
                 return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
             }
             self.pay_life_cost(p, life_tax);

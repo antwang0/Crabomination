@@ -59,3 +59,10 @@ impl GameState {
         super::actions::apply_colored_cost_statics(self, p, probe, cost);
     }
 }
+
+/// CR 119.4 — a life payment greater than 0 needs at least that much life;
+/// paying 0 life is always legal, even at 0 or less life (a seat kept in
+/// the game by Platinum Angel still casts its spells).
+pub(crate) fn life_payable(life: i32, amount: u32) -> bool {
+    amount == 0 || life >= amount as i32
+}

@@ -20186,7 +20186,7 @@ impl GameState {
                     .or_else(|| self.granted_cycling_for(seat, c).map(|mc| (Some(mc), 0)))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
-        if life_cost > 0 && self.players[seat].life < life_cost as i32 {
+        if !cast_cost::life_payable(self.players[seat].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // Pay the cycling cost from the floated mana pool; an {X} in the
@@ -21743,7 +21743,7 @@ impl GameState {
         }
         // "Equip—Pay 3 life" (Nightmare Lash): same up-front gate as energy.
         let life_cost = self.battlefield[equip_pos].definition.equip_life_cost;
-        if life_cost > 0 && self.players[p].life <= life_cost as i32 {
+        if !cast_cost::life_payable(self.players[p].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // "Equip—Sacrifice an artifact" (Piston Sledge). Resolve the victim

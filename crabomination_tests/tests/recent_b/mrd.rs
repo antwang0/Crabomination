@@ -1271,6 +1271,18 @@ fn nightmare_lash_equips_for_life() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+1/+1 per Swamp");
 }
 
+/// CR 119.4 — paying life down to exactly 0 is legal: at 3 life the Lash's
+/// "Pay 3 life" equip goes through (it used to need 4).
+#[test]
+fn cr_119_4_nightmare_lash_pays_its_last_three_life() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lash = g.add_card_to_battlefield(0, catalog::nightmare_lash());
+    g.players[0].life = 3;
+    g.perform_action(GameAction::Equip { equipment: lash, target: bear }).expect("equip for the last 3 life");
+    assert_eq!(g.players[0].life, 0);
+}
+
 /// Worldslayer wipes everything but itself on connect.
 #[test]
 fn worldslayer_wipes_the_board() {

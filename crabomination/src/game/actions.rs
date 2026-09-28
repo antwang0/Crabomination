@@ -6085,7 +6085,7 @@ impl GameState {
             })
             && let Some(life) = self.library_top_pay_life_cost(p, card_id)
         {
-            if self.players[p].life < life as i32 {
+            if !super::cast_cost::life_payable(self.players[p].life, life) {
                 return Err(GameError::InsufficientLife);
             }
             let card = self.players[p].library.remove(0);
@@ -10224,7 +10224,7 @@ impl GameState {
         // Terror of the Peaks' targeting tax is paid with it.
         let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life { x_value.unwrap_or(0) } else { 0 };
         let pay_x_life = pay_x_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
-        if self.effective_life(p) < pay_x_life as i32 {
+        if !super::cast_cost::life_payable(self.effective_life(p), pay_x_life) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::InsufficientLife);
@@ -13223,7 +13223,7 @@ impl GameState {
             && alt_cast_cost.as_ref().is_some_and(|c| c.cmc() > 0)
             && self.exile.iter().find(|c| c.id == card_id).is_some_and(|c| self.free_exile_cast_waiver(p, c));
         if let Some(life) = valgavoth_toll {
-            if self.players[p].life < life as i32 {
+            if !super::cast_cost::life_payable(self.players[p].life, life) {
                 return Err(GameError::InsufficientLife);
             }
             self.pay_life_cost(p, life);
@@ -13371,7 +13371,7 @@ impl GameState {
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
         // CR 119.4 — life is payable only up to the life total.
-        if tax_life > 0 && self.players[p].life < tax_life as i32 {
+        if !super::cast_cost::life_payable(self.players[p].life, tax_life) {
             self.players[p].command.push(card);
             self.offboard_keyword_grants = true;
             return Err(GameError::InsufficientLife);
@@ -13539,7 +13539,7 @@ impl GameState {
         // life total is greater than or equal to the payment. Pre-flight
         // gate so we reject cleanly rather than driving life negative
         // mid-cast.
-        if alt.life_cost > 0 && self.players[p].life < alt.life_cost as i32 {
+        if !super::cast_cost::life_payable(self.players[p].life, alt.life_cost) {
             return Err(GameError::InsufficientLife);
         }
         if alt.energy_cost > 0 && self.players[p].energy < alt.energy_cost {
@@ -13866,7 +13866,7 @@ impl GameState {
         };
         let tax_life = tax_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
         // CR 119.4 — the alt cost's life and a life-paid tax come out of one total.
-        if tax_life > 0 && self.players[p].life < (tax_life + alt.life_cost) as i32 {
+        if !super::cast_cost::life_payable(self.players[p].life, tax_life + alt.life_cost) {
             self.return_from_alt_cast(p, zone, card);
             return Err(GameError::InsufficientLife);
         }
@@ -15882,7 +15882,7 @@ impl GameState {
         let first = self.try_pay_after_snapshot_mode_any_life(
             payer, cost, snapshot, forced_only, kind, spend_float,
         )?;
-        if self.effective_life(payer) >= first.side_effects.life_lost as i32 {
+        if super::cast_cost::life_payable(self.effective_life(payer), first.side_effects.life_lost) {
             return Ok(first);
         }
         self.restore_payment_state(payer, pre.clone());
@@ -15909,7 +15909,7 @@ impl GameState {
             match self.try_pay_after_snapshot_mode_any_life(
                 payer, &attempt, pre.clone(), forced_only, kind, spend_float,
             ) {
-                Ok(r) if self.effective_life(payer) >= r.side_effects.life_lost as i32 => {
+                Ok(r) if super::cast_cost::life_payable(self.effective_life(payer), r.side_effects.life_lost) => {
                     return Ok(r);
                 }
                 Ok(_) => self.restore_payment_state(payer, pre.clone()),
@@ -19866,13 +19866,13 @@ impl GameState {
                 ability.life_cost.saturating_add(self.evaluate_value(v, &ctx).max(0) as u32)
             }
         };
-        if life_cost > 0 && self.players[p].life < life_cost as i32 {
+        if !super::cast_cost::life_payable(self.players[p].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // Pre-flight variable life-cost gate ("Pay X life", CR 107.16): the
         // spend equals the activation's chosen `x_value`. Reject cleanly when
         // short so tap/mana aren't burned (Krumar Initiate).
-        if ability.x_life_cost && self.players[p].life < x_value.unwrap_or(0) as i32 {
+        if ability.x_life_cost && !super::cast_cost::life_payable(self.players[p].life, x_value.unwrap_or(0)) {
             return Err(GameError::InsufficientLife);
         }
         // "Pay half your life, rounded up" (CR 118.4 — Lurking Evil).
