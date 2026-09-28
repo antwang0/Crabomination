@@ -888,25 +888,28 @@ mod recent277 {
     /// caster descended this turn.
     #[test]
     fn molten_collapse_descend_widens_to_both() {
-        use crabomination::effect::Effect;
-        let def = catalog::molten_collapse();
-        let Effect::If { cond, then, else_ } = &def.effect else { panic!("expected a descend-gated modal") };
-        assert!(
-            matches!(cond, crabomination::card::Predicate::DescendedThisTurn { .. }),
-            "gated on descend",
-        );
-        assert!(matches!(**else_, Effect::ChooseModesCast { min: 1, max: 1, .. }), "one mode by default");
-        let Effect::ChooseModesCast { modes, min: 1, max: 2, .. } = &**then else {
-            panic!("both modes available once descended")
-        };
-        assert_eq!(modes.len(), 2, "the two printed destroy modes");
-
-        // The default (non-descended) branch destroys a targeted creature.
+        // CR 700.2a — "if you descended this turn, you may choose both" is
+        // read as it is cast; the modal sat under a resolution-time `If`, so
+        // a two-mode cast was never accepted.
+        use crabomination::game::{drain_stack, GameAction};
         let mut g = two_player_game();
         let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        let ctx = EffectContext { targets: vec![Target::Permanent(creature)], ..EffectContext::for_spell(0, None, 0, 0) };
-        g.resolve_effect(&modes[0].clone(), &ctx).unwrap();
-        assert!(!g.battlefield.iter().any(|c| c.id == creature), "creature destroyed by mode 0");
+        let relic = g.add_card_to_battlefield(1, catalog::sol_ring());
+        let id = g.add_card_to_hand(0, catalog::molten_collapse());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        let both = || GameAction::CastSpellSpree {
+            card_id: id,
+            spree_modes: vec![0, 1],
+            target: Some(Target::Permanent(creature)),
+            additional_targets: vec![Target::Permanent(relic)],
+            x_value: None,
+        };
+        assert!(g.perform_action(both()).is_err(), "no descend: one mode");
+        g.players[0].descended_this_turn = true;
+        g.perform_action(both()).expect("descended: both");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(creature).is_none() && g.battlefield_find(relic).is_none());
     }
 }
 

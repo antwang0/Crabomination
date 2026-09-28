@@ -84,23 +84,12 @@ pub fn molten_collapse() -> CardDefinition {
         name: "Molten Collapse",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::If {
-            cond: Predicate::DescendedThisTurn {
-                who: PlayerRef::You,
-            },
-            then: Box::new(Effect::ChooseModesCast {
-                modes: modes.clone(),
-                min: 1,
-                max: 2,
-                allow_repeats: false,
-            }),
-            else_: Box::new(Effect::ChooseModesCast {
-                modes,
-                min: 1,
-                max: 1,
-                allow_repeats: false,
-            }),
-        },
+        // "If you descended this turn, you may choose both" is read as it is
+        // cast (CR 700.2a); a resolution-time `If` hid the modal from the cast.
+        modes_widen: Some(crate::card::ModesWiden::If(Predicate::DescendedThisTurn {
+            who: PlayerRef::You,
+        })),
+        effect: Effect::ChooseModesCast { modes, min: 1, max: 1, allow_repeats: false },
         ..Default::default()
     }
 }
