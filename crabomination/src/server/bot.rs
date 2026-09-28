@@ -7838,15 +7838,24 @@ pub(super) fn cast_candidates<'a>(
             }
             _ => continue,
         };
-        // Each target-bearing mode consumes exactly one target slot at
-        // resolution, in printed order.
+        // Each target-bearing mode consumes its target slots at resolution, in
+        // printed order: one for a Spree / Tiered mode, as many as it declares
+        // for a `ChooseModesCast` one (a fight mode's two creatures).
+        let multi = matches!(&c.definition.effect, Effect::ChooseModesCast { .. } | Effect::ChooseModesByPoints { .. });
         let pick = |picks: Vec<u8>| -> Option<GameAction> {
             let mut slots: Vec<crate::game::types::Target> = Vec::new();
             for &i in &picks {
                 let eff = modes[i as usize];
                 if eff.requires_target() {
-                    let (t, _) = state.auto_targets_for_effect_all_slots(eff, seat, None);
+                    let (t, extra) = state.auto_targets_for_effect_all_slots(eff, seat, None);
                     slots.push(t?);
+                    if multi {
+                        let k = crate::game::effects::mode_slot_count(eff);
+                        if extra.len() + 1 < k {
+                            return None;
+                        }
+                        slots.extend(extra.into_iter().take(k - 1));
+                    }
                 }
             }
             let mut slots = slots.into_iter();

@@ -154,11 +154,38 @@ pub(crate) fn modal_continuation<'a>(
 ) -> Effect {
     Effect::seq(
         rest.map(|(m, slot)| match slot {
-            Some(s) => Effect::BindTargetSlot { slot: s as u8, body: Box::new(m.clone()) },
+            Some(s) => Effect::BindTargetSlot { slot: s as u8, count: 1, body: Box::new(m.clone()) },
             None => m.clone(),
         })
         .collect(),
     )
+}
+
+/// `modal_continuation_in_order` for `ChooseModesCast`, where a mode owns as
+/// many consecutive slots as it declares ([`Effect::target_slot_count`]).
+pub(crate) fn modal_continuation_by_mode_slots<'a>(
+    rest: impl Iterator<Item = &'a Effect>,
+    first_slot: usize,
+) -> Effect {
+    let mut slot = first_slot;
+    Effect::seq(
+        rest.map(|m| {
+            if !m.requires_target() {
+                return m.clone();
+            }
+            let k = mode_slot_count(m);
+            let s = slot;
+            slot += k;
+            Effect::BindTargetSlot { slot: s as u8, count: k as u8, body: Box::new(m.clone()) }
+        })
+        .collect(),
+    )
+}
+
+/// How many target slots a target-bearing mode of a `ChooseModesCast` spell
+/// owns: the consecutive slots it declares from its slot 0, at least one.
+pub(crate) fn mode_slot_count(m: &Effect) -> usize {
+    m.target_slot_count().max(1)
 }
 
 /// `modal_continuation` for the arms that hand slots out in run order.
@@ -7105,21 +7132,26 @@ impl GameState {
                 } else {
                     ctx.spree_modes.clone()
                 };
+                // A mode owns as many consecutive slots as it declares — "target
+                // creature you control fights target creature you don't
+                // control" is two (CR 601.2c).
                 let mut next_slot = 0usize;
                 for (k, &i) in chosen.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
                     if m.requires_target() {
+                        let n = mode_slot_count(m);
+                        let from = next_slot.min(ctx.targets.len());
+                        let to = (next_slot + n).min(ctx.targets.len());
                         let mut sub_ctx = ctx.clone();
-                        sub_ctx.targets =
-                            ctx.targets.get(next_slot).cloned().into_iter().collect();
-                        next_slot += 1;
+                        sub_ctx.targets = ctx.targets[from..to].to_vec();
+                        next_slot += n;
                         self.run_effect(m, &sub_ctx, events)?;
                     } else {
                         self.run_effect(m, ctx, events)?;
                     }
                     // CR 700.2 — the modes after a suspending one were dropped.
                     if splice_after_suspend(&mut self.suspend_signal, || {
-                        modal_continuation_in_order(
+                        modal_continuation_by_mode_slots(
                             chosen[k + 1..].iter().filter_map(|&j| modes.get(j as usize)),
                             next_slot,
                         )
@@ -8298,16 +8330,16 @@ impl GameState {
                 self.run_effect(body, &sub, events)
             }
 
-            Effect::BindTargetSlot { slot, body } => {
-                // Runtime continuation only: the mode's own target slot moved
-                // to slot 0, which is what the modal arms do inline.
-                let sub = EffectContext {
-                    targets: ctx.targets.get(*slot as usize).cloned().into_iter().collect(),
-                    ..ctx.clone()
-                };
+            Effect::BindTargetSlot { slot, count, body } => {
+                // Runtime continuation only: the mode's own target slots moved
+                // to slot 0 on, which is what the modal arms do inline.
+                let from = (*slot as usize).min(ctx.targets.len());
+                let to = (from + (*count).max(1) as usize).min(ctx.targets.len());
+                let sub = EffectContext { targets: ctx.targets[from..to].to_vec(), ..ctx.clone() };
                 self.run_effect(body, &sub, events)?;
                 rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
                     slot: *slot,
+                    count: *count,
                     body: Box::new(carried),
                 });
                 Ok(())
@@ -8405,6 +8437,7 @@ impl GameState {
                     // target list: pin it to its own slot too, or it reads slot 0.
                     rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
                         slot: slot as u8,
+                        count: 1,
                         body: Box::new(carried),
                     });
                     // CR 608.2 — the targets after a suspending one were

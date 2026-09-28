@@ -8511,14 +8511,22 @@ pub enum Effect {
     /// "a permanent card with equal or lesser mana value" than the entrant:
     /// `WithX { x: ManaValueOf(TriggerSource), body }`.
     WithX { x: Value, body: Box<Effect> },
-    /// Run `body` with the spell's target slot `slot` moved to slot 0.
+    /// Run `body` with the spell's target slots `slot..slot + count` moved to
+    /// slots `0..count`.
     ///
     /// **Runtime-only** — built by the modal arms' suspend splice, never by a
-    /// card. A modal run gives each target-bearing mode its own slot through
+    /// card. A modal run gives each target-bearing mode its own slots through
     /// `EffectContext.targets`, and a parked continuation is resumed with the
-    /// spell's *whole* target list, so the slot has to be named in the effect
-    /// or every remaining mode reads slot 0.
-    BindTargetSlot { slot: u8, body: Box<Effect> },
+    /// spell's *whole* target list, so the slots have to be named in the
+    /// effect or every remaining mode reads slot 0.
+    BindTargetSlot {
+        slot: u8,
+        /// A mode with two targets ("target creature you control fights
+        /// target creature you don't control") binds two.
+        #[serde(default = "one_u8")]
+        count: u8,
+        body: Box<Effect>,
+    },
     /// Run `body` with `ctx.targets` set to exactly these objects.
     ///
     /// **Runtime-only**, and the sibling of `BindTargetSlot`: that one pins a
@@ -12299,6 +12307,11 @@ pub enum LookExileGrant {
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).
 pub fn player_ref_target_zero() -> PlayerRef {
     PlayerRef::Target(0)
+}
+
+/// Serde default for `BindTargetSlot.count`.
+pub fn one_u8() -> u8 {
+    1
 }
 
 /// Serde default for `ResetCreature` P/T (vanilla 1/1).

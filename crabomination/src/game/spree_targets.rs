@@ -27,10 +27,15 @@ pub(crate) fn chosen_mode_slot_filter<'a>(
     if chosen.is_empty() {
         return None;
     }
-    let mode = chosen
-        .iter()
-        .filter_map(|&i| modes.get(i as usize))
-        .filter(|m| m.requires_target())
-        .nth(slot as usize);
-    Some(mode.and_then(|m| m.target_filter_for_slot_in_mode_kicked(0, None, kicked)))
+    // A mode owns as many consecutive slots as it declares (a fight mode's
+    // two creatures); find the one covering `slot` and its own slot index.
+    let mut first = 0usize;
+    for m in chosen.iter().filter_map(|&i| modes.get(i as usize)).filter(|m| m.requires_target()) {
+        let k = crate::game::effects::mode_slot_count(m);
+        if (slot as usize) < first + k {
+            return Some(m.target_filter_for_slot_in_mode_kicked((slot as usize - first) as u8, None, kicked));
+        }
+        first += k;
+    }
+    Some(None)
 }

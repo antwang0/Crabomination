@@ -7542,6 +7542,12 @@ impl GameState {
         // it. A short list left a later mode aimed at nothing (Maestros
         // Confluence's goad resolved for nobody).
         let need = self.players[p].hand.iter().find(|c| c.id == card_id).map_or(0, |c| {
+            // A Spree / Tiered mode owns one slot; a `ChooseModesCast` mode as
+            // many as it declares (a fight mode's two creatures).
+            let multi = matches!(
+                &c.definition.effect,
+                crate::effect::Effect::ChooseModesCast { .. } | crate::effect::Effect::ChooseModesByPoints { .. }
+            );
             let mode_effect = |i: u8| -> Option<&crate::effect::Effect> {
                 match &c.definition.effect {
                     crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes } => {
@@ -7557,9 +7563,12 @@ impl GameState {
             for &i in &chosen {
                 let Some(e) = mode_effect(i) else { continue };
                 if e.requires_target() {
-                    slot += 1;
-                    if !e.target_slot_optional(0, None) {
-                        need = slot;
+                    let k = if multi { crate::game::effects::mode_slot_count(e) } else { 1 };
+                    for j in 0..k {
+                        slot += 1;
+                        if !e.target_slot_optional(j as u8, None) {
+                            need = slot;
+                        }
                     }
                 }
             }
