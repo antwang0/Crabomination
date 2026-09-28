@@ -59227,7 +59227,7 @@ pub fn notorious_throng() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                count: Value::DamageTakenThisTurn(PlayerRef::EachOpponent),
                 definition: std::sync::Arc::new(faerie_rogue_token()),
             },
             Effect::If {

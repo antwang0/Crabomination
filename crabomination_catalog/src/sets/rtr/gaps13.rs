@@ -155,7 +155,7 @@ pub fn rakdos_lord_of_riots() -> CardDefinition {
                           opponents have lost this turn.",
             effect: StaticEffect::CostReductionByValue {
                 filter: R::Creature,
-                amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                amount: Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent),
             },
         }],
         ..Default::default()

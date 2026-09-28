@@ -6530,3 +6530,42 @@ fn per_player_values_read_each_player() {
     g.resolve_effect(&exhaust, &EffectContext::for_ability(dragon, 0, None)).unwrap();
     assert_eq!((g.players[1].graveyard.len(), g.players[2].graveyard.len()), (2, 6), "each mills its own graveyard's size");
 }
+
+/// "The total life lost by your opponents this turn" is a sum over seats, not
+/// the worst single loss (Cryptborn Horror, Rakdos, Lord of Riots, Notorious
+/// Throng's "damage dealt to your opponents"); Warlock Class's "each opponent
+/// loses life equal to the life they lost this turn" is per seat.
+#[test]
+fn opponents_life_lost_sums_and_per_seat_losses() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    for (seat, n) in [(1usize, 2), (2, 3)] {
+        g.resolve_effect(
+            &crabomination::effect::Effect::LoseLife {
+                who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::Seat(seat)),
+                amount: crabomination::effect::Value::Const(n),
+            },
+            &ctx,
+        )
+        .unwrap();
+    }
+    let horror = g.add_card_to_hand(0, catalog::cryptborn_horror());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: horror, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Cryptborn Horror");
+    drain_stack(&mut g);
+    let counters = g.battlefield_find(horror).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 5, "2 + 3, not the larger");
+
+    let warlock_l3 = catalog::warlock_class().triggered_abilities.last().unwrap().effect.clone();
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    g.resolve_effect(&warlock_l3, &ctx).unwrap();
+    assert_eq!((l1 - g.players[1].life, l2 - g.players[2].life), (2, 3), "each loses what they lost");
+}

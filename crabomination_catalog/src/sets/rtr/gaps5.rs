@@ -102,7 +102,7 @@ pub fn cryptborn_horror() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
-            Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+            Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent),
         )),
         ..Default::default()
     }

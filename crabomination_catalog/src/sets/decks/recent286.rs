@@ -502,9 +502,12 @@ pub fn warlock_class() -> CardDefinition {
                     EventScope::ActivePlayer,
                 )
                 .with_filter(Predicate::SourceClassLevelAtLeast(3)),
-                effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                // "each opponent loses life equal to the life they lost this turn"
+                effect: Effect::ForEachOpponent {
+                    body: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::LifeLostThisTurn(PlayerRef::Triggerer),
+                    }),
                 },
             },
         ],
