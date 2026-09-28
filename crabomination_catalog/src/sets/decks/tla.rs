@@ -489,8 +489,10 @@ pub fn earth_kingdom_jailer() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
-                SelectionRequirement::ControlledByOpponent
-                    .and(SelectionRequirement::Nonland)
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::ControlledByOpponent)
                     .and(SelectionRequirement::ManaValueAtLeast(3)),
             ),
             return_to: ExileReturnZone::Battlefield,

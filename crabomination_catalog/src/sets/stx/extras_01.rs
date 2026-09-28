@@ -318,8 +318,9 @@ pub fn defiant_strike() -> CardDefinition {
 // ── Divine Gambit ───────────────────────────────────────────────────────────
 
 /// Divine Gambit — {W}{W} Instant (Strixhaven Mystical Archive).
-/// "Exile target nonland permanent. Its controller may put a permanent
-/// card from their hand onto the battlefield." Both clauses ship: the
+/// "Exile target artifact, creature, or enchantment an opponent controls.
+/// That player may put a permanent card from their hand onto the
+/// battlefield." Both clauses ship: the
 /// gift-back is a `MayDo(Move(hand → battlefield))` offered to the
 /// target's controller (auto-decider declines by default).
 pub fn divine_gambit() -> CardDefinition {
@@ -358,7 +359,10 @@ pub fn divine_gambit() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
                 to: ZoneDest::Exile,
             },
@@ -370,8 +374,7 @@ pub fn divine_gambit() -> CardDefinition {
                         Selector::CardsInZone {
                             who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                             zone: Zone::Hand,
-                            filter: SelectionRequirement::Permanent
-                                .and(SelectionRequirement::Nonland),
+                            filter: SelectionRequirement::Permanent,
                         },
                         Value::Const(1),
                     ),

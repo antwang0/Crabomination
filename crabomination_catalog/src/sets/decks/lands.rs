@@ -1104,7 +1104,7 @@ pub fn restless_ridgeline() -> CardDefinition {
         vec![],
         Effect::Seq(vec![
             Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                what: target_filtered(R::Creature.and(R::IsAttacking).and(R::OtherThanSource)),
                 power: Value::Const(2),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,

@@ -2346,3 +2346,14 @@ Estates (basic Plains → any Plains), Gatecreeper Vine (+ Gate), Shefet Monitor
 (+ Desert), Invasion of Theros (+ Aura, Demigod), Brightglass Gearhulk and
 Micromancer ("mana value 1" was ≤ 1). Residual: Tallowisp fetches any Aura, not
 only one "with enchant creature".
+
+Target adjective / type-list scan (same session): fixed Azorius Charm and Ballista
+Squad (had dropped "attacking or blocking"), Restless Ridgeline ("attacking"),
+Teferi TR / Divine Gambit / Earth Kingdom Jailer ("artifact, creature, or
+enchantment" read as any nonland permanent), Trickster Mage ("artifact, creature,
+or land"), Divine Gambit's gift-back (a land is a permanent card). Residuals:
+Kitesail Larcenist is still a plain exile (the per-player "becomes a Treasure
+for as long as" wants a while-source-on-battlefield `BecomeTreasure`); Hollow
+Marauder draws off the last discard only, not one per opponent who discarded
+low; Solitude / Shriekmaw / Pit Fight / Teferi TR keep the documented
+opponent-only narrowing (Atzocan Archer's reason).

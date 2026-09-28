@@ -2552,6 +2552,10 @@ fn azorius_charm_tucks_a_creature() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     let lib_before = g.players[1].library.len();
+    // "target attacking or blocking creature".
+    g.set_attacking(vec![crabomination::game::types::Attack {
+        attacker: bear, target: crabomination::game::types::AttackTarget::Player(0),
+    }]);
     cast_charm(&mut g, charm, 2, Some(Target::Permanent(bear)));
     assert!(g.battlefield_find(bear).is_none(), "creature left the battlefield");
     assert_eq!(g.players[1].library.len(), lib_before + 1, "put on top of library");

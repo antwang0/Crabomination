@@ -798,9 +798,12 @@ pub fn teferi_time_raveler() -> CardDefinition {
                 loyalty_cost: -3,
                 effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                     Effect::Move {
+                        // 🟡 "Up to one target artifact, creature, or
+                        // enchantment", narrowed to an opponent's.
                         what: target_filtered(
-                            SelectionRequirement::Permanent
-                                .and(SelectionRequirement::Nonland)
+                            SelectionRequirement::Artifact
+                                .or(SelectionRequirement::Creature)
+                                .or(SelectionRequirement::Enchantment)
                                 .and(SelectionRequirement::ControlledByOpponent),
                         ),
                         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),

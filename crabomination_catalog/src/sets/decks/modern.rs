@@ -66631,9 +66631,8 @@ fn white_knight_vig_token() -> TokenDefinition {
     }
 }
 
-/// Azorius Charm — {W}{U} Instant. Team lifelink EOT; or draw a card; or put a
-/// target creature on top of its owner's library. (The printed
-/// attacking/blocking restriction on the tuck mode is broadened to any creature.)
+/// Azorius Charm — {W}{U} Instant. Team lifelink EOT; or draw a card; or put
+/// target attacking or blocking creature on top of its owner's library.
 pub fn azorius_charm() -> CardDefinition {
     CardDefinition {
         name: "Azorius Charm",
@@ -66655,7 +66654,11 @@ pub fn azorius_charm() -> CardDefinition {
                 amount: Value::Const(1),
             },
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                    ),
+                ),
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOfMoved,
                     pos: crate::effect::LibraryPosition::Top,

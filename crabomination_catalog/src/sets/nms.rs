@@ -577,14 +577,15 @@ pub fn submerge() -> CardDefinition {
     }
 }
 
-/// Trickster Mage — {U} Spellshaper. Flips one permanent either way.
+/// Trickster Mage — {U} Spellshaper. Tap or untap target artifact, creature,
+/// or land.
 pub fn trickster_mage() -> CardDefinition {
     spellshaper(
         "Trickster Mage",
         cost(&[u()]),
         vec![CreatureType::Human, CreatureType::Spellshaper],
         cost(&[u()]),
-        Effect::TapOrUntap { what: target_filtered(R::Permanent) },
+        Effect::TapOrUntap { what: target_filtered(R::Artifact.or(R::Creature).or(R::Land)) },
     )
 }
 

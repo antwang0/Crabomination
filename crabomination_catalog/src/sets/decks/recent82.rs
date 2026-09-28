@@ -53,7 +53,7 @@ pub fn couriers_capsule() -> CardDefinition {
 }
 
 /// Ballista Squad — {3}{W} 2/2 Human Rebel. {X}{W}, {T}: This deals X damage to
-/// target creature. (Printed "attacking or blocking" restriction dropped.)
+/// target attacking or blocking creature.
 pub fn ballista_squad() -> CardDefinition {
     CardDefinition {
         name: "Ballista Squad",
@@ -69,7 +69,7 @@ pub fn ballista_squad() -> CardDefinition {
             mana_cost: cost(&[x(), w()]),
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature),
+                to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
                 amount: Value::XFromCost,
             },
             ..Default::default()

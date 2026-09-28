@@ -2644,3 +2644,28 @@ fn search_filters_match_the_printed_card_types() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "an Aura card");
 }
+
+/// "Target artifact, creature, or enchantment" is not "nonland permanent":
+/// Divine Gambit can't exile a planeswalker, Trickster Mage's "artifact,
+/// creature, or land" can't tap one either.
+#[test]
+fn artifact_creature_or_enchantment_is_not_any_nonland_permanent() {
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    let id = g.add_card_to_hand(0, catalog::divine_gambit());
+    g.players[0].mana_pool.add(Color::White, 2);
+    assert!(cast(&mut g, id, Some(Target::Permanent(jace))).is_err(), "a planeswalker");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, id, Some(Target::Permanent(bear))).expect("a creature");
+
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    let mage = g.add_card_to_battlefield(0, catalog::trickster_mage());
+    g.clear_sickness(mage);
+    g.add_card_to_hand(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(jace)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).is_err(), "Trickster Mage can't tap a planeswalker");
+}

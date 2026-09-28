@@ -446,10 +446,16 @@ mod recent82 {
         let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.players[0].mana_pool.add_colorless(2);
-        g.perform_action(GameAction::ActivateAbility {
+        let activate = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
             card_id: bs, ability_index: 0, target: Some(Target::Permanent(victim)),
             additional_targets: vec![], x_value: Some(2), mode: None,
-        }).expect("activate Ballista Squad for X=2");
+        });
+        // "target attacking or blocking creature": not a Bears at rest.
+        assert!(activate(&mut g).is_err(), "a creature out of combat is no target");
+        g.set_attacking(vec![crabomination::game::types::Attack {
+            attacker: victim, target: crabomination::game::types::AttackTarget::Player(0),
+        }]);
+        activate(&mut g).expect("activate Ballista Squad for X=2");
         drain_stack(&mut g);
         assert!(!g.battlefield.iter().any(|c| c.id == victim), "2 damage killed the 2/2");
     }
