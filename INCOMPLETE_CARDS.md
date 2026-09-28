@@ -391,6 +391,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Vivien, Champion of the Wilds (pod) | the −2's exiled card may be cast even if it isn't a creature spell | `LookTopExileOneMayPlay` grants an unfiltered while-exiled cast (the look-three and face-down halves shipped) |
 | The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
 | Puca's Covenant | "another target permanent card" can pick the creature that just died | no "other than the trigger source" requirement (the requirement walkers would all need it) |
+| Espers to Magicite (pod) | the token copy stays a creature (printed: "it's an artifact and it loses all other card types") | `CreateTokenCopyOf` adds card types but can't replace them |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 

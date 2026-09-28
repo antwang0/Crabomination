@@ -12458,13 +12458,13 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
 /// **+1**: Scry 1. Saheeli Rai deals 1 damage to each opponent and each
 /// planeswalker an opponent controls.
 /// **-2**: Create a token that's a copy of target artifact or creature
-/// you control, except it has haste. Exile it at the beginning of the
-/// next end step.
+/// you control, except it's an artifact in addition to its other types. That
+/// token gains haste. Exile it at the beginning of the next end step.
 /// **-7**: Search your library for up to three artifact cards with
 /// different names, put them onto the battlefield, then shuffle.
 pub fn saheeli_rai() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
-    use crate::effect::{DelayedTriggerKind, Duration};
+    use crate::effect::Duration;
     let copy_friendly = || {
         Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
@@ -12477,7 +12477,7 @@ pub fn saheeli_rai() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 extra_creature_types: vec![],
-                extra_card_types: vec![],
+                extra_card_types: vec![crate::card::CardType::Artifact],
                 override_pt: None,
                 override_colors: None,
                 enters_tapped: false,
@@ -12489,12 +12489,7 @@ pub fn saheeli_rai() -> CardDefinition {
                 keyword: crate::card::Keyword::Haste,
                 duration: Duration::Permanent,
             },
-            Effect::DelayUntil {
-                kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::Exile {
-                    what: Selector::LastCreatedToken,
-                }),
-            },
+            Effect::ExileLastCreatedTokensAtNextEndStep,
         ])
     };
     CardDefinition {
