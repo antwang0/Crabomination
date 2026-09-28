@@ -2920,6 +2920,34 @@ fn dawnsire_10plus_fires_once_per_attack() {
     assert_eq!(g.stack.len(), 1, "one trigger for the declaration");
 }
 
+/// CR 721.2a — a station band's `YouAttack` ("whenever you attack") trigger
+/// fires from the attack-declaration walk, once, at the band's threshold (the
+/// walk used to read printed triggers only).
+#[test]
+fn a_station_bands_whenever_you_attack_fires_once() {
+    use crabomination::card::{EventKind, EventScope, EventSpec};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut def = catalog::dawnsire_sunstar_dreadnought();
+    def.station[0].triggers[0].event = EventSpec::new(EventKind::YouAttack, EventScope::YourControl);
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, def);
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 10);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    assert_eq!(g.stack.len(), 1, "the band's trigger, once");
+}
+
 /// Infinite Guideline Station ETB mints a tapped Robot per multicolored permanent.
 #[test]
 fn infinite_guideline_station_etb_robots_per_multicolored() {

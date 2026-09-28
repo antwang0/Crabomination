@@ -2632,6 +2632,16 @@ impl GameState {
                         you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
                     }
                 }
+                // CR 721.2a — a station card's `{N+}` band triggers, live at
+                // `min` charge counters (Dawnsire's "whenever you attack").
+                if !c.definition.station.is_empty() {
+                    let charges = c.counter_count(crate::card::CounterType::Charge);
+                    for band in c.definition.station.iter().filter(|b| charges >= b.min) {
+                        for t in band.triggers.iter().filter(|t| listens(t, ctrl)) {
+                            you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
+                        }
+                    }
+                }
                 if own_you_attack_grant {
                     self.for_each_granted_trigger_matching(c.id, |t| listens(t, ctrl), |t| {
                         you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()))
