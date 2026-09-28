@@ -5249,9 +5249,11 @@ impl Effect {
                 // Guerrillas, Soul Sculptor, Excavator).
                 | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
                 | Effect::SetCardTypesTo { what, .. } => sel_find(what, slot),
-                Effect::RedirectNextCombatDamageTo { what, to } => {
+                Effect::RedirectNextCombatDamageTo { what, to }
+                | Effect::MayDealPowerThenNoCombatDamage { dealer: what, to } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }
+                Effect::RedirectDamageToThisThisTurn { to } => sel_find(to, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
