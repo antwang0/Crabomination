@@ -1084,7 +1084,7 @@ pub fn disintegrate() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::any_target()),
             },
             Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
             Effect::DealDamage {

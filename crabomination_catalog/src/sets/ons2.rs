@@ -1830,11 +1830,11 @@ pub fn sunfire_balm() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Cycling(cost(&[generic(1), w()]))],
         effect: Effect::PreventNextDamage {
-            target: target_filtered(R::Any),
+            target: target_filtered(R::any_target()),
             amount: Value::Const(4),
         },
         triggered_abilities: vec![on_cycle(Effect::PreventNextDamage {
-            target: target_filtered(R::Any),
+            target: target_filtered(R::any_target()),
             amount: Value::ONE,
         })],
         ..Default::default()
@@ -2422,7 +2422,7 @@ pub fn daru_healer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::PreventNextDamage {
-                target: target_filtered(R::Any),
+                target: target_filtered(R::any_target()),
                 amount: Value::ONE,
             },
             ..Default::default()

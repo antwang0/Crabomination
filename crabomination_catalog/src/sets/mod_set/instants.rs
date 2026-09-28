@@ -1491,7 +1491,7 @@ pub fn mending_hands() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::PreventNextDamage {
-            target: target_filtered(SelectionRequirement::Any),
+            target: target_filtered(SelectionRequirement::any_target()),
             amount: Value::Const(4),
         },
         ..Default::default()

@@ -40008,7 +40008,7 @@ pub fn overlord_of_the_floodpits() -> CardDefinition {
 /// Enters-or-attacks: deals 4 damage to any target.
 pub fn overlord_of_the_boilerbilges() -> CardDefinition {
     use crate::effect::shortcut::{deal, etb, impending, on_attack};
-    let bolt = deal(4, target_filtered(SelectionRequirement::Any));
+    let bolt = deal(4, target_filtered(SelectionRequirement::any_target()));
     CardDefinition {
         name: "Overlord of the Boilerbilges",
         cost: cost(&[generic(4), r(), r()]),

@@ -2821,7 +2821,8 @@ fn cr_115_4_any_target_includes_a_battle() {
 #[test]
 fn cr_115_4_bare_any_target_slots_refuse_a_land() {
     type Factory = fn() -> crabomination::card::CardDefinition;
-    let spells: [Factory; 8] = [
+    let spells: [Factory; 9] = [
+        catalog::mending_hands,
         catalog::lightning_bolt,
         catalog::shock,
         catalog::lightning_helix,

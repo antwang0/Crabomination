@@ -3487,7 +3487,7 @@ pub fn kitsune_healer() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::PreventNextDamage {
-                    target: target_filtered(SelectionRequirement::Any),
+                    target: target_filtered(SelectionRequirement::any_target()),
                     amount: Value::Const(1),
                 },
                 ..Default::default()

@@ -723,7 +723,7 @@ pub fn chandra_spark_hunter() -> CardDefinition {
                             filter: R::Artifact,
                         }),
                         effect: Effect::DealDamage {
-                            to: Selector::TargetFiltered { slot: 0, filter: R::Any },
+                            to: Selector::TargetFiltered { slot: 0, filter: R::any_target() },
                             amount: Value::Const(3),
                         },
                     }],

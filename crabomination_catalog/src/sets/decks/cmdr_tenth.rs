@@ -1132,7 +1132,7 @@ pub fn the_war_doctor() -> CardDefinition {
                 effect: time_counter_on_self(),
             },
             on_attack(Effect::Seq(vec![
-                Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Any) },
+                Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::any_target()) },
                 Effect::DealDamage { to: Selector::Target(0), amount: time_counters_on_self() },
             ])),
         ],

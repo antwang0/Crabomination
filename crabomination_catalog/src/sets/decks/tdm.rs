@@ -2517,7 +2517,7 @@ pub fn jeskai_revelation() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Any },
+                to: Selector::TargetFiltered { slot: 1, filter: R::any_target() },
                 amount: Value::Const(4),
             },
             Effect::CreateToken {
