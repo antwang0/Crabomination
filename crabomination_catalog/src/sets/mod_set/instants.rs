@@ -696,7 +696,6 @@ pub fn deadly_dispute() -> CardDefinition {
 /// Cryptic Command — {1}{U}{U}{U} Instant. Choose two — counter target spell;
 /// return target permanent to its owner's hand; tap all creatures your
 /// opponents control; draw a card.
-
 pub fn cryptic_command() -> CardDefinition {
     CardDefinition {
         name: "Cryptic Command",
