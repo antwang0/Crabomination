@@ -25765,16 +25765,21 @@ impl GameState {
                 }
                 // "Exile one of them" is the controller's pick (the auto default:
                 // the highest mana value). The Key to the Vault exiles a nonland
-                // card, and may exile none.
+                // card and Durnan a creature card, and either may exile none.
                 let eligible: Vec<&crate::card::CardInstance> = top
                     .iter()
                     .filter_map(|&id| self.players[opp].library.iter().find(|c| c.id == id))
-                    .filter(|c| *grant != G::CastFreeNonland || !c.definition.is_land())
+                    .filter(|c| match grant {
+                        G::CastFreeNonland => !c.definition.is_land(),
+                        G::CreatureMayWhileExiled => c.definition.is_creature(),
+                        _ => true,
+                    })
                     .collect();
                 let auto = eligible.iter().max_by_key(|c| c.definition.cost.cmc()).map(|c| c.id);
                 let candidates: Vec<(CardId, String)> =
                     eligible.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
-                let min = u32::from(*grant != G::CastFreeNonland && !candidates.is_empty());
+                let optional = matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled);
+                let min = u32::from(!optional && !candidates.is_empty());
                 let mut cursor = 0;
                 let Some(picked) = self.ask_seat_cards_logged(
                     &mut cursor,
@@ -25803,6 +25808,7 @@ impl GameState {
                         G::PlayThisTurn | G::CastFreeNonland => {
                             (false, crate::card::MayPlayDuration::EndOfThisTurn)
                         }
+                        G::CreatureMayWhileExiled => (false, crate::card::MayPlayDuration::WhileExiled),
                     };
                     card.face_down = face_down;
                     // Vivien: "you may cast it if it's a creature spell" — a

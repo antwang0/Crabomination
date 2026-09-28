@@ -12264,6 +12264,9 @@ pub enum LookExileGrant {
     PlayThisTurn,
     /// The Key to the Vault: a nonland card, cast now without paying its cost.
     CastFreeNonland,
+    /// Durnan of the Yawning Portal: you MAY exile a creature card, face up;
+    /// cast it while it stays exiled, paying its cost.
+    CreatureMayWhileExiled,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).
