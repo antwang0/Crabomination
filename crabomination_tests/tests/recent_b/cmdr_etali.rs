@@ -690,7 +690,7 @@ fn keeper_of_secrets_punishes_non_hand_casts() {
 }
 
 /// Eternal Scourge exiles itself when an opponent targets it, then comes back
-/// from exile for {3}.
+/// from exile: it's cast (CR 601.2), for its own {3}.
 #[test]
 fn eternal_scourge_dodges_to_exile_and_returns() {
     let mut g = b_main_phase();
@@ -706,7 +706,12 @@ fn eternal_scourge_dodges_to_exile_and_returns() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
-    b_activate(&mut g, scourge, 0);
+    let spells = g.spells_cast_this_turn;
+    g.perform_action(GameAction::CastAdventureCreature {
+        card_id: scourge, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast from exile");
+    assert_eq!(g.spells_cast_this_turn, spells + 1, "a cast, not an activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(scourge).is_some(), "back from exile");
 }

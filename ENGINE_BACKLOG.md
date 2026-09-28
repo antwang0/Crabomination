@@ -8504,9 +8504,8 @@ one of its own reasons teaches the next run to ignore the word.**
     opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
 
 - ⏳ **Discovered this run (coin-flip / artifact batch — deferred cards):**
-  - **Squee, the Immortal** — needs a static "you may cast this from your
-    graveyard or from exile" permission (a real cast onto the stack, unlike
-    Gravecrawler's `from_graveyard` Move approximation).
+  - ✅ **Squee, the Immortal** — `Keyword::GraveyardCast` + `Keyword::ExileCast`
+    (real casts from both zones; session 01E9u8Mj).
   - **Karplusan Minotaur** — cumulative upkeep whose cost is a coin flip
     (CR 702.24 + 705) + the win/lose-flip "deal 1 to any target" pair.
   - **Cursed Scroll** — name-a-card + reveal-at-random-from-hand + conditional

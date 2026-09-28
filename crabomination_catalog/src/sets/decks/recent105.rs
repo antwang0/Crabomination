@@ -6,28 +6,13 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::{Effect, PlayerRef, ZoneDest};
+use crate::effect::{Effect, PlayerRef};
 use crate::mana::{Color, cost, generic, r};
 
 /// Squee, the Immortal — {1}{R}{R} 2/1 Goblin. You may cast it from your
-/// graveyard (`Keyword::GraveyardCast` — a cast, so cast triggers and the
-/// commander's cast count see it) or from exile. Residual: the exile half is
-/// a pay-its-cost activation that moves it onto the battlefield — no
-/// self-granted exile cast exists.
+/// graveyard (`Keyword::GraveyardCast`) or from exile (`Keyword::ExileCast`).
+/// Both are casts, so cast triggers and the commander's cast count see them.
 pub fn squee_the_immortal() -> CardDefinition {
-    let recast_from_exile = ActivatedAbility {
-        mana_cost: cost(&[generic(1), r(), r()]),
-        effect: Effect::Move {
-            what: Selector::This,
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
-            },
-        },
-        sorcery_speed: true,
-        from_exile: true,
-        ..Default::default()
-    };
     CardDefinition {
         name: "Squee, the Immortal",
         cost: cost(&[generic(1), r(), r()]),
@@ -39,8 +24,7 @@ pub fn squee_the_immortal() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::GraveyardCast],
-        activated_abilities: vec![recast_from_exile],
+        keywords: vec![Keyword::GraveyardCast, Keyword::ExileCast],
         ..Default::default()
     }
 }

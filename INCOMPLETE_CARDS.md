@@ -787,7 +787,6 @@ abilities. One residual and two rule-implied allowances:
 |---|---|---|
 | Phyrexian Battleflies | "{B}: …  Activate **no more than twice** each turn" ships as `once_per_turn: true`, i.e. once | `ActivatedAbility::once_per_turn` is a `bool`, and `CardCold::once_per_turn_used` is a `Vec<usize>` of ability indices with no count beside it. A per-turn *limit* wants both widened, plus the wire and serde forms — a primitive, not a card job |
 | Arcanum Wings | `sorcery_speed: true` with no printed clause | CR 702.64a — aura swap **is** "Activate only as a sorcery" by rule |
-| Squee, the Immortal | same | CR 307.1/302.1 — casting a creature is sorcery-speed; the graveyard/exile permission is not a second one |
 | Roadkill Rodney | same, reported in the audit's token bucket | the flag is on the **Mutagen token**, whose own printed text says "Activate only as a sorcery"; a factory holds its tokens' rules text and the card's oracle does not |
 
 Two of the first eleven kept a documented residual rather than shipping whole:

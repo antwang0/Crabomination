@@ -941,11 +941,7 @@ pub fn keeper_of_secrets() -> CardDefinition {
 /// The exile trigger is `BecameTarget` + `OpponentControl`. The dispatcher
 /// already requires the targeted permanent to be this creature, and for
 /// `BecameTarget` the scope reads the caster (the Tenured Concocter shape).
-/// Approximation: the "cast this card from exile" permission uses the Squee,
-/// the Immortal shape: a `from_exile` sorcery-speed {3} activation that
-/// `Move`s the card onto the battlefield. It isn't a *cast*, so it can't be
-/// countered and doesn't fire cast triggers (including Nalfeshnee / Keeper of
-/// Secrets).
+/// "You may cast this card from exile" is `Keyword::ExileCast`.
 pub fn eternal_scourge() -> CardDefinition {
     CardDefinition {
         name: "Eternal Scourge",
@@ -961,19 +957,7 @@ pub fn eternal_scourge() -> CardDefinition {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentControl),
             effect: Effect::Exile { what: Selector::This },
         }],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3)]),
-            sorcery_speed: true,
-            from_exile: true,
-            effect: Effect::Move {
-                what: Selector::This,
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-            ..Default::default()
-        }],
+        keywords: vec![Keyword::ExileCast],
         ..Default::default()
     }
 }

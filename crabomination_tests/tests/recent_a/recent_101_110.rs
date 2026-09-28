@@ -541,14 +541,15 @@ mod recent105 {
         assert_eq!(g.spells_cast_this_turn, spells + 1, "a cast");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from the graveyard");
-        // Exile it, then bring it back from exile (its one activation).
+        // Exile it, then cast it from exile (`Keyword::ExileCast`).
         g.remove_from_battlefield_to_exile(squee);
         assert!(g.exile.iter().any(|c| c.id == squee));
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: squee, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        g.perform_action(GameAction::CastAdventureCreature {
+            card_id: squee, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("recast from exile");
+        assert_eq!(g.spells_cast_this_turn, spells + 2, "also a cast");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from exile");
     }
