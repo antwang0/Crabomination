@@ -122,7 +122,8 @@ pub fn nahiri_the_lithomancer() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -2,
                 effect: Effect::Move {
-                    what: Selector::Take {
+                    // The engine's pick: the priciest Equipment card.
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::Both(
                             Box::new(Selector::CardsInZone {
                                 who: PlayerRef::You,
