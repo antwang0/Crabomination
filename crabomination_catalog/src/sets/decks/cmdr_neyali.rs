@@ -105,7 +105,7 @@ pub fn neyali_suns_vanguard() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::IsToken.and(R::IsAttackingOpponentPlayer),
                 })
-                .once_per_batch(),
+                .once_per_batch_per_defender(),
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::ONE,

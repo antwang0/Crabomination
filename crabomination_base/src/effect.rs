@@ -3824,6 +3824,12 @@ pub struct EventSpec {
     /// where "to a player" fires per damaged seat.
     #[serde(default)]
     pub batch_across_players: bool,
+    /// With `once_per_batch` on `Attacks`: one fire per DEFENDING PLAYER —
+    /// "whenever one or more tokens you control attack a player" (Neyali,
+    /// Meriadoc) triggers for each player attacked (ruling), where "attack"
+    /// alone fires once for the declaration.
+    #[serde(default)]
+    pub batch_per_defender: bool,
     /// With `once_per_batch` on a combat-damage kind: the one fire's
     /// `TriggerEventAmount` is the batch's total damage to that player, not
     /// the first dealer's — "mills a card for each 1 damage dealt to them"
@@ -3929,6 +3935,7 @@ impl EventSpec {
             once_per_turn: false,
             once_per_batch: false,
             batch_across_players: false,
+            batch_per_defender: false,
             batch_sums_damage: false,
             batch_counts_card_types: false,
             batch_counts_subjects: false,
@@ -4009,6 +4016,12 @@ impl EventSpec {
     pub fn once_per_batch_across_players(mut self) -> Self {
         self.once_per_batch = true;
         self.batch_across_players = true;
+        self
+    }
+    /// "Whenever one or more … attack a player" — once per defending player.
+    pub fn once_per_batch_per_defender(mut self) -> Self {
+        self.once_per_batch = true;
+        self.batch_per_defender = true;
         self
     }
     /// Once per batch, with the batch's summed damage as the event amount.

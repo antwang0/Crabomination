@@ -277,11 +277,11 @@ pub fn insight_engine() -> CardDefinition {
 pub fn long_range_sensor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YouAttackedPlayer),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Charge,
-                amount: Value::OpponentsAttackedThisCombat,
+                amount: Value::ONE,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

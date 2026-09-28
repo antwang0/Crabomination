@@ -169,6 +169,26 @@ fn horizon_explorer_untaps_lands_and_makes_landers() {
     assert_eq!(named(&g, 0, "Lander").len(), 1);
 }
 
+/// Horizon Explorer — "Whenever you attack a player" triggers once for each
+/// player you attack (ruling); it fired once per declaration.
+#[test]
+fn horizon_explorer_makes_a_lander_per_player_attacked() {
+    let mut g = main_phase(3);
+    let hx = g.add_card_to_battlefield(0, catalog::horizon_explorer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(hx);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    act(&mut g, GameAction::DeclareAttackers(vec![
+        Attack { attacker: hx, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Lander").len(), 2);
+}
+
 /// Juri grows per sacrifice and deals its power when it dies.
 #[test]
 fn juri_grows_on_sacrifice_and_burns_on_death() {

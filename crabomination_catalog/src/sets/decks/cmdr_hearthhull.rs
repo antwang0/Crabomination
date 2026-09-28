@@ -228,7 +228,7 @@ pub fn horizon_explorer() -> CardDefinition {
             effect: StaticEffect::LandsEnterUntapped,
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YouAttackedPlayer),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

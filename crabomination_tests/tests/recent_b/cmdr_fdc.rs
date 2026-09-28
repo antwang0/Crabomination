@@ -6189,3 +6189,61 @@ fn cr_702_125a_durnans_exiled_creature_has_undaunted() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(tusk).is_some());
 }
+
+/// Neyali, Suns' Vanguard — "Whenever one or more tokens you control attack a
+/// player" triggers once for EACH player attacked with tokens (ruling), not
+/// once per declaration.
+#[test]
+fn neyali_triggers_once_per_player_attacked_with_tokens() {
+    let mut g = multi_player_game(4);
+    let neyali = g.add_card_to_battlefield(0, catalog::neyali_suns_vanguard());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let mut toks = vec![];
+    for _ in 0..3 {
+        let t = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(t).unwrap().is_token = true;
+        g.clear_sickness(t);
+        toks.push(t);
+    }
+    let _ = neyali;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let exiled_before = g.exile.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: toks[0], target: AttackTarget::Player(1) },
+        Attack { attacker: toks[1], target: AttackTarget::Player(1) },
+        Attack { attacker: toks[2], target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len() - exiled_before, 2, "one card per player attacked with tokens");
+}
+
+/// CR 603.2c — "whenever one or more tokens you control attack" asks whether
+/// ANY event of the batch matches. The dispatcher stopped at the first
+/// attacker whose filter failed, so a non-token declared ahead of the token
+/// (here Neyali herself) meant no trigger at all.
+#[test]
+fn cr_603_2c_a_one_or_more_trigger_reads_past_a_non_matching_attacker() {
+    let mut g = multi_player_game(3);
+    let neyali = g.add_card_to_battlefield(0, catalog::neyali_suns_vanguard());
+    g.clear_sickness(neyali);
+    g.add_card_to_library(0, catalog::plains());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    g.clear_sickness(token);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let exiled_before = g.exile.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: neyali, target: AttackTarget::Player(1) },
+        Attack { attacker: token, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len() - exiled_before, 1, "the token attacking made it trigger");
+}

@@ -23221,6 +23221,9 @@ impl GameState {
         // `cube` run (PERF `(-117)`). One `Vec` a dispatch, cleared per
         // trigger, capacity kept.
         let mut block_sides_seen: Vec<CardId> = Vec::new();
+        // `EventSpec::batch_per_defender` — the defenders one trigger already
+        // fired for in this batch ("attack a player", once per player).
+        let mut defenders_fired: Vec<crate::game::types::AttackTarget> = Vec::new();
         // Per-(permanent, trigger) dedup for `PutIntoGraveyard`, whose batch
         // can carry two records for one card. See the arm that uses it.
         let mut graveyard_subjects_seen: Vec<CardId> = Vec::new();
@@ -23443,6 +23446,8 @@ impl GameState {
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
                 graveyard_subjects_seen.clear();
+                defenders_fired.clear();
+                let per_defender = ta.event.batch_per_defender && !fanout;
                 for (i, ev) in events.iter().enumerate() {
                     let bits = if i < KEPT_BITS {
                         event_bits[i]
@@ -23532,12 +23537,27 @@ impl GameState {
                             subject,
                             self.event_amount_for(ev),
                         );
+                        // "One or more …" asks whether ANY event of the batch
+                        // matches: a miss on this one (a non-token attacker
+                        // declared ahead of the tokens — Neyali) is not the
+                        // batch's answer, so keep scanning.
                         if !self.evaluate_predicate(filter, &ctx) {
-                            if !fanout {
-                                break;
-                            }
                             continue;
                         }
+                    }
+                    // CR 603.2c — "attack a player": one fire per defender.
+                    let defender = if per_defender {
+                        match ev {
+                            GameEvent::AttackerDeclared(id) => {
+                                self.attacking.iter().find(|a| a.attacker == *id).map(|a| a.target)
+                            }
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
+                    if defender.is_some_and(|d| defenders_fired.contains(&d)) {
+                        continue;
                     }
                     // Per-subject cap ("triggers only twice each turn"
                     // counted per creature — Nadu). Deferred bump (the
@@ -23623,6 +23643,10 @@ impl GameState {
                     });
                     if ta.event.once_per_turn && trig_idx != usize::MAX {
                         once_fired_this_batch.insert(once_key);
+                    }
+                    if let Some(d) = defender {
+                        defenders_fired.push(d);
+                        continue;
                     }
                     if !fanout {
                         break;
@@ -23957,10 +23981,8 @@ impl GameState {
                                 subject,
                                 self.event_amount_for(ev),
                             );
+                            // Keep scanning the batch on a miss, as above.
                             if !self.evaluate_predicate(filter, &ctx) {
-                                if !fanout {
-                                    break;
-                                }
                                 continue;
                             }
                         }

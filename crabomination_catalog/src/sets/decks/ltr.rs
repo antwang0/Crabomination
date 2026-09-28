@@ -1736,7 +1736,7 @@ pub fn meriadoc_brandybuck() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Halfling),
                 })
-                .once_per_batch(),
+                .once_per_batch_per_defender(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
