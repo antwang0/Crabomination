@@ -436,7 +436,13 @@ fn xanders_pact_steals_a_spell() {
     let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
     let xp = g.add_card_to_hand(0, catalog::xanders_pact());
     cast(&mut g, 0, xp, None).expect("pact");
-    assert!(g.exile.iter().any(|c| c.id == bolt));
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_some()));
+    // "Cast spells from among them": an exiled land isn't playable.
+    let land = g.add_card_to_library(1, catalog::forest());
+    g.players[1].library.retain(|c| c.id == land);
+    let xp = g.add_card_to_hand(0, catalog::xanders_pact());
+    cast(&mut g, 0, xp, None).expect("pact");
+    assert!(g.exile.iter().any(|c| c.id == land && c.may_play_until.is_none()));
 }
 
 /// Zndrsplt's Judgment — you copy your best creature, opponents bounce one.

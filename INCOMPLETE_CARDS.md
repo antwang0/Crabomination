@@ -2072,7 +2072,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | activated abilities with {X} in their cost aren't copied. |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
-| 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
 | 🟡 Filigree Racer | Creative Energy (M3C) | the granted jump-start is a flashback for the card's mana cost, without the discard. |
 | 🟡 Hourglass of the Lost | Creative Energy (M3C) | it removes all its time counters (X is that number), not a chosen X. |

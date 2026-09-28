@@ -584,7 +584,11 @@ pub fn xanders_pact() -> CardDefinition {
                     what: Selector::TopOfLibrary { who: PlayerRef::EachOpponent, count: Value::ONE },
                     to: ZoneDest::Exile,
                 },
-                Effect::GrantMayPlayForLife { what: Selector::LastMoved, duration: MayPlayDuration::EndOfThisTurn },
+                // "You may CAST SPELLS from among those cards" — a land can't be played.
+                Effect::GrantMayPlayForLife {
+                    what: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: R::Nonland },
+                    duration: MayPlayDuration::EndOfThisTurn,
+                },
             ]),
         )
     }
