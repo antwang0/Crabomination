@@ -361,3 +361,19 @@ fn cr_611_2_predators_hour_only_arms_the_casters_creatures() {
     connect(&mut g, &[theirs], 0);
     assert!(!g.exile.iter().any(|c| c.id == top), "their Bear has no Predators' Hour trigger");
 }
+
+/// CR 702.35 / 107.3 — Avacyn's Judgment discarded with {3}{R} floating is
+/// cast for its madness {X}{R} at X = 3, and deals X instead of 2.
+#[test]
+fn avacyns_judgment_madness_deals_x() {
+    let mut g = main_phase(2);
+    g.players[0].hostile_player_targets = true;
+    let id = g.add_card_to_hand(0, catalog::avacyns_judgment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let mut events = Vec::new();
+    g.discard_card(0, id, &mut events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "X = 3 to the opponent");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
+}

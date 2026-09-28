@@ -377,7 +377,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Card | Residual | Why |
 |---|---|---|
 | Chevill, Bane of Monsters | "a permanent an opponent controls" dies is read as any permanent with a bounty counter | bounty counters only go on opponents' permanents, so it differs only after a control change |
-| Avacyn's Judgment | Madness {X}{R} is absent (and with it the "X damage divided instead" mode) | a madness cost with {X} and a `MadnessCostPaid` damage switch |
 | Elenda, Saint of Dusk | "hexproof from instants" is dropped | a `HexproofFrom` variant over a card type |
 
 ## Oracle-vs-definition scans (2026-09-28, session `01BA6uAJ`) — what the fixes left
@@ -1895,7 +1894,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dawnbreak Reclaimer | Angels (SLD) | both graveyard picks are the engine's (the cheapest creature card each way). |
 | 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
-| 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | no madness (its `{X}{R}` needs an X a madness cast can't choose); a plain 2-damage divider. |
+| 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | a madness cast names one target (the auto-pick), so its X isn't divided. |
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |

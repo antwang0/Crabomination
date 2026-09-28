@@ -3,8 +3,8 @@
 //! `tests/recent_b/cmdr_strefan.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Avacyn's Judgment** — no madness: its `{X}{R}` madness needs an X
-//!   the madness cast can't choose, so it is a plain 2-damage divider.
+//! - **Avacyn's Judgment** — a madness cast names one target (the
+//!   madness cast's auto-pick), so its X damage isn't divided.
 //! - **Shadowgrange Archfiend** — no madness: "{2}{B}, Pay 8 life" has a life
 //!   half a madness cost can't carry.
 //! - **Imposing Grandeur** — counts a commander in any zone, not only the
@@ -19,7 +19,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r};
+use crate::mana::{b, cost, generic, r, x};
 use crabomination_base::tokens::blood_token;
 use std::sync::Arc;
 
@@ -87,14 +87,20 @@ pub fn arterial_alchemy() -> CardDefinition {
     }
 }
 
-/// Avacyn's Judgment — 2 damage divided among any number of targets.
+/// Avacyn's Judgment — 2 damage divided among any number of targets; X
+/// instead if its madness {X}{R} was paid (CR 702.35).
 pub fn avacyns_judgment() -> CardDefinition {
     CardDefinition {
         name: "Avacyn's Judgment",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Madness(cost(&[x(), r()]))],
         effect: Effect::DealDamageDivided {
-            total: Value::Const(2),
+            total: Value::IfPred {
+                pred: Box::new(Predicate::SpellWasMadness),
+                then: Box::new(Value::XFromCost),
+                else_: Box::new(Value::Const(2)),
+            },
             filter: R::any_target(),
             max_targets: 2,
             retaliate_to_source: false,
