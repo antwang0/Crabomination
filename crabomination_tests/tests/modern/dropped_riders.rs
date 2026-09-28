@@ -2906,3 +2906,22 @@ fn cr_115_1_activated_slots_refuse_a_land() {
         assert!(g.perform_action(act(Target::Permanent(bear))).is_ok(), "{}: a creature", f().name);
     }
 }
+
+/// CR 115.4 — Comet Storm's multi-target "any target" slots were
+/// `ApplyToTargets { filter: Any }`: a land was a legal target.
+#[test]
+fn cr_115_4_comet_storm_refuses_a_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::comet_storm());
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.players[0].mana_pool.add_colorless(4);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    });
+    assert!(r.is_err());
+}

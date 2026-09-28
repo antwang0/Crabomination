@@ -804,7 +804,7 @@ pub fn comet_storm() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             max_targets: 4,
             min_targets: 1,
-            filter: R::Any,
+            filter: R::any_target(),
             effect: Box::new(Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::XFromCost,

@@ -1753,7 +1753,7 @@ pub fn firestorm() -> CardDefinition {
                 body: Box::new(Effect::ApplyToTargets {
                     max_targets: 8,
                     min_targets: 0,
-                    filter: R::Any,
+                    filter: R::any_target(),
                     effect: Box::new(Effect::DealDamage {
                         to: Selector::Target(0),
                         amount: Value::XFromCost,
