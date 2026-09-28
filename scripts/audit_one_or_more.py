@@ -43,6 +43,8 @@ ALLOWLIST = {
     # Per attacker is the batch: "1 life for each attacking creature",
     # "those creatures get -1/-0", "twice that many rad counters".
     "Orim's Prayer", "Sabotage Strategist", "Struggle for Project Purity",
+    # "Tap those creatures and put a stun counter on each of them".
+    "Tamiyo, Upriser Crowned",
     # Per discarded card, "that many" sums to the batch.
     "Cryptcaller Chariot", "Marauding Mako", "Scrounging Skyray",
     # `BlocksNOrMore` is one event per declaration.

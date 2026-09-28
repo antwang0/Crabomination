@@ -42,6 +42,7 @@ TOKENS = (
     "CreaturesAttackingPlayer",
     "AttackedDefenderWithCountAtLeast",
     "ControllerAttackedByOpponent",
+    "ControllerAttackedDirectlyByOpponent",
     "AnyPlayerAttacks",
 )
 

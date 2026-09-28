@@ -96,6 +96,14 @@ SOURCE_ALLOWLIST = {
     ),
     "nessian_wilds_ravager": "same narrowing, same reason",
     "brash_taunter": "same narrowing, same reason — an activated fight slot",
+    "pucas_covenant": (
+        "'another' is other than the creature that died — no requirement "
+        "names the trigger source (INCOMPLETE_CARDS' 🟡 row)"
+    ),
+    "the_lord_of_pain": (
+        "'another' is other than the player who cast the spell: the filter "
+        "already excludes `ControlledByTriggerPlayer`"
+    ),
     "etched_slith": (
         "the whole 'when you do, remove a counter from another target "
         "permanent or opponent' clause is unmodelled — `audit_incomplete`'s "
