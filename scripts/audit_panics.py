@@ -101,10 +101,29 @@ def rust_files():
                     yield p
 
 
+def test_only_modules(paths):
+    """Files whose `mod` declaration is gated `#[cfg(test)]` in their parent
+    (`server/mod.rs`'s `ability_probe`): the whole file is test code."""
+    out = set()
+    for path in paths:
+        lines = open(os.path.join(BASE, path)).read().split("\n")
+        for i, l in enumerate(lines[1:], 1):
+            m = re.match(r"\s*(?:pub(?:\([^)]*\))? )?mod (\w+);", l)
+            if m and lines[i - 1].strip() == "#[cfg(test)]":
+                d = os.path.dirname(path)
+                out.add(os.path.join(d, m.group(1) + ".rs"))
+                out.add(os.path.join(d, m.group(1), "mod.rs"))
+    return out
+
+
 def main() -> int:
     verbose = "--verbose" in sys.argv
     bare, guarded, locks = [], [], []
-    for path in sorted(rust_files()):
+    paths = sorted(rust_files())
+    test_only = test_only_modules(paths)
+    for path in paths:
+        if path in test_only:
+            continue
         lines = open(os.path.join(BASE, path)).read().split("\n")
         # Everything from a column-0 `#[cfg(test)]` on is test code.
         cut = len(lines)

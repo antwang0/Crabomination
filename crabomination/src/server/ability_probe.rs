@@ -19,7 +19,7 @@ fn probe_abilities() {
     let Ok(list) = std::env::var("CRAB_PROBE") else {
         return;
     };
-    let names = std::fs::read_to_string(list).unwrap();
+    let names = std::fs::read_to_string(&list).expect("CRAB_PROBE names a readable file");
     for name in names.lines().map(str::trim).filter(|l| !l.is_empty()) {
         let Some(def) = crate::card_registry::lookup_by_name(name) else {
             eprintln!("PROBE {name}: missing");
