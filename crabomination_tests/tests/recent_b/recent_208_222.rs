@@ -801,9 +801,11 @@ mod recent213 {
         let field = g.add_card_to_battlefield(0, catalog::demolition_field());
         let target_land = g.add_card_to_battlefield(1, catalog::demolition_field()); // nonbasic opp land
         let forest = g.add_card_to_library(0, catalog::forest());
+        let plains = g.add_card_to_library(1, catalog::plains());
         g.step = TurnStep::PreCombatMain;
         g.players[0].mana_pool.add_colorless(2);
         g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Search(Some(plains)),
             crabomination::decision::DecisionAnswer::Search(Some(forest)),
         ]));
         g.perform_action(GameAction::ActivateAbility {
@@ -814,6 +816,8 @@ mod recent213 {
         assert!(g.battlefield_find(target_land).is_none(), "opponent's nonbasic land destroyed");
         assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest"),
             "ramped a basic Forest to the battlefield");
+        assert!(g.battlefield_find(plains).is_some_and(|c| c.controller == 1),
+            "the destroyed land's controller searched too");
     }
 
     /// Goblin Firebomb flashes in and can be sacrificed to destroy a permanent.

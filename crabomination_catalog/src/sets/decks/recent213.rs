@@ -100,8 +100,8 @@ pub fn sanguine_indulgence() -> CardDefinition {
 }
 
 /// Demolition Field — Land. {T}: Add {C}. {2}, {T}, Sacrifice this land:
-/// Destroy target nonbasic land an opponent controls, then you may search your
-/// library for a basic land, put it onto the battlefield, then shuffle.
+/// Destroy target nonbasic land an opponent controls; that land's controller
+/// may search for a basic land, then you may, each onto the battlefield.
 pub fn demolition_field() -> CardDefinition {
     CardDefinition {
         name: "Demolition Field",
@@ -115,6 +115,14 @@ pub fn demolition_field() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::Destroy {
                         what: target_filtered(R::IsNonbasicLand.and(R::ControlledByOpponent)),
+                    },
+                    Effect::Search {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        filter: R::IsBasicLand,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                            tapped: false,
+                        },
                     },
                     Effect::Search {
                         who: PlayerRef::You,
