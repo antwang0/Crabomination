@@ -428,7 +428,7 @@ pub fn myth_unbound() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Your commander costs {1} less to cast for each time it's been cast from the command zone this game.",
             effect: StaticEffect::CostReductionByValue {
-                filter: R::IsCommander,
+                filter: R::IsCommander.and(R::OwnedByYou),
                 amount: Value::CommanderCastsOf(Box::new(Selector::TriggerSource)),
             },
         }],

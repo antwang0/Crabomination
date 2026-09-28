@@ -368,3 +368,44 @@ fn tome_of_legends_turns_pages_off_your_commander() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert!(catalog::tome_of_legends().subtypes.artifact_subtypes.contains(&ArtifactSubtype::Book));
 }
+
+/// Tome of Legends ruling: "if another player controls your commander, you'll
+/// still put a page counter on Tome of Legends if it attacks" — and a
+/// commander of theirs you control turns no page. The triggers were scoped to
+/// what you control, so both answers were backwards.
+#[test]
+fn tome_of_legends_reads_your_commander_whoever_controls_it() {
+    let mut g = main_phase();
+    let tome = g.add_card_to_battlefield(0, catalog::tome_of_legends());
+    let pages = |g: &GameState| g.battlefield_find(tome).unwrap().counter_count(CounterType::Page);
+    let base = pages(&g);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].commanders.push(mine);
+    g.battlefield_find_mut(mine).unwrap().controller = 1;
+    g.clear_sickness(mine);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[1].commanders.push(theirs);
+    g.battlefield_find_mut(theirs).unwrap().controller = 0;
+    g.clear_sickness(theirs);
+    // Seat 1 attacks with seat 0's commander.
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: mine, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pages(&g), base + 1, "your commander attacked, under their control");
+    // Seat 0 attacks with seat 1's commander.
+    let mut g2 = main_phase();
+    let tome2 = g2.add_card_to_battlefield(0, catalog::tome_of_legends());
+    let base2 = g2.battlefield_find(tome2).unwrap().counter_count(CounterType::Page);
+    let theirs2 = g2.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g2.players[1].commanders.push(theirs2);
+    g2.battlefield_find_mut(theirs2).unwrap().controller = 0;
+    g2.clear_sickness(theirs2);
+    g2.step = TurnStep::DeclareAttackers;
+    g2.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: theirs2, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g2);
+    assert_eq!(g2.battlefield_find(tome2).unwrap().counter_count(CounterType::Page), base2, "not your commander");
+}

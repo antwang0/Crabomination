@@ -398,6 +398,8 @@ pub fn starnheim_aspirant() -> CardDefinition {
 /// Tome of Legends — a page counter on entry and whenever your commander
 /// enters or attacks; {1}, {T}, remove one: draw.
 pub fn tome_of_legends() -> CardDefinition {
+    // "Your commander" wherever it is and whoever controls it (ruling: it
+    // still adds a page if another player controls it; a stolen one doesn't).
     let your_commander = || Predicate::EntityMatches {
         what: Selector::TriggerSource,
         filter: R::IsCommander.and(R::OwnedByYou),
@@ -411,12 +413,12 @@ pub fn tome_of_legends() -> CardDefinition {
         enters_with_counters: Some((CounterType::Page, Value::ONE)),
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
                     .with_filter(your_commander()),
                 effect: page(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(your_commander()),
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(your_commander()),
                 effect: page(),
             },
         ],
