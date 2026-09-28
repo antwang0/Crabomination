@@ -2517,3 +2517,32 @@ fn cr_603_2c_camellia_makes_one_squirrel_per_food_batch() {
     let squirrels = g.battlefield.iter().filter(|c| c.definition.name == "Squirrel").count();
     assert_eq!(squirrels, 1);
 }
+
+/// Power thresholds that shipped dropped (P/T-threshold scan): Zurgo
+/// Bellstriker can't block a creature with power 2 or greater; O-Naginata
+/// attaches only to a creature with power 3 or greater (CR 301.5c).
+#[test]
+fn zurgo_and_o_naginata_power_thresholds() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let zurgo = g.add_card_to_battlefield(1, catalog::zurgo_bellstriker());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(zurgo, bear)])).is_err(), "power 2 attacker");
+
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let nag = g.add_card_to_battlefield(0, catalog::o_naginata());
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(GameAction::Equip { equipment: nag, target: elf }).is_err(), "power 1");
+    g.perform_action(GameAction::Equip { equipment: nag, target: bear }).expect("power 4");
+}

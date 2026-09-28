@@ -47,9 +47,8 @@ pub fn mardu_scout() -> CardDefinition {
     }
 }
 
-/// Zurgo Bellstriker — {R} 2/2 Legendary Goblin Warrior. Dash {1}{R}.
-/// (The "can't block creatures with power 2 or greater" rider collapses —
-/// no power-gated block restriction primitive.)
+/// Zurgo Bellstriker — {R} 2/2 Legendary Orc Warrior. Can't block creatures with
+/// power 2 or greater. Dash {1}{R}.
 pub fn zurgo_bellstriker() -> CardDefinition {
     CardDefinition {
         name: "Zurgo Bellstriker",
@@ -62,6 +61,7 @@ pub fn zurgo_bellstriker() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::CantBlockPowerAtLeast(2)],
         alternative_cost: Some(dash(cost(&[generic(1), r()]))),
         ..Default::default()
     }

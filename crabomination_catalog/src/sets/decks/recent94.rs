@@ -485,16 +485,13 @@ pub fn silverskin_armor() -> CardDefinition {
 }
 
 /// O-Naginata — {1} Equipment. Equipped creature gets +3/+0 and has trample.
-/// Equip {2}. (The "attach only to power 3+" restriction is dropped.)
+/// Equip {2}. It can be attached only to a creature with power 3 or greater
+/// (CR 301.5c).
 pub fn o_naginata() -> CardDefinition {
-    simple_equipment(
-        "O-Naginata",
-        cost(&[generic(1)]),
-        cost(&[generic(2)]),
-        3,
-        0,
-        vec![Keyword::Trample],
-    )
+    CardDefinition {
+        attach_only_filter: Some(R::Creature.and(R::PowerAtLeast(3))),
+        ..simple_equipment("O-Naginata", cost(&[generic(1)]), cost(&[generic(2)]), 3, 0, vec![Keyword::Trample])
+    }
 }
 
 /// Prowler's Helm — {2} Equipment. Equipped creature can't be blocked except by
