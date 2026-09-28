@@ -224,6 +224,24 @@ pub fn animate_land_until_eot(
     }
 }
 
+/// "… becomes a [P/T] [colors] [type] creature …" (CR 105.3, layer 5):
+/// `animate` (a [`Effect::BecomeCreature`]) followed by a `SetColors` on the
+/// same permanents for the same duration. A creature-land or Keyrune is
+/// colorless until it animates; the printed color matters to protection,
+/// "nonblack creature" removal and color-counting.
+pub fn colored_animation(animate: Effect, colors: &[crate::mana::Color]) -> Effect {
+    let Effect::BecomeCreature { what, duration, .. } = &animate else {
+        panic!("colored_animation wraps an Effect::BecomeCreature");
+    };
+    let paint = Effect::BecomeColor {
+        what: what.clone(),
+        colors: colors.to_vec(),
+        duration: *duration,
+        additive: false,
+    };
+    Effect::Seq(vec![animate, paint])
+}
+
 /// `create`, then "It gains / They gain `keywords` until end of turn." — the
 /// grant lands on the tokens this resolution made, never on their definition.
 pub fn tokens_gain_until_eot(create: Effect, keywords: &[Keyword]) -> Effect {

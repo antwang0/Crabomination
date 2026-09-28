@@ -575,3 +575,44 @@ fn cr_601_exile_cast_keyword_casts_the_card_from_exile() {
     g.exile.iter_mut().find(|c| c.id == hidden).unwrap().face_down = true;
     assert!(cast_it(&mut g, hidden).is_err(), "face-down exile");
 }
+
+/// CR 105.3 / 613.1e — "becomes a 2/2 red and green … creature" sets the
+/// animated permanent's colors (layer 5) for the animation's duration
+/// (`shortcut::colored_animation`); a colorless land is colorless again once
+/// the animation ends.
+#[test]
+fn cr_105_3_colored_animation_sets_colors_for_its_duration() {
+    use crabomination::effect::shortcut::colored_animation;
+    use crabomination::effect::Effect;
+    let mut def = catalog::mutavault();
+    let idx = def
+        .activated_abilities
+        .iter()
+        .position(|a| matches!(a.effect, Effect::BecomeCreature { .. }))
+        .expect("Mutavault animates");
+    let animate = def.activated_abilities[idx].effect.clone();
+    def.activated_abilities[idx].effect = colored_animation(animate, &[Color::Red, Color::Green]);
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, def);
+    assert!(g.computed_permanent(land).unwrap().colors.is_empty(), "colorless land");
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: idx,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("animate");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert!(post.card_types().contains(&crabomination::card::CardType::Creature));
+    let mut colors = post.colors.to_vec();
+    colors.sort_by_key(|c| *c as u8);
+    let mut want = vec![Color::Red, Color::Green];
+    want.sort_by_key(|c| *c as u8);
+    assert_eq!(colors, want, "red and green while animated");
+    g.expire_end_of_turn_effects();
+    assert!(g.computed_permanent(land).unwrap().colors.is_empty(), "colorless again");
+}

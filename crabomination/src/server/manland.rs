@@ -10,12 +10,17 @@ use crate::game::GameState;
 use crate::game::types::{GameAction, TurnStep};
 
 /// Does this ability turn its own noncreature source into a creature for the turn?
+/// A colored animation leads with the `BecomeCreature` step
+/// (`shortcut::colored_animation`).
 fn animates_self(e: &Effect) -> bool {
-    matches!(
-        e,
-        Effect::BecomeCreature { what: Selector::This, duration: Duration::EndOfTurn, .. }
-            | Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn }
-    )
+    match e {
+        Effect::Seq(steps) => steps.first().is_some_and(animates_self),
+        _ => matches!(
+            e,
+            Effect::BecomeCreature { what: Selector::This, duration: Duration::EndOfTurn, .. }
+                | Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn }
+        ),
+    }
 }
 
 /// The first accepted self-animation of an untapped noncreature permanent
