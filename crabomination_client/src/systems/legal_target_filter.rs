@@ -22,8 +22,7 @@
 
 use std::collections::HashSet;
 
-use crabomination::card::{CardId, SelectionRequirement};
-use crabomination::game::Target;
+use crabomination::card::SelectionRequirement;
 use crabomination::net::{ClientView, PermanentView, PlayerView};
 
 use crate::game::LegalTargets;
@@ -292,42 +291,6 @@ fn evaluate_via_catalog(
         // reject if needed.
         _ => true,
     }
-}
-
-/// Convenience: also include a `Target::Permanent`-style helper for the
-/// auto-pass / decision-target paths. Currently unused, kept for symmetry
-/// with the engine's `evaluate_requirement_static` signature so callers
-/// can be migrated.
-#[allow(dead_code)]
-pub fn evaluate(
-    req: &SelectionRequirement,
-    target: &Target,
-    cv: &ClientView,
-    your_seat: usize,
-) -> bool {
-    match target {
-        Target::Player(s) => cv
-            .players
-            .iter()
-            .find(|p| p.seat == *s)
-            .is_some_and(|p| evaluate_player(req, p, your_seat)),
-        Target::Permanent(id) => cv
-            .battlefield
-            .iter()
-            .find(|p| p.id == *id)
-            .is_some_and(|p| evaluate_permanent(req, p, &BoardCtx::new(cv))),
-    }
-}
-
-/// Drop the (visual-only) entries for a card the viewer no longer
-/// targets. Cheap helper for callers that want to clear the highlight
-/// set without rebuilding the resource.
-#[allow(dead_code)]
-pub fn clear(legal: &mut LegalTargets, _: CardId) {
-    legal.permanents.clear();
-    legal.players.clear();
-    legal.source_name.clear();
-    legal.description.clear();
 }
 
 /// Does this filter admit a spell on the stack? The client can't re-run the

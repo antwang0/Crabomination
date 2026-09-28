@@ -7,10 +7,9 @@ use bevy::ecs::system::SystemParam;
 
 use crate::card::{
     hand_card_transform, layout::player_hand_anchor, Animating, BattlefieldCard,
-    CardFlipAnimation, CardHoverLift, CardMeshAssets, CombatLurch, DeathBeat, DeckCard,
-    DeckShuffleAnimation, DrawCardAnimation, FrontFaceMesh, GameCardId, HandCard,
-    HandSlideAnimation, MdfcFlipAnimation, PlayCardAnimation, ReturnToDeckAnimation,
-    ReturnToHandAnimation, RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase,
+    CardHoverLift, CardMeshAssets, CombatLurch, DeathBeat, DrawCardAnimation, FrontFaceMesh,
+    GameCardId, HandCard, HandSlideAnimation, MdfcFlipAnimation, PlayCardAnimation,
+    ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation, SendToGraveyardAnimation,
     TapAnimation, Vanishing, BF_HOVER_GROW, BF_HOVER_LIFT, CARD_WIDTH, DEATH_BEAT_SECS,
     HOVER_LIFT_SPEED,
 };
@@ -25,9 +24,6 @@ impl Default for AnimationSpeed {
     fn default() -> Self { AnimationSpeed(1.0) }
 }
 
-const SPREAD_DURATION: f32 = 0.1;
-const COLLAPSE_DURATION: f32 = 0.1;
-const SHUFFLE_DURATION: f32 = 0.35;
 
 pub fn ease_in_out(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
@@ -43,8 +39,6 @@ pub fn animate_hover_lift(
         (&mut Transform, &mut CardHoverLift, Option<&BattlefieldCard>),
         (
             Without<DrawCardAnimation>,
-            Without<DeckShuffleAnimation>,
-            Without<CardFlipAnimation>,
             Without<HandSlideAnimation>,
             Without<PlayCardAnimation>,
             Without<TapAnimation>,
@@ -232,8 +226,6 @@ pub fn animate_combat_lurch(
         (Entity, &mut Transform, &mut CombatLurch),
         (
             Without<DrawCardAnimation>,
-            Without<DeckShuffleAnimation>,
-            Without<CardFlipAnimation>,
             Without<HandSlideAnimation>,
             Without<PlayCardAnimation>,
             Without<TapAnimation>,
@@ -253,30 +245,6 @@ pub fn animate_combat_lurch(
         }
         let arc = (lurch.progress * PI).sin();
         transform.translation += lurch.offset * arc;
-    }
-}
-
-pub fn animate_flip(
-    mut commands: Commands,
-    time: Res<Time>,
-    speed: Res<AnimationSpeed>,
-    mut cards: Query<(Entity, &mut Transform, &mut CardFlipAnimation)>,
-) {
-    for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
-
-        if anim.progress >= 1.0 {
-            transform.rotation = anim.end_rotation;
-            transform.translation.y = anim.start_y;
-            commands.entity(entity).remove::<CardFlipAnimation>().remove::<Animating>();
-        } else {
-            let t = ease_in_out(anim.progress);
-            transform.rotation = anim.start_rotation.slerp(anim.end_rotation, t);
-
-            let flip_angle = t * PI;
-            let y_offset = (CARD_WIDTH / 2.0) * flip_angle.sin().abs();
-            transform.translation.y = anim.start_y + y_offset;
-        }
     }
 }
 
@@ -307,79 +275,6 @@ pub fn animate_mdfc_flip(
     }
 }
 
-pub fn animate_deck_shuffle(
-    mut commands: Commands,
-    time: Res<Time>,
-    speed: Res<AnimationSpeed>,
-    mut cards: Query<(
-        Entity,
-        &mut Transform,
-        &mut DeckShuffleAnimation,
-        &mut DeckCard,
-        &mut CardHoverLift,
-    )>,
-) {
-    let dt = time.delta_secs() * speed.0;
-    let flat_rotation =
-        Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) * Quat::from_rotation_z(PI);
-
-    for (entity, mut transform, mut anim, mut deck_card, mut lift) in &mut cards {
-        anim.phase_timer += dt;
-
-        match anim.phase {
-            ShufflePhase::Spread => {
-                let effective = (anim.phase_timer - anim.spread_delay).max(0.0);
-                let t = ease_in_out((effective / SPREAD_DURATION).clamp(0.0, 1.0));
-                transform.translation = anim.phase_start_translation.lerp(anim.spread_target, t);
-                transform.rotation = anim.phase_start_rotation.slerp(flat_rotation, t);
-
-                if anim.phase_timer >= anim.spread_wait {
-                    transform.translation = anim.spread_target;
-                    transform.rotation = flat_rotation;
-                    anim.phase = ShufflePhase::Shuffle;
-                    anim.phase_timer = 0.0;
-                    anim.phase_start_translation = transform.translation;
-                    anim.phase_start_rotation = transform.rotation;
-                }
-            }
-            ShufflePhase::Shuffle => {
-                let t = ease_in_out((anim.phase_timer / SHUFFLE_DURATION).clamp(0.0, 1.0));
-                let base = anim.phase_start_translation.lerp(anim.shuffled_spread_target, t);
-                let arc_offset = (t * PI).sin() * anim.shuffle_arc_x;
-                transform.translation = Vec3::new(base.x + arc_offset, base.y, base.z);
-
-                if anim.phase_timer >= SHUFFLE_DURATION {
-                    transform.translation = anim.shuffled_spread_target;
-                    anim.phase = ShufflePhase::Collapse;
-                    anim.phase_timer = 0.0;
-                    anim.phase_start_translation = transform.translation;
-                    anim.phase_start_rotation = transform.rotation;
-                }
-            }
-            ShufflePhase::Collapse => {
-                let effective = (anim.phase_timer - anim.collapse_delay).max(0.0);
-                let t = ease_in_out((effective / COLLAPSE_DURATION).clamp(0.0, 1.0));
-                transform.translation =
-                    anim.phase_start_translation.lerp(anim.restack_target, t);
-                transform.rotation = anim.phase_start_rotation.slerp(flat_rotation, t);
-
-                let total_time = anim.collapse_delay + COLLAPSE_DURATION;
-                if anim.phase_timer >= total_time {
-                    transform.translation = anim.restack_target;
-                    transform.rotation = flat_rotation;
-                    deck_card.index = anim.new_index;
-                    lift.base_translation = anim.restack_target;
-                    lift.current_lift = 0.0;
-                    commands.entity(entity).remove::<DeckShuffleAnimation>().remove::<Animating>();
-                }
-            }
-        }
-    }
-}
-
-/// Animate cards flying from the deck to the hand. `HandCard` only ever
-/// marks the viewer's own hand, so on completion we snap the card into the
-/// viewer's hand fan (seat=viewer).
 pub fn animate_draw_card(
     mut commands: Commands,
     time: Res<Time>,
@@ -659,8 +554,6 @@ pub fn animate_jolt(
             With<BattlefieldCard>,
             With<CardHoverLift>,
             Without<DrawCardAnimation>,
-            Without<DeckShuffleAnimation>,
-            Without<CardFlipAnimation>,
             Without<HandSlideAnimation>,
             Without<PlayCardAnimation>,
             Without<TapAnimation>,
@@ -834,113 +727,6 @@ pub const ANIM_SPEED_MIN: f32 = 0.1;
 pub const ANIM_SPEED_MAX: f32 = 10.0;
 
 // ── Animation queueing ───────────────────────────────────────────────────────
-
-/// Queued follow-up animation for an entity that's currently animating.
-/// `dispatch_animation_queue` peels the next item off the queue once the
-/// `Animating` marker is removed, so animations chain end-to-end instead
-/// of overlapping on the same card.
-///
-/// Only a small subset of animation types are queueable today (the ones
-/// that actually conflict on the same entity in practice — chiefly tap,
-/// play, hand-slide, and graveyard-flight). Adding a new variant is a
-/// one-line append to this enum plus a one-line arm in the dispatcher.
-#[allow(dead_code)]
-pub enum QueuedAnim {
-    /// Run a tap/untap rotation animation. The bool is the `TapState`
-    /// the card should land in once the animation finishes.
-    Tap {
-        anim: TapAnimation,
-        target_tapped: bool,
-    },
-    /// Run a card-flight (hand → battlefield, deck → exile, etc.).
-    Play(PlayCardAnimation),
-    /// Slide a hand card to a new fan slot.
-    HandSlide(HandSlideAnimation),
-    /// Fly the card to the graveyard (it self-despawns on completion).
-    SendToGraveyard(SendToGraveyardAnimation),
-}
-
-#[derive(Component, Default)]
-pub struct AnimQueue {
-    pub queue: std::collections::VecDeque<QueuedAnim>,
-    /// Seconds of forced idle time before popping the next animation.
-    /// Set when the previous animation finishes; counts down (scaled by
-    /// `AnimationSpeed`) inside `dispatch_animation_queue`. Zero on a
-    /// freshly-built queue so the first animation starts immediately.
-    pub delay_remaining: f32,
-}
-
-impl AnimQueue {
-    #[allow(dead_code)]
-    pub fn from_one(anim: QueuedAnim) -> Self {
-        let mut q = AnimQueue::default();
-        q.queue.push_back(anim);
-        q
-    }
-}
-
-/// Inter-animation breather. Short enough to feel snappy at 1× and naturally
-/// shrinks at higher speeds (the same `AnimationSpeed` multiplier scales the
-/// countdown).
-pub const INTER_ANIM_DELAY: f32 = 0.18;
-
-/// Pop the next queued animation onto an entity once it stops animating.
-/// Runs every frame; entities without an `AnimQueue` are simply skipped.
-/// Filtering with `Without<Animating>` ensures the previous animation has
-/// finished (since each `animate_*` system removes `Animating` on
-/// completion). When an animation just ended (detected via
-/// `RemovedComponents<Animating>`), arms a brief delay so consecutive
-/// queued animations don't visually merge.
-pub fn dispatch_animation_queue(
-    mut commands: Commands,
-    time: Res<Time>,
-    speed: Res<AnimationSpeed>,
-    mut removed: RemovedComponents<Animating>,
-    mut queues: ParamSet<(
-        Query<&mut AnimQueue>,
-        Query<(Entity, &mut AnimQueue), Without<Animating>>,
-    )>,
-) {
-    // Arm the inter-anim delay on entities that just had `Animating`
-    // removed (i.e. their previous animation finished this frame). Drain
-    // before the dispatch loop so the same frame's pop sees the delay.
-    {
-        let mut all_queues = queues.p0();
-        for entity in removed.read() {
-            if let Ok(mut queue) = all_queues.get_mut(entity)
-                && !queue.queue.is_empty()
-            {
-                queue.delay_remaining = INTER_ANIM_DELAY;
-            }
-        }
-    }
-
-    let dt = time.delta_secs() * speed.0;
-    let mut q = queues.p1();
-    for (entity, mut queue) in &mut q {
-        if queue.delay_remaining > 0.0 {
-            queue.delay_remaining = (queue.delay_remaining - dt).max(0.0);
-            continue;
-        }
-        let Some(next) = queue.queue.pop_front() else {
-            // Empty queue and not animating — drop the queue component
-            // entirely so the entity stops matching this query.
-            commands.entity(entity).remove::<AnimQueue>();
-            continue;
-        };
-        let mut e = commands.entity(entity);
-        e.insert(Animating);
-        match next {
-            QueuedAnim::Tap { anim, target_tapped } => {
-                e.insert(anim);
-                e.insert(crate::card::TapState { tapped: target_tapped });
-            }
-            QueuedAnim::Play(anim) => { e.insert(anim); }
-            QueuedAnim::HandSlide(anim) => { e.insert(anim); }
-            QueuedAnim::SendToGraveyard(anim) => { e.insert(anim); }
-        }
-    }
-}
 
 #[cfg(test)]
 mod death_and_jolt_tests {

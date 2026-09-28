@@ -301,21 +301,6 @@ pub enum SmaaPreset {
     Ultra,
 }
 
-impl SmaaPreset {
-    // Kept for back-compat with existing config.toml files that still set
-    // `graphics.smaa_preset`; the renderer now drives SMAA from
-    // `RenderQuality`, so this method may be unused.
-    #[allow(dead_code)]
-    pub fn to_bevy(self) -> bevy::anti_alias::smaa::SmaaPreset {
-        use bevy::anti_alias::smaa::SmaaPreset as B;
-        match self {
-            Self::Low    => B::Low,
-            Self::Medium => B::Medium,
-            Self::High   => B::High,
-            Self::Ultra  => B::Ultra,
-        }
-    }
-}
 
 
 // ── Persistence systems ───────────────────────────────────────────────────────

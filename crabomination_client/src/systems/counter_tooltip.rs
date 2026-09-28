@@ -2132,12 +2132,6 @@ pub(crate) mod tests {
         }
     }
 
-    // Silence unused-import warnings for items only used in some tests.
-    #[allow(dead_code)]
-    fn _ensure_counter_type_import_used() {
-        let _ = CounterType::PlusOnePlusOne;
-    }
-
     #[test]
     fn attacking_status_surfaces_in_tooltip() {
         let mut p = make_permanent_view(0, 2);

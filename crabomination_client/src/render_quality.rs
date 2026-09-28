@@ -12,7 +12,6 @@ pub struct ChangeQuality(pub RenderQuality);
 /// Controls shadow map resolution, anti-aliasing, and mesh detail.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[allow(dead_code)] // all variants are valid user-selectable quality levels
 pub enum RenderQuality {
     #[default]
     Low,

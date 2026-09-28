@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::card::{
     ActivatableHighlight, BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture,
-    CardHighlightAssets, CardHovered, CastableHighlight, DeckCard, DeckPile, DyingHighlight,
+    CardHighlightAssets, CardHovered, CastableHighlight, DeckPile, DyingHighlight,
     GameCardId, GraveyardPile, HandCard, PileHovered, CARD_THICKNESS,
 };
 use crate::game::GraveyardBrowserState;
@@ -1876,7 +1876,6 @@ pub fn pile_tooltip(
     mut commands: Commands,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
     pile_hovered: Query<&DeckPile, With<PileHovered>>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
     existing: Query<(Entity, &PileTooltip)>,
@@ -1897,13 +1896,7 @@ pub fn pile_tooltip(
             .map(|p| p.name.clone())
             .unwrap_or_else(|| format!("Player {owner}"))
     };
-    let viewer = cv.map(|cv| cv.your_seat).unwrap_or(0);
-
-    let text = if !deck_hovered.is_empty() {
-        // Hovering a face-up viewer-deck card visual.
-        let count = lib_size(viewer);
-        Some(format!("{} library: {count} card{}", player_name(viewer), if count == 1 { "" } else { "s" }))
-    } else if let Some(pile) = pile_hovered.iter().next() {
+    let text = if let Some(pile) = pile_hovered.iter().next() {
         let count = lib_size(pile.owner);
         Some(format!("{} library: {count} card{}", player_name(pile.owner), if count == 1 { "" } else { "s" }))
     } else if let Some(gy) = gy_hovered.iter().next() {

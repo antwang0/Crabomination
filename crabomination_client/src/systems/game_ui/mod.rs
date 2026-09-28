@@ -46,10 +46,10 @@ use crabomination::net::StackItemView;
 use super::ui::RevealPopupState;
 use crate::card::{
     Animating, BattlefieldCard, CARD_THICKNESS, CardHoverLift, CardHovered,
-    CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckCard, DeckPile, DrawCardAnimation,
+    CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckPile, DrawCardAnimation,
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, SendToGraveyardAnimation,
-    StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
+    StackCard, TapAnimation, TapState, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
     creature_card_transform, hand_card_transform, back_row_card_transform, in_back_row, spawn_single_card,
 };
@@ -2219,10 +2219,6 @@ pub fn sync_game_visuals(
         ),
         (With<HandCard>, Without<Animating>),
     >,
-    deck_cards: Query<
-        (Entity, &GameCardId, &DeckCard, &Transform),
-        (Without<HandCard>, Without<Animating>),
-    >,
     bf_cards: Query<
         (
             Entity,
@@ -2516,33 +2512,11 @@ pub fn sync_game_visuals(
     let viewer_deck_top = Vec3::new(viewer_deck_base.x, viewer_deck_top_y, viewer_deck_base.z);
     let viewer_deck_back_rot = back_face_rotation(viewer, viewer, n_seats);
 
-    // ── Deck → Hand transitions (viewer's deck-card visual → face-up hand) ──
     let hand_zoom = inflight.hand_zoom.0;
-    for (entity, game_id, _deck_card, transform) in &deck_cards {
-        if hand_ids.contains(&game_id.0) {
-            let slot = viewer_hand.iter().position(|c| c.id() == game_id.0)
-                .unwrap_or(hand_total.saturating_sub(1));
-            let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total, hand_zoom);
-            commands
-                .entity(entity)
-                .remove::<DeckCard>()
-                .insert(HandCard { slot })
-                .insert(Animating)
-                .insert(DrawCardAnimation {
-                    progress: 0.0,
-                    speed: 1.5,
-                    start_translation: transform.translation,
-                    start_rotation: transform.rotation,
-                    target_translation: target.translation,
-                    target_rotation: target.rotation,
-                });
-        }
-    }
 
     // ── Spawn viewer hand cards that have no visual entity yet ───────────────
     {
         let has_entity: HashSet<CardId> = all_hand_entity_ids.iter().map(|gid| gid.0)
-            .chain(deck_cards.iter().map(|(_, gid, _, _)| gid.0))
             // A bf permanent currently animating back to hand will become
             // a HandCard entity once the animation completes — don't spawn
             // a duplicate hand card in the meantime.
@@ -3313,13 +3287,6 @@ pub fn sync_game_visuals(
             base_translation: target.translation,
         });
     }
-
-    // ── Despawn viewer deck cards no longer in hand ─────────────────────────
-    for (entity, game_id, _deck_card, _transform) in &deck_cards {
-        if !hand_ids.contains(&game_id.0) {
-            commands.entity(entity).despawn();
-        }
-    }
 }
 
 /// Scan wire events for `TopCardRevealed` and arm the reveal popup if found.
@@ -3552,7 +3519,6 @@ pub fn auto_advance_p0(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn handle_game_input(
-    mut commands: Commands,
     outbox: Option<Res<NetOutbox>>,
     view: Res<CurrentView>,
     mut r: GameInputResources,
@@ -3567,7 +3533,6 @@ pub fn handle_game_input(
         (&GameCardId, &crate::card::CommandZoneCard),
         With<CardHovered>,
     >,
-    valid_targets: Query<Entity, With<ValidTarget>>,
     btns: Res<ButtonState>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
@@ -3912,7 +3877,7 @@ pub fn handle_game_input(
                 // the pick armed. Spell / ability targeting can still
                 // cancel back to normal mode.
                 if !targeting.pending_decision_target {
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                 } else if legal_targets.declinable {
                     // CR 601.4d — an "up to N targets" slot may be left
                     // empty. Escape is the Skip control for it; the engine
@@ -3920,7 +3885,7 @@ pub fn handle_game_input(
                     outbox.submit(GameAction::SubmitDecision(
                         crabomination::decision::DecisionAnswer::DeclineTarget,
                     ));
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                 } else {
                     let source = if legal_targets.source_name.is_empty() {
                         "the game".to_string()
@@ -3979,7 +3944,7 @@ pub fn handle_game_input(
                     } else {
                         continue;
                     }
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                     return;
                 }
                 for (game_id, _owner) in &hovered_bf {
@@ -3988,7 +3953,7 @@ pub fn handle_game_input(
                     // is moving an Equipment onto the clicked creature.
                     if let Some(equipment) = targeting.pending_equip_source {
                         outbox.submit(GameAction::Equip { equipment, target: game_id.0 });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     }
                     // CR 702.152 — Reconfigure moves an Equipment creature
@@ -3998,7 +3963,7 @@ pub fn handle_game_input(
                             equipment,
                             target: Some(game_id.0),
                         });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     }
                     if is_decision {
@@ -4010,12 +3975,12 @@ pub fn handle_game_input(
                             continue;
                         }
                         submit_decision_target(&outbox, cv, target);
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
                             outbox.submit(ability_target_action(targeting, src, idx, target));
-                            cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                            cancel_targeting(targeting, legal_targets);
                             return;
                         }
                     } else if let Some(src) = targeting.pending_prepare_source {
@@ -4024,7 +3989,7 @@ pub fn handle_game_input(
                             creature_id: src, target: Some(target),
                             additional_targets: vec![], mode: targeting.pending_mode, x_value: None,
                         });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     } else if targeting.pending_reinforce
                         && let Some(pending_id) = targeting.pending_card_id
@@ -4033,7 +3998,7 @@ pub fn handle_game_input(
                         // +1/+1 counters on the picked creature; it is not a
                         // cast, so it never goes through `build_pending_cast`.
                         outbox.submit(GameAction::Reinforce { card_id: pending_id, target });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         // Gate on the catalog-enumerated legal set when
@@ -4062,7 +4027,7 @@ pub fn handle_game_input(
                             targeting.pending_cast_variant,
                         );
                         outbox.submit(action);
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     }
                 }
@@ -4073,12 +4038,12 @@ pub fn handle_game_input(
                             continue;
                         }
                         submit_decision_target(&outbox, cv, target);
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
                             outbox.submit(ability_target_action(targeting, src, idx, target));
-                            cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                            cancel_targeting(targeting, legal_targets);
                             return;
                         }
                     } else if let Some(src) = targeting.pending_prepare_source {
@@ -4087,7 +4052,7 @@ pub fn handle_game_input(
                             creature_id: src, target: Some(target),
                             additional_targets: vec![], mode: targeting.pending_mode, x_value: None,
                         });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         // Gate on the catalog-enumerated legal set when
@@ -4116,7 +4081,7 @@ pub fn handle_game_input(
                             targeting.pending_cast_variant,
                         );
                         outbox.submit(action);
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     }
                 }
@@ -4135,7 +4100,7 @@ pub fn handle_game_input(
                         return;
                     }
                     submit_decision_target(&outbox, cv, target);
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                     return;
                 } else if is_ability_target {
                     if let (Some(src), Some(idx)) = (
@@ -4150,7 +4115,7 @@ pub fn handle_game_input(
                             x_value: None,
                             mode: targeting.pending_ability_mode,
                         });
-                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        cancel_targeting(targeting, legal_targets);
                         return;
                     }
                 } else if let Some(src) = targeting.pending_prepare_source {
@@ -4163,7 +4128,7 @@ pub fn handle_game_input(
                         mode: targeting.pending_mode,
                         x_value: None,
                     });
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                     return;
                 } else if let Some(pending_id) = targeting.pending_card_id {
                     let legal_set_populated = !legal_targets.permanents.is_empty()
@@ -4184,7 +4149,7 @@ pub fn handle_game_input(
                             targeting.pending_cast_variant,
                     );
                     outbox.submit(action);
-                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    cancel_targeting(targeting, legal_targets);
                     return;
                 }
             }
@@ -4998,12 +4963,7 @@ fn ability_target_action(
     }
 }
 
-fn cancel_targeting(
-    commands: &mut Commands,
-    targeting: &mut TargetingState,
-    legal: &mut crate::game::LegalTargets,
-    valid_targets: &Query<Entity, With<ValidTarget>>,
-) {
+fn cancel_targeting(targeting: &mut TargetingState, legal: &mut crate::game::LegalTargets) {
     targeting.active = false;
     targeting.pending_card_id = None;
     targeting.pending_ability_source = None;
@@ -5031,9 +4991,6 @@ fn cancel_targeting(
     legal.source_name.clear();
     legal.description.clear();
     legal.declinable = false;
-    for entity in valid_targets.iter() {
-        commands.entity(entity).remove::<ValidTarget>();
-    }
 }
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
@@ -5173,10 +5130,7 @@ pub fn sync_command_zone(
             &name,
             target.translation,
         );
-        commands.entity(entity).insert(crate::card::CommandZoneCard {
-            owner: *owner,
-            slot: *slot,
-        });
+        commands.entity(entity).insert(crate::card::CommandZoneCard { owner: *owner });
     }
 }
 

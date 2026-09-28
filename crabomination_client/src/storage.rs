@@ -7,9 +7,6 @@
 //!
 //! Values are strings; callers serialize structure (TOML/JSON) themselves.
 
-// Native config still talks to its long-standing file paths directly; this
-// backend exists for parity and future native use (resume tokens etc.).
-#[allow(dead_code)]
 #[cfg(not(target_arch = "wasm32"))]
 mod imp {
     use std::path::PathBuf;
@@ -68,5 +65,4 @@ mod imp {
     }
 }
 
-#[allow(unused_imports)]
 pub use imp::{load, remove, save};

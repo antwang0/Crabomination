@@ -38,7 +38,6 @@ use crabomination::{
 /// re-submit it once the player taps enough mana (see `poll_net` /
 /// `drive_pending_mana_cast`).
 #[derive(Resource)]
-#[allow(dead_code)]
 pub struct NetOutbox(pub mpsc::Sender<ClientMsg>, Mutex<Option<GameAction>>);
 
 /// Inbound chat lines `(seat, name, text)` relayed by the server

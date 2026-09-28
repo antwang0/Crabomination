@@ -68,7 +68,6 @@ impl GameLog {
     /// breaks the run.
     /// Coalescing event push without a hover-preview card (tests and
     /// art-less call sites).
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn push_event(&mut self, msg: impl Into<String>, color: Color) {
         self.push_event_with_art(msg, color, None);
     }

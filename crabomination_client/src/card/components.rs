@@ -118,16 +118,6 @@ pub struct MdfcFlipAnimation {
     pub start_rotation: Quat,
 }
 
-/// Tracks an in-progress flip animation. `progress` goes from 0.0 to 1.0.
-#[derive(Component)]
-pub struct CardFlipAnimation {
-    pub progress: f32,
-    pub speed: f32,
-    pub start_rotation: Quat,
-    pub end_rotation: Quat,
-    pub start_y: f32,
-}
-
 /// Marks a card as belonging to the player's hand.
 #[derive(Component)]
 pub struct HandCard {
@@ -164,23 +154,14 @@ pub struct CardHoverLift {
     pub base_translation: Vec3,
 }
 
-/// Marker for cards in the deck pile.
-#[derive(Component)]
-pub struct DeckCard {
-    pub index: usize,
-}
-
 /// Marker for a card sitting in a player's command zone (Commander
 /// commanders, Conspiracies). Rendered as a fixed-position pile
 /// near the seat's deck/graveyard, face-up; clicking the viewer's
 /// own command zone routes through `GameAction::CastFromCommandZone`.
-/// `owner` is the seat the zone belongs to; `slot` is the stack
-/// index within that zone.
+/// `owner` is the seat the zone belongs to.
 #[derive(Component)]
 pub struct CommandZoneCard {
     pub owner: usize,
-    #[allow(dead_code)]
-    pub slot: usize,
 }
 
 /// Marker for an opponent's hand card visual (face-down, count-synced).
@@ -190,39 +171,6 @@ pub struct CommandZoneCard {
 pub struct OpponentHandCard {
     pub owner: usize,
     pub slot: usize,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ShufflePhase {
-    Spread,   // Cards cascade out into a vertical column
-    Shuffle,  // Cards slide to their new positions within the spread
-    Collapse, // Cards fly back to a stack in the new order
-}
-
-/// Three-phase shuffle animation state for each deck card.
-#[derive(Component)]
-pub struct DeckShuffleAnimation {
-    pub phase: ShufflePhase,
-    pub phase_timer: f32,
-    /// Where this card spreads to in the waterfall column.
-    pub spread_target: Vec3,
-    /// Where this card ends up in the spread after shuffling.
-    pub shuffled_spread_target: Vec3,
-    /// X bulge for the arc during the shuffle phase (positive = right, negative = left).
-    pub shuffle_arc_x: f32,
-    /// Final stack position after collapse.
-    pub restack_target: Vec3,
-    pub new_index: usize,
-    /// Stagger delay for this card's spread movement.
-    pub spread_delay: f32,
-    /// Total time to wait in the Spread phase before transitioning to Shuffle.
-    /// All cards share this value so they enter Shuffle simultaneously.
-    pub spread_wait: f32,
-    /// Stagger delay for the collapse phase.
-    pub collapse_delay: f32,
-    pub phase_start_translation: Vec3,
-    pub phase_start_rotation: Quat,
 }
 
 /// Links a visual card entity to a game-engine CardId.
@@ -286,10 +234,6 @@ pub struct DeckPile {
     pub owner: usize,
     pub index: usize,
 }
-
-/// Marker for valid target entities during targeting mode.
-#[derive(Component)]
-pub struct ValidTarget;
 
 /// Per-seat marker tagging a player as a targetable entity. Now a bare,
 /// invisible entity — the visible player representation is the 2-D HUD
@@ -382,7 +326,8 @@ pub struct ReturnToHandAnimation {
 }
 
 /// Animates a hand card back to the deck position during a mulligan.
-/// On completion the entity is converted from HandCard to DeckCard.
+/// On completion the entity despawns: the deck pile's height already
+/// counts the card.
 #[derive(Component)]
 pub struct ReturnToDeckAnimation {
     pub progress: f32,

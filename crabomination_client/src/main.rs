@@ -60,8 +60,8 @@ use game::{
 use systems::game_ui::FastForward;
 use systems::input_guard::text_input_active;
 use systems::animate::{
-    adjust_animation_speed, animate_combat_lurch, animate_deck_shuffle, animate_draw_card,
-    animate_flip, dispatch_animation_queue, animate_mdfc_flip, animate_hand_slide,
+    adjust_animation_speed, animate_combat_lurch, animate_draw_card,
+    animate_mdfc_flip, animate_hand_slide,
     animate_hover_lift, animate_play_card, animate_return_to_deck, animate_return_to_hand,
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, update_combat_lurch_targets,
     AnimationSpeed,
@@ -106,7 +106,7 @@ use systems::ui::{
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_decision_cancel, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, handle_legend_keep_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_decision_cancel, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, handle_legend_keep_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -678,8 +678,6 @@ fn main() {
                 exile_browser,
                 pile_tooltip,
                 reveal_popup,
-                animate_flip,
-                animate_deck_shuffle,
                 animate_draw_card,
                 animate_hand_slide,
                 animate_play_card,
@@ -725,10 +723,6 @@ fn main() {
         .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_return_to_hand.run_if(in_state(AppState::InGame)))
         .add_systems(Update, systems::animate::animate_vanishing.run_if(in_state(AppState::InGame)))
-        // Pop the next queued animation onto an entity once it stops
-        // animating, so chained transitions (e.g. play-then-tap on a
-        // freshly-played land) play sequentially.
-        .add_systems(Update, dispatch_animation_queue.run_if(in_state(AppState::InGame)))
         // Give every freshly-loaded card-face texture a mip chain so the
         // sampler's 16× anisotropy keeps text legible at the table's oblique
         // angle. Ungated: card images load during draft/menu as well as in a
@@ -984,7 +978,6 @@ fn main() {
                 handle_damage_order_reorder,
                 handle_damage_assign_buttons,
                 handle_search_select,
-                handle_put_on_library_select,
                 handle_put_on_library_hand_click,
                 handle_discard_select,
                 update_put_on_library_count_text,

@@ -50,7 +50,6 @@ impl Default for Scrollable {
 
 impl Scrollable {
     /// A scrollable with a custom per-detent distance.
-    #[allow(dead_code)]
     pub fn with_line_px(line_px: f32) -> Self {
         Self { line_px }
     }

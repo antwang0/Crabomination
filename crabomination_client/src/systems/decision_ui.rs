@@ -75,11 +75,6 @@ pub struct SearchSelectButton {
 }
 
 #[derive(Component)]
-pub struct PutOnLibrarySelectButton {
-    pub card_id: CardId,
-}
-
-#[derive(Component)]
 pub struct DiscardSelectButton {
     pub card_id: CardId,
 }
@@ -2036,35 +2031,6 @@ fn spawn_mulligan_modal(
             }
         });
     });
-}
-
-/// Handle clicks on put-on-library candidate cards: add/remove from ordered selection.
-#[allow(clippy::type_complexity)]
-pub fn handle_put_on_library_select(
-    view: Res<CurrentView>,
-    mut state: ResMut<DecisionUiState>,
-    mut buttons: Query<
-        (&Interaction, &PutOnLibrarySelectButton, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
-    >,
-) {
-    let Some(cv) = &view.0 else { return };
-    let required_count = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
-        Some(DecisionWire::PutOnLibrary { count, .. }) => *count,
-        _ => return,
-    };
-
-    for (interaction, btn, mut bg) in buttons.iter_mut() {
-        if *interaction != Interaction::Pressed { continue; }
-        let id = btn.card_id;
-        if let Some(pos) = state.put_on_library.iter().position(|&x| x == id) {
-            state.put_on_library.remove(pos);
-            *bg = BackgroundColor(MODAL_TILE_BG);
-        } else if state.put_on_library.len() < required_count {
-            state.put_on_library.push(id);
-            *bg = BackgroundColor(theme::BUTTON_SELECTED_BG);
-        }
-    }
 }
 
 /// Handle clicks on Inquisition/Thoughtseize discard candidate cards.

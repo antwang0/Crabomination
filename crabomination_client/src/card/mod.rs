@@ -9,17 +9,17 @@ pub mod spawn;
 
 pub use components::{
     ActivatableHighlight,
-    Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
+    Animating, BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
     CombatLurch, DeathBeat, DyingHighlight, Vanishing, DEATH_BEAT_SECS,
-    CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, ExilePile,
+    CommandZoneCard, DeckPile, DrawCardAnimation, ExilePile,
     FlippedFace,
     FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,
     MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation,
     PlayerTargetZone, RevealPeekAnimation,
     ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
-    ShufflePhase, StackCard, SwapFrontMaterial, TapAnimation, TapState,
-    ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
+    StackCard, SwapFrontMaterial, TapAnimation, TapState,
+    CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
