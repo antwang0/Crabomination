@@ -173,15 +173,7 @@ ALLOW = {
     ("city_in_a_bottle", "StepBegins(Upkeep)"): "CR 603.8 state trigger checked at upkeep",
     ("jihad", "StepBegins(Upkeep)"): "CR 603.8 state trigger checked at upkeep",
     ("goblins_of_the_flarg", "EntersBattlefield"): "CR 603.8 state trigger, rechecked as permanents enter",
-    # Ascend (CR 702.131) is a continuous check; the engine re-reads the
-    # city's blessing when a permanent enters and at upkeep.
-    ("slippery_scoundrel", "EntersBattlefield"): "ascend re-check",
-    ("slippery_scoundrel", "StepBegins(Upkeep)"): "ascend re-check",
-    ("wayward_swordtooth", "EntersBattlefield"): "ascend re-check",
-    ("wayward_swordtooth", "StepBegins(Upkeep)"): "ascend re-check",
-    ("twilight_prophet", "EntersBattlefield"): "ascend re-check",
     # Documented approximations, each with its note in the factory.
-    ("marionette_master", "PermanentSacrificed"): "destroy case approximated to the sacrifice path",
     ("watery_grasp", "StepBegins(Upkeep)"): "'doesn't untap' modelled as a re-tap, as Narcolepsy",
     ("wrenn_and_six", "StepBegins(Upkeep)"): "the retrace emblem collapsed to upkeep recursion",
     ("zaffai_and_the_tempests", "StepBegins(PreCombatMain)"): "'once each of your turns' as a main-phase grant",
@@ -194,6 +186,13 @@ ALLOW = {
     ("rites_of_flourishing", "StepBegins(Upkeep)"): "the extra land drop granted each upkeep",
     ("druid_class", "StepBegins(Upkeep)"): "level 2's extra land drop granted each upkeep",
     ("exploration_broodship", "StepBegins(Upkeep)"): "the 3+ station extra land drop granted each upkeep",
+    # Devices for printed behaviour the engine has no event for:
+    ("desert_warfare", "CardDiscarded"): "a Desert discarded is one of 'put into your graveyard from your hand'",
+    ("erdwal_illuminator", "TokenCreated"): "'whenever you investigate' is a Clue token made",
+    ("intet_the_dreamer", "PermanentLeavesBattlefield"): "ends 'for as long as you control Intet' on its departure",
+    ("the_day_of_the_doctor", "PermanentLeavesBattlefield"): "ends 'for as long as this Saga remains on the battlefield'",
+    ("share_the_spoils", "StepBegins(Upkeep)"): "grants each player's per-turn play from among the exiled cards",
+    ("twins_of_discord", "SpellCast"): "grants bloodthirst 2 to your other colorless creature spells as cast",
 }
 
 

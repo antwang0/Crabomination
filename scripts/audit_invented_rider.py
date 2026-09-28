@@ -185,6 +185,12 @@ ALLOW = {
         "CR 307.1/302.1 — casting a creature is sorcery-speed; the grant is not a second permission",
     ("eternal_scourge", "sorcery_speed: true"):
         "CR 307.1/302.1 — 'you may cast this card from exile' on a creature is still sorcery-speed",
+    ("gavel_of_the_righteous", "sorcery_speed: true"):
+        "CR 702.6a — its 'Equip—remove a counter' is an equip ability, sorcery-speed by rule",
+    ("roadkill_rodney", "sorcery_speed: true"):
+        "the Mutagen TOKEN's printed ability ('Activate only as a sorcery'), not Rodney's",
+    ("valgavoth_harrower_of_souls", "once_per_turn: true"):
+        "'for the first time during each of their turns' is the once-a-turn limit",
     ("phyrexian_battleflies", "once_per_turn: true"):
         "'no more than twice each turn' has no primitive — `once_per_turn` is a bool; documented in INCOMPLETE_CARDS",
 }
