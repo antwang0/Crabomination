@@ -7,6 +7,9 @@
 //! the stack with a grant that stops it — hexproof/shroud against a targeted
 //! spell or ability (CR 702.11b / 702.18a: the target becomes illegal),
 //! indestructible against destroy or damage (CR 702.12b), a sweep included.
+//! Failing a grant, lethal removal is answered with a "when that creature dies
+//! this turn, return it to its owner's hand" ability (Together Forever — never
+//! activated in eight decks, census seed 3100001).
 //! Commander games only, so two-player play is unchanged.
 
 use crate::card::{CardId, Keyword};
@@ -105,7 +108,46 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
             }
         }
     }
-    None
+    if threat == Threat::TargetedOther {
+        return None;
+    }
+    // A sweep: insure the biggest creature the ability will take.
+    let mut victims: Vec<(i32, CardId)> = match victim {
+        Some(v) => vec![(0, v)],
+        None => state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.is_creature())
+            .map(|c| (state.computed_permanent(c.id).map_or(0, |cp| cp.power), c.id))
+            .collect(),
+    };
+    victims.sort_by_key(|&(power, id)| (std::cmp::Reverse(power), id));
+    let insurers: Vec<(CardId, usize)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat)
+        .flat_map(|c| {
+            c.definition
+                .activated_abilities
+                .iter()
+                .enumerate()
+                .filter(|(_, ab)| matches!(ab.effect, Effect::WhenTargetDiesThisTurn { slot: 0, .. }))
+                .map(move |(i, _)| (c.id, i))
+        })
+        .collect();
+    victims.iter().find_map(|&(_, v)| {
+        insurers.iter().find_map(|&(card_id, ability_index)| {
+            let action = GameAction::ActivateAbility {
+                card_id,
+                ability_index,
+                target: Some(Target::Permanent(v)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
 }
 
 #[cfg(test)]
@@ -142,5 +184,38 @@ mod tests {
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert!(g.battlefield_find(bear).is_some(), "Murder lost its target");
+    }
+
+    /// Together Forever insures a countered creature against Murder; an
+    /// uncountered one is outside its filter.
+    #[test]
+    fn together_forever_insures_a_countered_creature_against_murder() {
+        for (counter, fires) in [(true, true), (false, false)] {
+            let mut g = crate::game::multi_player_game(3);
+            g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+            g.active_player_idx = 1;
+            g.step = TurnStep::PreCombatMain;
+            let tf = g.add_card_to_battlefield(0, crate::catalog::together_forever());
+            let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+            if counter {
+                g.battlefield_find_mut(bear).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+            }
+            let murder = g.add_card_to_hand(1, crate::catalog::murder());
+            g.players[1].mana_pool.add(Color::Black, 3);
+            g.priority.player_with_priority = 1;
+            g.perform_action(GameAction::CastSpell {
+                card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+            })
+            .expect("Murder");
+            g.priority.player_with_priority = 0;
+            g.players[0].mana_pool.add_colorless(1);
+            let picked = pick_keyword_shield(&g, 0);
+            assert_eq!(
+                matches!(picked, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                    if card_id == tf && t == bear),
+                fires,
+                "counter {counter}"
+            );
+        }
     }
 }
