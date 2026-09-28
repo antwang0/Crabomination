@@ -18233,6 +18233,18 @@ impl GameState {
                                     counter_type: *kind,
                                     count: n, placer: self.resolution_causer,
                                 });
+                            } else if self.scratch.exiled_card_ids_this_resolution.contains(&cid)
+                                && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
+                            {
+                                // CR 400.7 / 122.1 — "exile it with a page
+                                // counter on it" (Tasha): the effect that
+                                // moved the card finds it in exile.
+                                c.add_counters(*kind, n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: *kind,
+                                    count: n, placer: self.resolution_causer,
+                                });
                             }
                             // Track per-turn "this permanent gained counters"
                             // for Fractal Tender's end-step trigger and any
