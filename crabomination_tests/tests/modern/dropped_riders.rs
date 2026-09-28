@@ -2878,3 +2878,31 @@ fn cr_115_1_bare_target_slots_name_their_filter() {
     assert!(!try_cast(&mut g, catalog::cannibalize, Target::Permanent(bear), vec![Target::Permanent(mine)]), "different controllers");
     assert!(try_cast(&mut g, catalog::searing_flesh, Target::Player(1), vec![]));
 }
+
+/// CR 115.1 — an activation's printed target bounds its slot: Soul Sculptor
+/// ("target creature") and Militant Monk ("any target") refuse a land.
+/// Soul Sculptor's filter existed and the per-slot walker never read it.
+#[test]
+fn cr_115_1_activated_slots_refuse_a_land() {
+    for f in [catalog::soul_sculptor as fn() -> crabomination::card::CardDefinition, catalog::militant_monk] {
+        let mut g = main_phase();
+        let land = g.add_card_to_battlefield(1, catalog::forest());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let src = g.add_card_to_battlefield(0, f());
+        g.clear_sickness(src);
+        for c in [Color::White, Color::Blue, Color::Green] {
+            g.players[0].mana_pool.add(c, 3);
+        }
+        g.players[0].mana_pool.add_colorless(3);
+        let act = |t: Target| GameAction::ActivateAbility {
+            card_id: src,
+            ability_index: 0,
+            target: Some(t),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        };
+        assert!(g.perform_action(act(Target::Permanent(land))).is_err(), "{}: a land", f().name);
+        assert!(g.perform_action(act(Target::Permanent(bear))).is_ok(), "{}: a creature", f().name);
+    }
+}

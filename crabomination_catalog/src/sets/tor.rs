@@ -1306,7 +1306,7 @@ pub fn militant_monk() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::PreventNextDamage {
-                target: Selector::Target(0),
+                target: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             ..Default::default()

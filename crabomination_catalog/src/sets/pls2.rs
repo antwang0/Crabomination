@@ -1711,7 +1711,7 @@ pub fn guard_dogs() -> CardDefinition {
                     filter: R::Permanent,
                 },
                 then: Box::new(Effect::PreventCombatDamageByTargetThisTurn {
-                    target: Selector::Target(0),
+                    target: crate::effect::shortcut::target_filtered(R::Creature),
                 }),
                 else_: Box::new(Effect::Noop),
             },
