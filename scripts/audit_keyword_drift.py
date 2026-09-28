@@ -44,13 +44,11 @@ spot (Ghor-Clan Rampager's bloodrush is a from-hand activated ability with
 `discard_self_cost` and no name anywhere) plus real gaps (Terminus prints
 Miracle {W} and has no miracle).
 
-**It was FOUR rows** (escalate's per-extra-mode price has since landed as
-`CardDefinition::escalate`), and each needs a primitive the engine does
-not have rather than a field it does: a bestow cost that is `{R}` plus Collect
-evidence 6 (Detective's Phoenix), a flashback costed in X loyalty counters removed from your walkers
-(Light Up the Night), and a kicker that changes a spell's MODAL COUNT from one
-to any number (Inscription of Ruin). Everything a rule or a card fix could
-reach has been reached; the next row here is engine work.
+Escalate's per-mode price (`CardDefinition::escalate`, CR 702.120a) and the
+kicker that widens a modal count (`kicked_any_modes`, the Inscriptions) have
+since landed; what is left is a bestow cost that is `{R}` plus Collect
+evidence 6 (Detective's Phoenix) and a flashback costed in X loyalty counters
+removed from your walkers (Light Up the Night).
 """
 import argparse
 import json
@@ -246,7 +244,12 @@ def oracle_words(name: str):
     if not c or c.get("card_faces") or " // " in (c.get("type_line") or "") \
             or " // " in (c.get("mana_cost") or ""):
         return None
-    txt = (c.get("oracle_text") or "") + " " + (c.get("type_line") or "")
+    # A flavor word ("Echo of the First Murder — …", Drach'Nyen) is not the
+    # keyword it starts with (CR 207.2c).
+    # Two or more plain words before the dash; "Companion — " and
+    # "Prototype {1}{R} — 1/1" are keywords.
+    oracle = re.sub(r"(?m)^[A-Z][\w'’,-]*(?: [\w'’,-]+)+ — ", "", c.get("oracle_text") or "")
+    txt = oracle + " " + (c.get("type_line") or "")
     return REMINDER.sub(" ", txt).lower()
 
 
@@ -285,7 +288,8 @@ DISCARD_FROM_HAND = {"channel", "bloodrush"}
 # `Value::IfPred`, Searing Barrage through `Effect::If`); the third,
 # Silverflame Ritual, really had no adamant half.
 SPELLED_AS = {
-    "adamant": ("ManaSpentOfColorAtLeast",),
+    # Desecrate Reality's colorless adamant is its own predicate.
+    "adamant": ("ManaSpentOfColorAtLeast", "ColorlessManaSpentAtLeast"),
     # CR 702.81 — Devour is an "as this enters" replacement, and the catalog
     # writes it as the effect it amounts to: an ETB `SacrificeAnyNumber` whose
     # `per_each` adds the counter (Caprichrome). `Keyword::Devour(n)` is in the
