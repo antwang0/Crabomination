@@ -699,8 +699,9 @@ fn is_costs_one_less() -> StaticAbility {
 
 /// Will, Scholar of Frost — {4}{U} Will planeswalker (back of Rowan), 4 loyalty.
 /// IS spells you cast cost {1} less. +1: target creature has base 0/2 until your
-/// next turn. −3: draw two. −7: exile up to five target permanents. (The −7's
-/// "controller makes a 4/4" compensation collapses to a single targeted exile.)
+/// next turn. −3: draw two. −7: exile up to five target permanents; each one's
+/// controller creates a 4/4 blue and red Elemental (made as it is exiled, so
+/// it names the controller the permanent had).
 fn will_scholar_of_frost() -> CardDefinition {
     CardDefinition {
         name: "Will, Scholar of Frost",
@@ -731,8 +732,29 @@ fn will_scholar_of_frost() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -7,
-                effect: Effect::Exile {
-                    what: target_filtered(SelectionRequirement::Permanent),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 5,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Permanent,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::CreateToken {
+                            who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                            count: Value::ONE,
+                            definition: std::sync::Arc::new(TokenDefinition {
+                                name: "Elemental".into(),
+                                power: 4,
+                                toughness: 4,
+                                colors: vec![Color::Blue, Color::Red],
+                                card_types: vec![CardType::Creature],
+                                subtypes: Subtypes {
+                                    creature_types: vec![CreatureType::Elemental],
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                        },
+                        Effect::Exile { what: Selector::Target(0) },
+                    ])),
                 },
                 ..Default::default()
             },

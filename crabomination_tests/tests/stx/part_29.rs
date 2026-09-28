@@ -320,6 +320,23 @@ fn will_plus_one_sets_base_zero_two_and_minus_three_draws_two() {
     assert_eq!(g.players[0].hand.len(), hand_before + 2);
 }
 
+/// Will's −7: the exiled permanent's controller gets a 4/4 Elemental.
+#[test]
+fn will_minus_seven_exiles_and_compensates_the_controller() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let will = g.add_card_to_battlefield(0, *catalog::rowan_scholar_of_sparks().back_face.unwrap());
+    g.battlefield_find_mut(will).unwrap().counters.insert(CounterType::Loyalty, 7);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: will, ability_index: 2, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Will -7");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled");
+    let elemental = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Elemental");
+    assert!(elemental.is_some_and(|c| c.controller == 1 && c.power() == 4), "its controller's 4/4");
+}
+
 // ── Mila, Crafty Companion // Lukka, Wayward Bonder ────────────────────────────
 
 #[test]
