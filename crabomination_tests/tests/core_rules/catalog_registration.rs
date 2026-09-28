@@ -1911,8 +1911,11 @@ fn every_creature_that_prints_lure_carries_it() {
 ///
 /// Forth Eorlingas! fires its "you become the monarch" per connecting
 /// creature, and becoming the monarch you already are is no change (CR
-/// 725.3): once a batch and once a dealer are the same game.
-const BATCHED_DAMAGE_SIGNED_OFF: &[&str] = &["Quartzwood Crasher", "Magmatic Galleon", "Forth Eorlingas!"];
+/// 725.3): once a batch and once a dealer are the same game. Tamiyo,
+/// Upriser Crowned (in the cache since 2026-09-28) taps and stuns "those
+/// creatures" — once per dealer puts the same one stun counter on each.
+const BATCHED_DAMAGE_SIGNED_OFF: &[&str] =
+    &["Quartzwood Crasher", "Magmatic Galleon", "Forth Eorlingas!", "Tamiyo, Upriser Crowned"];
 
 /// **A card that prints "whenever one or more … deal … damage" fires once per
 /// damage batch, not once per dealer.**
