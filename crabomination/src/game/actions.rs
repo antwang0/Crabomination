@@ -912,6 +912,10 @@ pub fn color_index(c: ManaColor) -> usize {
 
 /// A cached untapped mana source: what it can make and what it costs to
 /// activate. See `GameState::mana_source_table`.
+/// At or below this life total auto-tap drops sources that would kill the
+/// payer (`GameState::mana_source_self_harm`).
+const LETHAL_TAP_WINDOW: i32 = 3;
+
 struct ManaSourceInfo {
     id: CardId,
     /// Where the source sat on the battlefield when the table was built, so
@@ -16789,6 +16793,27 @@ impl GameState {
         out
     }
 
+    /// The most life any of `s`'s listed mana abilities costs its controller
+    /// to activate: `life_cost` plus a fixed "deals N damage to you" rider
+    /// (City of Brass, the painlands, Ancient Tomb).
+    fn mana_source_self_harm(&self, s: &ManaSourceInfo) -> i32 {
+        fn damage_to_you(e: &Effect) -> i32 {
+            match e {
+                Effect::DealDamage { to: crate::effect::Selector::You, amount: crate::effect::Value::Const(n) } => *n,
+                Effect::Seq(steps) => steps.iter().map(damage_to_you).sum(),
+                _ => 0,
+            }
+        }
+        let Some(c) = self.source_card(s) else { return 0 };
+        let abilities = &c.definition.activated_abilities;
+        std::iter::once(s.first_idx)
+            .chain(s.colors.iter().map(|col| s.color_idx[color_index(col)]))
+            .filter_map(|i| abilities.get(i))
+            .map(|a| a.life_cost as i32 + damage_to_you(&a.effect))
+            .max()
+            .unwrap_or(0)
+    }
+
     /// A listed mana source's live battlefield entry. `battlefield_find` is a
     /// linear scan and the two selection loops run one per live source per
     /// pip, so the table carries the index it was built at and the scan is
@@ -16957,8 +16982,16 @@ impl GameState {
 
         // Built once; the selection loops below re-check `tapped` live but
         // read colours and costs from here. See `mana_source_table`.
-        let sources = self.mana_source_table(player, creature_only, only);
+        let mut sources = self.mana_source_table(player, creature_only, only);
         crate::game::pay_census::record_tap(2, 1);
+        // A source whose own life cost or damage would take the payer's last
+        // life is never auto-tapped: a pod seat at 1 life paid a ward with
+        // City of Brass and left the game (CR 104.3a / 800.4a). Only read at
+        // a low life total, so an ordinary payment never walks it.
+        let life = self.effective_life(player);
+        if (1..=LETHAL_TAP_WINDOW).contains(&life) {
+            sources.0.retain(|s| self.mana_source_self_harm(s) < life);
+        }
 
         // Converge (`diverse`): colors already certain to be spent — the
         // cost's own colored pips, and pool surplus the diverse generic

@@ -6313,44 +6313,62 @@ fn cr_506_2_tahngarth_attacks_a_player_its_new_controller_attacks() {
     assert_eq!(t, Some(AttackTarget::Player(2)), "joins the attack on seat 2");
 }
 
-/// CR 702.21a + 800.4a — a player who pays a ward cost with City of Brass at
-/// 1 life leaves the game mid-payment, and their Bolt leaves the stack with
-/// them; the ward trigger then found nothing at the index it had looked up
-/// (a pod panic, "removal index (is 0) should be < len (is 0)").
-#[test]
-fn ward_payer_leaving_mid_payment_takes_the_spell_along() {
-    use crabomination::card::{Keyword, WardCost};
-    use crabomination::game::types::Target;
-    use crabomination::mana::{Color, cost, generic};
-    let mut g = multi_player_game(3);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.step = TurnStep::PreCombatMain;
-    let mut warded = catalog::grizzly_bears();
-    warded.keywords.push(Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))));
-    let bear = g.add_card_to_battlefield(0, warded);
-    g.add_card_to_battlefield(1, catalog::city_of_brass());
-    g.players[1].life = 1;
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("bolt the warded bear");
+/// A land whose mana ability deals `n` damage to its controller — City of
+/// Brass with a bigger rider, outside auto-tap's lethal-source window.
+fn painful_land(n: i32) -> crabomination::card::CardDefinition {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut land = catalog::city_of_brass();
+    let a = &mut land.activated_abilities[0];
+    if let Effect::Seq(steps) = &mut a.effect {
+        steps[1] = Effect::DealDamage { to: Selector::You, amount: Value::Const(n) };
+    }
+    land
+}
+
+fn pass_until_empty(g: &mut GameState) {
     for _ in 0..12 {
         if g.stack.is_empty() {
             break;
         }
         let _ = g.perform_action(GameAction::PassPriority);
     }
-    assert!(g.stack.is_empty());
-    assert!(!g.players[1].is_alive(), "City of Brass took the last point");
-    assert!(g.battlefield_find(bear).is_some(), "the Bolt left with its caster");
 }
 
+/// CR 702.21a + 800.4a — a player who pays a ward cost with a self-damaging
+/// land leaves the game mid-payment, and their Bolt leaves the stack with
+/// them; the ward trigger then found nothing at the index it had looked up
+/// (a pod panic, "removal index (is 0) should be < len (is 0)"). At 1 life
+/// auto-tap won't touch City of Brass at all: the ward goes unpaid.
+#[test]
+fn ward_payer_leaving_mid_payment_takes_the_spell_along() {
+    use crabomination::card::{Keyword, WardCost};
+    use crabomination::game::types::Target;
+    use crabomination::mana::{Color, cost, generic};
+    for (land, life, dies) in [(painful_land(4), 4, true), (catalog::city_of_brass(), 1, false)] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::PreCombatMain;
+        let mut warded = catalog::grizzly_bears();
+        warded.keywords.push(Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))));
+        let bear = g.add_card_to_battlefield(0, warded);
+        g.add_card_to_battlefield(1, land);
+        g.players[1].life = life;
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("bolt the warded bear");
+        pass_until_empty(&mut g);
+        assert!(g.stack.is_empty());
+        assert_eq!(!g.players[1].is_alive(), dies, "life {life}");
+        assert!(g.battlefield_find(bear).is_some(), "the Bolt never resolved");
+    }
+}
 /// CR 800.4a — the same shape through "counter target spell unless its
-/// controller pays {3}" (Mana Leak): City of Brass takes the caster's last
-/// point mid-payment and their spell leaves with them.
+/// controller pays {3}" (Mana Leak): the land's damage takes the caster's
+/// last life mid-payment and their spell leaves with them.
 #[test]
 fn mana_leak_payer_leaving_mid_payment_takes_the_spell_along() {
     use crabomination::game::types::Target;
@@ -6359,8 +6377,8 @@ fn mana_leak_payer_leaving_mid_payment_takes_the_spell_along() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.step = TurnStep::PreCombatMain;
-    g.add_card_to_battlefield(1, catalog::city_of_brass());
-    g.players[1].life = 1;
+    g.add_card_to_battlefield(1, painful_land(4));
+    g.players[1].life = 4;
     let life0 = g.players[0].life;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
@@ -6376,13 +6394,8 @@ fn mana_leak_payer_leaving_mid_payment_takes_the_spell_along() {
         card_id: leak, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("leak the bolt");
-    for _ in 0..12 {
-        if g.stack.is_empty() {
-            break;
-        }
-        let _ = g.perform_action(GameAction::PassPriority);
-    }
+    pass_until_empty(&mut g);
     assert!(g.stack.is_empty());
-    assert!(!g.players[1].is_alive(), "City of Brass took the last point");
+    assert!(!g.players[1].is_alive(), "the land took the last four");
     assert_eq!(g.players[0].life, life0, "no Bolt resolved");
 }
