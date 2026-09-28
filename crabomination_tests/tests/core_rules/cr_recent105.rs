@@ -332,3 +332,36 @@ fn cr_400_7_mass_graveyard_moves_report_the_cards_leaving() {
         assert_eq!(counters, 1, "{effect:?}: one trigger for the batch");
     }
 }
+
+/// CR 700.2 — Hullbreaker Horror's "choose up to one": with no opposing
+/// nonland permanent, the bounce mode's only target is the caster's own
+/// rock, so the auto-pick takes the empty mode instead (a Sol Ring /
+/// Talisman recast loop ran a pod to the action cap). An opposing
+/// permanent is still bounced.
+#[test]
+fn cr_700_2_hullbreaker_declines_to_bounce_its_own_permanent() {
+    for opposing in [false, true] {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.add_card_to_battlefield(0, catalog::hullbreaker_horror());
+        let talisman = g.add_card_to_battlefield(0, catalog::talisman_of_dominance());
+        let theirs = opposing.then(|| g.add_card_to_battlefield(1, catalog::sol_ring()));
+        let ring = g.add_card_to_hand(0, catalog::sol_ring());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: ring,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast Sol Ring");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(talisman).is_some(), "own Talisman stays (opposing: {opposing})");
+        if let Some(id) = theirs {
+            assert!(g.battlefield_find(id).is_none(), "the opposing Sol Ring is bounced");
+        }
+    }
+}

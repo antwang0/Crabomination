@@ -246,9 +246,32 @@ impl GameState {
             mode_texts: crate::game::mode_texts(modes),
         });
         if let DecisionAnswer::Mode(idx) = answer {
-            return Some(idx.min(modes.len() - 1));
+            let idx = idx.min(modes.len() - 1);
+            return Some(self.decline_self_hostile_mode(modes, idx, source, controller));
         }
         None
+    }
+
+    /// "Choose up to one" (an empty `Noop` mode beside the real ones): a
+    /// hostile targeted mode whose only target is the controller's own
+    /// permanent is declined for the empty mode instead. Hullbreaker Horror
+    /// with no opposing nonland permanent bounced its own controller's Sol
+    /// Ring and Talisman on each recast — a mana-neutral loop to the action
+    /// cap (pod seed 2103005, game 46).
+    fn decline_self_hostile_mode(&self, modes: &[Effect], idx: usize, source: CardId, controller: usize) -> usize {
+        let mode = &modes[idx];
+        if !mode.requires_target() || mode.prefers_friendly_target() {
+            return idx;
+        }
+        let Some(empty) = modes.iter().position(|m| matches!(m, Effect::Noop)) else { return idx };
+        match self.auto_target_for_effect_avoiding(mode, controller, Some(source)) {
+            Some(crate::game::types::Target::Permanent(id))
+                if self.battlefield_find(id).is_some_and(|c| c.controller == controller) =>
+            {
+                empty
+            }
+            _ => idx,
+        }
     }
 
     /// CR 700.2a — pick a directly-pushed trigger's mode, then auto-target the
