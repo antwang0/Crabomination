@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Excess** — counts creatures you control now that dealt damage to a
 //!   player this turn (combat or not).
-//! - **Killer Service** — the token sacrificed is the engine's pick.
 //! - **Sizzling Soloist** — "attacks during its controller's next combat" is
 //!   must-attack until your next turn.
 //! - **Vivien's Stampede** — the draw happens at end of combat, not at the

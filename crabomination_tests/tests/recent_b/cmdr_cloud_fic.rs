@@ -246,6 +246,24 @@ fn yuffie_steals_an_artifact() {
     assert_eq!(g.battlefield_find(ring).unwrap().controller, 0);
 }
 
+/// Yuffie: the Equipment she picks up is her controller's choice (CR 608.2d).
+#[test]
+fn yuffie_attaches_the_chosen_equipment() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let sword = g.add_card_to_battlefield(0, catalog::short_sword());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![sword]),
+    ]));
+    let yuffie = g.add_card_to_hand(0, catalog::yuffie_materia_hunter());
+    flood(&mut g, 0);
+    cast(&mut g, yuffie, &[Target::Permanent(ring)]).expect("cast");
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(yuffie));
+}
+
 /// A prompting caster's per-opponent picks resume one ask at a time. The loop
 /// used to ask on for the next opponent after a suspend, overwriting the
 /// parked ask: an 8-seat pod answered 7,741 of them (`--pod-decks

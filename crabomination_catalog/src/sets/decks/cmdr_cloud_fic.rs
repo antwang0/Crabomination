@@ -6,8 +6,6 @@
 //! - **Professor Hojo** — the draw fires for any ability of a permanent
 //!   that targets your creature.
 //! - **Lifestream's Blessing** — X is read as it resolves, not as it's cast.
-//! - **Yuffie, Materia Hunter** — the Equipment attached is the engine's
-//!   pick among yours.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, ConditionalEquipBonus, CounterType, CreatureType,
@@ -704,8 +702,7 @@ pub fn wrecking_ball_arm() -> CardDefinition {
 }
 
 /// Yuffie, Materia Hunter — ninjutsu; steals a noncreature artifact while
-/// you control her, then may pick up an Equipment of yours.
-/// Residual: the Equipment is the engine's pick.
+/// you control her, then may pick up an Equipment of yours (your choice).
 pub fn yuffie_materia_hunter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(1), r()]))],
@@ -715,12 +712,14 @@ pub fn yuffie_materia_hunter() -> CardDefinition {
             },
             Effect::MayDo {
                 description: "Attach an Equipment you control to Yuffie?".into(),
-                body: Box::new(Effect::Attach {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::EachPermanent(yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment)))),
-                        count: Box::new(Value::ONE),
-                    },
-                    to: Selector::This,
+                body: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment))),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Attach {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: Selector::This,
+                    }),
+                    other: Box::new(Effect::Noop),
                 }),
             },
         ]))],

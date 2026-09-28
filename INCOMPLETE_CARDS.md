@@ -2157,7 +2157,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
-| 🟡 Yuffie, Materia Hunter | Limit Break (FIC) | the Equipment attached is the engine's pick among yours. |
 | 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
@@ -2196,7 +2195,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
 | 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
-| 🟡 Killer Service | Cabaretti Cacophony (NCC) | the token sacrificed is the engine's pick. |
 | 🟡 Sizzling Soloist | Cabaretti Cacophony (NCC) | "attacks during its controller's next combat phase" is must-attack until your next turn. |
 | 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
