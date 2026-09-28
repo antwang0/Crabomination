@@ -990,14 +990,18 @@ pub fn rotfeaster_maggot() -> CardDefinition {
     }
 }
 
-/// Resolute Archangel — {5}{W}{W} 4/4 with flying. ETB: your life total
-/// becomes your starting life total.
+/// Resolute Archangel — {5}{W}{W} 4/4 with flying. ETB: if your life total is
+/// less than your starting life total, it becomes your starting life total.
 pub fn resolute_archangel() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::SetLifeTotal {
-            who: Selector::You,
-            amount: Value::StartingLifeTotal,
-        })],
+        triggered_abilities: vec![{
+            let mut t = etb(Effect::SetLifeTotal { who: Selector::You, amount: Value::StartingLifeTotal });
+            t.event.filter = Some(Predicate::ValueAtLeast(
+                Value::StartingLifeTotal,
+                Value::Sum(vec![Value::LifeOf(PlayerRef::You), Value::ONE]),
+            ));
+            t
+        }],
         ..creature(
             "Resolute Archangel",
             cost(&[generic(5), w(), w()]),

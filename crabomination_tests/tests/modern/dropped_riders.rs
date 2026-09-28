@@ -1714,3 +1714,32 @@ fn trade_caravan_untaps_on_an_opponents_upkeep() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(forest).unwrap().tapped);
 }
+
+/// Intervening "if" clauses that shipped dropped (CR 603.4): Resolute
+/// Archangel only raises a life total below the starting one (it lowered a
+/// Commander player's 45 to 40), and Unstoppable Slasher returns only if it
+/// had no counters — its stun-countered return used to come back every time.
+#[test]
+fn resolute_archangel_and_unstoppable_slasher_check_their_ifs() {
+    use crabomination::effect::{Effect, Selector};
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    for (life, after) in [(25, 25), (7, 20)] {
+        let mut g = main_phase();
+        g.players[0].life = life;
+        let angel = g.add_card_to_hand(0, catalog::resolute_archangel());
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.players[0].mana_pool.add_colorless(5);
+        cast(&mut g, angel, None).expect("Archangel");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, after, "from {life}");
+    }
+    let mut g = main_phase();
+    let slasher = g.add_card_to_battlefield(0, catalog::unstoppable_slasher());
+    let kill = Effect::Destroy { what: Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature) };
+    for round in 0..2 {
+        let evs = g.resolve_effect(&kill, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(slasher).is_some(), round == 0, "returns once, then stays dead");
+    }
+}

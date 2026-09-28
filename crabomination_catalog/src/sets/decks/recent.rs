@@ -4294,10 +4294,12 @@ pub fn unstoppable_slasher() -> CardDefinition {
                     rounded_up: true,
                 },
             },
-            on_dies(Effect::ReturnSelfTappedWithCounters {
-                kind: CounterType::Stun,
-                amount: 2,
-            }),
+            // "…if it had no counters on it, return it …" (CR 603.4).
+            {
+                let mut t = on_dies(Effect::ReturnSelfTappedWithCounters { kind: CounterType::Stun, amount: 2 });
+                t.event.filter = Some(Predicate::Not(Box::new(Predicate::TriggerSourceHadCounters)));
+                t
+            },
         ],
         ..Default::default()
     }
