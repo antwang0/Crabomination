@@ -32,7 +32,7 @@ pub fn valkyries_call() -> CardDefinition {
                 Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
+                        controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
                 },
@@ -82,7 +82,7 @@ pub fn infernal_vessel() -> CardDefinition {
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
+                        controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
                 },

@@ -37834,7 +37834,7 @@ pub fn felidar_guardian() -> CardDefinition {
             Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
+                    controller: PlayerRef::OwnerOfMoved,
                     tapped: false,
                 },
             },
@@ -45058,7 +45058,7 @@ pub fn soulherder() -> CardDefinition {
                         Effect::Move {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
-                                controller: PlayerRef::You,
+                                controller: PlayerRef::OwnerOfMoved,
                                 tapped: false,
                             },
                         },
@@ -63715,7 +63715,7 @@ pub fn splash_portal() -> CardDefinition {
             Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
+                    controller: PlayerRef::OwnerOfMoved,
                     tapped: false,
                 },
             },
@@ -64741,7 +64741,7 @@ pub fn luminous_broodmoth() -> CardDefinition {
                 Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
+                        controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
                 },

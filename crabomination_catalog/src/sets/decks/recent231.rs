@@ -96,7 +96,7 @@ pub fn lilysplash_mentor() -> CardDefinition {
                 Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
+                        controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
                 },

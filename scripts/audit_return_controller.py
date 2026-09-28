@@ -21,13 +21,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_counter_kinds import CACHE, oracle_of  # noqa: E402
 
 YOURS = re.compile(r"battlefield under your control", re.I)
-OWNERS = re.compile(r"battlefield under (its|their) owners?'? control", re.I)
+OWNERS = re.compile(r"battlefield under (its|their) owners?'s? control", re.I)
 DEST = re.compile(r"Battlefield \{ controller: (\w+)")
 # The printed object can only be yours already ("target creature you own",
-# "from your graveyard", "this card"), so either controller reads right.
+# "from your graveyard", "this card"), so either controller reads right. NOT
+# "a creature you control" or "return it": a creature you control may be
+# stolen (Ephemerate, Felidar Guardian, Luminous Broodmoth returned it to the
+# thief), and the owner-direction regex never matched "owner's" before
+# 2026-09-28, so this list had never been exercised.
 ONLY_YOURS = re.compile(
-    r"from your graveyard|you own|your hand|your library|return (it|this|~)|"
-    r"exile (it|this|~)|put (it|this)|each creature you control|creatures you control",
+    r"from your graveyard|you own|your hand|your library|return (this|~)|"
+    r"exile (this|~)|put (this)",
     re.I)
 
 

@@ -464,3 +464,48 @@ fn cr_603_10_an_opponents_dead_artifact_is_read_by_its_last_controller() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 21, "the opponent's artifact died");
 }
+
+/// CR 400.7 — a flickered permanent is a new object: effects that applied to
+/// the old one don't follow it. Giant Growth's +3/+3 is gone, and a creature
+/// stolen with Act of Treason and Ephemerated comes back to its owner and
+/// stays (Cloudshift would keep it: "under your control").
+#[test]
+fn cr_400_7_a_flickered_creature_sheds_pumps_and_control() {
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: growth, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Giant Growth");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+    let shift = g.add_card_to_hand(0, catalog::cloudshift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shift, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cloudshift");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").map(|c| c.id).unwrap();
+    assert_eq!(g.computed_permanent(back).unwrap().power, 2, "the pump didn't follow it");
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let treason = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: treason, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Act of Treason");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eph, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ephemerate the stolen Bears");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").map(|c| c.id).unwrap();
+    let cp = g.computed_permanent(back).unwrap();
+    assert_eq!(cp.controller, 1, "it returns under its owner's control and stays there");
+}
