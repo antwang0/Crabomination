@@ -1109,7 +1109,14 @@ mod recent53 {
         g.perform_action(GameAction::ActivateAbility {
             card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap forest for mana");
-        assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "monarch got an extra mana");
+        assert_eq!(g.players[0].mana_pool.total(), 2, "monarch got an extra mana");
+        // "Whenever *you* tap a land": the opponent's land adds only its own.
+        let their_forest = g.add_card_to_battlefield(1, catalog::forest());
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: their_forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("opponent taps a forest");
+        assert_eq!(g.players[1].mana_pool.total(), 1, "no extra mana for the opponent");
     }
 
     #[test]

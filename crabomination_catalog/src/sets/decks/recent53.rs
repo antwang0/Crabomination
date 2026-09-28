@@ -995,8 +995,9 @@ pub fn adriana_captain_of_the_guard() -> CardDefinition {
 }
 
 /// Regal Behemoth — {4}{G}{G} 5/5 Dinosaur. Trample; ETB become the monarch;
-/// while you're the monarch, a land tapped for mana produces one extra mana.
-/// (The printed "one mana of any color" is approximated to the produced type.)
+/// whenever you tap a land for mana while you're the monarch, add an
+/// additional one mana of any color (`ExtraManaKind::AnyColor`, only your
+/// lands).
 pub fn regal_behemoth() -> CardDefinition {
     use crate::card::StaticAbility as SA;
     use crate::effect::ExtraManaKind;
@@ -1016,11 +1017,11 @@ pub fn regal_behemoth() -> CardDefinition {
             who: PlayerRef::You,
         })],
         static_abilities: vec![SA {
-            description: "Whenever you tap a land for mana while you're the monarch, add an additional one mana.",
+            description: "Whenever you tap a land for mana while you're the monarch, add an additional one mana of any color.",
             effect: StaticEffect::ExtraManaOnLandTap {
                 enchanted_only: false,
-                filter: R::Any,
-                extra: ExtraManaKind::Mirror,
+                filter: R::ControlledByYou,
+                extra: ExtraManaKind::AnyColor,
                 while_monarch: true,
             },
         }],
