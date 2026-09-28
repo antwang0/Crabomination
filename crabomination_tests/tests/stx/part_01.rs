@@ -190,8 +190,9 @@ fn lorehold_command_auto_picks_spirit_token_and_team_pump() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
+        card_id: id, target: None, additional_targets: vec![], x_value: None,
     })
     .expect("Lorehold Command castable for {3}{R}{W}");
     drain_stack(&mut g);

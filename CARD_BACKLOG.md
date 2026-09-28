@@ -4797,7 +4797,6 @@ pod list:
 
 | Card | Where | Printed scope | Collapsed to |
 |---|---|---|---|
-| Primal Command | `decks/modern.rs` | choose two, both "target player" | fixed picks: you gain 7 + search |
 | Multiple Choice (X=2) | `stx/mono.rs` | "may choose a player" (any, incl. self) | EachOpponent returns |
 | Devastating Mastery (alt rider) | `stx/silverquill.rs` | "an opponent chooses" | EachOpponent (= the opponent in 1v1) |
 

@@ -1765,8 +1765,10 @@ pub fn against_all_odds() -> CardDefinition {
         name: "Against All Odds",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Seq(vec![
                     Effect::Exile {
@@ -4772,8 +4774,10 @@ pub fn molten_rebuke() -> CardDefinition {
         name: "Molten Rebuke",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 deal(
                     5,

@@ -87,8 +87,10 @@ pub fn return_from_the_wilds() -> CardDefinition {
         name: "Return from the Wilds",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![2],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Search {
                     who: PlayerRef::You,

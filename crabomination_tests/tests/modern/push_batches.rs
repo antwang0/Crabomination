@@ -2321,11 +2321,12 @@ fn kolaghans_command_default_reanimate_plus_two_damage() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 3],
         card_id: cmd,
         target: Some(Target::Permanent(bear)),     // slot 0: reanimate
         additional_targets: vec![Target::Player(1)], // slot 1: 2 damage
-        mode: None, x_value: None,
+        x_value: None,
     }).expect("Kolaghan's Command castable");
     drain_stack(&mut g);
 

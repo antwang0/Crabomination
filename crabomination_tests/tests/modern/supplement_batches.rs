@@ -587,11 +587,12 @@ fn cryptic_command_counter_plus_bounce_resolves() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Blue, 3);
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: cryptic,
         target: Some(Target::Permanent(bolt)),               // slot 0: counter
         additional_targets: vec![Target::Permanent(creature)], // slot 1: bounce
-        mode: None, x_value: None,
+        x_value: None,
     })
     .expect("Cryptic Command castable for {1}{U}{U}{U}");
     drain_stack(&mut g);
@@ -604,8 +605,7 @@ fn cryptic_command_counter_plus_bounce_resolves() {
 
 #[test]
 fn cryptic_command_counter_and_draw() {
-    // ScriptedDecider picks modes [0, 3] (counter + draw a card).
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    // Modes [0, 3] (counter + draw a card), chosen as it is cast.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::forest());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
@@ -624,12 +624,12 @@ fn cryptic_command_counter_and_draw() {
     g.players[0].mana_pool.add(Color::Blue, 3);
     let hand_before = g.players[0].hand.len();
     g.priority.player_with_priority = 0;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 3])]));
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 3],
         card_id: cryptic,
         target: Some(Target::Permanent(bolt)),
         additional_targets: vec![],
-        mode: None, x_value: None,
+        x_value: None,
     })
     .unwrap();
     drain_stack(&mut g);

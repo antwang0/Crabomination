@@ -1939,8 +1939,10 @@ pub fn grim_discovery() -> CardDefinition {
         name: "Grim Discovery",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![back(R::Creature, 0), back(R::Land, 0)],
         },
         ..Default::default()

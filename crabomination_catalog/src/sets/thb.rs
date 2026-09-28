@@ -5896,8 +5896,10 @@ pub fn rise_to_glory() -> CardDefinition {
         name: "Rise to Glory",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Move {
                     what: target_filtered(

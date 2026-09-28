@@ -7128,7 +7128,10 @@ impl GameState {
                 // (repeats included) consumes the next target slot. A plain
                 // `CastSpell { mode }` arrives with no stamped modes and
                 // falls back to that single mode (bot / back-compat path).
-                let chosen: Vec<u8> = if ctx.spree_modes.is_empty() {
+                // CR 702.41a — an entwined cast chooses every mode (Kaya's Guile).
+                let chosen: Vec<u8> = if ctx.entwined {
+                    (0..modes.len() as u8).collect()
+                } else if ctx.spree_modes.is_empty() {
                     vec![(ctx.mode as u8).min(modes.len().saturating_sub(1) as u8)]
                 } else {
                     ctx.spree_modes.clone()

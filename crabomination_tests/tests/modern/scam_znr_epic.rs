@@ -1112,9 +1112,10 @@ fn subtle_strike_chooses_both() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 1])]));
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: ss, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![Target::Permanent(mine)], mode: None, x_value: None,
+        additional_targets: vec![Target::Permanent(mine)], x_value: None,
     }).expect("cast both modes");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(foe).unwrap().toughness, 1, "-1/-1");

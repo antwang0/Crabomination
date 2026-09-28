@@ -120,11 +120,11 @@ mod recent101 {
         g.players[0].mana_pool.add_colorless(2);
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
-        g.perform_action(GameAction::CastSpell {
+        g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
             card_id: spell,
             target: Some(Target::Permanent(bear)),
             additional_targets: vec![Target::Permanent(ench)],
-            mode: None,
             x_value: None,
         })
         .expect("cast Season of Renewal");

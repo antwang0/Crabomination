@@ -6291,8 +6291,10 @@ pub fn scour_for_scrap() -> CardDefinition {
         name: "Scour for Scrap",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Search {
                     who: PlayerRef::You,

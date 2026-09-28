@@ -3725,11 +3725,11 @@ mod recent29 {
         let art = g.add_card_to_battlefield(1, catalog::mind_stone());
         let os = g.add_card_to_hand(0, catalog::overwhelming_surge());
         ready(&mut g);
-        g.perform_action(GameAction::CastSpell {
+        g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
             card_id: os,
             target: Some(Target::Permanent(foe)),
             additional_targets: vec![Target::Permanent(art)],
-            mode: None,
             x_value: None,
         })
         .expect("cast");

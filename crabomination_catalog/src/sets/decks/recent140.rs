@@ -61,8 +61,10 @@ pub fn rankles_prank() -> CardDefinition {
         name: "Rankle's Prank",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![1, 2, 3],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 3,
+            allow_repeats: false,
             modes: vec![
                 Effect::Discard {
                     who: Selector::Player(PlayerRef::EachPlayer),

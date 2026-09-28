@@ -1205,9 +1205,10 @@ fn against_all_odds_reanimates_small() {
     let spell = g.add_card_to_hand(0, catalog::against_all_odds());
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: spell, target: Some(Target::Permanent(mine)),
-        additional_targets: vec![Target::Permanent(dead)], mode: None, x_value: None,
+        additional_targets: vec![Target::Permanent(dead)], x_value: None,
     }).expect("cast both modes");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead).is_some(), "reanimated");

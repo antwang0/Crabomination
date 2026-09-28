@@ -131,8 +131,9 @@ fn verdant_command_two_modes() {
     let cmd = catalog::verdant_command();
     let life = g.players[0].life;
     let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
-    ctx.targets = vec![Target::Player(0)];
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 3])]));
+    // Both chosen modes target a player: one slot each (CR 700.2c).
+    ctx.targets = vec![Target::Player(0), Target::Player(0)];
+    ctx.spree_modes = vec![0, 3];
     let events = g.resolve_effect(&cmd.effect, &ctx).unwrap();
     g.dispatch_triggers_for_events(&events);
     let squirrels: Vec<_> =

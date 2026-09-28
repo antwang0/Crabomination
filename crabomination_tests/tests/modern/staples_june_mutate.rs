@@ -50,9 +50,37 @@ fn kayas_guile_runs_two_modes() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
-    cast(&mut g, id);
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("cast two modes");
+    drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed");
     assert!(g.exile.iter().any(|c| c.id == dead), "opponent graveyard exiled");
+}
+
+/// CR 702.41a — entwined, Kaya's Guile runs all four of its modes.
+#[test]
+fn kayas_guile_entwined_runs_every_mode() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::kayas_guile());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("entwined for {3} more");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the edict");
+    assert_eq!(g.players[0].life, life + 4, "the life");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"), "the token");
 }
 
 /// Damn destroys one creature normally and sweeps on overload.
@@ -2953,9 +2981,10 @@ fn fight_as_one_buffs_both() {
     let beast = g.add_card_to_battlefield(0, catalog::grizzly_bears());    // non-Human
     let spell = g.add_card_to_hand(0, catalog::fight_as_one());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: spell, target: Some(Target::Permanent(human)),
-        additional_targets: vec![Target::Permanent(beast)], mode: None, x_value: None,
+        additional_targets: vec![Target::Permanent(beast)], x_value: None,
     }).expect("cast Fight as One choosing both");
     drain_stack(&mut g);
     assert!(g.computed_permanent(human).unwrap().keywords().contains(&Keyword::Indestructible),
@@ -4335,9 +4364,10 @@ fn survivors_bond_returns_both() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.step = TurnStep::PreCombatMain;
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: spell, target: Some(Target::Permanent(real_human)),
-        additional_targets: vec![Target::Permanent(nonhuman)], mode: None, x_value: None,
+        additional_targets: vec![Target::Permanent(nonhuman)], x_value: None,
     }).expect("cast Survivors' Bond");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == real_human), "Human returned to hand");

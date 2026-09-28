@@ -1781,13 +1781,12 @@ mod recent130 {
         let spell = g.add_card_to_hand(0, catalog::return_from_the_wilds());
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(2);
-        // Pick modes 1 (Human) and 2 (Food).
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1, 2])]));
-        g.perform_action(GameAction::CastSpell {
+        // Pick modes 1 (Human) and 2 (Food), as it is cast (CR 700.2a).
+        g.perform_action(GameAction::CastSpellSpree {
+            spree_modes: vec![1, 2],
             card_id: spell,
             target: None,
             additional_targets: vec![],
-            mode: None,
             x_value: None,
         })
         .expect("cast Return from the Wilds");

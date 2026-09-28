@@ -163,8 +163,10 @@ pub fn verdant_command() -> CardDefinition {
         name: "Verdant Command",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![2],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::CreateToken {
                     who: PlayerRef::Target(0),

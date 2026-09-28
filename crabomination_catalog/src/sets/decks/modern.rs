@@ -12632,16 +12632,16 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
 /// - Destroy target artifact.
 /// - Deal 2 damage to any target.
 ///
-/// Faithful "choose two" via `Effect::ChooseN`. Each mode owns a cast-time
-/// target slot in pick order. `picks: [0, 3]` (reanimate + 2 damage) is the
-/// AutoDecider default; a UI/scripted decider can pick any two of the four.
+/// The two modes are chosen as it is cast (`ChooseModesCast`, CR 700.2a).
 pub fn kolaghans_command() -> CardDefinition {
     CardDefinition {
         name: "Kolaghan's Command",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 3],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 // Mode 0: return target creature card from your gy to hand.
                 Effect::Move {
@@ -20617,9 +20617,8 @@ pub fn collective_defiance() -> CardDefinition {
 /// ability, a bare "draw X" instead of scry-X-then-draw-one, a -X/-X pump
 /// instead of the exile, and no graveyard mode at all.
 ///
-/// `picks` names the pair the auto-decider takes; the two target-bearing
-/// modes among them each own a cast-time slot (the Spawn mode slot 0, the
-/// scry mode slot 1) so both can be aimed. Residual: the graveyard mode
+/// The two modes are chosen as it is cast (`ChooseModesCast`, CR 700.2a),
+/// each target-bearing one owning its own slots. Residual: the graveyard mode
 /// exiles from **target player's** graveyard rather than "graveyards", which
 /// is the shape `Effect::ExileFromGraveyard` has.
 pub fn kozileks_command() -> CardDefinition {
@@ -20631,8 +20630,10 @@ pub fn kozileks_command() -> CardDefinition {
             creature_types: vec![CreatureType::Eldrazi],
             ..Default::default()
         },
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::CreateToken {
                     who: PlayerRef::Target(0),
@@ -32914,8 +32915,10 @@ pub fn subtle_strike() -> CardDefinition {
         name: "Subtle Strike",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -52948,19 +52951,21 @@ pub fn it_that_heralds_the_end() -> CardDefinition {
     }
 }
 
-/// Primal Command — {3}{G}{G} Sorcery. Choose two: gain 7; bounce a
-/// noncreature permanent to its owner's library top; target player shuffles
-/// their graveyard into their library; search up a creature.
+/// Primal Command — {3}{G}{G} Sorcery. Choose two: target player gains 7;
+/// target noncreature permanent to its owner's library top; target player
+/// shuffles their graveyard into their library; search up a creature.
 pub fn primal_command() -> CardDefinition {
     CardDefinition {
         name: "Primal Command",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 3],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::GainLife {
-                    who: Selector::You,
+                    who: target_filtered(SelectionRequirement::Player),
                     amount: Value::Const(7),
                 },
                 Effect::Move {
@@ -52973,7 +52978,7 @@ pub fn primal_command() -> CardDefinition {
                     },
                 },
                 Effect::ShuffleGraveyardIntoLibrary {
-                    who: PlayerRef::You,
+                    who: PlayerRef::Target(0),
                 },
                 Effect::Search {
                     who: PlayerRef::You,
@@ -60889,8 +60894,10 @@ pub fn kayas_guile() -> CardDefinition {
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Entwine(cost(&[generic(3)]))],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::EachOpponent),
@@ -64035,8 +64042,10 @@ pub fn fight_as_one() -> CardDefinition {
         name: "Fight as One",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![buff(human), buff(non_human)],
         },
         ..Default::default()
@@ -66137,8 +66146,10 @@ pub fn survivors_bond() -> CardDefinition {
         name: "Survivors' Bond",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Move {
                     what: target_filtered(

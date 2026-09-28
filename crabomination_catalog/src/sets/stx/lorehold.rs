@@ -12211,9 +12211,8 @@ pub fn lorehold_spiritforge_b164() -> CardDefinition {
 /// • Deal 3 damage to any target; you gain 3 life.
 /// • Sacrifice a permanent, then draw two cards.
 ///
-/// Wired via `Effect::ChooseN` (CR 700.2g). AutoDecider keeps the default
-/// two non-targeting modes (token + team pump). The damage/lifegain mode
-/// folds the "target player gains 3 life" onto the caster.
+/// The two modes are chosen as it is cast (CR 700.2a). The damage/lifegain
+/// mode folds the "target player gains 3 life" onto the caster.
 pub fn lorehold_command() -> CardDefinition {
     let spirit_32 = TokenDefinition {
         name: "Spirit".into(),
@@ -12237,8 +12236,10 @@ pub fn lorehold_command() -> CardDefinition {
         name: "Lorehold Command",
         cost: cost(&[generic(3), r(), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,

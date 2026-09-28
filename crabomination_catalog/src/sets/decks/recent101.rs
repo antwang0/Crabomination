@@ -134,8 +134,10 @@ pub fn season_of_renewal() -> CardDefinition {
         name: "Season of Renewal",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Move {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard)),

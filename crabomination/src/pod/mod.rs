@@ -2552,6 +2552,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-28 (CR 700.2a — 23 `ChooseN` spells choose their
+        // modes at cast, so a pod bot picks Kolaghan's / Kozilek's / Austere
+        // Command's modes instead of the fixed defaults; `git bisect` names
+        // that commit alone): seed 43 54→71 turns, same winner; the other two
+        // unmoved. Pod smoke after it: 3,960 release games (3/4/5/6/8 seats ×
+        // every deck × 20, seeds 9931000+ … 9981000+), all decided.
         // Re-blessed 2026-09-28 (Judith, the Scourge Diva pings on her own
         // death — ruling; `git bisect` over bc45fd069..c9adf798b names that
         // commit alone, and every later commit to 42b269a1e reads the same
@@ -2787,7 +2793,7 @@ mod tests {
         // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
-            (43, Some(0), 54, 2838),
+            (43, Some(0), 71, 3349),
             (4242, Some(3), 104, 4725),
         ];
         let decks = rofellos_pod(4);

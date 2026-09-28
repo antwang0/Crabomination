@@ -1070,13 +1070,13 @@ fn kozileks_command_chooses_two_modes() {
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 1],
         card_id: id,
         // Each target-bearing mode among the default `picks` owns its own
         // cast-time slot: the Spawn mode takes slot 0, the scry mode slot 1.
         target: Some(crabomination::game::types::Target::Player(1)),
         additional_targets: vec![crabomination::game::types::Target::Player(1)],
-        mode: None,
         x_value: Some(2),
     }).expect("Kozilek's Command castable for X=2");
     drain_stack(&mut g);

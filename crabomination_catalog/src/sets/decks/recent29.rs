@@ -302,8 +302,10 @@ pub fn overwhelming_surge() -> CardDefinition {
         name: "Overwhelming Surge",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 deal(
                     3,

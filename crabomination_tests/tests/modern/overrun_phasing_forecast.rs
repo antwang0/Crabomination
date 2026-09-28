@@ -792,8 +792,9 @@ fn austere_command_choose_two_destroys_all_creatures_by_default() {
     let cmd = g.add_card_to_hand(0, catalog::austere_command());
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::CastSpell {
-        card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![2, 3],
+        card_id: cmd, target: None, additional_targets: vec![], x_value: None,
     }).expect("cast Austere Command (default picks: both creature modes)");
     drain_stack(&mut g);
     assert!(g.battlefield_find(big).is_none(), "MV-6 creature destroyed");

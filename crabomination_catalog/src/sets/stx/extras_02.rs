@@ -672,20 +672,16 @@ pub fn krosan_grip() -> CardDefinition {
 /// Create a token that's a copy of target creature you control. / •
 /// Target player draws a card."
 ///
-/// ✅ Wired as `Effect::ChooseN { picks: [2, 4], modes }` — auto-decider
-/// picks bounce a nonland permanent + draw a card (the two modes that
-/// share a single target slot most naturally). All five modes are real:
-/// counter spell (`CounterSpell`), counter ability (`CounterAbility`),
-/// bounce (`Move`), copy a creature you control (`CreateTokenCopyOf`),
-/// and draw. Mode 0/1 use stack-object target filters, so the default
-/// auto-pick avoids them (no compatible bounce/copy target slot).
+/// The modes are chosen as it is cast (`ChooseModesCast`, one to five).
 pub fn sublime_epiphany() -> CardDefinition {
     CardDefinition {
         name: "Sublime Epiphany",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![2, 4],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 5,
+            allow_repeats: false,
             modes: vec![
                 // Mode 0: Counter target spell.
                 Effect::CounterSpell {

@@ -1258,11 +1258,11 @@ fn sublime_epiphany_resolves_counter_bounce_draw() {
     g.players[0].mana_pool.add_colorless(4);
     let hand_before = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![2, 4],
         card_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        mode: None,
         x_value: None,
     })
     .expect("Sublime Epiphany castable for {4}{U}{U}");
@@ -1282,19 +1282,18 @@ fn sublime_epiphany_resolves_counter_bounce_draw() {
 
 #[test]
 fn sublime_epiphany_mode_three_copies_a_creature_you_control() {
-    // CR 700.2d override → mode 3 only: create a token copy of target
-    // creature you control.
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    // CR 700.2a — mode 3 alone, chosen as it is cast: create a token copy of
+    // target creature you control.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::sublime_epiphany());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(4);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![3])]));
     let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![3],
         card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![], x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     let after = g.battlefield.iter().filter(|c| c.controller == 0).count();

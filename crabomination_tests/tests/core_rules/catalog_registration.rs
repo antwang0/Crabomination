@@ -3770,3 +3770,38 @@ fn cr_115_1_ability_target_slots_carry_a_filter() {
     bare.dedup();
     assert!(bare.len() <= 54, "{} abilities target through a bare slot: {bare:?}", bare.len());
 }
+
+/// CR 700.2 — a `ChooseN`'s default picks name real, distinct modes. Rankle's
+/// Prank and Clash of the Eikons shipped `[1, 2, 3]` over three modes (no
+/// mode 3), so a default cast ran the wrong pair and never the first mode.
+#[test]
+fn every_choose_n_default_pick_names_a_real_mode() {
+    fn walk(v: &serde_json::Value, name: &str, bad: &mut Vec<String>) {
+        match v {
+            serde_json::Value::Object(m) => {
+                if let Some(serde_json::Value::Object(n)) = m.get("ChooseN") {
+                    let modes = n.get("modes").and_then(|x| x.as_array()).map_or(0, |a| a.len());
+                    let picks: Vec<u64> = n
+                        .get("picks")
+                        .and_then(|x| x.as_array())
+                        .map(|a| a.iter().filter_map(|p| p.as_u64()).collect())
+                        .unwrap_or_default();
+                    let mut seen = HashSet::new();
+                    if picks.iter().any(|&p| p as usize >= modes || !seen.insert(p)) {
+                        bad.push(format!("{name}: picks {picks:?} over {modes} modes"));
+                    }
+                }
+                m.values().for_each(|x| walk(x, name, bad));
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| walk(x, name, bad)),
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let v = serde_json::to_value(&def).expect("definition serializes");
+        walk(&v, def.name, &mut bad);
+    }
+    assert!(bad.is_empty(), "{bad:#?}");
+}

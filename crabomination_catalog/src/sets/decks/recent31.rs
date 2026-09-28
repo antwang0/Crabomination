@@ -275,8 +275,10 @@ pub fn ojutais_command() -> CardDefinition {
         name: "Ojutai's Command",
         cost: cost(&[generic(2), w(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![1, 3],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::Move {
                     what: target_filtered(
@@ -317,8 +319,10 @@ pub fn atarkas_command() -> CardDefinition {
         name: "Atarka's Command",
         cost: cost(&[r(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![1, 3],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::LifeGainLockThisTurn {
                     who: Selector::Player(PlayerRef::EachOpponent),

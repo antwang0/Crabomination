@@ -2040,12 +2040,10 @@ fn primal_command_gains_and_searches() {
     g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add_colorless(3);
     let life = g.players[0].life;
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Modes(vec![0, 3]),
-        DecisionAnswer::Search(Some(bear_in_lib)),
-    ]));
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear_in_lib))]));
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 3],
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], x_value: None,
     })
     .expect("cast");
     drain_stack(&mut g);

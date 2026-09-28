@@ -1463,7 +1463,6 @@ mod recent139 {
 
 mod recent140 {
     use crabomination::catalog;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::types::Target;
     use crabomination::game::*;
     use crabomination::game::{drain_stack, two_player_game};
@@ -1518,8 +1517,15 @@ mod recent140 {
         g.players[0].mana_pool.add(Color::Black, 2);
         g.players[0].mana_pool.add_colorless(2);
         let (l0, l1) = (g.players[0].life, g.players[1].life);
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
-        cast(&mut g, spell, None, None);
+        g.perform_action(GameAction::CastSpellSpree {
+            spree_modes: vec![1],
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("cast the life-loss mode");
+        drain_stack(&mut g);
         assert_eq!(g.players[0].life, l0 - 4, "you lose 4");
         assert_eq!(g.players[1].life, l1 - 4, "opponent loses 4");
     }

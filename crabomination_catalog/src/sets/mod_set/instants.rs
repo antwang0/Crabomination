@@ -696,18 +696,16 @@ pub fn deadly_dispute() -> CardDefinition {
 /// Cryptic Command — {1}{U}{U}{U} Instant. Choose two — counter target spell;
 /// return target permanent to its owner's hand; tap all creatures your
 /// opponents control; draw a card.
-///
-/// Faithful "choose two" via `Effect::ChooseN`: the four modes each own a
-/// cast-time target slot in pick order (counter → slot 0, bounce → slot 1).
-/// `picks: [0, 1]` is the AutoDecider default (counter + bounce, the most
-/// reactive line); a UI/scripted decider can pick any two of the four.
+
 pub fn cryptic_command() -> CardDefinition {
     CardDefinition {
         name: "Cryptic Command",
         cost: cost(&[generic(1), u(), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 // Mode 0: counter target spell.
                 Effect::CounterSpell {
