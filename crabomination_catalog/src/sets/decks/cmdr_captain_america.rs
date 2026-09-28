@@ -541,7 +541,7 @@ pub fn scarlet_witch_chaotic_avenger() -> CardDefinition {
             may(
                 "Cast a Hero or noncreature spell exiled with Scarlet Witch without paying its mana cost?",
                 Effect::CastWithoutPayingImmediate {
-                    what: Selector::Take {
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::You,
                             zone: Zone::Exile,
@@ -1031,7 +1031,7 @@ pub fn west_coast_expansion() -> CardDefinition {
                 then: Box::new(may(
                     "Cast a Hero spell from your hand without paying its mana cost?",
                     Effect::CastWithoutPayingImmediate {
-                        what: Selector::Take {
+                        what: Selector::TakeGreatestManaValue {
                             inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: hero() }),
                             count: Box::new(Value::ONE),
                         },

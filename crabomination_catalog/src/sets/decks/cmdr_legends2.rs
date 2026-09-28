@@ -884,7 +884,7 @@ pub fn tasha_the_witch_queen() -> CardDefinition {
                 loyalty_cost: -3,
                 // The cast's own "may" (`Decision::OptionalTrigger`, CastFree).
                 effect: Effect::CastWithoutPayingImmediate {
-                    what: Selector::one_of(Selector::CardsInZone {
+                    what: Selector::best_of(Selector::CardsInZone {
                         who: PlayerRef::EachPlayer,
                         zone: crate::card::Zone::Exile,
                         filter: R::WithCounter(CounterType::Page).and(R::Land.negate()),
