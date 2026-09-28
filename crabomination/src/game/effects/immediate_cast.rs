@@ -155,7 +155,7 @@ impl GameState {
             // Thalia on the table).
             if let Some(card) = self.find_card_anywhere(cast_id) {
                 let zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
-                let extra = crate::game::actions::extra_cost_for_spell(self, ctx.controller, card, auto_target.as_ref());
+                self.add_spell_taxes(ctx.controller, card, auto_target.as_ref(), &mut discounted);
                 let less = crate::game::actions::cost_reduction_for_spell_full(
                     self,
                     ctx.controller,
@@ -164,10 +164,11 @@ impl GameState {
                     zone == crate::card::Zone::Graveyard,
                     zone == crate::card::Zone::Exile,
                 );
-                discounted.add_generic(extra);
                 discounted.reduce_generic(less);
+                crate::game::actions::apply_colored_cost_statics(self, ctx.controller, card, &mut discounted);
             }
             discounted.reduce_generic(*reduce_generic);
+            crate::game::actions::apply_spell_cost_floor(self, &mut discounted);
             let forced_only = self.seat_prompts(ctx.controller);
             match self.try_pay_with_auto_tap_mode(ctx.controller, &discounted, forced_only) {
                 Ok(receipt) => {
