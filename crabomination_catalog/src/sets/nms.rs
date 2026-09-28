@@ -1160,10 +1160,13 @@ pub fn coiling_woodworm() -> CardDefinition {
 pub fn mossdog() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
+            // "Whenever THIS creature becomes the target of a spell or ability
+            // an opponent controls" — not any permanent of yours.
             event: EventSpec::new(
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
-            ),
+            )
+            .with_filter(crate::card::Predicate::TriggerSourceIsSelf),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

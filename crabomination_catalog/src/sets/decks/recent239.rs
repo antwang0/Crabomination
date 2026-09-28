@@ -1346,10 +1346,13 @@ pub fn altanak_the_thrice_called() -> CardDefinition {
         toughness: 9,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
+            // "Whenever THIS creature becomes the target of a spell or ability
+            // an opponent controls" — not any permanent of yours.
             event: EventSpec::new(
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
-            ),
+            )
+            .with_filter(crate::card::Predicate::TriggerSourceIsSelf),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

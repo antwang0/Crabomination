@@ -5521,10 +5521,15 @@ pub fn pawpatch_recruit() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             }),
             TriggeredAbility {
+                // "Whenever a CREATURE you control becomes the target …".
                 event: EventSpec::new(
                     EventKind::BecameTarget,
                     EventScope::YourPermanentTargetedByOpponent,
-                ),
+                )
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: crate::card::SelectionRequirement::Creature,
+                }),
                 effect: Effect::AddCounter {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),

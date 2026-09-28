@@ -52,3 +52,35 @@ fn cr_707_10_a_cast_trigger_ignores_the_copy() {
     // "Whenever you cast an instant or sorcery spell": the two casts only.
     assert_eq!(bolt_and_copy(catalog::young_pyromancer(), "Elemental"), 2);
 }
+
+/// CR 603.2 — "Whenever THIS creature becomes the target of a spell or
+/// ability an opponent controls" (Mossdog): an opponent's Giant Growth on
+/// another of your creatures doesn't grow it; one on Mossdog does.
+#[test]
+fn cr_603_2_mossdog_counts_only_itself_being_targeted() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::mossdog());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let counters = |g: &GameState| g.battlefield_find(dog).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    let growth_on = |g: &mut GameState, target| {
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::PreCombatMain;
+        let spell = g.add_card_to_hand(1, catalog::giant_growth());
+        g.players[1].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(target)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Giant Growth");
+        drain_stack(g);
+    };
+    growth_on(&mut g, bear);
+    assert_eq!(counters(&g), 0, "another creature was targeted");
+    growth_on(&mut g, dog);
+    assert_eq!(counters(&g), 1, "Mossdog itself was targeted");
+}

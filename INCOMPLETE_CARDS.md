@@ -2353,3 +2353,4 @@ library-exile event.
 | Rhuk, Hexgold Nabber | only the attack half: an equipped creature of yours DYING doesn't move its Equipment to Rhuk | the Equipment falls off before the trigger resolves; `AttachedToMe` of the dead creature needs last-known attachments |
 | Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
 | Jace, Vryn's Prodigy | the −9 emblem mills EACH opponent five, not one target opponent | an emblem trigger with a player target is untested ground; the ultimate is rarely reached |
+| Rayne, Academy Chancellor | only a PERMANENT of yours being targeted by an opponent draws; "you … become the target" doesn't | `YourPermanentTargetedByOpponent` binds permanents; a player-target twin scope is missing |
