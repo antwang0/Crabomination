@@ -7257,8 +7257,14 @@ impl GameState {
             // Void), even when a later clause moves a card (which would
             // otherwise trip `prefers_graveyard_target`).
             let slot0_accepts_player = slot0_filter.is_some_and(|f| f.can_match_player());
-            let target = if !slot0_accepts_player
-                && (view.prefers_graveyard_target() || slot0_rejects_player)
+            // CR 115.1 / 608.2b — a default the slot can't take (a damaged
+            // *creature* on a "target player mills" trigger — Towering-Wave
+            // Mystic) would only fizzle: pick a legal target instead.
+            let default_misfits = slot0_filter.is_some_and(|f| {
+                !self.evaluate_requirement_static(f, &default_target, controller, Some(trig_source))
+            });
+            let target = if default_misfits
+                || (!slot0_accepts_player && (view.prefers_graveyard_target() || slot0_rejects_player))
             {
                 // Concretize any X-from-cost gate against the damage dealt
                 // (Venerable Warsinger's "mana value X or less, where X is
