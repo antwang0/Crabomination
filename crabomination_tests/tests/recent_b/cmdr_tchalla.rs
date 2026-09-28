@@ -297,3 +297,27 @@ fn cr_110_2a_heart_shaped_herb_returns_a_stolen_creature_to_its_owner() {
     assert_eq!(g.battlefield_find(back[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
     assert_eq!(g.monarch, Some(0));
 }
+
+/// CR 506.2 — M'Baku pumps "a creature [that] attacks one of your opponents,
+/// if that player is the monarch": a creature attacking the monarch's
+/// planeswalker is not attacking the monarch.
+#[test]
+fn cr_506_2_mbaku_ignores_an_attack_on_the_monarchs_planeswalker() {
+    for at_walker in [true, false] {
+        let mut g = main_phase(3);
+        g.add_card_to_battlefield(0, catalog::mbaku_jabari_chieftain());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let walker = g.add_card_to_battlefield(2, catalog::chandra_torch_of_defiance());
+        g.monarch = Some(2);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::DeclareAttackers;
+        let target = if at_walker { AttackTarget::Planeswalker(walker) } else { AttackTarget::Player(2) };
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        let power = g.computed_permanent(bear).unwrap().power;
+        assert_eq!(power, if at_walker { 2 } else { 3 }, "at the walker: {at_walker}");
+    }
+}

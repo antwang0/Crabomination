@@ -466,7 +466,10 @@ pub fn mbaku_jabari_chieftain() -> CardDefinition {
                 },
             },
             TriggeredAbility {
+                // CR 506.2 — "attacks one of your opponents": a planeswalker
+                // attack doesn't count, whoever wears the crown.
                 event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsAttackingOpponentPlayer },
                     Predicate::PlayerIsOpponent { who: PlayerRef::DefendingPlayer },
                     Predicate::IsMonarch { who: PlayerRef::DefendingPlayer },
                 ])),

@@ -24,8 +24,11 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 ATTACKS = re.compile(r"whenever (?:~|this creature|one or more [^,.]{0,40}?) attacks? (?:a player|an opponent)\b"
-                     r"|whenever you attack (?:a player|an opponent) with", re.I)
-PLAYER_SIDE = re.compile(r"IsAttackingOpponentPlayer|on_attack_player|YouAttackedPlayer|AttackersOfPlayerMatching")
+                     r"|whenever you attack (?:a player|an opponent) with"
+                     r"|whenever (?:a|another) [^,.]{0,40}? attacks (?:a player|an opponent|one of your opponents)\b(?! or a planeswalker)",
+                     re.I)
+PLAYER_SIDE = re.compile(r"IsAttackingOpponentPlayer|on_attack_player|YouAttackedPlayer|AttackersOfPlayerMatching"
+                         r"|OpponentOfYoursAttacked|opponent_attacked\(\)|TriggerSourceAttacksItsPlayerAlone")
 ONE_OR_MORE = re.compile(r"whenever one or more [^.]{0,60}? deal combat damage to (?:a player|an opponent|one or more players)", re.I)
 # Forth Eorlingas!: its own delayed effect, and becoming the monarch twice is
 # becoming it once.
