@@ -15,54 +15,50 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 500 Commander cards by EDHREC rank | 500 / 500 |
 | Top 1000 Commander cards by EDHREC rank | 999 / 1000 |
 | Top 2000 Commander cards by EDHREC rank | 1924 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 4488 / 5000 |
+| Top 5000 Commander cards by EDHREC rank | 4491 / 5000 |
 | Top 100 commanders by decks built | 95 / 100 |
-| Top 300 commanders by decks built | 263 / 300 |
+| Top 300 commanders by decks built | 266 / 300 |
 
-## 1. Most-built commanders not in the catalog (37)
+## 1. Most-built commanders not in the catalog (34)
 
 A partner pair lists only its missing halves.
 
 | EDHREC # | Commander | Decks | Identity | Type | Flags |
 | --- | --- | --- | --- | --- | --- |
-| 48 | Maralen, Fae Ascendant | 22,685 | BGU | Legendary Creature — Elf Faerie Noble |  |
-| 61 | Tom Bombadil | 21,289 | BGRUW | Legendary Creature — God Bard |  |
-| 72 | Avatar Aang | 20,320 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
-| 89 | Norman Osborn | 18,721 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
-| 99 | Ezio Auditore da Firenze | 17,806 | BGRUW | Legendary Creature — Human Assassin |  |
-| 105 | Deadpool, Trading Card | 17,296 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
-| 114 | Jin Sakai, Ghost of Tsushima | 16,691 | BUW | Legendary Creature — Human Samurai |  |
-| 115 | Storm, Force of Nature | 16,522 | GRU | Legendary Creature — Mutant Hero |  |
-| 118 | Captain America, First Avenger | 16,077 | RUW | Legendary Creature — Human Soldier Hero |  |
-| 120 | Tovolar, Dire Overlord | 15,837 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
-| 134 | Kibo, Uktabi Prince | 14,820 | GR | Legendary Creature — Monkey Noble |  |
-| 135 | Satoru Umezawa | 14,668 | BU | Legendary Creature — Human Ninja |  |
-| 138 | Omnath, Locus of All | 14,378 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
-| 150 | Cosmic Spider-Man | 13,965 | BGRUW | Legendary Creature — Spider Human Hero |  |
-| 153 | Shelob, Child of Ungoliant | 13,735 | BG | Legendary Creature — Spider Demon |  |
-| 155 | Rocco, Street Chef | 13,507 | GRW | Legendary Creature — Elf Druid |  |
-| 157 | Atreus, Impulsive Son | 13,474 | RU | Legendary Creature — God Archer | partner |
-| 157 | Kratos, Stoic Father | 13,474 | RW | Legendary Creature — God Warrior | partner |
-| 163 | Dr. Eggman | 13,143 | BRU | Legendary Creature — Human Scientist |  |
-| 166 | Edward Kenway | 13,057 | BRU | Legendary Creature — Human Assassin Pirate |  |
-| 170 | Wolverine, Best There Is | 12,942 | GR | Legendary Creature — Mutant Berserker Hero |  |
-| 172 | Jon Irenicus, Shattered One | 12,909 | BU | Legendary Creature — Elf Wizard | goad |
-| 177 | Yurlok of Scorch Thrash | 12,671 | BGR | Legendary Creature — Lizard Shaman |  |
-| 183 | Light-Paws, Emperor's Voice | 12,421 | W | Legendary Creature — Fox Advisor |  |
-| 193 | Shadow the Hedgehog | 11,957 | BR | Legendary Creature — Hedgehog Mercenary |  |
-| 198 | Indoraptor, the Perfect Hybrid | 11,837 | BGR | Legendary Creature — Dinosaur Mutant |  |
-| 208 | Orvar, the All-Form | 11,401 | U | Legendary Creature — Shapeshifter |  |
-| 212 | Tinybones, Bauble Burglar | 11,290 | B | Legendary Creature — Skeleton Rogue |  |
-| 222 | Ob Nixilis, Captive Kingpin | 10,696 | BR | Legendary Creature — Demon |  |
-| 229 | Volo, Guide to Monsters | 10,393 | GU | Legendary Creature — Human Wizard |  |
-| 230 | Ojer Axonil, Deepest Might | 10,374 | R | Legendary Creature — God // Land |  |
-| 245 | Aloy, Savior of Meridian | 9,969 | GU | Legendary Creature — Human Warrior |  |
-| 249 | Eddie Brock | 9,902 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
-| 257 | Shilgengar, Sire of Famine | 9,655 | BW | Legendary Creature — Elder Demon |  |
-| 269 | Rowan, Scion of War | 9,304 | BR | Legendary Creature — Human Wizard |  |
-| 275 | Indominus Rex, Alpha | 9,225 | BGU | Legendary Creature — Dinosaur Mutant |  |
-| 292 | Arna Kennerüd, Skycaptain | 8,990 | BUW | Legendary Creature — Human Knight |  |
-| 300 | Goro-Goro and Satoru | 8,844 | BRU | Legendary Creature — Goblin Human |  |
+| 48 | Maralen, Fae Ascendant | 22,719 | BGU | Legendary Creature — Elf Faerie Noble |  |
+| 61 | Tom Bombadil | 21,295 | BGRUW | Legendary Creature — God Bard |  |
+| 72 | Avatar Aang | 20,350 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
+| 89 | Norman Osborn | 18,737 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
+| 99 | Ezio Auditore da Firenze | 17,802 | BGRUW | Legendary Creature — Human Assassin |  |
+| 105 | Deadpool, Trading Card | 17,302 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
+| 115 | Storm, Force of Nature | 16,537 | GRU | Legendary Creature — Mutant Hero |  |
+| 119 | Captain America, First Avenger | 16,091 | RUW | Legendary Creature — Human Soldier Hero |  |
+| 120 | Tovolar, Dire Overlord | 15,859 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
+| 133 | Kibo, Uktabi Prince | 14,834 | GR | Legendary Creature — Monkey Noble |  |
+| 135 | Satoru Umezawa | 14,675 | BU | Legendary Creature — Human Ninja |  |
+| 138 | Omnath, Locus of All | 14,395 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
+| 150 | Cosmic Spider-Man | 13,992 | BGRUW | Legendary Creature — Spider Human Hero |  |
+| 153 | Shelob, Child of Ungoliant | 13,738 | BG | Legendary Creature — Spider Demon |  |
+| 155 | Rocco, Street Chef | 13,511 | GRW | Legendary Creature — Elf Druid |  |
+| 163 | Dr. Eggman | 13,158 | BRU | Legendary Creature — Human Scientist |  |
+| 166 | Edward Kenway | 13,063 | BRU | Legendary Creature — Human Assassin Pirate |  |
+| 170 | Wolverine, Best There Is | 12,954 | GR | Legendary Creature — Mutant Berserker Hero |  |
+| 177 | Yurlok of Scorch Thrash | 12,684 | BGR | Legendary Creature — Lizard Shaman |  |
+| 183 | Light-Paws, Emperor's Voice | 12,432 | W | Legendary Creature — Fox Advisor |  |
+| 193 | Shadow the Hedgehog | 11,965 | BR | Legendary Creature — Hedgehog Mercenary |  |
+| 198 | Indoraptor, the Perfect Hybrid | 11,846 | BGR | Legendary Creature — Dinosaur Mutant |  |
+| 208 | Orvar, the All-Form | 11,421 | U | Legendary Creature — Shapeshifter |  |
+| 212 | Tinybones, Bauble Burglar | 11,317 | B | Legendary Creature — Skeleton Rogue |  |
+| 222 | Ob Nixilis, Captive Kingpin | 10,698 | BR | Legendary Creature — Demon |  |
+| 229 | Volo, Guide to Monsters | 10,402 | GU | Legendary Creature — Human Wizard |  |
+| 230 | Ojer Axonil, Deepest Might | 10,372 | R | Legendary Creature — God // Land |  |
+| 245 | Aloy, Savior of Meridian | 9,981 | GU | Legendary Creature — Human Warrior |  |
+| 248 | Eddie Brock | 9,915 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
+| 257 | Shilgengar, Sire of Famine | 9,660 | BW | Legendary Creature — Elder Demon |  |
+| 269 | Rowan, Scion of War | 9,297 | BR | Legendary Creature — Human Wizard |  |
+| 275 | Indominus Rex, Alpha | 9,239 | BGU | Legendary Creature — Dinosaur Mutant |  |
+| 292 | Arna Kennerüd, Skycaptain | 8,994 | BUW | Legendary Creature — Human Knight |  |
+| 300 | Goro-Goro and Satoru | 8,859 | BRU | Legendary Creature — Goblin Human |  |
 
 ## 2. Top 1000 Commander cards not in the catalog (1)
 
@@ -75,7 +71,7 @@ A partner pair lists only its missing halves.
 These need Commander primitives (an "is a commander" selector, a
 commander's-colour-identity mana source, "if you control your commander").
 
-### Missing (15)
+### Missing (12)
 
 | EDHREC rank | Card | Type | Oracle |
 | --- | --- | --- | --- |
@@ -86,16 +82,13 @@ commander's-colour-identity mana source, "if you control your commander").
 | 3592 | Guild Artisan | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature attacks a player, if no opponent has more life than that player, you create two Treasure tokens." (They… |
 | 3703 | Astarion's Thirst | Instant | Exile target creature. Put X +1/+1 counters on a commander creature you control, where X is the power of the creature exiled this way. |
 | 3907 | Noble Heritage | Legendary Enchantment — Background | Commander creatures you own have "When this creature enters and at the beginning of your upkeep, each player may put two +1/+1 counters on a creature they contr… |
-| 3914 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat | +2: Create two 0/1 black Thrull creature tokens. +1: You may sacrifice another creature or planeswalker. If you do, draw two cards, then draw another card if th… |
 | 4055 | Anara, Wolvid Familiar | Legendary Creature — Wolf Beast | During your turn, commanders you control have indestructible. (Effects that say "destroy" don't destroy them. A creature with indestructible can't be destroyed … |
 | 4276 | Tavern Brawler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your upkeep, exile the top card of your library. This creature gets +X/+0 until end of turn, where X is th… |
 | 4307 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman | Flying Whenever you cast an Adventure or Dragon spell, Lozhan deals damage equal to that spell's mana value to any target that isn't a commander. |
 | 4311 | Master Chef | Legendary Enchantment — Background | Commander creatures you own have "This creature enters with an additional +1/+1 counter on it" and "Other creatures you control enter with an additional +1/+1 c… |
-| 4487 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha | Whenever you cast a spell you don't own, create a 3/3 black Demon creature token. +1: Draw a card. For each opponent, exile up to one target instant or sorcery … |
-| 4586 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska | Jeska enters with a loyalty counter on her for each time you've cast a commander from the command zone this game. 0: Choose target creature. Until your next tur… |
 | 4745 | Far Traveler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your end step, exile up to one target tapped creature you control, then return it to the battlefield under… |
 
-### In the catalog — check the commander clause is modelled (61)
+### In the catalog — check the commander clause is modelled (64)
 
 | EDHREC rank | Card | Type |
 | --- | --- | --- |
@@ -149,6 +142,7 @@ commander's-colour-identity mana source, "if you control your commander").
 | 3682 | Hidden Hideout | Land |
 | 3770 | Sanctum of Eternity | Land |
 | 3817 | Folk Hero | Legendary Enchantment — Background |
+| 3914 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat |
 | 3919 | Cactus Preserve | Land — Desert |
 | 3983 | Minsc & Boo, Timeless Heroes | Legendary Planeswalker — Minsc |
 | 4037 | Will of the Temur | Sorcery |
@@ -156,6 +150,8 @@ commander's-colour-identity mana source, "if you control your commander").
 | 4261 | Teferi, Temporal Archmage | Legendary Planeswalker — Teferi |
 | 4305 | Vexilus Praetor | Creature — Custodes Warrior |
 | 4479 | Angelic Field Marshal | Creature — Angel |
+| 4487 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha |
+| 4586 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska |
 | 4658 | Tyrant's Familiar | Creature — Dragon |
 | 4704 | Haunted One | Legendary Enchantment — Background |
 | 4806 | Aminatou, the Fateshifter | Legendary Planeswalker — Aminatou |
