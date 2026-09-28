@@ -67,7 +67,7 @@ fn excavation_technique_destroys_and_treasures_controller() {
 /// Healing Technique returns a card from your graveyard to hand, gains life
 /// equal to its mana value, and exiles itself.
 #[test]
-fn healing_technique_returns_card_gains_life_and_exiles_self() {
+fn healing_technique_returns_card_and_gains_life() {
     let mut g = two_player_game();
     let card = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
     let spell = g.add_card_to_hand(0, catalog::healing_technique());
@@ -84,11 +84,11 @@ fn healing_technique_returns_card_gains_life_and_exiles_self() {
 
     assert!(g.players[0].hand.iter().any(|c| c.id == card), "card returned to hand");
     // Gain life equal to the returned card's mana value (Grizzly Bears = 2).
-    // The Demonstrate copies retarget into the caster's graveyard too; the
-    // engine's target filter has no zone constraint, so at least the base
-    // mana value is gained.
     assert!(g.players[0].life >= life + 2, "gain life equal to mana value");
-    assert!(g.exile.iter().any(|c| c.id == spell), "Healing Technique exiles itself");
+    // The Demonstrate copy resolves first and keeps the Bears as its target,
+    // so the original finds its only target gone and is countered on
+    // resolution (CR 608.2b) rather than exiled.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "countered to the graveyard");
 }
 
 /// Incarnation Technique mills five, then returns a creature card from your

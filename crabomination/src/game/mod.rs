@@ -28223,6 +28223,12 @@ impl GameState {
             && additional_targets.is_empty()
             && let Some(t) = &target
         {
+            let zoned_card_target = |t: &Target| {
+                matches!(t, Target::Permanent(_))
+                    && effect
+                        .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
+                        .is_some_and(|f| f.mentions_offboard_zone())
+            };
             let filter_fails = |g: &Self| {
                 effect
                     .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
@@ -28243,7 +28249,11 @@ impl GameState {
                 // CR 800.4a — its target player has left the game.
                 true
             } else {
-                card.is_token && filter_fails(self)
+                // A card target whose filter names its zone ("target creature
+                // card from your graveyard") is re-checked too: once it has
+                // left that zone it is a new object (CR 400.7). A zone-loose
+                // filter can't tell, so it stays a token-only re-check.
+                (card.is_token || zoned_card_target(t)) && filter_fails(self)
             };
             if fizzled {
                 // A fizzled token copy ceases to exist (already off the
@@ -28263,8 +28273,9 @@ impl GameState {
             }
         } else if is_initial_pass
             && !is_spree
-            && card.cast_target_was_battlefield
             && let Some(t0) = &target
+            && (card.cast_target_was_battlefield
+                || self.all_slots_zoned_card_targets(effect, mode, card.kicked, t0, &additional_targets))
         {
             // CR 608.2b — a multi-target spell fizzles only if EVERY target
             // is illegal on resolution; effects already skip individual
@@ -28272,8 +28283,9 @@ impl GameState {
             // a battlefield permanent at cast time) so zone-loose multi-
             // target spells (graveyard returns) are unaffected.
             let slot_illegal = |g: &Self, slot: u8, t: &Target| {
-                let gone = matches!(t, Target::Permanent(tid)
-                    if g.battlefield_find(*tid).is_none());
+                // A graveyard card target's zone is the filter's to check.
+                let gone = card.cast_target_was_battlefield
+                    && matches!(t, Target::Permanent(tid) if g.battlefield_find(*tid).is_none());
                 let filter_fail = effect
                     .target_filter_for_slot_in_mode_kicked(slot, Some(mode), card.kicked)
                     .is_some_and(|f| {
@@ -28848,6 +28860,25 @@ impl GameState {
             &mut events,
         )?;
         Ok(events)
+    }
+
+    /// CR 608.2b — every chosen target of a multi-target spell is a card
+    /// whose slot filter names its zone ("up to two target cards from your
+    /// graveyard"), so the all-targets-illegal re-check can read the filters.
+    fn all_slots_zoned_card_targets(
+        &self,
+        effect: &crate::effect::Effect,
+        mode: usize,
+        kicked: bool,
+        t0: &Target,
+        rest: &[Target],
+    ) -> bool {
+        std::iter::once(t0).chain(rest).enumerate().all(|(i, t)| {
+            matches!(t, Target::Permanent(_))
+                && effect
+                    .target_filter_for_slot_in_mode_kicked(i as u8, Some(mode), kicked)
+                    .is_some_and(|f| f.mentions_offboard_zone())
+        })
     }
 
     /// `continue_trigger_resolution_with_source` appending into a

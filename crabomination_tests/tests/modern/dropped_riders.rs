@@ -2926,3 +2926,51 @@ fn cr_115_4_comet_storm_refuses_a_land() {
     });
     assert!(r.is_err());
 }
+
+/// CR 115.1 / 608.2b — Pulse of Murasa's "target creature or land card from
+/// a graveyard" is chosen on cast, reaches an opponent's graveyard (returning
+/// to its owner's hand), and a target gone by resolution fizzles the spell:
+/// no 6 life (the re-check read battlefield targets only).
+#[test]
+fn pulse_of_murasa_targets_any_graveyard_and_fizzles_without_it() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pulse_of_murasa());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    cast(&mut g, id, Some(Target::Permanent(theirs))).expect("an opponent's creature card is legal");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "returned to its owner's hand");
+
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pulse_of_murasa());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    cast(&mut g, id, Some(Target::Permanent(mine))).expect("castable");
+    g.players[0].graveyard.clear();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "its only target left: the spell doesn't resolve");
+}
+
+/// CR 608.2b — both of a multi-target graveyard spell's targets gone by
+/// resolution: it doesn't resolve, so Seeds of Renewal isn't exiled.
+#[test]
+fn seeds_of_renewal_with_both_targets_gone_does_not_resolve() {
+    let mut g = main_phase();
+    let a = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let b = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::seeds_of_renewal());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    g.players[0].graveyard.clear();
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == id), "countered on resolution, not exiled");
+}
