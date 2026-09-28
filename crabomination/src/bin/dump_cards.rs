@@ -388,6 +388,19 @@ fn main() {
         }
         return;
     }
+    // `--pod`: the distinct card names across `pod::target_decks()`, one a
+    // line — the scope for oracle-vs-definition scans of the Commander decks.
+    if args.iter().any(|a| a == "--pod") {
+        let mut names: Vec<String> = crabomination::pod::target_decks()
+            .iter()
+            .flat_map(|d| d.commanders.iter().chain(d.main.iter()))
+            .map(|f| f().name.to_string())
+            .collect();
+        names.sort();
+        names.dedup();
+        names.iter().for_each(|n| println!("{n}"));
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--grep") {
         let needle = args.get(i + 1).expect("--grep NEEDLE");
         let mut seen: HashSet<String> = HashSet::default();
