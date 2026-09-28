@@ -19948,6 +19948,15 @@ impl GameState {
         events
     }
 
+    /// Nonland cards `p` has discarded in the current resolution scratch.
+    pub(crate) fn nonland_discarded_this_resolution(&self, p: usize) -> u32 {
+        self.scratch
+            .nonland_cards_discarded_per_player_this_resolution
+            .get(&p)
+            .copied()
+            .unwrap_or(0)
+    }
+
     /// CR 701.8 / 702.35 — discard `card_id` from player `p`'s hand. This
     /// is the single hand-to-graveyard discard path; the random/chosen
     /// `Effect::Discard` branches both route through it so the discard

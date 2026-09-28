@@ -10509,9 +10509,28 @@ impl GameState {
             {
                 card.cast_collected_evidence = true;
             }
+            let nonland_before = self.nonland_discarded_this_resolution(p);
             let (mut cost_events, power) =
                 self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
+            // CR 601.2h — a discard paid as a cost happened before resolution;
+            // carry its nonland count so "if the discarded card wasn't a land
+            // card" (Grab the Prize) reads it, copies included (CR 707.10).
+            if additional_costs.iter().any(|c| {
+                matches!(
+                    c,
+                    crate::card::AdditionalCastCost::Discard { .. }
+                        | crate::card::AdditionalCastCost::DiscardRandom { .. }
+                )
+            }) {
+                let nonland =
+                    self.nonland_discarded_this_resolution(p).saturating_sub(nonland_before);
+                let def = card.definition_make_mut();
+                def.effect = Effect::WithCastDiscards {
+                    nonland,
+                    body: Box::new(def.effect.clone()),
+                };
+            }
             sac_x = power;
             // Carry the cost-sacrifice's stats into the spell's resolution
             // (resolve_effect resets the scratch) so `Value::Sacrificed*`

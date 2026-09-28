@@ -162,23 +162,18 @@ pub fn gila_courser() -> CardDefinition {
 }
 
 /// Grab the Prize — {1}{R} Sorcery. Additional cost: discard a card. Draw two;
-/// if the discarded card wasn't a land, deal 2 to each opponent.
-///
-/// ⚠ Residual: the discard happens as it resolves, not as a cast cost — so
-/// it can be cast from an empty hand, and a countered copy discards nothing.
-/// A cast-time discard's card type doesn't survive to the resolution's
-/// `DiscardedNonlandThisEffect` (per-resolution scratch).
+/// if the discarded card wasn't a land, deal 2 to each opponent. The cost's
+/// card type reaches resolution through `Effect::WithCastDiscards`.
 pub fn grab_the_prize() -> CardDefinition {
     CardDefinition {
         name: "Grab the Prize",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
         effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::ONE,
-                random: false,
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),

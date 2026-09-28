@@ -10344,6 +10344,12 @@ pub enum Effect {
     /// queued Station effect by `activate_ability`; not for card definitions.
     WithTappedPower { power: i32, body: Box<Effect> },
 
+    /// Internal plumbing: re-stamp how many nonland cards the caster
+    /// discarded to pay an "as an additional cost, discard" (CR 601.2h) before
+    /// running `body`, so `Predicate::DiscardedNonlandThisEffect` reads the
+    /// cast-time discard (Grab the Prize). Wrapped by the cast path.
+    WithCastDiscards { nonland: u32, body: Box<Effect> },
+
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,
     /// Thoughtseize, etc. Currently the **caster** auto-picks the first

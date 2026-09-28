@@ -456,6 +456,35 @@ mod recent151 {
         assert_eq!(g.players[1].life, opp_life - 2, "nonland discard dealt 2 to the opponent");
     }
 
+    /// CR 601.2h: Grab the Prize's discard is a cast cost — a land pitched to
+    /// it deals no damage, and with no other card in hand it can't be cast.
+    #[test]
+    fn grab_the_prize_discards_as_a_cost() {
+        let mut g = two_player_game();
+        let land = g.add_card_to_hand(0, catalog::forest());
+        let id = g.add_card_to_hand(0, catalog::grab_the_prize());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        fill_mana(&mut g);
+        g.step = TurnStep::PreCombatMain;
+        let opp_life = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Grab the Prize");
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == land), "discarded on cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, opp_life, "a land discard deals nothing");
+
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::grab_the_prize());
+        fill_mana(&mut g);
+        g.step = TurnStep::PreCombatMain;
+        assert!(g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(), "no card to discard");
+    }
+
     /// Malevolent Chandelier bottoms a card from a graveyard.
     #[test]
     fn malevolent_chandelier_bottoms_graveyard_card() {

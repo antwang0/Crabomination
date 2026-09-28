@@ -305,7 +305,8 @@ impl GameState {
             | Effect::PayEnergy { then: body, .. }
             | Effect::PayEnergyValue { then: body, .. }
             | Effect::WithSacrificedPt { body, .. }
-            | Effect::WithTappedPower { body, .. } => Self::governing_modal(body),
+            | Effect::WithTappedPower { body, .. }
+            | Effect::WithCastDiscards { body, .. } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
             }

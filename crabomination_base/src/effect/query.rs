@@ -451,6 +451,7 @@ impl Effect {
             | Effect::OnMatchingBlocksThisTurn { body, .. }
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
+            | Effect::WithCastDiscards { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
@@ -1580,6 +1581,7 @@ impl Effect {
             Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
+            Effect::WithCastDiscards { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
@@ -3099,6 +3101,7 @@ impl Effect {
             | Effect::Forage { then } => then.primary_target_filter(),
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
+            | Effect::WithCastDiscards { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
@@ -5449,6 +5452,7 @@ impl Effect {
                 }
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::WithTappedPower { body, .. }
+                | Effect::WithCastDiscards { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextAttackThisTurn { body }

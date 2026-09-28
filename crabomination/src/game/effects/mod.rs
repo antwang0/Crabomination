@@ -30537,6 +30537,14 @@ impl GameState {
                 self.run_effect(body, ctx, events)
             }
 
+            Effect::WithCastDiscards { nonland, body } => {
+                *self
+                    .scratch
+                    .nonland_cards_discarded_per_player_this_resolution
+                    .entry_or_default(ctx.controller) += *nonland;
+                self.run_effect(body, ctx, events)
+            }
+
             Effect::SacrificeAndRemember { who, filter } => {
                 // Resolve `who` to a single player; pick one of their
                 // controlled permanents matching `filter`; sacrifice it and
