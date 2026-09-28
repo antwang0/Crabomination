@@ -495,8 +495,12 @@ pub fn locke_treasure_hunter() -> CardDefinition {
                 then: Box::new(treasures(1, false)),
                 else_: Box::new(Effect::Noop),
             },
+            // "You may CAST a spell from among those cards" — not a land.
             Effect::GrantMayPlay {
-                what: Selector::LastMoved,
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::LastMoved),
+                    filter: crate::card::SelectionRequirement::Nonland,
+                },
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: false,

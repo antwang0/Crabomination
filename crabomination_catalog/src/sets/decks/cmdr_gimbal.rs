@@ -363,7 +363,8 @@ pub fn rashmi_and_ragavan() -> CardDefinition {
                     }),
                 },
                 Effect::GrantMayPlay {
-                    what: Selector::ExiledThisResolution { filter: R::InExile },
+                    // "You may CAST it" — an exiled land can't be played.
+                    what: Selector::ExiledThisResolution { filter: R::InExile.and(R::Nonland) },
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,

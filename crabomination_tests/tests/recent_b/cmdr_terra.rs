@@ -336,3 +336,19 @@ fn cr_603_3d_general_leo_counts_creatures_with_an_empty_graveyard() {
     cast(&mut g, leo, &[]).expect("cast");
     assert_eq!(g.battlefield_find(leo).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// Locke's Mug — "you may CAST a spell from among those cards": a milled
+/// spell gets the permission, a milled land doesn't (it could be played).
+#[test]
+fn locke_mug_grants_spells_not_lands() {
+    let mut g = two_player_game();
+    let locke = g.add_card_to_battlefield(0, catalog::locke_treasure_hunter());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    let effect = catalog::locke_treasure_hunter().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &crabomination::game::effects::EffectContext::for_trigger(locke, 0, None, 0))
+        .expect("mug");
+    let may = |g: &GameState, id| g.find_card_anywhere(id).is_some_and(|c| c.may_play_until.is_some());
+    assert!(may(&g, bolt), "the milled Bolt is castable");
+    assert!(!may(&g, forest), "the milled Forest is not");
+}
