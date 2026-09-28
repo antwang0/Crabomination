@@ -69,12 +69,7 @@ SELECTOR_CONSUMED_SINGLY = (
 # Sites left on a fan-out ref ON PURPOSE, each with the reason and what it is
 # waiting on. `--gate` fails on anything outside this list, and on an entry
 # whose site is gone (a stale allowlist hides the next regression).
-ALLOWLIST = {
-    ("ManifestDread", "unidentified_hovership"):
-        'printed "the exiled card\'s OWNER manifests dread" — the ref wanted is '
-        "the owner of this Vehicle's linked exile, which no `PlayerRef` names. "
-        "`EachOpponent` stands in and is exact in a duel.",
-}
+ALLOWLIST: dict[tuple[str, str], str] = {}
 
 
 def singular_arms():
