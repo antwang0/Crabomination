@@ -89,26 +89,29 @@ pub fn fleeting_reflection() -> CardDefinition {
         name: "Fleeting Reflection",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::GrantKeyword {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Untap {
-                what: Selector::Target(0),
-                up_to: None,
-            },
-            Effect::BecomeCopyOfFor {
-                what: Selector::Target(0),
-                source: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature,
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
                 },
-                duration: Duration::EndOfTurn,
-                non_legendary: false,
-            },
-        ]),
+                Effect::Untap {
+                    what: Selector::Target(0),
+                    up_to: None,
+                },
+                Effect::BecomeCopyOfFor {
+                    what: Selector::Target(0),
+                    source: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature,
+                    },
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

@@ -120,27 +120,30 @@ pub fn closing_statement() -> CardDefinition {
                 amount: 2,
             },
         }],
-        effect: Effect::Seq(vec![
-            // "Destroy target creature or planeswalker you don't control."
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker)
-                        .and(SelectionRequirement::ControlledByOpponent),
-                ),
-            },
-            // "Put a +1/+1 counter on up to one target creature you
-            // control." (Slot 1 — optional.)
-            Effect::AddCounter {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                // "Destroy target creature or planeswalker you don't control."
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
                 },
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        ]),
+                // "Put a +1/+1 counter on up to one target creature you
+                // control." (Slot 1 — optional.)
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

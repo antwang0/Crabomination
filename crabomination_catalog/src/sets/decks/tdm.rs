@@ -882,24 +882,27 @@ pub fn dragonclaw_strike() -> CardDefinition {
             mono_hybrid(2, Color::Red),
         ]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Creature.and(R::ControlledByYou),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    power: Value::PowerOf(Box::new(Selector::Target(0))),
+                    toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                    duration: Duration::EndOfTurn,
                 },
-                power: Value::PowerOf(Box::new(Selector::Target(0))),
-                toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Fight {
-                attacker: Selector::Target(0),
-                defender: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature.and(R::ControlledByOpponent),
+                Effect::Fight {
+                    attacker: Selector::Target(0),
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
                 },
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

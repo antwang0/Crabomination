@@ -257,22 +257,25 @@ pub fn pyretic_rebirth() -> CardDefinition {
         name: "Pyretic Rebirth",
         cost: cost(&[generic(2), b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::InYourGraveyard.and(R::Artifact.or(R::Creature)),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::InYourGraveyard.and(R::Artifact.or(R::Creature)),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::DealDamage {
-                to: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature.or(R::Planeswalker),
+                Effect::DealDamage {
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.or(R::Planeswalker),
+                    },
+                    amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
                 },
-                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

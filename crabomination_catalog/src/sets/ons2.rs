@@ -2736,24 +2736,27 @@ pub fn cruel_revival() -> CardDefinition {
         name: "Cruel Revival",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Zombie).negate()),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::HasCreatureType(CreatureType::Zombie).negate()),
+                    },
                 },
-            },
-            Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature
-                        .and(R::HasCreatureType(CreatureType::Zombie))
-                        .and(R::InYourGraveyard),
+                Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature
+                            .and(R::HasCreatureType(CreatureType::Zombie))
+                            .and(R::InYourGraveyard),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

@@ -2323,6 +2323,27 @@ fn cruel_revival_kills_and_raises() {
     assert!(g.players[0].hand.iter().any(|c| c.id == corpse));
 }
 
+/// CR 601.2c — "up to one target Zombie card": with none in the graveyard
+/// the spell is still cast at its one required target.
+#[test]
+fn cr_601_2c_cruel_revival_needs_no_zombie() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::cruel_revival());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the Zombie slot may be declined");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+}
+
 /// Oversold Cemetery only fires once the graveyard is deep enough.
 #[test]
 fn oversold_cemetery_needs_four_bodies() {

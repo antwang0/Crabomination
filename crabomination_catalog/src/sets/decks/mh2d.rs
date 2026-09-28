@@ -867,19 +867,22 @@ pub fn smell_fear() -> CardDefinition {
         name: "Smell Fear",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Proliferate,
-            Effect::Fight {
-                attacker: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Creature.and(R::ControlledByYou),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Proliferate,
+                Effect::Fight {
+                    attacker: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
                 },
-                defender: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature.and(R::ControlledByOpponent),
-                },
-            },
-        ]),
+            ])),
+        },
         ..Default::default()
     }
 }

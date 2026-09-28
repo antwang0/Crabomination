@@ -560,24 +560,27 @@ pub fn bridgeworks_battle() -> CardDefinition {
         name: "Bridgeworks Battle",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Creature.and(R::ControlledByYou),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
                 },
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Fight {
-                attacker: Selector::Target(0),
-                defender: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature.and(R::ControlledByOpponent),
+                Effect::Fight {
+                    attacker: Selector::Target(0),
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
                 },
-            },
-        ]),
+            ])),
+        },
         back_face: Some(Box::new(mdfc_pain_land(
             "Tanglespan Bridgeworks",
             Color::Green,

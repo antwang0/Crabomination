@@ -179,19 +179,22 @@ pub fn cut_in() -> CardDefinition {
         name: "Cut In",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(R::Creature),
-                amount: Value::Const(4),
-            },
-            Effect::CreateTokenAttachedTo {
-                target: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature.and(R::ControlledByYou),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::Const(4),
                 },
-                definition: std::sync::Arc::new(young_hero_role()),
-            },
-        ]),
+                Effect::CreateTokenAttachedTo {
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    definition: std::sync::Arc::new(young_hero_role()),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

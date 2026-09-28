@@ -51,21 +51,24 @@ pub fn reasonable_doubt() -> CardDefinition {
         name: "Reasonable Doubt",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::CounterUnlessPaid {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                mana_cost: cost(&[generic(2)]),
-                exile: false,
-                extra_generic: None,
-                if_paid: None,
-            },
-            Effect::Suspect {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature,
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::CounterUnlessPaid {
+                    what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                    mana_cost: cost(&[generic(2)]),
+                    exile: false,
+                    extra_generic: None,
+                    if_paid: None,
                 },
-            },
-        ]),
+                Effect::Suspect {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
@@ -641,25 +644,28 @@ pub fn repulsive_mutation() -> CardDefinition {
         name: "Repulsive Mutation",
         cost: cost(&[crate::mana::x(), g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
-            },
-            Effect::CounterUnlessPaid {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::IsSpellOnStack,
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
                 },
-                mana_cost: cost(&[]),
-                exile: false,
-                extra_generic: Some(Value::GreatestPowerControlled { who: PlayerRef::You }),
-                if_paid: None,
-            },
-        ]),
+                Effect::CounterUnlessPaid {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::IsSpellOnStack,
+                    },
+                    mana_cost: cost(&[]),
+                    exile: false,
+                    extra_generic: Some(Value::GreatestPowerControlled { who: PlayerRef::You }),
+                    if_paid: None,
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
