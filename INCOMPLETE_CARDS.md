@@ -380,6 +380,16 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Laelia, the Blade Reforged (pod) | only her own attack's library exile (and graveyard exiles) grow her | the engine emits no "exiled from a library" event; she is the only card that needs one |
 | Chevill, Bane of Monsters | "a permanent an opponent controls" dies is read as any permanent with a bounty counter | bounty counters only go on opponents' permanents, so it differs only after a control change |
 
+## Oracle-vs-definition scans (2026-09-28, session `01BA6uAJ`) — what the fixes left
+
+| Card | Residual | Why |
+|---|---|---|
+| Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
+| Harnfel, Horn of Bounty (Birgi's back) | "Discard a card: exile the top two, play them this turn" ships as a trigger on any discard, playable until the end of your next turn | the discard cost fits `discard_cost`; the duration wants `EndOfThisTurn` — a body rewrite, not yet read against a test |
+| Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
+| Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
+| Angelic Intervention | "creature or planeswalker you control", "protection from colorless" | the planeswalker branch must skip the +1/+1 counter; no colorless-protection chooser |
+
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
 `audit_incomplete`'s comment scan intersected with the 183 pod decks gave 153

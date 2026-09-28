@@ -1692,3 +1692,25 @@ fn spellbane_centaur_is_targeting_only() {
     assert!(cp.keywords().contains(&Keyword::HexproofFromColor(Color::Blue)));
     assert!(!cp.keywords().contains(&Keyword::Protection(Color::Blue)), "blue creatures still block it");
 }
+
+/// Trade Caravan — "Activate only during an opponent's upkeep." It was gated
+/// to its controller's own upkeep.
+#[test]
+fn trade_caravan_untaps_on_an_opponents_upkeep() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let caravan = g.add_card_to_battlefield(0, catalog::trade_caravan());
+    g.battlefield_find_mut(caravan).unwrap().add_counters(CounterType::Currency, 4);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    let untap = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: caravan, ability_index: 0, target: Some(Target::Permanent(forest)),
+        additional_targets: vec![], x_value: None, mode: None,
+    });
+    g.step = TurnStep::Upkeep;
+    assert!(untap(&mut g).is_err(), "not during your own upkeep");
+    g.active_player_idx = 1;
+    untap(&mut g).expect("an opponent's upkeep");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(forest).unwrap().tapped);
+}

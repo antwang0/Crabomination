@@ -293,7 +293,11 @@ pub fn trade_caravan() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Currency, 2)),
             effect: Effect::Untap { what: target_filtered(R::IsBasicLand), up_to: None },
-            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
+            // "Activate only during an opponent's upkeep."
+            condition: Some(Predicate::All(vec![
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+                Predicate::Not(Box::new(Predicate::IsTurnOf(crate::effect::PlayerRef::You))),
+            ])),
             ..Default::default()
         }],
         ..creature(
