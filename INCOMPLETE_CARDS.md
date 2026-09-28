@@ -2202,7 +2202,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
 | 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
 | 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
-| 🟡 Zaffai, Thunder Conductor | Prismari Performance (C21) | one magecraft trigger per copy event, however many copies it made. |
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
 | 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
 | 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |
