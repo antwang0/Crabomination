@@ -227,11 +227,16 @@ pub fn dire_fleet_daredevil() -> CardDefinition {
 /// top four of your library; you may cast it while it stays exiled.
 ///
 /// Approximation: the first creature card among the four is exiled (no
-/// choice), and its cast has no undaunted.
+/// choice), and its undaunted discount (CR 702.125a, `per_opponent`) lasts
+/// only while Durnan is on the battlefield.
 pub fn durnan_of_the_yawning_portal() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "That spell has undaunted.",
+            effect: StaticEffect::LinkedExileCastCostReduction { amount: 1, per_opponent: true },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -242,6 +247,11 @@ pub fn durnan_of_the_yawning_portal() -> CardDefinition {
                     cap: Value::Const(4),
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::BottomRandom,
+                },
+                // Linked, so the undaunted discount below finds it.
+                Effect::ExileLinkedTo {
+                    what: Selector::ExiledThisResolution { filter: R::Creature },
+                    link: Selector::This,
                 },
                 Effect::GrantMayPlay {
                     what: Selector::ExiledThisResolution { filter: R::Creature },

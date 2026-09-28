@@ -828,7 +828,7 @@ pub fn urianger_augurelt() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Spells you cast this way cost {2} less to cast.",
-            effect: StaticEffect::LinkedExileCastCostReduction { amount: 2 },
+            effect: StaticEffect::LinkedExileCastCostReduction { amount: 2, per_opponent: false },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellFromExile),

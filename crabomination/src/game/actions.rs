@@ -1955,10 +1955,12 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
-                StaticEffect::LinkedExileCastCostReduction { amount }
+                StaticEffect::LinkedExileCastCostReduction { amount, per_opponent }
                     if from_exile && src.controller == caster && card.exiled_with == Some(src.id) =>
                 {
-                    reduction += amount;
+                    // CR 702.125b — a departed player is not an opponent.
+                    let times = if *per_opponent { state.opponents_of(caster).len() as u32 } else { 1 };
+                    reduction += amount * times;
                 }
                 // A hop cast from the library top or a graveyard is stamped
                 // before this runs; a command-zone cast is neither from hand

@@ -1957,7 +1957,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
-| 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
+| 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice); the undaunted discount holds only while Durnan is on the battlefield. |
 | 🟡 Revival Experiment | Witherbloom Witchcraft (C21) | the engine picks the cards — the highest mana value per permanent type, a multi-typed card counting for the first type it fills. |
 | 🟡 Suffer the Past | Witherbloom Witchcraft (C21) | the X cards are chosen as it resolves (from the target player's graveyard), not targeted. |
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |

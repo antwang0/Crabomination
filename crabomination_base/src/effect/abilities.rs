@@ -649,7 +649,13 @@ pub enum StaticEffect {
     /// `ExileCastCostReduction` for cards exiled WITH this source only
     /// (`exiled_with`) — Urianger Augurelt's "spells you cast this way cost
     /// {2} less".
-    LinkedExileCastCostReduction { amount: u32 },
+    LinkedExileCastCostReduction {
+        amount: u32,
+        /// {`amount`} less for each opponent — "that spell has undaunted"
+        /// (Durnan of the Yawning Portal, CR 702.125a).
+        #[serde(default)]
+        per_opponent: bool,
+    },
     /// "Spells you cast from anywhere other than your hand cost {N} less"
     /// (Fortune Teller's Talent level 3): the top of the library, a
     /// graveyard, exile or the command zone. Generic mana only.

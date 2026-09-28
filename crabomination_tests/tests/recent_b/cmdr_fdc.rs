@@ -6119,3 +6119,37 @@ fn battle_for_bretagard_copies_one_token_per_name() {
     g.resolve_effect(&chapter, &ctx).expect("chapter III");
     assert_eq!((count_named(&g, 0, "Grizzly Bears"), count_named(&g, 0, "Llanowar Elves")), (3, 2));
 }
+
+/// CR 702.125a — Durnan of the Yawning Portal: "That spell has undaunted" —
+/// the creature it exiles costs {1} less for each opponent. At a four-seat
+/// table Thragtusk ({4}{G}) costs {1}{G}; it used to cost full price.
+#[test]
+fn cr_702_125a_durnans_exiled_creature_has_undaunted() {
+    let mut g = multi_player_game(4);
+    let durnan = g.add_card_to_battlefield(0, catalog::durnan_of_the_yawning_portal());
+    g.clear_sickness(durnan);
+    let tusk = g.add_card_to_library(0, catalog::thragtusk());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: durnan,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == tusk), "Thragtusk exiled");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: tusk,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{4}{G} less {3} for three opponents");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tusk).is_some());
+}
