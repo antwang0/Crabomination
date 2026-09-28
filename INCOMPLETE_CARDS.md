@@ -395,6 +395,26 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
+## Oracle-vs-definition scans (2026-09-28, session `01WRiz7c`) — what the fixes left
+
+Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
+`audit_return_controller.py`, `audit_other_and_side.py`, `audit_missing_static.py`
+(all exploratory; the pod-scoped rows are fixed or listed here).
+
+| Card | Residual | Why |
+|---|---|---|
+| Avarice Amulet | "whenever equipped creature dies, target opponent gains control of this Equipment" is absent | an `EquipBonus` trigger runs on the creature and has no selector for the granting Equipment |
+| Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
+| Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
+| Party Thrasher | noncreature spells cast from exile lack convoke; the impulse grants both exiled cards, not the chosen one | no convoke grant by cast zone; `ExileTopAndGrantMayPlay` has no choose-one |
+| The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
+| Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |
+| Rootwater Matriarch | the steal is permanent, not "for as long as that creature is enchanted" | no `GainControlWhile` keyed to the target's auras |
+| Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
+| Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
+| Vizier of Many Faces | an embalmed Vizier's copy isn't white and keeps a mana cost | `EntersAsCopy` has no embalm-conditional rider |
+| Invasion of Amonkhet | Lazotep Convert doesn't enter as a copy of a graveyard creature card | a transformed battle's back face has no enters-as-copy path |
+
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
 `audit_incomplete`'s comment scan intersected with the 183 pod decks gave 153
