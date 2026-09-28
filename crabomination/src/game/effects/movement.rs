@@ -1533,8 +1533,12 @@ impl GameState {
                         })
                     })
                 {
+                    // "From the top of their library" — index 0 is the top.
                     for _ in 0..amount {
-                        let Some(card) = self.players[p].library.pop() else { break };
+                        if self.players[p].library.is_empty() {
+                            break;
+                        }
+                        let card = self.players[p].library.remove(0);
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });

@@ -412,11 +412,14 @@ fn crumbling_sanctuary_exiles_instead_of_damage() {
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
+    let bottom = g.add_card_to_library(0, catalog::forest());
     let lib = g.players[0].library.len();
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     cast(&mut g, 1, bolt, Some(Target::Player(0)));
     assert_eq!(g.players[0].life, 20);
     assert_eq!(g.players[0].library.len(), lib - 3);
+    // "From the top" — index 0; it exiled the bottom card first.
+    assert!(g.players[0].library.iter().any(|c| c.id == bottom), "the bottom card stays");
 }
 
 /// Instigator forces a player's whole board to attack.
@@ -598,10 +601,12 @@ fn clear_the_land_deploys_lands_and_exiles_the_rest() {
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
+    let sixth = g.add_card_to_library(0, catalog::island());
     let spell = g.add_card_to_hand(0, catalog::clear_the_land());
     cast(&mut g, 0, spell, None);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Forest").count(), 2);
     assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3);
+    assert!(g.players[0].library.iter().any(|c| c.id == sixth), "the sixth card was not revealed");
 }
 
 /// Unmask is free when you exile a black card.
@@ -935,6 +940,9 @@ fn game_preserve_is_all_or_nothing() {
 
     g.players[1].library.pop();
     let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    // A land UNDER each top card doesn't count — only the top is revealed.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_some());

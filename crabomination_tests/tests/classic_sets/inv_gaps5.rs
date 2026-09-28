@@ -187,6 +187,11 @@ fn desperate_research_takes_only_the_named_cards() {
     let mut g = main_phase();
     let wanted = g.add_card_to_library(0, catalog::grizzly_bears());
     let junk = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // The eighth card is not among the top seven.
+    let eighth = g.add_card_to_library(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::desperate_research());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
         "Grizzly Bears".into(),
@@ -194,6 +199,7 @@ fn desperate_research_takes_only_the_named_cards() {
     cast(&mut g, 0, spell, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == wanted), "named card taken");
     assert!(g.exile.iter().any(|c| c.id == junk), "the rest is exiled");
+    assert!(g.players[0].library.iter().any(|c| c.id == eighth), "only the top seven");
 }
 
 /// Spreading Plague wipes every other creature sharing the newcomer's colour.

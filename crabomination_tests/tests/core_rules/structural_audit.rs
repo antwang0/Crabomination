@@ -1544,3 +1544,53 @@ fn every_static_the_spell_cost_walks_read_is_admitted_by_the_cost_filter() {
     missing.sort();
     assert!(missing.is_empty(), "spell-cost statics the cost filter drops: {missing:?}");
 }
+
+/// Index 0 of a library is its TOP (`Player::draw_top` takes `remove(0)`), so
+/// `library.last()`, `library.pop()` and `library.iter().rev()` read the
+/// BOTTOM. Five "top card" effects read it that way (Crumbling Sanctuary,
+/// Desperate Research, Psychic Battle, Game Preserve, Clear the Land). A site
+/// that means the bottom says so with "bottom" on its line or the line above.
+#[test]
+fn library_top_is_index_zero() {
+    const PATTERNS: [&str; 4] = ["library.last()", "library.last_mut()", "library.pop()", "library.iter().rev()"];
+    fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
+        for e in std::fs::read_dir(dir).expect("readable").flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out);
+                continue;
+            }
+            if p.extension().is_none_or(|x| x != "rs") {
+                continue;
+            }
+            let src = std::fs::read_to_string(&p).expect("utf-8");
+            let lines: Vec<&str> = src.lines().collect();
+            // Whitespace-free text, each kept char's line: a chain split over
+            // lines (`.library\n.iter()\n.rev()`) still matches.
+            let mut flat = String::new();
+            let mut line_of = Vec::new();
+            for (i, l) in lines.iter().enumerate() {
+                let code = l.split("//").next().unwrap_or("");
+                for ch in code.chars().filter(|c| !c.is_whitespace()) {
+                    flat.push(ch);
+                    line_of.push(i);
+                }
+            }
+            for pat in PATTERNS {
+                let mut from = 0;
+                while let Some(rel) = flat[from..].find(pat) {
+                    let at = from + rel;
+                    from = at + pat.len();
+                    let ln = line_of[at + pat.len() - 1];
+                    let says_bottom = lines[ln.saturating_sub(1)..=ln].iter().any(|l| l.contains("bottom"));
+                    if !says_bottom {
+                        out.push(format!("{}:{} — {}", p.display(), ln + 1, lines[ln].trim()));
+                    }
+                }
+            }
+        }
+    }
+    let mut hits = Vec::new();
+    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src/game"), &mut hits);
+    assert!(hits.is_empty(), "a library read from its end (index 0 is the top):\n  {}", hits.join("\n  "));
+}

@@ -14609,6 +14609,7 @@ impl GameState {
                 if self.players[seat].library.is_empty() {
                     return Ok(());
                 }
+                // The bottom card (index 0 is the top).
                 let card = self.players[seat].library.pop().expect("nonempty");
                 let id = card.id;
                 let deployable = card.definition.is_creature()
@@ -20780,10 +20781,10 @@ impl GameState {
                             .and_then(|c| c.named_card.clone())
                     })
                     .unwrap_or_default();
+                // The top `n` — index 0 is the top.
                 let taken: Vec<CardId> = self.players[p]
                     .library
                     .iter()
-                    .rev()
                     .take(n)
                     .map(|c| c.id)
                     .collect();
@@ -33872,7 +33873,7 @@ impl GameState {
                     .players
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, p)| p.library.last().map(|c| (i, c.definition.cost.cmc())))
+                    .filter_map(|(i, p)| p.library.first().map(|c| (i, c.definition.cost.cmc())))
                     .collect();
                 self.cards_revealed_this_resolution += tops.len() as u32;
                 let Some(max) = tops.iter().map(|(_, mv)| *mv).max() else { return Ok(()) };
@@ -34933,7 +34934,7 @@ impl GameState {
             Effect::EachPlayerRevealTopAllEnterIfAllCreatures => {
                 // Game Preserve — all-or-nothing across the table.
                 let tops: Vec<(usize, CardId)> = (0..self.players.len())
-                    .filter_map(|p| self.players[p].library.last().map(|c| (p, c.id)))
+                    .filter_map(|p| self.players[p].library.first().map(|c| (p, c.id)))
                     .collect();
                 let all_creatures = !tops.is_empty()
                     && tops.iter().all(|(p, id)| {
@@ -34967,7 +34968,6 @@ impl GameState {
                     let revealed: Vec<CardId> = self.players[p]
                         .library
                         .iter()
-                        .rev()
                         .take(n)
                         .map(|c| c.id)
                         .collect();
