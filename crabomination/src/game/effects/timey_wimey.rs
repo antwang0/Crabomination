@@ -82,6 +82,7 @@ impl GameState {
         };
         let Some(card) = self.players[p].remove_from_hand(cid) else { return Ok(()) };
         self.exile.push(card);
+        self.note_exiled_from_hand_or_by(p);
         events.push(GameEvent::PermanentExiled { card_id: cid });
         self.grant_suspend_mana_value_counters(&Selector::ExactObjects(vec![cid]), ctx, events)
     }

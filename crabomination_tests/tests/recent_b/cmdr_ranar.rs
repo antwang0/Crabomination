@@ -97,6 +97,29 @@ fn hero_of_bretagard_grows_on_exile_and_flies_at_five() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
 }
 
+/// CR 603.2c / CR 118.9 — a card exiled from hand to pay an alternative
+/// cost (Force of Will's pitch) is "put into exile from your hand": Hero of
+/// Bretagard grows by one.
+#[test]
+fn hero_of_bretagard_counts_a_pitched_card() {
+    let mut g = pod(2);
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_bretagard());
+    let fow = g.add_card_to_hand(0, catalog::force_of_will());
+    let pitch = g.add_card_to_hand(0, catalog::force_of_will());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fow,
+        pitch_card: Some(pitch),
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("pitch cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == pitch), "the pitch card is in exile");
+    assert_eq!(g.battlefield_find(hero).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// Ethereal Valkyrie foretells a card that has no foretell of its own; it is
 /// cast from exile on a later turn for its mana cost less {2}.
 #[test]

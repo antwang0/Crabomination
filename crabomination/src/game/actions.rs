@@ -7695,6 +7695,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.add_counters(CounterType::Time, n);
         self.exile.push(card);
+        self.note_exiled_from_hand_or_by(p);
         events.push(GameEvent::PermanentExiled { card_id });
         events.push(GameEvent::CounterAdded {
             card_id,
@@ -13984,6 +13985,7 @@ impl GameState {
         {
             let cid = pitch.id;
             self.exile.push(pitch);
+            self.note_exiled_from_hand_or_by(p);
             auto_events.push(GameEvent::PermanentExiled { card_id: cid });
         }
 

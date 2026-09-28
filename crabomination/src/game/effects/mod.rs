@@ -14404,6 +14404,9 @@ impl GameState {
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
+                        // CR 603.2c — "one or more cards are put into exile
+                        // from your hand" (Ranar, Hero of Bretagard).
+                        self.note_exiled_from_hand_or_by(p);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                     }
                 }
@@ -20576,6 +20579,7 @@ impl GameState {
                         let card = self.players[p].hand.remove(i);
                         let cid = card.id;
                         self.exile.push(card);
+                        self.note_exiled_from_hand_or_by(p);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                         if victims_turn { keep.push(cid) } else { bin.push(cid) }
                     }
