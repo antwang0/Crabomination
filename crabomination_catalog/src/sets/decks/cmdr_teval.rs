@@ -300,9 +300,9 @@ pub fn thranduil_sindarin_liege() -> CardDefinition {
 /// creature cards are put into your graveyard from your library, put one of
 /// them onto the battlefield.
 ///
-/// Approximation: the creature returned is the first creature card of the
-/// milled batch (the trigger's bound subject), not one of the controller's
-/// choice.
+/// Approximation: "one of them" is the priciest creature card put into your
+/// graveyard from your library this turn (an earlier batch this turn counts
+/// too), not the controller's pick.
 pub fn colossal_grave_reaver() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -311,7 +311,14 @@ pub fn colossal_grave_reaver() -> CardDefinition {
             on_attack(mill(3)),
             TriggeredAbility {
                 event: creature_cards_milled(),
-                effect: Effect::Move { what: Selector::TriggerSource, to: to_battlefield(false) },
+                effect: Effect::Move {
+                    what: Selector::best_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: R::Creature.and(R::PutIntoGraveyardFromLibraryThisTurn),
+                    }),
+                    to: to_battlefield(false),
+                },
             },
         ],
         ..creature(

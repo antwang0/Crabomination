@@ -187,12 +187,13 @@ fn thranduil_landfall_elves_and_silvan_rally() {
 #[test]
 fn grave_reaver_and_sidisi_pay_off_creature_mills_once_per_batch() {
     let mut g = main_phase();
-    let a = g.add_card_to_library(0, catalog::grizzly_bears());
     let b = g.add_card_to_library(0, catalog::llanowar_elves());
+    let a = g.add_card_to_library(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::forest());
     etb(&mut g, catalog::colossal_grave_reaver());
     let returned = [a, b].iter().filter(|id| on_battlefield(&g, **id)).count();
     assert_eq!(returned, 1, "one of them onto the battlefield");
+    assert!(on_battlefield(&g, a), "the priciest, not the first milled");
 
     let mut g = main_phase();
     g.add_card_to_library(0, catalog::grizzly_bears());
