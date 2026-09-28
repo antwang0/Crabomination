@@ -7427,3 +7427,16 @@ fn cr_115_1_highway_robber_drains_one_target_opponent() {
     assert_eq!(lost, 2, "one opponent lost 2");
     assert_eq!(g.players[0].life, lives[0] + 2);
 }
+
+/// CR 101.4 / 800.4a — "the player to your left" is a seat: a reversed turn
+/// order moves the turn, not the chairs, so the left neighbour stays the
+/// next living seat clockwise while the next turn goes the other way.
+#[test]
+fn the_player_to_your_left_ignores_a_reversed_turn_order() {
+    let mut g = multi_player_game(4);
+    g.turn_order_reversed = true;
+    assert_eq!(g.next_alive_seat(0), 3, "the turn runs right");
+    assert_eq!(g.player_to_left_of(0), 1, "the left neighbour doesn't move");
+    g.concede(1);
+    assert_eq!(g.player_to_left_of(0), 2, "a departed seat is skipped");
+}

@@ -5803,6 +5803,15 @@ impl GameState {
 
     /// Next non-eliminated seat strictly after `from` (wrapping). Returns
     /// `from` if no other alive players remain.
+    /// "The player to your left" is a seat, not a turn: the next living
+    /// player clockwise (seat index up), whichever way turn order runs — a
+    /// reversed turn order (`turn_order_reversed`) moves the turn, not the
+    /// chairs. `PlayerRef::PlayerToYourRight` is its mirror.
+    pub fn player_to_left_of(&self, from: usize) -> usize {
+        let n = self.players.len();
+        (1..n).map(|k| (from + k) % n).find(|&i| self.players[i].is_alive()).unwrap_or(from)
+    }
+
     pub fn next_alive_seat(&self, from: usize) -> usize {
         let n = self.players.len();
         for step in 1..=n {
@@ -5817,9 +5826,9 @@ impl GameState {
     /// CR 800.4a — the seats still **in the game**, in turn order, starting
     /// with `from` (which is included when it is alive).
     ///
-    /// The one answer for a printed "starting with you, each player …" and,
-    /// via [`next_alive_seat`](Self::next_alive_seat), for "the player to
-    /// their left". A raw `(from + i) % n` rotation is the same list in a
+    /// The one answer for a printed "starting with you, each player …" (turn
+    /// order; "the player to their left" is a seat —
+    /// [`player_to_left_of`](Self::player_to_left_of)). A raw `(from + i) % n` rotation is the same list in a
     /// two-player game and in a pod that has lost nobody, which is why four
     /// hand-written ones survived review: CR 701.38a's ballot counted a
     /// departed seat's vote, and Grenzo's Rebuttal aimed a seat at a

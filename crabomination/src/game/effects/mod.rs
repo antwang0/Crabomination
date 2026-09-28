@@ -14691,7 +14691,8 @@ impl GameState {
                     // CR 800.4a — "the player to their left" is the next
                     // player, not the next seat index: a departed seat owns no
                     // permanents, so aiming at one silently destroyed nothing.
-                    let neighbor = self.next_alive_seat(seat);
+                    // A seat, not a turn: a reversed turn order doesn't move it.
+                    let neighbor = self.player_to_left_of(seat);
                     for filter in filters {
                         let legal: Vec<Target> = self
                             .battlefield
