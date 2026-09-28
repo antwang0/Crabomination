@@ -1616,7 +1616,8 @@ impl RepeatGuard {
 }
 
 /// `CRAB_POD_TRACE=<n>`: from action `n` on, every accepted action of a pod
-/// game on stderr — turn, step, stack depth, seat, action. Names a capped
+/// game on stderr — turn, step, stack depth, seat, action — and every
+/// rejected one as a `REJECT` line with the engine's error. Names a capped
 /// game's loop without a rebuild (`--first I --games 1` replays it).
 fn pod_trace_from() -> Option<usize> {
     static FROM: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
@@ -1711,7 +1712,13 @@ pub fn play_one_pod_game_censused(
                         g.recycle_events(events);
                         true
                     }
-                    Err(_) => false,
+                    Err(e) => {
+                        if let Some(a) = &traced {
+                            let (t, step, act) = (g.turn_number, g.step, g.active_player_idx);
+                            eprintln!("REJECT t{t} {step:?} active p{act} p{seat} {a} :: {e:?}");
+                        }
+                        false
+                    }
                 }
             };
             if ok {
