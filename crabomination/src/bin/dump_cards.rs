@@ -373,6 +373,21 @@ fn main() {
         }
         return;
     }
+    // `--enters-with`: `name\tDebug(enters_with_counters)` for every card
+    // that has one — the card's OWN field, not a nested token's
+    // (`scripts/audit_enters_with.py` reads it against the oracle).
+    if args.iter().any(|a| a == "--enters-with") {
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            if let Some(ewc) = &def.enters_with_counters
+                && seen.insert(def.name.to_string())
+            {
+                println!("{}\t{:?}", def.name, ewc);
+            }
+        }
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--grep") {
         let needle = args.get(i + 1).expect("--grep NEEDLE");
         let mut seen: HashSet<String> = HashSet::default();
