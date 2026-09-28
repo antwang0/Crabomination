@@ -7121,8 +7121,8 @@ pub fn perigee_beckoner() -> CardDefinition {
 
 /// The Seriema — {1}{W}{W} legendary Spacecraft. ETB: search your library for a
 /// legendary creature card and put it into your hand. Station; at 7+ it's a 5/5
-/// with flying. (The 7+ "other tapped legendary creatures have indestructible"
-/// static is dropped.)
+/// with flying and other tapped legendary creatures you control have
+/// indestructible.
 pub fn the_seriema() -> CardDefinition {
     CardDefinition {
         name: "The Seriema",
@@ -7145,6 +7145,16 @@ pub fn the_seriema() -> CardDefinition {
             min: 7,
             keywords: vec![Keyword::Flying],
             pt: Some((5, 5)),
+            statics: vec![StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary))
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Indestructible,
+            }],
             ..Default::default()
         }],
         ..Default::default()

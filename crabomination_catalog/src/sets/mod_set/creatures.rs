@@ -8166,7 +8166,8 @@ pub fn charging_badger() -> CardDefinition {
     }
 }
 
-/// Bellowing Tanglewurm — {3}{G}{G} 4/4 Wurm. Intimidate. (SOM)
+/// Bellowing Tanglewurm — {3}{G}{G} 4/4 Wurm. Intimidate. Other green
+/// creatures you control have intimidate. (SOM)
 pub fn bellowing_tanglewurm() -> CardDefinition {
     CardDefinition {
         name: "Bellowing Tanglewurm",
@@ -8179,6 +8180,18 @@ pub fn bellowing_tanglewurm() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Intimidate],
+        static_abilities: vec![StaticAbility {
+            description: "Other green creatures you control have intimidate.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Green))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Intimidate,
+            },
+        }],
         ..Default::default()
     }
 }

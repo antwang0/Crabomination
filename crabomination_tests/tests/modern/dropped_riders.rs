@@ -2167,3 +2167,39 @@ fn croaking_counterpart_copy_is_green_and_stays_legendary() {
     assert!(cp.colors.contains(Color::Green) && !cp.colors.contains(Color::White));
     assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
 }
+
+/// "Other … you control" statics that shipped dropped ("other" anthem scan):
+/// Bellowing Tanglewurm's intimidate, Spider-Ham's Animal May-Ham, The
+/// Seriema's 7+ indestructible for other tapped legends.
+#[test]
+fn other_creature_statics_apply_to_your_side_only() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::bellowing_tanglewurm());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Intimidate));
+    assert!(!g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Intimidate));
+
+    let mut g = main_phase();
+    let ham = g.add_card_to_battlefield(0, catalog::spider_ham_peter_porker());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pt = |g: &GameState, id| {
+        let c = g.computed_permanent(id).unwrap();
+        (c.power, c.toughness)
+    };
+    assert_eq!(pt(&g, mine), (3, 3), "a Bear you control");
+    assert_eq!(pt(&g, theirs), (2, 2));
+    assert_eq!(pt(&g, ham), (2, 2), "not itself");
+
+    let mut g = main_phase();
+    let ship = g.add_card_to_battlefield(0, catalog::the_seriema());
+    let thalia = g.add_card_to_battlefield(0, catalog::thalia_guardian_of_thraben());
+    g.battlefield_find_mut(thalia).unwrap().tapped = true;
+    let ind = |g: &GameState| g.computed_permanent(thalia).unwrap().keywords().contains(&Keyword::Indestructible);
+    assert!(!ind(&g), "below 7 charge counters");
+    g.battlefield_find_mut(ship).unwrap().add_counters(crabomination::card::CounterType::Charge, 7);
+    assert!(ind(&g), "tapped legend at 7+");
+    g.battlefield_find_mut(thalia).unwrap().tapped = false;
+    assert!(!ind(&g), "untapped");
+}

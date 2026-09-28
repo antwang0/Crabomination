@@ -686,7 +686,8 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
 }
 
 /// Spider-Ham, Peter Porker — {1}{G} 2/2 Spider Boar Hero. When it enters,
-/// create a Food token. (The "Animal May-Ham" menagerie anthem is omitted.)
+/// create a Food token. Animal May-Ham — other Spiders, Boars, … and Wolves
+/// you control get +1/+1.
 pub fn spider_ham_peter_porker() -> CardDefinition {
     CardDefinition {
         name: "Spider-Ham, Peter Porker",
@@ -704,6 +705,41 @@ pub fn spider_ham_peter_porker() -> CardDefinition {
             count: Value::Const(1),
             definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
         })],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spiders, Boars, Bats, Bears, Birds, Cats, Dogs, Frogs, Jackals, Lizards, Mice, Otters, Rabbits, Raccoons, Rats, Squirrels, Turtles, and Wolves you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    [
+                        CreatureType::Spider,
+                        CreatureType::Boar,
+                        CreatureType::Bat,
+                        CreatureType::Bear,
+                        CreatureType::Bird,
+                        CreatureType::Cat,
+                        CreatureType::Dog,
+                        CreatureType::Frog,
+                        CreatureType::Jackal,
+                        CreatureType::Lizard,
+                        CreatureType::Mouse,
+                        CreatureType::Otter,
+                        CreatureType::Rabbit,
+                        CreatureType::Raccoon,
+                        CreatureType::Rat,
+                        CreatureType::Squirrel,
+                        CreatureType::Turtle,
+                        CreatureType::Wolf,
+                    ]
+                    .into_iter()
+                    .map(R::HasCreatureType)
+                    .reduce(R::or)
+                    .expect("eighteen types")
+                    .and(R::ControlledByYou)
+                    .and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
         ..Default::default()
     }
 }
