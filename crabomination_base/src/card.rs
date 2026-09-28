@@ -9879,14 +9879,15 @@ impl CardInstance {
     #[inline]
     pub fn has_face_view(&self) -> bool {
         let d = &**self.definition;
-        d.split.is_some() || d.room.is_some() || self.adventuring || self.omen_casting
+        d.split.is_some() || d.room.is_some() || self.adventuring || self.omen_casting || self.bestowed
     }
 
     /// CR 709.3b / 709.4 / 715.3b — this card with the characteristics it has
     /// in its zone when they aren't the main face's: an Adventure / Omen or a
     /// split half on the stack has only that half's; a split card or Room
     /// anywhere else has both halves combined (cost, colors, mana value,
-    /// types). `None` when the main face is the answer. For readers only.
+    /// types); a bestowed spell is an Aura. `None` when the main face is the
+    /// answer. For readers only.
     pub fn face_view(&self, on_stack: bool) -> Option<CardInstance> {
         let def = &**self.definition;
         let mut v = def.clone();
@@ -9898,6 +9899,22 @@ impl CardInstance {
                 }
             }
         };
+        // CR 702.103b — a bestowed spell is an Aura enchantment spell, not a
+        // creature spell, with no creature types.
+        if on_stack && self.bestowed {
+            v.card_types.retain(|t| *t != CardType::Creature);
+            if !v.card_types.contains(&CardType::Enchantment) {
+                v.card_types.push(CardType::Enchantment);
+            }
+            v.subtypes.creature_types.clear();
+            if !v.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura) {
+                v.subtypes.enchantment_subtypes.push(EnchantmentSubtype::Aura);
+            }
+            let mut card = self.clone();
+            card.definition = Definition::new(Arc::new(v));
+            card.bestowed = false;
+            return Some(card);
+        }
         match (on_stack, self.alt_spell_half_of(def), def.split.as_deref(), def.room.as_deref()) {
             (true, Some(h), ..) => {
                 v.name = h.name;
@@ -9920,6 +9937,8 @@ impl CardInstance {
                 Some(2) => combine(&mut v, &s.right.cost, &s.right.card_types),
                 _ => return None,
             },
+            // CR 709.5 — a Room door spell has that door's cost.
+            (true, None, None, Some(r)) if self.split_cast == Some(1) => v.cost = r.right.cost.clone(),
             (false, _, Some(s), _) => combine(&mut v, &s.right.cost, &s.right.card_types),
             (false, _, None, Some(r)) => combine(&mut v, &r.right.cost, &[]),
             _ => return None,

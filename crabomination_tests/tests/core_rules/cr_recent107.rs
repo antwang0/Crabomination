@@ -260,3 +260,29 @@ fn cr_709_4b_cascade_reads_a_split_cards_combined_mana_value() {
     assert!(g.players[0].library.iter().any(|c| c.id == fi), "Fire // Ice went to the bottom");
     assert!(g.players[0].library.iter().all(|c| c.id != bears), "cascade hit the Bears");
 }
+
+/// CR 702.103b — a bestowed spell is an Aura enchantment spell, not a creature
+/// spell: prowess sees a noncreature spell and "creature spell" filters miss.
+#[test]
+fn cr_702_103b_a_bestowed_spell_is_not_a_creature_spell() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = main_phase();
+    let monk = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let satyr = g.add_card_to_hand(0, catalog::boon_satyr());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.perform_action(GameAction::CastBestow {
+        card_id: satyr,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow");
+    let spell = stack_card(&g, satyr);
+    assert!(!g.evaluate_requirement_on_card(&R::Creature, &spell, 1), "not a creature spell");
+    assert!(g.evaluate_requirement_on_card(&R::Enchantment, &spell, 1), "an Aura spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(monk).unwrap().power(), 2, "prowess saw a noncreature spell");
+}
+

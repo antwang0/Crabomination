@@ -24470,12 +24470,14 @@ impl GameState {
         // Veyran, whose magecraft trigger IS that pump under another filter.
         for ev in events {
             if let GameEvent::SpellCast { player, card_id, .. } = ev {
-                // CR 715.3b — Stomp is an instant spell, not a creature one.
+                // CR 715.3b / 702.103b — Stomp is an instant spell and a
+                // bestowed spell an Aura, not creature spells.
                 let is_creature_spell = self.stack.iter().any(|si| matches!(
                     si,
                     crate::game::types::StackItem::Spell { card, .. } if card.id == *card_id
                         && card.definition.is_creature()
                         && !card.casting_alt_half()
+                        && !card.bestowed
                 ));
                 if !is_creature_spell {
                     let prowess_ids: Vec<_> = self.battlefield.iter()
