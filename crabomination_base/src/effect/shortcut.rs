@@ -55,6 +55,15 @@ pub fn drain(amount: i32) -> Effect {
         amount: Value::Const(amount),
     }
 }
+/// "Target opponent loses `amount` life and you gain `amount` life" — one
+/// chosen opponent (`drain` takes it from every opponent).
+pub fn drain_target_opponent(amount: i32) -> Effect {
+    Effect::Drain {
+        from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
+        to: you(),
+        amount: Value::Const(amount),
+    }
+}
 /// "Each opponent loses `amount` life. You gain life equal to the life lost
 /// this way" — the gain is the total across opponents (`DrainLifeLost`).
 pub fn drain_life_lost(amount: Value) -> Effect {
