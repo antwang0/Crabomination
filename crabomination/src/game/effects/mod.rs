@@ -29318,7 +29318,8 @@ impl GameState {
                 // takes the offer and cancels the fallback.
                 let mut seats = self.resolve_players(who, ctx);
                 // Turn order from the controller, so the caster is asked first.
-                seats.sort_by_key(|s| (s + self.players.len() - ctx.controller) % self.players.len());
+                let order = self.seats_in_turn_order_from(ctx.controller);
+                seats.sort_by_key(|s| order.iter().position(|q| q == s).unwrap_or(usize::MAX));
                 let mut cursor = 0;
                 for seat in seats {
                     let Some(yes) = self.ask_seat_bool(

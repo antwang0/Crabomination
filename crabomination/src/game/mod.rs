@@ -10329,11 +10329,19 @@ impl GameState {
     /// The absolute turn number of `p`'s next turn — the current one when
     /// it's already theirs is skipped, so "until the end of your next turn"
     /// installed on your own turn spans the full rotation back to you.
-    /// Assumes turn order follows seat order, which `advance_turn` does.
+    /// Walks turn order the way `advance_turn` does: a departed seat takes no
+    /// turn (CR 800.4a) and a reversed order runs the other way.
     pub(crate) fn controllers_next_turn_number(&self, p: usize) -> u32 {
-        let n = self.players.len().max(1);
-        let delta = (p + n - self.active_player_idx) % n;
-        self.turn_number + if delta == 0 { n as u32 } else { delta as u32 }
+        let mut seat = self.active_player_idx;
+        let mut delta = 0;
+        for _ in 0..self.players.len().max(1) {
+            seat = self.next_alive_seat(seat);
+            delta += 1;
+            if seat == p {
+                break;
+            }
+        }
+        self.turn_number + delta
     }
 
     /// CR 613.2 — how many lands `p` controls whose *computed* subtypes

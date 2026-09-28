@@ -6855,3 +6855,23 @@ fn bot_removes_the_permanent_keeping_a_dead_seat_alive() {
     assert!(g.battlefield_find(herald).is_none());
     assert_eq!(g.game_over, Some(Some(0)));
 }
+
+/// CR 800.4a — "until the end of your next turn" counts the turns that will
+/// actually be taken: a departed seat takes none. Season of the Bold cast on
+/// seat 0's turn with seat 2 gone ends three turns on, not four.
+#[test]
+fn cr_800_4a_your_next_turn_skips_a_departed_seats_turn() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let now = g.turn_number;
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body: Box::new(Effect::Noop) })
+            .build(),
+    );
+    resolve_answering(&mut g);
+    let expiry = g.delayed_triggers.last().and_then(|d| d.expires_after_turn);
+    assert_eq!(expiry, Some(now + 3), "seats 1 and 3, then seat 0 again");
+}
