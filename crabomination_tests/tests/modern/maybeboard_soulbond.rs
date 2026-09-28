@@ -2303,6 +2303,7 @@ fn dethrone_grows_when_attacking_highest_life_player() {
             ability: crabomination::effect::shortcut::dethrone(),
             expiry: crabomination::game::layers::EffectDuration::UntilEndOfTurn,
             source: bear,
+            stamp: None,
         }],
     );
     g.players[1].life = 30; // the defender has the most life
@@ -2330,6 +2331,7 @@ fn dethrone_silent_when_attacking_lower_life_player() {
             ability: crabomination::effect::shortcut::dethrone(),
             expiry: crabomination::game::layers::EffectDuration::UntilEndOfTurn,
             source: bear,
+            stamp: None,
         }],
     );
     g.players[1].life = 10; // the defender has the LEAST life

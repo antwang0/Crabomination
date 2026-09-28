@@ -3896,6 +3896,11 @@ pub struct GrantedTrigger {
     pub ability: crate::card::TriggeredAbility,
     pub expiry: crate::game::layers::EffectDuration,
     pub source: CardId,
+    /// CR 400.7 — the object granted to: its `battlefield_timestamp`. A card
+    /// that leaves and returns is a new object, so the grant stops applying
+    /// (its death snapshot keeps the stamp, so its own dies trigger fires).
+    #[serde(default)]
+    pub stamp: Option<u64>,
 }
 
 /// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
@@ -4701,12 +4706,16 @@ impl GameState {
         &self,
         id: CardId,
     ) -> impl Iterator<Item = &crate::card::TriggeredAbility> + Clone {
-        self.granted_triggers_timed
-            .get(&id)
-            .map(Vec::as_slice)
-            .unwrap_or(&[])
-            .iter()
-            .map(|g| &g.ability)
+        let grants = self.granted_triggers_timed.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+        // The object's stamp: the permanent, else its last-known information.
+        let now = if grants.is_empty() {
+            None
+        } else {
+            self.battlefield_find(id)
+                .or_else(|| self.died_card_snapshots.get(&id))
+                .map(|c| c.battlefield_timestamp)
+        };
+        grants.iter().filter(move |g| g.stamp.is_none() || g.stamp == now).map(|g| &g.ability)
     }
 
     /// Presence gate for a hook that walks one trigger kind: is any
@@ -23463,7 +23472,13 @@ impl GameState {
                 .iter()
                 .enumerate()
                 .map(|(i, t)| (i, card.id, t))
-                .chain(own_granted.iter().map(|g| (usize::MAX, card.id, &g.ability)))
+                // CR 400.7 — a grant made to an earlier object of this card.
+                .chain(
+                    own_granted
+                        .iter()
+                        .filter(|g| g.stamp.is_none_or(|s| s == card.battlefield_timestamp))
+                        .map(|g| (usize::MAX, card.id, &g.ability)),
+                )
                 // A static grant's index counts down from below the sentinel,
                 // so a once-each-turn grant (Folk Hero) keys CR 603.3d apart
                 // from the printed triggers and from its siblings.

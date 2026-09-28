@@ -17020,13 +17020,17 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     match &expiry {
-                        Some(expiry) => self.granted_triggers_timed.entry(cid).or_default().push(
-                            crate::game::GrantedTrigger {
-                                ability: (**trigger).clone(),
-                                expiry: expiry.clone(),
-                                source,
-                            },
-                        ),
+                        Some(expiry) => {
+                            let stamp = self.battlefield_find(cid).map(|c| c.battlefield_timestamp);
+                            self.granted_triggers_timed.entry(cid).or_default().push(
+                                crate::game::GrantedTrigger {
+                                    ability: (**trigger).clone(),
+                                    expiry: expiry.clone(),
+                                    source,
+                                    stamp,
+                                },
+                            )
+                        }
                         None => {
                             if let Some(c) = self.battlefield_find_mut(cid) {
                                 c.bake_grant().triggered_abilities.push((**trigger).clone());

@@ -1098,6 +1098,51 @@ fn cr_400_7_permanent_grants_end_when_the_object_leaves() {
     assert!(dead.definition.triggered_abilities.is_empty(), "and stayed with the dead object");
 }
 
+/// CR 400.7 — the same for a TIMED grant ("until end of turn, target
+/// creature gains 'When this creature dies, draw a card'" — Rabid Attack,
+/// Feign Death): it fires on the object's death, and a card that returns the
+/// same turn is a new object, so its second death draws nothing.
+#[test]
+fn cr_400_7_a_timed_trigger_grant_ends_with_the_object() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Duration, Effect, Selector, Value, ZoneDest};
+    use crabomination::effect::PlayerRef;
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let all = Selector::EachPermanent(SelectionRequirement::Creature);
+    let dies_draw = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    };
+    g.resolve_effect(&Effect::GrantTriggeredAbility { what: all, trigger: Box::new(dies_draw), duration: Duration::EndOfTurn }, &ctx)
+        .unwrap();
+    let kill = |g: &mut GameState| {
+        let evs = g
+            .resolve_effect(&Effect::Destroy { what: Selector::EachPermanent(SelectionRequirement::Creature) }, &ctx)
+            .unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    let hand = g.players[0].hand.len();
+    kill(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the grant fired on the first death");
+    let back = Effect::Move {
+        what: Selector::EachMatching {
+            zone: crabomination::effect::ZoneRef::Graveyard(PlayerRef::You),
+            filter: SelectionRequirement::Creature,
+        },
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    g.resolve_effect(&back, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_some(), "returned");
+    kill(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a new object: the old grant is gone");
+}
+
 /// CR 601.2f — a may-play grant that bills the card's own cost ("you may
 /// cast it this turn", impulse) is a paid cast: cost increases apply. Such
 /// casts paid the stamped cost untaxed, so an opposing Thalia never charged
