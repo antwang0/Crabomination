@@ -78,7 +78,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Expected populations, with the reason each is one.
 SYNTHESIZED = (
-    # Generated (`scripts/gen_strixhaven2.py`, `STRIXHAVEN2.md`); most of these
+    # Generated from STRIXHAVEN2.md (by a since-removed script); most of these
     # cards do not exist, which is the point of the set.
     "sets/stx/",
     # Planechase PLANES. Scryfall's oracle bulk carries 7 of the hundreds

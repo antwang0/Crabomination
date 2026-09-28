@@ -10206,8 +10206,8 @@ finds, so only these survived the compaction.
   XXXI found 5 cards (Lorehold Apprentice, Lorehold Pledgemage,
   Storm-Kiln Artist, Sparring Regimen, Spectacle Mage) whose code
   was fully wired but whose 🟡 notes hadn't been updated. A simple
-  end-of-push audit script (`audit_strixhaven2.py` already exists
-  for SOS) extended to also walk STX-row notes against the
+  end-of-push audit script (`audit_strixhaven2.py` did this for the
+  SOS tables, since removed along with them) extended to also walk STX-row notes against the
   factory's `triggered_abilities` / `static_abilities` / activated-
   ability complexity could flag stale rows automatically.
 

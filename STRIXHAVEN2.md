@@ -206,9 +206,9 @@ of an until-EOT discount.
 ## Removed status tables (2026-07-12)
 
 The per-card status tables formerly in this file were removed. The three
-scripts `scripts/audit_strixhaven2.py`, `scripts/list_sos_ok.py`, and
-`scripts/sos_ok_factory_map.py` parsed those tables and are retained only as
-historical artifacts. A 2026-07-12 audit fixed 15 gameplay bugs and backfilled
+scripts that parsed them (`audit_strixhaven2.py`, `list_sos_ok.py`,
+`sos_ok_factory_map.py`) and the one that generated them
+(`gen_strixhaven2.py`) were removed on 2026-09-28; git history has them. A 2026-07-12 audit fixed 15 gameplay bugs and backfilled
 the sos_mode pools (elders Quandrix the Proof + Silverquill the Disputant and
 all other implemented-but-unpooled cards).
 
