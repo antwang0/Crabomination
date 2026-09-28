@@ -2762,6 +2762,11 @@ mod tests {
         // (0 → 2) change winner; aggregate within noise (3,000 games, seed
         // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
         // turns).
+        // Re-blessed 2026-09-28 (CR 605.1a, 2026-09-25 text: an ability that
+        // draws or mills beside its mana is not a mana ability — Sigarda's
+        // Chromatic Sphere now uses the stack; bisected against the same
+        // tip's CR 800.4i change, which moves nothing): 0xC0FFEE 2583→2585
+        // and 4242 4815→4818 actions, same winners and turns.
         // Re-blessed 2026-09-28 (`targeting.rs::best_graveyard_card`: a
         // graveyard target names the richest card and reaches every
         // opponent's graveyard — bisected: the picker alone moves it, the
@@ -2776,9 +2781,9 @@ mod tests {
         // Aggregate within noise (3,000 games, seed 43: 43.0/17.3/14.3/25.4
         // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 58, 2583),
+            (0xC0FFEE, Some(1), 58, 2585),
             (43, Some(0), 54, 2838),
-            (4242, Some(3), 108, 4815),
+            (4242, Some(3), 108, 4818),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

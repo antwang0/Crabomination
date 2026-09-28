@@ -75,7 +75,7 @@ fn has_mode_choice(e: &Effect) -> bool {
 /// A body that resolves later — a delayed trigger or a replacement of your
 /// next draw — whose "target" is chosen when it fires or applies, not as the
 /// spell is cast or the ability activated (Words of War, Ride the Avalanche).
-fn deferred(e: &Effect) -> bool {
+pub(crate) fn deferred(e: &Effect) -> bool {
     matches!(
         e,
         Effect::ReplaceYourNextDrawThisTurn { .. }

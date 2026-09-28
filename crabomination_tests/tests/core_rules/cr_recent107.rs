@@ -104,3 +104,41 @@ fn cr_608_2d_time_wipe_saves_the_best_creature() {
     assert!(in_hand(&g, 0, angel));
     assert!(g.battlefield_find(bears).is_none() && g.battlefield_find(theirs).is_none());
 }
+
+/// CR 605.1a (2026-09-25 text) — an ability whose cost or effect moves a card
+/// to or from a library is not a mana ability: Chromatic Sphere's "add one
+/// mana of any color, draw a card" goes on the stack (its 2026 ruling), while
+/// Mind Stone's plain {C} resolves at once.
+#[test]
+fn cr_605_1a_a_library_move_is_not_a_mana_ability() {
+    let mut g = main_phase();
+    let sphere = g.add_card_to_battlefield(0, catalog::chromatic_sphere());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sphere,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Chromatic Sphere");
+    assert_eq!(g.stack.len(), 1, "the ability is on the stack");
+    let hand = g.players[0].hand.len();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "it drew on resolution");
+
+    let mut g = main_phase();
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Mind Stone");
+    assert!(g.stack.is_empty(), "a plain mana ability doesn't use the stack");
+}

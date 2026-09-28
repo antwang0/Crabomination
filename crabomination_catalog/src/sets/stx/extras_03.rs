@@ -1961,10 +1961,9 @@ pub fn elvish_visionary() -> CardDefinition {
 ///
 /// Shipped as a synthesised "{1}, {T}, Sac: Add two of any one color" under a
 /// printed card's name and cost; `audit_oracle_verbs.py` saw the missing
-/// draw. **The draw is a CR 605.1a rider, not a separate ability** — the
-/// activation could add mana, targets nothing and is not a loyalty ability,
-/// so it is a mana ability and resolves during cost payment without the
-/// stack. `is_mana_ability`'s rider list carries the self-draw for it.
+/// draw. The draw is part of the same ability, so under CR 605.1a's
+/// 2026-09-25 text (a library move) it is NOT a mana ability: it uses the
+/// stack and can't be activated mid-payment.
 pub fn sungrass_egg() -> CardDefinition {
     CardDefinition {
         name: "Sungrass Egg",

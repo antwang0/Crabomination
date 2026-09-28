@@ -844,8 +844,53 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
 ///
 /// Loyalty abilities live in their own `CardDefinition` field and never reach
 /// this, so the third criterion needs no test here.
+///
+/// CR 605.1a (2026-09-25 text) adds a fourth criterion: the ability's cost
+/// and effect move no card to or from a library. Chromatic Sphere, Sungrass
+/// Egg, Millikin — a draw or mill beside the mana puts the ability on the
+/// stack ([`effect_moves_library_card`]).
 pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
-    effect_could_add_mana(effect) && !effect.requires_target()
+    effect_could_add_mana(effect)
+        && !effect.requires_target()
+        && !effect_moves_library_card(effect)
+}
+
+/// CR 605.1a — does this effect move a card to or from a library? Draws,
+/// mills, surveils, searches, explores / discovers, and moves or shuffles into
+/// a library, anywhere in the tree. A scry only reorders a library, so it is
+/// not one. A delayed or reflexive trigger's body is that trigger's effect,
+/// not this one (Astrolabe's next-upkeep draw, Codie's discover).
+pub fn effect_moves_library_card(e: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    if crate::game::required_target::deferred(e)
+        || matches!(
+            e,
+            Effect::AtNextTurnsUpkeep { .. } | Effect::Reflexive { .. } | Effect::ReflexiveTrigger { .. }
+        )
+    {
+        return false;
+    }
+    let here = matches!(
+        e,
+        Effect::Draw { .. }
+            | Effect::Mill { .. }
+            | Effect::Surveil { .. }
+            | Effect::Explore { .. }
+            | Effect::Discover { .. }
+            | Effect::Search { .. }
+            | Effect::SearchUpToN { .. }
+            | Effect::SearchAnyNumber { .. }
+            | Effect::SearchPickedBy { .. }
+            | Effect::ShuffleGraveyardIntoLibrary { .. }
+            | Effect::ShuffleFilteredGraveyardIntoLibrary { .. }
+            | Effect::Move { to: ZoneDest::Library { .. }, .. }
+    );
+    if here {
+        return true;
+    }
+    let mut found = false;
+    e.for_each_inner(&mut |inner| found |= effect_moves_library_card(inner));
+    found
 }
 
 /// CR 605.1a's first criterion on its own: could this effect add mana to a

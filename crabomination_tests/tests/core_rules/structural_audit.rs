@@ -221,8 +221,8 @@ fn a_clear_any_grant_bit_is_authoritative_for_every_predicate() {
 /// painland, City of Brass, Ancient Tomb, the ten Talismans, Wall of Roots,
 /// Gemstone Mine, Krark-Clan Ironworks.
 ///
-/// The three survivors target, and targeting is CR 605.1a's own first
-/// criterion. They are listed rather than excused in bulk, in both
+/// The survivors target (CR 605.1a's first criterion) or move a library card
+/// (its fourth, since the 2026-09-25 text). They are listed rather than excused in bulk, in both
 /// directions, for [`every_dead_mode_is_one_a_reviewer_signed_off`]'s reason:
 /// an entry whose card stops targeting is an entry that would go on
 /// licensing the next one.
@@ -246,6 +246,23 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
         "Witch Engine",
     ];
 
+    /// CR 605.1a's fourth criterion (2026-09-25 text): the ability's cost or
+    /// effect moves a card to or from a library — the draw beside the mana
+    /// (the Eggs, Chromatic Sphere) or a mill (Millikin, The Warring Triad;
+    /// both rulings, 2025-26, say so). Astrolabe and Codie are not here: their
+    /// draw / discover is a delayed trigger's effect, not the ability's.
+    const REVIEWED_LIBRARY_MANA: &[&str] = &[
+        "Chromatic Sphere",
+        "Darkwater Egg",
+        "Millikin",
+        "Mossfire Egg",
+        "Prismari Painter",
+        "Shadowblood Egg",
+        "Skycloud Egg",
+        "Sungrass Egg",
+        "The Warring Triad",
+    ];
+
     let mut seen: HashSet<&'static str> = HashSet::new();
     let mut bad: Vec<String> = Vec::new();
     let mut hit: HashSet<&'static str> = HashSet::new();
@@ -258,7 +275,9 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
             if !effect_could_add_mana(&a.effect) || is_mana_ability_public(&a.effect) {
                 continue;
             }
-            if REVIEWED_TARGETING_MANA.contains(&def.name) {
+            if REVIEWED_TARGETING_MANA.contains(&def.name)
+                || REVIEWED_LIBRARY_MANA.contains(&def.name)
+            {
                 hit.insert(def.name);
                 continue;
             }
@@ -269,18 +288,23 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
     assert!(
         bad.is_empty(),
         "{} ability/ies could add mana but are not mana abilities. Under CR \
-         605.1a the only reason for that is a target, so either the card's \
-         target is a modelling error or it belongs on \
-         REVIEWED_TARGETING_MANA:\n  {}",
+         605.1a the only reasons are a target or a library move, so either \
+         the card is a modelling error or it belongs on \
+         REVIEWED_TARGETING_MANA / REVIEWED_LIBRARY_MANA:\n  {}",
         bad.len(),
         bad.join("\n  "),
     );
-    let stale: Vec<&str> =
-        REVIEWED_TARGETING_MANA.iter().copied().filter(|n| !hit.contains(n)).collect();
+    let stale: Vec<&str> = REVIEWED_TARGETING_MANA
+        .iter()
+        .chain(REVIEWED_LIBRARY_MANA)
+        .copied()
+        .filter(|n| !hit.contains(n))
+        .collect();
     assert!(
         stale.is_empty(),
-        "REVIEWED_TARGETING_MANA names {} card(s) whose mana ability no longer \
-         targets — drop the entry rather than let it excuse the next one: {:?}",
+        "the reviewed lists name {} card(s) whose mana ability no longer \
+         targets or moves a library card — drop the entry rather than let it \
+         excuse the next one: {:?}",
         stale.len(),
         stale,
     );
