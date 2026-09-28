@@ -5243,7 +5243,15 @@ impl Effect {
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
-                | Effect::CantBeBlockedByPlayer { what, .. } => sel_find(what, slot),
+                | Effect::CantBeBlockedByPlayer { what, .. }
+                // `primary_target_filter` read these three and this walker did
+                // not, so their filters were never checked at cast (Soltari
+                // Guerrillas, Soul Sculptor, Excavator).
+                | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
+                | Effect::SetCardTypesTo { what, .. } => sel_find(what, slot),
+                Effect::RedirectNextCombatDamageTo { what, to } => {
+                    sel_find(what, slot).or_else(|| sel_find(to, slot))
+                }
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
