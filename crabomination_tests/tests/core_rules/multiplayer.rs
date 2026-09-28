@@ -261,6 +261,39 @@ fn cr_506_2_attack_a_player_triggers_count_players_not_combats() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "a planeswalker is not a player");
 }
 
+/// CR 506.2 — "whenever this creature attacks a player": an attack at a
+/// planeswalker triggers none of them. Master of Cruelties unblocked at
+/// Chandra set her controller's life to 1; Elder Brain exiled their hand.
+#[test]
+fn cr_506_2_attacks_a_player_ignores_a_planeswalker_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    for make in [catalog::master_of_cruelties as fn() -> _, catalog::elder_brain] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let who = g.add_card_to_battlefield(0, make());
+        g.clear_sickness(who);
+        let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+        g.battlefield_find_mut(walker).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 10);
+        g.add_card_to_hand(1, catalog::forest());
+        let (life, hand) = (g.players[1].life, g.players[1].hand.len());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: who,
+            target: AttackTarget::Planeswalker(walker),
+        }]))
+        .expect("attack the planeswalker");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        assert_eq!((g.players[1].life, g.players[1].hand.len()), (life, hand), "{}", make().name);
+    }
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────
 
 #[test]

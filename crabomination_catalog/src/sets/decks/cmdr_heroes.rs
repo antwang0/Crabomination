@@ -18,7 +18,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    etb, evolve, investigate, on_attack, on_dies, partner_with_search, squad_etb, target_any, target_filtered,
+    etb, evolve, investigate, on_attack, on_attack_player, on_dies, partner_with_search, squad_etb, target_any, target_filtered,
 };
 use crate::effect::{AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
@@ -658,7 +658,7 @@ pub fn ray_fillet_wave_warrior() -> CardDefinition {
 pub fn shredder_shadow_master() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![
-            on_attack(Effect::CopiesAttackEachOtherOpponent {
+            on_attack_player(Effect::CopiesAttackEachOtherOpponent {
                 non_legendary: true,
                 cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
             }),

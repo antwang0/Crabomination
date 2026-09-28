@@ -51,7 +51,7 @@ use crate::card::{
     EnchantmentSubtype, EnterMode, Keyword, LandType, MayPlayDuration, SelectionRequirement as R,
     StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, on_attack_player, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, RevealMissDest,
     Selector, StaticEffect, Value, ZoneDest,
@@ -913,7 +913,7 @@ pub fn yaroks_fenlurker() -> CardDefinition {
 /// it." (Attacking a planeswalker reads its controller.)
 pub fn elder_brain() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+        triggered_abilities: vec![on_attack_player(Effect::Seq(vec![
             Effect::Move {
                 what: Selector::CardsInZone {
                     who: PlayerRef::DefendingPlayer,

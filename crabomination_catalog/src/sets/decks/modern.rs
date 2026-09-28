@@ -14467,7 +14467,11 @@ pub fn master_of_cruelties() -> CardDefinition {
             Keyword::AttacksAlone,
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            // CR 506.2 — "attacks a player and isn't blocked": unblocked at
+            // a planeswalker, its controller's life stays put.
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::IsAttackingOpponentPlayer },
+            ),
             effect: Effect::Seq(vec![
                 Effect::SetLifeTotal {
                     who: Selector::Player(PlayerRef::DefendingPlayer),
@@ -40433,11 +40437,12 @@ pub fn preacher_of_the_schism() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
-                    Predicate::PlayerHasMostLife {
-                        who: PlayerRef::DefendingPlayer,
-                    },
-                ),
+                // CR 506.2 — "attacks the player with the most life": a
+                // planeswalker attack doesn't count.
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::IsAttackingOpponentPlayer },
+                    Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
+                ])),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
