@@ -25745,6 +25745,7 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
+                self.clear_answer_log();
                 let pick = picked.first().copied();
                 if let Some(pick) = pick {
                     let mut card = Self::take_card(&mut self.players[opp].library, pick)
