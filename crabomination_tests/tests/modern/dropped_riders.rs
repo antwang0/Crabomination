@@ -1893,3 +1893,29 @@ fn cr_701_19c_cant_be_regenerated_riders_beat_a_shield() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "Seal of Doom: the shield doesn't save it");
 }
+
+/// Order of Midnight — "Flying. This creature can't block." The adventure's
+/// creature face shipped with flying only, so it blocked.
+#[test]
+fn order_of_midnight_cant_block() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let order = g.add_card_to_battlefield(1, catalog::order_of_midnight());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let blockers = g.legal_blockers(1);
+    assert!(blockers.contains(&bears), "the Bears may block");
+    assert!(!blockers.contains(&order), "Order of Midnight can't");
+}

@@ -21805,9 +21805,9 @@ pub fn foulmire_knight() -> CardDefinition {
     }
 }
 
-/// Order of Midnight — {1}{B} Creature — Human Knight 2/2, Flying.
-/// Adventure: Alter Fate {1}{B} Sorcery — return target creature card from a
-/// graveyard to its owner's hand.
+/// Order of Midnight — {1}{B} Creature — Human Knight 2/2, flying, can't
+/// block. Adventure: Alter Fate {1}{B} Sorcery — return target creature card
+/// from your graveyard to your hand.
 pub fn order_of_midnight() -> CardDefinition {
     CardDefinition {
         name: "Order of Midnight",
@@ -21819,7 +21819,7 @@ pub fn order_of_midnight() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
         adventure: Some(Box::new(Adventure {
             name: "Alter Fate",
             cost: cost(&[generic(1), b()]),
