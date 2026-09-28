@@ -372,6 +372,8 @@ fn cr_202_3e_a_countered_x_spells_mana_value_counts_its_x() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == blaze), "countered");
     assert_eq!(g.countered_spell_mana_value, 6, "X counts");
+}
+
 /// CR 707.2 / 614.1c — Vesuva "enters tapped as a copy of any land": an
 /// as-enters choice (no target, no trigger to respond to), made as it enters.
 #[test]
