@@ -3833,15 +3833,41 @@ mod recent29 {
         assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "the land");
     }
 
-    /// Tersa Lightshatter loots on entry (draw then discard, graveyard grows).
+    /// Tersa Lightshatter — "discard up to two cards, then draw that many" on
+    /// entry (it shipped as a draw-one-discard-one loot).
     #[test]
-    fn tersa_lightshatter_loots() {
+    fn tersa_lightshatter_discards_up_to_two_then_draws_that_many() {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
         let mut g = two_player_game();
-        g.add_card_to_library(0, catalog::grizzly_bears());
-        g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
-        let gy = g.players[0].graveyard.len();
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![a, b])]));
         etb_bf(&mut g, 0, catalog::tersa_lightshatter());
-        assert_eq!(g.players[0].graveyard.len(), gy + 1, "discarded one");
+        assert_eq!(g.players[0].graveyard.len(), 2, "discarded two");
+        assert_eq!(g.players[0].hand.len(), 3, "and drew two");
+    }
+
+    /// Tersa's attack trigger (it shipped dropped): with seven or more cards
+    /// in your graveyard, one of them is exiled at random, playable this turn.
+    #[test]
+    fn tersa_lightshatter_attack_exiles_a_random_graveyard_card() {
+        let mut g = two_player_game();
+        let tersa = g.add_card_to_battlefield(0, catalog::tersa_lightshatter());
+        let attack = catalog::tersa_lightshatter().triggered_abilities[1].effect.clone();
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(tersa, 0, None, 0);
+        for _ in 0..6 {
+            g.add_card_to_graveyard(0, catalog::island());
+        }
+        g.resolve_effect(&attack, &ctx).expect("six cards");
+        assert_eq!(g.players[0].graveyard.len(), 6, "below seven: nothing");
+        g.add_card_to_graveyard(0, catalog::island());
+        g.resolve_effect(&attack, &ctx).expect("seven cards");
+        assert_eq!(g.players[0].graveyard.len(), 6, "one exiled");
+        assert_eq!(g.exile.len(), 1);
     }
 
     /// Temur Tawnyback loots on entry.

@@ -479,8 +479,9 @@ pub fn synchronized_charge() -> CardDefinition {
     }
 }
 
-/// Tersa Lightshatter — {2}{R} 3/3 Orc Wizard with haste. ETB: draw a card,
-/// then discard a card. (The graveyard-7 attack rider is dropped.)
+/// Tersa Lightshatter — {2}{R} 3/3 Orc Wizard with haste. ETB: discard up to
+/// two cards, then draw that many. Whenever she attacks with seven or more
+/// cards in your graveyard, exile one at random; you may play it this turn.
 pub fn tersa_lightshatter() -> CardDefinition {
     CardDefinition {
         name: "Tersa Lightshatter",
@@ -494,7 +495,44 @@ pub fn tersa_lightshatter() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![etb_loot()],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::DiscardAnyNumber {
+                    who: Selector::You,
+                    filter: SelectionRequirement::Any,
+                    max: Some(Value::Const(2)),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisEffect },
+            ])),
+            on_attack(Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: SelectionRequirement::Any },
+                    Value::Const(7),
+                ),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TakeRandom {
+                            inner: Box::new(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: SelectionRequirement::Any,
+                            }),
+                            count: Box::new(Value::ONE),
+                        },
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
         ..Default::default()
     }
 }

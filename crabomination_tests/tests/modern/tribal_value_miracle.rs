@@ -967,6 +967,15 @@ fn spine_of_ish_sah_destroys_on_etb_and_returns_on_death() {
     g.remove_to_graveyard_with_triggers(spine);
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == spine), "Spine returns to owner's hand on death");
+    // Exiled from the battlefield it stays exiled — only "put into a
+    // graveyard from the battlefield" returns it (it returned from any zone).
+    let spine2 = g.add_card_to_battlefield(0, catalog::spine_of_ish_sah());
+    let exile = crabomination::effect::Effect::Exile { what: crabomination::effect::Selector::This };
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(spine2, 0, None, 0);
+    let evs = g.resolve_effect(&exile, &ctx).expect("exile");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == spine2), "stays in exile");
 }
 
 #[test]

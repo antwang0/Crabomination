@@ -1908,29 +1908,24 @@ fn mage_duel_costs_two_less_after_instant_cast() {
     assert!(g.battlefield_find(opp_bear).is_none(), "the fight still happens");
 }
 
-/// Eccentric Apprentice's magecraft trigger pumps the source +1/+0 EOT
-/// when its controller casts an instant or sorcery. We cast Lightning
-/// Bolt with the apprentice on the battlefield and verify its power.
+/// Eccentric Apprentice (AFR) ventures into the dungeon as it enters; with a
+/// dungeon completed, its combat trigger makes a creature a 1/1 flying Bird.
+/// It shipped as a magecraft pump — another card's text.
 #[test]
-fn eccentric_apprentice_pumps_on_instant_cast() {
+fn eccentric_apprentice_ventures_and_birds() {
     let mut g = two_player_game();
-    let app = g.add_card_to_battlefield(0, catalog::eccentric_apprentice());
-    g.clear_sickness(app);
-    let pre = g.computed_permanent(app).unwrap();
-    assert_eq!(pre.power, 2, "starts at 2");
-
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("bolt castable");
+    let app = g.move_card_to_battlefield_for_test(0, catalog::eccentric_apprentice());
     drain_stack(&mut g);
-
-    let post = g.computed_permanent(app).unwrap();
-    assert_eq!(post.power, 3, "after magecraft +1/+0 → 3 power; got {}", post.power);
+    assert!(g.players[0].dungeon.is_some(), "ventured into a dungeon");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].dungeons_completed = 1;
+    let bird = catalog::eccentric_apprentice().triggered_abilities[1].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(app, 0, Some(Target::Permanent(bear)), 0);
+    g.resolve_effect(&bird, &ctx).expect("bird");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Bird));
 }
 
 /// Illuminate History: discard a card from hand and create two 2/2 R/W

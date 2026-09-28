@@ -2236,15 +2236,11 @@ pub fn mage_duel() -> CardDefinition {
 
 // ── Eccentric Apprentice ────────────────────────────────────────────────────
 
-/// Eccentric Apprentice — {2}{U} Creature — Human Wizard, 2/2.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// this creature gets +1/+0 until end of turn."
-///
-/// Vanilla Prismari/Lorehold magecraft body. The pump applies to the
-/// source itself via `magecraft_self_pump(1, 0)` — same shortcut
-/// Symmetry Sage uses. A 1/3 base body that scales into a 2/3 or 3/3
-/// attacker every time you cast a spell turns into a credible threat
-/// in an instants-and-sorceries deck.
+/// Eccentric Apprentice — {2}{U} Creature — Tiefling Wizard, 2/2. Flying.
+/// When it enters, venture into the dungeon. At the beginning of combat on
+/// your turn, if you've completed a dungeon, up to one target creature
+/// becomes a Bird with base power and toughness 1/1 and flying until end of
+/// turn. (It shipped as a magecraft pump — another card's text.)
 pub fn eccentric_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Eccentric Apprentice",
@@ -2257,7 +2253,37 @@ pub fn eccentric_apprentice() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Venture),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE)),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: target_filtered(SelectionRequirement::Creature),
+                            creature_types: vec![CreatureType::Bird],
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::SetBasePT {
+                            what: Selector::Target(0),
+                            power: Value::ONE,
+                            toughness: Value::ONE,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Flying,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

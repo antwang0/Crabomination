@@ -39449,12 +39449,10 @@ pub fn spine_of_ish_sah() -> CardDefinition {
             etb(Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Permanent),
             }),
-            // CR: "put into a graveyard from the battlefield" → return to hand.
+            // "Put into a graveyard from the battlefield" → return to hand; an
+            // exile or a bounce is not that.
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
                 effect: Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
