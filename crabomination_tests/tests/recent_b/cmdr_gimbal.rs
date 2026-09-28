@@ -226,6 +226,22 @@ fn pain_distributor_pays_the_first_spell_and_punishes_artifacts() {
     assert_eq!(g.players[1].life, life - 1);
 }
 
+/// CR 603.4 — "a player casts THEIR first spell" reads the caster's count:
+/// at three seats every seat's first spell pays a Treasure, a second one
+/// doesn't. The filter used to read the seat the previous resolution left
+/// in the trigger-player scratch.
+#[test]
+fn cr_603_4_pain_distributor_reads_each_casters_first_spell() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::pain_distributor());
+    for (seat, at) in [(1, 0), (1, 0), (2, 0), (0, 1), (2, 0)] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        cast_as(&mut g, seat, bolt, Some(Target::Player(at)), None).expect("bolt");
+    }
+    let treasures: Vec<usize> = (0..3).map(|s| named(&g, s, "Treasure").len()).collect();
+    assert_eq!(treasures, [1, 1, 1]);
+}
+
 /// CR 701.23 — Path of the Animist fetches two basics tapped.
 #[test]
 fn path_of_the_animist_ramps_two() {

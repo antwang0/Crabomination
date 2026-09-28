@@ -23596,7 +23596,8 @@ impl GameState {
                             trig_source,
                             subject,
                             self.event_amount_for(ev),
-                        );
+                        )
+                        .with_event_player(subject, crate::game::effects::events::event_actor(self, ev));
                         // "One or more …" asks whether ANY event of the batch
                         // matches: a miss on this one (a non-token attacker
                         // declared ahead of the tokens — Neyali) is not the
@@ -23665,7 +23666,8 @@ impl GameState {
                                 trig_source,
                                 subject,
                                 event_amount,
-                            ),
+                            )
+                            .with_event_player(subject, crate::game::effects::events::event_actor(self, ev)),
                         )
                     {
                         continue;
@@ -24749,7 +24751,8 @@ impl GameState {
                     source,
                     subject,
                     event_amount,
-                );
+                )
+                .with_event_player(subject, actor);
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
                 }

@@ -6875,3 +6875,41 @@ fn cr_800_4a_your_next_turn_skips_a_departed_seats_turn() {
     let expiry = g.delayed_triggers.last().and_then(|d| d.expires_after_turn);
     assert_eq!(expiry, Some(now + 3), "seats 1 and 3, then seat 0 again");
 }
+
+/// CR 603.4 — a trigger condition naming "that player" reads the seat of the
+/// event being checked. "Whenever a player draws a card, if that player is
+/// your opponent, gain 1 life": an opponent's draw fires it, then YOUR draw
+/// must not — the check used to read the seat the previous resolution left
+/// behind.
+#[test]
+fn cr_603_4_a_trigger_condition_reads_this_events_player() {
+    use crabomination::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Effect, Predicate, Value};
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    g.add_card_to_battlefield(
+        0,
+        CardDefinition {
+            name: "Opponent Draw Watcher",
+            card_types: vec![CardType::Enchantment],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::AnyPlayer)
+                    .with_filter(Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer }),
+                effect: Effect::GainLife { who: crabomination::effect::Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        },
+    );
+    let life = g.players[0].life;
+    for seat in [1, 0] {
+        let mut ev = vec![];
+        g.draw_one(seat, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, life + 1, "the opponent's draw only");
+}

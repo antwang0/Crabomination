@@ -390,6 +390,10 @@ pub struct EffectContext {
     /// Stamped from `CardInstance.cast_controlling_commander`; read by
     /// `Predicate::YouControlledACommanderAsCast`.
     pub cast_controlling_commander: bool,
+    /// CR 603.4 — the seat the event being checked names, for a trigger
+    /// condition read before the trigger is pushed (`PlayerRef::
+    /// TriggerEventPlayer`). `None` falls back to the resolution scratch.
+    pub event_player: Option<u8>,
     /// CR 702.172 — Spree mode indices chosen at cast time. Stamped from the
     /// resolving `CardInstance.spree_modes`; read by `Effect::Spree`. Empty
     /// for non-Spree contexts.
@@ -423,6 +427,7 @@ impl EffectContext {
             cast_collected_evidence: false,
             entwined: false,
             cast_controlling_commander: false,
+            event_player: None,
             spree_modes: Vec::new(),
         }
     }
@@ -512,6 +517,7 @@ impl EffectContext {
             cast_collected_evidence: false,
             entwined: false,
             cast_controlling_commander: false,
+            event_player: None,
             spree_modes: Vec::new(),
         }
     }
@@ -546,6 +552,7 @@ impl EffectContext {
             cast_collected_evidence: false,
             entwined: false,
             cast_controlling_commander: false,
+            event_player: None,
             spree_modes: Vec::new(),
         }
     }
@@ -579,6 +586,7 @@ impl EffectContext {
             cast_collected_evidence: false,
             entwined: false,
             cast_controlling_commander: false,
+            event_player: None,
             spree_modes: Vec::new(),
         }
     }
@@ -647,6 +655,17 @@ impl EffectContext {
     /// subject dedupe), so the rules they share live in one place now — see
     /// also `events::subject_already_fired`.
     ///
+    /// The seat an event names, bound for a trigger condition read before the
+    /// push (CR 603.4): a player subject, else the event's actor.
+    pub(crate) fn with_event_player(mut self, subject: Option<EntityRef>, actor: Option<usize>) -> Self {
+        let p = match subject {
+            Some(EntityRef::Player(p)) => Some(p),
+            _ => actor,
+        };
+        self.event_player = p.and_then(|p| u8::try_from(p).ok());
+        self
+    }
+
     /// A filter is a pure predicate over the event and its subject: no
     /// targets, no mode, no cast riders. `cast_from_hand: true` is the
     /// historical default the three walks all passed.
@@ -681,6 +700,7 @@ impl EffectContext {
             cast_collected_evidence: false,
             entwined: false,
             cast_controlling_commander: false,
+            event_player: None,
             spree_modes: Vec::new(),
         }
     }
@@ -41379,7 +41399,9 @@ impl GameState {
                 let of = self.resolve_player(inner, ctx)?;
                 self.opponents_of(of).into_iter().find(|i| self.players[*i].is_alive())
             }
-            PlayerRef::TriggerEventPlayer => self.trigger_event_player_scratch,
+            PlayerRef::TriggerEventPlayer => {
+                ctx.event_player.map(usize::from).or(self.trigger_event_player_scratch)
+            }
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
                 // A card trigger-source (e.g. a SpellCast trigger) resolves to

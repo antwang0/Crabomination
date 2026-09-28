@@ -6158,6 +6158,7 @@ fn effect_untap_removes_stun_counter_instead_of_untapping() {
         cast_collected_evidence: false,
         entwined: false,
         cast_controlling_commander: false,
+        event_player: None,
         spree_modes: Vec::new(),
     };
     g.resolve_effect(
@@ -6445,6 +6446,7 @@ fn cr_121_2b_draw_cap_truncates_draws() {
         cast_collected_evidence: false,
         entwined: false,
         cast_controlling_commander: false,
+        event_player: None,
         spree_modes: Vec::new(),
     };
     g.resolve_effect(
@@ -7418,6 +7420,7 @@ fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
         cast_collected_evidence: false,
         entwined: false,
         cast_controlling_commander: false,
+        event_player: None,
         spree_modes: Vec::new(),
     };
     assert!(!g.evaluate_predicate(&morbid, &ctx), "no deaths yet → morbid off");

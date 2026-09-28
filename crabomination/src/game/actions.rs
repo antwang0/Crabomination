@@ -12026,6 +12026,7 @@ impl GameState {
                     cast_collected_evidence: false,
                     entwined: false,
                     cast_controlling_commander: false,
+                    event_player: None,
                     spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
@@ -13528,6 +13529,7 @@ impl GameState {
                 cast_collected_evidence: false,
                     entwined: false,
                     cast_controlling_commander: false,
+                    event_player: None,
                     spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -15413,6 +15415,8 @@ impl GameState {
                     cast_collected_evidence: false,
                     entwined: false,
                     cast_controlling_commander: false,
+                    // CR 603.4 — "a player casts THEIR first spell" (Pain Distributor).
+                    event_player: u8::try_from(controller).ok(),
                     spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -19598,6 +19602,7 @@ impl GameState {
                 cast_collected_evidence: false,
                     entwined: false,
                     cast_controlling_commander: false,
+                    event_player: None,
                     spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {

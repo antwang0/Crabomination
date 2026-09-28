@@ -2537,6 +2537,7 @@ impl GameState {
                     cast_collected_evidence: false,
                     entwined: false,
                     cast_controlling_commander: false,
+                    event_player: None,
                     spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&predicate, &ctx) {
