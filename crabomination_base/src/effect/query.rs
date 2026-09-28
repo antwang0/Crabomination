@@ -3430,6 +3430,9 @@ impl Effect {
                         ..
                     }
             ),
+            // Untapping a land or creature is mana or a blocker back (Garruk
+            // Wildspeaker, Tezzeret the Seeker).
+            Effect::Untap { .. } => true,
             _ => false,
         }
     }

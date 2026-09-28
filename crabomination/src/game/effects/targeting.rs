@@ -382,8 +382,18 @@ impl GameState {
                         .find_by_id(cid)
                         .is_some_and(|c| c.definition.supertypes.contains(&crate::card::Supertype::Legendary))
             };
+            // An untap wants something tapped (Garruk Wildspeaker's lands).
+            let untaps = eff.any_nested(&|e| matches!(e, Effect::Untap { .. }));
+            let already_untapped =
+                |cid: CardId| untaps && self.battlefield.find_by_id(cid).is_some_and(|c| !c.tapped);
             primary_candidates.sort_by_cached_key(|c| {
-                (legend_copy(c.0), !fans_out(c.0), std::cmp::Reverse(counters(c.0)), std::cmp::Reverse(c.1))
+                (
+                    legend_copy(c.0),
+                    already_untapped(c.0),
+                    !fans_out(c.0),
+                    std::cmp::Reverse(counters(c.0)),
+                    std::cmp::Reverse(c.1),
+                )
             });
         } else {
             // Hostile pick: un-warded first, then the biggest threat.
