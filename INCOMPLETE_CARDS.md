@@ -2344,7 +2344,9 @@ opponent-only narrowing (Atzocan Archer's reason).
 
 ## Scope and slot scans (2026-09-28, session `012RbSk7`) — what the fixes left
 
-Fixed: the CR 506.3 attack scopes (`scripts/audit_attack_scope.py --gate`, 0 —
+Fixed: "target opponent <verb>" read as every opponent (`scripts/audit_target_vs_each.py
+--gate`, 0 — the Thunder Junction deserts, Highway Robber, Diregraf Captain, Al Bhed
+Salvagers, Keldon Marauders, Clackbridge Troll, Hunted Bonebrute), the CR 506.3 attack scopes (`scripts/audit_attack_scope.py --gate`, 0 —
 thirteen bare "attacks you" cards, Oath of Kaya, Revenge of Ravens), the
 "for each player / opponent … target … that player controls" slots (Blatant
 Thievery, Nils, Riptide Gearhulk, Demonic Junker), 21 "up to" spells whose
