@@ -686,12 +686,8 @@ pub fn the_unagi_of_kyoshi_island() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flash, Keyword::Ward(WardCost::generic(4))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl).with_filter(
-                Predicate::ValueEquals(
-                    Value::CardsDrawnThisTurn(PlayerRef::ActivePlayer),
-                    Value::Const(2),
-                ),
-            ),
+            // CR 121.2 — the drawing opponent's own second card, on any turn.
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::OpponentControl),
             effect: draw(2),
         }],
         ..Default::default()

@@ -370,3 +370,27 @@ fn crashing_wave_taps_then_stuns() {
         + g.battlefield_find(b).unwrap().counter_count(CounterType::Stun);
     assert_eq!(stun_total, 3, "three stun counters distributed among the tapped creatures");
 }
+
+/// CR 121.2 — "whenever an opponent draws their second card each turn"
+/// counts the drawing opponent's cards, not the active player's: at three
+/// seats a non-active opponent's second draw on another seat's turn draws
+/// the Unagi's controller two.
+#[test]
+fn cr_121_2_the_unagi_counts_the_drawing_opponents_cards() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    use crabomination::game::types::TriggerPush;
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    g.add_card_to_battlefield(0, catalog::the_unagi_of_kyoshi_island());
+    g.active_player_idx = 1;
+    let src = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.stack.push(TriggerPush::new(src, 2, Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) }).build());
+    g.priority.player_with_priority = 1;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
