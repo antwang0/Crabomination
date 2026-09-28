@@ -6944,9 +6944,9 @@ impl GameState {
             }
 
             Effect::Escalate { modes, cost } => {
-                // ⚠ CR 702.120a pays the escalate cost *as the spell is
-                // cast*; this arm asks and pays at resolution. That is a
-                // standing approximation, not this change.
+                // The printed escalate keyword is paid at cast
+                // (`CardDefinition::escalate`, CR 702.120a); this is the
+                // resolution-time shape, which no card uses.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 // The cast-time `mode` is the base (always-chosen) mode; the

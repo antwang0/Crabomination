@@ -7829,7 +7829,8 @@ pub(super) fn cast_candidates<'a>(
         let (modes, combo): (Vec<&Effect>, bool) = match &c.definition.effect {
             Effect::Spree { modes } => (modes.iter().map(|m| &m.effect).collect(), true),
             Effect::Tiered { modes } => (modes.iter().map(|m| &m.effect).collect(), false),
-            Effect::ChooseModesCast { modes, .. } => (modes.iter().collect(), false),
+            // Escalate (CR 702.120a): every mode, its costs gated like Spree's.
+            Effect::ChooseModesCast { modes, .. } => (modes.iter().collect(), c.definition.escalate.is_some()),
             // The Season cycle: the budget makes "all modes once" a legal
             // combination whenever the prices fit, so offer it too.
             Effect::ChooseModesByPoints { modes, points, budget } => {

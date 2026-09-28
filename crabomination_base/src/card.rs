@@ -4848,6 +4848,10 @@ pub struct CardDefinition {
     /// entwined cast, alongside (or instead of) `Keyword::Entwine`'s mana.
     #[serde(default)]
     pub entwine_additional_cost: Option<AdditionalCastCost>,
+    /// CR 702.120a — Escalate: a `ChooseModesCast` spell's cost for each mode
+    /// chosen beyond the first, paid as the spell is cast.
+    #[serde(default)]
+    pub escalate: Option<Escalate>,
     /// CR 702.27 — the non-mana half of a Buyback cost ("Buyback—Sacrifice a
     /// land", Constant Mists). Paid alongside `Keyword::Buyback`'s mana on a
     /// bought-back cast.
@@ -5418,6 +5422,34 @@ fn one_u32() -> u32 { 1 }
 /// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed
 /// in `CardDefinition.additional_cast_cost`. Determined and paid during
 /// casting; the spell can't be cast unless every cost is payable.
+/// CR 702.120a — what one escalate payment is.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Escalate {
+    /// "Escalate {1}" (Collective Defiance).
+    Mana(crate::mana::ManaCost),
+    /// "Escalate—Discard a card" / "—Tap an untapped creature you control".
+    Cost(AdditionalCastCost),
+}
+
+impl Escalate {
+    /// The non-mana additional cost of `extra` modes beyond the first.
+    pub fn times(&self, extra: u32) -> Option<AdditionalCastCost> {
+        let Escalate::Cost(c) = self else { return None };
+        if extra == 0 {
+            return None;
+        }
+        Some(match c {
+            AdditionalCastCost::Discard { count, filter } => {
+                AdditionalCastCost::Discard { count: count * extra, filter: filter.clone() }
+            }
+            AdditionalCastCost::TapPermanents { filter, count } => {
+                AdditionalCastCost::TapPermanents { filter: filter.clone(), count: count * extra }
+            }
+            other => other.clone(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 
 pub enum AdditionalCastCost {

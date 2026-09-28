@@ -10021,6 +10021,12 @@ impl GameState {
         if entwine && let Some(ec) = &card.definition.entwine_additional_cost {
             additional_costs.push(ec.clone());
         }
+        // CR 702.120a — a non-mana escalate cost, once per mode beyond the first.
+        if let Some(esc) = &card.definition.escalate
+            && let Some(c) = esc.times(spree_modes.len().saturating_sub(1) as u32)
+        {
+            additional_costs.push(c);
+        }
         // CR 702.27 — "Buyback—Sacrifice a land" (Constant Mists).
         if buyback && let Some(bc) = &card.definition.buyback_additional_cost {
             additional_costs.push(bc.clone());
@@ -10144,6 +10150,12 @@ impl GameState {
         for i in &card.kicked_options {
             if let Some(k) = card.definition.kicker_options.get(*i as usize) {
                 cost.symbols.extend(k.symbols.iter().cloned());
+            }
+        }
+        // CR 702.120a — escalate's mana, once per mode beyond the first.
+        if let Some(crate::card::Escalate::Mana(m)) = &card.definition.escalate {
+            for _ in 1..spree_modes.len() {
+                cost.symbols.extend(m.symbols.iter().cloned());
             }
         }
         // CR 702.172 / FIN Tiered — fold each chosen mode's mana cost into the

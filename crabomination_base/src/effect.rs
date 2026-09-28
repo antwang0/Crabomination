@@ -4311,15 +4311,11 @@ pub enum Effect {
     /// Three Trials (X = Lessons in your graveyard; modes pump self / scry /
     /// earthbend).
     ChooseUpToN { max: Box<Value>, modes: Vec<Effect> },
-    /// CR 702.119 — Escalate. "Choose one or more. You pay the escalate cost
-    /// for each mode chosen beyond the first." The cast-time `mode` is the
-    /// base (always-chosen) mode; a `Decision::ChooseModes` answer escalates
-    /// to additional distinct modes, running `cost` (Collective Brutality's
-    /// "discard a card", capped by hand size) once per extra mode. Each
-    /// chosen target-bearing mode owns a target slot in run order. AutoDecider
-    /// keeps just the base mode → no escalate cost, so a plain modal cast is
-    /// unaffected. Modeled at resolution (escalate cards are sorceries with
-    /// no cost/effect response window).
+    /// A resolution-time "choose one or more": the base `mode` always runs, a
+    /// `Decision::ChooseModes` answer adds distinct modes, and `cost` runs once
+    /// per added mode. No card uses it — the printed escalate keyword (CR
+    /// 702.120a) is paid as the spell is cast: `CardDefinition::escalate` on a
+    /// `ChooseModesCast` body (the four Collective spells).
     Escalate {
         modes: Vec<Effect>,
         cost: Box<Effect>,
