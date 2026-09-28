@@ -325,9 +325,28 @@ mod recent225 {
     fn wojek_investigator_investigates() {
         let mut g = two_player_game();
         let w = g.add_card_to_battlefield(0, catalog::wojek_investigator());
+        g.add_card_to_hand(1, catalog::forest());
         let effect = catalog::wojek_investigator().triggered_abilities[0].effect.clone();
         g.resolve_effect(&effect, &EffectContext::for_trigger(w, 0, None, 0)).unwrap();
         assert_eq!(count_named(&g, 0, "Clue"), 1, "investigated");
+    }
+
+    /// "Investigate once for each opponent who has more cards in hand than
+    /// you": two of three opponents qualify at 4 seats, so two Clues.
+    #[test]
+    fn wojek_investigator_counts_each_opponent_with_more_cards() {
+        let mut g = crabomination::game::multi_player_game(4);
+        let w = g.add_card_to_battlefield(0, catalog::wojek_investigator());
+        g.add_card_to_hand(0, catalog::forest());
+        for seat in [1, 2] {
+            for _ in 0..2 {
+                g.add_card_to_hand(seat, catalog::forest());
+            }
+        }
+        g.add_card_to_hand(3, catalog::forest());
+        let effect = catalog::wojek_investigator().triggered_abilities[0].effect.clone();
+        g.resolve_effect(&effect, &EffectContext::for_trigger(w, 0, None, 0)).unwrap();
+        assert_eq!(count_named(&g, 0, "Clue"), 2);
     }
 }
 
