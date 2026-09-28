@@ -529,12 +529,9 @@ pub fn will_of_the_mardu() -> CardDefinition {
         "Will of the Mardu",
         cost(&[generic(2), w()]),
         CardType::Instant,
-        Effect::If {
-            cond: Predicate::YouControlledACommanderAsCast,
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
-            else_: Box::new(Effect::ChooseMode(modes())),
-        },
+        Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false },
     )
+    .widening_modes(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander))
 }
 
 /// Within Range — two Warriors on entry; whenever you attack, each opponent

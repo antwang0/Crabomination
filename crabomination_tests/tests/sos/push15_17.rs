@@ -2199,9 +2199,9 @@ fn akromas_will_chooses_both_with_commander() {
     let id = g.add_card_to_hand(0, catalog::akromas_will());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 1], target: None, additional_targets: vec![], x_value: None,
+    }).expect("castable choosing both");
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert!(c.keywords().contains(&Keyword::DoubleStrike), "mode 0 applied");

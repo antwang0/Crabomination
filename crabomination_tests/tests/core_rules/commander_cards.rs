@@ -1994,14 +1994,15 @@ fn bot_does_not_shuffle_equipment_between_equal_hosts() {
 
 // ── The Will cycle ──────────────────────────────────────────────────────────
 
-fn cast_akromas_will(g: &mut GameState) {
-    let id = g.add_card_to_hand(0, catalog::akromas_will());
+fn cast_akromas_will(g: &mut GameState, modes: Vec<u8>) -> Result<(), GameError> {
+    let id = g.players[0].hand.iter().find(|c| c.definition.name == "Akroma's Will").map(|c| c.id);
+    let id = id.unwrap_or_else(|| g.add_card_to_hand(0, catalog::akromas_will()));
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: modes, target: None, additional_targets: vec![], x_value: None,
     })
-    .expect("castable");
+    .map(|_| ())
 }
 
 /// CR 601.2b — "If you control a commander as you cast this spell, you may
@@ -2012,20 +2013,23 @@ fn cr_601_2b_will_keeps_both_modes_when_the_commander_leaves_in_response() {
     let mut g = commander_game();
     let cmdr = commander_on_the_battlefield(&mut g);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    cast_akromas_will(&mut g);
+    cast_akromas_will(&mut g, vec![0, 1]).expect("both: a commander is out");
     g.remove_from_battlefield_to_hand(cmdr);
     drain_stack(&mut g);
     assert!(has_kw(&g, bear, Keyword::DoubleStrike), "mode 0");
     assert!(has_kw(&g, bear, Keyword::Lifelink), "mode 1 — the commander was there as it was cast");
 }
 
-/// CR 601.2b — the converse: a commander that arrives after the cast doesn't
-/// unlock the second mode.
+/// CR 601.2b — the converse: with no commander as it is cast, both modes
+/// can't be chosen, and a commander that arrives after the cast doesn't
+/// unlock the second.
 #[test]
 fn cr_601_2b_will_gets_one_mode_when_the_commander_arrives_after_the_cast() {
     let mut g = commander_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    cast_akromas_will(&mut g);
+    assert!(cast_akromas_will(&mut g, vec![0, 1]).is_err(), "no commander: one mode");
+    g.players[0].mana_pool = Default::default();
+    cast_akromas_will(&mut g, vec![0]).expect("one mode");
     commander_on_the_battlefield(&mut g);
     drain_stack(&mut g);
     assert!(has_kw(&g, bear, Keyword::DoubleStrike), "mode 0");

@@ -7495,8 +7495,15 @@ impl GameState {
         //   "up to four, same mode more than once").
         // - ChooseModesByPoints (the BLB Season cycle): any picks whose
         //   point prices total at most the printed budget, repeats allowed.
-        let widen = self.players[p].hand.iter().find(|c| c.id == card_id).is_some_and(|c| {
-            c.definition.kicked_any_modes && c.definition.has_kicker().is_some()
+        // CR 700.2 / 601.2b — "choose one; if …, choose more instead".
+        let widen = self.players[p].hand.iter().find(|c| c.id == card_id).and_then(|c| {
+            match c.definition.modes_widen.as_ref()? {
+                crate::card::ModesWiden::Kicked => c.definition.has_kicker().map(|_| true),
+                crate::card::ModesWiden::If(pred) => {
+                    let ctx = crate::game::effects::EffectContext::for_trigger(c.id, p, None, 0);
+                    self.evaluate_predicate(pred, &ctx).then_some(false)
+                }
+            }
         });
         let (mode_count, min_pick, max_pick, allow_repeats, points) = self.players[p]
             .hand
@@ -7531,8 +7538,9 @@ impl GameState {
         chosen.sort_unstable();
         // CR 702.33d / 700.2 — "if this spell was kicked, choose any number
         // instead": more modes than printed is the kicked cast.
-        let kicked = widen && chosen.len() > max_pick;
-        if chosen.len() < min_pick || (chosen.len() > max_pick && !kicked) {
+        let wide = widen.is_some() && chosen.len() > max_pick;
+        let kicked = wide && widen == Some(true);
+        if chosen.len() < min_pick || (chosen.len() > max_pick && !wide) {
             return Err(GameError::InvalidTarget);
         }
         if let Some((prices, budget)) = points {

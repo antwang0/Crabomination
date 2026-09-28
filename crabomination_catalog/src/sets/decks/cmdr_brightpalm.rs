@@ -337,7 +337,7 @@ pub fn inscription_of_abundance() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Kicker(cost(&[generic(2), g()]))],
-        kicked_any_modes: true,
+        modes_widen: Some(crate::card::ModesWiden::Kicked),
         effect: Effect::ChooseModesCast {
             modes: vec![
                 plus_one(target_filtered(R::Creature), 2),

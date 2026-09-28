@@ -273,12 +273,9 @@ pub fn klauths_will() -> CardDefinition {
         "Klauth's Will",
         cost(&[x(), r(), r(), g()]),
         CardType::Instant,
-        Effect::If {
-            cond: Predicate::YouControlledACommanderAsCast,
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
-            else_: Box::new(Effect::ChooseMode(modes())),
-        },
+        Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false },
     )
+    .widening_modes(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander))
 }
 
 /// Klauth, Unrivaled Ancient — flying, haste; attacking, add mana in any

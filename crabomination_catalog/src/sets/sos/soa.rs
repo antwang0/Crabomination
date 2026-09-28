@@ -51,17 +51,11 @@ pub fn akromas_will() -> CardDefinition {
         ]
     };
     CardDefinition {
+        modes_widen: Some(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander)),
         name: "Akroma's Will",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::If {
-            cond: Predicate::YouControlledACommanderAsCast,
-            then: Box::new(Effect::ChooseN {
-                picks: vec![0, 1],
-                modes: modes(),
-            }),
-            else_: Box::new(Effect::ChooseMode(modes())),
-        },
+        effect: Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false },
         ..Default::default()
     }
 }

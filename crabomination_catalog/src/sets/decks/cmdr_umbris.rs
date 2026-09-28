@@ -157,11 +157,7 @@ fn instant_or_sorcery() -> R {
 /// choose both instead." — the Akroma's Will / Jeska's Will shape (the
 /// commander check is stamped at cast, CR 601.2b).
 fn commander_both(modes: impl Fn() -> Vec<Effect>) -> Effect {
-    Effect::If {
-        cond: Predicate::YouControlledACommanderAsCast,
-        then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
-        else_: Box::new(Effect::ChooseMode(modes())),
-    }
+    Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false }
 }
 
 /// "Exile [a card] and you may play it for as long as it remains exiled, and
@@ -1401,6 +1397,7 @@ pub fn drown_in_dreams() -> CardDefinition {
             ]
         }),
     )
+    .widening_modes(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander))
 }
 
 /// Essence Flux — {U} Instant. "Exile target creature you control, then
@@ -1607,6 +1604,7 @@ pub fn szats_will() -> CardDefinition {
             ]
         }),
     )
+    .widening_modes(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander))
 }
 
 // ── sorceries ────────────────────────────────────────────────────────────────

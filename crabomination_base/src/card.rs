@@ -4819,11 +4819,12 @@ pub struct CardDefinition {
     /// original, like Storm's. Defaults to false.
     #[serde(default)]
     pub copies_on_cast_x: bool,
-    /// "Choose one. If this spell was kicked, choose any number instead."
-    /// (the Inscription cycle): a `ChooseModesCast` cast choosing more than
-    /// its `max` is a kicked cast (CR 702.33d, 700.2).
-    #[serde(default)]
-    pub kicked_any_modes: bool,
+    /// "Choose one. If …, choose any number / both instead." (CR 700.2): a
+    /// `ChooseModesCast` cast may choose past its `max` — as the kicked cast
+    /// (the Inscriptions, CR 702.33d), or while a condition holds as it is
+    /// cast (the Will cycle's "if you control a commander", CR 601.2b).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modes_widen: Option<ModesWiden>,
     /// "where X is … as you cast this spell": evaluated once in `finalize_cast`
     /// and stamped as the spell's X, so the body reads `Value::XFromCost`
     /// (Monstrous Onslaught, Volcanic Wind — CR 601.2d's division needs it then).
@@ -5430,6 +5431,23 @@ static ARABIAN_NIGHTS_NAMES: [&str; 78] = [
 ];
 
 fn one_u32() -> u32 { 1 }
+
+impl CardDefinition {
+    /// `self` with `modes_widen` set — the builder form for a helper-built card.
+    pub fn widening_modes(mut self, w: ModesWiden) -> Self {
+        self.modes_widen = Some(w);
+        self
+    }
+}
+
+/// When a "choose one" spell may choose more (`CardDefinition::modes_widen`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ModesWiden {
+    /// Choosing more is the kicked cast.
+    Kicked,
+    /// Choosing more needs this to hold as the spell is cast.
+    If(crate::effect::Predicate),
+}
 
 /// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed
 /// in `CardDefinition.additional_cast_cost`. Determined and paid during

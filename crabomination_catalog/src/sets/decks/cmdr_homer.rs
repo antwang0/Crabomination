@@ -1097,12 +1097,9 @@ pub fn will_of_the_sultai() -> CardDefinition {
         "Will of the Sultai",
         cost(&[generic(4), g()]),
         true,
-        Effect::If {
-            cond: Predicate::YouControlledACommanderAsCast,
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
-            else_: Box::new(Effect::ChooseMode(modes())),
-        },
+        Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false },
     )
+    .widening_modes(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander))
 }
 
 /// "For each player, choose a [filter] card in that player's graveyard. Put

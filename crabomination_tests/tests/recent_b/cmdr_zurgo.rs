@@ -448,7 +448,17 @@ fn will_of_the_mardu_does_both_with_a_commander() {
     commander_out(&mut g, catalog::zurgo_stormrender());
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let w = g.add_card_to_hand(0, catalog::will_of_the_mardu());
-    cast_at(&mut g, w, &[Target::Player(1), Target::Permanent(giant2)]).expect("both");
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: w,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(giant2)],
+        x_value: None,
+    })
+    .expect("both modes: a commander is out (CR 601.2b)");
+    drain_stack(&mut g);
     assert_eq!(named(&g, 0, "Warrior").len(), 1);
     assert!(g.battlefield_find(giant2).is_none(), "3 creatures deal 3");
     let _ = giant;

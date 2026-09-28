@@ -299,7 +299,17 @@ fn will_of_the_temur_does_both_with_a_commander() {
     let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
     let w = g.add_card_to_hand(0, catalog::will_of_the_temur());
     let hand = g.players[0].hand.len();
-    cast_at(&mut g, w, &[Target::Permanent(ring), Target::Player(0)]).expect("cast");
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: w,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![Target::Player(0)],
+        x_value: None,
+    })
+    .expect("both modes: a commander is out (CR 601.2b)");
+    drain_stack(&mut g);
     let copy = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Sol Ring").expect("the copy");
     let cp = g.computed_permanent(copy.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));

@@ -1406,6 +1406,7 @@ pub fn jeskas_will() -> CardDefinition {
     use crate::effect::ManaPayload;
     use crate::mana::Color;
     CardDefinition {
+        modes_widen: Some(crate::card::ModesWiden::If(crate::effect::Predicate::YouControlACommander)),
         name: "Jeska's Will",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
@@ -1434,14 +1435,7 @@ pub fn jeskas_will() -> CardDefinition {
                     },
                 ]
             };
-            Effect::If {
-                cond: crate::effect::Predicate::YouControlledACommanderAsCast,
-                then: Box::new(Effect::ChooseN {
-                    picks: vec![0, 1],
-                    modes: modes(),
-                }),
-                else_: Box::new(Effect::ChooseMode(modes())),
-            }
+            Effect::ChooseModesCast { modes: modes(), min: 1, max: 1, allow_repeats: false }
         },
         ..Default::default()
     }

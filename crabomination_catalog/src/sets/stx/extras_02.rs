@@ -1720,7 +1720,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![crate::card::Keyword::Kicker(cost(&[generic(2), b(), b()]))],
-        kicked_any_modes: true,
+        modes_widen: Some(crate::card::ModesWiden::Kicked),
         effect: Effect::ChooseModesCast {
             modes: vec![
                 Effect::Discard {

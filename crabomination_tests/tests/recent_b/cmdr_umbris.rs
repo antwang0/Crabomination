@@ -819,7 +819,17 @@ fn cmdr_umbris_drown_in_dreams_both_modes_with_a_commander() {
     flood(&mut g, 0);
     let s = g.add_card_to_hand(0, catalog::drown_in_dreams());
     let hand = g.players[1].hand.len();
-    cast(&mut g, s, Some(Target::Player(1)), vec![Target::Player(1)], Some(2));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: s,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: Some(2),
+    })
+    .expect("both modes: a commander is out (CR 601.2b)");
+    drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), hand + 2, "drew X");
     assert_eq!(g.players[1].graveyard.len(), 4, "milled twice X");
 }

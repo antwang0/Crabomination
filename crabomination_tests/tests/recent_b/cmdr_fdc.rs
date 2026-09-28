@@ -1377,7 +1377,17 @@ fn will_of_the_jeskai_grants_flashback_with_a_commander() {
     drain_stack(&mut g);
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let will = g.add_card_to_hand(0, catalog::will_of_the_jeskai());
-    cast(&mut g, will, &[]);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: will,
+        spree_modes: vec![0, 1],
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("both modes: a commander is out (CR 601.2b)");
+    drain_stack(&mut g);
     let life = g.players[1].life;
     flood(&mut g, 0);
     g.perform_action(GameAction::CastFlashback {

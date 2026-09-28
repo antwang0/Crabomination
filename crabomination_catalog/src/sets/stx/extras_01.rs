@@ -1139,7 +1139,7 @@ pub fn inscription_of_insight() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![crate::card::Keyword::Kicker(cost(&[generic(2), u(), u()]))],
-        kicked_any_modes: true,
+        modes_widen: Some(crate::card::ModesWiden::Kicked),
         effect: Effect::ChooseModesCast {
             min: 1,
             max: 1,

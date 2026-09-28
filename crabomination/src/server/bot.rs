@@ -7892,10 +7892,10 @@ pub(super) fn cast_candidates<'a>(
         {
             candidates.push((0..modes.len() as u8).collect());
         }
-        // "If this spell was kicked, choose any number instead" (the
-        // Inscriptions): every pick of two or more modes, the kicked cast;
-        // `would_accept` drops the ones whose kicker doesn't fit.
-        if c.definition.kicked_any_modes {
+        // "If this spell was kicked / if you control a commander, choose
+        // more instead" (the Inscriptions, the Will cycle): every pick of
+        // two or more modes; `would_accept` drops the ones it can't cast.
+        if c.definition.modes_widen.is_some() {
             let n = modes.len().min(8) as u32;
             candidates.extend(
                 (1u32..1 << n)
