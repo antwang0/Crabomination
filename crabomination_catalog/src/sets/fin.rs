@@ -8485,8 +8485,10 @@ pub fn clash_of_the_eikons() -> CardDefinition {
         name: "Clash of the Eikons",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![1, 2, 3],
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 3,
+            allow_repeats: false,
             modes: vec![
                 Effect::Fight {
                     attacker: Selector::TargetFiltered {

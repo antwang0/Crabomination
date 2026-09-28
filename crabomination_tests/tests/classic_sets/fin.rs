@@ -4579,17 +4579,26 @@ fn galufs_final_act_pumps_and_grants_death_trigger() {
     );
 }
 
-/// Clash of the Eikons is a choose-one-or-more with three real modes.
+/// Clash of the Eikons' fight mode takes both its targets (CR 700.2c). It
+/// shipped with default picks `[1, 2, 3]` — no mode 3, and the fight never ran.
 #[test]
-fn clash_of_the_eikons_is_modal() {
-    let c = catalog::clash_of_the_eikons();
-    match c.effect {
-        crabomination::card::Effect::ChooseN { ref picks, ref modes } => {
-            assert_eq!(picks, &vec![1, 2, 3], "choose one or more of three");
-            assert_eq!(modes.len(), 3);
-        }
-        _ => panic!("expected ChooseN"),
-    }
+fn clash_of_the_eikons_fights_with_its_two_targets() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::clash_of_the_eikons());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0],
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("cast the fight mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(giant).is_some());
 }
 
 /// Louisoix's Sacrifice counters a noncreature spell and carries its sac-or-pay
