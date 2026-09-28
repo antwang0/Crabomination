@@ -357,6 +357,10 @@ pub fn jayas_phoenix() -> CardDefinition {
                 effect: Effect::CopyNextLoyaltyAbility { copies: 1 },
             },
             TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+                effect: Effect::CopyNextLoyaltyAbility { copies: 1 },
+            },
+            TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Planeswalker },
                 ),

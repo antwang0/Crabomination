@@ -273,6 +273,10 @@ pub fn grateful_apparition() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Proliferate,
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+            effect: Effect::Proliferate,
         }],
         ..vanilla(
             "Grateful Apparition",
@@ -2085,6 +2089,14 @@ pub fn dreadhorde_butcher() -> CardDefinition {
                     amount: Value::ONE,
                 },
             },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
             on_dies(Effect::DealDamage {
                 to: target_any(),
                 amount: Value::PowerOf(Box::new(Selector::This)),
@@ -2823,6 +2835,10 @@ pub fn guildpact_informant() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Proliferate,
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+            effect: Effect::Proliferate,
         }],
         ..vanilla(
             "Guildpact Informant",
@@ -2928,26 +2944,33 @@ pub fn silent_submersible() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: draw(1),
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+            effect: draw(1),
         }],
         ..Default::default()
     }
 }
 
 /// Storrev, Devkarin Lich — {1}{B}{B}{G} 5/4 Zombie Elf Wizard with trample.
-/// Whenever it deals combat damage to a player, return a creature or
+/// Whenever it deals combat damage to a player or planeswalker, return a creature or
 /// planeswalker card from your graveyard to your hand. (The "wasn't put there
 /// this combat" rider is approximated.)
 pub fn storrev_devkarin_lich() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered((R::Creature.or(R::Planeswalker)).and(R::InYourGraveyard)),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        }],
+        triggered_abilities: [EventKind::DealsCombatDamageToPlayer, EventKind::DealsCombatDamageToPlaneswalker]
+            .into_iter()
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: target_filtered((R::Creature.or(R::Planeswalker)).and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            })
+            .collect(),
         ..vanilla(
             "Storrev, Devkarin Lich",
             cost(&[generic(1), b(), b(), g()]),
@@ -4805,7 +4828,7 @@ pub fn storm_the_citadel() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantTriggeredAbility {
-                what: yours,
+                what: yours.clone(),
                 trigger: Box::new(TriggeredAbility {
                     event: EventSpec::new(
                         EventKind::DealsCombatDamageToPlayer,
@@ -4814,6 +4837,23 @@ pub fn storm_the_citadel() -> CardDefinition {
                     effect: Effect::Destroy {
                         what: target_filtered(
                             (R::Artifact.or(R::Enchantment)).and(R::ControlledByTriggerPlayer),
+                        ),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+            // CR 506.2 — at a planeswalker, "defending player" is its
+            // controller (the damage event binds no trigger player).
+            Effect::GrantTriggeredAbility {
+                what: yours,
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToPlaneswalker,
+                        EventScope::SelfSource,
+                    ),
+                    effect: Effect::Destroy {
+                        what: target_filtered(
+                            (R::Artifact.or(R::Enchantment)).and(R::ControlledByDefendingPlayer),
                         ),
                     },
                 }),

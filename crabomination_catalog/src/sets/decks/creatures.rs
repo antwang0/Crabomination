@@ -263,6 +263,13 @@ pub fn psychic_frog() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(1),
             },
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![
             // "Discard a card: Put a +1/+1 counter on Psychic Frog." The

@@ -1,6 +1,6 @@
 //! Functionality tests for War of the Spark (WAR) — `catalog::sets::war`.
 
-use crabomination::card::{CounterType, CreatureType, Keyword};
+use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
@@ -3183,4 +3183,52 @@ fn finale_of_promise_casts_instant_and_sorcery() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "instant exiled after resolving");
     assert!(g.exile.iter().any(|c| c.id == tutor), "sorcery exiled after resolving");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt || c.id == tutor), "neither left in graveyard");
+}
+
+/// Attack `attacker` into seat 1's `walker` and run combat to its end.
+fn hit_walker(g: &mut GameState, attacker: CardId, walker: CardId) {
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Planeswalker(walker),
+    }]))
+    .expect("attack the planeswalker");
+    drain_stack(g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
+/// CR 510.2 — "deals combat damage to a player or planeswalker": Dreadhorde
+/// Butcher grows and a Storm the Citadel'd creature destroys an artifact of
+/// the planeswalker's controller when it hits a planeswalker. They fired on
+/// players only.
+#[test]
+fn cr_510_2_player_or_planeswalker_damage_triggers_on_a_planeswalker() {
+    let mut g = two_player_game();
+    let butcher = g.add_card_to_battlefield(0, catalog::dreadhorde_butcher());
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    hit_walker(&mut g, butcher, walker);
+    assert_eq!(g.battlefield_find(butcher).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let storm = g.add_card_to_hand(0, catalog::storm_the_citadel());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: storm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    hit_walker(&mut g, bear, walker);
+    assert!(g.battlefield_find(rock).is_none(), "the defending player's Mind Stone is destroyed");
 }
