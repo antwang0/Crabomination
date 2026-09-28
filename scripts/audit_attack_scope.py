@@ -58,7 +58,8 @@ def main():
         pw = "ControllerPlaneswalkerAttackedByOpponent" in d
         if not (wide or direct or pw):
             continue
-        text = oracle_of(cache.get(name) or {})
+        entry = cache.get(name)
+        text = oracle_of(entry) if isinstance(entry, dict) else ""
         both = bool(BOTH.search(text))
         bare = bool(BARE.search(BOTH.sub("", text)))
         pw_only = bool(PW_ONLY.search(text)) and not both
