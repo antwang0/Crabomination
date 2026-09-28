@@ -29577,7 +29577,7 @@ pub fn izzet_charm() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::CounterUnlessPaid {
-                what: Selector::Target(0),
+                what: tf(SelectionRequirement::Noncreature),
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,

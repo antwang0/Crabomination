@@ -4405,7 +4405,8 @@ pub fn shriekmaw() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::Artifact.negate())
-                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate()),
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
         }],

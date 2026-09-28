@@ -206,6 +206,7 @@ pub fn zoraline_cosmos_caller() -> CardDefinition {
                 what: Selector::TargetFiltered {
                     slot: 0,
                     filter: R::PermanentCard
+                        .and(R::Nonland)
                         .and(R::ManaValueAtMost(3))
                         .and(R::InYourGraveyard),
                 },

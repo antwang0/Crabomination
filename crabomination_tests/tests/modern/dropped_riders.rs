@@ -2694,3 +2694,47 @@ fn target_type_lists_carry_every_printed_type() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(ring).is_none(), "exiled");
 }
+
+/// Negated target qualifiers that shipped dropped (target-negation scan):
+/// Shriekmaw's "nonartifact", Crush's "noncreature", Izzet Charm's
+/// "noncreature spell".
+#[test]
+fn target_negations_are_enforced() {
+    let mut g = main_phase();
+    let thopter = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let crush = g.add_card_to_hand(0, catalog::crush());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, crush, Some(Target::Permanent(thopter))).is_err(), "an artifact creature");
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    cast(&mut g, crush, Some(Target::Permanent(ring))).expect("a noncreature artifact");
+    drain_stack(&mut g);
+
+    // Shriekmaw's ETB has no legal target when the only other creature is an
+    // artifact one (it is black itself).
+    let maw = g.add_card_to_hand(0, catalog::shriekmaw());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, maw, None).expect("shriekmaw");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thopter).is_some(), "Shriekmaw can't destroy an artifact creature");
+
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("bears");
+    g.priority.player_with_priority = 0;
+    let charm = g.add_card_to_hand(0, catalog::izzet_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    });
+    assert!(r.is_err(), "Izzet Charm can't counter a creature spell");
+}

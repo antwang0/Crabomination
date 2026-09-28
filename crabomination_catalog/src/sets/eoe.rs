@@ -509,7 +509,7 @@ pub fn all_fates_stalker() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasCreatureType(CreatureType::Assassin).negate())),
             return_to: crate::card::ExileReturnZone::Battlefield,
         })],
         alternative_cost: Some(warp(cost(&[generic(1), w()]))),
