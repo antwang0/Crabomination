@@ -7882,15 +7882,25 @@ pub(super) fn cast_candidates<'a>(
             candidates = mode_combinations(modes.len() as u8, *min as usize, *allow_repeats);
         }
         // "Choose one or both" / "one or more" (Saheeli's Artistry, Sublime
-        // Epiphany): every mode at once too, as Spree's combination is. Pods
-        // only for now: two-seat play (Choreographed Sparks) stays as the
-        // nets' gate runs measured it.
+        // Epiphany): every pick of two or more modes too (at most 26, for
+        // five modes), so the sim can take bounce + draw rather than all or
+        // one. Pods only for now: two-seat play (Choreographed Sparks) stays
+        // as the nets' gate runs measured it.
         if let Effect::ChooseModesCast { min: 1, max, .. } = &c.definition.effect
             && state.players.len() > 2
             && *max as usize >= modes.len()
             && modes.len() > 1
         {
-            candidates.push((0..modes.len() as u8).collect());
+            if modes.len() <= 5 {
+                let n = modes.len() as u32;
+                candidates.extend(
+                    (1u32..1 << n)
+                        .filter(|m| m.count_ones() > 1)
+                        .map(|m| (0..n as u8).filter(|i| m & (1 << i) != 0).collect()),
+                );
+            } else {
+                candidates.push((0..modes.len() as u8).collect());
+            }
         }
         // "If this spell was kicked / if you control a commander, choose
         // more instead" (the Inscriptions, the Will cycle): every pick of
@@ -29315,6 +29325,29 @@ mod stack_response_tests {
                 if *card_id == conf && spree_modes.len() == 3))
             .collect();
         assert!(!casts.is_empty(), "no three-mode cast offered");
+    }
+
+    /// A pod bot is offered every multi-mode pick of a "choose one or more"
+    /// spell, not only all-or-one: Sublime Epiphany's bounce + draw.
+    #[test]
+    fn a_pod_bot_is_offered_each_pair_of_a_choose_one_or_more_spell() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(4);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::sublime_epiphany());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add_colorless(4);
+        let picks: Vec<Vec<u8>> = cast_candidates(&g, 0, &EvalWeights::default(), None)
+            .into_iter()
+            .filter_map(|(a, _)| match a {
+                GameAction::CastSpellSpree { card_id, spree_modes, .. } if card_id == spell => Some(spree_modes),
+                _ => None,
+            })
+            .collect();
+        assert!(picks.contains(&vec![2, 4]), "{picks:?}");
     }
 
     /// CR 702.33d — "if this spell was kicked, choose any number instead" is
