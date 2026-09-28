@@ -1487,6 +1487,13 @@ pub struct TurnRegistries {
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
+    /// CR 508.5 — each attacked planeswalker / battle with its defending
+    /// player as declared, so "defending player" still names that player
+    /// after the permanent leaves (a creature that killed Chandra with Storm
+    /// the Citadel's grant). Cleared with `attacking`. Cold: only a
+    /// planeswalker or battle attack writes it.
+    #[serde(default)]
+    pub(crate) attacked_permanent_defenders: Vec<(CardId, usize)>,
     /// Aeon Engine — the game's turn order is reversed: every walk "in turn
     /// order" (the next turn, priority, APNAP) goes the other way round the
     /// table. Reversing again restores the original order. Cold: written once
@@ -18583,6 +18590,9 @@ impl GameState {
         self.next_id = value;
     }
     pub fn set_attacking(&mut self, attacks: Vec<Attack>) {
+        for a in &attacks {
+            self.note_attack_defender(a.target);
+        }
         self.attacking = attacks;
     }
     /// Restore from a flat (blocker, attacker) list — the snapshot wire form
@@ -18630,17 +18640,40 @@ impl GameState {
     }
 
     /// Resolve the defending player for a given attack target.
+    fn recorded_attack_defender(&self, attacked: CardId) -> Option<usize> {
+        self.attacked_permanent_defenders.iter().find(|(c, _)| *c == attacked).map(|&(_, d)| d)
+    }
+
+    /// Record an attacked planeswalker's / battle's defending player (CR
+    /// 508.5) — every site that puts an attacker into `attacking` calls this.
+    pub(crate) fn note_attack_defender(&mut self, target: AttackTarget) {
+        let id = match target {
+            AttackTarget::Player(_) => return,
+            AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => id,
+        };
+        if self.recorded_attack_defender(id).is_none()
+            && let Some(d) = self.defender_for(target)
+        {
+            self.attacked_permanent_defenders.push((id, d));
+        }
+    }
+
     pub fn defender_for(&self, target: AttackTarget) -> Option<usize> {
         match target {
             AttackTarget::Player(p) => Some(p),
-            AttackTarget::Planeswalker(pw) => {
-                self.battlefield_find(pw).map(|c| c.controller)
-            }
+            // CR 508.5 — once the attacked planeswalker or battle is gone the
+            // defending player is still the one it had "before it was removed
+            // from combat", as recorded at the attack.
+            AttackTarget::Planeswalker(pw) => self
+                .battlefield_find(pw)
+                .map(|c| c.controller)
+                .or_else(|| self.recorded_attack_defender(pw)),
             // CR 508.4 — the defending player for an attack on a battle is its
             // protector, who defends it with their creatures.
-            AttackTarget::Battle(b) => {
-                self.battlefield_find(b).and_then(|c| c.protected_by)
-            }
+            AttackTarget::Battle(b) => self
+                .battlefield_find(b)
+                .and_then(|c| c.protected_by)
+                .or_else(|| self.recorded_attack_defender(b)),
         }
     }
 

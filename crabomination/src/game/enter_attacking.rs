@@ -18,6 +18,7 @@ impl GameState {
     pub(crate) fn put_into_combat_attacking(&mut self, id: CardId, target: AttackTarget) -> bool {
         let Some(c) = self.battlefield.find_by_id_mut(id) else { return false };
         c.attacked_this_turn = true;
+        self.note_attack_defender(target);
         self.attacking.push(Attack { attacker: id, target });
         true
     }

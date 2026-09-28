@@ -2071,6 +2071,7 @@ impl GameState {
                 self.players[p].attacked_with_commander_this_turn = true;
                 self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { holder: p }, p);
             }
+            self.note_attack_defender(atk.target);
             let card = self
                 .battlefield
                 .iter_mut()
@@ -3589,6 +3590,9 @@ impl GameState {
     pub(crate) fn remove_all_from_combat(&mut self) {
         if !self.attacking.is_empty() {
             self.attacking.clear();
+            if !self.attacked_permanent_defenders.is_empty() {
+                self.attacked_permanent_defenders.clear();
+            }
         }
         // Dropped, not cleared — a cleared `HashMap` keeps its table and
         // every later `GameState::clone` re-allocates it (see `resolve_effect`'s
