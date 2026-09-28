@@ -839,6 +839,9 @@ rule; `git log -p -- FEATURE_ROADMAP.md` is the record. What closed, terse:
   CR 709.3b / 709.4b / 715.3b / 702.103b / 202.3e — Adventure, Omen, split
   half, bestow and X spells on the stack; split cards / Rooms off it
   (`core_rules/cr_recent107`); a Room permanent's unlocked doors (CR 709.5).
+- **Animation colors** (CR 105.3): `shortcut::colored_animation` — creature-lands,
+  Genju, Restless / AFR / Urza's Legacy lands and Oko's Elk take their printed
+  colors. **Cast from exile** (`Keyword::ExileCast`): Squee, Eternal Scourge.
 - **CR conformance batches**: `core_rules/cr_recent87`–`cr_recent98` — CR
   120.8, 613.11 (`effective_max_hand_size`), 701.19a, 604.4, 611.2c, 509.1c,
   704.5m, 702.26c, 707.4, 116.2b/116.3, 717.2/717.4/717.5.
