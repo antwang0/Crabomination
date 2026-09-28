@@ -959,7 +959,7 @@ fn zack_fair_hands_its_counters_over() {
 }
 
 /// Shorikai, Genesis Engine — its Pilot "crews Vehicles as though its power
-/// were 2 greater" (CR 702.122e): one 1/1 Pilot crews The Belligerent (crew 3).
+/// were 2 greater" (CR 702.122b): one 1/1 Pilot crews The Belligerent (crew 3).
 #[test]
 fn shorikai_pilot_crews_as_power_three() {
     let mut g = main_phase();

@@ -2046,7 +2046,7 @@ pub struct PermanentView {
     /// sorcery speed) by its controller.
     #[serde(default)]
     pub reconfigurable: bool,
-    /// CR 702.122e/702.171 — extra power this creature contributes when
+    /// CR 702.122b/702.171c — extra power this creature contributes when
     /// crewing a Vehicle or saddling a Mount, beyond its real power
     /// (Cloudspire Captain, Deathless Pilot). 0 for the common case; lets the
     /// client badge "crews as +N".

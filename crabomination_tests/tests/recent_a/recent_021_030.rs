@@ -1824,7 +1824,7 @@ mod recent24 {
         );
     }
 
-    /// Deathless Pilot's CR 702.122e rider lets a 2-power creature crew a Crew 4
+    /// Deathless Pilot's CR 702.122b rider lets a 2-power creature crew a Crew 4
     /// Vehicle by itself (counts as power 4).
     #[test]
     fn deathless_pilot_crews_as_though_power_greater() {

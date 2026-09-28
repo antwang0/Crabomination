@@ -256,7 +256,7 @@ pub enum StaticEffect {
     /// [inner]." The counter-gated wrapper behind the Quest enchantment cycle
     /// (Quest for Renewal, Quest for Ula's Temple).
     WhileCountersAtLeast { kind: CounterType, n: u32, inner: Box<StaticEffect> },
-    /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
+    /// CR 702.122b / 702.171c — "crews Vehicles and saddles Mounts as though
     /// its power were N greater." Adds `amount` to each affected creature's
     /// power *only* when summing crew / saddle totals (it is not a real P/T
     /// modification). `applies_to` is usually `Selector::This` (Cloudspire

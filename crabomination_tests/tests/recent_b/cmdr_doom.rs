@@ -69,7 +69,7 @@ fn begin_combat(g: &mut GameState) {
     drain_stack(g);
 }
 
-/// CR 701.50a / 701.50c — Doctor Doom's beginning-of-combat trigger makes a
+/// CR 701.50a / 701.50f — Doctor Doom's beginning-of-combat trigger makes a
 /// Villain of yours connive; Iron Monger ("whenever a creature you control
 /// connives") puts a +1/+1 counter on each Villain you control, and Glorious
 /// Purpose puts one on the conniver and a plan counter on itself.

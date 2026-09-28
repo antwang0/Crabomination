@@ -19,13 +19,14 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let n = self.evaluate_value(amount, ctx).max(0);
+        // CR 701.50e — "connive 0" is no connive event: nothing triggers.
         if n == 0 {
             return Ok(());
         }
         let ids: Vec<CardId> =
             self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
         for id in ids {
-            // CR 701.50c — a conniver that left still connives; its last
+            // CR 701.50b — a conniver that left still connives; its last
             // controller does the drawing and discarding.
             let controller = self.battlefield_find(id).map_or(ctx.controller, |c| c.controller);
             let sub = EffectContext { controller, targets: vec![Target::Permanent(id)], ..ctx.clone() };

@@ -1436,7 +1436,7 @@ fn graveyard_entry(
     }
 }
 
-/// CR 702.122e/702.171 — sum of "crews/saddles as though its power were N
+/// CR 702.122b/702.171c — sum of "crews/saddles as though its power were N
 /// greater" bonuses applying to `cid`, computed from a battlefield slice (the
 /// view layer has no `GameState`). Mirrors `GameState::crew_saddle_power_bonus`.
 fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 {
@@ -5413,7 +5413,7 @@ mod tests {
         assert!(pv.pt_modified, "noncreature Vehicle flagged as P/T-modified");
     }
 
-    /// CR 702.122e/702.171 — Deathless Pilot's crew-power rider surfaces in the
+    /// CR 702.122b/702.171c — Deathless Pilot's crew-power rider surfaces in the
     /// view so the client can badge "crews as +2".
     #[test]
     fn crew_power_bonus_surfaces_in_view() {

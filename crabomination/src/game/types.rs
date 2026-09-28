@@ -1174,7 +1174,7 @@ pub enum GameAction {
     /// the Vehicle); their total power must meet or exceed the Vehicle's
     /// `Keyword::Crew(N)`. On success the Vehicle becomes an artifact
     /// creature until end of turn. Crew is an activated ability usable any
-    /// time the controller has priority (instant speed, CR 702.122c).
+    /// time the controller has priority (instant speed, CR 702.122a).
     Crew { vehicle: CardId, crew_creatures: Vec<CardId> },
     /// CR 702.171 — Saddle a Mount. Taps each creature in `creatures` (each
     /// an untapped creature the activator controls, other than the Mount);

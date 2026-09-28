@@ -22076,10 +22076,10 @@ impl GameState {
     /// `AddCardType(Creature)` continuous effect so the Vehicle is an
     /// artifact creature for the rest of the turn (its printed P/T comes
     /// through the layer system via `base_power`/`base_toughness`). Crew is
-    /// usable at instant speed (CR 702.122c), so there's no sorcery-speed
+    /// usable at instant speed (CR 702.122a), so there's no sorcery-speed
     /// gate. Re-crewing an already-crewed Vehicle is legal but pointless;
     /// the engine still taps the creatures and stacks a redundant effect.
-    /// CR 702.122e / 702.171 — sum of "crews/saddles as though its power were
+    /// CR 702.122b / 702.171c — sum of "crews/saddles as though its power were
     /// N greater" bonuses applying to `cid` (Cloudspire Captain, Deathless
     /// Pilot). Folded into the crew / saddle power total, not real P/T.
     pub fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {

@@ -11148,7 +11148,7 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
                     && c.definition.is_creature()
                     && !c.tapped
             })
-            // CR 702.122e/702.171 — count the crew-power rider (Cloudspire
+            // CR 702.122b/702.171c — count the crew-power rider (Cloudspire
             // Captain / Deathless Pilot crew "as though power N greater").
             .map(|c| {
                 (c.id, c.power().saturating_add(state.crew_saddle_power_bonus(c.id)).max(0) as u32)
