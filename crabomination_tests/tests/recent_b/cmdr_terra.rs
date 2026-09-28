@@ -240,6 +240,7 @@ fn legions_to_ashes_takes_the_namesakes() {
 #[test]
 fn espers_to_magicite_crystallizes_a_creature() {
     let mut g = main_phase(2);
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
     g.add_card_to_graveyard(1, catalog::craw_wurm());
     let spell = g.add_card_to_hand(0, catalog::espers_to_magicite());
     flood(&mut g, 0);
@@ -247,6 +248,8 @@ fn espers_to_magicite_crystallizes_a_creature() {
     let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).map(|c| c.id).expect("a token");
     let types = g.computed_permanent(tok).unwrap().card_types().to_vec();
     assert_eq!(types, vec![CardType::Artifact]);
+    // The chosen card is the best one, not the first exiled.
+    assert_eq!(g.battlefield_find(tok).unwrap().definition.name, "Craw Wurm");
 }
 
 /// Shadow may sacrifice a permanent on a hit: draw two, drain its mana value.

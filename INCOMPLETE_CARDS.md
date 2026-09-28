@@ -389,7 +389,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
 | Puca's Covenant | "another target permanent card" can pick the creature that just died | no "other than the trigger source" requirement (the requirement walkers would all need it) |
-| Espers to Magicite (pod) | the copied card is the first creature card exiled, not a chosen target (the artifact-only type change ships: `SetCardTypesTo`) | the reflexive "choose up to one target … exiled this way" has no target slot over a resolution-exiled set |
+| Espers to Magicite (pod) | the copied card is auto-picked (greatest power among the exiled creature cards), not a chosen target (the artifact-only type change ships: `SetCardTypesTo`) | the reflexive "choose up to one target … exiled this way" has no target slot over a resolution-exiled set |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
@@ -2155,7 +2155,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
 | 🟡 Wakanda Forever! | Wakanda Forever (MSC) | the battlefield and hand picks are the two highest-mana-value permanent cards revealed, not the player's choice. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
-| 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is the first creature card exiled, not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
+| 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 General Leo Cristophe | Revival Trance (FIC) | the "up to one" return target is required whenever a legal card exists. |
 | 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |

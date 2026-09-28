@@ -291,7 +291,9 @@ pub fn espers_to_magicite() -> CardDefinition {
             Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                source: Selector::Take {
+                // "choose up to one target creature card exiled this way":
+                // the biggest body, not the first one exiled.
+                source: Selector::TakeGreatestPower {
                     inner: Box::new(Selector::ExiledThisResolution { filter: R::Creature }),
                     count: Box::new(Value::ONE),
                 },
