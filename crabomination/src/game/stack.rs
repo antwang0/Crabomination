@@ -5689,6 +5689,10 @@ impl GameState {
         // rest of the game) and the outside-the-game sideboard.
         self.players[p].command.clear();
         self.players[p].sideboard.clear();
+        // Emblems are objects in the command zone they own (CR 114.2).
+        if !self.players[p].emblems.is_empty() {
+            self.players[p].emblems.clear();
+        }
         // CR 800.4a — "all spells and abilities on the stack controlled by
         // that player cease to exist", and so does a spell they own that
         // someone else is casting. Nothing resolves them, so nothing runs:

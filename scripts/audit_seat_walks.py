@@ -55,13 +55,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-FILES = [
-    "crabomination/src/game/effects/mod.rs",
-    "crabomination/src/game/stack.rs",
-    "crabomination/src/game/combat.rs",
-    "crabomination/src/game/mod.rs",
-    "crabomination/src/game/actions.rs",
-]
+FILES = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "crabomination/src/game").rglob("*.rs"))
 
 # The two walk shapes. `RANGE` is "every seat index"; `ROTATE` is "every seat
 # index, starting somewhere" — the one that looks like turn order and is not.
@@ -88,6 +82,11 @@ PICK = re.compile(
 )
 # A pick that only locates a card/object rather than choosing a participant
 # is not a finding: a departed seat's zones are still searched by id.
+# ⚠ Third column (2026-09-28): `apnap_sort` ORDERS seats, it does not filter
+# them — a departed seat sorts to the tail and is still walked. Fifteen
+# "each player" fan-outs fed it every seat index (Truce, Ice Cave's payers,
+# the number-naming duels); the input is `living_seats()`.
+APNAP_ALL = re.compile(r"apnap_sort\(\s*\(0\s*\.\.\s*(?:self\.)?players\.len\(\)\)\s*\.collect\(\)")
 PICK_EXEMPT = re.compile(r"\.iter\(\)\.any\(\|c\||card_id|\.id ==")
 
 
@@ -138,6 +137,10 @@ def main():
                     continue
                 line = src[: m.start()].count("\n") + 1
                 findings.append((rel, line, enclosing_arm(src, m.start()), m.group(0).strip()))
+
+        for m in APNAP_ALL.finditer(src):
+            line = src[: m.start()].count("\n") + 1
+            findings.append((rel, line, enclosing_arm(src, m.start()), m.group(0).strip()))
 
         for m in PICK.finditer(src):
             # The guard can sit just ABOVE the pick — `first_opponent_of`

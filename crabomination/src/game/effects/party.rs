@@ -68,7 +68,7 @@ impl GameState {
         _ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
-        let seats = self.apnap_sort((0..self.players.len()).collect());
+        let seats = self.apnap_sort(self.living_seats().collect());
         let mut doomed: Vec<(CardId, usize)> = Vec::new();
         for p in seats {
             let mut mine = self.creature_roles(p);

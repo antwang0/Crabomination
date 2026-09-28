@@ -878,7 +878,7 @@ impl GameState {
         let source = ctx.source.unwrap_or(CardId(0));
         // CR 101.4 — each affected player is asked in APNAP order, so the
         // active player commits before their opponents see the answer.
-        let seat_order = self.apnap_sort((0..self.players.len()).collect());
+        let seat_order = self.apnap_sort(self.living_seats().collect());
         let mut targets: Vec<(CardId, usize)> = self
             .battlefield
             .iter()
@@ -11151,7 +11151,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 // APNAP order; each player picks their own keepers, then every
                 // unpicked permanent is sacrificed by its controller.
-                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let seats = self.apnap_sort(self.living_seats().collect());
                 let mut doomed: Vec<CardId> = Vec::new();
                 for p in seats {
                     let mine: Vec<(CardId, String)> = self
@@ -11203,7 +11203,7 @@ impl GameState {
                 let seats = if *opponents {
                     self.apnap_sort(self.opponents_of(ctx.controller).into_iter().collect())
                 } else {
-                    self.apnap_sort((0..self.players.len()).collect())
+                    self.apnap_sort(self.living_seats().collect())
                 };
                 let mut picks: Vec<CardId> = Vec::new();
                 for p in seats {
@@ -11524,7 +11524,7 @@ impl GameState {
             Effect::DealDamageToEachPlayerPerPermanent { filter, amount, flat } => {
                 let per = self.evaluate_value(amount, ctx);
                 let source = ctx.source;
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                for p in self.apnap_sort(self.living_seats().collect()) {
                     let n = self
                         .battlefield
                         .iter()
@@ -12003,7 +12003,7 @@ impl GameState {
                 // reads the same either way.
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, CardId)> = Vec::with_capacity(self.players.len());
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                for p in self.apnap_sort(self.living_seats().collect()) {
                     let hand: Vec<(CardId, String)> = self.players[p]
                         .hand
                         .iter()
@@ -14765,9 +14765,7 @@ impl GameState {
                 if n == 0 {
                     return Ok(());
                 }
-                let seats = self.apnap_sort(
-                    (0..self.players.len()).filter(|&p| !self.players[p].eliminated).collect(),
-                );
+                let seats = self.apnap_sort(self.living_seats().collect());
                 let mut cursor = 0;
                 let mut picks: Vec<CardId> = Vec::new();
                 for p in seats {
@@ -22622,7 +22620,7 @@ impl GameState {
                 // APNAP order (active player first). Eureka repeats the whole
                 // pass while any seat played (capped at the total hand size,
                 // which is the most cards the loop can consume).
-                let order = self.apnap_sort((0..self.players.len()).collect());
+                let order = self.apnap_sort(self.living_seats().collect());
                 let rounds = if *repeat {
                     self.players.iter().map(|p| p.hand.len()).sum::<usize>().max(1)
                 } else {
@@ -24604,7 +24602,7 @@ impl GameState {
                 }) else {
                     return Ok(());
                 };
-                let seats: Vec<usize> = (0..self.players.len()).filter(|p| *p != caster).collect();
+                let seats: Vec<usize> = self.living_seats().filter(|p| *p != caster).collect();
                 let mut cursor = 0;
                 for payer in seats {
                     let Some(willing) = self.ask_seat_bool(
@@ -26436,7 +26434,7 @@ impl GameState {
                         filter: crate::card::SelectionRequirement::Permanent,
                     })),
                 };
-                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let seats = self.apnap_sort(self.living_seats().collect());
                 for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
                     self.run_effect(&ask, &sub, events)?;
@@ -28495,7 +28493,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0usize;
                 let mut picks: Vec<(usize, u32)> = Vec::new();
-                for seat in self.apnap_sort((0..self.players.len()).collect()) {
+                for seat in self.apnap_sort(self.living_seats().collect()) {
                     let Some(n) = self.ask_seat_amount(
                         &mut cursor,
                         seat,
@@ -28809,7 +28807,8 @@ impl GameState {
                 };
                 for (p, &count) in land_counts.iter().enumerate() {
                     let deficit = max.saturating_sub(count);
-                    if deficit == 0 {
+                    // CR 800.4a — a departed seat has no lands and no player.
+                    if deficit == 0 || !self.players[p].is_alive() {
                         continue;
                     }
                     self.players[p].searched_library_this_turn = true;
@@ -30987,7 +30986,7 @@ impl GameState {
                         },
                     ])
                 };
-                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let seats = self.apnap_sort(self.living_seats().collect());
                 let before: Vec<usize> =
                     seats.iter().map(|&p| creatures_in_graveyard(self, p)).collect();
                 for (i, p) in seats.iter().copied().enumerate() {
@@ -31011,7 +31010,7 @@ impl GameState {
             // Kamahl's Summons — every seat cashes creature cards in hand for
             // tokens, one each.
             Effect::EachPlayerRevealsCreaturesForTokens { token } => {
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                for p in self.apnap_sort(self.living_seats().collect()) {
                     let n = self.players[p]
                         .hand
                         .iter()
@@ -35596,7 +35595,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, CardId, crate::mana::ManaCost, bool)> = Vec::new();
-                for seat in self.apnap_sort((0..self.players.len()).collect()) {
+                for seat in self.apnap_sort(self.living_seats().collect()) {
                     if self.players[seat].eliminated {
                         continue;
                     }
@@ -35877,7 +35876,7 @@ impl GameState {
                 let mut cursor = 0usize;
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut picks: Vec<(usize, u32)> = Vec::new();
-                for seat in self.apnap_sort((0..self.players.len()).collect()) {
+                for seat in self.apnap_sort(self.living_seats().collect()) {
                     let Some(n) = self.ask_seat_amount(
                         &mut cursor,
                         seat,
@@ -36177,9 +36176,7 @@ impl GameState {
             Effect::Parley { then } => {
                 // CR 701 ability word — no rules meaning of its own; the count
                 // it publishes is what the body reads.
-                let seats: Vec<usize> = self.apnap_sort(
-                    (0..self.players.len()).filter(|&p| !self.players[p].eliminated).collect(),
-                );
+                let seats: Vec<usize> = self.apnap_sort(self.living_seats().collect());
                 let (mut nonland, mut lands) = (0u32, 0u32);
                 for &p in &seats {
                     let Some(top) = self.players[p].library.first() else { continue };

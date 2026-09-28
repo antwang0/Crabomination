@@ -6748,3 +6748,47 @@ fn cr_603_2c_jolene_makes_one_treasure_per_attack_declaration() {
     let treasures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Treasure").count();
     assert_eq!(treasures, 1);
 }
+
+/// CR 800.4a / 114.2 — an emblem is an object its owner owns in the command
+/// zone, so it leaves the game with them. A departed seat's emblems stayed.
+#[test]
+fn cr_800_4a_a_departed_players_emblems_leave_too() {
+    let mut g = multi_player_game(4);
+    g.players[2].emblems.push(crabomination::player::Emblem {
+        name: "Test".into(),
+        triggered: vec![],
+        statics: vec![],
+    });
+    assert_eq!(g.players[2].emblems.len(), 1);
+    g.concede(2);
+    assert!(g.players[2].emblems.is_empty(), "the emblem left with its owner");
+}
+
+/// CR 800.4a — the APNAP fan-outs walk the players still in the game. Truce
+/// asked every seat index: a departed seat's ask was re-seated onto a live
+/// opponent (CR 800.4g) and its "didn't draw" life went to a player who is
+/// gone. "A player controls no creatures" was always true once one left.
+#[test]
+fn cr_800_4a_apnap_fan_outs_skip_a_departed_seat() {
+    use crabomination::effect::{Effect, Predicate};
+    let mut g = multi_player_game(4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for seat in [1, 3] {
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+    }
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[2].is_alive());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert!(
+        !g.evaluate_predicate(&Predicate::AnyPlayerControlsNoCreatures, &ctx),
+        "every player still in the game controls a creature"
+    );
+
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDrawsUpToElseGainsLife { max: 2, life_per_card: 2 })
+            .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(g.players[2].life, 0, "the departed seat gained nothing");
+}

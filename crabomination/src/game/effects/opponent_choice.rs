@@ -71,8 +71,7 @@ impl GameState {
         _ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
-        let seats = self.apnap_sort((0..self.players.len()).collect());
-        let seats: Vec<usize> = seats.into_iter().filter(|&s| self.players[s].is_alive()).collect();
+        let seats = self.apnap_sort(self.living_seats().collect());
         let mut exiled: Vec<(usize, Vec<CardId>)> = Vec::new();
         for &s in &seats {
             let ids: Vec<CardId> = self.players[s]

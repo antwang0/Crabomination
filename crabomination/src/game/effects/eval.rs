@@ -1127,7 +1127,8 @@ impl GameState {
                 }
                 counts.values().max().copied().unwrap_or(0) + changelings
             }
-            Value::GreatestCardsDrawnThisTurnByAnOpponent => (0..self.players.len())
+            Value::GreatestCardsDrawnThisTurnByAnOpponent => self
+                .living_seats()
                 .filter(|&q| q != ctx.controller && !self.same_team(q, ctx.controller))
                 .map(|q| self.players[q].cards_drawn_this_turn as i32)
                 .max()
@@ -3521,7 +3522,7 @@ impl GameState {
                 self.entered_from_graveyard_this_turn.contains(&cid)
                     || self.battlefield_find(cid).is_some_and(|c| c.cast_from_graveyard)
             }
-            Predicate::AnOpponentHadCreaturesEnterAtLeast(n) => (0..self.players.len()).any(|q| {
+            Predicate::AnOpponentHadCreaturesEnterAtLeast(n) => self.living_seats().any(|q| {
                 q != ctx.controller
                     && !self.same_team(q, ctx.controller)
                     && self.players[q].creatures_entered_this_turn.len() >= *n as usize
@@ -3868,7 +3869,8 @@ impl GameState {
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
-            Predicate::AnyPlayerControlsNoCreatures => (0..self.players.len()).any(|seat| {
+            // CR 800.4a — a departed seat controls nothing and is no player.
+            Predicate::AnyPlayerControlsNoCreatures => self.living_seats().any(|seat| {
                 !self.battlefield.iter().any(|c| c.controller == seat && c.definition.is_creature())
             }),
             Predicate::VoidActive { who } => {
