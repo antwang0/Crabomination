@@ -2273,3 +2273,34 @@ fn time_elemental_dooms_itself_on_a_block() {
     assert!(g.battlefield_find(te).is_none(), "sacrificed at end of combat");
     assert_eq!(g.players[1].life, life - 5);
 }
+
+/// "Whenever enchanted creature deals damage to an opponent" is ANY damage —
+/// Curiosity on a pinger is the classic draw engine — and only to an
+/// opponent. Curiosity, Keen Sense and Snake Umbra (pod cards) listened to
+/// combat damage to any player.
+#[test]
+fn damage_to_an_opponent_auras_draw_off_noncombat_damage() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    for aura in [catalog::curiosity, catalog::keen_sense, catalog::snake_umbra] {
+        for (victim, draws) in [(1usize, 1usize), (0, 0)] {
+            let mut g = two_player_game();
+            g.add_card_to_library(0, catalog::island());
+            let pinger = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            let a = g.add_card_to_battlefield(0, aura());
+            g.battlefield_find_mut(a).unwrap().attached_to = Some(pinger);
+            g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+                crabomination::decision::DecisionAnswer::Bool(true),
+            ]));
+            let hand = g.players[0].hand.len();
+            let ctx = EffectContext::for_ability(pinger, 0, None);
+            let to = if victim == 1 { PlayerRef::EachOpponent } else { PlayerRef::You };
+            let evs = g
+                .resolve_effect(&Effect::DealDamage { to: Selector::Player(to), amount: Value::Const(1) }, &ctx)
+                .unwrap();
+            g.dispatch_triggers_for_events(&evs);
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].hand.len() - hand, draws, "{} pinging seat {victim}", aura().name);
+        }
+    }
+}

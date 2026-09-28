@@ -167,9 +167,16 @@ pub fn snake_umbra() -> CardDefinition {
         vec![Keyword::UmbraArmor],
     );
     // Umbra armor is a keyword on the Aura itself, not a granted keyword.
+    // "Deals damage to an opponent" is any damage, where Curious Obsession's
+    // (the shared helper's) is combat damage.
     if let Some(b) = c.equipped_bonus.as_mut() {
         b.power = 1;
         b.toughness = 1;
+        for t in &mut b.triggered_abilities {
+            t.event = EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(
+                crate::effect::Predicate::PlayerIsOpponent { who: crate::effect::PlayerRef::TriggerEventPlayer },
+            );
+        }
     }
     c
 }

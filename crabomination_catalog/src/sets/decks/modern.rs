@@ -28151,7 +28151,8 @@ pub fn tandem_lookout() -> CardDefinition {
         keywords: vec![Keyword::Soulbond],
         soulbond_bonus: Some(SoulbondBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource)
+                    .with_filter(crate::effect::Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer }),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
@@ -42248,8 +42249,8 @@ pub fn ethereal_armor() -> CardDefinition {
     }
 }
 
-/// Curiosity — {U} Aura. "Whenever enchanted creature deals damage to a player,
-/// you may draw a card." (Modeled off combat damage, like the Sword cycle.)
+/// Curiosity — {U} Aura. "Whenever enchanted creature deals damage to an
+/// opponent, you may draw a card." Any damage, combat or not.
 pub fn curiosity() -> CardDefinition {
     aura_damage_draw("Curiosity", cost(&[u()]))
 }
@@ -42283,7 +42284,8 @@ fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {
         },
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource)
+                    .with_filter(crate::effect::Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer }),
                 effect: Effect::MayDo {
                     description: "Draw a card?".into(),
                     body: Box::new(Effect::Draw {

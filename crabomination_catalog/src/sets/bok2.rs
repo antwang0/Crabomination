@@ -691,7 +691,7 @@ pub fn neko_te() -> CardDefinition {
                 },
                 TriggeredAbility {
                     event: EventSpec::new(
-                        EventKind::DealsCombatDamageToPlayer,
+                        EventKind::DealsDamageToPlayer,
                         EventScope::SelfSource,
                     ),
                     effect: Effect::LoseLife {

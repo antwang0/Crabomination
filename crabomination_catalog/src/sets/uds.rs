@@ -1961,7 +1961,7 @@ pub fn sigil_of_sleep() -> CardDefinition {
     CardDefinition {
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 1,

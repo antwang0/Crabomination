@@ -2296,9 +2296,8 @@ pub fn arm_with_aether() -> CardDefinition {
         Effect::GrantTriggeredAbilityThisTurnToMatching {
             filter: R::Creature.and(R::ControlledByYou),
             trigger: Box::new(TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(
+                    crate::effect::Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer },
                 ),
                 effect: Effect::MayDo {
                     description: "Bounce a creature that player controls?".into(),
