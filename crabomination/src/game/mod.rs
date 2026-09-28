@@ -12651,8 +12651,8 @@ impl GameState {
         (fx, gates)
     }
 
-    /// The cross memo's answer for `key`, if it has one. Audited on every hit
-    /// under `debug_assertions`.
+    /// The cross memo's answer for `key`, if it has one. A sample of hits is
+    /// audited under `debug_assertions`.
     fn cross_memo_hit(
         &self,
         key: GatherKey,
@@ -12689,15 +12689,41 @@ impl GameState {
         }
     }
 
-    /// The memo's ratchet: re-gather and compare, on every hit under
+    /// The memo's ratchet: re-gather and compare, on a sample of hits under
     /// `debug_assertions` (PERF `(-303)` point 2). Defined unconditionally —
     /// a `#[cfg(debug_assertions)]` body behind a `debug_assert!` is the
     /// release-only breakage CLAUDE.md warns about.
+    ///
+    /// One hit in `MEMO_AUDIT_EVERY` per thread, and one audit at a time:
+    /// the re-gather reads computed permanents whose own memo hits would
+    /// audit again, a full gather per nesting level, and on a board of gated
+    /// statics the audit was the whole cost — a strict debug pod game (seed
+    /// 7504020, game 8: 2.4 s in release) ran past half an hour, every
+    /// sampled stack inside this function; 1 in 1,024 plays it in 261 s
+    /// against 168 s unaudited, ~100 audits a typical game. A stale memo
+    /// recurs, so sampling still catches it.
     fn gather_memo_agrees(
         &self,
         fx: &[ContinuousEffect],
         gates: crate::game::layers::SecondPass,
     ) -> bool {
+        const MEMO_AUDIT_EVERY: u32 = 1024;
+        thread_local! {
+            static AUDITING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+            static HITS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+        }
+        struct Clear;
+        impl Drop for Clear {
+            fn drop(&mut self) {
+                AUDITING.with(|a| a.set(false));
+            }
+        }
+        if !HITS.with(|h| h.replace(h.get().wrapping_add(1))).is_multiple_of(MEMO_AUDIT_EVERY)
+            || AUDITING.with(|a| a.replace(true))
+        {
+            return true;
+        }
+        let _clear = Clear;
         let fresh = self.gather_continuous_effects();
         crate::game::layers::SecondPass::of(&fresh) == gates
             && fresh.len() == fx.len()
