@@ -6943,6 +6943,57 @@ fn cr_104_2a_a_lose_the_game_effect_wins_before_the_sweep() {
     assert_eq!(g.game_over, Some(Some(0)));
 }
 
+// ── Graveyard target picks at N seats ────────────────────────────────────
+
+/// CR 102.2 — every opponent's graveyard is reachable by "target card from a
+/// graveyard". The auto-target walked only one opponent and its controller,
+/// so Ghost Vacuum at a four-seat table exiled its own card when only a
+/// third seat's graveyard held one; both pickers now try every opponent
+/// before the controller.
+#[test]
+fn graveyard_hate_reaches_a_third_seats_graveyard() {
+    let mut g = multi_player_game(4);
+    let own = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let exile = catalog::ghost_vacuum().activated_abilities[0].effect.clone();
+    assert_eq!(g.auto_target_for_effect(&exile, 0), Some(Target::Permanent(theirs)));
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&exile, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(theirs)), "not the caster's {own:?}");
+}
+
+/// A reanimation / regrowth names the richest card (creature, then mana
+/// value), not whichever one died first.
+#[test]
+fn regrowth_picks_the_richest_graveyard_card() {
+    let mut g = multi_player_game(4);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let big = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let disentomb = catalog::disentomb().effect;
+    assert_eq!(g.auto_target_for_effect(&disentomb, 0), Some(Target::Permanent(big)));
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&disentomb, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(big)));
+}
+
+/// A hostile body that only reaches its controller's own graveyard ("exile
+/// target card from your graveyard") spends the poorest card.
+#[test]
+fn exiling_from_your_own_graveyard_spends_the_poorest_card() {
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    let mut g = multi_player_game(3);
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    let small = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let exile = Effect::Move {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::Any.from_your_graveyard(),
+        },
+        to: ZoneDest::Exile,
+    };
+    assert_eq!(g.auto_target_for_effect(&exile, 0), Some(Target::Permanent(small)));
+}
+
 /// "Target … card from your graveyard" is a target declared on the stack
 /// (CR 115.1, 601.2c) and only in its controller's graveyard. Blood Fountain,
 /// Monastery Messenger, Queen's Bay Paladin and Regenesis read any graveyard

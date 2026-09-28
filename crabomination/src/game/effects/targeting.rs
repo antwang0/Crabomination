@@ -271,31 +271,20 @@ impl GameState {
             }
         }
 
-        // Graveyard-target effects: walk primary player's graveyard first,
-        // then secondary's. Reanimate/Disentomb (friendly) hits the caster's
-        // graveyard; Ghost Vacuum (hostile) hits the opp's. Falls through
-        // to the battlefield walk below if no graveyard match.
+        // Graveyard-target effects: Reanimate/Disentomb (friendly) hit the
+        // caster's graveyard; Ghost Vacuum (hostile) hits an opponent's
+        // (`best_graveyard_card`). Falls through to the battlefield walk
+        // below if no graveyard match.
         if prefer_graveyard {
             // The `avoid` set matters here too: a multi-slot trigger fanning
             // out over a graveyard (Celestial Gatekeeper's "up to two target
             // Bird and/or Cleric cards") re-picked the card it already claimed
             // and stalled after one slot.
-            // The highest mana value among the legal cards (the earliest on a
-            // tie): a reanimation or regrowth takes the best card, not the
-            // first to die — what `Selector::Take`'s resolution-time pick
-            // already did for the untargeted bodies.
-            for &p in &[primary_player, secondary_player] {
-                let best = self.players[p]
-                    .graveyard
-                    .iter()
-                    .filter(|c| !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id)))
-                    .fold(None::<&CardInstance>, |best, c| match best {
-                        Some(b) if b.definition.cost.cmc() >= c.definition.cost.cmc() => Some(b),
-                        _ => Some(c),
-                    });
-                if let Some(c) = best {
-                    return Some(Target::Permanent(c.id));
-                }
+            let pick = best_graveyard_card(self, controller, opp, prefer_friendly, |c| {
+                !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id))
+            });
+            if pick.is_some() {
+                return pick;
             }
         }
 
@@ -970,7 +959,13 @@ impl GameState {
                 // permanent that happens to match the filter; sweep
                 // graveyards first for those.
                 if found.is_none() && eff.prefers_graveyard_target() {
-                    found = best_legal_graveyard_card(self, is_legal_gy);
+                    found = best_graveyard_card(
+                        self,
+                        controller,
+                        opp,
+                        eff.prefers_friendly_target_for_slot(slot, mode),
+                        is_legal_gy,
+                    );
                 }
                 // Battlefield: prefer one not already picked by slot 0 or
                 // earlier slots to avoid double-targeting when the filter is
@@ -1090,7 +1085,13 @@ impl GameState {
                 // target creature") has no graveyard fallback, or Doom Blade
                 // was aimed at a creature card that had already died.
                 if found.is_none() && (eff.may_target_offboard_card() || req.mentions_offboard_zone()) {
-                    found = best_legal_graveyard_card(self, is_legal_gy);
+                    found = best_graveyard_card(
+                        self,
+                        controller,
+                        opp,
+                        eff.prefers_friendly_target_for_slot(slot, mode),
+                        is_legal_gy,
+                    );
                 }
                 found
             };
@@ -1108,31 +1109,47 @@ impl GameState {
     }
 }
 
-/// The graveyard card `is_legal` accepts with the highest mana value — the
-/// earliest in seat order on a tie (reanimation takes the best body).
-///
-/// Two call sites in `auto_targets_for_effect_all_slots_kicked` wrote this as
-/// `players.iter().flat_map(..).map(..).find(..)`; the walk is per graveyard
-/// card per slot and the adapter stack costs a `&mut F` forward per element
-/// (PERF (-78)).
+/// The graveyard card a bot names for a graveyard slot. Seats go
+/// friendly-first (controller, `opp`, the rest in turn order) or hostile-first
+/// (`opp`, the other opponents, controller last) — CR 102.2: at N seats every
+/// opponent's graveyard is reachable, not only `opp`'s. Within a seat the
+/// richest card wins (creature, then mana value; the earliest on a tie); a
+/// hostile body that only reaches its controller's own graveyard (magecraft's
+/// "exile a card from your graveyard") spends the poorest instead.
 ///
 /// Takes the card, not its id: the requirement goes through
-/// [`GameState::requirement_on_graveyard_card`], which skips the walker's
-/// battlefield miss and re-find for a card the loop already holds (PERF
-/// `(-185)`).
-fn best_legal_graveyard_card(
+/// [`GameState::requirement_on_graveyard_card`] at the enumerator's call
+/// site, which skips the walker's battlefield miss and re-find (PERF `(-185)`).
+fn best_graveyard_card(
     state: &GameState,
+    controller: usize,
+    opp: usize,
+    friendly: bool,
     is_legal: impl Fn(&CardInstance) -> bool,
 ) -> Option<Target> {
-    let mut best: Option<&CardInstance> = None;
-    for p in state.players.iter() {
-        for c in p.graveyard.iter() {
-            if best.is_none_or(|b| c.definition.cost.cmc() > b.definition.cost.cmc()) && is_legal(c) {
-                best = Some(c);
+    let n = state.players.len();
+    let others = (1..n)
+        .map(|k| (controller + k) % n)
+        .filter(|&s| s != opp && state.players[s].is_alive());
+    let head = if friendly { [Some(controller), Some(opp)] } else { [Some(opp), None] };
+    let tail = (!friendly).then_some(controller);
+    for p in head.into_iter().flatten().chain(others).chain(tail) {
+        let poorest = !friendly && p == controller;
+        let mut best: Option<((bool, u32), CardId)> = None;
+        for c in &state.players[p].graveyard {
+            if !is_legal(c) {
+                continue;
+            }
+            let key = (c.definition.is_creature(), c.definition.cost.cmc());
+            if best.is_none_or(|(k, _)| if poorest { key < k } else { key > k }) {
+                best = Some((key, c.id));
             }
         }
+        if let Some((_, id)) = best {
+            return Some(Target::Permanent(id));
+        }
     }
-    best.map(|c| Target::Permanent(c.id))
+    None
 }
 
 

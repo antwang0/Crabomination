@@ -2762,6 +2762,14 @@ mod tests {
         // (0 → 2) change winner; aggregate within noise (3,000 games, seed
         // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
         // turns).
+        // Re-blessed 2026-09-28 (`targeting.rs::best_graveyard_card`: a
+        // graveyard target names the richest card and reaches every
+        // opponent's graveyard — bisected: the picker alone moves it, the
+        // same commit's card conversions do not): seed 4242 61→108 turns,
+        // same winner; the other two unmoved. Aggregate, 2,000 games at
+        // seed 9991, before/after: 40.12/40.06, 60.43/60.02, 83.77/83.32
+        // turns at 3/4/6 seats, every block 2,000/2,000 decided; `--bench`
+        // 197,136 byte-identical.
         // Re-blessed 2026-09-28 (`server/generic_sink.rs`): the generic
         // activation sink also runs at the end step of the opponent seated
         // just before the bot. Same winners; seed 43 takes 21 more actions.
@@ -2770,7 +2778,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2583),
             (43, Some(0), 54, 2838),
-            (4242, Some(3), 61, 2970),
+            (4242, Some(3), 108, 4815),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
