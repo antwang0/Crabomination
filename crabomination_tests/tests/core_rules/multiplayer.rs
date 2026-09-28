@@ -7069,3 +7069,28 @@ fn an_opponent_is_one_opponent() {
     let drawn: usize = (1..4).map(|s| g.players[s].hand.len() - before[s - 1]).sum();
     assert_eq!(drawn, 1, "one opponent drew one card");
 }
+
+/// CR 800.4i (2026-09-25 text) — a departed player's actions "during their
+/// last turn" are findable only until their next turn would have begun.
+/// Avenge's "a player attacked you during their last turn" read a departed
+/// seat's attack forever: its record rolled over only as its own turn began,
+/// and that turn never does.
+#[test]
+fn cr_800_4i_a_departed_seats_last_turn_ends_when_its_turn_would_begin() {
+    use crabomination::effect::Predicate;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.players[1].attacked_players_this_turn.push(0);
+    g.concede(1);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let attacked = |g: &GameState| g.evaluate_predicate(&Predicate::APlayerAttackedYouLastTurn, &ctx);
+    assert!(attacked(&g));
+    g.do_cleanup(&mut Vec::new()); // seat 2's turn
+    assert_eq!(g.active_player_idx, 2);
+    assert!(attacked(&g), "seat 1's next turn has not come round");
+    g.do_cleanup(&mut Vec::new()); // seat 0's turn
+    assert!(attacked(&g), "still before seat 1's slot");
+    g.do_cleanup(&mut Vec::new()); // seat 1's slot passes; seat 2's turn
+    assert_eq!(g.active_player_idx, 2);
+    assert!(!attacked(&g), "seat 1's next turn would have begun");
+}

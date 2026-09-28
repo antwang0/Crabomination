@@ -5311,7 +5311,22 @@ impl GameState {
             // infinite loop in pathological "everyone skips" scenarios.
             let n_players = self.players.len();
             for _ in 0..n_players.max(1) {
-                self.active_player_idx = self.next_alive_seat(self.active_player_idx);
+                let from = self.active_player_idx;
+                self.active_player_idx = self.next_alive_seat(from);
+                // CR 800.4i — a departed seat's "last turn" actions are
+                // findable only until its next turn would have begun, which
+                // is now for every seat the rotation just walked past.
+                let n = n_players;
+                let mut s = from;
+                loop {
+                    s = if self.turn_order_reversed { (s + n - 1) % n } else { (s + 1) % n };
+                    if s == self.active_player_idx || s == from {
+                        break;
+                    }
+                    if !self.players[s].attacked_players_this_turn.is_empty() {
+                        self.players[s].attacked_players_this_turn.clear();
+                    }
+                }
                 self.turn_number += 1;
                 let skipped = self.players[self.active_player_idx].skip_turns;
                 if skipped == 0 {
