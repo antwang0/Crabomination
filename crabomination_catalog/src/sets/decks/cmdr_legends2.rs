@@ -8,7 +8,7 @@
 //! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
 //! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
 //! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
-//! Fools, Sivitri, Dragon Master and Elminster.
+//! Fools, Sivitri, Dragon Master, Elminster and Tasha, the Witch Queen.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -830,6 +830,75 @@ pub fn elminster() -> CardDefinition {
             cost(&[generic(3), w(), u()]),
             crate::card::PlaneswalkerSubtype::Elminster,
             5,
+        )
+    }
+}
+
+/// Tasha, the Witch Queen — casting a spell you don't own makes a 3/3 Demon;
+/// +1: draw, then exile up to one instant or sorcery from each opponent's
+/// graveyard with a page counter; −3: you may cast a spell from among
+/// page-countered exiled cards for free. Can be your commander.
+pub fn tasha_the_witch_queen() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let demon = std::sync::Arc::new(TokenDefinition {
+        name: "Demon".into(),
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    });
+    let instant_or_sorcery = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellNotOwnedByYou),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: demon },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    // CR 601.2c — one target per opponent's graveyard.
+                    Effect::ForEachOpponentTarget {
+                        body: Box::new(Effect::ApplyToTargets {
+                            max_targets: 7,
+                            min_targets: 0,
+                            filter: instant_or_sorcery().and(R::InOpponentGraveyard),
+                            effect: Box::new(Effect::Seq(vec![
+                                Effect::Move { what: Selector::Target(0), to: crate::effect::ZoneDest::Exile },
+                                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Page, amount: Value::ONE },
+                            ])),
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                // The cast's own "may" (`Decision::OptionalTrigger`, CastFree).
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::EachPlayer,
+                        zone: crate::card::Zone::Exile,
+                        filter: R::WithCounter(CounterType::Page).and(R::Land.negate()),
+                    }),
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..walker_commander(
+            "Tasha, the Witch Queen",
+            cost(&[generic(3), u(), b()]),
+            crate::card::PlaneswalkerSubtype::Tasha,
+            4,
         )
     }
 }

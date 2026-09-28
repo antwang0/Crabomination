@@ -634,7 +634,7 @@ modelled at all, so there is no filter to correct.
 | --- | --- |
 | Bloodthirsty Adversary | 🟡 the kicker payoff ships (exile, copy, cast free) but the cards are the engine's pick in graveyard order, not targets. |
 | Rydia, Summoner of Mist | 🟡 the **Summon** ability ("{X}, {T}: Return target Saga card with mana value X from your graveyard to the battlefield with a finality counter on it") is not modelled; only the landfall loot ships. |
-| Jeska, Thrice Reborn | 🟡 the −X's "each of up to three targets": `GameAction::ActivateLoyaltyAbility` carries one target, so slots 2 and 3 are `auto_extra_targets_for`'s pick, which fills permanents only and stops at the first player it prefers. |
+| Jeska, Thrice Reborn / Tasha, the Witch Queen | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets", Tasha's +1 "for each opponent … up to one target": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick, which fills permanents only and stops at the first player it prefers (Tasha's graveyard cards past the first are not filled). |
 
 Three approximations the fixes left standing, each documented at its variant:
 

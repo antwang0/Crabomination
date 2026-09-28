@@ -499,3 +499,28 @@ fn elminster_scry_discount_and_faerie_dragons() {
     activate_loyalty(&mut g, elminster, 1, None, None);
     assert_eq!(g.battlefield.len(), before + 5, "Serra Angel is mana value 5");
 }
+
+/// Tasha's +1 exiles an opponent's instant or sorcery with a page counter;
+/// her −3 casts it free — a spell she doesn't own, so a 3/3 Demon follows.
+/// (The other opponents' slots are the loyalty auto-fill — INCOMPLETE_CARDS.)
+#[test]
+fn tasha_pages_opposing_spells_and_casts_them() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let tasha = g.add_card_to_battlefield(0, catalog::tasha_the_witch_queen());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    activate_loyalty(&mut g, tasha, 0, Some(Target::Permanent(bolt)), None);
+    let paged = g.exile.iter().find(|c| c.id == bolt).expect("Bolt exiled");
+    assert_eq!(paged.counter_count(CounterType::Page), 1, "CR 400.7: the effect that moved it finds it");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.battlefield_find_mut(tasha).unwrap().add_counters(CounterType::Loyalty, 3);
+    let hand = g.players[0].hand.len();
+    let before = g.battlefield.len();
+    g.battlefield_find_mut(tasha).unwrap().loyalty_uses_this_turn = 0;
+    activate_loyalty(&mut g, tasha, 1, None, None);
+    assert!(g.exile.iter().all(|c| c.id != bolt), "Bolt was cast from exile");
+    assert_eq!(g.battlefield.len(), before + 1, "a spell she doesn't own: one Demon");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Demon"));
+    let _ = hand;
+}
