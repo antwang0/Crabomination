@@ -2121,11 +2121,11 @@ pub struct ResolutionScratch {
     #[serde(skip)]
     pub(crate) destroyed_this_resolution: Vec<CardId>,
     /// Transient: parallel to `destroyed_this_resolution`, each destroyed
-    /// permanent's controller as it was destroyed and whether it was a
-    /// creature — tokens included, which the card list can no longer find.
-    /// Read by `Value::CreaturesDestroyedThisResolutionControlledBy`.
+    /// permanent's controller as it was destroyed, whether it was a creature
+    /// and whether it was a token — tokens included, which the card list can
+    /// no longer find. Read by `Value::*DestroyedThisResolutionControlledBy`.
     #[serde(skip)]
-    pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool)>,
+    pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool, bool)>,
     /// Transient: the land cards the last `Effect::Parley` revealed, read by
     /// `Value::LandCardsRevealedThisEffect` inside its body (Phabine).
     #[serde(skip)]

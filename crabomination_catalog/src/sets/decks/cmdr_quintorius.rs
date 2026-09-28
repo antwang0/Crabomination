@@ -308,9 +308,7 @@ pub fn ceaseless_conflict() -> CardDefinition {
             Effect::Destroy { what: Selector::EachPermanent(R::Creature) },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::CountOf(Box::new(Selector::DestroyedThisResolution {
-                    filter: R::Creature.and(R::OwnedByYou),
-                })),
+                count: Value::NontokenCreaturesDestroyedThisResolutionControlledBy(PlayerRef::You),
                 definition: rw_spirit(),
             },
         ]),

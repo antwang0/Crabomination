@@ -3275,7 +3275,8 @@ impl GameState {
             return false;
         }
         let is_creature = self.permanent_is_creature(cid);
-        let controller = self.battlefield_find(cid).map(|c| c.controller);
+        let (controller, is_token) =
+            self.battlefield_find(cid).map_or((None, false), |c| (Some(c.controller), c.is_token));
         // Cache the dying card's snapshot for AnotherOfYours-scope triggers,
         // type filter predicates (token deaths vanish before dispatch) and
         // post-destruction LKI reads of its counters (CR 603.10 — Dismantle).
@@ -3292,7 +3293,7 @@ impl GameState {
             self.permanents_destroyed_this_resolution.saturating_add(1);
         self.scratch.destroyed_this_resolution.push(cid);
         if let Some(controller) = controller {
-            self.scratch.destroyed_controllers_this_resolution.push((controller, is_creature));
+            self.scratch.destroyed_controllers_this_resolution.push((controller, is_creature, is_token));
         }
         true
     }

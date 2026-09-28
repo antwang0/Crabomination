@@ -1935,3 +1935,28 @@ fn angelic_intervention_protects_a_planeswalker_without_a_counter() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
 }
+
+/// Ceaseless Conflict — "a 3/2 Spirit for each NONTOKEN creature you
+/// CONTROLLED that was destroyed this way". It counted destroyed creatures
+/// you OWN, tokens included: a stolen creature gave nothing, your creature
+/// under an opponent's control and your tokens gave Spirits.
+#[test]
+fn ceaseless_conflict_counts_nontoken_creatures_you_controlled() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    for _ in 0..2 {
+        let stolen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(stolen).unwrap().controller = 0;
+    }
+    let lent = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(lent).unwrap().controller = 1;
+    let cc = g.add_card_to_hand(0, catalog::ceaseless_conflict());
+    g.players[0].mana_pool.add(Color::White, 5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crabomination::game::cast(&mut g, cc);
+    let spirits = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 3, "your Bears and the two stolen; not the token, not the lent one");
+}

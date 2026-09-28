@@ -1606,6 +1606,10 @@ pub enum Value {
     /// included. Deadly Tempest's "each player loses life equal to the number
     /// of creatures they controlled that were destroyed this way".
     CreaturesDestroyedThisResolutionControlledBy(PlayerRef),
+    /// As `CreaturesDestroyedThisResolutionControlledBy`, tokens excluded —
+    /// Ceaseless Conflict's "for each nontoken creature you controlled that
+    /// was destroyed this way".
+    NontokenCreaturesDestroyedThisResolutionControlledBy(PlayerRef),
     /// Every permanent destroyed so far this resolution that `who` controlled
     /// as it was destroyed, of any type — From the Ashes's "for each land
     /// destroyed this way, its controller may search". Reads the same scratch
