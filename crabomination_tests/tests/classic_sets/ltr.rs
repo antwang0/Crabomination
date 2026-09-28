@@ -873,15 +873,19 @@ fn samwise_food_and_recursion() {
     for _ in 0..3 {
         g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
     }
+    // CR 700.6 — "target historic card": a Bear is refused, a Saga returns.
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let saga = g.add_card_to_graveyard(0, catalog::history_of_benalia());
     let food_count = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count();
     assert_eq!(food_count, 3, "three Foods present");
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: sam, ability_index: 0, target: Some(Target::Permanent(bear)),
+    let activate = |g: &mut GameState, t| g.perform_action(GameAction::ActivateAbility {
+        card_id: sam, ability_index: 0, target: Some(Target::Permanent(t)),
         additional_targets: vec![], x_value: None, mode: None,
-    }).expect("activate Samwise");
+    });
+    assert!(activate(&mut g, bear).is_err(), "a Bear is not historic");
+    activate(&mut g, saga).expect("activate Samwise");
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear back in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == saga), "the Saga back in hand");
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count(), 0, "Foods sacrificed");
 }
 
@@ -970,6 +974,14 @@ fn gloin_treasure_on_historic_cast() {
     cast(&mut g, bilbo);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
         "Treasure made for the historic cast");
+    // CR 700.6 — a Saga is historic too.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gloin_dwarf_emissary());
+    let saga = g.add_card_to_hand(0, catalog::history_of_benalia());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, saga);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "a Saga is historic");
 }
 
 /// Improvised Club requires sacrificing an artifact/creature and deals 4.

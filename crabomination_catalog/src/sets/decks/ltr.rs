@@ -1443,7 +1443,7 @@ pub fn samwise_gamgee() -> CardDefinition {
                 3,
             )),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
+                what: target_filtered(SelectionRequirement::historic().from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()
@@ -1563,8 +1563,7 @@ pub fn gloin_dwarf_emissary() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellMatches(
-                    SelectionRequirement::Artifact
-                        .or(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                    SelectionRequirement::historic(),
                 ))
                 .once_per_turn(),
             effect: Effect::CreateToken {
