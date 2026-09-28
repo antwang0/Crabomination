@@ -1786,8 +1786,10 @@ impl Effect {
             Effect::Search { who, to, .. } | Effect::SearchZones { who, to, .. } => {
                 player_has_target(who) || zonedest_has_target(to)
             }
-            Effect::SearchUpToN { who, to, .. } => {
-                player_has_target(who) || zonedest_has_target(to)
+            // `count` may name the target the search is keyed on ("the same
+            // name as target creature" — Pack Hunt, Mask of the Mimic).
+            Effect::SearchUpToN { who, to, count, .. } => {
+                player_has_target(who) || zonedest_has_target(to) || value_has_target(count)
             }
             Effect::SearchPickedBy { who, picker, to, .. } => {
                 player_has_target(who) || player_has_target(picker) || zonedest_has_target(to)
@@ -5003,6 +5005,7 @@ impl Effect {
                 Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                     sel_find(who, slot).or_else(|| val_find(amount, slot))
                 }
+                Effect::SearchUpToN { who, count, .. } => pref_find(who, slot).or_else(|| val_find(count, slot)),
                 Effect::LoseHalfLife { who, .. }
                 | Effect::LoseLifePerControlled { who, .. }
                 | Effect::MillHalf { who, .. }
