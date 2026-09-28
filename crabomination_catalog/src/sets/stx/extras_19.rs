@@ -414,7 +414,7 @@ pub fn radiant_scrollwielder() -> CardDefinition {
             ),
             effect: Effect::Seq(vec![
                 Effect::Move {
-                    what: Selector::Take {
+                    what: Selector::TakeRandom {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::You,
                             zone: Zone::Graveyard,
