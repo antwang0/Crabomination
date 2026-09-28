@@ -251,14 +251,16 @@ pub fn pharikas_cure() -> CardDefinition {
     }
 }
 
-/// Fade into Antiquity — {2}{G} Sorcery. Exile target enchantment.
+/// Fade into Antiquity — {2}{G} Sorcery. Exile target artifact or enchantment.
 pub fn fade_into_antiquity() -> CardDefinition {
     CardDefinition {
         name: "Fade into Antiquity",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Exile {
-            what: target_filtered(SelectionRequirement::Enchantment),
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
         },
         ..Default::default()
     }

@@ -2669,3 +2669,28 @@ fn artifact_creature_or_enchantment_is_not_any_nonland_permanent() {
         additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "Trickster Mage can't tap a planeswalker");
 }
+
+/// Printed target type lists the definitions had cut short: Get Lost's
+/// enchantment, Strangle's planeswalker, Fade into Antiquity's artifact.
+#[test]
+fn target_type_lists_carry_every_printed_type() {
+    let mut g = main_phase();
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    let id = g.add_card_to_hand(0, catalog::get_lost());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, id, Some(Target::Permanent(aura))).expect("Get Lost on an enchantment");
+
+    let mut g = main_phase();
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    let id = g.add_card_to_hand(0, catalog::strangle());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, id, Some(Target::Permanent(jace))).expect("Strangle on a planeswalker");
+
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::fade_into_antiquity());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    cast(&mut g, id, Some(Target::Permanent(ring))).expect("Fade into Antiquity on an artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "exiled");
+}

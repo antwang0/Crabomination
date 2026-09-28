@@ -11299,8 +11299,8 @@ pub fn cremate() -> CardDefinition {
 
 // ── modern_decks-15: 12 new cube cards ────────────────────────────────────────
 
-/// Strangle — {R} Instant. Strangle deals 3 damage to target creature.
-/// Surveil 1.
+/// Strangle — {R} Sorcery. Strangle deals 3 damage to target creature or
+/// planeswalker. Surveil 1.
 ///
 /// Single-target burn-plus-surveil instant — Drown in Ichor's red mirror.
 /// `Seq([DealDamage(target Creature, 3), Surveil 1])`.
@@ -11311,7 +11311,9 @@ pub fn strangle() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
                 amount: Value::Const(3),
             },
             Effect::Surveil {
@@ -40202,7 +40204,8 @@ pub fn overlord_of_the_hauntwoods() -> CardDefinition {
 
 // ── Misc modern staples ──────────────────────────────────────────────────────
 
-/// Get Lost — {1}{W} Instant. Destroy target creature or planeswalker. Its
+/// Get Lost — {1}{W} Instant. Destroy target creature, enchantment, or
+/// planeswalker. Its
 /// owner creates two Map tokens. (Uses owner; differs from "controller" only
 /// under control-stealing.)
 pub fn get_lost() -> CardDefinition {
@@ -40215,7 +40218,9 @@ pub fn get_lost() -> CardDefinition {
             Effect::Destroy {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Enchantment)
+                        .or(SelectionRequirement::Planeswalker),
                 },
             },
             Effect::CreateToken {

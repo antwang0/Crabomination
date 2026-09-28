@@ -611,7 +611,7 @@ pub fn pyrokinesis() -> CardDefinition {
 }
 
 /// Bone Shards — {B} Sorcery. As an additional cost, sacrifice a creature
-/// or discard a card. Destroy target creature.
+/// or discard a card. Destroy target creature or planeswalker.
 pub fn bone_shards() -> CardDefinition {
     CardDefinition {
         name: "Bone Shards",
@@ -628,7 +628,9 @@ pub fn bone_shards() -> CardDefinition {
             },
         ])],
         effect: Effect::Destroy {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
         },
         ..Default::default()
     }

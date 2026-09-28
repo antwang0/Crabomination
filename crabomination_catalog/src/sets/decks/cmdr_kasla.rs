@@ -313,8 +313,8 @@ pub fn saint_traft_and_rem_karolus() -> CardDefinition {
     }
 }
 
-/// Shatter the Source — convoke; 6 damage to a creature or planeswalker, or
-/// destroy an artifact.
+/// Shatter the Source — convoke; 6 damage to a creature, planeswalker, or
+/// battle, or destroy an artifact.
 pub fn shatter_the_source() -> CardDefinition {
     spell(
         "Shatter the Source",
@@ -322,7 +322,9 @@ pub fn shatter_the_source() -> CardDefinition {
         CardType::Instant,
         Effect::ChooseMode(vec![
             Effect::DealDamage {
-                to: target_filtered(R::Creature.or(R::Planeswalker)),
+                to: target_filtered(
+                    R::Creature.or(R::Planeswalker).or(R::HasCardType(CardType::Battle)),
+                ),
                 amount: Value::Const(6),
             },
             Effect::Destroy { what: target_filtered(R::Artifact) },
