@@ -951,7 +951,10 @@ pub fn the_curse_of_fenric() -> CardDefinition {
         ])),
         (3, Effect::Fight {
             attacker: target_filtered(R::HasCreatureType(CreatureType::Mutant)),
-            defender: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature.and(R::OtherThanTargetSlot(0)),
+            },
         }),
     ])
 }

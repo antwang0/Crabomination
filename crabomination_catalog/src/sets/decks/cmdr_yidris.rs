@@ -144,8 +144,9 @@ pub fn cruel_entertainment() -> CardDefinition {
         "Cruel Entertainment",
         cost(&[generic(6), b()]),
         CardType::Sorcery,
-        // Both slots declare their printed filter ("two target players"):
-        // the controller of a player target is that player.
+        // Both slots declare their printed filter ("target player and
+        // another target player"): the controller of a player target is that
+        // player.
         Effect::PlayersControlEachOthersNextTurn {
             first: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered {
                 slot: 0,
@@ -153,7 +154,7 @@ pub fn cruel_entertainment() -> CardDefinition {
             })),
             second: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Player,
+                filter: R::Player.and(R::OtherThanTargetSlot(0)),
             })),
         },
     )

@@ -293,7 +293,7 @@ pub fn nexus_mentality() -> CardDefinition {
         vec![
             Effect::MoveAllCounters {
                 from: target_filtered(nonland()),
-                to: Selector::TargetFiltered { slot: 1, filter: nonland() },
+                to: Selector::TargetFiltered { slot: 1, filter: nonland().and(R::OtherThanTargetSlot(0)) },
             },
             Effect::Seq(vec![
                 Effect::Draw {

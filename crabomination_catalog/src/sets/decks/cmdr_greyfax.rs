@@ -265,7 +265,15 @@ pub fn cybernetica_datasmith() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Draw { who: target_filtered(R::Player), amount: Value::ONE },
-                Effect::CreateToken { who: PlayerRef::Target(1), count: Value::ONE, definition: robot },
+                // "Another target player" — a filtered slot, not a bare `Target(1)`.
+                Effect::CreateToken {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Player.and(R::OtherThanTargetSlot(0)),
+                    })),
+                    count: Value::ONE,
+                    definition: robot,
+                },
             ]),
             ..Default::default()
         }],
