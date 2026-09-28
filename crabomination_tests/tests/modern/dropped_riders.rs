@@ -2975,34 +2975,39 @@ fn seeds_of_renewal_with_both_targets_gone_does_not_resolve() {
     assert!(!g.exile.iter().any(|c| c.id == id), "countered on resolution, not exiled");
 }
 
-/// Exalted Angel — "whenever this creature deals damage, you gain that much
-/// life" is a trigger, not lifelink (it shipped with the keyword): the life
-/// arrives when the trigger resolves.
+/// Exalted Angel, Paladin of Prahv — "whenever this creature deals damage,
+/// you gain that much life" is a trigger, not lifelink (both shipped with the
+/// keyword): the life arrives when the trigger resolves.
 #[test]
-fn exalted_angel_gains_life_by_trigger() {
-    let mut g = main_phase();
-    let angel = g.add_card_to_battlefield(0, catalog::exalted_angel());
-    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Lifelink));
-    g.clear_sickness(angel);
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
-        attacker: angel,
-        target: crabomination::game::types::AttackTarget::Player(1),
-    }]))
-    .expect("attack");
-    g.step = TurnStep::DeclareBlockers;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
-    let life = g.players[0].life;
-    for _ in 0..6 {
-        if g.step == TurnStep::PostCombatMain {
-            break;
+fn damage_lifegain_triggers_are_not_lifelink() {
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let cards: [(Factory, i32); 2] = [(catalog::exalted_angel, 4), (catalog::paladin_of_prahv, 3)];
+    for (card, power) in cards {
+        let name = card().name;
+        let mut g = main_phase();
+        let id = g.add_card_to_battlefield(0, card());
+        assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Lifelink), "{name}");
+        g.clear_sickness(id);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: id,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        let life = g.players[0].life;
+        for _ in 0..6 {
+            if g.step == TurnStep::PostCombatMain {
+                break;
+            }
+            if let Ok(ev) = g.advance_step(Vec::new()) {
+                g.dispatch_triggers_for_events(&ev);
+            }
+            drain_stack(&mut g);
         }
-        if let Ok(ev) = g.advance_step(Vec::new()) {
-            g.dispatch_triggers_for_events(&ev);
-        }
-        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 20 - power, "{name}");
+        assert_eq!(g.players[0].life, life + power, "{name}: the trigger gained its damage");
     }
-    assert_eq!(g.players[1].life, 16);
-    assert_eq!(g.players[0].life, life + 4, "the trigger gained 4");
 }

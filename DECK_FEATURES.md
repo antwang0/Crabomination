@@ -1141,8 +1141,8 @@ own Wolves, Fire Lord Zuko and Nassari missed them. The primitives:
 `StaticEffect::FreeExileCastOncePerTurnMatching` (Tlincalli Hunter's
 creature-only {0}; the shared `free_exile_cast_waiver` now reaches an
 adventurer's cast, Warped Space's too). Residuals: **Aurora Phoenix** doesn't
-see cascade granted by a trigger; **Durnan** takes the first creature of the four and its cast has no
-undaunted. Pods (release,
+see cascade granted by a trigger; **Durnan**'s undaunted holds only while it is on the battlefield
+(the pick among the four is the controller's since `LookExileGrant::CreatureMayWhileExiled`). Pods (release,
 seed 10221, 1,000 games beside Trostani / Ranar / Urza): 1,000/1,000
 decided, no card of the four lists unplayed, Faldorn 13.4 %; six seats
 beside Anikthea / Trostani / Ranar / Urza / Brimaz (seed 10222, 400 games)

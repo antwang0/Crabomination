@@ -7953,7 +7953,8 @@ one of its own reasons teaches the next run to ignore the word.**
     Dominance (cast-time creature-type choice on a spell with no permanent to
     stamp `chosen_creature_type`).
 - ⏳ **Noticed this run (recent81–83 batches):**
-  - **Auto-targeter ignores target slots embedded in a `Value`.** A trigger
+  - ✅ (`01P3edJz`: Wall of Reverence targets through `Value::PowerOf` and
+    its test auto-targets; Solitude does the same.) **Auto-targeter ignores target slots embedded in a `Value`.** A trigger
     whose only target lives inside `Value::PowerOf(Selector::TargetFiltered{..})`
     (e.g. Wall of Reverence's "gain life equal to the power of target creature
     you control") isn't auto-targeted, so it resolves as 0. Wall of Reverence is
@@ -8308,8 +8309,8 @@ one of its own reasons teaches the next run to ignore the word.**
   tax (`StaticEffect::ActivationTax` — Suppression Field), Reckoner
   Bankbuster (charge-empty payout via `remove_counter_cost` + If).
 - ⏳ **Still deferred:**
-  - **Exalted Angel's printed trigger** is modeled as Lifelink (gains on
-    any damage it deals — equivalent in practice).
+  - ✅ **Exalted Angel's printed trigger** (was Lifelink) — a `DealsDamage`
+    self trigger since `01P3edJz`.
   - **Eon Hub vs. suspend/pacts**: skipped upkeeps also skip suspend ticks
     and pact payments — correct per CR 614.10b, but worth a regression test
     when pact decks meet Eon Hub.

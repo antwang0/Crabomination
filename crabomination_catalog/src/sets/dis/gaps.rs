@@ -463,10 +463,9 @@ pub fn cytoplast_manipulator() -> CardDefinition {
     }
 }
 
-/// Paladin of Prahv — {4}{W}{W} 3/4 Human Knight. "Whenever this creature deals
-/// damage, you gain that much life" is modeled as Lifelink (CR 702.15). Forecast
-/// — {1}{W}: Whenever target creature deals damage this turn, you gain that much
-/// life.
+/// Paladin of Prahv — {4}{W}{W} 3/4 Human Knight. Whenever this creature deals
+/// damage, you gain that much life (a trigger, not lifelink). Forecast — {1}{W}:
+/// Whenever target creature deals damage this turn, you gain that much life.
 pub fn paladin_of_prahv() -> CardDefinition {
     CardDefinition {
         name: "Paladin of Prahv",
@@ -478,7 +477,10 @@ pub fn paladin_of_prahv() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
         activated_abilities: vec![forecast(
             cost(&[generic(1), w()]),
             Effect::GainLifeWhenTargetDealsDamageThisTurn { slot: 0 },
