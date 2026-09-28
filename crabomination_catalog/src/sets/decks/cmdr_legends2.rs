@@ -8,7 +8,8 @@
 //! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
 //! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
 //! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
-//! Fools, Sivitri, Dragon Master, Elminster and Tasha, the Witch Queen.
+//! Fools, Sivitri, Dragon Master, Elminster and Tasha, the Witch Queen; and
+//! Jon Irenicus, Shattered One.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -899,6 +900,45 @@ pub fn tasha_the_witch_queen() -> CardDefinition {
             cost(&[generic(3), u(), b()]),
             crate::card::PlaneswalkerSubtype::Tasha,
             4,
+        )
+    }
+}
+
+/// Jon Irenicus, Shattered One — at your end step, target opponent gains
+/// control of up to one target creature you control; it gets two +1/+1
+/// counters, taps, is goaded for the rest of the game and can't be
+/// sacrificed. A creature you own but don't control attacking draws you a
+/// card.
+pub fn jon_irenicus_shattered_one() -> CardDefinition {
+    let gift = || Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                // Slot 0 the creature, slot 1 the opponent (Harmless Offering's shape).
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::GainControl { what: gift(), to: Some(PlayerRef::Target(1)), duration: Duration::Permanent },
+                        Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::GoadForTheGame { what: Selector::Target(0) },
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBeSacrificed, duration: Duration::Permanent },
+                    ])),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer)
+                    .with_filter(trigger_source_is(R::Creature.and(R::OwnedByYou).and(R::ControlledByOpponent))),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..legend(
+            "Jon Irenicus, Shattered One",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Elf, CreatureType::Wizard],
+            3,
+            3,
         )
     }
 }

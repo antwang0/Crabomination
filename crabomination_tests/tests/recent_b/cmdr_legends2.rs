@@ -524,3 +524,32 @@ fn tasha_pages_opposing_spells_and_casts_them() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Demon"));
     let _ = hand;
 }
+
+/// Jon Irenicus's end step hands a creature to an opponent: two +1/+1
+/// counters, tapped, goaded for the rest of the game (CR 701.15), can't be
+/// sacrificed; when it attacks, its owner draws.
+#[test]
+fn jon_irenicus_gifts_a_goaded_creature_and_draws_when_it_attacks() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::jon_irenicus_shattered_one());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    let new_owner = c.controller;
+    assert_ne!(new_owner, 0, "an opponent controls it");
+    assert!(c.tapped && c.counter_count(crabomination::card::CounterType::PlusOnePlusOne) == 2);
+    assert!(g.computed_permanent(bear).unwrap().keywords().has_kw(&Keyword::CantBeSacrificed));
+
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    g.clear_sickness(bear);
+    g.active_player_idx = new_owner;
+    g.priority.player_with_priority = new_owner;
+    g.step = TurnStep::DeclareAttackers;
+    let other = if new_owner == 1 { 2 } else { 1 };
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(other) }]))
+        .expect("the goaded Bears attack someone else");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "its owner draws");
+}

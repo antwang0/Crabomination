@@ -4504,6 +4504,7 @@ static DECKS: &[Factory] = &[
     super::decks::sivitri_dragon_master,
     super::decks::elminster,
     super::decks::tasha_the_witch_queen,
+    super::decks::jon_irenicus_shattered_one,
     super::decks::aragorn_the_uniter,
     super::decks::zur_the_enchanter,
     super::decks::flubs_the_fool,
