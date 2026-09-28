@@ -17,28 +17,17 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w};
 /// A Desert dual land: enters tapped, ETB pings an opponent for 1, taps for
 /// either of its two colors (the OTJ "painland Desert" cycle).
 fn desert_painland(name: &'static str, a: Color, b: Color) -> CardDefinition {
-    CardDefinition {
+    // "This land enters tapped. When this land enters, it deals 1 damage to
+    // target opponent." — a real enters-tapped replacement (no window to tap
+    // it for mana first) and ONE opponent, not each.
+    let mut d = crate::sets::tapland_untyped(
         name,
-        card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Desert],
-            ..Default::default()
-        },
-        activated_abilities: vec![crate::sets::tap_add(a), crate::sets::tap_add(b)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::This,
-                },
-                Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
-        ..Default::default()
-    }
+        a,
+        b,
+        etb(Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::Const(1) }),
+    );
+    d.subtypes = Subtypes { land_types: vec![LandType::Desert], ..Default::default() };
+    d
 }
 
 pub fn bristling_backwoods() -> CardDefinition {

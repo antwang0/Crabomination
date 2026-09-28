@@ -931,16 +931,22 @@ mod recent127 {
     use crabomination::game::{drain_stack, two_player_game};
     use crabomination::mana::Color;
 
-    /// A Desert painland enters tapped and pings an opponent for 1.
+    /// A Desert painland enters tapped and pings ONE target opponent for 1 —
+    /// at 3 seats the other opponent is untouched (it pinged every opponent).
     #[test]
     fn desert_painland_etb_ping() {
-        let mut g = two_player_game();
-        let opp = g.players[1].life;
-        let land = g.add_card_to_battlefield(0, catalog::bristling_backwoods());
-        g.fire_self_etb_triggers(land, 0);
-        drain_stack(&mut g);
+        let mut g = crabomination::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = crabomination::TurnStep::PreCombatMain;
+        let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+        let land = g.add_card_to_hand(0, catalog::bristling_backwoods());
+        g.perform_action(GameAction::PlayLand(land)).expect("land drop");
         assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
-        assert_eq!(g.players[1].life, opp - 1, "opponent pinged for 1");
+        drain_stack(&mut g);
+        let lost: i32 = (1..3).map(|p| lives[p] - g.players[p].life).sum();
+        assert_eq!(lost, 1, "one opponent pinged for 1");
+        assert_eq!(g.players[0].life, lives[0]);
     }
 
     /// Eroded Canyon (completing the 10-Desert cycle) taps for either of its two
