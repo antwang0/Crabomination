@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -309,4 +309,35 @@ fn apex_altisaur_declines_a_fight_it_cannot_win() {
     assert!(g.battlefield_find(pig).is_none(), "the Pig it could kill");
     assert!(g.battlefield_find(zetalpa).is_some());
     assert!(g.battlefield_find(alti).is_some_and(|c| c.damage == 0), "never fought Zetalpa");
+}
+
+/// Landroval attack: two bears, split or together.
+fn landroval_attack(split: bool) -> (GameState, [CardId; 2]) {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::landroval_horizon_witness());
+    let bears = [0, 1].map(|_| {
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(b);
+        b
+    });
+    g.step = TurnStep::DeclareAttackers;
+    let second = if split { 2 } else { 1 };
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bears[0], target: AttackTarget::Player(1) },
+        Attack { attacker: bears[1], target: AttackTarget::Player(second) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    (g, bears)
+}
+
+/// CR 506.2 — "two or more creatures you control attack a player" counts
+/// the attackers at ONE player: two bears split across two seats don't
+/// trigger Landroval, two at one seat do.
+#[test]
+fn cr_506_2_landroval_counts_attackers_per_player() {
+    let (g, bears) = landroval_attack(true);
+    assert!(bears.iter().all(|b| !g.permanent_has_keyword(*b, &Keyword::Flying)), "split: no trigger");
+    let (g, bears) = landroval_attack(false);
+    assert_eq!(bears.iter().filter(|b| g.permanent_has_keyword(**b, &Keyword::Flying)).count(), 1);
 }

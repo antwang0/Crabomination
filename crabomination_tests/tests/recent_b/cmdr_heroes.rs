@@ -190,6 +190,24 @@ fn shredders_copies_are_not_legendary() {
     assert!(g.attacking.iter().any(|a| a.attacker == copy.id && a.target == AttackTarget::Player(2)));
 }
 
+/// CR 506.2 — "whenever Shredder attacks a player": an attack on a
+/// planeswalker makes no copies.
+#[test]
+fn cr_506_2_shredder_attacking_a_planeswalker_makes_no_copies() {
+    let mut g = pod(3);
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let shredder = g.add_card_to_battlefield(0, catalog::shredder_shadow_master());
+    g.clear_sickness(shredder);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shredder,
+        target: AttackTarget::Planeswalker(walker),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Shredder, Shadow Master"), 1);
+}
+
 /// Vigor: damage to another creature of yours becomes +1/+1 counters; Vigor
 /// itself and an opponent's creature are hurt as usual.
 #[test]

@@ -448,8 +448,18 @@ pub fn landroval_horizon_witness() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
-                .with_filter(Predicate::AttackedWithCountAtLeast { who: PlayerRef::You, at_least: 2 }),
+            // CR 506.2 / 603.2c — two or more at ONE player, once per such player.
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsAttackingOpponentPlayer },
+                    Predicate::AttackedDefenderWithCountAtLeast {
+                        who: PlayerRef::You,
+                        defender: PlayerRef::DefendingPlayer,
+                        at_least: 2,
+                        include_planeswalkers: false,
+                    },
+                ]))
+                .once_per_batch_per_defender(),
             effect: attacker_flies(R::HasKeyword(Keyword::Flying).negate()),
         }],
         ..legendary(creature(
