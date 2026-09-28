@@ -202,6 +202,51 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Combat and targeting arrows as geometry (2026-09-28) — shipped
+
+Read off layout-harness screenshots of every combat and targeting state
+(`--combat blocks|declared|plan|target`, duel and pod, 1920x1080 and
+1280x720).
+
+- ✅ **Arrows are shaded ribbons, not gizmo lines** (`systems::arrows`).
+  Attack, block, stack and target-drag arrows were 3-5 px lines that read
+  as debug output next to the lit cards and chips. An arrow now arcs over
+  the table from source to target, turned to face the camera; it has a
+  dark rim (it reads over bright art), a flat body in its cue's colour, a
+  thin glowing core with bands of light running toward the target, a
+  tail that fades out of its source and a broad head. It grows out of its
+  source when it appears and fades when it goes. Immediate-mode like
+  gizmos: systems push to `Arrows`, `render_arrows` keeps one mesh per
+  `ArrowKey` across frames. The legal-target, decision-source and
+  defender rings are the same geometry, lying on the card's face.
+  - Tuning notes: past 1.0 the tonemapper and bloom turned a thin yellow
+    arrow to cream, so the body stays in range and only a thin core line
+    glows.
+- ✅ **Combat chips replace the swords and diamonds** (`combat_badge`).
+  ⚔ on an attacker, 🛡 on a blocker, coloured with its part in the combat:
+  orange attacking, cyan a declared block, green the viewer's planned
+  block (and the attacker it blocks), gold the blocker picked up, red an
+  attacker still unblocked. A chip sits at the top edge as seen — on an
+  opponent's upside-down card, toward the printed left, clear of the P/T
+  badge and keyword strip — or, when another card lies over that edge, at
+  the top of what shows.
+- ✅ **Arrows meet what shows.** A card covered by its neighbour is met in
+  the middle of its visible part (`CardCover::visible_centre`); an arrow
+  aimed at its centre landed on the card lying over it. Block and attack
+  arrows run chip to chip and stop at the chips' rims, the stop measured
+  as seen (an arrow coming in toward the camera leaves more of its curve
+  bare).
+- ✅ **Bug: a spell's legal-target rings never showed.**
+  `spawn_decision_ui` cleared `LegalTargets` on every frame without a
+  decision for the viewer — every frame of a cast's own targeting
+  session — so the rings `enumerate_for_cast` filled in were gone a frame
+  later, and a click on anything clickable was taken as the target. The
+  set now stays while a cast's session is open
+  (`casting_keeps_legal_targets`). A click off the legal set during a cast
+  is now ignored, as the click handler always meant.
+- ✅ **Layout harness:** `--combat SCENE` stages a combat or a targeting
+  pick client-side (patched view, set plans, auto-pass held).
+
 ## The stack beside the table, and a board that answers the cursor (2026-09-28) — shipped
 
 - ✅ **The 3-D stack hangs in a lane beside the table**
@@ -434,13 +479,6 @@ The graveyard browser shows cards as a flat unordered list.  Preserving
 insertion order (most recently added = top) matches player intuition and helps
 with "top of graveyard" effects.
 
-### Attacking / Blocking Arrow Polish
-Gizmo arrows are drawn in `draw_blocking_gizmos.rs` and `draw_attacker_overlays.rs`.
-Improvements:
-- Colour-code arrows by blocked/unblocked status.
-- Show combat damage assignment numbers on arrows.
-- Animate arrows fading in/out on declare-attackers/blockers transitions.
-
 ### Token Labeling
 Token cards in the 3D view use the Scryfall-fetched art path, which often
 resolves to a generic back image.  A text overlay (name + P/T) on token cards
@@ -657,7 +695,8 @@ plan, click an opponent planeswalker / player disc / 2-D HUD chip to
 reassign the last-added attacker's defender, Esc / right-click to clear,
 and `A` / the Attack button submits the picked plan (falling back to
 "attack all eligible at next opp" when the plan is empty). Selected
-attackers render gizmo diamonds (`gizmos.rs`).
+attackers show their ⚔ chip (`combat_badge.rs`) and an arrow to their
+defender.
 
 ⏳ Bigger lift still open: **drag an arrow** from attacker to defender /
 planeswalker as an alternative to click-to-assign.

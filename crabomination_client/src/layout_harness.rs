@@ -16,7 +16,8 @@
 //! the damage numerals in flight; `--stack` starts with two spells on the
 //! stack; `--mana-gallery` lays every kind of mana symbol over the board;
 //! `--hover-card NAME` hovers one of the viewer's battlefield cards (a
-//! screenshot run ignores the real mouse).
+//! screenshot run ignores the real mouse); `--combat SCENE` stages a combat
+//! or a targeting pick ([`CombatScene`]).
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -69,6 +70,8 @@ pub struct HarnessArgs {
     pub mana_gallery: bool,
     /// `--hover-card NAME`: that card of the viewer's is hovered.
     pub hover_card: Option<String>,
+    /// `--combat SCENE`: a combat or a targeting pick, staged client-side.
+    pub combat: Option<CombatScene>,
 }
 
 impl HarnessArgs {
@@ -101,6 +104,7 @@ impl HarnessArgs {
             stack: args.iter().any(|a| a == "--stack"),
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
             hover_card: value("--hover-card"),
+            combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
         }
     }
 
@@ -465,6 +469,173 @@ pub fn hover_card_for_screenshot(
     lift.target_lift = crate::card::BF_HOVER_LIFT;
     commands.entity(entity).insert(crate::card::CardHovered);
     *done = true;
+}
+
+/// What `--combat` stages. The match itself stays paused in the viewer's
+/// main phase: each view that arrives is patched, the viewer's plans are
+/// set, and auto-pass is held, so nothing moves on before the screenshot.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CombatScene {
+    /// `blocks`: seat 1 attacks the viewer, who is picking blocks — one
+    /// block planned, another blocker picked up.
+    Blocks,
+    /// `declared`: the viewer has attacked (in a pod, three seats at once)
+    /// and the defenders have blocked two of the attackers.
+    Declared,
+    /// `plan`: the viewer is picking attackers.
+    Plan,
+    /// `target`: the viewer is casting Lightning Bolt and pointing it at
+    /// seat 1's Serra Angel.
+    Target,
+}
+
+impl CombatScene {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "blocks" => Some(Self::Blocks),
+            "declared" => Some(Self::Declared),
+            "plan" => Some(Self::Plan),
+            "target" => Some(Self::Target),
+            _ => None,
+        }
+    }
+}
+
+/// The creatures that attack in a `--combat` scene; Serra Angel has
+/// vigilance, so it attacks untapped.
+const ATTACKERS: [&str; 3] = ["Tarmogoyf", "Shivan Dragon", "Serra Angel"];
+
+/// Who the `i`th attacker attacks in a `--combat declared` scene: seat 1 in
+/// a duel, a different opponent each in a pod.
+fn defender_for(i: usize, seats: usize) -> usize {
+    if seats <= 2 { 1 } else { 1 + i % (seats - 1) }
+}
+
+fn permanent_id(cv: &crabomination::net::ClientView, seat: usize, name: &str) -> Option<crabomination::card::CardId> {
+    cv.battlefield.iter().find(|p| p.controller == seat && p.name == name).map(|p| p.id)
+}
+
+/// Patch a view into `scene`'s step and attacks.
+fn stage_view(cv: &mut crabomination::net::ClientView, scene: CombatScene) {
+    use crabomination::game::AttackTarget;
+    let (viewer, seats) = (cv.your_seat, cv.players.len());
+    // Priority sits with a bot wherever the scene allows, which holds the
+    // client's auto-pass on its own.
+    let (step, active, priority) = match scene {
+        CombatScene::Blocks => (TurnStep::DeclareBlockers, 1, 1),
+        CombatScene::Declared => (TurnStep::DeclareBlockers, viewer, 1),
+        CombatScene::Plan => (TurnStep::DeclareAttackers, viewer, viewer),
+        CombatScene::Target => (TurnStep::PreCombatMain, viewer, viewer),
+    };
+    cv.step = step;
+    cv.active_player = active;
+    cv.priority = priority;
+    let (attacker_seat, defender): (usize, fn(usize, usize) -> usize) = match scene {
+        CombatScene::Blocks => (1, |_, _| 0),
+        CombatScene::Declared => (viewer, defender_for),
+        CombatScene::Plan | CombatScene::Target => return,
+    };
+    for (i, name) in ATTACKERS.iter().enumerate() {
+        let seat = defender(i, seats);
+        let Some(p) = cv.battlefield.iter_mut().find(|p| p.controller == attacker_seat && p.name == *name) else {
+            continue;
+        };
+        p.attacking = true;
+        p.tapped = *name != "Serra Angel";
+        p.attack_target = Some(AttackTarget::Player(seat));
+        p.defending_player = Some(seat);
+    }
+    if scene == CombatScene::Declared {
+        // Each of the first two attackers' defenders blocks it.
+        for (i, blocker) in [(0, "Tarmogoyf"), (1, "Serra Angel")] {
+            let Some(attacker) = permanent_id(cv, viewer, ATTACKERS[i]) else { continue };
+            let seat = defender_for(i, seats);
+            if let Some(b) = cv.battlefield.iter_mut().find(|p| p.controller == seat && p.name == blocker) {
+                b.blocking_attackers = vec![attacker];
+            }
+        }
+    }
+}
+
+/// `--combat SCENE`: stage [`CombatScene`] — patch each view that arrives,
+/// set the viewer's attack, block or targeting plan, and hold auto-pass.
+/// Runs after `poll_net`.
+#[allow(clippy::too_many_arguments)]
+pub fn stage_combat_for_screenshot(
+    mut commands: Commands,
+    args: Res<HarnessArgs>,
+    mut view: ResMut<crate::net_plugin::CurrentView>,
+    (mut blocking, mut attacking): (ResMut<crate::game::BlockingState>, ResMut<crate::game::AttackingState>),
+    (mut targeting, mut legal): (ResMut<crate::game::TargetingState>, ResMut<crate::game::LegalTargets>),
+    mut ff: ResMut<crate::systems::game_ui::FastForward>,
+    cards: Query<(Entity, &crate::card::GameCardId), With<crate::card::BattlefieldCard>>,
+    mut hovered: Local<bool>,
+) {
+    use crabomination::game::AttackTarget;
+    let Some(scene) = args.combat else { return };
+    if view.is_changed()
+        && let Some(cv) = view.bypass_change_detection().0.as_mut()
+    {
+        stage_view(cv, scene);
+    }
+    let Some(cv) = view.0.as_ref() else { return };
+    if !ff.manual_priority {
+        ff.manual_priority = true;
+    }
+    let (viewer, seats) = (cv.your_seat, cv.players.len());
+    let mine = |name: &str| permanent_id(cv, viewer, name);
+    match scene {
+        CombatScene::Blocks => {
+            let theirs = |name: &str| permanent_id(cv, 1, name);
+            let assignments: Vec<_> = mine("Tarmogoyf").zip(theirs("Tarmogoyf")).into_iter().collect();
+            let selected = mine("Serra Angel");
+            if blocking.assignments != assignments || blocking.selected_blocker != selected {
+                blocking.assignments = assignments;
+                blocking.selected_blocker = selected;
+            }
+        }
+        CombatScene::Plan => {
+            let plan: Vec<_> = ATTACKERS
+                .iter()
+                .enumerate()
+                .filter_map(|(i, name)| Some((mine(name)?, AttackTarget::Player(defender_for(i + 1, seats)))))
+                .collect();
+            if attacking.plan != plan {
+                attacking.last_added = plan.last().map(|(a, _)| *a);
+                attacking.plan = plan;
+            }
+        }
+        CombatScene::Target => {
+            let bolt = cv.players.get(viewer).and_then(|p| {
+                p.hand.iter().find_map(|h| match h {
+                    crabomination::net::HandCardView::Known(k) if k.name == "Lightning Bolt" => Some(k.id),
+                    _ => None,
+                })
+            });
+            if !targeting.active || targeting.pending_card_id != bolt {
+                targeting.active = true;
+                targeting.pending_card_id = bolt;
+            }
+            if legal.permanents.is_empty() {
+                legal.permanents = cv
+                    .battlefield
+                    .iter()
+                    .filter(|p| p.controller != viewer && p.power > 0)
+                    .map(|p| p.id)
+                    .collect();
+                legal.enumerated = true;
+            }
+            // Point at the target as the pointer would, once its card is up.
+            if !*hovered
+                && let Some(angel) = permanent_id(cv, 1, "Serra Angel")
+                && let Some((e, _)) = cards.iter().find(|(_, g)| g.0 == angel)
+            {
+                commands.entity(e).insert(crate::card::CardHovered);
+                *hovered = true;
+            }
+        }
+        CombatScene::Declared => {}
+    }
 }
 
 /// A screenshot run ignores the mouse: the desktop's cursor, wherever it

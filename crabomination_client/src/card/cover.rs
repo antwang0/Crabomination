@@ -63,6 +63,20 @@ impl CardCover {
     pub fn hides_local(&self, own: Entity, card: &GlobalTransform, local: Vec3) -> bool {
         self.hides(own, card.transform_point(local))
     }
+
+    /// The middle of the part of card `own` that shows, in its local space:
+    /// its centre when nothing lies over it, the middle of what shows when
+    /// another card overlaps it, and its centre again when it is covered
+    /// entirely. An arrow meeting a card aims here, so it lands on that card
+    /// rather than on the one lying over it.
+    pub fn visible_centre(&self, own: Entity, card: &GlobalTransform) -> Vec3 {
+        let grid = (-1..=1).flat_map(|i| (-2..=2).map(move |j| (i, j)));
+        let shown: Vec<Vec3> = grid
+            .map(|(i, j)| Vec3::new(i as f32 * CARD_WIDTH * 0.3, j as f32 * CARD_HEIGHT * 0.2, 0.0))
+            .filter(|&local| !self.hides_local(own, card, local))
+            .collect();
+        if shown.is_empty() { Vec3::ZERO } else { shown.iter().sum::<Vec3>() / shown.len() as f32 }
+    }
 }
 
 #[cfg(test)]
@@ -93,5 +107,19 @@ mod tests {
         // ...and nothing covers the card on top.
         assert!(!cover.hides_local(b, &over, bottom));
         assert!(!cover.hides_local(b, &over, top));
+    }
+
+    #[test]
+    fn a_covered_card_is_met_in_the_part_that_shows() {
+        let eye = Vec3::new(0.0, 30.0, 20.0);
+        let under = flat(Vec3::ZERO);
+        let over = flat(Vec3::new(0.0, 0.03, 2.0));
+        let (a, b) = (Entity::from_raw_u32(1).unwrap(), Entity::from_raw_u32(2).unwrap());
+        let cover = CardCover::from_cards(eye, [(a, under), (b, over)].into_iter());
+        // The lower card shows only its top: it is met there, square across it.
+        let spot = cover.visible_centre(a, &under);
+        assert!(spot.y > CARD_HEIGHT * 0.2 && spot.x.abs() < 1e-5, "{spot}");
+        // The card on top is met in its middle.
+        assert!(cover.visible_centre(b, &over).length() < 1e-5);
     }
 }

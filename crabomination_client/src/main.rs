@@ -92,11 +92,9 @@ use systems::game_ui::{
     ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
-    draw_active_seat_glow, draw_attachment_tethers, draw_attack_plan_gizmos,
-    draw_attacker_overlays, draw_blocking_gizmos, draw_legal_target_rings,
-    draw_stack_arrows, draw_target_arrow, ActiveSeatGizmos,
-    AttachmentGizmos, AttackPlanGizmos, AttackerGizmos, BlockingGizmos,
-    LegalTargetGizmos, StackGizmos, TargetArrowGizmos,
+    draw_active_seat_glow, draw_attachment_tethers, draw_attack_plan_arrows,
+    draw_block_arrows, draw_legal_target_rings, draw_stack_arrows, draw_target_arrow,
+    ActiveSeatGizmos, AttachmentGizmos,
 };
 use systems::quality::{
     close_settings_on_esc, handle_leave_game_button, handle_quality_buttons, handle_speed_slider,
@@ -367,16 +365,9 @@ fn main() {
             systems::lobby_ui::LobbyUiPlugin,
             systems::game_ui::TableAwarenessPlugin,
         ))
-        .init_gizmo_group::<BlockingGizmos>()
-        .init_gizmo_group::<AttackerGizmos>()
-        .init_gizmo_group::<StackGizmos>()
-        .init_gizmo_group::<AttackPlanGizmos>()
-        .init_gizmo_group::<LegalTargetGizmos>()
-        .init_gizmo_group::<TargetArrowGizmos>()
         .init_gizmo_group::<AttachmentGizmos>()
         .init_gizmo_group::<ActiveSeatGizmos>()
         .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
-        .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: cfg_quality.shadow_map_size() })
         .insert_resource(gfx)
         .insert_resource(gameplay)
@@ -441,7 +432,11 @@ fn main() {
         )
         .add_systems(
             PreUpdate,
-            layout_harness::inject_damage_for_screenshot.after(crate::net_plugin::poll_net),
+            (
+                layout_harness::inject_damage_for_screenshot,
+                layout_harness::stage_combat_for_screenshot.run_if(in_state(AppState::InGame)),
+            )
+                .after(crate::net_plugin::poll_net),
         )
         // The stack panel sits beside the 3-D stack lane.
         .add_systems(Update, crate::systems::game_ui::place_stack_panel.run_if(in_state(AppState::InGame)))
@@ -449,6 +444,9 @@ fn main() {
         // After `Update`, whose systems despawn the nodes it rebuilds (a
         // tooltip closing), and before the UI lays the new rows out.
         .add_systems(PostUpdate, mana_text::sync_mana_text.before(bevy::ui::UiSystems::Prepare))
+        // Combat, targeting and stack arrows, as geometry (`systems::arrows`).
+        .init_resource::<systems::arrows::Arrows>()
+        .add_systems(PostUpdate, systems::arrows::render_arrows)
         .add_systems(Startup, layout_harness::ignore_mouse_for_screenshot)
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
@@ -841,18 +839,18 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
-        // Battlefield-anchored gizmo overlays must run AFTER animate_combat_lurch,
+        // Battlefield-anchored overlays must run AFTER animate_combat_lurch,
         // which adds the lunge offset to each attacker/blocker's transform. If
         // they run before it (the default unordered placement), they read the
-        // pre-lunge resting position and the overlay (e.g. the attacker swords
+        // pre-lunge resting position and the overlay (e.g. a block arrow
         // during DeclareBlockers) detaches from the card that has lunged forward.
         .add_systems(
             Update,
             (
-                draw_blocking_gizmos,
-                draw_attacker_overlays,
+                draw_block_arrows,
+                crate::systems::combat_badge::sync_combat_chips,
                 draw_stack_arrows,
-                draw_attack_plan_gizmos,
+                draw_attack_plan_arrows,
                 draw_legal_target_rings,
                 draw_target_arrow,
                 draw_attachment_tethers,
@@ -1071,19 +1069,6 @@ fn main() {
                 .run_if(in_state(AppState::InGame)),
         )
         .run();
-}
-
-fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
-    let (config, _) = store.config_mut::<BlockingGizmos>();
-    config.line.width = 4.0;
-    let (config, _) = store.config_mut::<AttackerGizmos>();
-    config.line.width = 3.0;
-    let (config, _) = store.config_mut::<StackGizmos>();
-    config.line.width = 3.0;
-    let (config, _) = store.config_mut::<AttackPlanGizmos>();
-    config.line.width = 4.0;
-    let (config, _) = store.config_mut::<LegalTargetGizmos>();
-    config.line.width = 5.0;
 }
 
 fn setup(

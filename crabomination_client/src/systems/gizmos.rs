@@ -1,9 +1,11 @@
-//! Gizmo overlays drawn over the battlefield: blocking diamonds + assignment
-//! arrows during the DeclareBlockers step, attacker swords during attacks, and
-//! source→target arrows for items on the stack.
+//! Overlays over the battlefield: the combat, targeting and stack arrows
+//! (pushed to `systems::arrows`, which draws them as shaded geometry), and the
+//! gizmo rings, tethers and seat outline. The attacker and blocker marks are
+//! chips (`systems::combat_badge`).
 
 use std::collections::{HashMap, HashSet};
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use crabomination::card::CardId;
@@ -11,11 +13,14 @@ use crabomination::game::{AttackTarget, Target, TurnStep};
 use crabomination::net::StackItemView;
 
 use crate::card::{
-    BattlefieldCard, CardHovered, CardOwner, GameCardId, HandCard, PlayerTargetZone, StackCard,
+    BattlefieldCard, CARD_HEIGHT, CARD_WIDTH, CardHovered, GameCardId, HandCard, PlayerTargetZone,
+    StackCard,
 };
+use crate::card::cover::{CardCover, CoverQuery};
 use crate::card::layout::player_hand_anchor;
 use crate::game::{AttackingState, BlockingState, TargetingState};
 use crate::net_plugin::CurrentView;
+use crate::systems::arrows::{ArrowKey, Arrows, Cue, End};
 use crate::systems::game_ui::PlayerHudPanel;
 use crate::systems::game_ui::table_awareness::seat_color;
 use crate::MainCamera;
@@ -34,33 +39,75 @@ fn glow(color: Color, intensity: f32) -> Color {
 /// threshold without becoming a fireball.
 const CUE_GLOW: f32 = 2.6;
 
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct BlockingGizmos;
+/// Where arrows meet the battlefield's cards. Cards overlap on a busy board
+/// — a creature row wraps, a card lies over the one it is attached to — and
+/// an arrow aimed at a covered card's centre landed on the card lying over
+/// it, so a card is met in the middle of the part of it that shows
+/// (`CardCover::visible_centre`), or at its combat chip.
+#[derive(SystemParam)]
+pub struct BoardSpots<'w, 's> {
+    cards: Query<'w, 's, (Entity, &'static Transform, &'static GameCardId), With<BattlefieldCard>>,
+    cover_cards: CoverQuery<'w, 's>,
+    camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), With<MainCamera>>,
+}
 
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct AttackerGizmos;
+impl<'w, 's> BoardSpots<'w, 's> {
+    /// This frame's spots.
+    pub fn spots(&self) -> Spots<'_, 'w, 's> {
+        let cover = self.camera.single().ok().map(|(_, eye)| CardCover::new(eye, &self.cover_cards));
+        Spots { board: self, cover }
+    }
+}
 
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct StackGizmos;
+/// [`BoardSpots`] with this frame's [`CardCover`].
+pub struct Spots<'a, 'w, 's> {
+    board: &'a BoardSpots<'w, 's>,
+    cover: Option<CardCover>,
+}
 
-/// Overlay drawn while the viewer is building their attack plan during
-/// their own DeclareAttackers step. One diamond per selected attacker,
-/// one arrow per attacker → target (player zone or planeswalker).
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct AttackPlanGizmos;
+impl Spots<'_, '_, '_> {
+    /// A battlefield card's entity and transform. Reads the local
+    /// `Transform` (battlefield cards have no parent), so a card's combat
+    /// lunge this frame is already in it.
+    fn card(&self, id: CardId) -> Option<(Entity, GlobalTransform)> {
+        self.board.cards.iter().find(|(_, _, g)| g.0 == id).map(|(e, t, _)| (e, GlobalTransform::from(*t)))
+    }
 
-/// Overlay drawn around battlefield permanents enumerated as legal
-/// targets for a server `Decision::ChooseTarget` while the viewer is
-/// picking. Pulses the same yellow used elsewhere in the targeting
-/// vocabulary (player chip outline, blocker selection diamond).
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct LegalTargetGizmos;
+    /// The middle of the part of the card that shows, `lift` above it.
+    pub fn centre(&self, id: CardId, lift: f32) -> Option<Vec3> {
+        let (e, t) = self.card(id)?;
+        let local = self.cover.as_ref().map_or(Vec3::ZERO, |c| c.visible_centre(e, &t));
+        Some(t.transform_point(local) + Vec3::Y * lift)
+    }
 
-/// Overlay for the interactive "drag" arrow that runs from the targeting
-/// source to the cursor (or the hovered target it snaps to) while the viewer
-/// is picking a spell/ability target.
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct TargetArrowGizmos;
+    /// The middle of the part of the card that shows, `lift` off its face;
+    /// the face's normal; and the card's scale.
+    pub fn face(&self, id: CardId, lift: f32) -> Option<(Vec3, Vec3, f32)> {
+        let (e, t) = self.card(id)?;
+        let local = self.cover.as_ref().map_or(Vec3::ZERO, |c| c.visible_centre(e, &t));
+        let normal = t.rotation() * Vec3::Z;
+        Some((t.transform_point(local) + normal * lift, normal, t.scale().x))
+    }
+
+    /// Where the card's combat chip sits (`combat_badge::chip_local`),
+    /// `lift` above it, and how far short of it an arrow stops to meet the
+    /// chip's rim. The middle of what shows, with nothing to stop short of,
+    /// when the chip has nowhere to go.
+    pub fn chip(&self, id: CardId, lift: f32) -> Option<(Vec3, f32)> {
+        let (e, t) = self.card(id)?;
+        let (Some(cover), Ok((camera, eye))) = (&self.cover, self.board.camera.single()) else {
+            return self.centre(id, lift).map(|at| (at, 0.0));
+        };
+        let project = |local: Vec3| camera.world_to_viewport(eye, t.transform_point(local)).ok();
+        match crate::systems::combat_badge::chip_local(project, |local| cover.hides_local(e, &t, local)) {
+            Some(local) => {
+                let clearance = crate::systems::combat_badge::CHIP_CLEARANCE * CARD_WIDTH * t.scale().x;
+                Some((t.transform_point(local) + Vec3::Y * lift, clearance))
+            }
+            None => self.centre(id, lift).map(|at| (at, 0.0)),
+        }
+    }
+}
 
 /// Faint tether lines linking each attached Aura / Equipment /
 /// Fortification card to its host permanent, so the physical association
@@ -174,20 +221,19 @@ fn cursor_on_plane(
 /// or — for stack-driven decision targets with no on-table source — the
 /// viewer's own side of the table) and pointing at the cursor. When the cursor
 /// is over a battlefield card or a player zone, the head snaps to it, matching
-/// exactly what a click would resolve to. Glows like the other cues, so it
-/// reads as a beam of light on HDR tiers.
+/// exactly what a click would resolve to.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_target_arrow(
     targeting: Res<TargetingState>,
     view: Res<CurrentView>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    board: BoardSpots,
     hand_cards: Query<(&Transform, &GameCardId), With<HandCard>>,
     hovered_bf: Query<&GameCardId, (With<CardHovered>, With<BattlefieldCard>)>,
     hovered_zone: Query<&PlayerTargetZone, With<CardHovered>>,
     chips: Query<(&Interaction, &PlayerHudPanel)>,
-    mut gizmos: Gizmos<TargetArrowGizmos>,
+    mut arrows: ResMut<Arrows>,
 ) {
     if !targeting.active {
         return;
@@ -198,7 +244,8 @@ pub fn draw_target_arrow(
     // Held a touch off the table so the arrow floats clearly above the cards.
     const ARROW_Y: f32 = 0.4;
 
-    let bf_pos = |id: CardId| bf_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation);
+    let spots = board.spots();
+    let bf_pos = |id: CardId| spots.centre(id, 0.0);
     let hand_pos =
         |id: CardId| hand_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation);
 
@@ -236,24 +283,23 @@ pub fn draw_target_arrow(
         return;
     }
 
-    let color = glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW);
-    gizmos.arrow(source, end, color).with_tip_length(0.8);
+    let key = ArrowKey::new(Cue::TargetDrag, End::Cursor, End::Cursor);
+    arrows.arrow(key, source, end, Color::srgb(1.0, 0.84, 0.1), 1.0);
 }
 
+/// A pulsing ring on each legal target of the spell or ability being aimed,
+/// on the part of the card that shows.
 pub fn draw_legal_target_rings(
     view: Res<CurrentView>,
     targeting: Res<crate::game::TargetingState>,
     legal: Res<crate::game::LegalTargets>,
     time: Res<Time>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    board: BoardSpots,
     // A counterspell's legal targets are spells on the stack, which carry
     // `StackCard` rather than `BattlefieldCard` — ringing only the
     // battlefield left "counter target spell" with no visible target.
-    stack_cards: Query<
-        (&Transform, &GameCardId),
-        (With<crate::card::StackCard>, Without<BattlefieldCard>),
-    >,
-    mut gizmos: Gizmos<LegalTargetGizmos>,
+    stack_cards: Query<(&Transform, &GameCardId), (With<StackCard>, Without<BattlefieldCard>)>,
+    mut arrows: ResMut<Arrows>,
 ) {
     // Pulse rings whenever any targeting flow has populated `legal`.
     // Cast-time targeting uses the catalog evaluator in
@@ -268,32 +314,33 @@ pub fn draw_legal_target_rings(
     if view.0.is_none() {
         return;
     }
+    // The ring breathes in and out.
     let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
-    // Pulse drives both hue brightness and the HDR glow, so the ring visibly
-    // breathes light in and out as it pulses.
-    let color = glow(Color::srgb(pulse, pulse * 0.88, 0.0), 3.0);
-    for (t, gid) in bf_cards.iter().chain(stack_cards.iter()) {
-        if !legal.permanents.contains(&gid.0) {
-            continue;
-        }
-        let center = t.translation + Vec3::Y * 0.2;
-        let n = 28;
-        let r = 1.2;
-        for i in 0..n {
-            let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
-            let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
-            let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
-            let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
-            gizmos.line(p0, p1, color);
+    let colour = Color::srgba(1.0, 0.84, 0.1, pulse);
+    let spots = board.spots();
+    for &id in &legal.permanents {
+        let key = ArrowKey::new(Cue::LegalTarget, End::Card(id), End::Card(id));
+        if let Some((at, normal, scale)) = spots.face(id, 0.2) {
+            arrows.ring(key, at, 1.2 * scale, normal, colour);
+        } else if let Some((t, _)) = stack_cards.iter().find(|(_, g)| g.0 == id) {
+            // A spell in the stack lane stands facing the camera; its ring
+            // lies on its face.
+            let normal = t.rotation * Vec3::Z;
+            arrows.ring(key, t.translation + normal * 0.2, 1.2 * t.scale.x, normal, colour);
         }
     }
 }
 
-pub fn draw_blocking_gizmos(
+/// Blocks as arrows from each blocker to the attacker it blocks. Declared
+/// blocks draw for every seat for as long as combat lasts; while the viewer
+/// picks blocks, their plan draws too, and the blocker they have picked up
+/// reaches toward each attacker it could still take. The attackers' and
+/// blockers' own marks are chips (`combat_badge`).
+pub fn draw_block_arrows(
     view: Res<CurrentView>,
     blocking: Res<BlockingState>,
-    bf_cards: Query<(&Transform, &GameCardId, &CardOwner), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<BlockingGizmos>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
 ) {
     let Some(cv) = &view.0 else { return };
     // Declared blocks are drawn for *every* seat, for as long as combat lasts.
@@ -313,196 +360,130 @@ pub fn draw_blocking_gizmos(
     }
     let picking_blocks = cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(cv.your_seat);
 
-    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
-    for (transform, gid, _) in &bf_cards {
-        positions.insert(gid.0, transform.translation + Vec3::Y * 0.15);
-    }
-
-    let attacking: Vec<CardId> = cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id).collect();
+    // Chip to chip: the blocker's 🛡 to the attacker's ⚔.
+    let spots = board.spots();
+    let mut arrow = |cue: Cue, blocker: CardId, attacker: CardId, colour: Color, weight: f32| {
+        if let (Some((from, clear_from)), Some((to, clear_to))) = (spots.chip(blocker, 0.15), spots.chip(attacker, 0.15)) {
+            let key = ArrowKey::new(cue, End::Card(blocker), End::Card(attacker));
+            arrows.arrow_trimmed(key, from, to, colour, weight, [clear_from, clear_to]);
+        }
+    };
 
     // Declared blocks, straight from the server. One arrow per (blocker,
     // attacker) pair, so a multi-block blocker fans out to each attacker it
     // was assigned to and a gang block shows every arm.
-    let declared = glow(Color::srgb(0.15, 0.85, 1.0), CUE_GLOW);
     for perm in &cv.battlefield {
-        let Some(&b_pos) = positions.get(&perm.id) else { continue };
-        for atk in &perm.blocking_attackers {
-            if let Some(&a_pos) = positions.get(atk) {
-                gizmos.arrow(b_pos, a_pos, declared).with_tip_length(0.6);
-                draw_diamond(&mut gizmos, b_pos, 0.9, declared);
-            }
+        for &attacker in &perm.blocking_attackers {
+            arrow(Cue::Block, perm.id, attacker, Color::srgb(0.15, 0.85, 1.0), 0.9);
         }
     }
 
     if !picking_blocks {
         return;
     }
-
-    for &attacker_id in &attacking {
-        let is_blocked = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);
-        if let Some(&pos) = positions.get(&attacker_id) {
-            let base = if is_blocked { Color::srgb(0.0, 0.9, 0.3) } else { Color::srgb(1.0, 0.2, 0.2) };
-            draw_diamond(&mut gizmos, pos, 1.1, glow(base, CUE_GLOW));
-        }
+    for &(blocker, attacker) in &blocking.assignments {
+        arrow(Cue::BlockPlan, blocker, attacker, Color::srgb(0.0, 0.9, 0.3), 0.9);
     }
-
-    if let Some(blocker_id) = blocking.selected_blocker
-        && let Some(&pos) = positions.get(&blocker_id)
-    {
-        draw_diamond(&mut gizmos, pos, 1.1, glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW));
-        for &attacker_id in &attacking {
-            let already_assigned = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);
-            if !already_assigned && let Some(&att_pos) = positions.get(&attacker_id) {
-                gizmos.arrow(pos, att_pos, glow(Color::srgba(1.0, 0.88, 0.0, 0.7), CUE_GLOW)).with_tip_length(0.6);
+    // The picked-up blocker's options: thin, so a board of attackers
+    // doesn't bury the plan under candidates.
+    if let Some(blocker) = blocking.selected_blocker {
+        for attacker in cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id) {
+            if !blocking.assignments.iter().any(|(_, a)| *a == attacker) {
+                arrow(Cue::BlockCandidate, blocker, attacker, Color::srgba(1.0, 0.84, 0.1, 0.85), 0.6);
             }
         }
     }
-
-    for &(blocker_id, attacker_id) in &blocking.assignments {
-        if let Some(&b_pos) = positions.get(&blocker_id)
-            && let Some(&a_pos) = positions.get(&attacker_id)
-        {
-            let green = glow(Color::srgb(0.0, 0.9, 0.3), CUE_GLOW);
-            gizmos.arrow(b_pos, a_pos, green).with_tip_length(0.6);
-            draw_diamond(&mut gizmos, b_pos, 1.1, green);
-        }
-    }
 }
 
-pub fn draw_attacker_overlays(
-    view: Res<CurrentView>,
-    attack_plan: Res<AttackingState>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<AttackerGizmos>,
-) {
-    let Some(cv) = &view.0 else { return };
-    // Creatures the engine already reports as attacking…
-    let mut attacking: HashSet<CardId> =
-        cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id).collect();
-    // …plus the viewer's in-progress attack plan, so a creature shows its
-    // swords the moment it's selected during DeclareAttackers — not only after
-    // the attack is submitted (Attack All / Confirm).
-    if cv.step == TurnStep::DeclareAttackers && cv.active_player == cv.your_seat {
-        attacking.extend(attack_plan.plan.iter().map(|(atk, _)| *atk));
-    }
-    if attacking.is_empty() { return; }
-
-    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
-    for (transform, gid) in &bf_cards {
-        positions.insert(gid.0, transform.translation);
-    }
-
-    for attacker_id in attacking {
-        if let Some(&pos) = positions.get(&attacker_id) {
-            draw_crossed_swords(&mut gizmos, pos, glow(Color::srgb(1.0, 0.35, 0.05), CUE_GLOW));
-        }
-    }
-}
-
+/// Arrows from each spell or ability on the stack to its targets. A spell
+/// hangs in the stack lane beside the table (`framing::stack_lane`), facing
+/// the camera; its arrow leaves from the card's bottom edge, in front of the
+/// face, so the card doesn't hide where the arrow starts.
 pub fn draw_stack_arrows(
     view: Res<CurrentView>,
     stack_cards: Query<(&Transform, &GameCardId), With<StackCard>>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<StackGizmos>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
 ) {
     let Some(cv) = &view.0 else { return };
     if cv.stack.is_empty() { return; }
 
-    let mut stack_pos: HashMap<CardId, Vec3> = HashMap::new();
+    // (where an arrow from it starts, where one at it ends)
+    let mut stack_pos: HashMap<CardId, (Vec3, Vec3)> = HashMap::new();
     for (t, gid) in &stack_cards {
-        stack_pos.insert(gid.0, t.translation + Vec3::Y * 0.2);
+        let front = t.rotation * Vec3::Z * 0.1;
+        let bottom = t.transform_point(Vec3::new(0.0, -CARD_HEIGHT * 0.42, 0.0));
+        stack_pos.insert(gid.0, (bottom + front, t.translation + front * 3.0));
     }
-    let mut bf_pos: HashMap<CardId, Vec3> = HashMap::new();
-    for (t, gid) in &bf_cards {
-        bf_pos.insert(gid.0, t.translation + Vec3::Y * 0.2);
-    }
+    let spots = board.spots();
 
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    let color = glow(Color::srgba(1.0, 0.6, 0.05, 0.9), CUE_GLOW);
-
-    // Secondary targets draw slightly dimmer so the primary stays legible
-    // when a multi-target spell fans out (Forked Bolt, Cone of Flame).
-    let secondary = glow(Color::srgba(1.0, 0.45, 0.05, 0.65), CUE_GLOW * 0.7);
+    let orange = Color::srgb(1.0, 0.6, 0.05);
 
     for item in &cv.stack {
         let StackItemView::Known(known) = item else { continue };
         let source_id = known.source;
 
-        let from = stack_pos.get(&source_id).or_else(|| bf_pos.get(&source_id)).copied();
+        let from = stack_pos.get(&source_id).map(|p| p.0).or_else(|| spots.centre(source_id, 0.2));
         // A target can be a battlefield permanent, a player zone, or
         // another spell on the stack (counter magic).
         let resolve = |target: &Target| match target {
-            Target::Permanent(id) => {
-                bf_pos.get(id).copied().or_else(|| stack_pos.get(id).copied())
-            }
-            Target::Player(idx) => {
-                if *idx < n_seats {
-                    let mut p = player_hand_anchor(*idx, viewer, n_seats);
-                    p.y = 0.2;
-                    Some(p)
-                } else {
-                    None
-                }
-            }
+            Target::Permanent(id) => spots
+                .centre(*id, 0.2)
+                .or_else(|| stack_pos.get(id).map(|p| p.1))
+                .map(|at| (End::Card(*id), at)),
+            Target::Player(idx) => (*idx < n_seats).then(|| {
+                let mut p = player_hand_anchor(*idx, viewer, n_seats);
+                p.y = 0.2;
+                (End::Seat(*idx), p)
+            }),
         };
 
         let Some(from) = from else { continue };
-        if let Some(to) = known.target.as_ref().and_then(resolve) {
-            gizmos.arrow(from, to, color).with_tip_length(0.7);
+        let source = End::Card(source_id);
+        if let Some((end, to)) = known.target.as_ref().and_then(resolve) {
+            arrows.arrow(ArrowKey::new(Cue::Stack, source, end), from, to, orange, 1.0);
         }
-        // Slots 1+ — every extra target of a multi-target spell.
+        // Slots 1+ — every extra target of a multi-target spell, a little
+        // thinner so the primary stays legible when a spell fans out
+        // (Forked Bolt, Cone of Flame).
         for t in &known.additional_targets {
-            if let Some(to) = resolve(t) {
-                gizmos.arrow(from, to, secondary).with_tip_length(0.55);
+            if let Some((end, to)) = resolve(t) {
+                let key = ArrowKey::new(Cue::StackExtra, source, end);
+                arrows.arrow(key, from, to, Color::srgba(1.0, 0.45, 0.05, 0.8), 0.75);
             }
         }
     }
 }
 
-/// Draw a crossed-swords (⚔) symbol in the XZ plane at `pos`, slightly raised.
-fn draw_crossed_swords(gizmos: &mut Gizmos<AttackerGizmos>, pos: Vec3, color: Color) {
-    let y = pos.y + 0.18;
-    let r: f32 = 0.7;
-    let g: f32 = 0.22;
-    let gf: f32 = 0.35;
-
-    let s1_handle = Vec3::new(pos.x - r, y, pos.z - r);
-    let s1_tip = Vec3::new(pos.x + r, y, pos.z + r);
-    let s1_guard = s1_handle.lerp(s1_tip, gf);
-    let gd1 = Vec3::new(1.0, 0.0, -1.0).normalize() * g;
-    gizmos.line(s1_handle, s1_tip, color);
-    gizmos.line(s1_guard - gd1, s1_guard + gd1, color);
-
-    let s2_handle = Vec3::new(pos.x + r, y, pos.z - r);
-    let s2_tip = Vec3::new(pos.x - r, y, pos.z + r);
-    let s2_guard = s2_handle.lerp(s2_tip, gf);
-    let gd2 = Vec3::new(1.0, 0.0, 1.0).normalize() * g;
-    gizmos.line(s2_handle, s2_tip, color);
-    gizmos.line(s2_guard - gd2, s2_guard + gd2, color);
+/// Where an attack aimed at `target` lands: the defending player's spot at
+/// the edge of their board, or the planeswalker or battle's card.
+fn attack_end(target: AttackTarget, spots: &Spots, viewer: usize, n_seats: usize) -> Option<(End, Vec3)> {
+    match target {
+        AttackTarget::Player(seat) => {
+            let mut p = player_hand_anchor(seat, viewer, n_seats);
+            p.y = 0.3;
+            Some((End::Seat(seat), p))
+        }
+        // A Siege battle is attacked like a planeswalker — the arrow points
+        // at its battlefield position (CR 508.1).
+        AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => {
+            spots.centre(id, 0.18).map(|p| (End::Card(id), p))
+        }
+    }
 }
 
-fn draw_diamond(gizmos: &mut Gizmos<BlockingGizmos>, pos: Vec3, r: f32, color: Color) {
-    let n = pos + Vec3::Z * r;
-    let s = pos - Vec3::Z * r;
-    let e = pos + Vec3::X * r;
-    let w = pos - Vec3::X * r;
-    gizmos.line(n, e, color);
-    gizmos.line(e, s, color);
-    gizmos.line(s, w, color);
-    gizmos.line(w, n, color);
-}
-
-/// Render the viewer's in-progress attack plan: a yellow diamond on each
-/// chosen attacker and an arrow from that attacker to its target (player
-/// disc or opp planeswalker card). Active only during the viewer's own
+/// Render the viewer's in-progress attack plan: an arrow from each chosen
+/// attacker to its target (player disc or opp planeswalker card), and a ring
+/// on each player the plan aims at. Active only during the viewer's own
 /// DeclareAttackers step with priority — outside that window the plan is
 /// stale and the resource is cleared by the input handler.
-pub fn draw_attack_plan_gizmos(
+pub fn draw_attack_plan_arrows(
     view: Res<CurrentView>,
     attacking: Res<AttackingState>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<AttackPlanGizmos>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
 ) {
     let Some(cv) = &view.0 else { return };
     if cv.step != TurnStep::DeclareAttackers
@@ -517,15 +498,11 @@ pub fn draw_attack_plan_gizmos(
 
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    let yellow = Color::srgb(1.0, 0.88, 0.0);
-
-    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
-    for (t, gid) in &bf_cards {
-        positions.insert(gid.0, t.translation + Vec3::Y * 0.18);
-    }
+    let yellow = Color::srgb(1.0, 0.84, 0.1);
+    let spots = board.spots();
 
     for (attacker, target) in &attacking.plan {
-        let Some(&from) = positions.get(attacker) else {
+        let Some((from, clear)) = spots.chip(*attacker, 0.18) else {
             continue;
         };
         // In a pod each arrow takes its defending seat's identity colour
@@ -536,60 +513,31 @@ pub fn draw_attack_plan_gizmos(
             Some(d) if n_seats > 2 => seat_color(d),
             _ => yellow,
         };
-        let color = if attacking.last_added == Some(*attacker) {
-            glow(base.with_alpha(0.5), CUE_GLOW)
-        } else {
-            glow(base, CUE_GLOW)
-        };
-        // The attacker itself is marked by its crossed-swords overlay (see
-        // `draw_attacker_overlays`, which now includes planned attackers), so
-        // here we only draw the targeting arrow to its chosen defender.
-        let to = match target {
-            AttackTarget::Player(seat) => {
-                let mut p = player_hand_anchor(*seat, viewer, n_seats);
-                p.y = 0.3;
-                Some(p)
-            }
-            AttackTarget::Planeswalker(pw_id) => positions.get(pw_id).copied(),
-            // A Siege battle is attacked like a planeswalker — point the arrow
-            // at its battlefield position (CR 508.1).
-            AttackTarget::Battle(battle_id) => positions.get(battle_id).copied(),
-        };
-        if let Some(to) = to {
-            gizmos.arrow(from, to, color).with_tip_length(0.7);
-            if matches!(target, AttackTarget::Player(_)) {
-                draw_defender_ring(&mut gizmos, to, color);
-            }
+        let colour = if attacking.last_added == Some(*attacker) { base.with_alpha(0.5) } else { base };
+        // The attacker itself is marked by its combat chip (`combat_badge`,
+        // which includes planned attackers), so here we only draw the arrow
+        // to its chosen defender.
+        let Some((end, to)) = attack_end(*target, &spots, viewer, n_seats) else { continue };
+        let key = ArrowKey::new(Cue::AttackPlan, End::Card(*attacker), end);
+        arrows.arrow_trimmed(key, from, to, colour, 1.0, [clear, 0.0]);
+        // A ring where the arrowheads of a multi-attacker plan converge, so
+        // the defending player's spot is unmistakable.
+        if let End::Seat(_) = end {
+            arrows.ring(ArrowKey::new(Cue::Defender, end, end), to, 1.1, Vec3::Y, base);
         }
-    }
-}
-
-/// Ring on the table at a defending player's anchor, so the arrowheads of a
-/// multi-attacker plan converge on an unmistakable spot in that seat's area.
-fn draw_defender_ring<G: GizmoConfigGroup>(gizmos: &mut Gizmos<G>, center: Vec3, color: Color) {
-    let n = 24;
-    let r = 1.1;
-    for i in 0..n {
-        let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
-        let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
-        gizmos.line(
-            center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r),
-            center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r),
-            color,
-        );
     }
 }
 
 /// After the declaration, keep one arrow per attacker pointing at what it
 /// is attacking (CR 508.1b — the view's `attack_target`), coloured by the
-/// defending seat. In a pod the swords alone don't say *who* is under fire,
-/// and the defenders each need to know which attackers are theirs to block.
-/// 1v1 skips it: there is only one place an attack can go.
+/// defending seat. In a pod the combat chips alone don't say *who* is under
+/// fire, and the defenders each need to know which attackers are theirs to
+/// block. 1v1 skips it: there is only one place an attack can go.
 pub fn draw_declared_attack_arrows(
     view: Res<CurrentView>,
     attacking: Res<AttackingState>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<AttackPlanGizmos>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
 ) {
     let Some(cv) = &view.0 else { return };
     let n_seats = cv.players.len();
@@ -600,33 +548,23 @@ pub fn draw_declared_attack_arrows(
         return;
     }
     let viewer = cv.your_seat;
-    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
-    for (t, gid) in &bf_cards {
-        positions.insert(gid.0, t.translation + Vec3::Y * 0.18);
-    }
+    let spots = board.spots();
     for c in cv.battlefield.iter().filter(|c| c.attacking) {
         // The plan overlay already draws this attacker.
         if attacking.contains(c.id) {
             continue;
         }
-        let (Some(target), Some(&from)) = (c.attack_target, positions.get(&c.id)) else {
+        let (Some(target), Some((from, clear))) = (c.attack_target, spots.chip(c.id, 0.18)) else {
             continue;
         };
-        let to = match target {
-            AttackTarget::Player(seat) => {
-                let mut p = player_hand_anchor(seat, viewer, n_seats);
-                p.y = 0.3;
-                Some(p)
-            }
-            AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => positions.get(&id).copied(),
-        };
-        let Some(to) = to else { continue };
+        let Some((end, to)) = attack_end(target, &spots, viewer, n_seats) else { continue };
         let base = c.defending_player.map(seat_color).unwrap_or(Color::srgb(1.0, 0.35, 0.05));
-        gizmos.arrow(from, to, glow(base.with_alpha(0.75), CUE_GLOW * 0.8)).with_tip_length(0.6);
+        let key = ArrowKey::new(Cue::Attack, End::Card(c.id), end);
+        arrows.arrow_trimmed(key, from, to, base.with_alpha(0.8), 0.85, [clear, 0.0]);
     }
 }
 
-/// Pulsing cyan ring around the battlefield permanent whose pending
+/// Pulsing cyan ring on the battlefield permanent whose pending
 /// decision is waiting on the viewer — "the game is waiting HERE". Most
 /// decisions carry their source's CardId; when that source is a live
 /// battlefield permanent, ring it so the modal's context is findable on
@@ -634,8 +572,8 @@ pub fn draw_declared_attack_arrows(
 pub fn draw_decision_source_ring(
     view: Res<CurrentView>,
     time: Res<Time>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
-    mut gizmos: Gizmos<LegalTargetGizmos>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
 ) {
     use crabomination::net::DecisionWire as D;
     let Some(cv) = &view.0 else { return };
@@ -661,18 +599,8 @@ pub fn draw_decision_source_ring(
         }
         _ => return,
     };
-    let Some((t, _)) = bf_cards.iter().find(|(_, gid)| gid.0 == source) else { return };
-
+    let Some((at, normal, scale)) = board.spots().face(source, 0.2) else { return };
     let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
-    let color = glow(Color::srgb(0.0, pulse * 0.9, pulse), 3.0);
-    let center = t.translation + Vec3::Y * 0.2;
-    let n = 28;
-    let r = 1.35;
-    for i in 0..n {
-        let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
-        let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
-        let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
-        let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
-        gizmos.line(p0, p1, color);
-    }
+    let key = ArrowKey::new(Cue::DecisionSource, End::Card(source), End::Card(source));
+    arrows.ring(key, at, 1.35 * scale, normal, Color::srgba(0.0, 0.9, 1.0, pulse));
 }

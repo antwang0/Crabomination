@@ -317,6 +317,17 @@ use theme::PANEL_TILE_BG as MODAL_TILE_BG;
 use theme::BUTTON_TERTIARY_BG as REORDER_BG;
 use theme::BUTTON_TERTIARY_BG_DISABLED as REORDER_BG_DISABLED;
 
+/// Whether a targeting session with no decision behind it — a spell or
+/// ability the viewer picked from hand or board, whose legal targets the
+/// click filled in (`legal_target_filter::enumerate_for_cast`) — is open.
+/// Its legal set stays: [`spawn_decision_ui`] used to clear the set on every
+/// frame without a decision for the viewer, which is every frame of such a
+/// session, so the legal-target rings never showed and a click anywhere
+/// clickable was taken as a target.
+fn casting_keeps_legal_targets(targeting: &crate::game::TargetingState) -> bool {
+    targeting.active && !targeting.pending_decision_target
+}
+
 /// Spawn or despawn the decision modal based on the server view. Only shows
 /// for decisions owned by P0 (your_seat).
 pub fn spawn_decision_ui(
@@ -381,10 +392,12 @@ pub fn spawn_decision_ui(
                 targeting.active = false;
                 targeting.pending_decision_target = false;
             }
-            legal_targets.permanents.clear();
-            legal_targets.players.clear();
-            legal_targets.source_name.clear();
-            legal_targets.description.clear();
+            if !casting_keeps_legal_targets(&targeting) {
+                legal_targets.permanents.clear();
+                legal_targets.players.clear();
+                legal_targets.source_name.clear();
+                legal_targets.description.clear();
+            }
             return;
         }
     };
@@ -4283,5 +4296,22 @@ mod commander_redirect_tests {
         assert_eq!(auto.0.get(&(a, "When this enters, draw".to_string())), None);
         // A new game starts from a fresh resource (menu.rs re-inserts it).
         assert_eq!(AutoOptionalAnswers::default().commander_redirect(a), None);
+    }
+}
+
+#[cfg(test)]
+mod legal_target_tests {
+    use super::*;
+
+    /// A spell's own targeting session keeps the legal set its click filled
+    /// in; a decision's, or no session at all, lets it go.
+    #[test]
+    fn a_cast_keeps_its_legal_targets_while_it_is_aimed() {
+        let mut targeting = crate::game::TargetingState { active: true, ..Default::default() };
+        assert!(casting_keeps_legal_targets(&targeting));
+        targeting.pending_decision_target = true;
+        assert!(!casting_keeps_legal_targets(&targeting));
+        targeting = crate::game::TargetingState::default();
+        assert!(!casting_keeps_legal_targets(&targeting));
     }
 }
