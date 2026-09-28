@@ -207,16 +207,12 @@ pub fn cavern_harpy() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(
-                            SelectionRequirement::HasColor(Color::Blue)
-                                .or(SelectionRequirement::HasColor(Color::Black)),
-                        ),
+            effect: Effect::ReturnOneYouControl {
+                filter: SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasColor(Color::Blue)
+                        .or(SelectionRequirement::HasColor(Color::Black)),
                 ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                keep_best: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -249,11 +245,9 @@ pub fn stonecloaker() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                effect: Effect::ReturnOneYouControl {
+                    filter: SelectionRequirement::Creature,
+                    keep_best: false,
                 },
             },
             TriggeredAbility {

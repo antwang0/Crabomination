@@ -3116,11 +3116,9 @@ pub fn kor_skyfisher() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ReturnOneYouControl {
+            filter: SelectionRequirement::Permanent,
+            keep_best: false,
         })],
         ..Default::default()
     }
@@ -3666,11 +3664,9 @@ pub fn whitemane_lion() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ReturnOneYouControl {
+            filter: SelectionRequirement::Creature,
+            keep_best: false,
         })],
         ..Default::default()
     }

@@ -942,11 +942,9 @@ pub fn zell_dincht() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::End),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            effect: Effect::ReturnOneYouControl {
+                filter: SelectionRequirement::Land,
+                keep_best: false,
             },
         }],
         ..Default::default()

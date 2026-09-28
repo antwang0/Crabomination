@@ -187,9 +187,9 @@ pub fn guildless_commons() -> CardDefinition {
         name: "Guildless Commons",
         card_types: vec![CardType::Land],
         static_abilities: vec![crate::sets::enters_tapped()],
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(R::Land.and(R::ControlledByYou)),
-            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        triggered_abilities: vec![etb(Effect::ReturnOneYouControl {
+            filter: R::Land,
+            keep_best: false,
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

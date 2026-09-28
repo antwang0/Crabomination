@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, evolve, evolve_then, target_any, target_filtered};
 use crate::effect::{
-    Duration, ExtraManaKind, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
+    Duration, ExtraManaKind, PlayerRef, Predicate, Selector, StaticEffect,
 };
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -178,10 +178,7 @@ pub fn species_gorger() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
+            effect: Effect::ReturnOneYouControl { filter: R::Creature, keep_best: false },
         }],
         ..Default::default()
     }
