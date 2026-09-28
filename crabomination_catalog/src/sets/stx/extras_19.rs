@@ -655,10 +655,13 @@ pub fn mila_crafty_companion() -> CardDefinition {
             // control" — planeswalker-attack-only scope (attacks on the
             // player don't fire it).
             TriggeredAbility {
+                // CR 603.2c — once per declaration however many attack
+                // (ruling).
                 event: EventSpec::new(
                     EventKind::Attacks,
                     EventScope::ControllerPlaneswalkerAttackedByOpponent,
-                ),
+                )
+                .once_per_batch(),
                 effect: Effect::AddCounter {
                     what: Selector::EachPermanent(
                         SelectionRequirement::Planeswalker

@@ -6696,3 +6696,55 @@ fn cr_800_4a_a_departed_players_tokens_leaving_trigger_twilight_drover() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(drover).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// CR 603.2c — Mila, Crafty Companion: "whenever an opponent attacks one or
+/// more planeswalkers you control" triggers once however many creatures
+/// attack or planeswalkers are attacked (ruling).
+#[test]
+fn cr_603_2c_mila_adds_one_loyalty_for_the_whole_attack() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::mila_crafty_companion());
+    let jace = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    let lili = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    let loyalty = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(crabomination::card::CounterType::Loyalty);
+    let (j0, l0) = (loyalty(&g, jace), loyalty(&g, lili));
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Planeswalker(jace) },
+        Attack { attacker: b, target: AttackTarget::Planeswalker(lili) },
+    ]))
+    .expect("attack both planeswalkers");
+    drain_stack(&mut g);
+    assert_eq!(loyalty(&g, jace), j0 + 1, "one counter, not one per attacker");
+    assert_eq!(loyalty(&g, lili), l0 + 1);
+}
+
+/// CR 603.2c — Jolene, the Plunder Queen: "whenever a player attacks one or
+/// more of your opponents" is one Treasure for the declaration, not one per
+/// opponent attacked.
+#[test]
+fn cr_603_2c_jolene_makes_one_treasure_per_attack_declaration() {
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::jolene_the_plunder_queen());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(2) },
+        Attack { attacker: b, target: AttackTarget::Player(3) },
+    ]))
+    .expect("attack two of Jolene's opponents");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 1);
+}

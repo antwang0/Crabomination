@@ -264,14 +264,15 @@ pub fn industrial_advancement() -> CardDefinition {
     }
 }
 
-/// Jolene, the Plunder Queen — {2}{R}{G} 2/2. A player attacking one of your
-/// opponents makes a Treasure; your Treasure creations make one more;
+/// Jolene, the Plunder Queen — {2}{R}{G} 2/2. A player attacking one or more of
+/// your opponents makes a Treasure; your Treasure creations make one more;
 /// sacrifice five Treasures: five +1/+1 counters.
 pub fn jolene_the_plunder_queen() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::OpponentOfYoursAttacked),
+            // CR 603.2c — "one or more of your opponents": once a declaration.
+            event: EventSpec::new(EventKind::Attacks, EventScope::OpponentOfYoursAttacked).once_per_batch(),
             effect: Effect::CreateToken { who: PlayerRef::Target(0), count: Value::ONE, definition: treasure() },
         }],
         static_abilities: vec![StaticAbility {

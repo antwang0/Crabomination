@@ -2370,15 +2370,22 @@ impl GameState {
                 t.event.kind == EventKind::Attacks
                     && t.event.scope == crate::effect::EventScope::OpponentOfYoursAttacked
             };
-            let mut listeners: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>)> = Vec::new();
+            // CR 603.2c — `once_per_batch` is "one or more of your opponents"
+            // (Jolene, the Plunder Queen): one fire for the declaration, not
+            // one per opponent attacked.
+            let mut listeners: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>, bool)> = Vec::new();
             for c in self.battlefield.iter().filter(|c| !stripped.contains(&c.id)) {
                 for t in c.definition.triggered_abilities.iter().filter(|t| listens(t)) {
-                    listeners.push((c.id, c.controller, t.effect.clone(), t.event.filter.clone()));
+                    listeners.push((c.id, c.controller, t.effect.clone(), t.event.filter.clone(), t.event.once_per_batch));
                 }
             }
+            let mut batch_fired: Vec<usize> = Vec::new();
             for d in defended {
-                for (src, ctrl, effect, filter) in &listeners {
+                for (i, (src, ctrl, effect, filter, once)) in listeners.iter().enumerate() {
                     if *ctrl == d || self.same_team(*ctrl, d) || !self.players[*ctrl].is_alive() {
+                        continue;
+                    }
+                    if *once && batch_fired.contains(&i) {
                         continue;
                     }
                     let ctx = crate::game::effects::EffectContext {
@@ -2390,6 +2397,9 @@ impl GameState {
                     };
                     if filter.as_ref().is_some_and(|f| !self.evaluate_predicate(f, &ctx)) {
                         continue;
+                    }
+                    if *once {
+                        batch_fired.push(i);
                     }
                     self.stack.push(
                         TriggerPush::new(*src, *ctrl, effect.clone())
