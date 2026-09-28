@@ -2079,7 +2079,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Sphinx of the Revelation | Creative Energy (M3C) | the X {E} is paid as the ability resolves, not as a cost. |
-| 🟡 Arbor Adherent | Abzan Armor (TDC) | X counts its own toughness too ("other creatures" isn't honored). |
 | 🟡 Baldin, Century Herdmaster | Abzan Armor (TDC) | the +0/+X goes on each creature you control rather than up to one hundred targets. |
 | 🟡 Betor, Ancestor's Voice | Abzan Armor (TDC) | the counters go on your greatest-power other creature and the reanimation takes the greatest-power card; neither is targeted. |
 | 🟡 Tip the Scales | Abzan Armor (TDC) | the -X/-X resolves with the spell, not as a reflexive "when you do" trigger. |

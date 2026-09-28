@@ -393,3 +393,24 @@ fn arbor_adherent_taps_for_toughness() {
     .expect("mana");
     assert_eq!(g.players[0].mana_pool.total(), 10);
 }
+
+/// Arbor Adherent's X is "the greatest toughness among OTHER creatures you
+/// control": beside a Grizzly Bears (2/2) it makes 2, not its own 4.
+#[test]
+fn arbor_adherent_reads_other_creatures_only() {
+    let mut g = two_player_game();
+    let adherent = g.add_card_to_battlefield(0, catalog::arbor_adherent());
+    g.clear_sickness(adherent);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: adherent,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for X");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
