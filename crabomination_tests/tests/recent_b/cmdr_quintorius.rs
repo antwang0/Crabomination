@@ -305,3 +305,26 @@ fn lorehold_duals_enter_tapped() {
         assert!(g.battlefield_find(l).unwrap().tapped);
     }
 }
+
+/// Ao's first death mode: the cheap permanents go onto the battlefield and
+/// "the rest" go to the BOTTOM — the next draw is the eighth card, not an
+/// unpicked one of the seven.
+#[test]
+fn ao_puts_the_rest_on_the_bottom() {
+    let mut g = two_player_game();
+    let ao = g.add_card_to_battlefield(0, catalog::ao_the_dawn_sky());
+    let memnite = g.add_card_to_library(0, catalog::memnite());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let eighth = g.add_card_to_library(0, catalog::plains());
+    let effect = catalog::ao_the_dawn_sky().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext {
+        mode: 0,
+        ..crabomination::game::effects::EffectContext::for_trigger(ao, 0, None, 0)
+    };
+    g.resolve_effect(&effect, &ctx).expect("resolve");
+    assert!(g.battlefield_find(memnite).is_some(), "Memnite onto the battlefield");
+    assert_eq!(g.players[0].library[0].id, eighth, "the six Islands went under");
+    assert_eq!(g.players[0].library.len(), 7);
+}

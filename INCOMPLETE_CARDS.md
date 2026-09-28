@@ -2063,7 +2063,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Abstract Performance | Prismari Artistry (SOC) | the "face-down" pile is exiled face up (only the chooser's prompt hides it); the chooser is the hostile opponent, not one you choose. |
 | 🟡 Cataclysmic Prospecting | Desert Bloom (OTC) | mana spent from Deserts isn't tracked; the Treasures count the tapped Deserts you control as it resolves. |
 | 🟡 Dune Chanter | Desert Bloom (OTC) | land cards off the battlefield aren't Deserts (lands you control are). |
-| 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
 | 🟡 Grave Endeavor | Dungeons of Death (AFC) | its counters are put on after the creature enters. |
 | 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |

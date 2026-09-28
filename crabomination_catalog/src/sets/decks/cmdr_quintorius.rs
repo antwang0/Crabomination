@@ -255,13 +255,27 @@ pub fn ao_the_dawn_sky() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::ChooseMode(vec![
-                Effect::MoveWithinTotalManaValue {
-                    from: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(7) },
-                    filter: R::Nonland.and(R::PermanentCard),
-                    cap: Value::Const(4),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    max_count: None,
-                },
+                Effect::Seq(vec![
+                    Effect::MoveWithinTotalManaValue {
+                        from: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(7) },
+                        filter: R::Nonland.and(R::PermanentCard),
+                        cap: Value::Const(4),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        max_count: None,
+                    },
+                    // "Put the rest on the bottom of your library" — they
+                    // used to stay on top, a free look at the next draws.
+                    Effect::Move {
+                        what: Selector::TopOfLibrary {
+                            who: PlayerRef::You,
+                            count: Value::Diff(
+                                Box::new(Value::Const(7)),
+                                Box::new(Value::CountOf(Box::new(Selector::LastMoved))),
+                            ),
+                        },
+                        to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+                    },
+                ]),
                 Effect::AddCounter {
                     what: Selector::EachPermanent(
                         R::Creature.or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)).and(R::ControlledByYou),
