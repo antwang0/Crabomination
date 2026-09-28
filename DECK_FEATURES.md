@@ -2007,8 +2007,7 @@ The structural audit caught Killer Service nesting `MaySacrifice` inside
 `MayPay` (the inner ask replays the outer answer); it pays, then sacrifices
 the engine's pick. Residuals: **Excess** counts your creatures that damaged a
 player; **Killer Service**'s token is the engine's pick; **Sizzling
-Soloist**'s must-attack runs until your next turn; **Vivien's Stampede**
-draws at end of combat; **Zurzoth**'s loot reaches one defender per batch.
+Soloist**'s must-attack runs until your next turn; **Zurzoth**'s loot reaches one defender per batch.
 Pods (release, seed 10261, 1,000 games beside Go-Shintai / Jeleva / Winter):
 1,000/1,000 decided, no card of the four lists unplayed, Kitt 16.8 %.
 `--bench` byte-identical.

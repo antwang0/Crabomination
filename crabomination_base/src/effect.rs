@@ -10379,8 +10379,8 @@ pub enum Effect {
     /// "Add an amount of {C} equal to [amount] at the beginning of your
     /// next main phase" — `amount` is evaluated NOW (so resolution-scoped
     /// scratch values like `CounteredSpellManaSpent` are read while still
-    /// live) and baked as a constant into the registered
-    /// `YourNextMainPhase` delayed trigger. Mana Sculpt.
+    /// live) and baked as a constant into the registered delayed trigger.
+    /// Mana Sculpt, Mana Drain.
     AddManaAtNextMainPhase {
         amount: Value,
         /// When true the mana is added as `AnyColors` (the player picks each
@@ -10388,6 +10388,11 @@ pub enum Effect {
         /// colors". Defaults to false (Mana Sculpt's colorless bank).
         #[serde(default)]
         any_color: bool,
+        /// "Your next *first* main phase" (Plasm Capture): only a precombat
+        /// main counts. False is "your next main phase", first or second
+        /// (CR 505.1).
+        #[serde(default)]
+        first_main: bool,
     },
 
     /// "When [target creature] dies this turn, [body]." Registers an
@@ -12041,6 +12046,13 @@ pub enum DelayedTriggerKind {
     /// the pool before the player can spend it (mana pools clear on
     /// step transition, MTG rule 500.4).
     YourNextMainPhase,
+    /// "At the beginning of your next main phase" — first or second,
+    /// whichever of the controller's begins next (CR 505.1).
+    YourNextMainPhaseAny,
+    /// "At the beginning of the next main phase this turn" (Vivien's
+    /// Stampede): as `YourNextMainPhaseAny`, but it lapses at this turn's
+    /// cleanup when no main phase is left.
+    NextMainPhaseThisTurn,
     /// "At the beginning of the next cleanup step" (Waylay). Fires in the
     /// cleanup step of the turn it was registered in, so the objects it
     /// touches survive the end step.

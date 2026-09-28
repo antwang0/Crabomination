@@ -5,9 +5,9 @@
 //! end-of-turn death redirect (Gruesome Encore), or nothing (Whip of Erebos,
 //! Llanowar Greenwidow), so a bounce kept the creature.
 
-use crabomination::card::CardId;
+use crabomination::card::{CardDefinition, CardId};
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -184,4 +184,120 @@ fn a_spell_copy_chain_stops_at_the_stack_bound() {
         .expect("copies");
     assert!(g.stack.len() <= crabomination::recommend::MAX_STACK + 1, "stack {}", g.stack.len());
     assert!(g.stack.len() > 100, "the copies up to the bound were made");
+}
+
+// ── CR 505.1 — "your next main phase" is the first OR the second ────────────
+
+/// Pass priority until `step` begins (the stack is drained on the way).
+fn pass_to_step(g: &mut GameState, step: TurnStep) {
+    for _ in 0..200 {
+        if g.step == step {
+            return;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    panic!("never reached {step:?}");
+}
+
+/// Seat 1 Bolts seat 0 during seat 0's first main phase; seat 0 answers with
+/// `counter`, paying `blue` of its cost in {U} and the rest in {G}.
+fn counter_a_bolt_in_first_main(g: &mut GameState, counter: CardDefinition, blue: u32) {
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let md = g.add_card_to_hand(0, counter);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt");
+    g.players[0].mana_pool.add(Color::Blue, blue);
+    g.players[0].mana_pool.add(Color::Green, 4 - blue.min(4));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: md,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+    g.players[0].mana_pool.empty();
+}
+
+/// CR 505.1 — Mana Drain: "At the beginning of your next main phase, add {C}
+/// equal to that spell's mana value." Countering in your own first main
+/// phase banks for the SECOND main phase this turn; the rider was missing
+/// entirely, and the kind it would have used fires on a first main only.
+#[test]
+fn cr_505_1_mana_drain_pays_out_at_this_turns_second_main_phase() {
+    let mut g = two_player_game();
+    counter_a_bolt_in_first_main(&mut g, catalog::mana_drain(), 2);
+    let turn = g.turn_number;
+    pass_to_step(&mut g, TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.turn_number, turn, "still this turn");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "Bolt's mana value in {{C}}");
+}
+
+/// CR 505.1a — Plasm Capture says "your next FIRST main phase": a counter in
+/// your first main phase waits a whole turn cycle, it doesn't pay out in the
+/// second main phase.
+#[test]
+fn cr_505_1a_plasm_capture_waits_for_a_first_main_phase() {
+    let mut g = two_player_game();
+    counter_a_bolt_in_first_main(&mut g, catalog::plasm_capture(), 2);
+    pass_to_step(&mut g, TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "nothing in the second main phase");
+    assert!(g.delayed_triggers.iter().any(|dt| dt.controller == 0), "still waiting");
+}
+
+/// Vivien's Stampede — "At the beginning of the next main phase this turn,
+/// draw a card for each player who was dealt combat damage this turn": the
+/// draw comes in the second main phase (it came at end of combat), and cast
+/// in the second main phase there is no main phase left, so the trigger
+/// lapses at cleanup (CR 603.7b, a stated "this turn" duration).
+#[test]
+fn cr_603_7b_viviens_stampede_draws_at_the_next_main_phase_this_turn_only() {
+    for (cast_step, draws) in [(TurnStep::PreCombatMain, 1), (TurnStep::PostCombatMain, 0)] {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let stampede = g.add_card_to_hand(0, catalog::viviens_stampede());
+        g.active_player_idx = 0;
+        g.step = cast_step;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Green, 6);
+        crabomination::game::cast(&mut g, stampede);
+        let hand = g.players[0].hand.len();
+        let turn = g.turn_number;
+        if cast_step == TurnStep::PreCombatMain {
+            pass_to_step(&mut g, TurnStep::DeclareAttackers);
+            g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+                attacker: bear,
+                target: AttackTarget::Player(1),
+            }]))
+            .expect("attack");
+            pass_to_step(&mut g, TurnStep::PostCombatMain);
+            drain_stack(&mut g);
+            assert!(g.players[1].life < 20, "the Bear connected");
+        } else {
+            while g.turn_number == turn {
+                g.perform_action(GameAction::PassPriority).expect("pass");
+            }
+            assert!(g.delayed_triggers.iter().all(|dt| dt.source != stampede), "lapsed at cleanup");
+        }
+        assert_eq!(g.players[0].hand.len() - hand, draws, "cast in {cast_step:?}");
+    }
 }

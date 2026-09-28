@@ -337,6 +337,7 @@ pub fn scattering_stroke() -> CardDefinition {
                 on_win: Box::new(Effect::AddManaAtNextMainPhase {
                     amount: Value::CounteredSpellManaValue,
                     any_color: false,
+                    first_main: false,
                 }),
             },
         ]),

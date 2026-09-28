@@ -436,17 +436,21 @@ pub fn smothering_tithe() -> CardDefinition {
     }
 }
 
-/// Mana Drain — {U}{U} Instant. "Counter target spell." (The "add {C} for each
-/// of its mana value at your next precombat main phase" ritual rider is
-/// omitted.)
+/// Mana Drain — {U}{U} Instant. "Counter target spell. At the beginning of
+/// your next main phase, add an amount of {C} equal to that spell's mana value."
 pub fn mana_drain() -> CardDefinition {
     CardDefinition {
         name: "Mana Drain",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell {
-            what: target_filtered(SelectionRequirement::Any),
-        },
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+            Effect::AddManaAtNextMainPhase {
+                amount: Value::CounteredSpellManaValue,
+                any_color: false,
+                first_main: false,
+            },
+        ]),
         ..Default::default()
     }
 }

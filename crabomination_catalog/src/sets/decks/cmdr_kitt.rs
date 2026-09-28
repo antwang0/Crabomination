@@ -526,9 +526,7 @@ pub fn sizzling_soloist() -> CardDefinition {
 }
 
 /// Vivien's Stampede — your creatures gain vigilance, trample and melee;
-/// later this turn, draw a card per player dealt combat damage.
-///
-/// Approximation: the draw comes at end of combat.
+/// at the next main phase this turn, draw a card per player dealt combat damage.
 pub fn viviens_stampede() -> CardDefinition {
     spell(
         "Vivien's Stampede",
@@ -541,7 +539,7 @@ pub fn viviens_stampede() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::DelayUntil {
-                kind: DelayedTriggerKind::EndOfCombat,
+                kind: DelayedTriggerKind::NextMainPhaseThisTurn,
                 body: Box::new(Effect::Draw {
                     who: Selector::You,
                     amount: Value::PlayersDealtCombatDamageThisTurn(PlayerRef::EachPlayer),

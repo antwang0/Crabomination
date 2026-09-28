@@ -25,6 +25,9 @@ pub(crate) fn delayed_kind_from_effect(
         DelayedTriggerKind::OpponentPermanentDamagesYouThisTurn => DelayedKind::OpponentPermanentDamagesYouThisTurn,
         DelayedTriggerKind::NextCleanupStep => DelayedKind::NextCleanupStep,
         DelayedTriggerKind::YourNextMainPhase => DelayedKind::YourNextMainPhase,
+        DelayedTriggerKind::YourNextMainPhaseAny | DelayedTriggerKind::NextMainPhaseThisTurn => {
+            DelayedKind::YourNextMainPhaseAny
+        }
         DelayedTriggerKind::EndOfCombat => DelayedKind::EndOfCombat,
         DelayedTriggerKind::NextCombat => DelayedKind::NextCombat,
         DelayedTriggerKind::CreatureAttacksYouUntilYourNextTurn => {
@@ -39,4 +42,11 @@ pub(crate) fn delayed_kind_from_effect(
             None => DelayedKind::NextEndStep,
         },
     }
+}
+
+/// The `expires_after_turn` a delayed kind carries: a stated "this turn"
+/// duration (CR 603.7b) lapses at this turn's cleanup, fired or not. Every
+/// other kind runs on its own clock.
+pub(crate) fn delayed_expiry(k: DelayedTriggerKind, turn: u32) -> Option<u32> {
+    matches!(k, DelayedTriggerKind::NextMainPhaseThisTurn).then_some(turn)
 }

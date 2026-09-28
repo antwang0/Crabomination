@@ -4898,6 +4898,7 @@ impl GameState {
                         &Effect::AddManaAtNextMainPhase {
                             amount: crate::effect::Value::Const(gained as i32),
                             any_color: false,
+                            first_main: false,
                         },
                         ctx,
                         events,
@@ -31261,7 +31262,7 @@ impl GameState {
                     bound_token: self.last_created_token,
                     bound_subject: None,
                     fires_once: true,
-                    expires_after_turn: None,
+                    expires_after_turn: delayed::delayed_expiry(*kind, self.turn_number),
                 });
                 Ok(())
             }
@@ -31316,12 +31317,12 @@ impl GameState {
                     bound_token: self.last_created_token,
                     bound_subject: None,
                     fires_once: true,
-                    expires_after_turn: None,
+                    expires_after_turn: delayed::delayed_expiry(*kind, self.turn_number),
                 });
                 Ok(())
             }
 
-            Effect::AddManaAtNextMainPhase { amount, any_color } => {
+            Effect::AddManaAtNextMainPhase { amount, any_color, first_main } => {
                 // Mana Sculpt — evaluate `amount` NOW (resolution-scoped
                 // scratch values like `CounteredSpellManaSpent` are still
                 // live) and bake the constant into the delayed body, so the
@@ -31335,7 +31336,11 @@ impl GameState {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source,
-                    kind: crate::game::types::DelayedKind::YourNextMainPhase,
+                    kind: if *first_main {
+                        crate::game::types::DelayedKind::YourNextMainPhase
+                    } else {
+                        crate::game::types::DelayedKind::YourNextMainPhaseAny
+                    },
                     effect: Effect::AddMana {
                         who: crate::effect::PlayerRef::You,
                         pool: if *any_color {

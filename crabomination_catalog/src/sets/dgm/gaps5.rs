@@ -70,6 +70,7 @@ pub fn plasm_capture() -> CardDefinition {
             Effect::AddManaAtNextMainPhase {
                 amount: Value::CounteredSpellManaValue,
                 any_color: true,
+                first_main: true,
             },
         ]),
         ..Default::default()

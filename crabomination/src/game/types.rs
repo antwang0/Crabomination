@@ -1290,6 +1290,10 @@ pub enum DelayedKind {
     /// step so the mana lands in the pool with main-phase windows still
     /// open (mana pools empty on step transition, MTG rule 500.4).
     YourNextMainPhase,
+    /// "At the beginning of your next main phase" — first or second, the
+    /// controller's next main phase to begin (CR 505.1). Mana Drain
+    /// countering on your own turn banks for this turn's second main phase.
+    YourNextMainPhaseAny,
     /// "When [card] dies this turn, …" — fires on a `CreatureDied` event for
     /// the watched card id (CR 603.4 event-keyed delayed trigger). Registered
     /// by `Effect::WhenTargetDiesThisTurn` capturing the targeted creature.

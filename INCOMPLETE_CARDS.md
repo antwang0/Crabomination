@@ -2186,7 +2186,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
 | 🟡 Killer Service | Cabaretti Cacophony (NCC) | the token sacrificed is the engine's pick. |
 | 🟡 Sizzling Soloist | Cabaretti Cacophony (NCC) | "attacks during its controller's next combat phase" is must-attack until your next turn. |
-| 🟡 Vivien's Stampede | Cabaretti Cacophony (NCC) | the draw happens at end of combat, not at the next main phase. |
 | 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
 | 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |

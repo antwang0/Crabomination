@@ -1336,6 +1336,9 @@ impl GameState {
             (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
             (DelayedKind::NextUpkeep { after_turn }, TurnStep::Upkeep) => turn > *after_turn,
             (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => dt.controller == active,
+            (DelayedKind::YourNextMainPhaseAny, TurnStep::PreCombatMain | TurnStep::PostCombatMain) => {
+                dt.controller == active
+            }
             (DelayedKind::NextEndStep, TurnStep::End) => true,
             (DelayedKind::PlayersNextEndStep { player, after_turn }, TurnStep::End) => {
                 *player == active && turn > *after_turn
