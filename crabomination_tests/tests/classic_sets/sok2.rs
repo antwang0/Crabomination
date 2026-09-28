@@ -545,6 +545,42 @@ fn erayo_flips_on_the_fourth_spell() {
     }
 }
 
+/// "Whenever the fourth spell of a turn is cast" — an Erayo that arrives
+/// after the fourth doesn't flip on the fifth.
+#[test]
+fn erayo_arriving_late_skips_the_fifth_spell() {
+    let mut g = two_player_game();
+    for i in 0..5 {
+        if i == 4 {
+            g.add_card_to_battlefield(0, catalog::erayo_soratami_ascendant());
+        }
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Player(1)));
+    }
+    assert!(g.battlefield.iter().all(|c| !c.flipped));
+}
+
+/// Erayo's Essence counters EACH opponent's first spell of the turn: at
+/// three seats both opponents' first spells are countered, their second
+/// spells are not (it was once a turn for all opponents together).
+#[test]
+fn erayos_essence_counters_each_opponents_first_spell() {
+    let mut g = multi_player_game(3);
+    let erayo = g.add_card_to_battlefield(0, catalog::erayo_soratami_ascendant());
+    g.flip_permanent(erayo, &mut vec![]);
+    let mut resolved = Vec::new();
+    for seat in [1, 2, 1, 2] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        g.players[seat].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = seat;
+        let life = g.players[0].life;
+        cast(&mut g, bolt, Some(Target::Player(0)));
+        resolved.push(g.players[0].life < life);
+    }
+    assert_eq!(resolved, [false, false, true, true]);
+}
+
 /// Homura comes back as its Essence and anthems the team.
 #[test]
 fn homura_returns_flipped_and_anthems() {

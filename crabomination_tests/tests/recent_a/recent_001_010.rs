@@ -10217,6 +10217,25 @@ mod recent6 {
         assert_eq!(g.players[0].hand.len(), my_hand + 1, "drew on opponent's second card");
     }
 
+    /// CR 121.2 — "an opponent draws their second card each turn" is per
+    /// opponent: at three seats each opponent's second card draws one.
+    #[test]
+    fn faerie_mastermind_counts_each_opponents_second_draw() {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.add_card_to_battlefield(0, catalog::faerie_mastermind());
+        for seat in 0..3 {
+            for _ in 0..3 { g.add_card_to_library(seat, catalog::forest()); }
+        }
+        let my_hand = g.players[0].hand.len();
+        for seat in [1, 1, 2, 2] {
+            let mut ev = vec![];
+            g.draw_one(seat, &mut ev);
+            g.dispatch_triggers_for_events(&ev);
+            drain_stack(&mut g);
+        }
+        assert_eq!(g.players[0].hand.len(), my_hand + 2);
+    }
+
     /// Profane Tutor suspends for {1}{B} and tutors any card to hand on resolution.
     #[test]
     fn profane_tutor_suspends_then_searches() {

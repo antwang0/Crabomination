@@ -431,12 +431,8 @@ pub fn faerie_mastermind() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::Triggerer,
-                    n: 2,
-                })
-                .once_per_turn(),
+            // Each opponent's own second card (CR 121.2) — not once a turn.
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::OpponentControl),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

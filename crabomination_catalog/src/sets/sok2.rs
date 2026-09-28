@@ -1503,18 +1503,18 @@ fn essence(name: &'static str, abilities: Vec<StaticAbility>) -> CardDefinition 
 pub fn erayo_soratami_ascendant() -> CardDefinition {
     let mut flipped = essence("Erayo's Essence", vec![]);
     flipped.triggered_abilities = vec![crate::card::TriggeredAbility {
-        event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).once_per_turn(),
+        // Each opponent's own first spell — not the turn's first opposing one.
+        event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::ValueAtMost(
+            Value::SpellsCastThisTurn(PlayerRef::Triggerer),
+            Value::ONE,
+        )),
         effect: Effect::CounterSpell { what: Selector::TriggerSource },
     }];
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::card::TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
-                .with_filter(Predicate::ValueAtLeast(
-                    Value::SpellsCastThisTurnTotal,
-                    Value::Const(4),
-                ))
-                .once_per_turn(),
+                .with_filter(Predicate::ValueEquals(Value::SpellsCastThisTurnTotal, Value::Const(4))),
             effect: Effect::Flip { what: Selector::This },
         }],
         flip_face: Some(Box::new(flipped)),
