@@ -69,14 +69,13 @@ pub fn living_history() -> CardDefinition {
                     definition: std::sync::Arc::new(spirit_token()),
                 },
             },
-            // On any attack you control: if a card left your graveyard
-            // this turn, +2/+0 EOT to the attacking creature
-            // (TriggerSource = the just-declared attacker).
-            // CR 603.4 — the intervening 'if' lives in `event.filter`
-            // (trigger-time check); the inner `Effect::If` re-checks at
-            // resolution (the event-trigger path doesn't re-check filters).
+            // "Whenever you attack, if a card left your graveyard this turn,
+            // target attacking creature gets +2/+0" — once per attack (it
+            // fired per attacker, pumping each). CR 603.4 — the intervening
+            // 'if' lives in `event.filter` (trigger-time check); the inner
+            // `Effect::If` re-checks at resolution.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
                     Predicate::CardsLeftGraveyardThisTurnAtLeast {
                         who: PlayerRef::You,
                         at_least: Value::Const(1),
@@ -88,7 +87,10 @@ pub fn living_history() -> CardDefinition {
                         at_least: Value::Const(1),
                     },
                     then: Box::new(Effect::PumpPT {
-                        what: Selector::TriggerSource,
+                        what: crate::effect::shortcut::target_filtered(
+                            crate::card::SelectionRequirement::Creature
+                                .and(crate::card::SelectionRequirement::IsAttacking),
+                        ),
                         power: Value::Const(2),
                         toughness: Value::Const(0),
                         duration: Duration::EndOfTurn,

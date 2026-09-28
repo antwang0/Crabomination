@@ -6445,6 +6445,11 @@ mod recent {
     fn run_amok_pumps_and_tramples() {
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        // "Target attacking creature" (the filter shipped as any creature).
+        g.attacking.push(crabomination::game::types::Attack {
+            attacker: bear,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        });
         let spell = g.add_card_to_hand(0, catalog::run_amok());
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(2);

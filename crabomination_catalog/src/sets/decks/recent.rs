@@ -8333,7 +8333,7 @@ pub fn run_amok() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking)),
                 power: Value::Const(3),
                 toughness: Value::Const(3),
                 duration: Duration::EndOfTurn,

@@ -48630,10 +48630,9 @@ pub fn guide_of_souls() -> CardDefinition {
                     Effect::AddEnergy(Value::ONE),
                 ]),
             },
-            // "Whenever you attack" — approximated as once per attack batch
-            // via once_per_turn (a single combat per turn in practice).
+            // "Whenever you attack" — once per attack declaration.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+                event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
                 effect: Effect::MayDo {
                     description: "Pay {E}{E}{E} for +1/+1 counters and flying?".into(),
                     body: Box::new(Effect::PayEnergy {

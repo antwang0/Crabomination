@@ -8070,9 +8070,11 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
         // Human creature token that's tapped and attacking that player." One
         // token per opponent, each at its own opponent — a single
         // `CreateTokenAttacking` is exact at two players and makes one token
-        // aimed at one seat in a pod.
-        triggered_abilities: vec![crate::effect::shortcut::on_attack(
-            Effect::ForEachOpponent {
+        // aimed at one seat in a pod. "Whenever YOU attack" — any attack,
+        // Adeline among the attackers or not (it listened to her own).
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(crate::card::EventKind::YouAttack, crate::card::EventScope::YourControl),
+            effect: Effect::ForEachOpponent {
                 body: Box::new(Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(1),
@@ -8087,7 +8089,7 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
                     defender: Some(PlayerRef::Triggerer),
                 }),
             },
-        )],
+        }],
         ..Default::default()
     }
 }

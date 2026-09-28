@@ -2548,9 +2548,20 @@ fn cast_charm(g: &mut GameState, card: crabomination::card::CardId, mode: usize,
 fn azorius_charm_tucks_a_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // "target attacking or blocking creature": a creature sitting at home is
+    // not a legal target (the filter shipped as any creature).
+    let idle = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    });
     let charm = g.add_card_to_hand(0, catalog::azorius_charm());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: charm, target: Some(Target::Permanent(idle)), additional_targets: vec![], mode: Some(2), x_value: None,
+    });
+    assert!(r.is_err(), "not attacking or blocking");
     let lib_before = g.players[1].library.len();
     // "target attacking or blocking creature".
     g.set_attacking(vec![crabomination::game::types::Attack {

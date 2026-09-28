@@ -2738,3 +2738,40 @@ fn target_negations_are_enforced() {
     });
     assert!(r.is_err(), "Izzet Charm can't counter a creature spell");
 }
+
+/// "Whenever you attack" is one trigger per attack declaration, whoever
+/// attacks: Adeline listened only to her own attack (a cube card), Living
+/// History fired once per attacker and pumped each.
+#[test]
+fn whenever_you_attack_fires_once_per_declaration() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let adeline = g.add_card_to_battlefield(0, catalog::adeline_resplendent_cathar());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let _ = adeline;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack without Adeline");
+    drain_stack(&mut g);
+    let humans = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Human").count();
+    assert_eq!(humans, 1, "one Human for the one opponent");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::living_history());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    g.players[0].cards_left_graveyard_this_turn = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let power: i32 = [a, b].iter().map(|&id| g.computed_permanent(id).unwrap().power).sum();
+    assert_eq!(power, 2 + 2 + 2, "one +2/+0, not one per attacker");
+}
