@@ -3344,6 +3344,7 @@ impl HeuristicBot {
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                         .or_else(|| pick_copy_response(state, seat, &self.weights))
+                        .or_else(|| super::trigger_copy::pick_trigger_copy(state, seat))
                         .or_else(|| super::spell_response::pick_punish_response(state, seat))
                         .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     {

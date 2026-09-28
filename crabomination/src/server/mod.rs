@@ -94,6 +94,7 @@ mod foretell;
 mod room;
 mod mutate;
 mod fog;
+mod trigger_copy;
 mod voyage;
 mod evasion;
 mod manland;
