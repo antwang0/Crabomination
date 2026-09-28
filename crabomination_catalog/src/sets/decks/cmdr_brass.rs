@@ -799,7 +799,7 @@ pub fn zara_renegade_recruiter() -> CardDefinition {
             description: "Put a creature from the defending player's hand onto the battlefield attacking?".into(),
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
-                    what: Selector::Take {
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::DefendingPlayer,
                             zone: Zone::Hand,

@@ -535,7 +535,7 @@ pub fn polluted_cistern_dim_oubliette() -> CardDefinition {
                     effect: Effect::Seq(vec![
                         mill(3),
                         Effect::Move {
-                            what: Selector::one_of(Selector::CardsInZone {
+                            what: Selector::best_of(Selector::CardsInZone {
                                 who: PlayerRef::You,
                                 zone: Zone::Graveyard,
                                 filter: R::Creature,

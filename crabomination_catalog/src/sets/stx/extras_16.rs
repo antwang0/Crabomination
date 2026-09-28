@@ -1115,7 +1115,7 @@ pub fn deadly_brew() -> CardDefinition {
                 then: Box::new(Effect::MayDo {
                     description: "Return a permanent card from your graveyard to your hand?".into(),
                     body: Box::new(Effect::Move {
-                        what: Selector::take(
+                        what: Selector::take_priciest(
                             Selector::CardsInZone {
                                 who: PlayerRef::You,
                                 zone: Zone::Graveyard,

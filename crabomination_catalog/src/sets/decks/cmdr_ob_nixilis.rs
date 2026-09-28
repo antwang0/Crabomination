@@ -225,7 +225,7 @@ pub fn infernal_offering() -> CardDefinition {
     };
     let draw_two = |who: Selector| Effect::Draw { who, amount: Value::Const(2) };
     let return_one = |who: PlayerRef| Effect::Move {
-        what: Selector::Take {
+        what: Selector::TakeGreatestManaValue {
             inner: Box::new(Selector::CardsInZone { who: who.clone(), zone: Zone::Graveyard, filter: R::Creature }),
             count: Box::new(Value::ONE),
         },

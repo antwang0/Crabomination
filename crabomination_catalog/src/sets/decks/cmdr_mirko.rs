@@ -539,7 +539,7 @@ pub fn counterpoint() -> CardDefinition {
             body: Box::new(Effect::Seq(vec![
                 counter_target_spell(),
                 Effect::CastWithoutPayingImmediate {
-                    what: Selector::take(your_graveyard(kinds.and(R::ManaValueAtMostXFromCost)), Value::ONE),
+                    what: Selector::take_priciest(your_graveyard(kinds.and(R::ManaValueAtMostXFromCost)), Value::ONE),
                     source_zone: crate::card::Zone::Graveyard,
                     exile_after: false,
                     copy: false,

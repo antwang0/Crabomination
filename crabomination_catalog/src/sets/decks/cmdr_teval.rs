@@ -666,7 +666,7 @@ pub fn diviner_of_mist() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
             mill(4),
             Effect::CastWithoutPayingImmediate {
-                what: Selector::take(
+                what: Selector::take_priciest(
                     your_graveyard(instant_or_sorcery().and(R::ManaValueAtMost(4))),
                     Value::ONE,
                 ),

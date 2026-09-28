@@ -176,7 +176,9 @@ fn cruel_ultimatum_sequence() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     for _ in 0..4 { g.add_card_to_hand(1, catalog::island()); }
-    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // The pick is the best creature card (Shivan Dragon), not the oldest.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::shivan_dragon());
     for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     let cu = g.add_card_to_hand(0, catalog::cruel_ultimatum());
     g.players[0].mana_pool.add(Color::Blue, 2);

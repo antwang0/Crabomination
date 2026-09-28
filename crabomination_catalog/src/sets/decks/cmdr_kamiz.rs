@@ -336,7 +336,7 @@ pub fn jailbreak() -> CardDefinition {
             Effect::WithX {
                 x: Value::ManaValueOf(Box::new(Selector::LastMoved)),
                 body: Box::new(Effect::Move {
-                    what: Selector::Take {
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::You,
                             zone: Zone::Graveyard,
@@ -482,7 +482,7 @@ pub fn obscura_confluence() -> CardDefinition {
                 ]),
                 Effect::Connive { what: target_filtered(R::Creature), amount: Value::ONE },
                 Effect::Move {
-                    what: Selector::Take {
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::You,
                             zone: Zone::Graveyard,

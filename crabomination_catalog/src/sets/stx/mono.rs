@@ -894,7 +894,7 @@ pub fn incarnation_technique() -> CardDefinition {
                 amount: Value::Const(5),
             },
             Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
+                what: Selector::best_of(Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::Creature,

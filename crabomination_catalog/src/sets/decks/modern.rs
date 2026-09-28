@@ -55937,7 +55937,7 @@ pub fn cruel_ultimatum() -> CardDefinition {
                 amount: Value::Const(5),
             },
             Effect::Move {
-                what: Selector::take(
+                what: Selector::take_priciest(
                     Selector::CardsInZone {
                         who: PlayerRef::You,
                         zone: crate::card::Zone::Graveyard,

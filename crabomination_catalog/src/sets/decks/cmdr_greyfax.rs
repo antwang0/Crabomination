@@ -541,7 +541,7 @@ pub fn neyam_shai_murad() -> CardDefinition {
                         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                     },
                     Effect::Move {
-                        what: Selector::Take {
+                        what: Selector::TakeGreatestManaValue {
                             inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::PermanentCard }),
                             count: Box::new(Value::ONE),
                         },

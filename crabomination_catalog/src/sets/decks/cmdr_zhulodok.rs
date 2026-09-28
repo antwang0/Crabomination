@@ -134,7 +134,7 @@ pub fn desecrate_reality() -> CardDefinition {
             Effect::If {
                 cond: Predicate::ColorlessManaSpentAtLeast(3),
                 then: Box::new(Effect::Move {
-                    what: Selector::Take {
+                    what: Selector::TakeGreatestManaValue {
                         inner: Box::new(Selector::CardsInZone {
                             who: PlayerRef::You,
                             zone: crate::card::Zone::Graveyard,
