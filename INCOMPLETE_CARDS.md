@@ -441,6 +441,12 @@ on existing primitives. What each rounds off:
 | Najeela, the Blade-Blossom | an opponent's Warrior attacking asks the "you may" (its controller gets the token); the headless seat declines | nothing — a strategy choice, noted |
 | Balduvian Fallen (older) | "+1/+0 per {B}/{R} spent on cumulative upkeep" dropped | a `CumulativeUpkeepPaid` event carrying the spent colours |
 
+## Commander additions of session `01E9u8Mj` (2026-09-28)
+
+| Card | Approximation | What it needs |
+|---|---|---|
+| Shilgengar, Sire of Famine | the returned creatures get their finality counter just after they enter, not "with" it (an ETB that counts counters sees none) | a mass `Move` that enters with counters |
+
 ## Multiplayer wording — the N-seat audit, and what it still misses
 
 Every implemented card whose oracle says "each opponent" was read against its
