@@ -62,15 +62,17 @@ pub fn rain_of_embers() -> CardDefinition {
         name: "Rain of Embers",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
-            ),
-            body: Box::new(Effect::DealDamage {
-                to: Selector::TriggerSource,
-                amount: Value::Const(1),
-            }),
-        },
+        // "1 damage to each creature and each player" — flyers included.
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature),
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(1) }),
+            },
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachPlayer),
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(1) }),
+            },
+        ]),
         ..Default::default()
     }
 }

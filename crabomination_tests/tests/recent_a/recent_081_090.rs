@@ -1063,17 +1063,21 @@ mod recent88 {
             "3 damage killed both 2/2s");
     }
 
+    /// "1 damage to each creature and each player": flyers too (it used to
+    /// spare them and skip the players — Earthquake's shape, not this card's).
     #[test]
-    fn rain_of_embers_spares_flyers() {
+    fn rain_of_embers_hits_every_creature_and_player() {
         let mut g = two_player_game();
         let ground = g.add_card_to_battlefield(1, catalog::llanowar_elves()); // 1/1, no flying
         let flyer = g.add_card_to_battlefield(1, catalog::suntail_hawk()); // 1/1 flying
+        let lives = (g.players[0].life, g.players[1].life);
         let id = g.add_card_to_hand(0, catalog::rain_of_embers());
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(2);
         cast(&mut g, id, None, vec![], None);
         assert!(g.battlefield_find(ground).is_none(), "the grounded 1/1 died");
-        assert!(g.battlefield_find(flyer).is_some(), "the flyer was spared");
+        assert!(g.battlefield_find(flyer).is_none(), "so did the flyer");
+        assert_eq!((g.players[0].life, g.players[1].life), (lives.0 - 1, lives.1 - 1));
     }
 
     /// Lieutenant (CR 207.2c — an ability word with no rules meaning of its
