@@ -156,7 +156,7 @@ pub fn sync_seat_name_plates(
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     ui_scale: Res<UiScale>,
     ticker: Res<crate::systems::game_ui::life_ticker::LifeTicker>,
-    mut plates: Query<(Entity, &SeatNamePlate, &mut Node, &mut Text, &bevy::ui::ComputedNode)>,
+    mut plates: Query<(Entity, &SeatNamePlate, &mut Node, &mut Text)>,
 ) {
     let pod = view.0.as_ref().filter(|cv| cv.players.len() > 2);
     let camera = camera_q.single().ok();
@@ -174,7 +174,7 @@ pub fn sync_seat_name_plates(
         crate::theme::project_to_ui(camera, cam_xform, &ui_scale, top)
     };
     let mut placed = vec![false; n];
-    for (e, plate, mut node, mut text, computed) in &mut plates {
+    for (e, plate, mut node, mut text) in &mut plates {
         let Some(p) = cv.players.iter().find(|p| p.seat == plate.0) else {
             commands.entity(e).despawn();
             continue;
@@ -185,11 +185,14 @@ pub fn sync_seat_name_plates(
             text.0 = label;
         }
         match pile_top(p) {
+            // Centred by its `UiTransform`, not by offsetting it half its
+            // laid-out size: layout rounds a node's size to whole pixels by
+            // where it sits, so a plate placed by its own size moved its
+            // size, which moved it back — it shook by a pixel every frame.
             Some(at) => {
-                let half = computed.size() * computed.inverse_scale_factor() * 0.5;
                 node.display = Display::Flex;
-                node.left = Val::Px(at.x - half.x);
-                node.top = Val::Px(at.y - half.y);
+                node.left = Val::Px(at.x);
+                node.top = Val::Px(at.y);
             }
             None => node.display = Display::None,
         }
@@ -198,7 +201,7 @@ pub fn sync_seat_name_plates(
         if placed.get(p.seat).copied().unwrap_or(true) {
             continue;
         }
-        // Parked off screen for the frame before layout has sized it.
+        // Parked off screen until the next frame places it.
         commands.spawn((
             SeatNamePlate(p.seat),
             Text::new(plate_label(cv, p, ticker.shown(p.seat, p.life))),
@@ -218,6 +221,7 @@ pub fn sync_seat_name_plates(
                 border_radius: BorderRadius::all(Val::Px(3.0)),
                 ..default()
             },
+            UiTransform { translation: Val2::percent(-50.0, -50.0), ..UiTransform::IDENTITY },
             Pickable::IGNORE,
             GlobalZIndex(crate::theme::layer::CARD_OVERLAY),
             crate::systems::game_ui::InGameRoot,
