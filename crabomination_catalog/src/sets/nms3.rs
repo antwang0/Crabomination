@@ -81,7 +81,11 @@ pub fn pack_hunt() -> CardDefinition {
             who: PlayerRef::You,
             filter: R::SameNameAsTarget,
             to: ZoneDest::Hand(PlayerRef::You),
-            count: Value::Const(3),
+            // The count names the target, so the slot is declared (CR 601.2c).
+            count: Value::Times(
+                Box::new(Value::CountOf(Box::new(target_filtered(R::Creature)))),
+                Box::new(Value::Const(3)),
+            ),
         },
         ..Default::default()
     }

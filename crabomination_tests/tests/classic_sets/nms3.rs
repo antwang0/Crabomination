@@ -115,6 +115,48 @@ fn pack_hunt_fetches_same_named_cards() {
     assert!(g.players[0].hand.iter().any(|c| c.id == copy));
 }
 
+/// CR 601.2c — Pack Hunt names "target creature": with no target it can't be
+/// cast (the slot was never declared, so a bot cast it at nothing).
+#[test]
+fn cr_601_2c_pack_hunt_needs_its_target() {
+    let mut g = main_phase();
+    let hunt = g.add_card_to_hand(0, catalog::pack_hunt());
+    mana(&mut g, 0);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: hunt,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "no creature named, no cast");
+}
+
+/// CR 115.1 — Mask of the Mimic's target is a NONTOKEN creature: a token is
+/// refused; a real card finds its namesake onto the battlefield.
+#[test]
+fn mask_of_the_mimic_targets_a_nontoken_creature() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let copy = g.add_card_to_library(0, catalog::serra_angel());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let token = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let mask = g.add_card_to_hand(0, catalog::mask_of_the_mimic());
+    mana(&mut g, 0);
+    let refused = g.perform_action(GameAction::CastSpell {
+        card_id: mask,
+        target: Some(Target::Permanent(token)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(refused.is_err(), "a token is not a nontoken creature");
+    script(&mut g, vec![DecisionAnswer::Search(Some(copy))]);
+    cast(&mut g, 0, mask, Some(Target::Permanent(angel)));
+    assert!(g.battlefield_find(copy).is_some_and(|c| c.controller == 0));
+}
+
 /// Mind Slash trades a creature for a hand-picked discard.
 #[test]
 fn mind_slash_trades_a_creature_for_a_discard() {

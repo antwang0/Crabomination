@@ -1251,7 +1251,8 @@ pub fn mask_of_the_mimic() -> CardDefinition {
             who: PlayerRef::You,
             filter: R::SameNameAsTarget.and(R::Creature),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            count: Value::ONE,
+            // The count names the target, so the slot is declared (CR 601.2c).
+            count: Value::CountOf(Box::new(target_filtered(R::Creature.and(R::NotToken)))),
         },
         ..Default::default()
     }
