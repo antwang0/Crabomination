@@ -2307,6 +2307,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![crate::card::Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
         static_abilities: vec![StaticAbility {
             description: "If one or more tokens would be created under your \
                           control, twice that many of those tokens are created \

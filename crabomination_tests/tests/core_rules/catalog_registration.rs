@@ -2253,6 +2253,14 @@ fn every_card_that_prints_a_keyword_line_carries_those_keywords() {
                 missing.push(format!("{} is missing {name}", def.name));
             }
         }
+        // Ward prints its cost on the line ("ward {2}"), so it matches by
+        // prefix; Adrix and Nev shipped without it.
+        let ward = |d: &crabomination::card::CardDefinition| {
+            d.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Ward(_)))
+        };
+        if scryfall.contains("ward") && lines.iter().any(|w| w.starts_with("ward")) && !ward(&def) {
+            missing.push(format!("{} is missing ward", def.name));
+        }
     }
 
     assert!(
