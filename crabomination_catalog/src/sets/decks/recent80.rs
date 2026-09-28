@@ -8,7 +8,7 @@ use crate::card::{
     EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{drain, etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, x};
@@ -138,7 +138,7 @@ pub fn highway_robber() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(drain(2))],
+        triggered_abilities: vec![etb(crate::effect::shortcut::drain_target_opponent(2))],
         ..Default::default()
     }
 }

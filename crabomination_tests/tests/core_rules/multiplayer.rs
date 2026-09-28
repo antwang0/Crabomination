@@ -7402,3 +7402,28 @@ fn cr_500_1_an_attack_last_turn_is_not_an_attack_this_turn() {
     }
     assert!(!g.evaluate_predicate(&attacked, &ctx), "seat 1 attacked last turn, not this one");
 }
+
+/// "Target opponent loses 2 life and you gain 2 life" (Highway Robber) is ONE
+/// opponent at 3 seats — `drain` took it from every opponent.
+#[test]
+fn cr_115_1_highway_robber_drains_one_target_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let robber = g.add_card_to_graveyard(0, catalog::highway_robber());
+    let put = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::ExactObjects(vec![robber]),
+        to: crabomination::effect::ZoneDest::Battlefield {
+            controller: crabomination::effect::PlayerRef::You,
+            tapped: false,
+        },
+    };
+    let evs = g.resolve_effect(&put, &EffectContext::for_spell(0, None, 0, 0)).expect("enter");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let lost: i32 = (1..3).map(|p| lives[p] - g.players[p].life).sum();
+    assert_eq!(lost, 2, "one opponent lost 2");
+    assert_eq!(g.players[0].life, lives[0] + 2);
+}

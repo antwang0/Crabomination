@@ -36920,7 +36920,7 @@ pub fn imperious_perfect() -> CardDefinition {
 pub fn diregraf_captain() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
-    use crate::effect::shortcut::{each_opponent, lose_life};
+    use crate::effect::shortcut::lose_life;
     CardDefinition {
         name: "Diregraf Captain",
         cost: cost(&[generic(1), u(), b()]),
@@ -36952,7 +36952,7 @@ pub fn diregraf_captain() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 },
             ),
-            effect: lose_life(1, each_opponent()),
+            effect: lose_life(1, crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer)),
         }],
         ..Default::default()
     }

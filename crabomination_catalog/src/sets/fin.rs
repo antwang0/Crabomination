@@ -1512,7 +1512,8 @@ pub fn al_bhed_salvagers() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
-            effect: crate::effect::shortcut::drain(1),
+            // "target opponent loses 1 life and you gain 1 life".
+            effect: crate::effect::shortcut::drain_target_opponent(1),
         }],
         ..Default::default()
     }
