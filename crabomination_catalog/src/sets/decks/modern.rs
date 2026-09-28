@@ -5222,19 +5222,18 @@ pub fn final_reward() -> CardDefinition {
     }
 }
 
-/// Holy Light — {2}{W} Instant. All creatures get -1/-1 until end of turn.
-///
-/// Sweep small creatures (1-toughness ones die) for one mana. Modeled as
-/// `ForEach(Creature) + PumpPT(-1/-1 EOT)`. The "nonwhite" Oracle filter
-/// is collapsed — engine simplification, in line with Languish (drops
-/// the "nonblack" rider).
+/// Holy Light — {2}{W} Instant. Nonwhite creatures get -1/-1 until end of
+/// turn.
 pub fn holy_light() -> CardDefinition {
     CardDefinition {
         name: "Holy Light",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(Color::White)))),
+            ),
             body: Box::new(Effect::PumpPT {
                 what: Selector::TriggerSource,
                 power: Value::Const(-1),
@@ -8947,8 +8946,8 @@ pub fn murktide_regent() -> CardDefinition {
 
 /// Seasoned Pyromancer — {1}{R}{R} Creature — Human Shaman, 2/2. ETB:
 /// discard two cards, then draw two; create a 1/1 red Elemental for each
-/// nonland card discarded this way. (The graveyard-exile recursion clause
-/// is omitted.)
+/// nonland card discarded this way. {3}{R}{R}, exile it from your graveyard:
+/// two 1/1 red Elementals.
 pub fn seasoned_pyromancer() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
@@ -12284,18 +12283,18 @@ pub fn stroke_of_genius() -> CardDefinition {
 /// creature card with mana value X or less, put it onto the battlefield,
 /// then shuffle. Shuffle this card into its owner's library."
 ///
-/// Approximation: the "shuffle into library" rider collapses (the spell
-/// goes to graveyard normally). The body wires the X-gated tutor via
-/// `Search(Creature ∧ HasColor(Green) ∧ ManaValueAtMost(X) → BF)`.
+/// The tutor had no mana-value cap: an X=0 Zenith fetched any green creature.
 pub fn green_suns_zenith() -> CardDefinition {
     CardDefinition {
         name: "Green Sun's Zenith",
         cost: cost(&[x(), g()]),
         card_types: vec![CardType::Sorcery],
+        shuffle_into_library_on_resolve: true,
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::Creature
-                .and(SelectionRequirement::HasColor(Color::Green)),
+                .and(SelectionRequirement::HasColor(Color::Green))
+                .and(SelectionRequirement::ManaValueAtMostXFromCost),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,
@@ -12309,17 +12308,19 @@ pub fn green_suns_zenith() -> CardDefinition {
 /// to any target. If a creature dealt damage this way would die this
 /// turn, exile it instead. Shuffle this card into its owner's library."
 ///
-/// Wired as a simple X-damage burn at instant speed. The "exile if
-/// would die" rider and "shuffle into library" rider both collapse.
+/// It shipped as a sorcery with an unfiltered target and neither rider.
 pub fn red_suns_zenith() -> CardDefinition {
     CardDefinition {
         name: "Red Sun's Zenith",
         cost: cost(&[x(), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: Selector::Target(0),
-            amount: Value::XFromCost,
-        },
+        card_types: vec![CardType::Instant],
+        shuffle_into_library_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: crate::effect::shortcut::target_any(),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+        ]),
         ..Default::default()
     }
 }
@@ -12327,7 +12328,7 @@ pub fn red_suns_zenith() -> CardDefinition {
 /// White Sun's Zenith — {X}{W}{W}{W} Instant. "Create X 2/2 white Cat
 /// creature tokens. Shuffle this card into its owner's library."
 ///
-/// X-cost army-in-a-can. The "shuffle into library" rider collapses.
+/// X-cost army-in-a-can.
 pub fn white_suns_zenith() -> CardDefinition {
     use crate::card::TokenDefinition;
     let cat = TokenDefinition {
@@ -12352,6 +12353,7 @@ pub fn white_suns_zenith() -> CardDefinition {
         name: "White Sun's Zenith",
         cost: cost(&[ManaSymbol::X, w(), w(), w()]),
         card_types: vec![CardType::Instant],
+        shuffle_into_library_on_resolve: true,
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
@@ -12364,14 +12366,14 @@ pub fn white_suns_zenith() -> CardDefinition {
 /// Black Sun's Zenith — {X}{B}{B} Sorcery. "Put X -1/-1 counters on each
 /// creature. Shuffle this card into its owner's library."
 ///
-/// Wired via `ForEach + AddCounter(MinusOneMinusOne, X)`. The
-/// "shuffle into library" rider collapses.
+/// Wired via `ForEach + AddCounter(MinusOneMinusOne, X)`.
 pub fn black_suns_zenith() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Black Sun's Zenith",
         cost: cost(&[x(), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        shuffle_into_library_on_resolve: true,
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
             body: Box::new(Effect::AddCounter {
@@ -23246,9 +23248,8 @@ pub fn inquisitive_puppet() -> CardDefinition {
 }
 
 /// Juggernaut — {4} Artifact Creature — Juggernaut 5/3. "Juggernaut attacks
-/// each combat if able." (CR 508.1d via `Keyword::MustAttack`, enforced in
-/// `declare_attackers`. The "can't be blocked by Walls" rider is dropped —
-/// no Wall-typed blockers are modelled.)
+/// each combat if able. Juggernaut can't be blocked by Walls." (CR 508.1d via
+/// `Keyword::MustAttack`, enforced in `declare_attackers`.)
 pub fn juggernaut() -> CardDefinition {
     CardDefinition {
         name: "Juggernaut",
@@ -24669,13 +24670,14 @@ pub fn rest_in_peace() -> CardDefinition {
 }
 
 /// Leyline of the Void — {2}{B}{B} Enchantment. "If a card would be put into
-/// an opponent's graveyard from anywhere, exile it instead." (CR 614.6.)
-/// (The opening-hand "begin the game with this in play" clause is dropped.)
+/// an opponent's graveyard from anywhere, exile it instead." (CR 614.6.) In
+/// your opening hand, you may begin the game with it on the battlefield.
 pub fn leyline_of_the_void() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
     CardDefinition {
         name: "Leyline of the Void",
+        opening_hand: Some(crate::effect::OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
@@ -27289,14 +27291,16 @@ pub fn lion_sash() -> CardDefinition {
     }
 }
 
-/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Permanents you
-/// control are all colors and your lands are every basic land type (so they
-/// tap for any color). The opening-hand Leyline rider is dropped.
+/// Leyline of the Guildpact — {G/W}{G/U}{B/G}{R/G} Enchantment. Permanents
+/// you control are all colors and your lands are every basic land type (so
+/// they tap for any color). In your opening hand, you may begin the game with
+/// it on the battlefield.
 pub fn leyline_of_the_guildpact() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
     CardDefinition {
         name: "Leyline of the Guildpact",
+        opening_hand: Some(crate::effect::OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
         cost: cost(&[
             hybrid(Color::Green, Color::White),
             hybrid(Color::Green, Color::Blue),
@@ -29353,8 +29357,8 @@ pub fn liliana_the_last_hope() -> CardDefinition {
 }
 
 /// Teferi, Hero of Dominaria — {3}{W}{U} Legendary Planeswalker. 4 loyalty.
-/// **+1**: Draw a card (the "untap two lands at the next end step" rider is
-/// dropped). **−3**: Put target nonland permanent into its owner's library
+/// **+1**: Draw a card; at the next end step, untap up to two lands.
+/// **−3**: Put target nonland permanent into its owner's library
 /// third from the top. **−8**: emblem — whenever you draw a card, exile target
 /// permanent an opponent controls.
 pub fn teferi_hero_of_dominaria() -> CardDefinition {
@@ -30946,9 +30950,8 @@ pub fn daru_lancer() -> CardDefinition {
     }
 }
 
-/// Skirk Marauder — {1}{R} 2/1 Goblin with Morph {2}{R}. (The turn-face-up
-/// "deals 2 damage to any target" rider is still dropped; the Mountaincycling
-/// it shipped with is not on the card at all.)
+/// Skirk Marauder — {1}{R} 2/1 Goblin with Morph {2}{R}. When it's turned face
+/// up, it deals 2 damage to any target.
 pub fn skirk_marauder() -> CardDefinition {
     CardDefinition {
         name: "Skirk Marauder",
@@ -39543,13 +39546,13 @@ pub fn bonfire_of_the_damned() -> CardDefinition {
 }
 
 /// Temporal Mastery — {5}{U}{U} Sorcery. Miracle {1}{U}. Take an extra turn
-/// after this one. (The self-exile rider is dropped — the spell goes to the
-/// graveyard as normal.)
+/// after this one. Exile Temporal Mastery.
 pub fn temporal_mastery() -> CardDefinition {
     CardDefinition {
         name: "Temporal Mastery",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
         miracle: Some(cost(&[generic(1), u()])),
         effect: Effect::TakeExtraTurn {
             who: PlayerRef::You,

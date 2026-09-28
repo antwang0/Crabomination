@@ -192,8 +192,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
 }
 
 /// Griselbrand — {4}{B}{B}{B}{B}, 7/7 Legendary Demon. Flying, lifelink. Pay
-/// 7 life: draw seven cards. Stub: vanilla 7/7 with flying + lifelink; the
-/// activated draw-7-pay-7 ability is wired.
+/// 7 life: draw seven cards.
 pub fn griselbrand() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{Selector, Value};
@@ -586,12 +585,12 @@ pub fn ophidian() -> CardDefinition {
 }
 
 /// Legion Loyalist — {R} 1/1 Goblin Soldier, Haste. Battalion: creatures you
-/// control gain first strike and trample until end of turn. (The "can't be
-/// blocked by creature tokens" rider is dropped.)
+/// control gain first strike and trample and can't be blocked by creature
+/// tokens until end of turn.
 pub fn legion_loyalist() -> CardDefinition {
     use crate::effect::shortcut::battalion;
     let pump = |kw: Keyword| Effect::GrantKeyword {
-        what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+        what: Selector::EachPermanent(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
         keyword: kw,
         duration: Duration::EndOfTurn,
     };
@@ -609,6 +608,9 @@ pub fn legion_loyalist() -> CardDefinition {
         triggered_abilities: vec![battalion(Effect::Seq(vec![
             pump(Keyword::FirstStrike),
             pump(Keyword::Trample),
+            pump(Keyword::CantBeBlockedBy(Box::new(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
+            ))),
         ]))],
         ..Default::default()
     }

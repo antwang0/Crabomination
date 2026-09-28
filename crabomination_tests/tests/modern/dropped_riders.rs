@@ -2304,3 +2304,96 @@ fn damage_to_an_opponent_auras_draw_off_noncombat_damage() {
         }
     }
 }
+
+/// Cube riders that shipped dropped. The Sun's Zenith cycle shuffles itself
+/// back into its owner's library; Green Sun's Zenith is capped at X; Red
+/// Sun's Zenith is an instant that exiles a creature it would kill.
+#[test]
+fn suns_zenith_cycle_riders() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::llanowar_elves());
+    g.add_card_to_library(0, catalog::craterhoof_behemoth());
+    let gsz = g.add_card_to_hand(0, catalog::green_suns_zenith());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: gsz, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("GSZ for 1");
+    drain_stack(&mut g);
+    let names: Vec<_> = g.battlefield.iter().map(|c| c.definition.name).collect();
+    assert!(!names.contains(&"Craterhoof Behemoth"), "mana value 8 > X");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != gsz), "not in the graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == gsz), "shuffled into the library");
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rsz = g.add_card_to_hand(0, catalog::red_suns_zenith());
+    assert!(catalog::red_suns_zenith().card_types.contains(&crabomination::card::CardType::Instant));
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rsz,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("RSZ for 2");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != bear), "exiled, not dead");
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    assert!(g.players[0].library.iter().any(|c| c.id == rsz));
+}
+
+/// Leyline of the Void and Leyline of the Guildpact begin the game on the
+/// battlefield from an opening hand (their docs said the clause was dropped).
+#[test]
+fn opening_hand_leylines_start_in_play() {
+    for f in [catalog::leyline_of_the_void as fn() -> crabomination::card::CardDefinition, catalog::leyline_of_the_guildpact] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, f());
+        g.fire_start_of_game_effects();
+        assert!(g.battlefield_find(id).is_some(), "{} starts in play", f().name);
+    }
+}
+
+/// Holy Light hits nonwhite creatures only; Temporal Mastery exiles itself;
+/// Legion Loyalist's battalion makes your team unblockable by tokens.
+#[test]
+fn holy_light_mastery_and_loyalist_riders() {
+    let mut g = main_phase();
+    let knight = g.add_card_to_battlefield(0, catalog::white_knight());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hl = g.add_card_to_hand(0, catalog::holy_light());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, hl, None).expect("holy light");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 2, "white: untouched");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 1, "nonwhite: -1/-1");
+
+    let mut g = main_phase();
+    let tm = g.add_card_to_hand(0, catalog::temporal_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, tm, None).expect("temporal mastery");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == tm), "exiled as it resolves");
+
+    let mut g = main_phase();
+    let ll = g.add_card_to_battlefield(0, catalog::legion_loyalist());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [ll, a, b] {
+        g.clear_sickness(id);
+    }
+    let tok = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    g.step = TurnStep::DeclareAttackers;
+    let attacks = [ll, a, b]
+        .map(|attacker| crabomination::game::types::Attack { attacker, target: crabomination::game::types::AttackTarget::Player(1) });
+    g.perform_action(GameAction::DeclareAttackers(attacks.to_vec())).expect("battalion");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(tok, a)])).is_err(), "a token can't block them");
+}
