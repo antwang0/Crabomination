@@ -25718,14 +25718,34 @@ impl GameState {
                 if top.is_empty() {
                     return Ok(());
                 }
-                // The Key to the Vault exiles a nonland card, and may exile none.
-                let pick = top
+                // "Exile one of them" is the controller's pick (the auto default:
+                // the highest mana value). The Key to the Vault exiles a nonland
+                // card, and may exile none.
+                let eligible: Vec<&crate::card::CardInstance> = top
                     .iter()
-                    .copied()
-                    .filter_map(|id| self.players[opp].library.iter().find(|c| c.id == id))
+                    .filter_map(|&id| self.players[opp].library.iter().find(|c| c.id == id))
                     .filter(|c| *grant != G::CastFreeNonland || !c.definition.is_land())
-                    .max_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id);
+                    .collect();
+                let auto = eligible.iter().max_by_key(|c| c.definition.cost.cmc()).map(|c| c.id);
+                let candidates: Vec<(CardId, String)> =
+                    eligible.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+                let min = u32::from(*grant != G::CastFreeNonland && !candidates.is_empty());
+                let mut cursor = 0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    ctx.controller,
+                    "Exile one of these cards".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    min,
+                    1,
+                    PickValue::Gain,
+                    effect,
+                    auto.into_iter().collect(),
+                ) else {
+                    return Ok(());
+                };
+                let pick = picked.first().copied();
                 if let Some(pick) = pick {
                     let mut card = Self::take_card(&mut self.players[opp].library, pick)
                         .expect("pick chosen from the top of this library just above");

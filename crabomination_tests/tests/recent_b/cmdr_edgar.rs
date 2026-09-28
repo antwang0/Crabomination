@@ -487,6 +487,20 @@ fn florian_digs_for_the_total_life_lost() {
         card.may_play_until.map(|p| p.duration),
         Some(crabomination::card::MayPlayDuration::EndOfThisTurn),
     );
+
+    // "Exile one of those cards" is the controller's pick, not the engine's.
+    let mut g = main_phase_n(3);
+    let island = g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::florian_voldaren_scion());
+    g.players[1].life_lost_this_turn = 3;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![island]),
+    ]));
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == island), "the chosen Island, not the Angel");
 }
 
 /// Elenda's Hierophant grows on lifegain and splits on death.
