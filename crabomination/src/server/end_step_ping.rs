@@ -22,6 +22,25 @@ fn chips_target(e: &Effect) -> bool {
     }
 }
 
+/// A repeatable ability whose whole cost is mana and/or {T} — spare at an
+/// opponent's end step, since both come back at the untap.
+pub(super) fn costs_only_mana(ab: &crate::effect::ActivatedAbility) -> bool {
+    !ab.sac_cost
+        && ab.sac_other_filter.is_none()
+        && ab.tap_other_filter.is_none()
+        && ab.discard_cost.is_none()
+        && ab.life_cost == 0
+        && ab.energy_cost == 0
+        && ab.remove_counter_cost.is_none()
+        && ab.remove_all_counters_cost.is_none()
+        && ab.remove_counter_among_filter.is_none()
+        && ab.exile_other_filter.is_none()
+        && ab.remove_counter_x.is_none()
+        && !ab.mana_cost.has_x()
+        // A free untapped one would be taken every priority.
+        && (ab.tap_cost || ab.mana_cost.cmc() > 0)
+}
+
 /// The first accepted chip at an opponent, lowest life first, at an
 /// opponent's end step.
 pub(super) fn pick_end_step_ping(state: &GameState, seat: usize) -> Option<GameAction> {
@@ -33,21 +52,7 @@ pub(super) fn pick_end_step_ping(state: &GameState, seat: usize) -> Option<GameA
     opps.sort_by_key(|&q| (state.effective_life(q), q));
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (i, ab) in c.definition.activated_abilities.iter().enumerate() {
-            let costs_only_mana = !ab.sac_cost
-                && ab.sac_other_filter.is_none()
-                && ab.tap_other_filter.is_none()
-                && ab.discard_cost.is_none()
-                && ab.life_cost == 0
-                && ab.energy_cost == 0
-                && ab.remove_counter_cost.is_none()
-                && ab.remove_all_counters_cost.is_none()
-                && ab.remove_counter_among_filter.is_none()
-                && ab.exile_other_filter.is_none()
-                && ab.remove_counter_x.is_none()
-                && !ab.mana_cost.has_x()
-                // A free untapped one would be taken every priority.
-                && (ab.tap_cost || ab.mana_cost.cmc() > 0);
-            if !costs_only_mana || !chips_target(&ab.effect) {
+            if !costs_only_mana(ab) || !chips_target(&ab.effect) {
                 continue;
             }
             for &q in &opps {

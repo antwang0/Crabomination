@@ -2693,10 +2693,16 @@ mod tests {
         // Re-blessed 2026-09-27 (`server/counter_sink.rs`): idle mana puts a
         // Forge of Heroes-style counter on the bot's own permanent. Same
         // winners; seed 43 two turns sooner.
+        // Re-blessed 2026-09-28 (`server/graveyard_hate.rs`): at an
+        // opponent's end step Ghost Vacuum (Sigarda, Hanna, Tatyova) exiles
+        // an opponent's best graveyard card. Seeds 0xC0FFEE (3 → 2) and 43
+        // (0 → 2) change winner; aggregate within noise (3,000 games, seed
+        // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
+        // turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 71, 3175),
-            (43, Some(0), 67, 3165),
-            (4242, Some(3), 61, 2859),
+            (0xC0FFEE, Some(2), 68, 3132),
+            (43, Some(2), 86, 4155),
+            (4242, Some(3), 61, 2962),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

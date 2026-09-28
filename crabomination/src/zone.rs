@@ -995,9 +995,10 @@ fn static_effect_is_haste_gate(e: &crate::effect::StaticEffect) -> bool {
 
 fn card_has_draw_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
+    // `ungated`: Archmage Ascension's tutor is `WhileCountersAtLeast`.
     c.definition.static_abilities.iter().any(|sa| {
         matches!(
-            sa.effect,
+            sa.effect.ungated(),
             S::PlayersSkipDraws
                 | S::SharedFate
                 | S::PlayersDrawExiledPlayable
