@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -272,4 +273,22 @@ fn heart_shaped_herb_softens_combat_damage() {
         drain_stack(&mut g);
     }
     assert_eq!(g.players[0].life, life - 1);
+}
+
+/// CR 110.2a — Heart-Shaped Herb returns the sacrificed card "under its
+/// owner's control": a stolen Grizzly Bears goes home with its three
+/// counters, and you still become the monarch.
+#[test]
+fn cr_110_2a_heart_shaped_herb_returns_a_stolen_creature_to_its_owner() {
+    let mut g = main_phase(2);
+    let herb = g.add_card_to_battlefield(0, catalog::heart_shaped_herb());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 0;
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    activate(&mut g, herb, 0).expect("herb");
+    let back = named(&g, 1, "Grizzly Bears");
+    assert_eq!(back.len(), 1, "home under its owner");
+    assert_eq!(g.battlefield_find(back[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    assert_eq!(g.monarch, Some(0));
 }

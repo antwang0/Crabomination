@@ -242,6 +242,20 @@ fn cr_603_4_pain_distributor_reads_each_casters_first_spell() {
     assert_eq!(treasures, [1, 1, 1]);
 }
 
+/// CR 608.2h — "that player" is the artifact's controller as it died: seat 2
+/// stole seat 1's Ornithopter, so seat 2 takes the point, not its owner.
+#[test]
+fn cr_608_2h_pain_distributor_pings_the_dying_artifacts_controller() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::pain_distributor());
+    let thopter = g.add_card_to_battlefield(1, catalog::ornithopter());
+    g.battlefield_find_mut(thopter).unwrap().controller = 2;
+    let (one, two) = (g.players[1].life, g.players[2].life);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(thopter))).expect("kill it");
+    assert_eq!((g.players[1].life, g.players[2].life), (one, two - 1));
+}
+
 /// CR 701.23 — Path of the Animist fetches two basics tapped.
 #[test]
 fn path_of_the_animist_ramps_two() {

@@ -416,6 +416,21 @@ fn olivia_voldaren_converts_then_steals() {
     assert_eq!(g.battlefield_find(bears).unwrap().controller, 0);
 }
 
+/// CR 611.2b — "for as long as you control Olivia": the Vampire goes home
+/// once Olivia changes hands, though she never left the battlefield.
+#[test]
+fn cr_611_2b_olivia_voldaren_steal_ends_when_olivia_changes_hands() {
+    let mut g = main_phase();
+    let olivia = g.add_card_to_battlefield(0, catalog::olivia_voldaren());
+    let seeker = g.add_card_to_battlefield(1, catalog::sanctum_seeker());
+    flood(&mut g, 0);
+    activate_at(&mut g, olivia, 1, Some(Target::Permanent(seeker))).expect("steal the Vampire");
+    assert_eq!(g.battlefield_find(seeker).unwrap().controller, 0);
+    g.battlefield_find_mut(olivia).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(seeker).unwrap().controller, 1);
+}
+
 /// Drana and Linvala shuts off an opponent's creature abilities and borrows
 /// them.
 #[test]
@@ -797,6 +812,21 @@ fn idol_of_oblivion_needs_a_token() {
     g.battlefield_find_mut(idol).unwrap().tapped = false;
     activate(&mut g, idol, 1).expect("the Eldrazi");
     assert_eq!(tokens_named(&g, 0, "Eldrazi"), 1);
+}
+
+/// CR 111.1 — "you created a token this turn" counts the creation, not a
+/// token still around: the Vampire already gone, the Idol still draws.
+#[test]
+fn cr_111_1_idol_of_oblivion_remembers_a_token_that_left() {
+    let mut g = main_phase();
+    stock_libraries(&mut g, 5);
+    let idol = g.add_card_to_battlefield(0, catalog::idol_of_oblivion());
+    let heart = g.add_card_to_battlefield(0, catalog::glass_cast_heart());
+    activate(&mut g, heart, 0).expect("make a Vampire");
+    g.battlefield.retain(|c| c.definition.name != "Vampire");
+    let hand = g.players[0].hand.len();
+    activate(&mut g, idol, 0).expect("created a token this turn");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
 /// Chronicle of Victory: +2/+2, first strike, trample, and a card per cast.

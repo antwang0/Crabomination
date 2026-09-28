@@ -16,8 +16,6 @@
 //!   color" rider on the borrowed abilities is dropped; the lock gates the
 //!   activation path, so a creature's mana ability tapped by the auto-payer
 //!   while paying a cost is not stopped.
-//! - **Olivia Voldaren** — "for as long as you control Olivia" is modelled as
-//!   "for as long as Olivia remains on the battlefield".
 //! - **Florian, Voldaren Scion** — the exiled card may be cast while it stays
 //!   exiled (the engine's look-and-exile-with-permission primitive), not
 //!   "played this turn"; a land among them can't be played.
@@ -26,9 +24,6 @@
 //! - **New Blood** — the text change is modelled as the stolen creature
 //!   becoming a Vampire *in addition to* its types (it keeps the replaced type,
 //!   and creature-type words inside its rules text are not rewritten).
-//! - **Idol of Oblivion** — "you created a token this turn" reads "a token you
-//!   control entered this turn", so a token that already left (or one you made
-//!   for another player) doesn't count.
 //! - **Edgar, Charmed Groom** — returns under the control of its controller at
 //!   death (its owner in every ordinary game).
 //! - **Westvale Abbey** — the transform ability's five sacrifices are "other
@@ -768,8 +763,7 @@ pub fn rakish_heir() -> CardDefinition {
 /// "{1}{R}: Olivia Voldaren deals 1 damage to another target creature. That
 /// creature becomes a Vampire in addition to its other types. Put a +1/+1
 /// counter on Olivia Voldaren. {3}{B}{B}: Gain control of target Vampire for
-/// as long as you control Olivia Voldaren." (The steal lasts while Olivia
-/// remains on the battlefield.)
+/// as long as you control Olivia Voldaren."
 pub fn olivia_voldaren() -> CardDefinition {
     legend(CardDefinition {
         activated_abilities: vec![
@@ -795,7 +789,7 @@ pub fn olivia_voldaren() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), b(), b()]),
-                effect: Effect::GainControlWhileSourceRemains {
+                effect: Effect::GainControlWhileYouControlSource {
                     what: target_filtered(R::Creature.and(vampire())),
                 },
                 ..Default::default()
@@ -1330,8 +1324,7 @@ pub fn banner_of_kinship() -> CardDefinition {
 
 /// Idol of Oblivion — {2} Artifact. "{T}: Draw a card. Activate only if you
 /// created a token this turn. {8}, {T}, Sacrifice this artifact: Create a
-/// 10/10 colorless Eldrazi creature token." (The token gate reads "a token you
-/// control entered this turn".)
+/// 10/10 colorless Eldrazi creature token."
 pub fn idol_of_oblivion() -> CardDefinition {
     let eldrazi = TokenDefinition {
         name: "Eldrazi".into(),
@@ -1348,9 +1341,7 @@ pub fn idol_of_oblivion() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
-                    R::IsToken.and(R::ControlledByYou).and(R::EnteredThisTurn),
-                ))),
+                condition: Some(Predicate::ValueAtLeast(Value::TokensCreatedThisTurn(PlayerRef::You), Value::ONE)),
                 effect: draw(Selector::You, Value::ONE),
                 ..Default::default()
             },

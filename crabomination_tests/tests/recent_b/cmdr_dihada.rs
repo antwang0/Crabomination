@@ -174,6 +174,32 @@ fn bladewing_raises_zombie_knights() {
     assert_eq!(named(&g, 0, "Zombie Knight").len(), 2);
 }
 
+/// CR 510.2 — "a player or planeswalker": Bladewing hitting a planeswalker
+/// raises the Knights too.
+#[test]
+fn cr_510_2_bladewing_triggers_on_a_planeswalker() {
+    let mut g = pod(2);
+    let dragon = ready(&mut g, 0, catalog::bladewing_deathless_tyrant());
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.clear_sickness(dragon);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = g.active_player_idx;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dragon,
+        target: AttackTarget::Planeswalker(walker),
+    }]))
+    .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(named(&g, 0, "Zombie Knight").len(), 1);
+}
+
 /// CR 704.5j — Cadric's token copy of a legend survives the legend rule and
 /// is sacrificed at the end step.
 #[test]

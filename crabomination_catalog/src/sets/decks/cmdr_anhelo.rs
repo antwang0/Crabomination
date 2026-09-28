@@ -6,7 +6,6 @@
 //! - **Parnesse, the Subtle Brush** — only your permanents get the pay-4-life
 //!   tax (a targeted player doesn't), and copying a spell doesn't offer an
 //!   opponent a copy.
-//! - **Sinister Concierge** — the second creature it exiles is an opponent's.
 //! - **Syrix, Carrier of the Flame** — its end-step check counts any card
 //!   leaving your graveyard, and "you may cast this from your graveyard" is a
 //!   permission for the rest of the turn.
@@ -380,8 +379,6 @@ pub fn rekindling_phoenix() -> CardDefinition {
 
 /// Sinister Concierge — dying, it may suspend itself and a creature for
 /// three turns.
-///
-/// Residual: the second creature is an opponent's.
 pub fn sinister_concierge() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -393,7 +390,7 @@ pub fn sinister_concierge() -> CardDefinition {
                     Effect::ApplyToTargets {
                         max_targets: 1,
                         min_targets: 0,
-                        filter: R::Creature.and(R::ControlledByOpponent),
+                        filter: R::Creature,
                         effect: Box::new(Effect::GrantSuspend { what: Selector::Target(0), time_counters: 3 }),
                     },
                 ])),

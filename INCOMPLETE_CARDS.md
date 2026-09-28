@@ -2084,7 +2084,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | activated abilities with {X} in their cost aren't copied. |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
-| 🟡 Sinister Concierge | Maestros Massacre (NCC) | the second creature suspended must be an opponent's. |
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
 | 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
@@ -2151,7 +2150,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Ancestral Communion | Wakanda Forever (MSC) | its copy keeps the original's target on auto seats (a second return of a card already moved does nothing). |
-| 🟡 Heart-Shaped Herb | Wakanda Forever (MSC) | the sacrificed creature is the auto-pick, and it returns under your control rather than its owner's. |
+| 🟡 Heart-Shaped Herb | Wakanda Forever (MSC) | the sacrificed creature is the auto-pick. |
 | 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
 | 🟡 Wakanda Forever! | Wakanda Forever (MSC) | the battlefield and hand picks are the two highest-mana-value permanent cards revealed, not the player's choice. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
@@ -2242,12 +2241,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sparkshaper Visionary | Planeswalker Party (CMM) | all or none of your planeswalkers become Birds; they keep their colours and lack the scry trigger. |
 | 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
-| 🟡 Bladewing, Deathless Tyrant | Legends' Legacy (DMC) | combat damage to a planeswalker doesn't trigger it. |
 | 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Verrak, Warped Sengir | Legends' Legacy (DMC) | only a fixed life cost counts as life paid (not X or half your life); the copy keeps its targets. |
 | 🟡 Dance with Calamity | Tinker Time (MOC) | the exiling stops once the total mana value reaches nine (the engine's stop point), not as many times as the controller chooses. |
 | 🟡 Path of the Animist | Tinker Time (MOC) | Will of the Planeswalkers is not voted: outside Planechase planeswalking and chaos do nothing, but "whenever players vote" triggers don't see it. |
-| 🟡 Pain Distributor | Tinker Time (MOC) | "that player" is the dying artifact's owner, not its controller. |
 | 🟡 Gimbal, Gremlin Prodigy | Tinker Time (MOC) | the trample grant matches printed card types, so an animated artifact doesn't get it (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
 | 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |

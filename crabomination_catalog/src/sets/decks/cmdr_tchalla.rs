@@ -5,8 +5,7 @@
 //! Residuals (each also on its card):
 //! - **Ancestral Communion** — its copy keeps the original's target unless a
 //!   prompting seat re-aims it.
-//! - **Heart-Shaped Herb** — the sacrificed creature is the auto-pick, and it
-//!   returns under your control.
+//! - **Heart-Shaped Herb** — the sacrificed creature is the auto-pick.
 //! - **Panther Habit** — a replacement, so damage that can't be prevented still
 //!   becomes counters.
 //! - **Wakanda Forever!** — the two picks are the highest-mana-value
@@ -334,7 +333,7 @@ pub fn hatut_zeraze_strike_force() -> CardDefinition {
 
 /// Heart-Shaped Herb — opposing damage to you is 1 less; it can re-deploy a
 /// creature with three counters and crown you.
-/// Residual: the creature is the auto-pick, and returns under your control.
+/// Residual: the creature is the auto-pick.
 pub fn heart_shaped_herb() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -352,7 +351,12 @@ pub fn heart_shaped_herb() -> CardDefinition {
                 then: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::SacrificedThisResolution { filter: R::Creature },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::SacrificedThisResolution {
+                                filter: R::Creature,
+                            })),
+                            tapped: false,
+                        },
                     },
                     counter(Selector::LastMoved, Value::Const(3)),
                     you_become_monarch(),

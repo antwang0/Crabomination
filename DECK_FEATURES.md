@@ -147,7 +147,7 @@ lists were picked.
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
-| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 5 carry residuals (Parnesse, Sinister Concierge, Syrix, Xander's Pact, Zndrsplt's Judgment) |
+| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Parnesse, Syrix, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
@@ -199,8 +199,8 @@ lists were picked.
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
-| **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Eldrazi Unbound** (CMM precon) C | Zhulodok, Void Gorger | C | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1346,7 +1346,7 @@ Example), `GrantSuspend` (Sinister Concierge), graveyard-scoped triggers
 (Dogged Detective's opponent draw, Skyclave Shade's landfall, Syrix),
 `GrantMayPlayForLife` (Xander's Pact), `Hideaway` + a capped free cast
 (Smuggler's Buggy). Residuals: **Parnesse** protects only your permanents and offers
-no copy; **Sinister Concierge** suspends an opponent's creature;
+no copy;
 **Syrix** reads any card leaving your graveyard; **Xander's Pact** lets exiled lands be
 played; **Zndrsplt's Judgment** makes you the only friend. Pods (1,000 games
 each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11112) Anhelo
@@ -2182,8 +2182,7 @@ seventh planeswalker commander. Eighteen cards were missing; the primitives:
 `Value::GreatestManaValueExiledThisTurn` over
 `GameState::greatest_exiled_mv_this_turn` (Bell Borca's noted mana values,
 written by the library/graveyard exile funnel and the battlefield exile funnel).
-Residuals: **Bell Borca** notes cards exiled before it entered too; **Bladewing**
-doesn't trigger on damage to a planeswalker; **The Peregrine Dynamo** copies as
+Residuals: **Bell Borca** notes cards exiled before it entered too; **The Peregrine Dynamo** copies as
 Strionic Resonator does; **Verrak** sees only fixed life costs.
 Four-seat pods beside Gimbal / Mishra / Ms. Bumbleflower (seed 10190, 1,000 games, all decided): Dihada 31.1 %; a 300-game census (seed 10191) leaves no card unplayed; 12 seats (seed 10192): 200 / 200. `--bench` byte-identical.
 The **eighty-fourth** is March of the Machine Commander's **Tinker Time**
@@ -2195,7 +2194,7 @@ picker and bot block) and `Effect::ExileTopPushingLuck` (Dance with Calamity).
 a "mana value X or less" filter matched nothing (CR 107.3; Rashmi and Ragavan).
 Residuals: **Dance with Calamity** stops exiling at a total of nine rather than by
 choice; **Path of the Animist**'s Will of the Planeswalkers vote does nothing
-outside Planechase; **Pain Distributor** damages the artifact's owner;
+outside Planechase;
 **Gimbal**'s trample grant reads printed types.
 Four-seat pods beside Mishra / Ms. Bumbleflower / Derevi (seed 10180, 1,000 games, all decided): Gimbal 29.0 %; a 300-game census (seed 10181) leaves no card of the four unplayed; 12 seats (seed 10192): 200 / 200. `--bench` byte-identical.
 The **eighty-third** is The Brothers' War Commander's **Mishra's Burnished

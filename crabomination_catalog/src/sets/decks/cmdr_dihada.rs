@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Bell Borca** — the noted mana values are every card exiled this turn,
 //!   including before Bell Borca entered.
-//! - **Bladewing** — damage to a planeswalker doesn't trigger it.
 //! - **The Peregrine Dynamo** — the ability copy is Strionic Resonator's (the
 //!   target is the ability's source permanent, the copy keeps its targets).
 //! - **Verrak** — only a fixed life cost counts as "life paid" (not X or half
@@ -259,16 +258,20 @@ pub fn bladewing_deathless_tyrant() -> CardDefinition {
     };
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: mint(
-                Value::CountOf(Box::new(Selector::EachMatching {
-                    zone: ZoneRef::Graveyard(PlayerRef::You),
-                    filter: R::Creature,
-                })),
-                zombie_knight,
-            ),
-        }],
+        // CR 510.2 — "a player or planeswalker": one trigger per damaged object.
+        triggered_abilities: [EventKind::DealsCombatDamageToPlayer, EventKind::DealsCombatDamageToPlaneswalker]
+            .into_iter()
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource),
+                effect: mint(
+                    Value::CountOf(Box::new(Selector::EachMatching {
+                        zone: ZoneRef::Graveyard(PlayerRef::You),
+                        filter: R::Creature,
+                    })),
+                    zombie_knight.clone(),
+                ),
+            })
+            .collect(),
         ..legend(
             "Bladewing, Deathless Tyrant",
             cost(&[generic(5), b(), r()]),

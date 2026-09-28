@@ -8,7 +8,6 @@
 //!   choose.
 //! - **Path of the Animist** — Will of the Planeswalkers is a vote with no
 //!   effect: outside Planechase, planeswalking and chaos do nothing (CR 901).
-//! - **Pain Distributor** — "that player" is the artifact's owner.
 //! - **Gimbal** — its trample grant, like every static type filter, reads
 //!   printed types (an animated artifact misses it; ENGINE_BACKLOG).
 
@@ -271,7 +270,7 @@ pub fn masterful_replication() -> CardDefinition {
 }
 
 /// Pain Distributor — menace; each player's first spell each turn makes them a
-/// Treasure; an opponent's artifact dying costs its owner 1 life.
+/// Treasure; an opponent's artifact dying costs its controller 1 life.
 pub fn pain_distributor() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
@@ -294,7 +293,8 @@ pub fn pain_distributor() -> CardDefinition {
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
                 ),
                 effect: Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                    // "That player" is the artifact's controller as it died (CR 608.2h).
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                     amount: Value::ONE,
                 },
             },
