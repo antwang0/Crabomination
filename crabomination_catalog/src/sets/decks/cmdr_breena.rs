@@ -395,15 +395,18 @@ pub fn nils_discipline_enforcer() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: your_end_step(),
-            effect: Effect::ForEach {
-                selector: Selector::Player(PlayerRef::EachPlayer),
-                body: Box::new(Effect::AddCounter {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature }),
-                        count: Box::new(Value::ONE),
-                    },
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
+            // "For each player, … up to one target creature that player
+            // controls" (CR 601.2c — one target per player).
+            effect: Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 15,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
                 }),
             },
         }],

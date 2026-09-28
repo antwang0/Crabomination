@@ -1993,7 +1993,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
 | 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
-| 🟡 Nils, Discipline Enforcer | Silverquill Statement (C21) | each player's counter goes on their first creature, chosen rather than targeted. |
 | 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Agitator Ant | Blame Game (MKC) | each taker's two counters go on their greatest-power creature, not one they choose. |
