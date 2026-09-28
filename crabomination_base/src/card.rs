@@ -516,6 +516,8 @@ pub enum PlaneswalkerSubtype {
     Jared,
     // Commander Legends planeswalker commanders (Partner).
     Jeska, Szat,
+    // Commander Legends: Battle for Baldur's Gate planeswalker commanders.
+    Sivitri,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

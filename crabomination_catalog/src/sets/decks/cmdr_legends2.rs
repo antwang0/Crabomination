@@ -7,8 +7,8 @@
 //! Horrifying Healer, Sonic the Hedgehog, Iron Man, Titan of Innovation, and
 //! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son,
 //! Jin Sakai, Ghost of Tsushima (`Predicate::TriggerSourceAttacksItsPlayerAlone`),
-//! and the Partner planeswalker commanders Jeska, Thrice Reborn and Tevesh
-//! Szat, Doom of Fools.
+//! and the planeswalker commanders Jeska, Thrice Reborn, Tevesh Szat, Doom of
+//! Fools and Sivitri, Dragon Master.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -741,6 +741,43 @@ pub fn tevesh_szat_doom_of_fools() -> CardDefinition {
             "Tevesh Szat, Doom of Fools",
             cost(&[generic(4), b()]),
             crate::card::PlaneswalkerSubtype::Szat,
+            4,
+        )
+    }
+}
+
+/// Sivitri, Dragon Master — +1: until your next turn, attacking you or your
+/// planeswalkers costs 2 life per creature; −3: tutor a Dragon card; −7:
+/// destroy all non-Dragon creatures. Can be your commander.
+pub fn sivitri_dragon_master() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let dragon = || R::HasCreatureType(CreatureType::Dragon);
+    CardDefinition {
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::TaxAttackersInLifeUntilYourNextTurn { amount: Value::Const(2) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: dragon(),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(dragon().negate())) },
+                ..Default::default()
+            },
+        ],
+        ..walker_commander(
+            "Sivitri, Dragon Master",
+            cost(&[generic(2), u(), b()]),
+            crate::card::PlaneswalkerSubtype::Sivitri,
             4,
         )
     }

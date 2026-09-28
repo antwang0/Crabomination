@@ -447,3 +447,34 @@ fn tevesh_szat_rewards_a_commander_sacrifice_and_steals_every_commander() {
         assert_eq!(g.battlefield_find(id).map(|c| c.controller), Some(0), "{id:?} is ours");
     }
 }
+
+/// CR 508.1g / 119.4 — Sivitri's +1: attacking her controller costs 2 life
+/// per creature until their next turn; a declaration costing more life than
+/// the attacker has is refused, and the bot trims to what it can pay.
+#[test]
+fn sivitri_taxes_attackers_in_life() {
+    let setup = |life: i32| {
+        let mut g = pod(3);
+        let sivitri = g.add_card_to_battlefield(0, catalog::sivitri_dragon_master());
+        activate_loyalty(&mut g, sivitri, 0, None, None);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.players[1].life = life;
+        let bears: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        (g, bears)
+    };
+    let (mut g, bears) = setup(40);
+    let at_zero = |b: &[CardId]| GameAction::DeclareAttackers(b.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(0) }).collect());
+    g.perform_action(at_zero(&bears)).expect("two attackers for 4 life");
+    assert_eq!(g.players[1].life, 36);
+
+    let (mut g, bears) = setup(3);
+    assert!(g.perform_action(at_zero(&bears)).is_err(), "4 life from 3");
+    let picked = crabomination::server::bot::pick_attacks(&g, 1);
+    let taxed = picked.iter().filter(|a| a.target == AttackTarget::Player(0)).count() as i32;
+    assert!(2 * taxed < 3, "the bot keeps the tax under its life: {picked:?}");
+}
