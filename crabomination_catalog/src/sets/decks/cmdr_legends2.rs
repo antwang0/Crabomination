@@ -4,7 +4,8 @@
 //! Watcher, Syr Gwyn, Hero of Ashvale, Jodah, Archmage Eternal, Raggadragga,
 //! Goreguts Boss, Alexios, Deimos of Kosmos, Narset, Enlightened Exile,
 //! Thalia and The Gitrog Monster, Rocco, Cabaretti Caterer, Anti-Venom,
-//! Horrifying Healer, Sonic the Hedgehog, and Iron Man, Titan of Innovation.
+//! Horrifying Healer, Sonic the Hedgehog, Iron Man, Titan of Innovation, and
+//! the Father & son partners Kratos, Stoic Father and Atreus, Impulsive Son.
 //! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
@@ -526,6 +527,69 @@ pub fn iron_man_titan_of_innovation() -> CardDefinition {
             cost(&[generic(3), u(), r()]),
             vec![CreatureType::Human, CreatureType::Hero],
             4,
+            4,
+        )
+    }
+}
+
+/// Kratos, Stoic Father — you get an experience counter whenever you attack
+/// with one or more Gods and whenever a God dies; at your end step, +1/+1
+/// counters on target creature equal to your experience. Partner—Father &
+/// son.
+pub fn kratos_stoic_father() -> CardDefinition {
+    let god = || R::HasCreatureType(CreatureType::God);
+    CardDefinition {
+        keywords: vec![Keyword::PartnerLabel("Father & son".into())],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
+                    .with_filter(Predicate::AttackedWithCreatureMatching { who: PlayerRef::You, filter: god() }),
+                effect: Effect::AddExperience(Value::ONE),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(trigger_source_is(god())),
+                effect: Effect::AddExperience(Value::ONE),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ControllerExperience,
+                },
+            },
+        ],
+        ..legend(
+            "Kratos, Stoic Father",
+            cost(&[generic(2), r(), w()]),
+            vec![CreatureType::God, CreatureType::Warrior],
+            4,
+            4,
+        )
+    }
+}
+
+/// Atreus, Impulsive Son — reach; {3}, {T}: draw a card per experience
+/// counter you have, then discard a card; 2 damage to each opponent.
+/// Partner—Father & son.
+pub fn atreus_impulsive_son() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::PartnerLabel("Father & son".into())],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ControllerExperience },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Atreus, Impulsive Son",
+            cost(&[generic(1), u(), r()]),
+            vec![CreatureType::God, CreatureType::Archer],
+            2,
             4,
         )
     }

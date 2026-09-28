@@ -315,3 +315,33 @@ fn iron_man_climbs_the_artifact_ladder() {
     let ring = g.battlefield_find(sol).expect("Sol Ring (mana value 1) came in");
     assert!(ring.tapped);
 }
+
+/// CR 702.124i — Kratos and Atreus share "Partner—Father & son". Attacking
+/// with a God gets Kratos's controller an experience counter; the end step
+/// spends it as +1/+1 counters.
+#[test]
+fn kratos_stoic_father_banks_experience_and_atreus_cashes_it() {
+    assert!(crabomination::format::commanders_may_pair(&catalog::kratos_stoic_father(), &catalog::atreus_impulsive_son()));
+    let mut g = pod(3);
+    let kratos = g.add_card_to_battlefield(0, catalog::kratos_stoic_father());
+    attack(&mut g, &[kratos]);
+    assert_eq!(g.players[0].experience, 1);
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kratos).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+
+    let mut g = pod(3);
+    let atreus = g.add_card_to_battlefield(0, catalog::atreus_impulsive_son());
+    g.clear_sickness(atreus);
+    g.players[0].experience = 2;
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    let (hand, life) = (g.players[0].hand.len(), g.players[1].life);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atreus, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate Atreus");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew two, discarded one");
+    assert_eq!(g.players[1].life, life - 2);
+}
