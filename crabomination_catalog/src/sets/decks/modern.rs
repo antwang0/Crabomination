@@ -8914,8 +8914,8 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
 }
 
 /// Murktide Regent — {5}{U}{U} Creature — Dragon, 3/3, Flying, Delve.
-/// Enters with two +1/+1 counters; whenever you cast an instant or sorcery
-/// spell, put a +1/+1 counter on it.
+/// Enters with a +1/+1 counter per instant/sorcery card it delved; grows
+/// whenever an instant or sorcery card leaves your graveyard.
 pub fn murktide_regent() -> CardDefinition {
     CardDefinition {
         name: "Murktide Regent",
@@ -8928,7 +8928,13 @@ pub fn murktide_regent() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Delve],
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        links_delved_cards: true,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CardsExiledWithSourceMatching(
+                SelectionRequirement::HasCardType(CardType::Instant).or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+        )),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl).with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
@@ -46102,11 +46108,17 @@ pub fn obosh_the_preypiercer() -> CardDefinition {
     }
 }
 
-/// Umori, the Collector — {2}{B/G}{B/G} 4/5 Ooze. (The "choose a card type;
-/// spells of that type cost {1} less" rider is approximated away.) Companion:
+/// Umori, the Collector — {2}{B/G}{B/G} 4/5 Ooze. As it enters, choose a
+/// card type; spells of that type cost {1} less (as Cloud Key). Companion:
 /// each nonland card shares a card type.
 pub fn umori_the_collector() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
+        as_enters_effect: Some(Effect::ChooseCardTypeForSource),
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast of the chosen type cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: SelectionRequirement::IsSourceChosenCardType, amount: 1 },
+        }],
         name: "Umori, the Collector",
         cost: cost(&[
             generic(2),
@@ -63417,12 +63429,17 @@ pub fn blitz_of_the_thunder_raptor() -> CardDefinition {
 }
 
 /// Tentative Connection — {3}{R} Sorcery. Gain control of target creature until
-/// end of turn; untap it; it gains haste. (The menace cost reduction is dropped.)
+/// end of turn; untap it; it gains haste. Costs {3} less if you control a
+/// creature with menace.
 pub fn tentative_connection() -> CardDefinition {
     CardDefinition {
         name: "Tentative Connection",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
+        self_cost_reduction_if_control: vec![(
+            SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Menace)),
+            3,
+        )],
         effect: Effect::Seq(vec![
             Effect::GainControl {
                 what: target_filtered(SelectionRequirement::Creature),

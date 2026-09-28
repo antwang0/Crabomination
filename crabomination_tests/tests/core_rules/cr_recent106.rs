@@ -1097,3 +1097,45 @@ fn cr_400_7_permanent_grants_end_when_the_object_leaves() {
     let dead = g.players[0].graveyard.iter().find(|c| c.id == bear2).expect("died");
     assert!(dead.definition.triggered_abilities.is_empty(), "and stayed with the dead object");
 }
+
+/// CR 601.2f — a may-play grant that bills the card's own cost ("you may
+/// cast it this turn", impulse) is a paid cast: cost increases apply. Such
+/// casts paid the stamped cost untaxed, so an opposing Thalia never charged
+/// for an impulse-drawn Lightning Bolt.
+#[test]
+fn cr_601_2f_a_paid_may_play_cast_is_taxed() {
+    use crabomination::card::{MayPlayDuration, MayPlayPermission};
+    use crabomination::mana::{Color, ManaCost, ManaSymbol};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+    let bolt = g.add_card_to_exile(0, catalog::lightning_bolt());
+    {
+        let c = g.exile.iter_mut().find(|c| c.id == bolt).unwrap();
+        c.may_play_until = Some(MayPlayPermission {
+            player: 0,
+            granted_turn: g.turn_number,
+            duration: MayPlayDuration::EndOfThisTurn,
+            exile_after: false,
+            miracle: false,
+            pay_life: false,
+            cast_only: false,
+            locks_further_casts: false,
+            one_cast_group: None,
+        });
+        c.granted_alt_cast_cost_eot = Some(ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]));
+    }
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g).is_err(), "{{R}} alone no longer pays: Thalia adds {{1}}");
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g).expect("{1}{R} pays the taxed Bolt");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

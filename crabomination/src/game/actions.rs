@@ -1940,17 +1940,10 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
     for src in srcs {
         for sa in &src.definition.static_abilities {
-            // CR 716.2 — a Class's higher-level statics only apply once the
-            // permanent has reached that level (Artist's Talent level 2).
-            let effect = match &sa.effect {
-                StaticEffect::WhileClassLevelAtLeast { n, inner }
-                    if src.class_level >= *n =>
-                {
-                    inner.as_ref()
-                }
-                StaticEffect::WhileClassLevelAtLeast { .. } => continue,
-                other => other,
-            };
+            // Every gate `active_static` peels: a Class level (CR 716.2,
+            // Artist's Talent level 2), "during your turn" (Momo), a
+            // `WhileCondition`. Class levels were the only one read here.
+            let Some(effect) = state.active_static(&sa.effect, src) else { continue };
             match effect {
                 StaticEffect::GraveyardCastCostReduction { amount }
                     if from_graveyard && src.controller == caster =>
@@ -1959,6 +1952,11 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 }
                 StaticEffect::ExileCastCostReduction { amount }
                     if from_exile && src.controller == caster =>
+                {
+                    reduction += amount;
+                }
+                StaticEffect::LinkedExileCastCostReduction { amount }
+                    if from_exile && src.controller == caster && card.exiled_with == Some(src.id) =>
                 {
                     reduction += amount;
                 }
@@ -13049,6 +13047,30 @@ impl GameState {
         // isn't free — the controller pays this cost instead of the card's
         // full mana cost.
         let mut alt_cast_cost = card_ref.granted_alt_cast_cost_eot.clone();
+        // CR 601.2f — a grant that bills a real cost (an impulse `pay_own_cost`,
+        // a miracle cost) is a paid cast: the caster's taxes and discounts
+        // apply, as on `CastWithoutPayingImmediate`'s paid arm. Urianger's
+        // linked-exile discount and a Thalia on the table both went unread.
+        if let Some(cost) = alt_cast_cost.as_mut().filter(|c| !c.symbols.is_empty()) {
+            let tax = extra_cost_for_spell(self, p, card_ref, target.as_ref());
+            if tax > 0 {
+                cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+            }
+            cost.symbols.extend(colored_spell_tax_for_spell(self, p, card_ref).symbols);
+            let less = cost_reduction_for_spell_full(
+                self,
+                p,
+                card_ref,
+                target.as_ref(),
+                zone == crate::card::Zone::Graveyard,
+                zone == crate::card::Zone::Exile,
+            );
+            if less > 0 {
+                cost.reduce_generic(less);
+            }
+            apply_colored_cost_statics(self, p, card_ref, cost);
+            apply_spell_cost_floor(self, cost);
+        }
         // "It costs [N] more to cast this way unless the spell targets a
         // permanent matching [filter]" (Mavinda's {8} rider). Evaluated
         // against the chosen targets before payment.
@@ -18675,6 +18697,10 @@ impl GameState {
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
             && source.is_some_and(|c| c.controller == p && c.definition.is_artifact());
+        // Professor Hojo's "first activated ability … that targets a creature
+        // you control" — spent by the first such activation, Hojo or not.
+        let first_own_creature_target = self.own_creature_ability_unspent(p)
+            && self.targets_own_creature(p, target.iter().chain(additional_targets.iter()));
         let out = self.activate_ability_inner(
             card_id,
             ability_index,
@@ -18687,8 +18713,13 @@ impl GameState {
         );
         if out.is_err() {
             events.truncate(mark);
-        } else if first_artifact_ability && self.pending_decision.is_none() {
-            self.players[p].artifact_ability_activated_this_turn = true;
+        } else {
+            if first_artifact_ability && self.pending_decision.is_none() {
+                self.players[p].artifact_ability_activated_this_turn = true;
+            }
+            if first_own_creature_target && self.pending_decision.is_none() {
+                self.players[p].own_creature_ability_this_turn = true;
+            }
         }
         if let Some(before) = before {
             let pool = &mut self.players[p].mana_pool;
@@ -20838,6 +20869,16 @@ impl GameState {
             if total > 0 {
                 let max_cut = effective_mana_cost.cmc().saturating_sub(1);
                 effective_mana_cost.reduce_generic(total.min(max_cut));
+            }
+        }
+        // Professor Hojo — the first ability you activate during your turn
+        // that targets a creature you control costs {N} less (generic only).
+        if !effective_mana_cost.symbols.is_empty()
+            && self.targets_own_creature(p, target.iter().chain(additional_targets.iter()))
+        {
+            let n = self.own_creature_target_discount(p);
+            if n > 0 {
+                effective_mana_cost.reduce_generic(n);
             }
         }
         // Tezzeret, Betrayer of Flesh — the first artifact ability you

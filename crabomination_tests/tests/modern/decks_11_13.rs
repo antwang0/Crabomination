@@ -605,17 +605,25 @@ fn glint_nest_crane_etb_digs_for_an_artifact() {
 }
 
 #[test]
-fn murktide_regent_enters_with_two_counters_and_grows_on_spellcast() {
+fn murktide_regent_counts_delved_spells_and_grows_on_graveyard_leave() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::murktide_regent());
+    // "A +1/+1 counter for each instant and sorcery card exiled with it" —
+    // it shipped as a flat two (the enters-with scan, 2026-09-27).
+    let delved = [
+        g.add_card_to_graveyard(0, catalog::lightning_bolt()),
+        g.add_card_to_graveyard(0, catalog::shock()),
+        g.add_card_to_graveyard(0, catalog::grizzly_bears()),
+    ];
     g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(5);
-    g.perform_action(GameAction::CastSpell {
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellDelve {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Murktide castable for {5}{U}{U}");
+        delve_cards: delved.to_vec(),
+    }).expect("Murktide castable for {2}{U}{U} + three delved");
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
-    assert_eq!((cp.power, cp.toughness), (5, 5), "3/3 base + two +1/+1 counters");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "two delved spells, not the creature card");
     // "Whenever an instant or sorcery card leaves your graveyard" — a cast
     // does nothing (it shipped as magecraft; the trigger columns, 2026-09-10).
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());

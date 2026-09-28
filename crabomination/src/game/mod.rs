@@ -152,6 +152,7 @@ mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;
+mod own_creature_target;
 // CR 601.2c — a required target nothing could fill makes the cast illegal.
 mod required_target;
 mod unattach;
@@ -21504,7 +21505,8 @@ impl GameState {
     }
 
     /// CR 702.6 — summed "equip costs you pay cost {N} less" reduction across
-    /// the player's permanents (Auriok Steelshaper).
+    /// the player's permanents (Auriok Steelshaper), plus the target's own
+    /// "equip abilities that target this creature" discount (Helitrooper).
     /// Strong Back's "equip abilities you activate that target enchanted
     /// creature cost {N} less" is the same discount, gated on `target` being
     /// the creature the Aura enchants.
@@ -21515,6 +21517,9 @@ impl GameState {
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| match sa.effect {
                 crate::effect::StaticEffect::EquipCostReduction { amount } => Some(amount),
+                crate::effect::StaticEffect::EquipCostReductionTargetingSelf { amount } if c.id == target => {
+                    Some(amount)
+                }
                 crate::effect::StaticEffect::CostReductionTargetingHost { amount }
                     if c.attached_to == Some(target) =>
                 {
@@ -21614,6 +21619,11 @@ impl GameState {
         // and Belt of Giant Strength's own "{X} less, where X is the power of
         // the creature it targets".
         let mut reduction = self.equip_cost_reduction_for(p, target);
+        // Professor Hojo — an equip targets a creature you control.
+        let hojo_first = fortify.is_none() && self.own_creature_ability_unspent(p);
+        if hojo_first {
+            reduction += self.own_creature_target_discount(p);
+        }
         if self.battlefield[equip_pos].definition.static_abilities.iter().any(|sa| {
             matches!(sa.effect, crate::effect::StaticEffect::EquipCostReducedByTargetPower)
         }) {
@@ -21725,6 +21735,9 @@ impl GameState {
             .mana_pool
             .pay(&equip_cost)
             .map_err(GameError::Mana)?;
+        if hojo_first {
+            self.players[p].own_creature_ability_this_turn = true;
+        }
         self.spend_energy(p, energy_cost);
         self.pay_life_cost(p, life_cost);
         if let Some(victim) = sac_victim {
@@ -30849,6 +30862,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::ExileCastCostReduction { .. }
+            | StaticEffect::LinkedExileCastCostReduction { .. }
             | StaticEffect::NonHandCastCostReduction { .. }
             | StaticEffect::AurasOnYourPermanentsHaveUmbraArmor
             | StaticEffect::PlotCostReduction { .. }
@@ -31266,6 +31280,7 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
             | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
+            | StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend
             // Read by `Effect::Explore`.
@@ -31282,6 +31297,7 @@ fn static_effect_to_effects(
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }
+            | StaticEffect::EquipCostReductionTargetingSelf { .. }
             | StaticEffect::CostReductionTargetingHost { .. }
             // Read by `draw_one`, not a layer effect.
             | StaticEffect::ControllerDrawsFromBottom

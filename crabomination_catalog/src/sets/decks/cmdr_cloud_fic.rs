@@ -3,10 +3,8 @@
 //! `tests/recent_b/cmdr_cloud_fic.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Professor Hojo** — no first-targeting-ability discount; the draw
-//!   fires for any ability of a permanent that targets your creature.
-//! - **Helitrooper** — its {2} equip discount applies to every equip you
-//!   activate, not only those targeting it (as FIN's Cloud).
+//! - **Professor Hojo** — the draw fires for any ability of a permanent
+//!   that targets your creature.
 //! - **Lifestream's Blessing** — X is read as it resolves, not as it's cast.
 //! - **Yuffie, Materia Hunter** — the Equipment attached is the engine's
 //!   pick among yours.
@@ -301,8 +299,8 @@ pub fn heidegger_shinra_executive() -> CardDefinition {
     }
 }
 
-/// Helitrooper — lends flying to another attacker; its equip discount.
-/// Residual: the discount covers every equip you activate.
+/// Helitrooper — lends flying to another attacker; equips onto it cost {2}
+/// less.
 pub fn helitrooper() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -313,7 +311,7 @@ pub fn helitrooper() -> CardDefinition {
         })],
         static_abilities: vec![StaticAbility {
             description: "Equip abilities you activate that target this creature cost {2} less to activate.",
-            effect: StaticEffect::EquipCostReduction { amount: 2 },
+            effect: StaticEffect::EquipCostReductionTargetingSelf { amount: 2 },
         }],
         ..nonlegendary(creature(
             "Helitrooper",
@@ -370,10 +368,15 @@ pub fn lifestreams_blessing() -> CardDefinition {
     }
 }
 
-/// Professor Hojo — draws once a turn when an ability targets your creature.
-/// Residual: no discount; any permanent's ability counts.
+/// Professor Hojo — your first own-creature-targeting activation each turn
+/// costs {2} less; draws once a turn when an ability targets your creature.
+/// Residual: any permanent's ability counts for the draw.
 pub fn professor_hojo() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "The first activated ability you activate during your turn that targets a creature you control costs {2} less to activate.",
+            effect: StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { amount: 2 },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
                 .caused_by(R::OnBattlefield)

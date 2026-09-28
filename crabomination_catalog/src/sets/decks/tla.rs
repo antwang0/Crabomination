@@ -5725,10 +5725,24 @@ pub fn bitter_work() -> CardDefinition {
 
 /// Momo, Friendly Flier — {W} 1/1 Legendary Lemur Bat Ally. Flying; whenever
 /// another creature you control with flying enters, Momo gets +1/+1 until end
-/// of turn. (The "first flyer each turn costs {1} less" rider is omitted —
-/// no first-spell-of-type cost reduction yet.)
+/// of turn; the first non-Lemur flying creature spell you cast during each of
+/// your turns costs {1} less.
 pub fn momo_friendly_flier() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "The first non-Lemur creature spell with flying you cast during each of your turns costs {1} less to cast.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::FirstMatchingSpellEachTurnCostsLess {
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying))
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasCreatureType(
+                            CreatureType::Lemur,
+                        )))),
+                    amount: 1,
+                }),
+            },
+        }],
         name: "Momo, Friendly Flier",
         cost: cost(&[w()]),
         supertypes: vec![Supertype::Legendary],

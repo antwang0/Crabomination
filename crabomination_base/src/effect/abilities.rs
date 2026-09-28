@@ -646,6 +646,10 @@ pub enum StaticEffect {
     /// the exile-cast paths (foretell, adventure-creature, plotted, impulse
     /// pay-own-cost); clamped at the generic pip.
     ExileCastCostReduction { amount: u32 },
+    /// `ExileCastCostReduction` for cards exiled WITH this source only
+    /// (`exiled_with`) — Urianger Augurelt's "spells you cast this way cost
+    /// {2} less".
+    LinkedExileCastCostReduction { amount: u32 },
     /// "Spells you cast from anywhere other than your hand cost {N} less"
     /// (Fortune Teller's Talent level 3): the top of the library, a
     /// graveyard, exile or the command zone. Generic mana only.
@@ -2021,6 +2025,11 @@ pub enum StaticEffect {
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).
     FirstArtifactAbilityEachTurnCostsLess { amount: u32 },
+    /// "The first activated ability you activate during your turn that
+    /// targets a creature you control costs {N} less to activate" (Professor
+    /// Hojo). Generic only; equip counts. Read by
+    /// `GameState::own_creature_target_discount`.
+    FirstOwnCreatureTargetingAbilityCostsLess { amount: u32 },
     /// "If a creature you control would explore, instead it explores, then it
     /// explores again" (Topography Tracker) — read by `Effect::Explore`.
     ExploresTwice,
@@ -2056,6 +2065,11 @@ pub enum StaticEffect {
     /// Brass Squire-style discounts). Reduces the controller's equip-cost
     /// generic by `amount`, never below the colored portion.
     EquipCostReduction { amount: u32 },
+    /// "Equip abilities you activate that target this creature cost {N}
+    /// less to activate" (Fervent Champion, Helitrooper, Cloud, Planet's
+    /// Champion) — `EquipCostReduction` gated on the equip's target being
+    /// the static's own permanent.
+    EquipCostReductionTargetingSelf { amount: u32 },
     /// "Equip abilities you activate that target enchanted creature cost {N}
     /// less to activate. Aura spells you cast that target enchanted creature
     /// cost {N} less to cast." (Strong Back.) Reduces the generic part of

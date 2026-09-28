@@ -1623,3 +1623,59 @@ fn serra_paragon_shares_its_once_and_grants_the_exile_rider() {
     let card = g.exile.iter().find(|c| c.id == bears).unwrap();
     assert!(card.definition.triggered_abilities.is_empty(), "the rider ended with the permanent");
 }
+
+/// Cost riders the cost-less scan (2026-09-27) found dropped — each pays
+/// exactly the discounted cost from an exact pool.
+fn pay_exactly(g: &mut GameState, id: CardId, generic: u32, color: Color, n: u32, target: Option<Target>) -> Result<(), GameError> {
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add_colorless(generic);
+    g.players[0].mana_pool.add(color, n);
+    cast(g, id, target)?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Tentative Connection costs {3} less with a menace creature out.
+#[test]
+fn tentative_connection_menace_discount() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tc = g.add_card_to_hand(0, catalog::tentative_connection());
+    assert!(pay_exactly(&mut g, tc, 0, Color::Red, 1, Some(Target::Permanent(victim))).is_err(), "full {{3}}{{R}} without menace");
+    g.add_card_to_battlefield(0, catalog::boggart_brute());
+    pay_exactly(&mut g, tc, 0, Color::Red, 1, Some(Target::Permanent(victim))).expect("{R} with a menace creature");
+}
+
+/// Umori: as it enters choose a card type; spells of that type cost {1}
+/// less (creature is the first choice).
+#[test]
+fn umori_discounts_the_chosen_type() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.add_card_to_battlefield_entering(0, catalog::umori_the_collector());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    pay_exactly(&mut g, bear, 0, Color::Green, 1, None).expect("Bears for {G}");
+}
+
+/// Momo: the first non-Lemur flyer you cast during your turn costs {1}
+/// less — not the second.
+#[test]
+fn momo_discounts_the_first_flyer_on_your_turn() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::momo_friendly_flier());
+    let d1 = g.add_card_to_hand(0, catalog::wind_drake());
+    let d2 = g.add_card_to_hand(0, catalog::wind_drake());
+    pay_exactly(&mut g, d1, 1, Color::Blue, 1, None).expect("first Wind Drake for {1}{U}");
+    assert!(pay_exactly(&mut g, d2, 1, Color::Blue, 1, None).is_err(), "the second is {{2}}{{U}}");
+}
+
+/// Fervent Champion: equips that target it cost {3} less.
+#[test]
+fn fervent_champion_discounts_equips_onto_it() {
+    let mut g = main_phase();
+    let champ = g.add_card_to_battlefield(0, catalog::fervent_champion());
+    let hammer = g.add_card_to_battlefield(0, catalog::loxodon_warhammer());
+    g.perform_action(GameAction::Equip { equipment: hammer, target: champ }).expect("equip {3} for {0}");
+    assert_eq!(g.battlefield_find(hammer).unwrap().attached_to, Some(champ));
+}

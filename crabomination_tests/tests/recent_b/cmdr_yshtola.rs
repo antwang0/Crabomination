@@ -414,6 +414,32 @@ fn urianger_reads_the_arcana() {
     assert!(g.exile.iter().any(|c| c.id == top));
 }
 
+/// Urianger's Play Arcanum: "spells you cast this way cost {2} less" — a
+/// Grizzly Bears exiled with him casts for {G} (CR 601.2f). It shipped with
+/// no discount (the cost-less scan, 2026-09-27).
+#[test]
+fn urianger_discounts_what_he_exiled() {
+    let mut g = main_phase(2);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let u = g.add_card_to_battlefield(0, catalog::urianger_augurelt());
+    g.clear_sickness(u);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    act(&mut g, GameAction::ActivateAbility { card_id: u, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("draw arcanum");
+    g.clear_sickness(u);
+    g.battlefield_find_mut(u).unwrap().tapped = false;
+    act(&mut g, GameAction::ActivateAbility { card_id: u, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("play arcanum");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Bears from exile for {G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    assert_eq!(g.players[0].life, life + 2, "cast from exile gains 2");
+}
+
 /// Tataru draws you a card and offers the opponent one.
 #[test]
 fn tataru_keeps_the_books() {

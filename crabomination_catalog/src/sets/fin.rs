@@ -5923,7 +5923,7 @@ pub fn cloud_planets_champion() -> CardDefinition {
             },
             StaticAbility {
                 description: "Equip abilities you activate that target Cloud cost {2} less.",
-                effect: StaticEffect::EquipCostReduction { amount: 2 },
+                effect: StaticEffect::EquipCostReductionTargetingSelf { amount: 2 },
             },
         ],
         ..Default::default()

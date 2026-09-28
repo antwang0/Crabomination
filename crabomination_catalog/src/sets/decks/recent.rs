@@ -13202,9 +13202,10 @@ pub fn patchwork_beastie() -> CardDefinition {
 // === Third modern_decks batch: aggro + equipment + adventure staples. ===
 
 /// Fervent Champion — {R} 1/1 Human Knight. First strike, haste. Whenever it
-/// attacks, another target Knight you control gets +1/+0. (The equip-cost
-/// rider is dropped — the engine has no self-targeted equip discount.)
+/// attacks, another target Knight you control gets +1/+0; equips onto it
+/// cost {3} less.
 pub fn fervent_champion() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Fervent Champion",
         cost: cost(&[r()]),
@@ -13216,6 +13217,10 @@ pub fn fervent_champion() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Equip abilities you activate that target this creature cost {3} less to activate.",
+            effect: StaticEffect::EquipCostReductionTargetingSelf { amount: 3 },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {

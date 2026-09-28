@@ -280,3 +280,57 @@ fn ultimate_magic_meteor_prompts_each_opponent_once() {
     assert_eq!(asks, 5, "one pick per opponent with something to lose");
     assert!(lands.iter().all(|l| g.battlefield_find(*l).is_none()));
 }
+
+fn equip(g: &mut GameState, equipment: CardId, target: CardId, generic: u32) -> Result<(), String> {
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add_colorless(generic);
+    act(g, GameAction::Equip { equipment, target })
+}
+
+/// Helitrooper's "equip abilities that target this creature cost {2} less"
+/// (CR 702.6): only equips onto it — it shipped discounting every equip.
+#[test]
+fn helitrooper_discounts_only_equips_onto_it() {
+    let mut g = main_phase(2);
+    let heli = g.add_card_to_battlefield(0, catalog::helitrooper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hammer = g.add_card_to_battlefield(0, catalog::loxodon_warhammer());
+    assert!(equip(&mut g, hammer, bear, 1).is_err(), "equip {{3}} onto the Bears is full price");
+    equip(&mut g, hammer, heli, 1).expect("equip {3} onto Helitrooper costs {1}");
+}
+
+/// Professor Hojo: the first ability you activate during your turn that
+/// targets a creature you control costs {2} less — an equip is one; the
+/// second is full price.
+#[test]
+fn hojo_discounts_the_first_own_creature_activation() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::professor_hojo());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hammer = g.add_card_to_battlefield(0, catalog::loxodon_warhammer());
+    equip(&mut g, hammer, bear, 1).expect("first equip costs {1}");
+    assert!(equip(&mut g, hammer, other, 1).is_err(), "the second is full price");
+    equip(&mut g, hammer, other, 3).expect("{3} pays it");
+}
+
+/// Hojo's discount on an ordinary activated ability: Rogue's Passage's
+/// {4}, {T} at your own creature costs {2}.
+#[test]
+fn hojo_discounts_a_targeted_activation() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::professor_hojo());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let passage = g.add_card_to_battlefield(0, catalog::rogues_passage());
+    g.players[0].mana_pool.add_colorless(2);
+    act(&mut g, GameAction::ActivateAbility {
+        card_id: passage,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{4} less {2}");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

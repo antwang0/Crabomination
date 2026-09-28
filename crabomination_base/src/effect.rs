@@ -12463,6 +12463,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::CostReductionForYourSpellsTargetingThis { .. }
         | SE::CostReductionWhile { .. }
         | SE::ExileCastCostReduction { .. }
+        | SE::LinkedExileCastCostReduction { .. }
         | SE::FirstMatchingSpellEachTurnCostsLess { .. }
         // Zimone's per-counter first-X-spell discount, Family Matters'
         // non-hand discount and Grand Larceny's spells-you-don't-own one
@@ -12477,13 +12478,10 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::NamedSpellCostReduction { .. }
         | SE::SharedCreatureTypeSpellCostReduction { .. }
         | SE::YourISSpellsCostLessPerTargetCreature { .. } => true,
-        // The one gate wrapper the reduction loop peels itself (CR 716.2).
-        // The other `While*` wrappers are NOT peeled by these three walks, so
-        // listing them here would over-approximate past what they can reach —
-        // but that direction is free and the next reader should not have to
-        // prove it, so they are in: a kept source the walk ignores costs one
-        // iteration, a dropped source it would have matched costs a wrong
-        // mana cost.
+        // Gate wrappers: the reduction loop peels every one through
+        // `active_static` (a Class level, CR 716.2; Momo's "during your
+        // turn"). The two tax walks peel none — over-approximating is free (a
+        // kept source costs one iteration), dropping one misprices a spell.
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }

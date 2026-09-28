@@ -329,6 +329,10 @@ pub struct PlayerCold {
     /// ability this turn. Written once a turn; reset at the turn boundary.
     #[serde(default)]
     pub artifact_ability_activated_this_turn: bool,
+    /// Professor Hojo — this player has activated an ability targeting a
+    /// creature they control during their turn. Reset at the turn boundary.
+    #[serde(default)]
+    pub own_creature_ability_this_turn: bool,
     /// Nuka-Nuke Launcher — rad counters this player gets per spell cast,
     /// until the end of their next turn.
     #[serde(default)]

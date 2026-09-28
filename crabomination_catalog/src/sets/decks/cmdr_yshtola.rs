@@ -8,7 +8,7 @@
 //! - **Estinien Varlineau** — counts opponents dealt combat damage by any
 //!   creature, not only by it or a Dragon.
 //! - **Urianger Augurelt** — the card is exiled face up; a land played from
-//!   exile gains no life; its spells get no {2} discount.
+//!   exile gains no life.
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -819,12 +819,17 @@ pub fn transpose() -> CardDefinition {
 }
 
 /// Urianger Augurelt — casting from exile gains 2 life; {T}: you may exile
-/// your top card; {T}: this turn you may play the cards exiled with it.
+/// your top card; {T}: this turn you may play the cards exiled with it, and
+/// those spells cost {2} less.
 ///
 /// ⚠ Residual: the card is exiled face up; a land played from exile gains no
-/// life; its spells get no {2} discount.
+/// life.
 pub fn urianger_augurelt() -> CardDefinition {
     legendary(CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast this way cost {2} less to cast.",
+            effect: StaticEffect::LinkedExileCastCostReduction { amount: 2 },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellFromExile),
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },

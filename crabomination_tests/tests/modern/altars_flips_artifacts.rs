@@ -314,11 +314,13 @@ fn solemnity_blocks_enters_with_counters() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::solemnity());
     let id = g.add_card_to_hand(0, catalog::murktide_regent());
-    g.players[0].mana_pool.add_colorless(5);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Blue, 2);
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellDelve {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable for {5}{U}{U}");
+        delve_cards: vec![bolt],
+    }).expect("castable for {4}{U}{U} + one delved instant");
     drain_stack(&mut g);
     let n = g.battlefield.iter().find(|c| c.id == id).unwrap()
         .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);

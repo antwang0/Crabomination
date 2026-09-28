@@ -1897,7 +1897,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
-| 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
+| 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
@@ -2128,8 +2128,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles the first instant or sorcery card of each graveyard rather than a chosen one. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
-| 🟡 Professor Hojo | Limit Break (FIC) | no "first activated ability targeting your creature costs {2} less" discount; the draw fires for any permanent's ability targeting your creature. |
-| 🟡 Helitrooper | Limit Break (FIC) | the {2} equip discount applies to every equip you activate, not only ones targeting it. |
+| 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
 | 🟡 Yuffie, Materia Hunter | Limit Break (FIC) | the Equipment attached is the engine's pick among yours. |
 | 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
 | 🟡 Boneyard Parley | Merciless Rage (C19) | the up-to-five creature cards are an untargeted pick (the first five in seat order). |
