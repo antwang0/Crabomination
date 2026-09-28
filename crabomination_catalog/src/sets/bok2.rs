@@ -77,15 +77,9 @@ pub fn ink_eyes_servant_of_oni() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Reanimate a creature from that player's graveyard?".into(),
+                // "target creature card from that player's graveyard" (CR 115.1).
                 body: Box::new(Effect::Move {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::Target(0),
-                            zone: crate::card::Zone::Graveyard,
-                            filter: R::Creature,
-                        },
-                        Value::ONE,
-                    ),
+                    what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ControlledByTriggerPlayer)),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),
             },

@@ -7094,3 +7094,31 @@ fn cr_800_4i_a_departed_seats_last_turn_ends_when_its_turn_would_begin() {
     assert_eq!(g.active_player_idx, 2);
     assert!(!attacked(&g), "seat 1's next turn would have begun");
 }
+
+/// CR 115.1 / 506.2 — Ink-Eyes reanimates a TARGET creature card from the
+/// graveyard of the player it damaged: at 3 seats, never the bystander's
+/// (bigger) creature card.
+#[test]
+fn cr_115_1_ink_eyes_targets_the_damaged_players_graveyard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = multi_player_game(3);
+    let ink = g.add_card_to_battlefield(0, catalog::ink_eyes_servant_of_oni());
+    g.clear_sickness(ink);
+    let bystander = g.add_card_to_graveyard(1, catalog::craw_wurm());
+    let victims = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ink, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    for _ in 0..16 {
+        if g.battlefield_find(victims).is_some() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(victims).is_some_and(|c| c.controller == 0), "the damaged player's card");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bystander), "the bystander's stays");
+}
