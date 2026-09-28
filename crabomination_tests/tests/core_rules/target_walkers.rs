@@ -2037,3 +2037,30 @@ mod defending_player {
         );
     }
 }
+
+/// An optional ("up to one") slot whose filter says "you control" names the
+/// caster's side outright, whatever the effect reads as: the picker would
+/// not spend an optional slot on its own permanent under an `Attach`, which
+/// it classes as hostile (a Curse / Pacifism), so "attach up to one target
+/// Equipment you control" was never filled.
+#[test]
+fn an_optional_you_control_slot_is_filled_on_your_side() {
+    use crabomination::card::{ArtifactSubtype, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::types::Target;
+    let mut g = crabomination::game::two_player_game();
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(1, catalog::bonesplitter());
+    let eff = Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::Attach {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+            },
+            to: Selector::This,
+        }),
+    };
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(sword)));
+}

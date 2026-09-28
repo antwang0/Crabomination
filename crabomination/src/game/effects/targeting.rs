@@ -1027,7 +1027,10 @@ impl GameState {
                     // the wanted one. Hate Mirage's token copies read as a
                     // gift, so its optional slots were never spent on the
                     // opponents' creatures it can only name — never cast.
-                    let side_fixed = req.excludes_your_side();
+                    // "You control" settles it the other way: an Attach reads
+                    // as hostile, so Raubahn's "up to one target Equipment you
+                    // control" was never filled.
+                    let side_fixed = req.excludes_your_side() || req.excludes_opponents_side();
                     // 0 = wanted side, un-warded; 1 = wanted side, warded;
                     // 2 = the other side (a last resort, see `optional`).
                     let rank = |id: CardId, ctrl: usize| -> u8 {
