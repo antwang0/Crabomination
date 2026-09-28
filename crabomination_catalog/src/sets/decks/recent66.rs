@@ -295,7 +295,7 @@ pub fn rambling_possum() -> CardDefinition {
                 description: "return the creatures that saddled it to hand".into(),
                 body: Box::new(Effect::Move {
                     what: Selector::CreaturesThatSaddledSource,
-                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
             },
         ]))],
