@@ -445,6 +445,22 @@ fn treasonous_ogre_dethrones_and_burns_life_for_red() {
     );
 }
 
+/// CR 702.105a — dethrone reads "attacks the PLAYER with the most life": an
+/// attack on that player's planeswalker doesn't grow it.
+#[test]
+fn cr_702_105a_dethrone_needs_a_player_attack() {
+    let mut g = main_phase();
+    let ogre = g.add_card_to_battlefield(0, catalog::treasonous_ogre());
+    g.clear_sickness(ogre);
+    g.players[1].life = 30;
+    let walker = g.add_card_to_battlefield(1, catalog::liliana_of_the_veil());
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: ogre, target: AttackTarget::Planeswalker(walker) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ogre).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
 // ── Voting, CR 701.38 ──────────────────────────────────────────────────────
 
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};

@@ -2206,9 +2206,16 @@ pub fn heroic(body: Effect) -> TriggeredAbility {
 pub fn dethrone() -> TriggeredAbility {
     use crate::card::CounterType;
     TriggeredAbility {
-        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+        // CR 702.105a — "attacks the PLAYER with the most life": a planeswalker
+        // or battle attack doesn't count, though `DefendingPlayer` names its
+        // controller / protector.
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+            Predicate::EntityMatches {
+                what: Selector::This,
+                filter: crate::card::SelectionRequirement::IsAttackingOpponentPlayer,
+            },
             Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
-        ),
+        ])),
         effect: Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
