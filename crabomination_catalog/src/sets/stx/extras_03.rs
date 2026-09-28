@@ -241,11 +241,7 @@ pub fn tempest_caller() -> CardDefinition {
 /// Activate only as a sorcery."
 ///
 /// Wired as a sorcery-speed activated ability with tap + sacrifice in
-/// the cost. "Target instant or sorcery card from your graveyard"
-/// rides the engine's resolution-time pick
-/// (`Selector::one_of(CardsInZone)`) — cast-time `Target` only
-/// addresses players and permanents (same approximation as Rise of
-/// Extus / Cogwork Archivist).
+/// the cost; the graveyard card is a declared target.
 pub fn pillardrop_warden() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

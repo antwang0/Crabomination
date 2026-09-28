@@ -443,7 +443,7 @@ pub fn monastery_messenger() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
             min_targets: 0,
-            filter: SelectionRequirement::InGraveyard
+            filter: SelectionRequirement::InYourGraveyard
                 .and(SelectionRequirement::Creature.negate())
                 .and(SelectionRequirement::Land.negate()),
             effect: Box::new(Effect::Move {

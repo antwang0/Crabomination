@@ -276,14 +276,21 @@ pub fn exterminator_magmarch() -> CardDefinition {
 }
 
 /// Find // Finality — two creature cards back; or two counters, then -4/-4
-/// to everything. ⚠ Find picks its two at resolution (the printed "target"
-/// isn't declared on cast).
+/// to everything.
 pub fn find_finality() -> CardDefinition {
     CardDefinition {
         name: "Find // Finality",
         cost: ManaCost::new(vec![hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ReturnGraveyardCardsToHand { filter: R::Creature, max: Value::Const(2) },
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::InYourGraveyard.and(R::Creature),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
         split: Some(Box::new(SplitCard {
             right: SplitHalf {
                 cost: cost(&[generic(4), b(), g()]),

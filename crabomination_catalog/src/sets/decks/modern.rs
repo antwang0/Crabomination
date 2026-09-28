@@ -39756,20 +39756,21 @@ pub fn reveillark() -> CardDefinition {
                 EventKind::PermanentLeavesBattlefield,
                 EventScope::SelfSource,
             ),
-            effect: Effect::Move {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature
-                            .and(SelectionRequirement::PowerAtMost(2)),
-                    }),
-                    count: Box::new(Value::Const(2)),
-                },
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
+            // "Up to two target creature cards with power 2 or less from
+            // your graveyard" — declared when the trigger is put on the stack.
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: SelectionRequirement::InYourGraveyard
+                    .and(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::PowerAtMost(2)),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
             },
         }],
         ..Default::default()

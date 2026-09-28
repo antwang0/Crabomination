@@ -2654,7 +2654,7 @@ pub fn blood_fountain() -> CardDefinition {
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
-                filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                filter: SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::You),

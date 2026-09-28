@@ -1284,7 +1284,7 @@ pub fn regenesis() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 0,
-            filter: R::InGraveyard.and(R::Not(Box::new(
+            filter: R::InYourGraveyard.and(R::Not(Box::new(
                 R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
             ))),
             effect: Box::new(Effect::Move {

@@ -364,14 +364,11 @@ pub fn elspeth_conquers_death() -> CardDefinition {
                 3,
                 Effect::Seq(vec![
                     Effect::Move {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::EachMatching {
-                                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                                filter: SelectionRequirement::Creature
-                                    .or(SelectionRequirement::Planeswalker),
-                            }),
-                            count: Box::new(Value::ONE),
-                        },
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Planeswalker)
+                                .from_your_graveyard(),
+                        ),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,
@@ -5585,8 +5582,8 @@ pub fn the_first_iroan_games() -> CardDefinition {
 
 /// The Binding of the Titans — {1}{G} Saga. I: each player mills three. II:
 /// exile up to two target cards from graveyards, gaining 1 life per creature
-/// card exiled. III: return a creature or land card from your graveyard to
-/// your hand.
+/// card exiled. III: return target creature or land card from your graveyard
+/// to your hand.
 pub fn the_binding_of_the_titans() -> CardDefinition {
     CardDefinition {
         name: "The Binding of the Titans",
@@ -5625,13 +5622,11 @@ pub fn the_binding_of_the_titans() -> CardDefinition {
             (
                 3,
                 Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::EachMatching {
-                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                            filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Land)
+                            .from_your_graveyard(),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             ),

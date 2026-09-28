@@ -6942,3 +6942,45 @@ fn cr_104_2a_a_lose_the_game_effect_wins_before_the_sweep() {
     resolve_answering(&mut g);
     assert_eq!(g.game_over, Some(Some(0)));
 }
+
+/// "Target … card from your graveyard" is a target declared on the stack
+/// (CR 115.1, 601.2c) and only in its controller's graveyard. Blood Fountain,
+/// Monastery Messenger, Queen's Bay Paladin and Regenesis read any graveyard
+/// (an opponent's creature came back under your control); Sheoldred,
+/// Reveillark, Izzet Chronarch, Seeds of Renewal, Find and The Binding of the
+/// Titans (and Elspeth Conquers Death, Pinnacle Monk, Wrenn and Six) picked
+/// at resolution with no target at all.
+#[test]
+fn your_graveyard_returns_target_only_your_graveyard() {
+    use crabomination::card::CardDefinition;
+    use crabomination::effect::Effect;
+    type Pick = fn(&CardDefinition) -> Effect;
+    let spell: Pick = |d| d.effect.clone();
+    let trig: Pick = |d| d.triggered_abilities[0].effect.clone();
+    let rows: [(fn() -> CardDefinition, Pick, fn() -> CardDefinition); 13] = [
+        (catalog::blood_fountain, |d| d.activated_abilities[0].effect.clone(), catalog::grizzly_bears),
+        (catalog::monastery_messenger, trig, catalog::sol_ring),
+        (catalog::queens_bay_paladin, trig, catalog::vampire_nighthawk),
+        (catalog::regenesis, spell, catalog::grizzly_bears),
+        (catalog::sheoldred_whispering_one, trig, catalog::grizzly_bears),
+        (catalog::reveillark, trig, catalog::grizzly_bears),
+        (catalog::izzet_chronarch, trig, catalog::lightning_bolt),
+        (catalog::seeds_of_renewal, spell, catalog::grizzly_bears),
+        (catalog::find_finality, spell, catalog::grizzly_bears),
+        (catalog::the_binding_of_the_titans, |d| d.saga_chapters[2].1.clone(), catalog::grizzly_bears),
+        (catalog::elspeth_conquers_death, |d| d.saga_chapters[2].1.clone(), catalog::grizzly_bears),
+        (catalog::pinnacle_monk, trig, catalog::lightning_bolt),
+        (catalog::wrenn_and_six, |d| d.loyalty_abilities[0].effect.clone(), catalog::forest),
+    ];
+    for (card, pick, stock) in rows {
+        let def = card();
+        let eff = pick(&def);
+        let mut g = multi_player_game(4);
+        let theirs = g.add_card_to_graveyard(1, stock());
+        let (none, _) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+        assert_eq!(none, None, "{}: took an opponent's {theirs:?}", def.name);
+        let mine = g.add_card_to_graveyard(0, stock());
+        let (slot0, _) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+        assert_eq!(slot0, Some(Target::Permanent(mine)), "{}", def.name);
+    }
+}

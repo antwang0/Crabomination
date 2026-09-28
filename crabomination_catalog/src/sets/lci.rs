@@ -6140,7 +6140,7 @@ pub fn queens_bay_paladin() -> CardDefinition {
     let reanimate = || Effect::ApplyToTargets {
         max_targets: 1,
         min_targets: 0,
-        filter: SelectionRequirement::InGraveyard
+        filter: SelectionRequirement::InYourGraveyard
             .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire)),
         effect: Box::new(Effect::Seq(vec![
             Effect::Move {

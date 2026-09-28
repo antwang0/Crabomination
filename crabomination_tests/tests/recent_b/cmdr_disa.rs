@@ -333,11 +333,30 @@ fn broodmate_tyrant_brings_a_mate() {
 #[test]
 fn find_finality_both_halves() {
     let mut g = main_phase();
-    for _ in 0..2 {
-        g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    }
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // "Up to two TARGET creature cards from your graveyard" (CR 601.2c):
+    // an opponent's creature card is not a legal target.
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     let card = g.add_card_to_hand(0, catalog::find_finality());
-    cast(&mut g, card, None);
+    flood(&mut g, 0);
+    let bad = GameAction::CastSpell {
+        card_id: card,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(bad).is_err(), "an opponent's graveyard is off limits");
+    g.perform_action(GameAction::CastSpell {
+        card_id: card,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
     assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 2);
     let giant = g.add_card_to_battlefield(0, catalog::serra_angel());
     let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());

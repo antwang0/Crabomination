@@ -7,7 +7,7 @@ former — Buried Ruin could return an opponent's artifact to your hand. The
 reverse row ("from a graveyard" read as yours) is reported too.
 
     cargo build --profile release-fast -p crabomination --bin dump_cards
-    target/release-fast/dump_cards --grep TargetFiltered > /tmp/tf.tsv
+    target/release-fast/dump_cards --grep Target > /tmp/tf.tsv
     python3 scripts/audit_your_graveyard.py /tmp/tf.tsv [--gate]
 """
 
@@ -22,7 +22,9 @@ CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 
 def target_filters(dbg):
     out = []
-    for m in re.finditer(r"TargetFiltered \{ slot: \d+, filter: ", dbg):
+    # `ApplyToTargets` carries its filter bare ("up to N target cards"):
+    # Blood Fountain and Regenesis hid there from the first sweep.
+    for m in re.finditer(r"TargetFiltered \{ slot: \d+, filter: |ApplyToTargets \{ max_targets: \d+, min_targets: \d+, filter: ", dbg):
         i = j = m.end()
         depth = 0
         while j < len(dbg):
