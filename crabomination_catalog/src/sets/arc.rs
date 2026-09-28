@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility,
 };
 use crate::effect::{
-    Duration, Effect, PlayerRef, Selector, StaticEffect, Value, shortcut::drain,
+    Duration, Effect, PlayerRef, Selector, StaticEffect, Value,
 };
 use crate::mana::Color;
 use crate::game::types::TurnStep;
@@ -65,10 +65,10 @@ fn token(
     }
 }
 
-/// I Delight in Your Convulsions — a three-point drain off the top of the
-/// scheme deck.
+/// I Delight in Your Convulsions — each opponent loses 3 life; you gain the
+/// life lost this way.
 pub fn i_delight_in_your_convulsions() -> CardDefinition {
-    scheme("I Delight in Your Convulsions", drain(3))
+    scheme("I Delight in Your Convulsions", crate::effect::shortcut::drain_life_lost(Value::Const(3)))
 }
 
 /// Delight in the Hunt — a 3/3 Horror plus a fog for your board.

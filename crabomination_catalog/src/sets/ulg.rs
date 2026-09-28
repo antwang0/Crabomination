@@ -952,12 +952,13 @@ pub fn delusions_of_mediocrity() -> CardDefinition {
     }
 }
 
-/// Subversion — {3}{B}{B}. Each upkeep, drain each opponent for 1.
+/// Subversion — {3}{B}{B}. Each upkeep, each opponent loses 1 life and you
+/// gain the life lost this way.
 pub fn subversion() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: crate::effect::shortcut::drain(1),
+            effect: crate::effect::shortcut::drain_life_lost(Value::ONE),
         }],
         ..enchantment("Subversion", cost(&[generic(3), b(), b()]))
     }

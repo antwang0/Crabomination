@@ -10517,7 +10517,8 @@ pub fn ahn_crop_crasher() -> CardDefinition {
 }
 
 /// Servant of Tymaret — {2}{B}, 1/3 Zombie with Inspired (CR 702.108):
-/// whenever it becomes untapped, each opponent loses 1 life.
+/// whenever it becomes untapped, each opponent loses 1 life and you gain the
+/// life lost this way.
 pub fn servant_of_tymaret() -> CardDefinition {
     CardDefinition {
         name: "Servant of Tymaret",
@@ -10531,10 +10532,7 @@ pub fn servant_of_tymaret() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
-            effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
+            effect: crate::effect::shortcut::drain_life_lost(Value::ONE),
         }],
         // "{2}{B}: Regenerate this creature" — the ability shipped missing (the
         // `cnt` audit column, 2026-09-10).

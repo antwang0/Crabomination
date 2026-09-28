@@ -3011,3 +3011,26 @@ fn damage_lifegain_triggers_are_not_lifelink() {
         assert_eq!(g.players[0].life, life + power, "{name}: the trigger gained its damage");
     }
 }
+
+/// "Each opponent loses N life. You gain life equal to the life lost this
+/// way" gains the TOTAL at a table (`DrainLifeLost`): Subversion gained one
+/// opponent's worth (`Drain`), Servant of Tymaret gained nothing, Malakir
+/// Bloodwitch its Vampire count once.
+#[test]
+fn life_lost_this_way_gains_the_table_total() {
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let cards: [Factory; 3] = [catalog::subversion, catalog::servant_of_tymaret, catalog::malakir_bloodwitch];
+    for card in cards {
+        let name = card().name;
+        let mut g = crabomination::game::multi_player_game(4);
+        let src = g.add_card_to_battlefield(0, card());
+        let life = g.players[0].life;
+        let eff = card().triggered_abilities[0].effect.clone();
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(src, 0, None, 0);
+        g.resolve_effect(&eff, &ctx).expect("resolves");
+        for p in 1..4 {
+            assert_eq!(g.players[p].life, life - 1, "{name}: seat {p} lost 1");
+        }
+        assert_eq!(g.players[0].life, life + 3, "{name}: gained the three lost");
+    }
+}

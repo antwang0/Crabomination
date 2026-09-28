@@ -10331,7 +10331,7 @@ pub fn gatekeeper_of_malakir() -> CardDefinition {
 
 /// Malakir Bloodwitch — {3}{B}{B} Creature — Vampire Shaman 4/4, Flying,
 /// protection from white. ETB: each opponent loses life equal to your
-/// Vampire count; you gain that much.
+/// Vampire count; you gain the total life lost this way.
 pub fn malakir_bloodwitch() -> CardDefinition {
     use crate::mana::Color;
     let vampires = || Value::CountMatching {
@@ -10353,16 +10353,7 @@ pub fn malakir_bloodwitch() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Protection(Color::White)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: vampires(),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: vampires(),
-                },
-            ]),
+            effect: crate::effect::shortcut::drain_life_lost(vampires()),
         }],
         ..Default::default()
     }
