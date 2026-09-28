@@ -410,15 +410,19 @@ pub fn grenzo_havoc_raiser() -> CardDefinition {
                 Effect::Goad {
                     what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)),
                 },
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::TriggerEventPlayer,
-                    count: Value::ONE,
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
+                Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::TriggerEventPlayer,
+                        count: Value::ONE,
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: true,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
             ]),
         }],
         ..creature(

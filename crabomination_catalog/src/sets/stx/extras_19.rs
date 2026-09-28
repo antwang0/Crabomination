@@ -313,15 +313,19 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::EachOpponent,
-                    count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::EachOpponent,
+                        count: Value::Const(1),
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: true,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)

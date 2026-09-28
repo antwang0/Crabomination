@@ -556,15 +556,19 @@ pub fn ramirez_depietro_pillager() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Seq(vec![Effect::LoseLife { who: Selector::You, amount: Value::Const(2) }, treasures(2, false)])),
-            pirates_connect(EventKind::DealsCombatDamageToPlayer, Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::TriggerEventPlayer,
-                count: Value::ONE,
-                duration: MayPlayDuration::WhileExiled,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            }),
+            pirates_connect(EventKind::DealsCombatDamageToPlayer, Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::TriggerEventPlayer,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::WhileExiled,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                // "You may CAST": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ])),
         ],
         ..creature(
             "Ramirez DePietro, Pillager",

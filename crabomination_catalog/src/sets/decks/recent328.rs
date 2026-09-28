@@ -469,15 +469,19 @@ pub fn kotis_the_fangkeeper() -> CardDefinition {
         keywords: vec![Keyword::Indestructible],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::Target(0),
-                count: Value::TriggerEventAmount,
-                duration: crate::card::MayPlayDuration::WhileExiled,
-                pay_any_color: false,
-                max_mana_value: Some(Value::TriggerEventAmount),
-                pay_own_cost: false,
-                uncast_penalty: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::TriggerEventAmount,
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    pay_any_color: false,
+                    max_mana_value: Some(Value::TriggerEventAmount),
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+                // "You may CAST": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ]),
         }],
         ..legend(
             "Kotis, the Fangkeeper",

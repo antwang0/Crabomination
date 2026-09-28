@@ -53990,15 +53990,19 @@ pub fn ral_monsoon_mage() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -8,
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::Const(8),
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::Const(8),
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
                 ..Default::default()
             },
         ],

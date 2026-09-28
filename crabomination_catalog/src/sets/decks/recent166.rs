@@ -246,15 +246,19 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl)
                 .once_per_turn(),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: false,
-                uncast_penalty: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+                // "You may CAST": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ]),
         }],
         ..Default::default()
     }

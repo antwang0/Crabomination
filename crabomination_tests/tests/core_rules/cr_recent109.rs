@@ -84,3 +84,23 @@ fn cr_603_2_mossdog_counts_only_itself_being_targeted() {
     growth_on(&mut g, dog);
     assert_eq!(counters(&g), 1, "Mossdog itself was targeted");
 }
+
+/// CR 305.1 / 601 — "you may CAST spells from among them" (Apex of Power)
+/// is no land drop: an exiled Forest is marked cast-only, and playing it is
+/// refused, while an exiled spell stays castable.
+#[test]
+fn cr_305_1_a_cast_permission_does_not_play_a_land() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let apex = catalog::apex_of_power();
+    g.resolve_effect(&apex.effect, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0))
+        .expect("resolve");
+    let perm = |id| g.exile.iter().find(|c| c.id == id).and_then(|c| c.may_play_until.clone());
+    assert!(perm(forest).is_some_and(|p| p.cast_only), "the Forest is cast-only");
+    assert!(perm(bolt).is_some(), "the Bolt is castable");
+    assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "no land drop from a cast permission");
+}

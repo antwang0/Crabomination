@@ -140,15 +140,19 @@ pub fn nivix_aerie_of_the_firemind() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), u(), r()]),
                 tap_cost: true,
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    duration: MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: true,
-                    uncast_penalty: None,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        duration: MayPlayDuration::EndOfControllersNextTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
                 ..Default::default()
             },
         ],

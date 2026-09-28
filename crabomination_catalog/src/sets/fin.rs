@@ -9224,15 +9224,19 @@ pub fn vaan_street_thief() -> CardDefinition {
                         filter: thief_types(),
                     })
                 },
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::Target(0),
-                    count: Value::ONE,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: true,
-                    uncast_penalty: Some(Box::new(mint_treasures(1))),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::Target(0),
+                        count: Value::ONE,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: Some(Box::new(mint_treasures(1))),
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(

@@ -912,15 +912,19 @@ pub fn laughing_jasper_flint() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::EachOpponent,
-                count: Value::count(Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou))),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: true,
-                max_mana_value: None,
-                pay_own_cost: false,
-                uncast_penalty: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::count(Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou))),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: true,
+                    max_mana_value: None,
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+                // "You may CAST": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ]),
         }],
         ..legend(
             "Laughing Jasper Flint",

@@ -2336,7 +2336,7 @@ library-exile event.
 | Card | Residual | Why |
 |---|---|---|
 | Weftwalking | "the first spell each player casts during each of their turns may be cast without paying its mana cost" is absent | no once-per-turn-per-player free-cast static |
-| Coveted Jewel, Flame Sweep, The One Ring, Amped Raptor | a bare "attack you" fires on planeswalker attacks; "except creatures you control with flying" spares every flyer; the protection rider ignores "if you cast it"; the Raptor's exile ignores "if you cast it from your hand", takes the top card only and costs a flat {E}×4 | cube pool — frozen |
+| Coveted Jewel, Flame Sweep, The One Ring, Amped Raptor, Chandra ToD, Ragavan, Robber of the Rich, Gonti | a bare "attack you" fires on planeswalker attacks; "except creatures you control with flying" spares every flyer; the protection rider ignores "if you cast it"; the Raptor's exile ignores "if you cast it from your hand", takes the top card only and costs a flat {E}×4; the impulse "you may cast" of the last four lets an exiled land be played | cube pool — frozen |
 | Choreographed Sparks, Render Speechless, Cost of Brilliance, Homesickness, Vibrant Outburst, Burrog Barrage, Chelonian Tackle, Dissection Practice, Impractical Joke | copy any-controller spell / "up to" slots still mandatory | SOS pool — frozen; this also blocks the CR 601.2c later-slot gate (TODO) |
 | Nihiloor | one steal, tapping Nihiloor, not one per opponent per tapped creature | the steal's power cap reads the creature tapped for it |
 | Turf War | the contested land per player is the engine's pick | `ContestOneLandPerPlayer` has no per-player target slot |

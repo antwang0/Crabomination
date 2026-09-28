@@ -182,15 +182,19 @@ pub fn daxos_of_meletis() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::DefendingPlayer,
-                    count: Value::ONE,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
+                Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::DefendingPlayer,
+                        count: Value::ONE,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: true,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                    // "You may CAST": an exiled land can't be played.
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+                ]),
                 Effect::GainLife {
                     who: Selector::You,
                     amount: Value::ManaValueOf(Box::new(Selector::LastMoved)),

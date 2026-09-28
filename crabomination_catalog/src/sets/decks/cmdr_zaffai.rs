@@ -76,15 +76,19 @@ pub fn apex_of_power() -> CardDefinition {
         cost(&[generic(7), r(), r(), r()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::Const(7),
-                duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(7),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                // "You may CAST": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ]),
             Effect::If {
                 cond: Predicate::CastFromHand,
                 then: Box::new(Effect::AddMana {
