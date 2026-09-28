@@ -1554,6 +1554,7 @@ fn solitude_evoke_exiles_target_then_sacrifices_self() {
     let pitch = g.add_card_to_hand(0, catalog::serra_angel());
     // P1 has a creature for Solitude's ETB to exile.
     let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_life = g.players[1].life;
 
     g.perform_action(GameAction::CastSpellAlternative {
         card_id: solitude_id,
@@ -1569,6 +1570,7 @@ fn solitude_evoke_exiles_target_then_sacrifices_self() {
     // ETB exile fires → opponent's creature in exile.
     assert!(g.exile.iter().any(|c| c.id == opp_creature),
         "Solitude's ETB should exile the targeted creature");
+    assert_eq!(g.players[1].life, opp_life + 2, "its controller gains life equal to its power");
     // Evoke sacrifice fires → Solitude is back in P0's graveyard.
     assert!(g.players[0].graveyard.iter().any(|c| c.id == solitude_id),
         "Solitude should be sacrificed via evoke");

@@ -72,7 +72,7 @@ fn provoke() -> TriggeredAbility {
         effect: Effect::MayDo {
             description: "Provoke a blocker?".into(),
             body: Box::new(Effect::Provoke {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
             }),
         },
     }

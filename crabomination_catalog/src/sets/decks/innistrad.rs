@@ -2981,7 +2981,9 @@ pub fn gavony_dawnguard() -> CardDefinition {
                 effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    pick_filter: Some(SelectionRequirement::Creature),
+                    pick_filter: Some(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                    ),
                     take: Some(Value::Const(1)),
                     optional: true,
     ..Default::default()

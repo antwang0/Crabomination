@@ -838,7 +838,7 @@ pub fn abiding_grace() -> CardDefinition {
                 },
                 Effect::Move {
                     what: target_filtered(
-                        R::Creature.and(R::ManaValueAtMost(1))
+                        R::Creature.and(R::ManaValueExactly(1))
                             .from_your_graveyard(),
                     ),
                     to: ZoneDest::Battlefield {

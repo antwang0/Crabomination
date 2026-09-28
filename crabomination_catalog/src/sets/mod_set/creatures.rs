@@ -1521,7 +1521,8 @@ pub fn bone_shredder() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::Artifact.negate())
-                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate()),
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
         }],
@@ -4381,8 +4382,10 @@ pub fn grave_titan() -> CardDefinition {
 
 // ── Shriekmaw ──────────────────────────────────────────────────────────────
 
-/// Shriekmaw — {4}{B}, 3/2 Elemental with Menace. ETB: destroy target
-/// nonblack creature an opponent controls.
+/// Shriekmaw — {4}{B}, 3/2 Elemental with fear. Evoke {1}{B}. ETB: destroy
+/// target nonartifact, nonblack creature. 🟡 Narrowed to an opponent's, as
+/// Atzocan Archer's comment explains: the printed trigger is mandatory and
+/// would take one of your own on a board with no opposing target.
 pub fn shriekmaw() -> CardDefinition {
     CardDefinition {
         name: "Shriekmaw",
@@ -4401,8 +4404,8 @@ pub fn shriekmaw() -> CardDefinition {
             effect: Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())
-                        .and(SelectionRequirement::ControlledByOpponent),
+                        .and(SelectionRequirement::Artifact.negate())
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate()),
                 ),
             },
         }],

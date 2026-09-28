@@ -761,8 +761,9 @@ pub fn magmaquake() -> CardDefinition {
     }
 }
 
-/// Pit Fight — {1}{G} Sorcery. Target creature you control fights target
-/// creature you don't control.
+/// Pit Fight — {1}{R/G} Instant. Target creature you control fights another
+/// target creature. 🟡 The second slot is narrowed to one you don't control
+/// (Atzocan Archer's reason).
 pub fn pit_fight() -> CardDefinition {
     CardDefinition {
         name: "Pit Fight",

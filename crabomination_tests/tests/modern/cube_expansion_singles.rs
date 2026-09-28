@@ -950,6 +950,28 @@ fn shriekmaw_etb_destroys_nonblack_creature() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
         "Opponent's nonblack creature should be destroyed");
+
+    // "nonartifact, nonblack creature": an opposing Memnite is no target.
+    let mut g = two_player_game();
+    let memnite = g.add_card_to_battlefield(1, catalog::memnite());
+    let id = g.add_card_to_hand(0, catalog::shriekmaw());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Shriekmaw castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(memnite).is_some(), "an artifact creature is not a target");
+
+    // Crush: "target noncreature artifact" — never an artifact creature.
+    let mut g = two_player_game();
+    let memnite = g.add_card_to_battlefield(1, catalog::memnite());
+    let id = g.add_card_to_hand(0, catalog::crush());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(memnite)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Crush cannot target an artifact creature");
 }
 
 #[test]

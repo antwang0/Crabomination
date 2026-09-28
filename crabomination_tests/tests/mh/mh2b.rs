@@ -620,6 +620,16 @@ fn abiding_grace_returns_one_drop() {
     g.fire_step_triggers(crabomination::game::types::TurnStep::End);
     drain_stack(&mut g);
     assert!(g.battlefield_find(elf).is_some(), "Llanowar Elves returned");
+
+    // "with mana value 1" is exactly 1: a mana-value-0 Memnite stays put.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::abiding_grace());
+    let memnite = g.add_card_to_graveyard(0, catalog::memnite());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crabomination::game::types::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(memnite).is_none(), "mana value 0 is not 1");
 }
 
 // ── Batch 3 — commons/uncommons ──────────────────────────────────────────────

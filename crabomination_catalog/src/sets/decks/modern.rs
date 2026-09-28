@@ -31201,14 +31201,16 @@ pub fn coral_merfolk() -> CardDefinition {
     }
 }
 
-/// Crush — {R} Instant. Destroy target artifact.
+/// Crush — {R} Instant. Destroy target noncreature artifact.
 pub fn crush() -> CardDefinition {
     CardDefinition {
         name: "Crush",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
-            what: target_filtered(SelectionRequirement::Artifact),
+            what: target_filtered(
+                SelectionRequirement::Artifact.and(SelectionRequirement::Creature.negate()),
+            ),
         },
         ..Default::default()
     }

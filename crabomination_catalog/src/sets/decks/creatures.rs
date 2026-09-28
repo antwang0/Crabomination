@@ -324,22 +324,16 @@ pub fn quantum_riddler() -> CardDefinition {
     }
 }
 
-/// Solitude — {3}{W}{W}, 3/2 Kor Cleric. Flash. Flying, lifelink. When Solitude
-/// enters, exile target nonwhite creature an opponent controls. Evoke: exile
-/// a white card from your hand (pitch alt cost; Solitude is sacrificed on
-/// ETB after its triggers fire).
+/// Solitude — {3}{W}{W}, 3/2 Elemental Incarnation. Flash, lifelink. ETB:
+/// exile up to one other target creature; its controller gains life equal to
+/// its power. Evoke: exile a white card from your hand.
 ///
-/// "Nonwhite creature an opponent controls" is approximated by the
-/// `Creature.and(ControlledByOpponent)` filter — non-white isn't enforced
-/// (the engine has only `HasColor`, not `Not(HasColor)` cleanly composed
-/// here).
+/// 🟡 "Up to one other target creature" is narrowed to one an opponent
+/// controls (Atzocan Archer's reason); its controller gains life equal to
+/// its power.
 pub fn solitude() -> CardDefinition {
     CardDefinition {
         name: "Solitude",
-        // Real Oracle: `{3}{W}`. Pre-fix the catalog had `{3}{W}{W}` (one
-        // extra white pip), which made the spell uncastable in the
-        // existing test fixtures and slightly off-flavor (Solitude is a
-        // single-white-pip MH2 evoke spell, not a double-white).
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -351,11 +345,17 @@ pub fn solitude() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
-            },
+            // "That creature's controller gains life equal to its power" —
+            // read before the exile, as Swords to Plowshares does.
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::PowerOf(Box::new(target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ))),
+                },
+                Effect::Exile { what: Selector::Target(0) },
+            ]),
         }],
         alternative_cost: Some(AlternativeCost {
             awaken: false,

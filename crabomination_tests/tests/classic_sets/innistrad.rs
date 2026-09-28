@@ -671,6 +671,18 @@ fn component_collector_becomes_day() {
     g.move_card_to_battlefield_for_test(0, catalog::component_collector());
     drain_stack(&mut g);
     assert_eq!(g.day_night, Some(DayNight::Day));
+
+    // Day becoming night looks at four and takes a creature with mana value
+    // 3 or less — never the Serra Angel on top.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let mut ev = vec![];
+    g.set_day_night(DayNight::Night, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(!g.players[0].hand.iter().any(|c| c.id == angel), "a 5-drop is not 3 or less");
 }
 
 /// Stromkirk Bloodthief's end-step trigger grows a Vampire.
