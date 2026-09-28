@@ -3034,3 +3034,70 @@ fn life_lost_this_way_gains_the_table_total() {
         assert_eq!(g.players[0].life, life + 3, "{name}: gained the three lost");
     }
 }
+
+/// The delayed end-step verb, read against the oracle (`scan_eot_verb`):
+/// Kiki-Jiki and Reflection of Kiki-Jiki SACRIFICE the copy (it exiled / was
+/// put into the graveyard), Junkyo Bell sacrifices (it destroyed) and Wings of
+/// Hubris sacrifices the creature it made unblockable (dropped).
+#[test]
+fn delayed_end_step_sacrifices_are_sacrifices() {
+    fn end_step(g: &mut GameState) {
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(g);
+        g.check_state_based_actions();
+    }
+    for kiki in [catalog::kiki_jiki_mirror_breaker(), catalog::reflection_of_kiki_jiki()] {
+        let mut g = main_phase();
+        let k = g.add_card_to_battlefield(0, kiki);
+        g.clear_sickness(k);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: k, ability_index: 0, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], x_value: None, mode: None,
+        }).expect("copy");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+        end_step(&mut g);
+        assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 0);
+        assert_eq!(g.players[0].permanents_sacrificed_this_turn, 1, "sacrificed, not exiled");
+    }
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, catalog::wings_of_hubris());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: wings, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wings, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("sacrifice Wings");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
+    end_step(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the creature is sacrificed at end step");
+}
+
+/// Corpse Dance: the returned creature gains haste and is EXILED at the next
+/// end step; it sacrificed "a creature" of the caster's choosing instead.
+#[test]
+fn corpse_dance_exiles_the_returned_creature() {
+    let mut g = main_phase();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dance = g.add_card_to_hand(0, catalog::corpse_dance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, dance, None).expect("Corpse Dance");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.id != other && c.definition.name == "Grizzly Bears").map(|c| c.id).expect("returned");
+    assert!(g.computed_permanent(back).unwrap().keywords().contains(&Keyword::Haste));
+    let _ = dead;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(other).is_some(), "the other creature stays");
+    assert!(g.exile.iter().any(|c| c.id == back), "the returned creature is exiled");
+}

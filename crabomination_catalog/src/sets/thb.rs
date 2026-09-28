@@ -4026,7 +4026,8 @@ pub fn bronze_sword() -> CardDefinition {
 }
 
 /// Wings of Hubris — {2} Equipment. Equipped creature has flying. Sacrifice:
-/// equipped creature can't be blocked this turn. Equip {1}.
+/// equipped creature can't be blocked this turn; sacrifice it at the next end
+/// step. Equip {1}.
 pub fn wings_of_hubris() -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus};
     CardDefinition {
@@ -4044,11 +4045,18 @@ pub fn wings_of_hubris() -> CardDefinition {
         }),
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::GrantKeyword {
-                what: Selector::AttachedTo(Box::new(Selector::This)),
-                keyword: Keyword::Unblockable,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DelayUntilWithCapture {
+                    kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                    capture: Selector::AttachedTo(Box::new(Selector::This)),
+                    body: Box::new(Effect::SacrificeSelected { what: Selector::Target(0) }),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

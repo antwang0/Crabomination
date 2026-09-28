@@ -1752,7 +1752,7 @@ pub fn junkyo_bell() -> CardDefinition {
                         duration: Duration::EndOfTurn,
                     },
                     Effect::AtNextEndStep {
-                        body: Box::new(Effect::Destroy {
+                        body: Box::new(Effect::SacrificeSelected {
                             what: Selector::Target(0),
                         }),
                     },

@@ -18948,13 +18948,12 @@ pub fn thundertrap_trainer() -> CardDefinition {
     }
 }
 
-/// Corpse Dance — {2}{B} Instant. Buyback {2} (CR 702.27).
-/// "Put the top creature card of your graveyard onto the battlefield
-/// under your control. Sacrifice it at the beginning of the next end
-/// step." Buyback returns the spell to hand instead of the graveyard.
+/// Corpse Dance — {2}{B} Instant. Buyback {2} (CR 702.27). Return the top
+/// creature card of your graveyard to the battlefield; it gains haste until
+/// end of turn and is exiled at the beginning of the next end step.
 pub fn corpse_dance() -> CardDefinition {
     use crate::card::Keyword;
-    use crate::effect::DelayedTriggerKind;
+    use crate::effect::{DelayedTriggerKind, Duration};
     CardDefinition {
         name: "Corpse Dance",
         cost: cost(&[generic(2), b()]),
@@ -18975,13 +18974,15 @@ pub fn corpse_dance() -> CardDefinition {
                     tapped: false,
                 },
             },
-            Effect::DelayUntil {
+            Effect::GrantKeyword {
+                what: Selector::LastMoved,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DelayUntilWithCapture {
                 kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature,
-                }),
+                capture: Selector::LastMoved,
+                body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
             },
         ]),
         ..Default::default()
@@ -38136,7 +38137,7 @@ pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Exile {
+                    body: Box::new(Effect::SacrificeSelected {
                         what: Selector::LastCreatedToken,
                     }),
                 },
@@ -47855,9 +47856,8 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Move {
+                    body: Box::new(Effect::SacrificeSelected {
                         what: Selector::LastCreatedToken,
-                        to: ZoneDest::Graveyard,
                     }),
                 },
             ]),

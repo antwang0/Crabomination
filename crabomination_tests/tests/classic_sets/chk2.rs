@@ -540,6 +540,7 @@ fn junkyo_bell_pumps_then_kills_its_target() {
     drain_stack(&mut g);
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_none(), "sacrificed at end of turn");
+    assert_eq!(g.players[0].permanents_sacrificed_this_turn, 1, "a sacrifice, not a destroy");
 }
 
 /// Petals of Insight bottoms the batch and bounces itself, or draws three.
