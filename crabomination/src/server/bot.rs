@@ -7082,6 +7082,9 @@ struct BoardFacts {
     grants_conspire: bool,
     /// A `GraveyardCardsHaveEscape*` static is on the board (Kotis).
     grants_escape: bool,
+    /// A retrace grant is on the board or an emblem (Deeproot Historian,
+    /// Six, Wrenn and Six's emblem).
+    grants_retrace: bool,
     /// A replicate-granting static is on the board (Hatchery Sliver).
     grants_replicate: bool,
     /// A graveyard-cast permission is on the board (Muldrotha, Gisa).
@@ -7109,6 +7112,11 @@ impl BoardFacts {
             grants_offspring: false,
             grants_conspire: false,
             grants_escape: false,
+            grants_retrace: state.players[seat].emblems.iter().any(|em| {
+                em.statics.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::GraveyardCardsHaveRetrace { .. })
+                })
+            }),
             grants_replicate: false,
             grants_gy_cast: false,
             grants_gy_cast_any_turn: false,
@@ -7134,6 +7142,8 @@ impl BoardFacts {
                     SE::FirstNonlegendaryArtifactSpellHasCasualty(_) => f.grants_artifact_casualty = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
+                    SE::GraveyardCardsHaveRetrace { .. }
+                    | SE::GraveyardPermanentsHaveRetraceDuringYourTurn => f.grants_retrace = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
                         f.grants_replicate = true
                     }
@@ -7377,6 +7387,11 @@ pub(super) fn cast_candidates<'a>(
         | graveyard_specialties(state, seat)
         | if facts.grants_escape && !state.players[seat].graveyard.is_empty() {
             spec::GY_ESCAPE
+        } else {
+            0
+        }
+        | if facts.grants_retrace && !state.players[seat].graveyard.is_empty() {
+            spec::GY_RETRACE
         } else {
             0
         }
@@ -8369,7 +8384,13 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat]
         .graveyard
         .iter()
-        .filter(|c| spare_land && c.definition.keywords.contains(&crate::card::Keyword::Retrace))
+        // A granted retrace (Deeproot Historian, Wrenn and Six's emblem) is
+        // `effective_retrace`'s to judge, not the printed keyword's.
+        .filter(|c| {
+            spare_land
+                && (c.definition.keywords.contains(&crate::card::Keyword::Retrace)
+                    || (facts.grants_retrace && state.effective_retrace(c, seat)))
+        })
     {
         let effect = &c.definition.effect;
         let (target, additional_targets) = if effect.requires_target() {
@@ -24021,6 +24042,20 @@ mod tests {
         assert!(!has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "the only land isn't spare");
         g.add_card_to_hand(0, catalog::forest());
         assert!(has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "retrace");
+
+        // A GRANTED retrace (Wrenn and Six's emblem) is offered too.
+        let mut g = two_player_game();
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        g.add_card_to_hand(0, catalog::forest());
+        g.add_card_to_hand(0, catalog::forest());
+        flood(&mut g);
+        assert!(!has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "no grant, no retrace");
+        let six = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
+        g.battlefield_find_mut(six).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: six, ability_index: 2, target: None, x_value: None })
+            .expect("Wrenn -7");
+        crate::game::drain_stack(&mut g);
+        assert!(has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "granted retrace");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on

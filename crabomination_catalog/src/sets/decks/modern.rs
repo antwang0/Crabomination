@@ -39213,9 +39213,8 @@ pub fn sword_of_truth_and_justice() -> CardDefinition {
 /// Wrenn and Six — {R}{G} Legendary Planeswalker. 3 loyalty.
 /// **+1**: Return up to one target land card from your graveyard to your hand.
 /// **-1**: Wrenn and Six deals 1 damage to any target.
-/// **-7**: Emblem — approximated as "at the beginning of your upkeep, return an
-/// instant or sorcery card from your graveyard to your hand" (the printed
-/// retrace-grant emblem collapses to recurring gy-recursion).
+/// **-7**: You get an emblem with "Instant and sorcery cards in your graveyard
+/// have retrace."
 pub fn wrenn_and_six() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
@@ -39256,25 +39255,14 @@ pub fn wrenn_and_six() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Wrenn and Six".into(),
-                    statics: vec![],
-                    triggered: vec![TriggeredAbility {
-                        event: EventSpec::new(
-                            EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                            EventScope::YourControl,
-                        ),
-                        effect: Effect::Move {
-                            what: Selector::Take {
-                                inner: Box::new(Selector::CardsInZone {
-                                    who: PlayerRef::You,
-                                    zone: crate::card::Zone::Graveyard,
-                                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                                }),
-                                count: Box::new(Value::Const(1)),
-                            },
-                            to: ZoneDest::Hand(PlayerRef::You),
+                    statics: vec![crate::card::StaticAbility {
+                        description: "Instant and sorcery cards in your graveyard have retrace.",
+                        effect: crate::card::StaticEffect::GraveyardCardsHaveRetrace {
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                         },
                     }],
+                    triggered: vec![],
                 },
                 ..Default::default()
             },

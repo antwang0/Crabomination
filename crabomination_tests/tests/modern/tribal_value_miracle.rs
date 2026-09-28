@@ -856,6 +856,39 @@ fn wrenn_and_six_plus_one_returns_land_from_graveyard() {
     }).expect("Wrenn +1");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "returned a land to hand");
+    // "Up to one" — the +1 is legal with no land card to name.
+    let mut g = two_player_game();
+    let wrenn = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: wrenn, ability_index: 0, target: None, x_value: None,
+    }).expect("Wrenn +1 with no target");
+}
+
+/// CR 702.81 — Wrenn and Six's −7 emblem: instant and sorcery cards in your
+/// graveyard have retrace. It shipped as an invented upkeep regrowth.
+#[test]
+fn wrenn_and_six_emblem_grants_retrace() {
+    let mut g = two_player_game();
+    let wrenn = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
+    g.battlefield_find_mut(wrenn).unwrap().add_counters(CounterType::Loyalty, 7);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: wrenn, ability_index: 2, target: None, x_value: None,
+    }).expect("Wrenn -7");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 4);
+    let retrace = |id| GameAction::CastRetrace {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    };
+    assert!(g.perform_action(retrace(bear)).is_err(), "a creature card has no retrace");
+    let life = g.players[1].life;
+    g.perform_action(retrace(bolt)).expect("Bolt retraced");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == land), "the land was discarded");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "retrace returns to the graveyard");
 }
 
 #[test]

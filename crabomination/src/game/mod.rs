@@ -10007,14 +10007,18 @@ impl GameState {
         if card.definition.has_retrace() {
             return true;
         }
-        // Deeproot Historian — "[filter] cards in your graveyard have retrace".
-        if self.battlefield.iter().any(|c| {
-            c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(&sa.effect, StaticEffect::GraveyardCardsHaveRetrace { filter }
-                        if self.evaluate_requirement_on_card(filter, card, p))
-                })
-        }) {
+        // Deeproot Historian — "[filter] cards in your graveyard have
+        // retrace" — and Wrenn and Six's emblem, which says the same.
+        let grants = |sa: &crate::card::StaticAbility| {
+            matches!(&sa.effect, StaticEffect::GraveyardCardsHaveRetrace { filter }
+                if self.evaluate_requirement_on_card(filter, card, p))
+        };
+        if self
+            .battlefield
+            .iter()
+            .any(|c| c.controller == p && c.definition.static_abilities.iter().any(grants))
+            || self.players.get(p).is_some_and(|pl| pl.emblems.iter().any(|em| em.statics.iter().any(grants)))
+        {
             return true;
         }
         self.active_player_idx == p
