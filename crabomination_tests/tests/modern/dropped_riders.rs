@@ -1919,3 +1919,19 @@ fn order_of_midnight_cant_block() {
     assert!(blockers.contains(&bears), "the Bears may block");
     assert!(!blockers.contains(&order), "Order of Midnight can't");
 }
+
+/// Angelic Intervention — "Target creature or planeswalker you control gains
+/// protection … If it's a creature, put a +1/+1 counter on it." The
+/// planeswalker target was refused.
+#[test]
+fn angelic_intervention_protects_a_planeswalker_without_a_counter() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let walker = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+    let ai = g.add_card_to_hand(0, catalog::angelic_intervention());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ai, Some(Target::Permanent(walker))).expect("a planeswalker you control");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}

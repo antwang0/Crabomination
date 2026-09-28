@@ -148,9 +148,9 @@ pub fn gnawing_crescendo() -> CardDefinition {
     }
 }
 
-/// Angelic Intervention — {1}{W} Instant. Target creature you control gains
-/// protection from the color of your choice until end of turn and gets a +1/+1
-/// counter. (The "or planeswalker" / "or colorless" riders are approximated.)
+/// Angelic Intervention — {1}{W} Instant. Target creature or planeswalker you control gains
+/// protection from the color of your choice until end of turn; a creature gets a +1/+1
+/// counter. (The "or colorless" choice is not offered.)
 pub fn angelic_intervention() -> CardDefinition {
     CardDefinition {
         name: "Angelic Intervention",
@@ -158,13 +158,18 @@ pub fn angelic_intervention() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::GrantProtectionFromChosenColor {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                what: target_filtered(R::Creature.or(R::Planeswalker).and(R::ControlledByYou)),
                 duration: Duration::EndOfTurn,
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
+            // "If it's a creature, put a +1/+1 counter on it."
+            Effect::If {
+                cond: crate::effect::Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()

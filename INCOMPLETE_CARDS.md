@@ -389,7 +389,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
-| Angelic Intervention | "creature or planeswalker you control", "protection from colorless" | the planeswalker branch must skip the +1/+1 counter; no colorless-protection chooser |
+| Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
