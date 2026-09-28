@@ -290,7 +290,7 @@ pub fn tarfire() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         },
         ..Default::default()

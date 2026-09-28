@@ -146,7 +146,7 @@ pub fn faiths_fetters() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
         },
         triggered_abilities: vec![etb(Effect::GainLife {
             who: Selector::You,

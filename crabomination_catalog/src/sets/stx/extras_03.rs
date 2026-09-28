@@ -1258,14 +1258,14 @@ pub fn pyrotechnics() -> CardDefinition {
         name: "Pyrotechnics",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        // "…divided as you choose among **any number of targets**" — the
-        // printed filter is `Any`, so a player is a legal target too; it
-        // shipped restricted to creatures and planeswalkers. Four is the real
+        // "…divided as you choose among **any number of targets**" — any
+        // target, so a player is legal too; it shipped restricted to
+        // creatures and planeswalkers. Four is the real
         // ceiling either way (1 damage minimum a target).
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(4),
-            filter: SelectionRequirement::Any,
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
             max_targets: 4,
         },
         ..Default::default()

@@ -581,7 +581,7 @@ pub fn kilnmouth_dragon() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::CountersOn {
                     what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,

@@ -111,12 +111,6 @@ pub fn arc_lightning() -> CardDefinition {
 
 /// Disentomb — {B} Sorcery. Return target creature card from your graveyard
 /// to your hand.
-///
-/// Approximation: the engine's target filter has no zone constraint, so
-/// "from your graveyard" is dropped — any creature card the picker can
-/// reference (battlefield / graveyard / exile / stack via the same
-/// fallback Reanimate uses) is valid. The auto-target heuristic prefers
-/// the caster's own graveyard creatures first.
 pub fn disentomb() -> CardDefinition {
     CardDefinition {
         name: "Disentomb",
@@ -750,13 +744,16 @@ pub fn arc_trail() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Any,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(1),
             },
@@ -775,13 +772,13 @@ pub fn cone_of_flame() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Any
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)
                         .and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(2),
@@ -791,7 +788,7 @@ pub fn cone_of_flame() -> CardDefinition {
                     slot: 2,
                     // "1 damage to any target, 2 to **another** target, and 3
                     // to **a third** target": three different objects.
-                    filter: SelectionRequirement::Any
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)
                         .and(SelectionRequirement::OtherThanTargetSlot(0))
                         .and(SelectionRequirement::OtherThanTargetSlot(1)),
                 },
@@ -878,7 +875,7 @@ pub fn fire_ambush() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -1075,7 +1072,7 @@ pub fn fireball() -> CardDefinition {
         cost_per_extra_target: Some(cost(&[generic(1)])),
         effect: Effect::DealDamageDividedEvenly {
             total: Value::XFromCost,
-            filter: SelectionRequirement::Any,
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
             max_targets: 10,
         },
         ..Default::default()

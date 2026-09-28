@@ -6869,10 +6869,7 @@ pub fn pain_for_all() -> CardDefinition {
         // attach and nothing after it runs on the cast path (dead as shipped
         // until 2026-09-10; the old test resolved the effect by hand).
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Any,
-            },
+            to: crate::effect::shortcut::target_any(),
             amount: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
         })],
         // "Whenever enchanted creature is dealt damage, it deals that much

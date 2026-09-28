@@ -5062,7 +5062,7 @@ pub fn urabrasks_anointer() -> CardDefinition {
         power: 4,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::count(Selector::EachPermanent(
                 SelectionRequirement::WithCounter(CounterType::Oil)
                     .and(SelectionRequirement::ControlledByYou),

@@ -141,7 +141,7 @@ pub fn alibou_ancient_witness() -> CardDefinition {
                 })
             },
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_filtered(R::Any), amount: x() },
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: x() },
                 Effect::Scry { who: PlayerRef::You, amount: x() },
             ]),
         }],

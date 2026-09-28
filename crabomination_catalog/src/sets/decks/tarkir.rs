@@ -638,7 +638,7 @@ pub fn sonic_shrieker() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             Effect::GainLife {
@@ -1880,7 +1880,7 @@ pub fn twin_bolt() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
-            filter: SelectionRequirement::Any,
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker),
             max_targets: 2,
         },
         ..Default::default()

@@ -686,7 +686,7 @@ pub fn profane_prayers() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: tribe_count(CreatureType::Cleric),
             },
             Effect::GainLife { who: Selector::You, amount: tribe_count(CreatureType::Cleric) },
@@ -965,7 +965,7 @@ pub fn embermage_goblin() -> CardDefinition {
         triggered_abilities: vec![fetch_sibling()],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
             ..Default::default()
         }],
         ..creature(
@@ -1767,9 +1767,9 @@ pub fn solar_blast() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Cycling(cost(&[generic(1), r(), r()]))],
-        effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+        effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
         triggered_abilities: vec![on_cycle(Effect::DealDamage {
-            to: target_filtered(R::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::ONE,
         })],
         ..Default::default()
@@ -2342,7 +2342,7 @@ pub fn airdrop_condor() -> CardDefinition {
                 1,
             )),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::SacrificedPower,
             },
             ..Default::default()
@@ -2825,7 +2825,7 @@ pub fn lightning_rift() -> CardDefinition {
                 description: "Pay one generic mana to deal 2 damage?".into(),
                 mana_cost: cost(&[generic(1)]),
                 body: Box::new(Effect::DealDamage {
-                    to: target_filtered(R::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(2),
                 }),
                 else_: None,
@@ -3177,7 +3177,7 @@ pub fn words_of_war() -> CardDefinition {
     words(
         "Words of War",
         cost(&[generic(2), r()]),
-        Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(2) },
+        Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
     )
 }
 
@@ -3323,7 +3323,7 @@ pub fn chain_of_plasma() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
             Effect::MayCopyThisSpell {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 cost: ChainCopyCost::DiscardCard,

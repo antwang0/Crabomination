@@ -8592,7 +8592,13 @@ pub fn screaming_nemesis() -> CardDefinition {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: target_filtered(
+                        // "any other target": only a creature can be itself.
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource)
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
                     amount: Value::TriggerEventAmount,
                 },
                 // No-op unless the target was a player (CR 119.7 rest-of-game lock).
@@ -10265,7 +10271,7 @@ pub fn light_up_the_night() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         // "X plus 1 damage instead" — one event, not X then 1.
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::IfPred {
                 pred: Box::new(Predicate::EntityMatches {
                     what: Selector::Target(0),
@@ -10541,7 +10547,7 @@ pub fn archangel_of_wrath() -> CardDefinition {
                     Predicate::Any(vec![Predicate::SpellWasKickedWith(0), Predicate::SpellWasKickedWith(1)]),
                 ),
                 effect: Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(2),
                 },
             },
@@ -10550,7 +10556,7 @@ pub fn archangel_of_wrath() -> CardDefinition {
                     Predicate::All(vec![Predicate::SpellWasKickedWith(0), Predicate::SpellWasKickedWith(1)]),
                 ),
                 effect: Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(2),
                 },
             },

@@ -38,7 +38,7 @@ pub fn glacial_ray() -> CardDefinition {
             SpellSubtype::Arcane,
         )],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         },
         ..Default::default()
@@ -1785,7 +1785,7 @@ pub fn honden_of_infinite_rage() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         subtypes: shrine(),
         triggered_abilities: vec![honden_upkeep(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Times(Box::new(Value::Const(2)), Box::new(shrines_you_control())),
         })],
         ..Default::default()
@@ -3962,7 +3962,7 @@ pub fn ire_of_kaminari() -> CardDefinition {
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::CardsInGraveyardMatching {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane),

@@ -692,7 +692,7 @@ pub fn vengeful_devil() -> CardDefinition {
                 at_least: Value::Const(1),
             }),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(1),
             },
             ..Default::default()

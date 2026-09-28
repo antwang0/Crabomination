@@ -1334,10 +1334,10 @@ pub fn disrupting_scepter() -> CardDefinition {
     }
 }
 
-/// Birthing Pod — {1}{G} Artifact (printed {1}{G/P}; Phyrexian mana simplified
-/// to green). "{1}{G}, {T}, Sacrifice a creature: Search your library for a
-/// creature card with mana value equal to 1 plus the sacrificed creature's
-/// mana value, put it onto the battlefield, then shuffle."
+/// Birthing Pod — {3}{G/P} Artifact. "{1}{G/P}, {T}, Sacrifice a creature:
+/// Search your library for a creature card with mana value equal to 1 plus
+/// the sacrificed creature's mana value, put it onto the battlefield, then
+/// shuffle."
 ///
 /// The sacrifice is the activation cost (`sac_other_filter`); its mana value
 /// reaches the `ManaValueEqualsSacrificedPlus(1)` search at resolution.

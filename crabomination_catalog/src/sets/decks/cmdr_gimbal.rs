@@ -185,7 +185,7 @@ pub fn ghirapur_aether_grid() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             tap_others_cost: Some((R::Artifact, 2)),
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
             ..Default::default()
         }],
         ..Default::default()

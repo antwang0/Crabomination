@@ -197,7 +197,7 @@ pub fn arc_mage() -> CardDefinition {
         cost(&[generic(2), r()]),
         Effect::DealDamageDivided {
             total: Value::Const(2),
-            filter: R::Any,
+            filter: R::Creature.or(R::Player).or(R::Planeswalker),
             max_targets: 2,
             retaliate_to_source: false,
         },

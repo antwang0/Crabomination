@@ -276,7 +276,7 @@ pub fn creative_outburst() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(5),
             },
             Effect::LookPickToHand(Box::new(LookPick {

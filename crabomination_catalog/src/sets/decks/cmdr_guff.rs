@@ -400,7 +400,7 @@ pub fn narset_of_the_ancient_way() -> CardDefinition {
     let emblem = TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
             .with_filter(Predicate::CastSpellMatches(R::Not(Box::new(R::Creature)))),
-        effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(2) },
+        effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
     };
     walker(
         "Narset of the Ancient Way",

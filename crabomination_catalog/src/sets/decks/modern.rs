@@ -3264,14 +3264,8 @@ pub fn magma_jet() -> CardDefinition {
 
 /// Remand — {1}{U} Instant. Counter target spell. If that spell is
 /// countered this way, put it into its owner's hand instead of into their
-/// graveyard. Then draw a card.
-///
-/// The "back to owner's hand" half is approximated as the regular
-/// `CounterSpell` (which moves the spell to the graveyard) plus a
-/// `Move(Target → Hand)` follow-up — the engine's `CounterSpell` resolver
-/// already routes the countered card to its owner's graveyard, but the
-/// follow-up Move re-routes it from there to hand. The cantrip is the
-/// gameplay-relevant half.
+/// graveyard. Then draw a card. (`CounterSpell` then a `Move` of the countered
+/// card to its owner's hand.)
 pub fn remand() -> CardDefinition {
     use crate::effect::shortcut::counter_target_spell;
     CardDefinition {
@@ -11478,11 +11472,7 @@ pub fn strategic_planning() -> CardDefinition {
 /// Ravenous Rats — {1}{B} Creature 1/1 Rat. When this creature enters,
 /// target opponent discards a card.
 ///
-/// Cheap discard-on-a-stick body. ETB self-source trigger fires
-/// `Discard` against `EachOpponent` (the "target opponent" half collapses
-/// to "each opponent" — gameplay-equivalent in 2-player). Non-chosen
-/// discard mirrors Mind Rot's caster-side simplification (the engine's
-/// chosen-discard primitive only handles caster-side picks today).
+/// The discarding player chooses the card.
 pub fn ravenous_rats() -> CardDefinition {
     CardDefinition {
         name: "Ravenous Rats",
@@ -12304,16 +12294,16 @@ pub fn green_suns_zenith() -> CardDefinition {
     }
 }
 
-/// Red Sun's Zenith — {X}{R} Instant. "Red Sun's Zenith deals X damage
+/// Red Sun's Zenith — {X}{R} Sorcery. "Red Sun's Zenith deals X damage
 /// to any target. If a creature dealt damage this way would die this
 /// turn, exile it instead. Shuffle this card into its owner's library."
 ///
-/// It shipped as a sorcery with an unfiltered target and neither rider.
+/// It shipped with an unfiltered target and neither rider.
 pub fn red_suns_zenith() -> CardDefinition {
     CardDefinition {
         name: "Red Sun's Zenith",
         cost: cost(&[x(), r()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         shuffle_into_library_on_resolve: true,
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {
@@ -12991,10 +12981,11 @@ pub fn lord_xander_the_collector() -> CardDefinition {
 }
 
 /// Oko, Thief of Crowns — {1}{G}{U} Planeswalker. 4 loyalty.
-/// +2: Create a Food token (approximated as gain 3 life).
+/// +2: Create a Food token.
 /// +1: Target artifact or creature becomes a 3/3 Elk, losing all other
 ///   types and abilities (`ResetCreature`).
-/// -5: Exchange control of target (collapsed to gain control).
+/// -5: Exchange control of an artifact or creature you control and a creature
+///   an opponent controls with power 3 or less.
 pub fn oko_thief_of_crowns() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
     CardDefinition {
@@ -13150,7 +13141,6 @@ pub fn pia_nalaar() -> CardDefinition {
 /// equal to its power to any target.`
 pub fn spikeshot_goblin() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Spikeshot Goblin",
         cost: cost(&[generic(2), r()]),
@@ -13165,7 +13155,7 @@ pub fn spikeshot_goblin() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[r()]),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::PowerOf(Box::new(Selector::This)),
             },
             ..Default::default()
@@ -13179,7 +13169,7 @@ pub fn spikeshot_goblin() -> CardDefinition {
 /// an artifact: deal 2 damage to any target.` (ORI)
 pub fn pia_and_kiran_nalaar() -> CardDefinition {
     use crate::card::{ActivatedAbility, Supertype, TokenDefinition};
-    use crate::effect::shortcut::{etb, target_filtered};
+    use crate::effect::shortcut::etb;
     let thopter = TokenDefinition {
         name: "Thopter".into(),
         power: 1,
@@ -13212,7 +13202,7 @@ pub fn pia_and_kiran_nalaar() -> CardDefinition {
             mana_cost: cost(&[generic(2), r()]),
             sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -13899,7 +13889,7 @@ pub fn shady_informant() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Disguise(cost(&[generic(2), br(), br()]))],
         triggered_abilities: vec![on_dies(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         })],
         ..Default::default()
@@ -13976,7 +13966,7 @@ pub fn spikeshot_elder() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r(), r()]),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::PowerOf(Box::new(Selector::This)),
             },
             ..Default::default()
@@ -14493,17 +14483,10 @@ pub fn master_of_cruelties() -> CardDefinition {
     }
 }
 
-/// Territorial Kavu — {R}{G} Creature — Kavu. 3/2. "Whenever a land
-/// enters the battlefield under an opponent's control, put a +1/+1
-/// counter on Territorial Kavu."
-///
-/// Wired via `LandPlayed` + `OpponentControl` trigger → `AddCounter` on
-/// `Selector::This`. The trigger reads the published `LandPlayed` event
-/// (`event_subject = player`), filtered by scope so only opp-controlled
-/// lands fire. Approximation: lands that ETB without being "played"
-/// (Sakura-Tribe Elder, Kodama's Reach branches) still emit
-/// `LandPlayed`, so the trigger catches every fresh land that lands on
-/// the opponent's side.
+/// Territorial Kavu — {R}{G} Creature — Kavu. Domain: power and toughness
+/// are each the number of basic land types among lands you control. Whenever
+/// it attacks, choose one — discard a card to draw a card, or exile up to one
+/// target card from a graveyard.
 pub fn territorial_kavu() -> CardDefinition {
     // This was not the card it is named after: it shipped as a 3/2 that grew
     // when an OPPONENT played a land. The printed card is a Domain */* with a
@@ -18355,7 +18338,7 @@ pub fn firebolt() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         },
         ..Default::default()
@@ -20843,7 +20826,7 @@ pub fn chain_lightning() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(3),
             },
             Effect::MayCopyThisSpell {
@@ -20887,7 +20870,7 @@ pub fn rift_bolt() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(1, cost(&[r()]))],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -20963,7 +20946,7 @@ pub fn exquisite_firecraft() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(4),
         },
         ..Default::default()
@@ -23196,14 +23179,8 @@ pub fn solemn_simulacrum() -> CardDefinition {
     }
 }
 
-/// Inquisitive Puppet — {1} Artifact Creature — Homunculus 0/2.
-/// "When this creature enters, look at the top card of your library.
-/// You may put that card on the bottom of your library."
-///
-/// 🟡 Approximated as Scry 1 — the engine's Scry primitive offers the
-/// look + may-bottom semantics exactly. (Real card lacks the "leave on
-/// top" option that real Scry offers, but the gameplay outcome is
-/// strictly a subset.)
+/// Inquisitive Puppet — {1} Artifact Creature — Homunculus 0/2. When it
+/// enters, scry 1. Exile it: create a 1/1 white Human creature token.
 pub fn inquisitive_puppet() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::{PlayerRef, Value};
@@ -23905,7 +23882,7 @@ pub fn corrupt() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: swamps(),
             },
             Effect::GainLife {
@@ -39607,7 +39584,7 @@ pub fn murderous_redcap() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Persist],
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::PowerOf(Box::new(Selector::This)),
         })],
         ..Default::default()
@@ -44428,8 +44405,7 @@ pub fn paranoid_delusions() -> CardDefinition {
 }
 
 /// Midnight Recovery — {3}{B} Sorcery. Return target creature card from your
-/// graveyard to your hand. Cipher (CR 702.99). (The "from your graveyard" zone
-/// filter is dropped, matching Disentomb.)
+/// graveyard to your hand. Cipher (CR 702.99).
 pub fn midnight_recovery() -> CardDefinition {
     CardDefinition {
         name: "Midnight Recovery",
@@ -57227,7 +57203,7 @@ pub fn turn_burn() -> CardDefinition {
                 cost: cost(&[generic(1), r()]),
                 card_types: vec![CardType::Instant],
                 effect: Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(2),
                 },
             },
@@ -57400,7 +57376,7 @@ pub fn heart_piercer_manticore() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 },
                 Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::SacrificedPower,
                 },
             ])),
@@ -60399,7 +60375,7 @@ pub fn shard_volley() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -60722,7 +60698,7 @@ pub fn sorin_the_mirthless() -> CardDefinition {
                 loyalty_cost: -7,
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
-                        to: target_filtered(SelectionRequirement::Any),
+                        to: crate::effect::shortcut::target_any(),
                         amount: Value::Const(13),
                     },
                     Effect::GainLife {
@@ -60756,7 +60732,7 @@ pub fn omnath_locus_of_the_roil() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![
             etb(Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::CountMatching {
                     sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
                     filter: elementals_you_control.clone(),
@@ -61632,7 +61608,7 @@ pub fn weaponize_the_monsters() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -61978,7 +61954,7 @@ pub fn porcuparrot() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::MutateCount,
             },
             ..Default::default()

@@ -266,7 +266,7 @@ pub fn spiked_corridor_torture_pit() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
         }],
         ..Default::default()
     };

@@ -531,7 +531,7 @@ pub fn stonehide_ancient() -> CardDefinition {
             // a turn-scoped discount on Dragon spells.
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Any),
+                    to: crate::effect::shortcut::target_any(),
                     amount: Value::Const(2),
                 },
                 Effect::SpellsCostLessThisTurn {

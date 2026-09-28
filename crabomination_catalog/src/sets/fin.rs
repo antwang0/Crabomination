@@ -3887,7 +3887,7 @@ pub fn lion_heart() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::Const(2),
         })],
         ..Default::default()
@@ -6387,7 +6387,7 @@ pub fn self_destruct() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Any,
+                    filter: (SelectionRequirement::Creature.or(SelectionRequirement::Player).or(SelectionRequirement::Planeswalker)).and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
                     slot: 0,

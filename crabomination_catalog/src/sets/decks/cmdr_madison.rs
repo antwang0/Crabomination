@@ -722,7 +722,7 @@ pub fn synth_eradicator() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             energy_cost: 3,
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
             ..Default::default()
         }],
         ..artifact_creature(
@@ -1216,7 +1216,7 @@ pub fn bottle_cap_blast() -> CardDefinition {
             cost(&[generic(4), r()]),
             CardType::Instant,
             Effect::Seq(vec![
-                Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(5) },
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(5) },
                 make(
                     TokenDefinition { tapped: true, ..crabomination_base::tokens::treasure_token() },
                     Value::ExcessDamageDealtThisResolution,

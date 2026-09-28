@@ -328,7 +328,7 @@ pub fn judith_the_scourge_diva() -> CardDefinition {
                 },
             ),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::ONE,
             },
         }],
@@ -572,7 +572,7 @@ pub fn warleaders_helix() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(4),
             },
             Effect::GainLife {
@@ -624,7 +624,7 @@ pub fn firemane_avenger() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![battalion(Effect::Seq(vec![
             Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(3),
             },
             Effect::GainLife {
@@ -800,7 +800,7 @@ pub fn warstorm_surge() -> CardDefinition {
                     filter: R::Creature,
                 }),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
             },
         }],
@@ -834,7 +834,7 @@ pub fn terror_of_the_peaks() -> CardDefinition {
                     filter: R::Creature,
                 }),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
             },
         }],

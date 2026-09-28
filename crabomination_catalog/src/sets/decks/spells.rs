@@ -438,9 +438,6 @@ pub fn prismatic_ending() -> CardDefinition {
 
 /// Thoughtseize — {B} Sorcery. Target player reveals their hand; you choose
 /// a nonland card; they discard it. You lose 2 life.
-///
-/// Targeting is approximated as `EachOpponent` (2P-correct). The caster
-/// auto-picks the first nonland card.
 pub fn thoughtseize() -> CardDefinition {
     CardDefinition {
         name: "Thoughtseize",

@@ -1038,7 +1038,6 @@ pub fn sylvan_safekeeper() -> CardDefinition {
 /// other graveyard cards; the two are auto-picked lowest-CMC first.
 pub fn grim_lavamancer() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::shortcut::target_filtered;
     use crate::mana::r;
     CardDefinition {
         name: "Grim Lavamancer",
@@ -1056,7 +1055,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[r()]),
             effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             once_per_turn: false,

@@ -2307,7 +2307,7 @@ fn damage_to_an_opponent_auras_draw_off_noncombat_damage() {
 
 /// Cube riders that shipped dropped. The Sun's Zenith cycle shuffles itself
 /// back into its owner's library; Green Sun's Zenith is capped at X; Red
-/// Sun's Zenith is an instant that exiles a creature it would kill.
+/// Sun's Zenith exiles a creature it would kill.
 #[test]
 fn suns_zenith_cycle_riders() {
     let mut g = main_phase();
@@ -2327,7 +2327,6 @@ fn suns_zenith_cycle_riders() {
     let mut g = main_phase();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let rsz = g.add_card_to_hand(0, catalog::red_suns_zenith());
-    assert!(catalog::red_suns_zenith().card_types.contains(&crabomination::card::CardType::Instant));
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
@@ -2396,4 +2395,36 @@ fn holy_light_mastery_and_loyalist_riders() {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(tok, a)])).is_err(), "a token can't block them");
+}
+
+/// CR 115.4 — "any target" is a creature, player, planeswalker or battle. ~70
+/// damage effects were written with the match-everything filter, so a land
+/// or an artifact was a legal target; Arc Trail's "another target" could
+/// also name the first one twice.
+#[test]
+fn any_target_is_not_any_permanent() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fa = g.add_card_to_hand(0, catalog::fire_ambush());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(cast(&mut g, fa, Some(Target::Permanent(land))).is_err(), "a land isn't a target for damage");
+    let at = g.add_card_to_hand(0, catalog::arc_trail());
+    let twice = g.perform_action(GameAction::CastSpell {
+        card_id: at,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(twice.is_err(), "another target");
+    g.perform_action(GameAction::CastSpell {
+        card_id: at,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a creature and a player");
 }

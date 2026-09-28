@@ -697,7 +697,7 @@ pub fn noise_marine() -> CardDefinition {
         triggered_abilities: vec![
             cascade(5),
             etb(Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::SpellsCastThisTurn(PlayerRef::You),
             }),
         ],
@@ -751,14 +751,14 @@ pub fn nurgles_rot() -> CardDefinition {
 pub fn pink_horror() -> CardDefinition {
     let blue = TokenDefinition {
         triggered_abilities: vec![on_instant_or_sorcery_cast(Effect::DealDamage {
-            to: target_filtered(R::Any),
+            to: crate::effect::shortcut::target_any(),
             amount: Value::ONE,
         })],
         ..token("Blue Horror", vec![Color::Blue, Color::Red], vec![CreatureType::Demon, CreatureType::Horror], 2, 2)
     };
     CardDefinition {
         triggered_abilities: vec![
-            on_instant_or_sorcery_cast(Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(2) }),
+            on_instant_or_sorcery_cast(Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) }),
             on_dies(make(blue, Value::Const(2))),
         ],
         ..creature("Pink Horror", cost(&[generic(3), u(), r()]), vec![CreatureType::Demon, CreatureType::Horror], 4, 4)

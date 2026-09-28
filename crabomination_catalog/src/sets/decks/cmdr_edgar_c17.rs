@@ -449,7 +449,7 @@ pub fn outpost_siege() -> CardDefinition {
                             filter: R::Creature,
                         }),
                     effect: Effect::DealDamage {
-                        to: target_filtered(R::Any),
+                        to: crate::effect::shortcut::target_any(),
                         amount: Value::ONE,
                     },
                 }],
