@@ -1139,6 +1139,17 @@ fn cmdr_teval_utility_land_activations() {
     let b = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     activate(&mut g, grounds, 1, None);
     assert!(in_exile(&g, a) && in_exile(&g, b));
+    assert!(g.battlefield_find(grounds).is_none(), "the only Desert paid for itself");
+
+    // "Sacrifice a Desert" — another Desert pays, and the Grounds stays.
+    let mut g = main_phase();
+    flood(&mut g, 0);
+    let grounds = g.add_card_to_battlefield(0, catalog::scavenger_grounds());
+    let other = g.add_card_to_battlefield(0, catalog::desert_of_the_glorified());
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    activate(&mut g, grounds, 1, None);
+    assert!(in_exile(&g, a));
+    assert!(g.battlefield_find(grounds).is_some() && g.battlefield_find(other).is_none());
 
     // Witch's Clinic: lifelink on a commander — an opponent's too — and a
     // legend that isn't one is no target.

@@ -1668,9 +1668,8 @@ pub fn dakmor_salvage() -> CardDefinition {
 }
 
 /// Scavenger Grounds — Land — Desert. {T}: Add {C}. {2}, {T}, Sacrifice a
-/// Desert: Exile all graveyards.
-///
-/// Approximation: the sacrificed Desert is Scavenger Grounds itself.
+/// Desert: Exile all graveyards. Any Desert you control pays the sacrifice,
+/// this one included.
 pub fn scavenger_grounds() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
@@ -1681,7 +1680,8 @@ pub fn scavenger_grounds() -> CardDefinition {
                 ActivatedAbility {
                     mana_cost: cost(&[generic(2)]),
                     tap_cost: true,
-                    sac_cost: true,
+                    sac_other_filter: Some((R::HasLandType(LandType::Desert), 1)),
+                    sac_other_may_be_source: true,
                     effect: Effect::ExileAllGraveyards { filter: None, opponents_only: false },
                     ..Default::default()
                 },
