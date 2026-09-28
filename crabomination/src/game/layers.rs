@@ -1695,6 +1695,9 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // Face-down is likewise a live `CardInstance` flag (Ixidor, Reality
         // Sculptor's "face-down creatures get +1/+1").
         R::FaceDown => true,
+        // The printed activated abilities (Raggadragga's "each creature you
+        // control with a mana ability").
+        R::HasManaAbility => true,
         // Counter presence is live `CardInstance` state, likewise re-read each
         // layer recompute via the dynamic CardMatch path ("permanents you
         // control with counters on them have ward {1}" — Innkeeper's Talent).
@@ -1794,6 +1797,7 @@ pub(crate) fn requirement_matches_card_typed(
         R::IsSnow => def.is_snow(),
         R::IsToken => card.is_token,
         R::NotToken => !card.is_token,
+        R::HasManaAbility => def.activated_abilities.iter().any(|a| crate::game::actions::is_mana_ability(&a.effect)),
         R::Tapped => card.tapped,
         R::FaceDown => card.face_down,
         R::Untapped => !card.tapped,

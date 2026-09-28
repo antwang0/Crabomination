@@ -5375,6 +5375,15 @@ impl GameState {
                     R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
                     R::IsToken => card.is_token,
                     R::NotToken => !card.is_token,
+                    // CR 605.1a — a permanent's printed mana ability. It fell
+                    // to the default arm here, so on the battlefield no
+                    // permanent had one: Midnight Arsonist's "artifacts
+                    // without mana abilities" took mana rocks too.
+                    R::HasManaAbility => card
+                        .definition
+                        .activated_abilities
+                        .iter()
+                        .any(|a| crate::game::actions::is_mana_ability(&a.effect)),
 
                     R::Warped => card.warped,
                     R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),

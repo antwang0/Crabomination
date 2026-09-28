@@ -153,3 +153,83 @@ fn syr_gwyn_equips_knights_for_free_and_draws_on_equipped_attacks() {
     attack(&mut g, &[knight]);
     assert_eq!((g.players[0].hand.len(), g.players[0].life), (hand + 1, life - 1));
 }
+
+/// CR 118.9 — Jodah, Archmage Eternal lets a spell be cast for WUBRG.
+#[test]
+fn jodah_archmage_casts_anything_for_wubrg() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::jodah_archmage_eternal());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: wurm, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast for WUBRG");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some());
+}
+
+/// Raggadragga: a mana creature gets +2/+2 and untaps when it attacks; a
+/// spell cast with seven or more mana gives a creature +7/+7 and trample.
+#[test]
+fn raggadragga_pumps_mana_creatures_and_rewards_big_spells() {
+    let mut g = pod(3);
+    let boss = g.add_card_to_battlefield(0, catalog::raggadragga_goreguts_boss());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    assert_eq!(pt(&g, elf), (3, 3));
+    attack(&mut g, &[elf]);
+    assert!(!g.battlefield_find(elf).unwrap().tapped, "untapped as it attacked");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let crusher = g.add_card_to_hand(0, catalog::ulamogs_crusher());
+    g.players[0].mana_pool.add_colorless(8);
+    cast(&mut g, 0, crusher, None).expect("eight mana into the Crusher");
+    let pumped = [boss, elf, crusher].iter().any(|&c| {
+        let cp = g.computed_permanent(c).unwrap();
+        cp.keywords().has_kw(&Keyword::Trample) && cp.power >= 10
+    });
+    assert!(pumped, "+7/+7 and trample on a creature");
+}
+
+/// Alexios moves to each player at their upkeep, untapped, with a +1/+1
+/// counter and haste.
+#[test]
+fn alexios_changes_hands_every_upkeep() {
+    let mut g = pod(3);
+    let alexios = g.add_card_to_battlefield(0, catalog::alexios_deimos_of_kosmos());
+    advance_to(&mut g, TurnStep::End);
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.active_player_idx, 1);
+    let a = g.battlefield_find(alexios).unwrap();
+    assert_eq!(a.controller, 1);
+    assert_eq!(a.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert!(g.computed_permanent(alexios).unwrap().keywords().has_kw(&Keyword::Haste));
+}
+
+/// Narset gives your creatures prowess; attacking exiles a cheap noncreature
+/// card from a graveyard to cast a copy.
+#[test]
+fn narset_recasts_a_graveyard_spell_on_attack() {
+    let mut g = pod(3);
+    let narset = g.add_card_to_battlefield(0, catalog::narset_enlightened_exile());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords().has_kw(&Keyword::Prowess));
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    attack(&mut g, &[narset]);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt left the graveyard for exile");
+}
+
+/// CR 605.1a — a permanent's printed mana ability counts on the battlefield
+/// (Raggadragga's pump, Midnight Arsonist's "without mana abilities").
+#[test]
+fn cr_605_1a_battlefield_permanents_read_their_mana_abilities() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = pod(3);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let thopter = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let without = R::Artifact.and(R::HasManaAbility.negate());
+    assert!(!g.evaluate_requirement_static(&without, &Target::Permanent(ring), 0, None), "Sol Ring has one");
+    assert!(g.evaluate_requirement_static(&without, &Target::Permanent(thopter), 0, None));
+}

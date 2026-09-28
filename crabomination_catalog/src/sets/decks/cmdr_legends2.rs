@@ -1,7 +1,9 @@
 //! Most-built commanders missing from the catalog (COMMANDER_BACKLOG §1,
 //! regenerated 2026-09-27): Reaper King, Shroofus Sproutsire, Kratos, God of
 //! War, Myrel, Shield of Argive, Doran, Besieged by Time, Gargos, Vicious
-//! Watcher, and Syr Gwyn, Hero of Ashvale. All but Syr Gwyn are built from
+//! Watcher, Syr Gwyn, Hero of Ashvale, Jodah, Archmage Eternal, Raggadragga,
+//! Goreguts Boss, Alexios, Deimos of Kosmos, and Narset, Enlightened Exile.
+//! All but Syr Gwyn are built from
 //! primitives other cards already use; Syr Gwyn's "Equipment you control have
 //! equip Knight {0}" is `StaticEffect::EquipmentYouControlEquipZeroFor`
 //! (CR 702.6c, an equip ability restricted to a quality).
@@ -11,13 +13,14 @@
 //!   the same as choosing zero.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
-    Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::game::TurnStep;
-use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, w};
+use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
 fn legend(name: &'static str, mana: crate::mana::ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -242,6 +245,128 @@ pub fn syr_gwyn_hero_of_ashvale() -> CardDefinition {
             vec![CreatureType::Human, CreatureType::Knight],
             5,
             5,
+        )
+    }
+}
+
+/// Jodah, Archmage Eternal — flying; you may pay {W}{U}{B}{R}{G} rather than
+/// the mana cost for spells you cast.
+pub fn jodah_archmage_eternal() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost for spells you cast.",
+            effect: StaticEffect::FiveColorAlternativeCost,
+        }],
+        ..legend(
+            "Jodah, Archmage Eternal",
+            cost(&[generic(1), u(), r(), w()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            4,
+            3,
+        )
+    }
+}
+
+/// Raggadragga, Goreguts Boss — your creatures with a mana ability get +2/+2
+/// and untap when they attack; a spell cast with seven or more mana untaps
+/// target creature and gives it +7/+7 and trample.
+pub fn raggadragga_goreguts_boss() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a mana ability gets +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::HasManaAbility)),
+                power: 2,
+                toughness: 2,
+            },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(trigger_source_is(R::HasManaAbility)),
+                effect: Effect::Untap { what: Selector::TriggerSource, up_to: None },
+            },
+            TriggeredAbility {
+                // CR 603.4 — "if at least seven mana was spent to cast it".
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellManaSpentAtLeast(7)),
+                effect: Effect::Seq(vec![
+                    Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                    Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::Const(7),
+                        toughness: Value::Const(7),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ]),
+            },
+        ],
+        ..legend(
+            "Raggadragga, Goreguts Boss",
+            cost(&[generic(2), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Boar],
+            4,
+            4,
+        )
+    }
+}
+
+/// Alexios, Deimos of Kosmos — trample; attacks each combat, can't be
+/// sacrificed, can't attack its owner; at each player's upkeep that player
+/// takes it, untaps it, and gives it a +1/+1 counter and haste.
+pub fn alexios_deimos_of_kosmos() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::MustAttack, Keyword::CantBeSacrificed, Keyword::CantAttackOwner],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::GainControl { what: Selector::This, to: Some(PlayerRef::ActivePlayer), duration: Duration::Permanent },
+                Effect::Untap { what: Selector::This, up_to: None },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..legend(
+            "Alexios, Deimos of Kosmos",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Berserker],
+            4,
+            4,
+        )
+    }
+}
+
+/// Narset, Enlightened Exile — your creatures have prowess; attacking exiles
+/// a noncreature, nonland card with mana value less than Narset's power from
+/// a graveyard and offers a free cast of a copy of it.
+pub fn narset_enlightened_exile() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have prowess.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Prowess,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ExileWithSource {
+                    what: target_filtered(
+                        R::Noncreature.and(R::Nonland).and(R::InGraveyard).and(R::ManaValueLessThanSourcePower),
+                    ),
+                },
+                Effect::CopyCardAndCastFree { what: Selector::CardExiledWithSource },
+            ]),
+        }],
+        ..legend(
+            "Narset, Enlightened Exile",
+            cost(&[generic(1), u(), r(), w()]),
+            vec![CreatureType::Human, CreatureType::Monk],
+            3,
+            4,
         )
     }
 }
