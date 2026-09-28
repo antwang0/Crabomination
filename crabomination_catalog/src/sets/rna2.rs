@@ -321,12 +321,24 @@ pub fn lazav_dimir_mastermind() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "Have Lazav become a copy of that creature card?".into(),
-                body: Box::new(Effect::BecomeCopyOfFor {
-                    what: Selector::This,
-                    source: Selector::TriggerSource,
-                    duration: Duration::Permanent,
-                    non_legendary: false,
-                }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: Selector::TriggerSource,
+                        duration: Duration::Permanent,
+                        non_legendary: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![],
+                        keep_triggered: vec![0],
+                        pt: None,
+                        keep_name: true,
+                        legendary: true,
+                        keywords: vec![Keyword::Hexproof],
+                        card_types: vec![],
+                    },
+                ])),
             },
         }],
         ..Default::default()

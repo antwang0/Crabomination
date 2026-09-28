@@ -472,8 +472,8 @@ pub fn vesuvan_shapeshifter() -> CardDefinition {
 
 /// Volrath, the Shapestealer — {2}{B}{G}{U} 7/5 Phyrexian Shapeshifter. Your
 /// combat puts a -1/-1 counter on up to one creature; {1}: until your next
-/// turn it becomes a copy of a creature with a counter on it.
-/// Residual: the copy isn't 7/5 and doesn't keep the {1} ability.
+/// turn it becomes a copy of a creature with a counter on it, except it's 7/5
+/// and has this ability (CR 707.9b).
 pub fn volrath_the_shapestealer() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -491,12 +491,24 @@ pub fn volrath_the_shapestealer() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::BecomeCopyOfFor {
-                what: Selector::This,
-                source: target_filtered(R::Creature.and(R::WithAnyCounter).and(R::OtherThanSource)),
-                duration: Duration::UntilNextTurn,
-                non_legendary: false,
-            },
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(R::Creature.and(R::WithAnyCounter).and(R::OtherThanSource)),
+                    duration: Duration::UntilNextTurn,
+                    non_legendary: false,
+                },
+                Effect::AmendCopy {
+                    what: Selector::This,
+                    keep_activated: vec![0],
+                    keep_triggered: vec![],
+                    pt: Some((7, 5)),
+                    keep_name: false,
+                    legendary: false,
+                    keywords: vec![],
+                    card_types: vec![],
+                },
+            ]),
             ..Default::default()
         }],
         ..creature(

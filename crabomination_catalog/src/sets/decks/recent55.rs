@@ -165,7 +165,8 @@ pub fn ravenous_intruder() -> CardDefinition {
 /// Saheeli, Sublime Artificer — {1}{U/R}{U/R} Legendary Planeswalker — Saheeli.
 /// 5 loyalty. Whenever you cast a noncreature spell, create a 1/1 Servo. −2:
 /// target artifact you control becomes a copy of another target artifact or
-/// creature you control until end of turn.
+/// creature you control until end of turn, except it's an artifact in addition
+/// to its other types.
 pub fn saheeli_sublime_artificer() -> CardDefinition {
     CardDefinition {
         name: "Saheeli, Sublime Artificer",
@@ -192,21 +193,33 @@ pub fn saheeli_sublime_artificer() -> CardDefinition {
         }],
         loyalty_abilities: vec![LoyaltyAbility {
             loyalty_cost: -2,
-            effect: Effect::BecomeCopyOfFor {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Artifact.and(R::ControlledByYou),
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Artifact.and(R::ControlledByYou),
+                    },
+                    source: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature
+                            .or(R::Artifact)
+                            .and(R::ControlledByYou)
+                            .and(R::OtherThanTargetSlot(0)),
+                    },
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
                 },
-                source: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: R::Creature
-                        .or(R::Artifact)
-                        .and(R::ControlledByYou)
-                        .and(R::OtherThanTargetSlot(0)),
+                Effect::AmendCopy {
+                    what: Selector::Target(0),
+                    keep_activated: vec![],
+                    keep_triggered: vec![],
+                    pt: None,
+                    keep_name: false,
+                    legendary: false,
+                    keywords: vec![],
+                    card_types: vec![CardType::Artifact],
                 },
-                duration: Duration::EndOfTurn,
-                non_legendary: false,
-            },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

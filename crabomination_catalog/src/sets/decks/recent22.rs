@@ -60,9 +60,8 @@ pub fn jeong_jeong_the_deserter() -> CardDefinition {
     }
 }
 
-/// Ran and Shaw — {3}{R}{R} 4/4 legendary Dragon with flying and firebending 2.
-/// (The cast-ETB "copy if 3+ Dragons/Lessons in your graveyard" rider is
-/// dropped.)
+/// Ran and Shaw — {3}{R}{R} 4/4 legendary Dragon with flying and firebending 2;
+/// cast with 3+ Dragon/Lesson cards in your graveyard, a non-legendary copy.
 pub fn ran_and_shaw() -> CardDefinition {
     let dragon_or_lesson = SelectionRequirement::HasCreatureType(CreatureType::Dragon)
         .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson));

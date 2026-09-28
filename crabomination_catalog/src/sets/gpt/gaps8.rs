@@ -236,12 +236,24 @@ pub fn mizzium_transreliquat() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), u(), r()]),
-                effect: Effect::BecomeCopyOfFor {
-                    what: Selector::This,
-                    source: target_filtered(R::Artifact),
-                    duration: Duration::Permanent,
-                    non_legendary: false,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: target_filtered(R::Artifact),
+                        duration: Duration::Permanent,
+                        non_legendary: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![1],
+                        keep_triggered: vec![],
+                        pt: None,
+                        keep_name: false,
+                        legendary: false,
+                        keywords: vec![],
+                        card_types: vec![],
+                    },
+                ]),
                 ..Default::default()
             },
         ],

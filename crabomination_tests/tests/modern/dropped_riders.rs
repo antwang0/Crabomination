@@ -1978,3 +1978,97 @@ fn worn_powerstone_enters_tapped_as_a_replacement() {
     assert!(c.tapped, "tapped as it entered");
     assert!(g.stack.is_empty(), "no enters-tapped trigger to respond to");
 }
+
+/// CR 707.9b — Volrath, the Shapestealer's copy is "7/5 and it has this
+/// ability": the copied Bears keep Volrath's P/T and its {1} copy ability.
+#[test]
+fn volrath_copy_is_seven_five_and_keeps_its_ability() {
+    let mut g = main_phase();
+    let volrath = g.add_card_to_battlefield(0, catalog::volrath_the_shapestealer());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: volrath,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}: become a copy");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(volrath).unwrap();
+    assert_eq!(g.battlefield_find(volrath).unwrap().definition.name, "Grizzly Bears");
+    assert_eq!((cp.power, cp.toughness), (7, 5));
+    assert_eq!(g.battlefield_find(volrath).unwrap().definition.activated_abilities.len(), 1, "keeps {{1}}");
+}
+
+/// CR 707.9b — Mizzium Transreliquat's {1}{U}{R} copy keeps "this ability"
+/// (its second one) and not its {3} one.
+#[test]
+fn mizzium_transreliquat_permanent_copy_keeps_only_this_ability() {
+    let mut g = main_phase();
+    let mizz = g.add_card_to_battlefield(0, catalog::mizzium_transreliquat());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mizz,
+        ability_index: 1,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}{U}{R}: become a copy");
+    drain_stack(&mut g);
+    let def = &g.battlefield_find(mizz).unwrap().definition;
+    assert_eq!(def.name, "Sol Ring");
+    assert_eq!(def.activated_abilities.len(), 2, "Sol Ring's mana ability + this ability");
+    assert_eq!(def.activated_abilities[1].mana_cost.cmc(), 3);
+}
+
+/// CR 707.9b — Lazav, Dimir Mastermind's copy keeps his name, legendary,
+/// hexproof and the trigger, so he can copy again.
+#[test]
+fn lazav_dimir_mastermind_copy_keeps_name_hexproof_and_trigger() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let lazav = g.add_card_to_battlefield(0, catalog::lazav_dimir_mastermind());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lazav).unwrap();
+    assert_eq!(g.battlefield_find(lazav).unwrap().definition.name, "Lazav, Dimir Mastermind");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "the Bears' P/T");
+    assert!(cp.keywords().contains(&Keyword::Hexproof));
+    assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+    assert_eq!(g.battlefield_find(lazav).unwrap().definition.triggered_abilities.len(), 1);
+}
+
+/// CR 707.9b — Saheeli, Sublime Artificer's −2 copy is "an artifact in
+/// addition to its other types".
+#[test]
+fn saheeli_sublime_artificer_copy_stays_an_artifact() {
+    let mut g = main_phase();
+    let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_sublime_artificer());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: saheeli,
+        ability_index: 0,
+        target: Some(Target::Permanent(ring)),
+        x_value: None,
+    })
+    .expect("-2");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ring).unwrap();
+    assert_eq!(g.battlefield_find(ring).unwrap().definition.name, "Grizzly Bears");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
+}
