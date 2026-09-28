@@ -3805,3 +3805,36 @@ fn every_choose_n_default_pick_names_a_real_mode() {
     }
     assert!(bad.is_empty(), "{bad:#?}");
 }
+
+/// CR 603.2 — "whenever this becomes the target of a spell" is not "of a
+/// spell or ability": a card whose printing says the former gates its
+/// `BecameTarget` trigger on a spell (`caused_by(IsSpellOnStack)`). Goldspan
+/// Dragon made a Treasure per activation of Pia Nalaar's pump and looped a
+/// cube game to the action cap.
+#[test]
+fn every_target_of_a_spell_trigger_ignores_abilities() {
+    use crabomination::effect::EventKind;
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let mut bad = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(text) = cache.get(def.name).and_then(|c| c.get("oracle_text")).and_then(|t| t.as_str())
+        else {
+            continue;
+        };
+        let spell_only = text.contains("the target of a spell")
+            && !text.contains("spell or ability")
+            && !text.contains("spells or abilities");
+        let ungated = def.triggered_abilities.iter().any(|t| {
+            matches!(t.event.kind, EventKind::BecameTarget) && t.event.causer_filter.is_none()
+        });
+        if spell_only && ungated {
+            bad.push(def.name);
+        }
+    }
+    assert!(bad.is_empty(), "{bad:?}");
+}

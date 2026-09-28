@@ -2726,7 +2726,8 @@ pub fn stormchaser_drake() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl),
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl)
+                .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

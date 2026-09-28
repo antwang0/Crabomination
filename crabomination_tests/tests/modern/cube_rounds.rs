@@ -977,6 +977,30 @@ fn goldspan_dragon_treasure_on_becoming_targeted() {
         "becoming the target of a spell mints a Treasure");
 }
 
+/// CR 603.2 — "becomes the target of a **spell**": Pia Nalaar's activated
+/// "target creature can't block" on Goldspan mints nothing. It did, and a cube
+/// game (seed 9910001) looped Treasure → activation → Treasure to the cap.
+#[test]
+fn goldspan_dragon_ignores_an_ability_targeting_it() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::goldspan_dragon());
+    let pia = g.add_card_to_battlefield(0, catalog::pia_nalaar());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pia,
+        ability_index: 1,
+        target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice the Ornithopter: Goldspan can't block");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "no Treasure");
+}
+
 #[test]
 fn battle_mammoth_draws_when_your_permanent_is_targeted_by_opponent() {
     let mut g = two_player_game();

@@ -823,9 +823,8 @@ pub fn gnarled_professor() -> CardDefinition {
 
 /// Dream Strix — {2}{U} 3/2 Bird Illusion with flying. "When this creature
 /// becomes the target of a spell, sacrifice it. When this creature dies,
-/// learn." Approximation: `EventKind::BecameTarget` fires for spells AND
-/// activated abilities (no spell-only targeting event), so an ability
-/// targeting it also triggers the sacrifice.
+/// learn." "Of a spell" is `caused_by(IsSpellOnStack)`: an ability
+/// targeting it doesn't trigger the sacrifice.
 pub fn dream_strix() -> CardDefinition {
     CardDefinition {
         name: "Dream Strix",
@@ -840,7 +839,8 @@ pub fn dream_strix() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                    .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
                 effect: Effect::SacrificeSource,
             },
             on_dies(Effect::Learn {

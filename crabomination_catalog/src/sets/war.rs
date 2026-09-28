@@ -2606,7 +2606,8 @@ pub fn fblthp_the_lost() -> CardDefinition {
         triggered_abilities: vec![
             etb(draw(1)),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                    .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
                 effect: Effect::ShuffleSelfIntoLibrary,
             },
         ],

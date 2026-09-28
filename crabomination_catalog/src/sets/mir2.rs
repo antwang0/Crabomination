@@ -1144,7 +1144,8 @@ pub fn forsaken_wastes() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                    .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::TriggerEventPlayer),
                     amount: Value::Const(5),

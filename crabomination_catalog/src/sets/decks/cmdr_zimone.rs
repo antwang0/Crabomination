@@ -246,10 +246,15 @@ pub fn giggling_skitterspike() -> CardDefinition {
         amount: Value::PowerOf(Box::new(Selector::This)),
     };
     let on = |kind: EventKind| TriggeredAbility { event: EventSpec::new(kind, EventScope::SelfSource), effect: ping() };
+    // "…of a spell" — an ability targeting it doesn't ping.
+    let targeted = TriggeredAbility {
+        event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource).caused_by(R::IsSpellOnStack),
+        effect: ping(),
+    };
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Indestructible],
-        triggered_abilities: vec![on(EventKind::Attacks), on(EventKind::Blocks), on(EventKind::BecameTarget)],
+        triggered_abilities: vec![on(EventKind::Attacks), on(EventKind::Blocks), targeted],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5)]),
             effect: Effect::Monstrosity { n: Value::Const(5) },

@@ -1288,6 +1288,7 @@ pub fn tectonic_giant() -> CardDefinition {
                 event: {
                     let mut e = EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource);
                     e.actor_is_opponent = true;
+                    e.causer_filter = Some(crate::card::SelectionRequirement::IsSpellOnStack);
                     e
                 },
                 effect: modal(),

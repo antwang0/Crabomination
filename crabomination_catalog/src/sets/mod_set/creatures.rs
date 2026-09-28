@@ -721,7 +721,10 @@ pub fn goldspan_dragon() -> CardDefinition {
                 effect: make_treasure(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                // "…of a spell" — not an ability (Pia Nalaar's pump looped a
+                // Treasure per activation, cube seed 9910001).
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                    .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
                 effect: make_treasure(),
             },
         ],

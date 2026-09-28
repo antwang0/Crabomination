@@ -5927,7 +5927,8 @@ pub fn venerated_rotpriest() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Toxic(1)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted),
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
+                .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),
             effect: Effect::AddPoison {
                 who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::ONE,
