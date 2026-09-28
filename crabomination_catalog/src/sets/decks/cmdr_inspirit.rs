@@ -62,7 +62,7 @@ fn artifact_card() -> R {
 /// Inspirit, Flagship Vessel — Spacecraft, station. 1+: at the beginning of
 /// combat on your turn, a +1/+1 counter or two charge counters on up to one
 /// other target artifact. 8+: a 5/5 flier; your other artifacts have hexproof
-/// and indestructible. ⚠ Always targets when it can.
+/// and indestructible.
 pub fn inspirit_flagship_vessel() -> CardDefinition {
     let other_artifacts = || yours(artifact_card().and(R::OtherThanSource));
     let grant = |keyword| StaticEffect::GrantKeyword { applies_to: other_artifacts(), keyword };
@@ -77,10 +77,13 @@ pub fn inspirit_flagship_vessel() -> CardDefinition {
         station: vec![
             StationBand {
                 min: 1,
-                triggers: vec![your_combat(Effect::ChooseMode(vec![
-                    Effect::AddCounter { what: slot(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
-                    charge(slot(), 2),
-                ]))],
+                triggers: vec![your_combat(Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::ChooseMode(vec![
+                        Effect::AddCounter { what: slot(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                        charge(slot(), 2),
+                    ])),
+                })],
                 ..Default::default()
             },
             StationBand {

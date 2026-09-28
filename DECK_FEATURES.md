@@ -152,7 +152,7 @@ lists were picked.
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 2 carry residuals (Alandra, Sky Dreamer, Erdwal Illuminator) |
-| **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
+| **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Cloud Key, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
 | **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
@@ -2998,7 +2998,7 @@ printed types** (CR 613.8 — an anthem missed an animated land; "artifact
 creatures you control have …" missed an animated artifact; now a `SecondPass`
 gate), ⚠ **`CostReduction` over the source's chosen card type never
 matched** (Cloud Key; the card check has no source), ⚠ **a Station band's
-`PumpPTByValue` static was dropped** (Uthros Research Craft). Residuals: six
+`PumpPTByValue` static was dropped** (Uthros Research Craft). Residuals: five
 (INCOMPLETE_CARDS). Four-seat pods beside Morska / Saheeli / Zimone (seed
 13901, 1,000): all decided, Inspirit 7.2 %; six seats (13902, 1,000): all
 decided, 1.4 % — ⚠ a weak bot pilot, lead open; census (13903, 500): nothing
