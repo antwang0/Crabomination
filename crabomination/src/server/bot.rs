@@ -9975,6 +9975,11 @@ fn main_phase_action_with(
     // and size. Dry-run-scored against passing.
     gated_pick!(state, sinks, sink::AB_X_COUNTERS, super::x_counter_sink::pick_x_counter_ability(state, seat, w));
 
+    // Pods: pay life for a card banked until the end step (Necropotence).
+    if let Some(action) = super::life_draw::pick_life_draw(state, seat) {
+        return BotStep::plain(action);
+    }
+
     // Pods: any other non-mana ability that beats passing (Arbor Elf, Elvish
     // Piper, the scry and tutor rocks). Two seats return at once.
     if let Some(action) = super::generic_sink::pick_generic_ability(state, seat, w) {

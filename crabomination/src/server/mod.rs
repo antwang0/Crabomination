@@ -119,6 +119,7 @@ mod library_top;
 mod spell_response;
 mod fight_pick;
 mod loyalty_pick;
+mod life_draw;
 mod transform_sink;
 mod x_counter_sink;
 mod generic_sink;
