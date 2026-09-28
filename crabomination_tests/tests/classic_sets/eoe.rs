@@ -2410,6 +2410,11 @@ fn meltstriders_resolve_fights() {
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     resolve_aura_etb(&mut g, catalog::meltstriders_resolve(), mine, theirs);
     assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to the 4/4's fight");
+    // "Enchanted creature gets +0/+2 and can't be blocked by more than one
+    // creature" — the static half shipped missing.
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 6));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::CantBeBlockedByMoreThanOne));
 }
 
 /// Pain for All pings a target for the enchanted creature's power.

@@ -6833,14 +6833,24 @@ pub fn meltstriders_resolve() -> CardDefinition {
         // The entry half is an ETB trigger: an Aura's own `effect:` is its
         // attach and nothing after it runs on the cast path (dead as shipped
         // until 2026-09-10; the old test resolved the effect by hand).
-        triggered_abilities: vec![etb(Effect::Fight {
-            attacker: Selector::AttachedTo(Box::new(Selector::This)),
-            defender: Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
-            },
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Fight {
+                attacker: Selector::AttachedTo(Box::new(Selector::This)),
+                defender: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            }),
         })],
+        // "Enchanted creature gets +0/+2 and can't be blocked by more than one
+        // creature" — shipped missing (aura-bonus scan).
+        equipped_bonus: Some(crate::card::EquipBonus {
+            toughness: 2,
+            keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
