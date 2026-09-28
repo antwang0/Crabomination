@@ -9,10 +9,13 @@ use crate::card::{
 use crate::effect::{Effect, PlayerRef, ZoneDest};
 use crate::mana::{Color, cost, generic, r};
 
-/// Squee, the Immortal — {1}{R}{R} 2/1 Goblin. Castable from graveyard or
-/// exile (modeled as pay-cost Move activations, like Gravecrawler).
+/// Squee, the Immortal — {1}{R}{R} 2/1 Goblin. You may cast it from your
+/// graveyard (`Keyword::GraveyardCast` — a cast, so cast triggers and the
+/// commander's cast count see it) or from exile. Residual: the exile half is
+/// a pay-its-cost activation that moves it onto the battlefield — no
+/// self-granted exile cast exists.
 pub fn squee_the_immortal() -> CardDefinition {
-    let recast = |from_graveyard: bool| ActivatedAbility {
+    let recast_from_exile = ActivatedAbility {
         mana_cost: cost(&[generic(1), r(), r()]),
         effect: Effect::Move {
             what: Selector::This,
@@ -22,8 +25,7 @@ pub fn squee_the_immortal() -> CardDefinition {
             },
         },
         sorcery_speed: true,
-        from_graveyard,
-        from_exile: !from_graveyard,
+        from_exile: true,
         ..Default::default()
     };
     CardDefinition {
@@ -37,7 +39,8 @@ pub fn squee_the_immortal() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        activated_abilities: vec![recast(true), recast(false)],
+        keywords: vec![Keyword::GraveyardCast],
+        activated_abilities: vec![recast_from_exile],
         ..Default::default()
     }
 }

@@ -524,28 +524,30 @@ mod recent105 {
     use crabomination::game::types::{Target, TurnStep};
     use crabomination::game::*;
 
-    /// Squee recasts from the graveyard and from exile for its mana cost.
+    /// Squee is CAST from the graveyard (a cast: the stack sees a spell) and
+    /// comes back from exile for its mana cost.
     #[test]
     fn squee_recasts_from_graveyard_and_exile() {
         let mut g = two_player_game();
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
-        // From the graveyard (ability 0).
         let squee = g.add_card_to_graveyard(0, catalog::squee_the_immortal());
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: squee, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
-        }).expect("recast from graveyard");
+        let spells = g.spells_cast_this_turn;
+        g.perform_action(GameAction::CastFlashback {
+            card_id: squee, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("cast from the graveyard");
+        assert_eq!(g.spells_cast_this_turn, spells + 1, "a cast");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from the graveyard");
-        // Exile it, then recast from exile (ability 1).
+        // Exile it, then bring it back from exile (its one activation).
         g.remove_from_battlefield_to_exile(squee);
         assert!(g.exile.iter().any(|c| c.id == squee));
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: squee, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+            card_id: squee, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("recast from exile");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from exile");
