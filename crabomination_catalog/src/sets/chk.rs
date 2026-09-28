@@ -817,7 +817,7 @@ pub fn befoul() -> CardDefinition {
         name: "Befoul",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(
                 SelectionRequirement::Land.or(SelectionRequirement::Creature
                     .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())),

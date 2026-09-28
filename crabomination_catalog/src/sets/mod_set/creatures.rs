@@ -9513,7 +9513,7 @@ pub fn seal_of_doom() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::Destroy {
+            effect: Effect::DestroyNoRegen {
                 what: target_filtered(SelectionRequirement::Creature.and(
                     SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(
                         Color::Black,

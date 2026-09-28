@@ -1106,7 +1106,7 @@ pub fn winds_of_rath() -> CardDefinition {
             selector: Selector::EachPermanent(SelectionRequirement::Creature.and(
                 SelectionRequirement::Not(Box::new(SelectionRequirement::IsEnchanted)),
             )),
-            body: Box::new(Effect::Destroy {
+            body: Box::new(Effect::DestroyNoRegen {
                 what: Selector::TriggerSource,
             }),
         },

@@ -1659,21 +1659,12 @@ pub fn gift_of_estates() -> CardDefinition {
 
 /// Pillage — {1}{R}{R} Sorcery (Urza's Saga reprint flavor). "Destroy
 /// target artifact or land. It can't be regenerated."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Three-mana red flexible
-/// artifact / land destruction. Wired as `Effect::Destroy { what:
-/// target_filtered(Artifact ∨ Land) }`. The "can't be regenerated"
-/// rider is a no-op in the current engine (no regeneration shield
-/// primitive — destroy is unconditional). Tests:
-/// `pillage_destroys_target_land`,
-/// `pillage_destroys_target_artifact`,
-/// `pillage_is_a_three_mana_red_sorcery`.
 pub fn pillage() -> CardDefinition {
     CardDefinition {
         name: "Pillage",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Land)),
         },
         ..Default::default()

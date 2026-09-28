@@ -950,7 +950,7 @@ pub fn grotesque_hybrid() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
-            effect: Effect::Destroy { what: Selector::TriggerSource },
+            effect: Effect::DestroyNoRegen { what: Selector::TriggerSource },
         }],
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Any, 1)),

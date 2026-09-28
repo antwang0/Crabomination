@@ -1093,6 +1093,7 @@ pub fn disintegrate() -> CardDefinition {
             Effect::ExileIfWouldDieThisTurn {
                 what: target_filtered(SelectionRequirement::Any),
             },
+            Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::XFromCost,

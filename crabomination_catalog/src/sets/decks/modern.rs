@@ -5119,19 +5119,15 @@ pub fn shatter() -> CardDefinition {
 
 /// Incinerate — {1}{R} Instant. Incinerate deals 3 damage to any target.
 /// A creature dealt damage this way can't be regenerated this turn.
-///
-/// The "can't be regenerated" rider collapses (no regeneration primitive
-/// is observable from this site), so the spell is functionally identical
-/// to Lightning Strike. Distinct factory + name kept for cube variety.
 pub fn incinerate() -> CardDefinition {
     CardDefinition {
         name: "Incinerate",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: Selector::Target(0),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ]),
         ..Default::default()
     }
 }
@@ -6821,7 +6817,7 @@ pub fn rout() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::Destroy {
+            body: Box::new(Effect::DestroyNoRegen {
                 what: Selector::TriggerSource,
             }),
         },
@@ -16629,6 +16625,7 @@ pub fn carbonize() -> CardDefinition {
             Effect::ExileIfWouldDieThisTurn {
                 what: Selector::Target(0),
             },
+            Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::Creature
@@ -23640,7 +23637,7 @@ pub fn vendetta() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
             },
-            Effect::Destroy {
+            Effect::DestroyNoRegen {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::HasColor(Color::Black).negate()),
@@ -67284,7 +67281,7 @@ pub fn fissure() -> CardDefinition {
         name: "Fissure",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
         },
         ..Default::default()
@@ -67387,7 +67384,7 @@ pub fn afterlife() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy {
+            Effect::DestroyNoRegen {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::CreateToken {

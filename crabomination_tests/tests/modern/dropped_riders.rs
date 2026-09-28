@@ -1835,3 +1835,61 @@ fn intrepid_stablemaster_funds_vehicles_only() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(copter).is_some());
 }
+
+/// CR 701.19c — "It can't be regenerated" / "they can't be regenerated" /
+/// "can't be regenerated this turn": these shipped as a plain destroy or a
+/// bare damage spell, so a regeneration shield saved the creature (oracle
+/// scan, 2026-09-28). Rout, Winds of Rath, Vendetta, Seal of Doom and
+/// Afterlife are pod cards.
+#[test]
+fn cr_701_19c_cant_be_regenerated_riders_beat_a_shield() {
+    let spells: [(fn() -> crabomination::card::CardDefinition, bool, Option<u32>); 9] = [
+        (catalog::afterlife, true, None),
+        (catalog::befoul, true, None),
+        (catalog::fissure, true, None),
+        (catalog::vendetta, true, None),
+        (catalog::rout, false, None),
+        (catalog::winds_of_rath, false, None),
+        (catalog::incinerate, true, None),
+        (catalog::carbonize, true, None),
+        (catalog::disintegrate, true, Some(3)),
+    ];
+    for (f, targeted, x_value) in spells {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().regeneration_shields = 1;
+        let spell = g.add_card_to_hand(0, f());
+        for c in Color::ALL {
+            g.players[0].mana_pool.add(c, 3);
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let name = f().name;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: targeted.then_some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value,
+        })
+        .expect(name);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_none(), "{name}: the shield doesn't save it");
+    }
+    // Seal of Doom's sacrifice ability.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().regeneration_shields = 1;
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_doom());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Seal of Doom");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "Seal of Doom: the shield doesn't save it");
+}
