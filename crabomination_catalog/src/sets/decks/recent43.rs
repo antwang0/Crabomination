@@ -3,7 +3,7 @@
 //! recursion, and devotion-style mana doublers. Tests in `tests/recent43.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, Effect, SelectionRequirement as R, Selector, Value, Zone,
+    CardDefinition, CardType, CounterType, Effect, SelectionRequirement as R, Selector, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
@@ -189,14 +189,7 @@ pub fn petrified_field() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Move {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: R::Land,
-                        },
-                        Value::Const(1),
-                    ),
+                    what: crate::effect::shortcut::target_filtered(R::Land.and(R::InYourGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()

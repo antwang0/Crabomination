@@ -1624,24 +1624,10 @@ pub fn mystical_inquiry() -> CardDefinition {
 
 // ── Conjurer's Bauble (STA reprint, originally Modern Horizons) ────────────
 
-/// Conjurer's Bauble — {1} Artifact (STA reprint, originally Modern
-/// Horizons). "{1}, Sacrifice this artifact: Put a card from your
-/// graveyard on the bottom of your library. Draw a card."
-///
-/// A one-mana artifact that cycles graveyard contents for a fresh
-/// draw — useful for both blue control and graveyard-based decks
-/// (snake the right card back into the library for a future tutor).
-/// Cast for `{1}`, with `{1}` + `sac_cost: true` on the
-/// activation. ✅ The "put a card from your graveyard on the bottom of
-/// your library" clause is now wired: the effect bottoms one chosen
-/// card (any type) from your graveyard via `ZoneDest::Library { pos:
-/// Bottom }`, then draws. With an empty graveyard the move is a no-op
-/// and the activation still draws (the sacrificed Bauble itself is in
-/// the graveyard by resolution, so a target virtually always exists —
-/// matching the printed card's play pattern).
-/// Tests: `conjurers_bauble_zero_mana_artifact`,
-/// `conjurers_bauble_sac_activation_cantrips`,
-/// `conjurers_bauble_bottoms_a_graveyard_card`.
+/// Conjurer's Bauble — {1} Artifact. "{T}, Sacrifice this artifact: Put up to
+/// one target card from your graveyard on the bottom of your library. Draw a
+/// card." The target is chosen before the sacrifice is paid (CR 602.2b), so
+/// the Bauble can't bottom itself.
 pub fn conjurers_bauble() -> CardDefinition {
     CardDefinition {
         name: "Conjurer's Bauble",
@@ -1663,16 +1649,17 @@ pub fn conjurers_bauble() -> CardDefinition {
             exile_other_filter: None,
             once_per_turn: false,
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Any,
+                // "Put up to one target card from your graveyard on the bottom
+                // of your library" — chosen before the sacrifice is paid.
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: crate::effect::shortcut::target_filtered(SelectionRequirement::InYourGraveyard),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::You,
+                            pos: crate::effect::LibraryPosition::Bottom,
+                        },
                     }),
-                    to: ZoneDest::Library {
-                        who: PlayerRef::You,
-                        pos: crate::effect::LibraryPosition::Bottom,
-                    },
                 },
                 Effect::Draw {
                     who: Selector::You,

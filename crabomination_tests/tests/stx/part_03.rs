@@ -896,7 +896,7 @@ fn conjurers_bauble_bottoms_a_graveyard_card_and_cantrips() {
     let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bauble, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Bauble activatable");
+        card_id: bauble, ability_index: 0, target: Some(Target::Permanent(dead_bolt)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Bauble activatable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bauble), "Bauble sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");

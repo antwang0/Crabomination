@@ -2175,11 +2175,7 @@ pub fn cogwork_archivist() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             effect: Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::EachPlayer,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Any,
-                }),
+                what: crate::effect::shortcut::target_filtered(SelectionRequirement::InGraveyard),
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOfMoved,
                     pos: crate::effect::LibraryPosition::Bottom,

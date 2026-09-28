@@ -2773,7 +2773,7 @@ fn cogwork_archivist_etb_mills_four_from_target_opponent() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        target: Some(Target::Permanent(dead_bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("Archivist activation for {2}, {T}");
     drain_stack(&mut g);
@@ -3047,7 +3047,8 @@ fn aether_helix_bounces_nonland_and_burns_opp() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(crabomination::game::types::Target::Permanent(opp_bear)),
-        additional_targets: vec![],
+        // The second target: the permanent card in your graveyard.
+        additional_targets: vec![crabomination::game::types::Target::Permanent(dead_bear)],
         mode: None,
         x_value: None,
     }).expect("Aether Helix castable");
@@ -3107,10 +3108,12 @@ fn pillardrop_warden_etb_may_pay_returns_creature_card() {
     g.clear_sickness(id);
     g.players[0].mana_pool.add_colorless(2);
 
-    g.perform_action(GameAction::ActivateAbility {
+    let activate = |g: &mut GameState, t| g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Pillardrop Warden activation for {2}, {T}, Sacrifice");
+        target: Some(Target::Permanent(t)), additional_targets: Vec::new(), x_value: None, mode: None,
+    });
+    assert!(activate(&mut g, dead_bear).is_err(), "a creature card is no target");
+    activate(&mut g, dead_bolt).expect("Pillardrop Warden activation for {2}, {T}, Sacrifice");
     drain_stack(&mut g);
 
     // Warden sacrificed itself as part of the cost.

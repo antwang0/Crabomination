@@ -131,11 +131,11 @@ pub fn aether_helix() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
             Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Permanent,
-                }),
+                // The second printed target: slot 1, not a second read of slot 0.
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+                },
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
@@ -265,12 +265,11 @@ pub fn pillardrop_warden() -> CardDefinition {
             sac_cost: true,
             sorcery_speed: true,
             effect: Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                }),
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()
