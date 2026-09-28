@@ -253,19 +253,15 @@ pub fn boneyard_parley() -> CardDefinition {
         cost(&[generic(5), b(), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::EachPlayer,
-                        zone: Zone::Graveyard,
-                        filter: R::Creature,
-                    }),
-                    count: Box::new(Value::Const(5)),
-                },
-                to: ZoneDest::Exile,
+            // "Exile up to five target creature cards from graveyards" (CR 115.1).
+            Effect::ApplyToTargets {
+                max_targets: 5,
+                min_targets: 0,
+                filter: R::Creature.and(R::InGraveyard),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
             },
             Effect::SeparateIntoPiles {
-                what: Selector::LastMoved,
+                what: Selector::ExiledThisResolution { filter: R::Creature },
                 splitter: PlayerRef::OpponentOf(Box::new(PlayerRef::You)),
                 chooser: PlayerRef::You,
                 chosen: Box::new(Effect::Move {

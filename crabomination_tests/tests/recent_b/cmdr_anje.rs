@@ -232,13 +232,16 @@ fn boneyard_parley_takes_a_pile() {
     let mut g = main_phase(2);
     let a = g.add_card_to_graveyard(1, catalog::craw_wurm());
     let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // CR 115.1 — "up to five TARGET creature cards": the untargeted one stays.
+    let left = g.add_card_to_graveyard(1, catalog::shivan_dragon());
     let spell = g.add_card_to_hand(0, catalog::boneyard_parley());
     flood(&mut g, 0);
-    cast(&mut g, spell, &[]).expect("cast");
+    cast(&mut g, spell, &[Target::Permanent(a), Target::Permanent(b)]).expect("cast");
     let mine = [a, b].iter().filter(|id| g.battlefield_find(**id).is_some_and(|c| c.controller == 0)).count();
     assert!(mine >= 1, "the chosen pile came back under your control");
     assert!([a, b].iter().all(|id| g.battlefield_find(*id).is_some()
         || g.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == *id))));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == left), "not a target, not exiled");
 }
 
 /// Asylum Visitor draws on the upkeep of a player with no cards in hand.

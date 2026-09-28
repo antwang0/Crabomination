@@ -2162,7 +2162,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
 | 🟡 Yuffie, Materia Hunter | Limit Break (FIC) | the Equipment attached is the engine's pick among yours. |
 | 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
-| 🟡 Boneyard Parley | Merciless Rage (C19) | the up-to-five creature cards are an untargeted pick (the first five in seat order). |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells only, not activation or other costs. |
