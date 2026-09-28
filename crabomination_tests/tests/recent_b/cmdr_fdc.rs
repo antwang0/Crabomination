@@ -3496,6 +3496,26 @@ fn divine_reckoning_destroys_all_but_one_each() {
     assert!(g.battlefield_find(lost).is_none() && g.battlefield_find(their_bear).is_none());
 }
 
+/// Divine Reckoning — "each player chooses" is each player's own pick, made
+/// in APNAP order before anything is destroyed (CR 101.4, CR 608.2c).
+#[test]
+fn divine_reckoning_each_player_picks_their_keeper() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let their_giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let their_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![bear]),
+        DecisionAnswer::Cards(vec![their_bear]),
+    ]));
+    let d = g.add_card_to_hand(0, catalog::divine_reckoning());
+    cast(&mut g, d, &[]);
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(their_bear).is_some());
+    assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(their_giant).is_none());
+}
+
 /// The rest of Feline Ferocity, one assertion each.
 #[test]
 fn feline_ferocity_cards() {

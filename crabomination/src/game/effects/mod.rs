@@ -8,6 +8,7 @@
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
+mod keep_one;
 mod combat_copies;
 mod combat_damage_watch;
 // CR 701.50 — connive on a selected permanent (Kamiz, Change of Plans).
@@ -24024,41 +24025,8 @@ impl GameState {
             }
 
             Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
-                // Deadly Vanity — each resolved player keeps one `filter`
-                // permanent (auto-pick: highest mana value) and sacrifices the
-                // rest of their `filter` permanents.
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    let keep = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == p
-                                && self.evaluate_requirement_on_card(filter, c, p)
-                        })
-                        .max_by_key(|c| c.definition.cost.cmc())
-                        .map(|c| c.id);
-                    let to_sac: Vec<CardId> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == p
-                                && Some(c.id) != keep
-                                && self.evaluate_requirement_on_card(filter, c, p)
-                        })
-                        .map(|c| c.id)
-                        .collect();
-                    for id in to_sac {
-                        if *destroy {
-                            self.destroy_permanent(id, false, events);
-                        } else {
-                            self.sacrifice_one(id, p, events);
-                        }
-                    }
-                }
-                Ok(())
+                self.each_player_keeps_one(who, filter, *destroy, ctx, events, effect)
             }
-
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
 

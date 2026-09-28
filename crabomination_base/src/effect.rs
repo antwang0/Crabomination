@@ -10136,9 +10136,8 @@ pub enum Effect {
     /// "Each [resolved] player chooses a [`filter`] permanent they control,
     /// then sacrifices the rest [of their `filter` permanents]" — Deadly
     /// Vanity (keep one creature or planeswalker). Like
-    /// `SacrificeAllButOnePerType` but scoped to a single filter; the keeper
-    /// is auto-picked as the highest-mana-value match (the same approximation
-    /// the Cataclysm family uses for the "each player chooses" clause).
+    /// `SacrificeAllButOnePerType` but scoped to a single filter; each player
+    /// picks their keeper in APNAP order (a bot keeps its highest mana value).
     /// `destroy`: "destroy the rest" instead (Divine Reckoning) —
     /// indestructible and regeneration apply (CR 701.8).
     EachPlayerKeepsOneSacrificeRest {
