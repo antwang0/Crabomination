@@ -8,9 +8,12 @@ use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector};
 use crate::mana::{Color, b, cost, g, generic, hybrid};
 
 /// Svogthos, the Restless Tomb — Land. {T}: Add {C}. {3}{B}{G}: Until end of
-/// turn, this land becomes a Plant Zombie creature whose power and toughness
-/// each equal the number of creature cards in your graveyard. It's still a land.
-/// (The black-and-green color grant is cosmetic and omitted.)
+/// turn, this land becomes a black and green Plant Zombie creature whose power
+/// and toughness each equal the number of creature cards in your graveyard.
+/// It's still a land. Approximation: the printed P/T is a characteristic-
+/// defining ability; here the count is read once, as the ability resolves
+/// (`BecomeCreature` sets a fixed P/T), so a creature card hitting your
+/// graveyard later that turn doesn't grow it.
 pub fn svogthos_the_restless_tomb() -> CardDefinition {
     CardDefinition {
         name: "Svogthos, the Restless Tomb",
@@ -26,7 +29,7 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), b(), g()]),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::CardsInGraveyardMatching {
                         who: PlayerRef::You,
@@ -39,7 +42,7 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
                     creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
                     keywords: vec![],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Black, crate::mana::Color::Green]),
                 ..Default::default()
             },
         ],

@@ -1335,14 +1335,14 @@ pub fn nantuko_monastery() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[g(), w()]),
                 condition: Some(threshold()),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(4),
                     toughness: Value::Const(4),
                     creature_types: vec![CreatureType::Insect, CreatureType::Monk],
                     keywords: vec![Keyword::FirstStrike],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Green, crate::mana::Color::White]),
                 ..Default::default()
             },
         ],

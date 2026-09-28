@@ -1011,6 +1011,14 @@ fn genju(
     (p, t): (i32, i32),
     keywords: Vec<Keyword>,
 ) -> CardDefinition {
+    // "becomes a 4/4 green Spirit creature" — the land type's color.
+    let color = match land {
+        LandType::Plains => crate::mana::Color::White,
+        LandType::Island => crate::mana::Color::Blue,
+        LandType::Swamp => crate::mana::Color::Black,
+        LandType::Mountain => crate::mana::Color::Red,
+        _ => crate::mana::Color::Green,
+    };
     CardDefinition {
         name,
         cost: c,
@@ -1025,14 +1033,14 @@ fn genju(
         },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::BecomeCreature {
+            effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 power: Value::Const(p),
                 toughness: Value::Const(t),
                 creature_types: vec![CreatureType::Spirit],
                 keywords,
                 duration: Duration::EndOfTurn,
-            },
+            }, &[color]),
             ..Default::default()
         }],
         // The printed trigger is "when enchanted land is put into a graveyard";

@@ -3598,14 +3598,14 @@ pub fn stuffed_bear() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::BecomeCreature {
+            effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                 what: Selector::This,
                 power: Value::Const(4),
                 toughness: Value::Const(4),
                 creature_types: vec![CreatureType::Bear],
                 keywords: vec![],
                 duration: Duration::EndOfTurn,
-            },
+            }, &[crate::mana::Color::Green]),
             ..Default::default()
         }],
         ..Default::default()

@@ -748,6 +748,55 @@ fn creeping_tar_pit_animates_unblockable() {
     assert!(post.keywords().contains(&Keyword::Unblockable));
 }
 
+/// CR 105.3 — a creature-land's animation sets its printed colors: Creeping
+/// Tar Pit is a blue and black creature, so Doom Blade ("destroy target
+/// nonblack creature") can't target it; a Genju's land takes the Genju's
+/// color; both are colorless again after the turn.
+#[test]
+fn animated_lands_have_their_printed_colors() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::creeping_tar_pit());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("animate for {1}{U}{B}");
+    drain_stack(&mut g);
+    let mut colors = g.computed_permanent(land).unwrap().colors.to_vec();
+    colors.sort_by_key(|c| *c as u8);
+    let mut want = vec![Color::Blue, Color::Black];
+    want.sort_by_key(|c| *c as u8);
+    assert_eq!(colors, want, "blue and black");
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: blade, target: Some(Target::Permanent(land)), additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "Doom Blade can't target a black creature",
+    );
+    g.priority.player_with_priority = 0;
+
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let genju = g.add_card_to_battlefield(0, catalog::genju_of_the_cedars());
+    g.battlefield_find_mut(genju).unwrap().attached_to = Some(forest);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: genju, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("animate the Forest");
+    drain_stack(&mut g);
+    let f = g.computed_permanent(forest).unwrap();
+    assert!(f.card_types().contains(&CardType::Creature));
+    assert_eq!(f.colors.to_vec(), vec![Color::Green], "a green Spirit");
+
+    g.expire_end_of_turn_effects();
+    assert!(g.computed_permanent(land).unwrap().colors.is_empty(), "colorless again");
+    assert!(g.computed_permanent(forest).unwrap().colors.is_empty());
+}
+
 /// An animated manland can be declared as an attacker (it's a creature).
 #[test]
 fn animated_manland_can_attack() {

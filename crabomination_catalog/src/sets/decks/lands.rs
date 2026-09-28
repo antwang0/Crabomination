@@ -728,14 +728,14 @@ fn manland(
         discard_cost: None,
         tap_cost: false,
         mana_cost: animate_cost,
-        effect: Effect::BecomeCreature {
+        effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
             what: Selector::This,
             power: Value::Const(power),
             toughness: Value::Const(toughness),
             creature_types: vec![CreatureType::Elemental],
             keywords,
             duration: crate::effect::Duration::EndOfTurn,
-        },
+        }, &[color_a, color_b]),
         ..Default::default()
     };
     // ⚠ **A creature-land prints "Land" and no basic land type.** All
@@ -968,14 +968,14 @@ fn restless_land(
     use crate::effect::Duration;
     let animate = ActivatedAbility {
         mana_cost: animate_cost,
-        effect: Effect::BecomeCreature {
+        effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
             what: Selector::This,
             power: Value::Const(power),
             toughness: Value::Const(toughness),
             creature_types,
             keywords,
             duration: Duration::EndOfTurn,
-        },
+        }, &[color_a, color_b]),
         ..Default::default()
     };
     CardDefinition {
@@ -2475,14 +2475,14 @@ fn afr_land(
     use crate::effect::Duration;
     let animate = ActivatedAbility {
         mana_cost: animate_cost,
-        effect: Effect::BecomeCreature {
+        effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
             what: Selector::This,
             power: Value::Const(power),
             toughness: Value::Const(toughness),
             creature_types,
             keywords,
             duration: Duration::EndOfTurn,
-        },
+        }, &[color]),
         ..Default::default()
     };
     CardDefinition {
@@ -2553,14 +2553,14 @@ pub fn lair_of_the_hydra() -> CardDefinition {
     use crate::effect::Duration;
     let animate = ActivatedAbility {
         mana_cost: cost(&[crate::mana::x(), crate::mana::g()]),
-        effect: Effect::BecomeCreature {
+        effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
             what: Selector::This,
             power: Value::XFromCost,
             toughness: Value::XFromCost,
             creature_types: vec![CreatureType::Hydra],
             keywords: vec![],
             duration: Duration::EndOfTurn,
-        },
+        }, &[crate::mana::Color::Green]),
         ..Default::default()
     };
     CardDefinition {

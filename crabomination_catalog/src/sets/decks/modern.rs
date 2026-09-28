@@ -13016,15 +13016,27 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::ResetCreature {
-                    what: target_filtered(
-                        SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-                    ),
-                    power: Value::Const(3),
-                    toughness: Value::Const(3),
-                    creature_types: vec![CreatureType::Elk],
-                    duration: Duration::Permanent,
-                },
+                // "… becomes a green Elk creature with base power and
+                // toughness 3/3" (the color is layer 5).
+                effect: Effect::Seq(vec![
+                    Effect::ResetCreature {
+                        what: target_filtered(
+                            SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                        ),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Elk],
+                        duration: Duration::Permanent,
+                    },
+                    Effect::BecomeColor {
+                        what: target_filtered(
+                            SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                        ),
+                        colors: vec![crate::mana::Color::Green],
+                        duration: Duration::Permanent,
+                        additive: false,
+                    },
+                ]),
             },
             LoyaltyAbility {
                 x_cost: false,
@@ -51840,14 +51852,14 @@ pub fn den_of_the_bugbear() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), r()]),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(3),
                     toughness: Value::Const(2),
                     creature_types: vec![CreatureType::Goblin],
                     keywords: vec![],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Red]),
                 ..Default::default()
             },
         ],
@@ -60001,14 +60013,14 @@ pub fn faerie_conclave() -> CardDefinition {
             tap_add(Color::Blue),
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), u()]),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(2),
                     toughness: Value::Const(1),
                     creature_types: vec![CreatureType::Faerie],
                     keywords: vec![Keyword::Flying],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Blue]),
                 ..Default::default()
             },
         ],

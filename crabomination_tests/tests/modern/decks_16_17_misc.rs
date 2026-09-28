@@ -390,6 +390,8 @@ fn oko_plus_one_turns_target_into_a_three_three_elk() {
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Elk), "is an Elk");
     assert!(cp.lost_all_abilities, "loses all abilities (no more flying)");
     assert!(!cp.keywords().contains(&Keyword::Flying), "flying stripped");
+    // CR 105.3 — "becomes a green Elk": the white Angel is green now.
+    assert_eq!(cp.colors.to_vec(), vec![Color::Green], "a green Elk");
 }
 
 #[test]

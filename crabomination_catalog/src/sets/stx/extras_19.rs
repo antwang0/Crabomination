@@ -31,14 +31,14 @@ pub fn emergent_sequence() -> CardDefinition {
                     tapped: true,
                 },
             },
-            Effect::BecomeCreature {
+            crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                 what: Selector::LastMoved,
                 power: Value::Const(0),
                 toughness: Value::Const(0),
                 creature_types: vec![CreatureType::Fractal],
                 keywords: vec![],
                 duration: Duration::Permanent,
-            },
+            }, &[crate::mana::Color::Green, crate::mana::Color::Blue]),
             Effect::AddCounter {
                 what: Selector::LastMoved,
                 kind: crate::card::CounterType::PlusOnePlusOne,

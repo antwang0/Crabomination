@@ -420,14 +420,14 @@ pub fn sarkhan_the_dragonspeaker() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(4),
                     toughness: Value::Const(4),
                     creature_types: vec![CreatureType::Dragon],
                     keywords: vec![Keyword::Flying, Keyword::Indestructible, Keyword::Haste],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Red]),
                 x_cost: false,
             },
             LoyaltyAbility {

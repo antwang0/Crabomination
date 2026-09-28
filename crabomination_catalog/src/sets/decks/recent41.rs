@@ -139,14 +139,14 @@ pub fn spawning_pool() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), b()]),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(1),
                     toughness: Value::Const(1),
                     creature_types: vec![CreatureType::Skeleton],
                     keywords: vec![],
                     duration: Duration::EndOfTurn,
-                },
+                }, &[crate::mana::Color::Black]),
                 ..Default::default()
             },
         ],

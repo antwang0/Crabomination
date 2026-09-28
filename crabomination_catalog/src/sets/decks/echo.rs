@@ -232,14 +232,14 @@ fn urzas_legacy_manland(
             tap_add(color),
             crate::card::ActivatedAbility {
                 mana_cost: cost(&[generic(1), crate::mana::ManaSymbol::Colored(color)]),
-                effect: Effect::BecomeCreature {
+                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: crate::effect::Selector::This,
                     power: Value::Const(pt.0),
                     toughness: Value::Const(pt.1),
                     creature_types: vec![ctype],
                     keywords: kws,
                     duration: crate::effect::Duration::EndOfTurn,
-                },
+                }, &[color]),
                 ..Default::default()
             },
         ],

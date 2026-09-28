@@ -28,14 +28,14 @@ pub fn woodwraith_corrupter() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b(), g()]),
             tap_cost: true,
-            effect: Effect::BecomeCreature {
+            effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                 what: target_filtered(R::HasLandType(LandType::Forest)),
                 power: Value::Const(4),
                 toughness: Value::Const(4),
                 creature_types: vec![CreatureType::Elemental, CreatureType::Horror],
                 keywords: vec![],
                 duration: Duration::Permanent,
-            },
+            }, &[crate::mana::Color::Black, crate::mana::Color::Green]),
             ..Default::default()
         }],
         ..Default::default()
