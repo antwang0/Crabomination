@@ -444,11 +444,6 @@ mod recent82 {
         let bs = g.add_card_to_battlefield(0, catalog::ballista_squad());
         g.clear_sickness(bs);
         let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-        // "target attacking or blocking creature" (it shipped as any creature).
-        g.attacking.push(crabomination::game::types::Attack {
-            attacker: victim,
-            target: crabomination::game::types::AttackTarget::Player(0),
-        });
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.players[0].mana_pool.add_colorless(2);
         let activate = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
