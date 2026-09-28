@@ -2738,9 +2738,15 @@ pub fn sync_game_visuals(
         .collect();
     for (entity, game_id, owner, bf, transform, _) in &bf_cards {
         if all_bf_ids.contains(&game_id.0) { continue; }
-        // Tokens leaving the battlefield: just despawn (no graveyard arc).
+        // Tokens leaving the battlefield cease to exist: no graveyard arc,
+        // they shrink away where they lay (after burning, if they died).
         if bf.is_token {
-            commands.entity(entity).despawn();
+            commands
+                .entity(entity)
+                .remove::<BattlefieldCard>()
+                .remove::<TapState>()
+                .remove::<CardHovered>()
+                .insert((Animating, crate::card::Vanishing::default()));
             continue;
         }
         // Bounced to viewer's hand — animate to a hand slot and convert.

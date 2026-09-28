@@ -21,6 +21,7 @@ pub mod game_over;
 pub mod match_stats;
 pub mod game_ui;
 pub mod gizmos;
+pub mod glow;
 pub mod impact;
 pub mod input_guard;
 pub mod kb_cursor;

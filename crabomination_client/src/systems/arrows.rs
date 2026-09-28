@@ -59,6 +59,9 @@ pub enum Cue {
     /// A creature being dragged onto what it attacks or blocks, to the
     /// pointer.
     Drag,
+    /// The cord from an Aura, Equipment or Fortification to what it's
+    /// attached to.
+    Tether,
 }
 
 /// One end of a mark, for its key.
@@ -88,6 +91,7 @@ impl ArrowKey {
 enum Shape {
     Arrow { from: Vec3, to: Vec3, weight: f32, trim: [f32; 2] },
     Ring { centre: Vec3, radius: f32, normal: Vec3 },
+    Cord { from: Vec3, to: Vec3, weight: f32 },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -115,6 +119,12 @@ impl Arrows {
         self.0.push((key, Mark { shape: Shape::Arrow { from, to, weight, trim }, colour }));
     }
 
+    /// A cord from `from` to `to`: an arrow's arc and colours, without the
+    /// head — a link rather than an action.
+    pub fn cord(&mut self, key: ArrowKey, from: Vec3, to: Vec3, colour: Color, weight: f32) {
+        self.0.push((key, Mark { shape: Shape::Cord { from, to, weight }, colour }));
+    }
+
     /// A ring around `centre`, square to `normal`: flat on the table for
     /// `Vec3::Y`, or on a card's face for the card's normal.
     pub fn ring(&mut self, key: ArrowKey, centre: Vec3, radius: f32, normal: Vec3, colour: Color) {
@@ -138,6 +148,10 @@ const SHAFT_HALF: f32 = 0.15;
 const HEAD_HALF: f32 = 0.5;
 const HEAD_LEN: f32 = 1.05;
 const HEAD_ROWS: usize = 6;
+/// Half-width of a cord of weight 1, and how far in from each end it
+/// narrows.
+const CORD_HALF: f32 = 0.1;
+const CORD_TAPER: f32 = 0.5;
 /// Over how much of its length the tail narrows and fades out of its source.
 const TAIL: f32 = 1.1;
 /// A ring's half-thickness.
@@ -197,29 +211,49 @@ fn seen_trim(from: Vec3, to: Vec3, trim: [f32; 2], eye: Vec3) -> [f32; 2] {
     ]
 }
 
+/// The arrow's curve from `from` to `to`, sampled and measured along its
+/// length.
+struct Sampled {
+    samples: Vec<Vec3>,
+    lengths: Vec<f32>,
+}
+
+impl Sampled {
+    fn new(from: Vec3, to: Vec3) -> Self {
+        let point = curve(from, to);
+        let samples: Vec<Vec3> = (0..=CURVE_SAMPLES).map(|i| point(i as f32 / CURVE_SAMPLES as f32)).collect();
+        let mut lengths = vec![0.0];
+        for pair in samples.windows(2) {
+            lengths.push(lengths.last().copied().unwrap_or(0.0) + pair[0].distance(pair[1]));
+        }
+        Self { samples, lengths }
+    }
+
+    fn total(&self) -> f32 {
+        self.lengths.last().copied().unwrap_or(0.0)
+    }
+
+    /// The point `arc` along the curve, and the way it runs there.
+    fn at(&self, arc: f32) -> (Vec3, Vec3) {
+        let (samples, lengths) = (&self.samples, &self.lengths);
+        let i = lengths.partition_point(|&l| l < arc).clamp(1, CURVE_SAMPLES);
+        let (a, b) = (samples[i - 1], samples[i]);
+        let span = (lengths[i] - lengths[i - 1]).max(1e-6);
+        (a.lerp(b, ((arc - lengths[i - 1]) / span).clamp(0.0, 1.0)), (b - a).normalize_or(Vec3::X))
+    }
+}
+
 /// The rows of an arrow from `from` to `to`, tail to tip, grown `grow` of
 /// the way (0-1) along its curve, with `trim` of the curve left bare at
 /// each end (never more than a third of it).
 fn arrow_rows(from: Vec3, to: Vec3, weight: f32, grow: f32, trim: [f32; 2]) -> Vec<Row> {
-    let point = curve(from, to);
-    let samples: Vec<Vec3> = (0..=CURVE_SAMPLES).map(|i| point(i as f32 / CURVE_SAMPLES as f32)).collect();
-    let mut lengths = vec![0.0];
-    for pair in samples.windows(2) {
-        lengths.push(lengths.last().copied().unwrap_or(0.0) + pair[0].distance(pair[1]));
-    }
-    let total = lengths.last().copied().unwrap_or(0.0);
+    let curve = Sampled::new(from, to);
+    let total = curve.total();
     let start = trim[0].min(total / 3.0);
     let shown = (total - start - trim[1].min(total / 3.0)) * grow.clamp(0.0, 1.0);
     if shown < 0.05 {
         return Vec::new();
     }
-    // The point `arc` along the curve, and the way it runs there.
-    let at_arc = |arc: f32| {
-        let i = lengths.partition_point(|&l| l < arc).clamp(1, CURVE_SAMPLES);
-        let (a, b) = (samples[i - 1], samples[i]);
-        let span = (lengths[i] - lengths[i - 1]).max(1e-6);
-        (a.lerp(b, ((arc - lengths[i - 1]) / span).clamp(0.0, 1.0)), (b - a).normalize_or(Vec3::X))
-    };
 
     // A short arrow (or one still growing) gets a head in proportion.
     let head = (HEAD_LEN * weight).min(shown * 0.45);
@@ -228,7 +262,7 @@ fn arrow_rows(from: Vec3, to: Vec3, weight: f32, grow: f32, trim: [f32; 2]) -> V
     let shaft_end = shown - head;
     let tail = TAIL.min(shown * 0.3);
     let row = |arc: f32, half: f32| {
-        let (at, along) = at_arc(start + arc);
+        let (at, along) = curve.at(start + arc);
         Row { at, along, half, arc }
     };
 
@@ -248,6 +282,26 @@ fn arrow_rows(from: Vec3, to: Vec3, weight: f32, grow: f32, trim: [f32; 2]) -> V
         rows.push(row(shaft_end + head * t, head_half * (1.0 - t)));
     }
     rows
+}
+
+/// The rows of a cord from `from` to `to`, grown `grow` of the way along
+/// its curve: even along its length, narrowing into each end.
+fn cord_rows(from: Vec3, to: Vec3, weight: f32, grow: f32) -> Vec<Row> {
+    let curve = Sampled::new(from, to);
+    let shown = curve.total() * grow.clamp(0.0, 1.0);
+    if shown < 0.05 {
+        return Vec::new();
+    }
+    let taper = CORD_TAPER.min(shown / 3.0).max(1e-3);
+    let steps = (shown / ROW_STEP).ceil().max(1.0) as usize;
+    (0..=steps)
+        .map(|k| {
+            let arc = shown * k as f32 / steps as f32;
+            let narrow = 0.35 + 0.65 * smoothstep(arc.min(shown - arc) / taper);
+            let (at, along) = curve.at(arc);
+            Row { at, along, half: CORD_HALF * weight * narrow, arc }
+        })
+        .collect()
 }
 
 fn smoothstep(t: f32) -> f32 {
@@ -467,6 +521,10 @@ pub fn render_arrows(
             Shape::Ring { centre, radius, normal } => {
                 ring(centre, radius, normal, colour, alpha, grow, phase * 0.25)
             }
+            // Its light drifts from the attachment into its host, slowly.
+            Shape::Cord { from, to, weight } => {
+                ribbon(&cord_rows(from, to, weight, grow), eye, colour, alpha, phase * 0.3)
+            }
         };
         let _ = meshes.insert(&l.mesh, geometry.into_mesh());
         true
@@ -557,6 +615,21 @@ mod tests {
         // A light band brightens the core.
         let [_, _, lit] = tones(LinearRgba::rgb(0.2, 0.8, 1.0), 1.0, 1.0);
         assert!(lit[2] > core[2]);
+    }
+
+    #[test]
+    fn a_cord_joins_its_ends_without_a_head() {
+        let rows = cord_rows(FROM, TO, 1.0, 1.0);
+        let (first, last) = (rows[0], rows[rows.len() - 1]);
+        assert!(first.at.distance(FROM) < 1e-3 && last.at.distance(TO) < 1e-3);
+        // Even along its middle, narrower at its ends, never wider.
+        let middle = rows[rows.len() / 2].half;
+        assert!((middle - CORD_HALF).abs() < 1e-6, "{middle}");
+        assert!(first.half < middle && last.half < middle);
+        assert!(rows.iter().all(|r| r.half <= CORD_HALF + 1e-6));
+        // It grows out of the attachment like an arrow.
+        let half_grown = cord_rows(FROM, TO, 1.0, 0.5);
+        assert!((half_grown.last().unwrap().arc - last.arc / 2.0).abs() < 1e-3);
     }
 
     #[test]

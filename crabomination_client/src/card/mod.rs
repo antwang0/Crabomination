@@ -11,7 +11,7 @@ pub use components::{
     ActivatableHighlight,
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
-    CombatLurch, DyingHighlight,
+    CombatLurch, DeathBeat, DyingHighlight, Vanishing, DEATH_BEAT_SECS,
     CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, ExilePile,
     FlippedFace,
     FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,

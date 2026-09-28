@@ -202,6 +202,41 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Hits and deaths in light, the cards react (2026-09-28) — shipped
+
+The table's last wireframe was its most dramatic moments: death bursts,
+damage sparks, dig rings and mana motes were one-pixel gizmo rings and
+spokes, as were the aura/equipment tethers and the active seat's outline.
+Read off layout-harness screenshots (`--impacts AGE`, which fires a death,
+a token death, three hits, a dig and — with `--stack` — mana, AGE seconds
+before the shot) at 0.08-0.5 s, duel and pod.
+
+- ✅ **Light as geometry** (`systems::glow`): soft shapes — orbs, pools,
+  waves, trails, a frame — whose colour runs to nothing at their edges,
+  blended additively (overlapping effects brighten rather than cover each
+  other) and HDR so they bloom where bloom is on. Immediate-mode like
+  `Arrows`: systems push `Light`s, `render_glow` builds one mesh a frame.
+- ✅ **Deaths**: a flash on the felt, a shockwave ring out across the
+  neighbouring cards, embers rising off the card and cooling
+  (`impact::burst_lights`). The card itself burns first — its face flushes
+  ember-red, chars to near black and shrinks for 0.45 s (`DeathBeat`)
+  before it flies to the graveyard; it had flown there looking exactly like
+  a bounced card. A token no longer blinks out: it shrinks away where it
+  lay (`Vanishing`), after burning if it died. Both death events are read
+  (a creature's may come as either), once per card.
+- ✅ **Damage**: a flash, a small ring and streaking sparks that fly up
+  and fall; a struck creature shudders side to side, further for a bigger
+  hit (`animate::Jolt`).
+- ✅ **Digs** (explore, discover): a cyan ripple and rising motes.
+- ✅ **Mana**: each mote is a glowing orb with a trail, arcing from its land
+  to the spell and bursting on arrival.
+- ✅ **Cords and the active seat**: the aura/equipment tether is a cord in
+  the arrows' style (`Arrows::cord`, no head, its light drifting into the
+  host), brighter when either end is hovered; the active seat's board
+  outline glows gold (`Light::Frame`). The client draws no gizmos now.
+- Residual: all of it was seen only in stills; the motion (the jolt, the
+  embers' drift, the beat's timing) is covered by unit tests, not by eye.
+
 ## Drag to act, and focus fades the overlays (2026-09-28) — shipped
 
 - ✅ **Drag to act** (`systems::drag_act`). Drag a spell from the hand
@@ -615,9 +650,8 @@ Cross-references the detailed entries below where one exists.
   laid out like a 1v1 near edge with a pile strip either side: five groups a
   row on every board, up from three and a half on each far board when all
   three opponents shared the far edge, and a wrapped creature row gets a
-  whole card of depth instead of a shingle. Remaining ⏳: a
-  visible aura/equipment → host link (today attachment info lives only in
-  tooltips).
+  whole card of depth instead of a shingle. ✅ Each aura/equipment is
+  joined to its host by a cord (`gizmos::draw_attachment_tethers`).
 - 🟡 **Cost-payment feedback** — ✅ the manual-tap banner live-updates
   with the remaining cost ("{1}{U} to go") as sources tap. Remaining ⏳:
   pre-highlighting which sources auto-tap would take.

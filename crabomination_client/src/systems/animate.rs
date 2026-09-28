@@ -3,12 +3,15 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 
+use bevy::ecs::system::SystemParam;
+
 use crate::card::{
     hand_card_transform, layout::player_hand_anchor, Animating, BattlefieldCard,
-    CardFlipAnimation, CardHoverLift, CombatLurch, DeckCard, DeckShuffleAnimation,
-    DrawCardAnimation, GameCardId, HandCard, HandSlideAnimation, MdfcFlipAnimation,
-    PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
-    SendToGraveyardAnimation, ShufflePhase, TapAnimation, BF_HOVER_GROW, BF_HOVER_LIFT, CARD_WIDTH,
+    CardFlipAnimation, CardHoverLift, CardMeshAssets, CombatLurch, DeathBeat, DeckCard,
+    DeckShuffleAnimation, DrawCardAnimation, FrontFaceMesh, GameCardId, HandCard,
+    HandSlideAnimation, MdfcFlipAnimation, PlayCardAnimation, ReturnToDeckAnimation,
+    ReturnToHandAnimation, RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase,
+    TapAnimation, Vanishing, BF_HOVER_GROW, BF_HOVER_LIFT, CARD_WIDTH, DEATH_BEAT_SECS,
     HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
@@ -483,15 +486,90 @@ pub fn animate_play_card(
     }
 }
 
-/// Animate a card flying to the graveyard with a tumbling spin, then despawn it.
+/// How far a dying card shrinks over its [`DeathBeat`].
+const DEATH_SHRINK: f32 = 0.1;
+/// Seconds a leaving token takes to shrink away.
+const VANISH_SECS: f32 = 0.3;
+
+/// A dying card's face colour `k` (0-1) of the way through its
+/// [`DeathBeat`]: flushing ember-red, then charring to near black. Linear,
+/// as the face material's own white is.
+pub(crate) fn char_tint(k: f32) -> Color {
+    // How far through the beat the face is reddest.
+    const FLUSH: f32 = 0.35;
+    let white = LinearRgba::WHITE;
+    let ember = LinearRgba::rgb(1.0, 0.42, 0.3);
+    let ash = LinearRgba::rgb(0.1, 0.05, 0.04);
+    let k = k.clamp(0.0, 1.0);
+    let tint = if k < FLUSH { white.mix(&ember, k / FLUSH) } else { ember.mix(&ash, (k - FLUSH) / (1.0 - FLUSH)) };
+    Color::LinearRgba(tint)
+}
+
+/// Each card's face material, for tinting a dying card.
+#[derive(SystemParam)]
+pub struct CardFaces<'w, 's> {
+    faces: Query<'w, 's, &'static MeshMaterial3d<StandardMaterial>, With<FrontFaceMesh>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    assets: Option<Res<'w, CardMeshAssets>>,
+}
+
+impl CardFaces<'_, '_> {
+    /// Multiply the face among `children` by `tint`. A face-down card shows
+    /// the shared card back, which it leaves alone: tinting it would tint
+    /// every card back on the table.
+    fn tint(&mut self, children: &Children, tint: Color) {
+        let back = self.assets.as_ref().map(|a| a.back_material.id());
+        for child in children.iter() {
+            let Ok(face) = self.faces.get(child) else { continue };
+            if Some(face.0.id()) == back {
+                continue;
+            }
+            if let Some(mut material) = self.materials.get_mut(&face.0) {
+                material.base_color = tint;
+            }
+        }
+    }
+}
+
+/// Advance a dying card's [`DeathBeat`] by `dt`: darken its face and shrink
+/// it. `true` while the beat holds the card on the table.
+fn beat_death(beat: &mut DeathBeat, dt: f32, transform: &mut Transform, children: Option<&Children>, faces: &mut CardFaces) -> bool {
+    if beat.age >= DEATH_BEAT_SECS {
+        return false;
+    }
+    beat.age += dt;
+    let k = ease_in_out((beat.age / DEATH_BEAT_SECS).min(1.0));
+    transform.scale = Vec3::splat(1.0 - DEATH_SHRINK * k);
+    if let Some(children) = children {
+        faces.tint(children, char_tint(k));
+    }
+    true
+}
+
+/// Animate a card flying to the graveyard with a tumbling spin, then despawn
+/// it. A card that died plays its [`DeathBeat`] where it lay first.
+#[allow(clippy::type_complexity)]
 pub fn animate_send_to_graveyard(
     mut commands: Commands,
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
-    mut cards: Query<(Entity, &mut Transform, &mut SendToGraveyardAnimation)>,
+    mut cards: Query<(Entity, &mut Transform, &mut SendToGraveyardAnimation, Option<&mut DeathBeat>, Option<&Children>)>,
+    mut faces: CardFaces,
 ) {
-    for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+    let dt = time.delta_secs() * speed.0;
+    for (entity, mut transform, mut anim, beat, children) in &mut cards {
+        let died = beat.is_some();
+        if let Some(mut beat) = beat
+            && beat_death(&mut beat, dt, &mut transform, children, &mut faces)
+        {
+            // Held where it lay: the death may have landed a frame after
+            // the flight began.
+            anim.progress = 0.0;
+            transform.translation = anim.start_translation;
+            transform.rotation = anim.start_rotation;
+            continue;
+        }
+        anim.progress += dt * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         // Arc: rise then fall as the card travels to the graveyard
@@ -500,10 +578,107 @@ pub fn animate_send_to_graveyard(
         pos.y += arc_y;
         transform.translation = pos;
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+        // A dying card regains its size on the way.
+        if died {
+            transform.scale = Vec3::splat(1.0 - DEATH_SHRINK * (1.0 - t));
+        }
 
         if anim.progress >= 1.0 {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+/// Shrink each [`Vanishing`] token away where it lay, after its
+/// [`DeathBeat`] if it died, then despawn it.
+pub fn animate_vanishing(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut Vanishing, Option<&mut DeathBeat>, Option<&Children>)>,
+    mut faces: CardFaces,
+) {
+    let dt = time.delta_secs() * speed.0;
+    for (entity, mut transform, mut vanish, beat, children) in &mut cards {
+        let size = if beat.is_some() { 1.0 - DEATH_SHRINK } else { 1.0 };
+        if let Some(mut beat) = beat
+            && beat_death(&mut beat, dt, &mut transform, children, &mut faces)
+        {
+            continue;
+        }
+        vanish.age += dt;
+        let k = (vanish.age / VANISH_SECS).min(1.0);
+        transform.scale = Vec3::splat(size * (1.0 - k * k));
+        if k >= 1.0 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// A creature that was just dealt damage shudders: a quick side-to-side
+/// shake that dies away, bigger for a bigger hit.
+#[derive(Component)]
+pub struct Jolt {
+    age: f32,
+    reach: f32,
+}
+
+/// How long a [`Jolt`] lasts, how fast it shakes, and how far: `JOLT_REACH`
+/// plus `JOLT_PER_DAMAGE` a point of damage, up to six.
+const JOLT_SECS: f32 = 0.34;
+const JOLT_HZ: f32 = 9.0;
+const JOLT_REACH: f32 = 0.08;
+const JOLT_PER_DAMAGE: f32 = 0.025;
+
+impl Jolt {
+    pub fn new(damage: u32) -> Self {
+        Self { age: 0.0, reach: JOLT_REACH + JOLT_PER_DAMAGE * damage.min(6) as f32 }
+    }
+}
+
+/// How far across (world units) a card `age` seconds into a jolt of `reach`
+/// is thrown: kicked at once, swinging back and forth, dying away.
+fn jolt_offset(age: f32, reach: f32) -> f32 {
+    let k = age / JOLT_SECS;
+    if !(0.0..1.0).contains(&k) {
+        return 0.0;
+    }
+    reach * (1.0 - k) * (1.0 - k) * (std::f32::consts::TAU * JOLT_HZ * age).sin()
+}
+
+/// Bevy system: shake each jolted battlefield card, on top of the place
+/// `animate_hover_lift` put it this frame (so the shake never accumulates).
+#[allow(clippy::type_complexity)]
+pub fn animate_jolt(
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut commands: Commands,
+    mut cards: Query<
+        (Entity, &mut Transform, &mut Jolt),
+        (
+            With<BattlefieldCard>,
+            With<CardHoverLift>,
+            Without<DrawCardAnimation>,
+            Without<DeckShuffleAnimation>,
+            Without<CardFlipAnimation>,
+            Without<HandSlideAnimation>,
+            Without<PlayCardAnimation>,
+            Without<TapAnimation>,
+            Without<SendToGraveyardAnimation>,
+            Without<ReturnToDeckAnimation>,
+            Without<ReturnToHandAnimation>,
+            Without<RevealPeekAnimation>,
+        ),
+    >,
+) {
+    let dt = time.delta_secs() * speed.0;
+    for (entity, mut transform, mut jolt) in &mut cards {
+        jolt.age += dt;
+        if jolt.age >= JOLT_SECS {
+            commands.entity(entity).remove::<Jolt>();
+            continue;
+        }
+        transform.translation.x += jolt_offset(jolt.age, jolt.reach);
     }
 }
 
@@ -764,6 +939,39 @@ pub fn dispatch_animation_queue(
             QueuedAnim::HandSlide(anim) => { e.insert(anim); }
             QueuedAnim::SendToGraveyard(anim) => { e.insert(anim); }
         }
+    }
+}
+
+#[cfg(test)]
+mod death_and_jolt_tests {
+    use super::*;
+
+    #[test]
+    fn a_dying_card_flushes_then_chars() {
+        let white = char_tint(0.0).to_linear();
+        let flushed = char_tint(0.35).to_linear();
+        let charred = char_tint(1.0).to_linear();
+        assert_eq!(white, LinearRgba::WHITE);
+        // Red-hot: the red held, the rest dropping...
+        assert!(flushed.red > 0.9 && flushed.green < 0.5 && flushed.blue < 0.5);
+        // ...then all but black.
+        assert!(charred.red < 0.15 && charred.green < 0.1);
+    }
+
+    #[test]
+    fn a_jolt_kicks_at_once_and_dies_away() {
+        let reach = Jolt::new(3).reach;
+        assert!((reach - (JOLT_REACH + 3.0 * JOLT_PER_DAMAGE)).abs() < 1e-6);
+        // A bigger hit throws it further, to a point.
+        assert!(Jolt::new(6).reach > reach && Jolt::new(20).reach == Jolt::new(6).reach);
+        // Out a good way within the first swing...
+        let first_swing = 1.0 / (4.0 * JOLT_HZ);
+        assert!(jolt_offset(first_swing, reach) > reach * 0.6);
+        // ...swinging back past the middle...
+        assert!(jolt_offset(3.0 * first_swing, reach) < 0.0);
+        // ...and still by the end.
+        assert_eq!(jolt_offset(JOLT_SECS, reach), 0.0);
+        assert!(jolt_offset(JOLT_SECS * 0.9, reach).abs() < reach * 0.02);
     }
 }
 

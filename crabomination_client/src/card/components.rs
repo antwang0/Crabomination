@@ -328,6 +328,27 @@ pub struct SendToGraveyardAnimation {
     pub owner: usize,
 }
 
+/// A permanent that just died: before it leaves the table it darkens and
+/// shrinks, as if burning, for [`DEATH_BEAT_SECS`] — its flight to the
+/// graveyard (or a token's vanishing) waits on it. Put on the card by the
+/// death event (`impact::spawn_impact_effects`); only the animations of a
+/// card leaving the table read it.
+#[derive(Component, Default)]
+pub struct DeathBeat {
+    pub age: f32,
+}
+
+/// Seconds a [`DeathBeat`] holds a dying card on the table.
+pub const DEATH_BEAT_SECS: f32 = 0.45;
+
+/// A token leaving the table: it shrinks away where it lay, after its
+/// [`DeathBeat`] if it died. (A token that leaves the battlefield ceases
+/// to exist; it has no graveyard to fly to.)
+#[derive(Component, Default)]
+pub struct Vanishing {
+    pub age: f32,
+}
+
 /// Animates a permanent flying back to its owner's hand (e.g. after
 /// Unsummon, Boomerang). On completion the entity either restores its
 /// `HandCard` slot (viewer's hand — keep it visible face-up) or

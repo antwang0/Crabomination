@@ -1,7 +1,8 @@
-//! Overlays over the battlefield: the combat, targeting and stack arrows
-//! (pushed to `systems::arrows`, which draws them as shaded geometry), and the
-//! gizmo rings, tethers and seat outline. The attacker and blocker marks are
-//! chips (`systems::combat_badge`).
+//! Overlays over the battlefield: the combat, targeting and stack arrows,
+//! the target rings and the cords from attachments to their hosts (pushed
+//! to `systems::arrows`, which draws them as shaded geometry), and the glow
+//! round the active seat's board (pushed to `systems::glow`). The attacker
+//! and blocker marks are chips (`systems::combat_badge`).
 
 use std::collections::{HashMap, HashSet};
 
@@ -21,23 +22,10 @@ use crate::card::layout::player_hand_anchor;
 use crate::game::{AttackingState, BlockingState, TargetingState};
 use crate::net_plugin::CurrentView;
 use crate::systems::arrows::{ArrowKey, Arrows, Cue, End};
+use crate::systems::glow::{Glow, Light};
 use crate::systems::game_ui::PlayerHudPanel;
 use crate::systems::game_ui::table_awareness::seat_color;
 use crate::MainCamera;
-
-/// Scale a colour into the HDR range (linear space, alpha preserved) so it
-/// exceeds the bloom prefilter threshold (~1.0, see `RenderQuality::bloom`)
-/// and reads as emitted *light* rather than a flat line on HDR tiers. On Low
-/// (no bloom) it just draws a brighter line, which is still perfectly legible.
-fn glow(color: Color, intensity: f32) -> Color {
-    let l = color.to_linear();
-    LinearRgba::new(l.red * intensity, l.green * intensity, l.blue * intensity, l.alpha).into()
-}
-
-/// Standard glow strength for the gameplay-cue overlays. Picked so a fully
-/// saturated cue (yellow/green/orange) lands comfortably past the bloom
-/// threshold without becoming a fireball.
-const CUE_GLOW: f32 = 2.6;
 
 /// Where arrows meet the battlefield's cards. Cards overlap on a busy board
 /// — a creature row wraps, a card lies over the one it is attached to — and
@@ -109,26 +97,12 @@ impl Spots<'_, '_, '_> {
     }
 }
 
-/// Faint tether lines linking each attached Aura / Equipment /
-/// Fortification card to its host permanent, so the physical association
-/// is readable on the board (previously tooltip-only).
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct AttachmentGizmos;
-
-/// Gold outline around the active player's board column, so "whose turn
-/// is it" reads on the 3-D table itself — not just the HUD roster.
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct ActiveSeatGizmos;
-
-/// Draw a glowing rectangle at table level around the active player's
-/// column. Skipped when it's the viewer's own turn in 1v1 (the phase bar
-/// already carries that signal); in a pod it always draws, since the
-/// seat → column mapping is exactly what the eye has to find.
-pub fn draw_active_seat_glow(
-    view: Res<CurrentView>,
-    time: Res<Time>,
-    mut gizmos: Gizmos<ActiveSeatGizmos>,
-) {
+/// Light round the active player's board, so "whose turn is it" reads on
+/// the 3-D table itself — not just the HUD roster: the board's printed
+/// outline glows gold. Skipped when it's the viewer's own turn in 1v1 (the
+/// phase bar already carries that signal); in a pod it always shows, since
+/// the seat → board mapping is exactly what the eye has to find.
+pub fn draw_active_seat_glow(view: Res<CurrentView>, time: Res<Time>, mut glow: ResMut<Glow>) {
     let Some(cv) = &view.0 else { return };
     if cv.game_over.is_some() {
         return;
@@ -137,46 +111,40 @@ pub fn draw_active_seat_glow(
     if n <= 2 && cv.active_player == cv.your_seat {
         return;
     }
-    let (min, max) =
-        crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n);
+    let (min, max) = crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n);
     // Gentle breathing so the outline reads as "live" without pulsing
     // hard enough to pull the eye during someone else's long turn.
     let breathe = 0.75 + 0.25 * (time.elapsed_secs() * 1.6).sin();
-    let color = glow(Color::srgba(0.95, 0.78, 0.30, 0.85), CUE_GLOW * breathe);
-    let y = 0.04;
-    let corners = [
-        Vec3::new(min.x, y, min.z),
-        Vec3::new(max.x, y, min.z),
-        Vec3::new(max.x, y, max.z),
-        Vec3::new(min.x, y, max.z),
-    ];
-    for i in 0..4 {
-        gizmos.line(corners[i], corners[(i + 1) % 4], color);
-    }
+    glow.push(Light::Frame {
+        min: Vec2::new(min.x, min.z),
+        max: Vec2::new(max.x, max.z),
+        // Over the printed outline, under the cards.
+        y: 0.012,
+        half: 0.45,
+        // Held near 1, where the tonemapper leaves gold gold; brighter, it
+        // washed out to cream.
+        colour: LinearRgba::rgb(1.25, 0.72, 0.14) * breathe,
+    });
 }
 
-/// Draw a low-alpha tether from every attached permanent to its host. The
-/// tether brightens when either end is hovered, so "what's enchanting
-/// this?" is answerable by pointing at a card. Skipped for co-located
-/// pairs, where the line would collapse to a dot.
+/// A cord from every attached Aura / Equipment / Fortification to its host,
+/// so the physical association is readable on the board. Faint at rest; it
+/// brightens when either end is hovered, so "what's enchanting this?" is
+/// answerable by pointing at a card. Skipped for co-located pairs, where it
+/// would collapse to a dot.
 pub fn draw_attachment_tethers(
     view: Res<CurrentView>,
-    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    board: BoardSpots,
     hovered: Query<&GameCardId, (With<BattlefieldCard>, With<CardHovered>)>,
-    mut gizmos: Gizmos<AttachmentGizmos>,
+    mut arrows: ResMut<Arrows>,
 ) {
     let Some(cv) = &view.0 else { return };
-
-    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
-    for (transform, gid) in &bf_cards {
-        // Slightly above the table so the line doesn't z-fight card faces.
-        positions.insert(gid.0, transform.translation + Vec3::Y * 0.12);
-    }
+    let spots = board.spots();
     let hovered: HashSet<CardId> = hovered.iter().map(|g| g.0).collect();
 
     for p in &cv.battlefield {
         let Some(host) = p.attached_to else { continue };
-        let (Some(&from), Some(&to)) = (positions.get(&p.id), positions.get(&host)) else {
+        let (Some(from), Some(to)) = (spots.centre(p.id, 0.1), spots.centre(host, 0.1)) else {
             continue;
         };
         if from.distance_squared(to) < 0.25 {
@@ -184,15 +152,11 @@ pub fn draw_attachment_tethers(
         }
         let emphasized = hovered.contains(&p.id) || hovered.contains(&host);
         // Violet — distinct from the yellow/green/orange combat-cue
-        // vocabulary; near-invisible at rest, glowing when hovered.
-        let alpha = if emphasized { 0.9 } else { 0.28 };
-        let intensity = if emphasized { CUE_GLOW } else { 1.0 };
-        let color = glow(Color::srgba(0.72, 0.5, 0.95, alpha), intensity);
-        // Lift the midpoint so the tether reads as a cord draped between
-        // the two cards rather than a targeting arrow.
-        let mid = (from + to) * 0.5 + Vec3::Y * 0.6;
-        gizmos.line(from, mid, color);
-        gizmos.line(mid, to, color);
+        // vocabulary.
+        let alpha = if emphasized { 0.95 } else { 0.55 };
+        let weight = if emphasized { 1.3 } else { 1.0 };
+        let key = ArrowKey::new(Cue::Tether, End::Card(p.id), End::Card(host));
+        arrows.cord(key, from, to, Color::srgba(0.72, 0.5, 0.95, alpha), weight);
     }
 }
 

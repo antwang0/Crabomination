@@ -18,7 +18,9 @@
 //! `--hover-card NAME` hovers one of the viewer's battlefield cards (a
 //! screenshot run ignores the real mouse); `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
-//! ([`add_token_piles`]); `--life-change` swings every seat's life total a
+//! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
+//! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
+//! `--life-change` swings every seat's life total a
 //! moment before the screenshot, catching the life feedback in flight.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
@@ -79,6 +81,9 @@ pub struct HarnessArgs {
     /// `--life-change`: every seat's life total swings, client-side, a
     /// moment before the screenshot.
     pub life_change: bool,
+    /// `--impacts AGE`: deaths, damage, a dig and mana, fired client-side
+    /// AGE seconds before the screenshot ([`fire_impacts_for_screenshot`]).
+    pub impacts: Option<f32>,
 }
 
 impl HarnessArgs {
@@ -114,6 +119,7 @@ impl HarnessArgs {
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
             tokens: args.iter().any(|a| a == "--tokens"),
             life_change: args.iter().any(|a| a == "--life-change"),
+            impacts: value("--impacts").and_then(|v| v.parse().ok()),
         }
     }
 
@@ -538,6 +544,95 @@ pub fn swing_life_for_screenshot(
     if let Some(cv) = view.0.as_mut() {
         for (p, swing) in cv.players.iter_mut().zip(LIFE_SWINGS) {
             p.life += swing;
+        }
+    }
+}
+
+/// `--impacts AGE`: the table's effects, fired client-side AGE seconds
+/// before the screenshot so they're caught part-way. Seat 1's Serra Angel
+/// dies — it leaves the view for its graveyard — and so does one of seat
+/// 1's tokens (with `--tokens`); damage lands on two creatures and on seat
+/// 1; the viewer's Tarmogoyf explores; and, with a spell on the stack
+/// (`--stack`), three of the viewer's lands pay mana toward it. Every view
+/// also has the viewer's Sol Ring attached to their Shivan Dragon, for the
+/// cord between them. Runs after `poll_net`.
+pub fn fire_impacts_for_screenshot(
+    args: Res<HarnessArgs>,
+    time: Res<Time>,
+    mut view: ResMut<crate::net_plugin::CurrentView>,
+    mut events: ResMut<crate::net_plugin::LatestServerEvents>,
+    mut since_view: Local<f32>,
+    mut done: Local<bool>,
+) {
+    use crabomination::net::GameEventWire as E;
+    let Some(age) = args.impacts else { return };
+    let Some(viewer) = view.0.as_ref().map(|cv| cv.your_seat) else { return };
+    let find = |cv: &crabomination::net::ClientView, seat: usize, name: &str| {
+        cv.battlefield.iter().find(|p| p.controller == seat && p.name == name).map(|p| p.id)
+    };
+    let cord = view.0.as_ref().and_then(|cv| {
+        let (ring, host) = (find(cv, viewer, "Sol Ring")?, find(cv, viewer, "Shivan Dragon")?);
+        let attached = cv.battlefield.iter().any(|p| p.id == ring && p.attached_to == Some(host));
+        (!attached).then_some((ring, host))
+    });
+    if let Some((ring, host)) = cord
+        && let Some(p) = view.0.as_mut().and_then(|cv| cv.battlefield.iter_mut().find(|p| p.id == ring))
+    {
+        p.attached_to = Some(host);
+    }
+    *since_view += time.delta_secs();
+    if *done || *since_view < args.screenshot_delay - age {
+        return;
+    }
+    *done = true;
+    let Some(cv) = view.0.as_mut() else { return };
+    let opponent = (viewer + 1) % cv.players.len();
+
+    // The deaths: gone from the board, the Angel to its graveyard.
+    let token = cv.battlefield.iter().find(|p| p.controller == opponent && p.is_token).map(|p| p.id);
+    for id in find(cv, opponent, "Serra Angel").into_iter().chain(token) {
+        let Some(at) = cv.battlefield.iter().position(|p| p.id == id) else { continue };
+        let gone = cv.battlefield.remove(at);
+        if !gone.is_token
+            && let Some(player) = cv.players.iter_mut().find(|p| p.seat == gone.owner)
+        {
+            player.graveyard.push(crabomination::net::GraveyardCardView {
+                id: gone.id,
+                name: gone.name.clone(),
+                card_types: gone.card_types.clone(),
+                mana_cost: Default::default(),
+                power: gone.base_power,
+                toughness: gone.base_toughness,
+                flashback_cost: None,
+                retrace: false,
+                escape: None,
+                bestow_cost: None,
+                buyback_cost: None,
+                disturb_cost: None,
+                mayhem_cost: None,
+                harmonize_cost: None,
+                scavenge_cost: None,
+            });
+        }
+        events.0.push(E::CreatureDied { card_id: id });
+        events.0.push(E::PermanentDied { card_id: id, is_creature: true });
+    }
+    for (seat, name, amount) in [(opponent, "Walking Ballista", 5), (viewer, "Luminarch Aspirant", 2)] {
+        if let Some(id) = find(cv, seat, name) {
+            events.0.push(E::DamageDealt { amount, to_player: None, to_card: Some(id) });
+        }
+    }
+    events.0.push(E::DamageDealt { amount: 3, to_player: Some(opponent), to_card: None });
+    if let Some(id) = find(cv, viewer, "Tarmogoyf") {
+        events.0.push(E::Explored { card_id: id, controller: viewer });
+    }
+    if !cv.stack.is_empty() {
+        let lands = ["Mountain", "Forest", "Stomping Ground"];
+        let colours = [crabomination::mana::Color::Red, crabomination::mana::Color::Green, crabomination::mana::Color::Red];
+        for (land, color) in lands.into_iter().zip(colours) {
+            if let Some(id) = find(cv, viewer, land) {
+                events.0.push(E::ManaAdded { player: viewer, color, source: Some(id) });
+            }
         }
     }
 }

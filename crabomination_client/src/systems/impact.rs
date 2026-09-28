@@ -1,15 +1,17 @@
-//! Transient "impact" feedback for high-drama moments: a radial burst when a
-//! creature dies, a sharp spark where damage lands, and a red edge-vignette
-//! when the viewer loses life.
+//! Transient "impact" feedback for high-drama moments: a flash, a shockwave
+//! and rising embers when a permanent dies (while the card itself burns and
+//! shrinks, `animate::animate_send_to_graveyard`), sparks and a shudder
+//! where damage lands, a ripple for a library dig, mana flying to its spell,
+//! and a red edge-vignette when the viewer loses life.
 //!
-//! All three are intentionally over-bright (colours in the HDR > 1.0 range)
-//! so they bloom on the Medium+ tiers — the death burst and damage spark in
-//! particular read as a flash of light rather than a flat gizmo line. They
-//! self-despawn on a short timer and are tagged `InGameRoot`, so leaving the
+//! The light is additive geometry ([`Glow`]), over-bright (HDR, past 1) so
+//! it blooms on the Medium+ tiers: it reads as a flash of light rather than
+//! the wireframe rings and spokes it was drawn as before. Every effect
+//! self-despawns on a short timer and is tagged `InGameRoot`, so leaving the
 //! match cleans them up with the rest of the HUD.
 
 use std::collections::{HashMap, HashSet};
-use std::f32::consts::TAU;
+use std::f32::consts::{PI, TAU};
 
 use bevy::prelude::*;
 use crabomination::card::CardId;
@@ -17,27 +19,46 @@ use crabomination::mana::Color as ManaColor;
 use crabomination::net::{GameEventWire, StackItemView};
 
 use crate::card::layout::player_hand_anchor;
-use crate::card::{BattlefieldCard, GameCardId, StackCard};
+use crate::card::{BattlefieldCard, CARD_HEIGHT, CARD_WIDTH, DeathBeat, GameCardId, StackCard};
 use crate::net_plugin::{CurrentView, LatestServerEvents};
+use crate::systems::animate::Jolt;
 use crate::systems::game_ui::InGameRoot;
+use crate::systems::glow::{Glow, Light};
 use crate::theme::{self, UiFonts};
 use crate::MainCamera;
 
-/// Gizmo group for the 3-D bursts/sparks. Registered in `main.rs`.
-#[derive(Default, Reflect, GizmoConfigGroup)]
-pub struct ImpactGizmos;
+/// What an [`Impact`] marks.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Burst {
+    /// A permanent died: a flash on the table, a shockwave out across it,
+    /// embers rising off the card.
+    Death,
+    /// Damage landed: a flash and sparks flying off.
+    Spark,
+    /// A library dig (explore, CR 701.40; discover, CR 701.57): a cool
+    /// ripple and a few motes, so a top-of-library reveal gets noticed even
+    /// when it only moves cards off the board.
+    Dig,
+}
 
-/// An expanding, fading ring-plus-spokes drawn in the XZ plane at `pos`.
-/// `color` is already HDR-bright; it dims out over the burst's life.
+impl Burst {
+    fn ttl(self) -> f32 {
+        match self {
+            Burst::Death => DEATH_TTL,
+            Burst::Spark => SPARK_TTL,
+            Burst::Dig => DIG_TTL,
+        }
+    }
+}
+
+/// A burst of light at `at`, `age` seconds old; `seed` scatters its sparks
+/// and embers.
 #[derive(Component)]
-pub struct ImpactBurst {
-    pos: Vec3,
+pub struct Impact {
+    at: Vec3,
     age: f32,
-    ttl: f32,
-    color: Color,
-    start_r: f32,
-    end_r: f32,
-    spokes: usize,
+    kind: Burst,
+    seed: u32,
 }
 
 /// A red screen-edge flash shown when the viewer takes life loss. Driven via
@@ -72,41 +93,44 @@ impl DamageNumeral {
     }
 }
 
-/// A glowing mana-coloured mote that arcs from a player's land row toward the
-/// table centre as they tap for mana — one per `ManaAdded`, so a multi-pip
-/// cast reads as mana converging into the spell.
+/// A glowing mana-coloured orb that arcs from the land that made it to the
+/// spell it pays for, trailing light, and bursts on arrival — one per
+/// `ManaAdded`, so a multi-pip cast reads as mana converging into the spell.
 #[derive(Component)]
 pub struct ManaMote {
     start: Vec3,
     end: Vec3,
     age: f32,
-    ttl: f32,
-    color: Color,
+    colour: LinearRgba,
 }
 
 // ── Tuning ─────────────────────────────────────────────────────────────────
 
-const DEATH_TTL: f32 = 0.55;
-const DEATH_START_R: f32 = 0.3;
-const DEATH_END_R: f32 = 2.3;
-const DEATH_SPOKES: usize = 8;
+const DEATH_TTL: f32 = 1.0;
+/// The death flash: how long it lasts and how far it spreads.
+const DEATH_FLASH_SECS: f32 = 0.2;
+const DEATH_FLASH_R: f32 = 2.2;
+/// The death shockwave: how long it runs, and its radius at the start and
+/// the end.
+const DEATH_WAVE_SECS: f32 = 0.7;
+const DEATH_WAVE_R: (f32, f32) = (0.5, 3.4);
+const DEATH_EMBERS: u32 = 14;
 
-const SPARK_TTL: f32 = 0.3;
-const SPARK_START_R: f32 = 0.15;
-const SPARK_END_R: f32 = 0.95;
-const SPARK_SPOKES: usize = 6;
+const SPARK_TTL: f32 = 0.55;
+const SPARK_FLASH_SECS: f32 = 0.12;
+const SPARKS: u32 = 11;
+/// How far a spark's streak trails behind it, in seconds of its flight.
+const SPARK_STREAK: f32 = 0.06;
+/// Pull on a flying spark or ember (world units / s²; embers float).
+const SPARK_GRAVITY: f32 = 16.0;
 
-/// Library-dig pulse for explore (CR 701.40) and discover (CR 701.57) — a soft
-/// cyan ring so the player notices a top-of-library reveal even when it only
-/// shuffles cards around off-board.
-const DIG_TTL: f32 = 0.4;
-const DIG_START_R: f32 = 0.2;
-const DIG_END_R: f32 = 1.3;
-const DIG_SPOKES: usize = 7;
+const DIG_TTL: f32 = 0.6;
+const DIG_WAVE_R: (f32, f32) = (0.3, 2.0);
+const DIG_MOTES: u32 = 6;
 
-/// Raise the burst slightly off the table so it reads above the card faces and
-/// any counter coins sitting on them.
-const BURST_Y: f32 = 0.25;
+/// How high a burst sits off the card or spot it marks: a shockwave or
+/// ripple runs just over the flat cards around it.
+const BURST_Y: f32 = 0.06;
 
 const VIGNETTE_TTL: f32 = 0.7;
 /// Border thickness (px) of the edge flash — fat enough to register in
@@ -128,27 +152,26 @@ pub(crate) const DMG_NUMERAL_RED: Color = Color::srgb(1.0, 0.32, 0.26);
 const DMG_NUMERAL_OUTLINE: [(f32, f32); 8] =
     [(-2.0, 0.0), (2.0, 0.0), (0.0, -2.0), (0.0, 2.0), (-1.4, -1.4), (1.4, -1.4), (-1.4, 1.4), (1.4, 1.4)];
 
-const MANA_MOTE_TTL: f32 = 0.55;
+/// Seconds a mana mote flies, and bursts for on arrival.
+const MANA_MOTE_FLIGHT: f32 = 0.55;
+const MANA_MOTE_POP: f32 = 0.16;
 /// Peak arc height of a travelling mana mote.
 const MANA_MOTE_LIFT: f32 = 1.6;
+/// How far back a mote's trail reaches, in seconds of its flight.
+const MANA_MOTE_TRAIL: f32 = 0.16;
 
-/// Bright red (HDR) for the death burst — blooms, then fades to nothing.
-fn death_color() -> Color {
-    LinearRgba::new(3.2, 0.25, 0.1, 1.0).into()
-}
-
+/// Deep red-orange (HDR) for a death — blooms, then fades to nothing.
+const DEATH_COLOUR: LinearRgba = LinearRgba::rgb(3.2, 0.6, 0.18);
+/// An ember, hot and then cooling.
+const EMBER_HOT: LinearRgba = LinearRgba::rgb(3.4, 1.4, 0.35);
+const EMBER_COOL: LinearRgba = LinearRgba::rgb(0.9, 0.08, 0.02);
 /// Hot, near-white spark for damage landing.
-fn spark_color() -> Color {
-    LinearRgba::new(3.0, 2.2, 1.2, 1.0).into()
-}
-
+const SPARK_COLOUR: LinearRgba = LinearRgba::rgb(3.0, 2.2, 1.2);
 /// Cool cyan for a library dig (explore / discover).
-fn dig_color() -> Color {
-    LinearRgba::new(0.4, 1.8, 2.6, 1.0).into()
-}
+const DIG_COLOUR: LinearRgba = LinearRgba::rgb(0.4, 1.8, 2.6);
 
 /// HDR mana-pip colour for a travelling mote; `None` is colorless.
-fn mana_color(color: Option<ManaColor>) -> Color {
+fn mana_colour(color: Option<ManaColor>) -> LinearRgba {
     let (r, g, b) = match color {
         Some(ManaColor::White) => (2.7, 2.6, 2.1),
         Some(ManaColor::Blue) => (0.3, 1.4, 3.0),
@@ -157,7 +180,7 @@ fn mana_color(color: Option<ManaColor>) -> Color {
         Some(ManaColor::Green) => (0.5, 2.6, 0.8),
         None => (1.8, 1.8, 2.1),
     };
-    LinearRgba::new(r, g, b, 1.0).into()
+    LinearRgba::rgb(r, g, b)
 }
 
 // ── Spawning ───────────────────────────────────────────────────────────────
@@ -171,53 +194,42 @@ pub fn spawn_impact_effects(
     events: Res<LatestServerEvents>,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    cards: Query<(&GlobalTransform, &GameCardId)>,
+    cards: Query<(Entity, &GlobalTransform, &GameCardId, Has<BattlefieldCard>)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
     existing_vignettes: Query<Entity, With<HitVignette>>,
+    mut seed: Local<u32>,
 ) {
     if events.0.is_empty() {
         return;
     }
     let Some(cv) = &view.0 else { return };
 
-    let pos_of = |id: CardId| -> Option<Vec3> {
-        cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation())
+    let card = |id: CardId| cards.iter().find(|(_, _, g, _)| g.0 == id);
+    let pos_of = |id: CardId| card(id).map(|(_, t, _, _)| t.translation());
+    let mut burst = |commands: &mut Commands, at: Vec3, kind: Burst| {
+        *seed = seed.wrapping_add(1);
+        commands.spawn((Impact { at: at + Vec3::Y * BURST_Y, age: 0.0, kind, seed: *seed }, InGameRoot));
     };
     // Damage each struck permanent took in this batch, in the order first
     // struck: two blockers' damage is one "−N", not two numerals printed
     // over each other.
     let mut struck: Vec<(CardId, u32)> = Vec::new();
+    let mut died: HashSet<CardId> = HashSet::new();
 
     for ev in &events.0 {
         match ev {
-            GameEventWire::CreatureDied { card_id } => {
-                if let Some(p) = pos_of(*card_id) {
-                    spawn_burst(
-                        &mut commands,
-                        p,
-                        death_color(),
-                        DEATH_TTL,
-                        DEATH_START_R,
-                        DEATH_END_R,
-                        DEATH_SPOKES,
-                    );
+            // Every permanent that dies burns — once, though a creature's
+            // death may come as both events.
+            GameEventWire::CreatureDied { card_id } | GameEventWire::PermanentDied { card_id, .. } => {
+                if !died.insert(*card_id) {
+                    continue;
                 }
-            }
-            // A non-creature permanent (artifact / enchantment / planeswalker)
-            // hitting a graveyard also earns a death burst; creatures already
-            // fire CreatureDied, so only burst here when it wasn't a creature.
-            GameEventWire::PermanentDied { card_id, is_creature: false } => {
-                if let Some(p) = pos_of(*card_id) {
-                    spawn_burst(
-                        &mut commands,
-                        p,
-                        death_color(),
-                        DEATH_TTL,
-                        DEATH_START_R,
-                        DEATH_END_R,
-                        DEATH_SPOKES,
-                    );
+                if let Some((entity, t, _, _)) = card(*card_id) {
+                    burst(&mut commands, t.translation(), Burst::Death);
+                    // The card burns before it leaves: its flight to the
+                    // graveyard (or a token's vanishing) waits on this.
+                    commands.entity(entity).try_insert(DeathBeat::default());
                 }
             }
             GameEventWire::DamageDealt { to_card, to_player, amount } => {
@@ -230,15 +242,7 @@ pub fn spawn_impact_effects(
                         .map(|seat| player_hand_anchor(seat, cv.your_seat, cv.players.len()))
                 });
                 if let Some(p) = at {
-                    spawn_burst(
-                        &mut commands,
-                        p,
-                        spark_color(),
-                        SPARK_TTL,
-                        SPARK_START_R,
-                        SPARK_END_R,
-                        SPARK_SPOKES,
-                    );
+                    burst(&mut commands, p, Burst::Spark);
                 }
                 // Floating "−N" on a struck creature, so the player reads how
                 // much it took. A player's life change has its own numeral
@@ -255,12 +259,12 @@ pub fn spawn_impact_effects(
             }
             GameEventWire::Explored { card_id, .. } => {
                 if let Some(p) = pos_of(*card_id) {
-                    spawn_burst(&mut commands, p, dig_color(), DIG_TTL, DIG_START_R, DIG_END_R, DIG_SPOKES);
+                    burst(&mut commands, p, Burst::Dig);
                 }
             }
             GameEventWire::Discovered { player, .. } => {
                 let at = player_hand_anchor(*player, cv.your_seat, cv.players.len());
-                spawn_burst(&mut commands, at, dig_color(), DIG_TTL, DIG_START_R, DIG_END_R, DIG_SPOKES);
+                burst(&mut commands, at, Burst::Dig);
             }
             GameEventWire::LifeLost { player, amount } if *player == cv.your_seat => {
                 // Replace any in-flight vignette so rapid hits don't stack into
@@ -275,13 +279,20 @@ pub fn spawn_impact_effects(
         }
     }
 
+    // A struck creature still on the table shudders with the hit.
+    for &(id, amount) in &struck {
+        if let Some((entity, _, _, true)) = card(id) {
+            commands.entity(entity).try_insert(Jolt::new(amount));
+        }
+    }
+
     // Each numeral punches in on the struck card's P/T box and rises off it,
     // uncovering the toughness it just turned red. The box is also the part
     // of a back-row card that the card in front of it leaves showing: at the
     // card's centre, a back-row creature's numeral landed on its neighbour.
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
     for (id, amount) in struck {
-        if let Some((card, _)) = cards.iter().find(|(_, g)| g.0 == id)
+        if let Some((_, card, _, _)) = card(id)
             && let Some(screen) = crate::theme::project_to_ui(
                 camera,
                 cam_xform,
@@ -394,37 +405,12 @@ pub fn spawn_mana_motes(
                     }
                 };
                 start.y += 0.3;
-                commands.spawn((
-                    ManaMote {
-                        start,
-                        end: dest,
-                        age: 0.0,
-                        ttl: MANA_MOTE_TTL,
-                        color: mana_color(color),
-                    },
-                    InGameRoot,
-                ));
+                commands.spawn((ManaMote { start, end: dest, age: 0.0, colour: mana_colour(color) }, InGameRoot));
             }
         }
     }
 
     *prev_tapped = current_tapped;
-}
-
-#[allow(clippy::too_many_arguments)]
-fn spawn_burst(
-    commands: &mut Commands,
-    pos: Vec3,
-    color: Color,
-    ttl: f32,
-    start_r: f32,
-    end_r: f32,
-    spokes: usize,
-) {
-    commands.spawn((
-        ImpactBurst { pos: pos + Vec3::Y * BURST_Y, age: 0.0, ttl, color, start_r, end_r, spokes },
-        InGameRoot,
-    ));
 }
 
 fn spawn_damage_numeral(commands: &mut Commands, fonts: &UiFonts, amount: u32, screen: Vec2) {
@@ -507,33 +493,147 @@ fn spawn_vignette(commands: &mut Commands, peak_alpha: f32) {
 
 // ── Animation ──────────────────────────────────────────────────────────────
 
-/// Expand each burst's ring (ease-out) while dimming its colour to zero, then
-/// despawn it when elapsed.
-pub fn animate_impact_bursts(
+/// A number (0-1) for scattering the `i`th spark or ember of burst `seed`;
+/// `salt` picks which of its numbers.
+fn scatter(seed: u32, i: u32, salt: u32) -> f32 {
+    let mut h = seed.wrapping_mul(0x9e37_79b9) ^ i.wrapping_mul(0x85eb_ca6b) ^ salt.wrapping_mul(0xc2b2_ae35);
+    h ^= h >> 16;
+    h = h.wrapping_mul(0x7feb_352d);
+    h ^= h >> 15;
+    h = h.wrapping_mul(0x846c_a68b);
+    h ^= h >> 16;
+    (h & 0xffff) as f32 / 65535.0
+}
+
+fn ease_out(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    1.0 - (1.0 - t) * (1.0 - t)
+}
+
+fn scaled(colour: LinearRgba, k: f32) -> LinearRgba {
+    LinearRgba::rgb(colour.red * k, colour.green * k, colour.blue * k)
+}
+
+/// The light of a `kind` burst at `at`, `age` seconds in: nothing once it
+/// has run its course.
+pub(crate) fn burst_lights(kind: Burst, at: Vec3, age: f32, seed: u32) -> Vec<Light> {
+    let mut out = Vec::new();
+    let r = |i: u32, salt: u32| scatter(seed, i, salt);
+    match kind {
+        Burst::Death => {
+            if age < DEATH_FLASH_SECS {
+                let k = 1.0 - age / DEATH_FLASH_SECS;
+                out.push(Light::Pool {
+                    at,
+                    radius: DEATH_FLASH_R * (1.0 - 0.4 * k),
+                    colour: scaled(DEATH_COLOUR, 1.4 * k * k),
+                });
+            }
+            if age < DEATH_WAVE_SECS {
+                let t = age / DEATH_WAVE_SECS;
+                out.push(Light::Wave {
+                    at,
+                    radius: DEATH_WAVE_R.0 + (DEATH_WAVE_R.1 - DEATH_WAVE_R.0) * ease_out(t),
+                    width: 0.35 + 0.45 * t,
+                    colour: scaled(DEATH_COLOUR, 1.5 * (1.0 - t).powf(1.5)),
+                });
+            }
+            // Embers rise off the card's face, drifting, cooling from
+            // orange to a dull red, and go out.
+            for i in 0..DEATH_EMBERS {
+                let life = 0.55 + 0.4 * r(i, 0);
+                if age >= life {
+                    continue;
+                }
+                let k = age / life;
+                let start = at + Vec3::new((r(i, 1) - 0.5) * CARD_WIDTH * 0.85, 0.0, (r(i, 2) - 0.5) * CARD_HEIGHT * 0.85);
+                let angle = TAU * r(i, 3);
+                let drift = Vec3::new(angle.cos(), 0.0, angle.sin()) * (0.3 + 0.6 * r(i, 4));
+                let rise = 1.4 + 1.8 * r(i, 5);
+                let colour = EMBER_HOT.mix(&EMBER_COOL, k);
+                out.push(Light::Orb {
+                    at: start + drift * age + Vec3::Y * (rise * age - 0.9 * age * age),
+                    radius: (0.09 + 0.07 * r(i, 6)) * (1.0 - 0.5 * k),
+                    colour: scaled(colour, 1.0 - k),
+                });
+            }
+        }
+        Burst::Spark => {
+            if age < SPARK_FLASH_SECS {
+                let k = 1.0 - age / SPARK_FLASH_SECS;
+                out.push(Light::Orb { at: at + Vec3::Y * 0.3, radius: 1.1 * (0.5 + 0.5 * k), colour: scaled(SPARK_COLOUR, 1.6 * k) });
+            }
+            let t = age / (SPARK_TTL * 0.66);
+            if t < 1.0 {
+                out.push(Light::Wave {
+                    at,
+                    radius: 0.2 + 1.0 * ease_out(t),
+                    width: 0.35,
+                    colour: scaled(SPARK_COLOUR, 0.8 * (1.0 - t)),
+                });
+            }
+            // Sparks fly off, up and out, streaking, and fall.
+            for i in 0..SPARKS {
+                let life = 0.3 + 0.25 * r(i, 0);
+                if age >= life {
+                    continue;
+                }
+                let k = age / life;
+                let angle = TAU * (i as f32 + 0.8 * r(i, 1)) / SPARKS as f32;
+                let dir = Vec3::new(angle.cos(), 0.35 + 0.9 * r(i, 2), angle.sin()).normalize();
+                let speed = 5.0 + 5.0 * r(i, 3);
+                let flown = |t: f32| at + dir * speed * t - Vec3::Y * 0.5 * SPARK_GRAVITY * t * t;
+                out.push(Light::Trail {
+                    points: vec![flown(age), flown((age - SPARK_STREAK).max(0.0))],
+                    half: 0.08,
+                    colour: scaled(SPARK_COLOUR, 2.4 * (1.0 - k)),
+                });
+            }
+        }
+        Burst::Dig => {
+            let t = age / DIG_TTL;
+            if t < 1.0 {
+                out.push(Light::Wave {
+                    at,
+                    radius: DIG_WAVE_R.0 + (DIG_WAVE_R.1 - DIG_WAVE_R.0) * ease_out(t),
+                    width: 0.6,
+                    colour: scaled(DIG_COLOUR, 1.0 - t),
+                });
+            }
+            for i in 0..DIG_MOTES {
+                let life = 0.45 + 0.15 * r(i, 0);
+                if age >= life {
+                    continue;
+                }
+                let k = age / life;
+                let angle = TAU * (i as f32 + r(i, 1)) / DIG_MOTES as f32;
+                let start = at + Vec3::new(angle.cos(), 0.0, angle.sin()) * (0.4 + 0.5 * r(i, 2));
+                out.push(Light::Orb {
+                    at: start + Vec3::Y * (1.2 + 0.8 * r(i, 3)) * age,
+                    radius: 0.08,
+                    colour: scaled(DIG_COLOUR, 1.2 * (1.0 - k)),
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Bevy system: age each [`Impact`] and push its light, despawning it once
+/// it has run its course.
+pub fn animate_impacts(
     mut commands: Commands,
     time: Res<Time>,
-    mut bursts: Query<(Entity, &mut ImpactBurst)>,
-    mut gizmos: Gizmos<ImpactGizmos>,
+    mut impacts: Query<(Entity, &mut Impact)>,
+    mut glow: ResMut<Glow>,
 ) {
-    for (entity, mut burst) in &mut bursts {
-        burst.age += time.delta_secs();
-        if burst.age >= burst.ttl {
+    for (entity, mut impact) in &mut impacts {
+        impact.age += time.delta_secs();
+        if impact.age >= impact.kind.ttl() {
             commands.entity(entity).despawn();
             continue;
         }
-        let t = (burst.age / burst.ttl).clamp(0.0, 1.0);
-        let eased = 1.0 - (1.0 - t) * (1.0 - t); // ease-out expansion
-        let r = burst.start_r + (burst.end_r - burst.start_r) * eased;
-        // Fade brightness (and alpha) linearly to zero; multiplying the HDR
-        // colour keeps it blooming early and gone late.
-        let col = faded(burst.color, 1.0 - t);
-
-        draw_ring(&mut gizmos, burst.pos, r, col);
-        for i in 0..burst.spokes {
-            let a = (i as f32 / burst.spokes as f32) * TAU;
-            let dir = Vec3::new(a.cos(), 0.0, a.sin());
-            gizmos.line(burst.pos + dir * (r * 0.45), burst.pos + dir * r, col);
-        }
+        glow.extend(burst_lights(impact.kind, impact.at, impact.age, impact.seed));
     }
 }
 
@@ -587,44 +687,42 @@ pub fn animate_damage_numerals(
     }
 }
 
-/// Fly each mana mote along its arc and fade it out, despawning when elapsed.
+/// The light of a mana mote from `start` to `end`, `age` seconds in: an
+/// orb flying its arc with a trail behind it, then a burst where it lands.
+pub(crate) fn mote_lights(start: Vec3, end: Vec3, age: f32, colour: LinearRgba) -> Vec<Light> {
+    let path = |t: f32| {
+        let t = t.clamp(0.0, 1.0);
+        start.lerp(end, t) + Vec3::Y * (t * PI).sin() * MANA_MOTE_LIFT
+    };
+    if age < MANA_MOTE_FLIGHT {
+        let t = age / MANA_MOTE_FLIGHT;
+        let reach = MANA_MOTE_TRAIL / MANA_MOTE_FLIGHT;
+        let points = (0..8).map(|j| path(t - reach * j as f32 / 7.0)).collect();
+        vec![
+            Light::Trail { points, half: 0.13, colour },
+            Light::Orb { at: path(t), radius: 0.26, colour: scaled(colour, 1.3) },
+        ]
+    } else {
+        let k = ((age - MANA_MOTE_FLIGHT) / MANA_MOTE_POP).min(1.0);
+        vec![Light::Orb { at: end, radius: 0.3 + 0.8 * k, colour: scaled(colour, 1.6 * (1.0 - k)) }]
+    }
+}
+
+/// Fly each mana mote along its arc and burst it where it lands,
+/// despawning it after.
 pub fn animate_mana_motes(
     mut commands: Commands,
     time: Res<Time>,
     mut motes: Query<(Entity, &mut ManaMote)>,
-    mut gizmos: Gizmos<ImpactGizmos>,
+    mut glow: ResMut<Glow>,
 ) {
     for (entity, mut mote) in &mut motes {
         mote.age += time.delta_secs();
-        if mote.age >= mote.ttl {
+        if mote.age >= MANA_MOTE_FLIGHT + MANA_MOTE_POP {
             commands.entity(entity).despawn();
             continue;
         }
-        let t = (mote.age / mote.ttl).clamp(0.0, 1.0);
-        let mut pos = mote.start.lerp(mote.end, t);
-        pos.y += (t * TAU * 0.5).sin() * MANA_MOTE_LIFT; // half-sine arc
-        let col = faded(mote.color, 1.0 - t);
-        draw_ring(&mut gizmos, pos, 0.16, col);
-        // A short cross through the centre gives the mote a brighter core than
-        // the ring alone.
-        gizmos.line(pos - Vec3::X * 0.12, pos + Vec3::X * 0.12, col);
-        gizmos.line(pos - Vec3::Z * 0.12, pos + Vec3::Z * 0.12, col);
-    }
-}
-
-fn faded(color: Color, k: f32) -> Color {
-    let l = color.to_linear();
-    LinearRgba::new(l.red * k, l.green * k, l.blue * k, l.alpha * k).into()
-}
-
-fn draw_ring(gizmos: &mut Gizmos<ImpactGizmos>, center: Vec3, r: f32, color: Color) {
-    const SEGMENTS: usize = 28;
-    for i in 0..SEGMENTS {
-        let a0 = (i as f32 / SEGMENTS as f32) * TAU;
-        let a1 = ((i + 1) as f32 / SEGMENTS as f32) * TAU;
-        let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
-        let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
-        gizmos.line(p0, p1, color);
+        glow.extend(mote_lights(mote.start, mote.end, mote.age, mote.colour));
     }
 }
 
@@ -639,5 +737,80 @@ mod tests {
         assert!(midway > 1.0 && midway < DMG_NUMERAL_PUNCH);
         assert_eq!(damage_numeral_scale(DMG_NUMERAL_PUNCH_SECS), 1.0);
         assert_eq!(damage_numeral_scale(DMG_NUMERAL_SECS), 1.0);
+    }
+
+    const AT: Vec3 = Vec3::new(2.0, 0.08, -3.0);
+
+    #[test]
+    fn every_burst_has_gone_out_by_the_end_of_its_life() {
+        for kind in [Burst::Death, Burst::Spark, Burst::Dig] {
+            assert!(!burst_lights(kind, AT, 0.0, 7).is_empty(), "{kind:?} starts lit");
+            assert!(burst_lights(kind, AT, kind.ttl(), 7).is_empty(), "{kind:?} outlives its ttl");
+        }
+    }
+
+    #[test]
+    fn a_death_flashes_sends_a_wave_out_and_embers_up() {
+        let at_start = burst_lights(Burst::Death, AT, 0.0, 3);
+        assert!(matches!(at_start[0], Light::Pool { .. }), "the flash comes first");
+        let wave = |age: f32| {
+            burst_lights(Burst::Death, AT, age, 3).into_iter().find_map(|l| match l {
+                Light::Wave { radius, .. } => Some(radius),
+                _ => None,
+            })
+        };
+        assert!(wave(0.1).unwrap() < wave(0.5).unwrap(), "the wave spreads");
+        assert!(wave(DEATH_WAVE_SECS).is_none());
+        // Every ember is lit at first, and all that are left have risen.
+        let embers = |age: f32| {
+            burst_lights(Burst::Death, AT, age, 3)
+                .into_iter()
+                .filter_map(|l| match l {
+                    Light::Orb { at, .. } => Some(at),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(embers(0.0).len(), DEATH_EMBERS as usize);
+        assert!(embers(0.5).iter().all(|e| e.y > AT.y + 0.4), "{:?}", embers(0.5));
+    }
+
+    #[test]
+    fn sparks_fly_off_streaking_behind_them() {
+        let trails: Vec<Vec<Vec3>> = burst_lights(Burst::Spark, AT, 0.1, 5)
+            .into_iter()
+            .filter_map(|l| match l {
+                Light::Trail { points, .. } => Some(points),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(trails.len(), SPARKS as usize);
+        for points in trails {
+            let (head, tail) = (points[0], points[1]);
+            assert!(head.distance(AT) > tail.distance(AT), "the head leads");
+            assert!(head.distance(AT) > 0.4);
+        }
+    }
+
+    #[test]
+    fn a_mana_mote_arcs_to_its_spell_and_bursts_there() {
+        let (start, end) = (Vec3::new(-6.0, 0.3, 8.0), Vec3::new(4.0, 1.1, 0.0));
+        let head = |age: f32| {
+            mote_lights(start, end, age, LinearRgba::BLUE).into_iter().find_map(|l| match l {
+                Light::Orb { at, .. } => Some(at),
+                _ => None,
+            })
+        };
+        assert!(head(0.0).unwrap().distance(start) < 1e-4);
+        let midway = head(MANA_MOTE_FLIGHT / 2.0).unwrap();
+        assert!(midway.y > end.y + 1.0, "it arcs over the table");
+        // Its trail runs back along the way it came.
+        let Some(Light::Trail { points, .. }) = mote_lights(start, end, MANA_MOTE_FLIGHT / 2.0, LinearRgba::BLUE).first().cloned()
+        else {
+            panic!("no trail")
+        };
+        assert!(points[0].distance(start) > points[7].distance(start));
+        // Landed, it bursts on the spell.
+        assert_eq!(head(MANA_MOTE_FLIGHT + 0.01), Some(end));
     }
 }

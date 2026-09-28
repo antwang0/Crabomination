@@ -93,7 +93,6 @@ use systems::game_ui::{
 use systems::gizmos::{
     draw_active_seat_glow, draw_attachment_tethers, draw_attack_plan_arrows,
     draw_block_arrows, draw_legal_target_rings, draw_stack_arrows, draw_target_arrow,
-    ActiveSeatGizmos, AttachmentGizmos,
 };
 use systems::quality::{
     close_settings_on_esc, handle_leave_game_button, handle_quality_buttons, handle_speed_slider,
@@ -364,9 +363,6 @@ fn main() {
             systems::lobby_ui::LobbyUiPlugin,
             systems::game_ui::TableAwarenessPlugin,
         ))
-        .init_gizmo_group::<AttachmentGizmos>()
-        .init_gizmo_group::<ActiveSeatGizmos>()
-        .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
         .insert_resource(DirectionalLightShadowMap { size: cfg_quality.shadow_map_size() })
         .insert_resource(gfx)
         .insert_resource(gameplay)
@@ -435,6 +431,7 @@ fn main() {
                 layout_harness::inject_damage_for_screenshot,
                 layout_harness::stage_combat_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::swing_life_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::fire_impacts_for_screenshot.run_if(in_state(AppState::InGame)),
             )
                 .after(crate::net_plugin::poll_net),
         )
@@ -450,6 +447,8 @@ fn main() {
         // Combat, targeting and stack arrows, as geometry (`systems::arrows`).
         .init_resource::<systems::arrows::Arrows>()
         .add_systems(PostUpdate, systems::arrows::render_arrows)
+        .init_resource::<systems::glow::Glow>()
+        .add_systems(PostUpdate, systems::glow::render_glow)
         // A hovered battlefield card's tilt toward the camera is taken off
         // before `Update` and put back after it (`animate::HoverTilt`).
         .add_systems(First, systems::animate::untilt_hovered_cards)
@@ -718,13 +717,14 @@ fn main() {
         // transform.translation each frame from `base_translation`.
         .add_systems(
             Update,
-            (update_combat_lurch_targets, animate_combat_lurch)
+            (update_combat_lurch_targets, animate_combat_lurch, systems::animate::animate_jolt)
                 .chain()
                 .after(animate_hover_lift)
                 .run_if(in_state(AppState::InGame)),
         )
         .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_return_to_hand.run_if(in_state(AppState::InGame)))
+        .add_systems(Update, systems::animate::animate_vanishing.run_if(in_state(AppState::InGame)))
         // Pop the next queued animation onto an entity once it stops
         // animating, so chained transitions (e.g. play-then-tap on a
         // freshly-played land) play sequentially.
@@ -743,13 +743,14 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
-        // Impact feedback: death bursts, damage sparks, life-loss vignette.
+        // Impact feedback: deaths, damage sparks, digs, mana, life-loss
+        // vignette.
         .add_systems(
             Update,
             (
                 crate::systems::impact::spawn_impact_effects,
                 crate::systems::impact::spawn_mana_motes,
-                crate::systems::impact::animate_impact_bursts,
+                crate::systems::impact::animate_impacts,
                 crate::systems::impact::animate_hit_vignettes,
                 crate::systems::impact::animate_damage_numerals,
                 crate::systems::impact::animate_mana_motes,
