@@ -19875,8 +19875,13 @@ impl GameState {
         // skip already-eliminated seats, so this won't fire for them there.
         self.stamp_departures(&[seat]);
         self.objects_leave_with_player(seat, &mut events);
-        // Resolve the game-over / surviving-team determination.
-        self.check_state_based_actions_into(&mut events);
+        // CR 104.2a — the last opponent leaving wins the game for the player
+        // still in it *immediately*: a life total at 0 awaiting the next
+        // state-based check (mid-resolution) must not turn it into a draw.
+        self.settle_game_over_if_decided(&mut events);
+        if self.game_over.is_none() {
+            self.check_state_based_actions_into(&mut events);
+        }
         // The leave (and anything the sweep did) triggers like any other
         // event — the server hands these straight to the wire.
         self.dispatch_triggers_for_events(&events);

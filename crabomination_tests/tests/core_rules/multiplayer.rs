@@ -6913,3 +6913,17 @@ fn cr_603_4_a_trigger_condition_reads_this_events_player() {
     }
     assert_eq!(g.players[0].life, life + 1, "the opponent's draw only");
 }
+
+/// CR 104.2a — a player still in the game wins the moment the last opponent
+/// leaves, "overriding all effects that would preclude that player from
+/// winning": a life total at 0 still waiting on the next state-based check
+/// (mid-resolution) does not turn a concession into a draw. Found by
+/// `CRAB_POD_CONCEDE` (seed 5604004 game 8 read as a four-way draw).
+#[test]
+fn cr_104_2a_the_last_opponent_conceding_wins_before_a_pending_state_based_loss() {
+    let mut g = multi_player_game(3);
+    g.concede(1);
+    g.players[0].life = -5; // dealt mid-resolution; no sweep has run yet
+    g.concede(2);
+    assert_eq!(g.game_over, Some(Some(0)), "seat 0 won as seat 2 left");
+}

@@ -7922,6 +7922,15 @@ impl GameState {
         // Pre-Phase-G this checked alive seats directly, which in 2HG
         // would have ended the match as soon as one of the four
         // players died even though their teammate was still in.
+        self.settle_game_over_if_decided(events);
+    }
+
+    /// CR 104.2a / 104.4a — the game ends once no more than one team has a
+    /// seat still in it: that team wins, or, if every seat is out, it is a
+    /// draw. Run by every state-based sweep and, immediately, by a
+    /// concession (a player still in the game wins the moment the last
+    /// opponent leaves, whatever else is pending).
+    pub(crate) fn settle_game_over_if_decided(&mut self, events: &mut Vec<GameEvent>) {
         if self.game_over.is_none() {
             // One seat walk, no allocation. This block built two `Vec`s and
             // sorted one of them on **every** state-based-action sweep — the
