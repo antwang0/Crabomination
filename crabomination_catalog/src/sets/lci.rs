@@ -3815,7 +3815,9 @@ pub fn deeproot_pilgrimage() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::NotToken),
                 },
-            ),
+            )
+            // CR 603.2c — "one or more … become tapped".
+            .once_per_batch(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

@@ -749,8 +749,8 @@ pub fn ancient_vendetta() -> CardDefinition {
 }
 
 /// Ketramose, the New Dawn — {1}{W}{B} 4/4 God. Locked out of combat until
-/// exile is seven deep; every exile off a graveyard or the battlefield on your
-/// turn draws you a card.
+/// exile is seven deep; each batch of exiles off graveyards or the battlefield
+/// on your turn draws you a card.
 pub fn ketramose_the_new_dawn() -> CardDefinition {
     CardDefinition {
         keywords: vec![
@@ -764,7 +764,9 @@ pub fn ketramose_the_new_dawn() -> CardDefinition {
                 EventKind::CardExiledFromPlayOrGraveyard,
                 EventScope::AnyPlayer,
             )
-            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You))
+            // CR 603.2c — "one or more cards are put into exile".
+            .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
                 Effect::LoseLife { who: Selector::You, amount: Value::ONE },

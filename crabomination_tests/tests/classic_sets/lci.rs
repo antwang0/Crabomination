@@ -1598,7 +1598,8 @@ fn ghalta_drops_creatures_from_hand() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"));
 }
 
-/// Deeproot Pilgrimage mints a Merfolk when your nontoken Merfolk taps.
+/// Deeproot Pilgrimage mints a Merfolk when one or more of your nontoken
+/// Merfolk become tapped.
 #[test]
 fn deeproot_pilgrimage_on_merfolk_tap() {
     let mut g = two_player_game();
@@ -1610,6 +1611,22 @@ fn deeproot_pilgrimage_on_merfolk_tap() {
     let merfolk = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.name == "Merfolk").count();
     assert_eq!(merfolk, 1, "tapping a Merfolk minted a Merfolk token");
+
+    // CR 603.2c — "one or more … become tapped": two Merfolk tapped at once
+    // are one trigger.
+    let a = g.add_card_to_battlefield(0, catalog::cenote_scout());
+    let b = g.add_card_to_battlefield(0, catalog::cenote_scout());
+    for id in [a, b] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    g.dispatch_triggers_for_events(&[
+        GameEvent::PermanentTapped { card_id: a, actor: None, as_attacker: false },
+        GameEvent::PermanentTapped { card_id: b, actor: None, as_attacker: false },
+    ]);
+    drain_stack(&mut g);
+    let merfolk = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Merfolk").count();
+    assert_eq!(merfolk, 2, "one more token for the batch of two");
 }
 
 /// Chupacabra Echo's ETB shrinks an opponent's creature by your graveyard's
