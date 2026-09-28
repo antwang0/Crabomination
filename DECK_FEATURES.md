@@ -205,7 +205,7 @@ lists were picked.
 | **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Eldrazi Unbound** (CMM precon) C | Zhulodok, Void Gorger | C | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Subjective Reality** (C18 precon) WUB | Aminatou, the Fateshifter (**planeswalker**) | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
@@ -2064,8 +2064,7 @@ Frugivore repeat, doubling the Squirrels per answer. Session `01XnuL2a`
 landed the same fix first (`f0522648`), so this seat carries none. Residuals:
 **Winter**'s exiled set is the engine's pick; **Cemetery Tampering** puts a
 hidden land onto the battlefield rather than playing it; **Polluted Cistern**
-counts milled cards only; **Demonic Covenant** draws on an attack at a
-planeswalker too; **Into the Pit**'s sacrifice is paid as the cast
+counts milled cards only; **Into the Pit**'s sacrifice is paid as the cast
 completes; **Old Stickfingers** reveals creature by creature. Pods (release,
 seed 10231, 1,000 games beside Faldorn / Anikthea / Ranar): 1,000/1,000
 decided, no card of the four lists unplayed, Winter 45.1 %. `--bench`

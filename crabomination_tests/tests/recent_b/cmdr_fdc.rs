@@ -6301,3 +6301,34 @@ fn cr_603_2c_a_one_or_more_trigger_reads_past_a_non_matching_attacker() {
     drain_stack(&mut g);
     assert_eq!(g.exile.len() - exiled_before, 1, "the token attacking made it trigger");
 }
+
+/// CR 506.2 — "whenever one or more Demons you control attack a player"
+/// triggers once per player attacked: two Demons at one seat draw one card,
+/// split across two seats they draw two.
+#[test]
+fn cr_506_2_demonic_covenant_draws_per_player_attacked() {
+    for (split, cards) in [(false, 1), (true, 2)] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, catalog::demonic_covenant());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let demons = [0, 1].map(|_| {
+            let d = g.add_card_to_battlefield(0, catalog::abyssal_persecutor());
+            g.clear_sickness(d);
+            d
+        });
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: demons[0], target: AttackTarget::Player(1) },
+            Attack { attacker: demons[1], target: AttackTarget::Player(if split { 2 } else { 1 }) },
+        ]))
+        .expect("attack");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + cards, "split: {split}");
+    }
+}

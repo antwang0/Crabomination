@@ -2196,7 +2196,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
 | 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
-| 🟡 Demonic Covenant | Death Toll (DSC) | the draw also fires when Demons attack only a planeswalker. |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
