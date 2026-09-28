@@ -290,8 +290,6 @@ pub fn nyx_fleece_ram() -> CardDefinition {
 
 /// Wall of Reverence — {3}{W} 1/6 Spirit Wall. Defender, flying. At your end
 /// step, you may gain life equal to the power of target creature you control.
-/// (The "target" is modeled as the greatest-power creature you control — the
-/// value-maximizing pick.)
 pub fn wall_of_reverence() -> CardDefinition {
     CardDefinition {
         name: "Wall of Reverence",
@@ -310,12 +308,10 @@ pub fn wall_of_reverence() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::MayDo {
-                description: "Gain life equal to a creature's power?".into(),
+                description: "Gain life equal to its power?".into(),
                 body: Box::new(Effect::GainLife {
                     who: Selector::You,
-                    amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
-                        R::Creature.and(R::ControlledByYou),
-                    ))),
+                    amount: Value::PowerOf(Box::new(target_filtered(R::Creature.and(R::ControlledByYou)))),
                 }),
             },
         }],

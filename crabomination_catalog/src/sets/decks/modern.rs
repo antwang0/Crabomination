@@ -18839,7 +18839,7 @@ pub fn keen_eyed_curator() -> CardDefinition {
     }
 }
 
-// ── Cube expansion: body-only stubs ─────────────────────────────────────────
+// ── Cube expansion ──────────────────────────────────────────────────────────
 
 /// Enduring Innocence — {1}{W}{W} Enchantment Creature — Glimmer. 2/1
 /// Lifelink. Draw a card the first time another creature you control with
