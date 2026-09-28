@@ -1729,7 +1729,7 @@ impl GameState {
                             StackItem::Spell { card, .. } if card.id == cid => Some(&**card),
                             _ => None,
                         }))
-                        .map(|c| c.definition.cost.cmc() as i32),
+                        .map(|c| self.zone_mana_value(c) as i32),
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
@@ -4999,6 +4999,19 @@ impl GameState {
                     None => self.requirement_card_off_battlefield(*cid),
                 };
                 let Some(card) = card else { return false; };
+                // CR 709.3b / 709.4 / 715.3b — a split / Adventure / Room
+                // card off the battlefield is read with its zone's face.
+                let face;
+                let card = match bf_card {
+                    None if card.has_face_view() => match self.face_view_of(card) {
+                        Some(v) => {
+                            face = v;
+                            &face
+                        }
+                        None => card,
+                    },
+                    _ => card,
+                };
                 // Layer-4-aware card types for battlefield permanents
                 // (CR 613.2): an artifact-ized creature (Phyrexian
                 // Scriptures I), an animated land, or a devotion-gated god
@@ -6283,6 +6296,11 @@ impl GameState {
         controller: usize,
     ) -> bool {
         use SelectionRequirement as R;
+        if card.has_face_view()
+            && let Some(v) = self.face_view_of(card)
+        {
+            return self.evaluate_requirement_on_card_inner(req, &v, controller);
+        }
         match req {
             R::Any => true,
             R::ManaValueEqualsTriggerAmount => {

@@ -178,3 +178,85 @@ fn cr_608_2d_mistbreath_elder_returns_another_then_grows() {
     let elder = g.battlefield_find(elder).unwrap();
     assert_eq!(elder.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
 }
+
+// ── CR 709.3b / 709.4b / 715.3b — a half's characteristics on the stack ─────
+
+fn stack_card(g: &GameState, id: CardId) -> crabomination::card::CardInstance {
+    g.stack
+        .iter()
+        .find_map(|si| match si {
+            crabomination::game::types::StackItem::Spell { card, .. } if card.id == id => {
+                Some((**card).clone())
+            }
+            _ => None,
+        })
+        .expect("on the stack")
+}
+
+/// CR 715.3b — Stomp on the stack is an instant with only Stomp's
+/// characteristics: prowess triggers and "counter target creature spell"
+/// can't target it.
+#[test]
+fn cr_715_3b_an_adventure_spell_is_not_a_creature_spell() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = main_phase();
+    let monk = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+    let giant = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: giant,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Stomp");
+    let spell = stack_card(&g, giant);
+    assert!(!g.evaluate_requirement_on_card(&R::Creature, &spell, 1), "not a creature spell");
+    assert!(g.evaluate_requirement_on_card(&R::ManaValueAtMost(2), &spell, 1), "MV 2, Stomp's");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(monk).unwrap().power(), 2, "prowess saw a noncreature spell");
+}
+
+/// CR 709.3b / 709.4b — Ice on the stack is a blue MV-2 spell; Fire // Ice in
+/// any other zone has the combined cost {1}{R}{1}{U}: red and blue, MV 4.
+#[test]
+fn cr_709_split_card_characteristics_by_zone() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = main_phase();
+    let fi = g.add_card_to_hand(0, catalog::fire_ice());
+    let in_hand = g.players[0].hand.iter().find(|c| c.id == fi).unwrap().clone();
+    assert!(!g.evaluate_requirement_on_card(&R::ManaValueAtMost(3), &in_hand, 0), "MV 4 in hand");
+    assert!(g.evaluate_requirement_on_card(&R::HasColor(Color::Blue), &in_hand, 0), "blue in hand");
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: fi,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ice");
+    let spell = stack_card(&g, fi);
+    assert!(g.evaluate_requirement_on_card(&R::HasColor(Color::Blue), &spell, 1), "Ice is blue");
+    assert!(!g.evaluate_requirement_on_card(&R::HasColor(Color::Red), &spell, 1), "not red");
+    assert!(g.evaluate_requirement_on_card(&R::ManaValueAtMost(2), &spell, 1), "MV 2 on the stack");
+}
+
+/// CR 709.4b / 702.85a — cascade from a four-drop skips Fire // Ice: in the
+/// library its mana value is 4, both halves', not Fire's 2.
+#[test]
+fn cr_709_4b_cascade_reads_a_split_cards_combined_mana_value() {
+    let mut g = main_phase();
+    let bears = g.next_id();
+    g.players[0].add_to_library_top(bears, catalog::grizzly_bears());
+    let fi = g.next_id();
+    g.players[0].add_to_library_top(fi, catalog::fire_ice());
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, elf);
+    assert!(g.players[0].library.iter().any(|c| c.id == fi), "Fire // Ice went to the bottom");
+    assert!(g.players[0].library.iter().all(|c| c.id != bears), "cascade hit the Bears");
+}

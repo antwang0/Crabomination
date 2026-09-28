@@ -9875,6 +9875,67 @@ impl CardInstance {
         self.adventuring || self.omen_casting
     }
 
+    /// True when [`face_view`](Self::face_view) can differ from the card.
+    #[inline]
+    pub fn has_face_view(&self) -> bool {
+        let d = &**self.definition;
+        d.split.is_some() || d.room.is_some() || self.adventuring || self.omen_casting
+    }
+
+    /// CR 709.3b / 709.4 / 715.3b — this card with the characteristics it has
+    /// in its zone when they aren't the main face's: an Adventure / Omen or a
+    /// split half on the stack has only that half's; a split card or Room
+    /// anywhere else has both halves combined (cost, colors, mana value,
+    /// types). `None` when the main face is the answer. For readers only.
+    pub fn face_view(&self, on_stack: bool) -> Option<CardInstance> {
+        let def = &**self.definition;
+        let mut v = def.clone();
+        let combine = |v: &mut CardDefinition, cost: &ManaCost, types: &[CardType]| {
+            v.cost.symbols.extend(cost.symbols.iter().cloned());
+            for t in types {
+                if !v.card_types.contains(t) {
+                    v.card_types.push(t.clone());
+                }
+            }
+        };
+        match (on_stack, self.alt_spell_half_of(def), def.split.as_deref(), def.room.as_deref()) {
+            (true, Some(h), ..) => {
+                v.name = h.name;
+                v.cost = h.cost.clone();
+                v.card_types = h.card_types.clone();
+                v.subtypes = Subtypes::default();
+                v.supertypes.clear();
+                v.keywords.clear();
+                v.power = 0;
+                v.toughness = 0;
+                v.effect = h.effect.clone();
+            }
+            (true, None, Some(s), _) => match self.split_cast {
+                Some(1) => {
+                    v.cost = s.right.cost.clone();
+                    v.card_types = s.right.card_types.clone();
+                    v.effect = s.right.effect.clone();
+                }
+                // CR 709.4d — a fused split spell has both halves.
+                Some(2) => combine(&mut v, &s.right.cost, &s.right.card_types),
+                _ => return None,
+            },
+            (false, _, Some(s), _) => combine(&mut v, &s.right.cost, &s.right.card_types),
+            (false, _, None, Some(r)) => combine(&mut v, &r.right.cost, &[]),
+            _ => return None,
+        }
+        v.split = None;
+        v.room = None;
+        v.adventure = None;
+        v.omen = None;
+        let mut card = self.clone();
+        card.definition = Definition::new(Arc::new(v));
+        card.adventuring = false;
+        card.omen_casting = false;
+        card.split_cast = None;
+        Some(card)
+    }
+
     pub fn new(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
         let definition = definition.into();
         // CR 123.1 — a new object has no stickers: one built from a stickered

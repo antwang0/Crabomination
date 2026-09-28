@@ -11461,13 +11461,19 @@ impl GameState {
             }
             None => x_value,
         };
+        // CR 709.3b / 715.3b — the spell has only the cast half's
+        // characteristics (Adventure / Omen, a split card's right half, both
+        // halves when fused), so the cast filters and spell-type tallies
+        // (Magecraft / Prowess) read that face.
+        let face = if card.has_face_view() { card.face_view(true) } else { None };
+        let fdef = face.as_ref().map_or_else(|| card.definition.arc(), |f| f.definition.arc());
         // "The next [filter] spell you cast this turn can't be countered" is a
         // one-shot: the matching cast consumes its grant.
         if !self.players[p].next_spell_uncounterable.is_empty() {
             let hit = self.players[p]
                 .next_spell_uncounterable
                 .iter()
-                .position(|f| self.evaluate_requirement_on_card(f, &card, p));
+                .position(|f| self.evaluate_requirement_on_card(f, face.as_ref().unwrap_or(&card), p));
             if let Some(i) = hit {
                 self.players[p].next_spell_uncounterable.remove(i);
             }
@@ -11477,7 +11483,7 @@ impl GameState {
             self.players[p].used_graveyard_this_turn = true;
         }
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
-        self.last_cast_spell_colors = card.definition.printed_color_set();
+        self.last_cast_spell_colors = fdef.printed_color_set();
         {
             // One `Player::deref_mut` for the run: `Player` is a CoW handle,
             // so each write below was its own `Arc::make_mut`.
@@ -11488,7 +11494,7 @@ impl GameState {
             if me.life_alt_next_spell_this_turn {
                 me.life_alt_next_spell_this_turn = false;
             }
-            if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
+            if fdef.card_types.contains(&crate::card::CardType::Sorcery) {
                 me.sorceries_cast_this_turn += 1;
             }
         }
@@ -11503,13 +11509,11 @@ impl GameState {
         // the same name").
         {
             let me = &mut *self.players[p];
-            me.spell_names_cast_this_turn.push(card.definition.name);
+            me.spell_names_cast_this_turn.push(fdef.name);
             me.spell_ids_cast_this_turn.push(card.id);
         }
-        // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
-        // Adventure/Omen half cast is a noncreature spell regardless of the
-        // card's front face.
-        if card.casting_alt_half() || !card.definition.is_creature() {
+        // "First noncreature spell of a turn" tally (Nullstone Gargoyle).
+        if !fdef.is_creature() {
             self.noncreature_spells_cast_this_turn += 1;
         }
         // Per-name lifetime tally — "you've cast another spell named X this
@@ -11536,19 +11540,8 @@ impl GameState {
         if card.cast_from_exile {
             self.players[p].spells_cast_from_exile_this_turn += 1;
         }
-        // CR 715 / 702.183 — when cast as its Adventure/Omen half the card is an
-        // instant/sorcery spell, not a creature spell, so the spell-type
-        // tallies (Magecraft / Prowess) read the half's types.
-        let alt_types = card.alt_spell_half().map(|h| &h.card_types);
-        let is_instant_or_sorcery = match alt_types {
-            Some(types) => {
-                types.contains(&CardType::Instant) || types.contains(&CardType::Sorcery)
-            }
-            None => {
-                card.definition.card_types.contains(&CardType::Instant)
-                    || card.definition.card_types.contains(&CardType::Sorcery)
-            }
-        };
+        let is_instant_or_sorcery = fdef.card_types.contains(&CardType::Instant)
+            || fdef.card_types.contains(&CardType::Sorcery);
         if is_instant_or_sorcery && card.cast_from_graveyard {
             self.players[p].instants_sorceries_cast_from_graveyard_this_turn += 1;
         }
@@ -11560,19 +11553,18 @@ impl GameState {
         let me = &mut *self.players[p];
         if is_instant_or_sorcery {
             me.instants_or_sorceries_cast_this_turn += 1;
-            let mv = card.definition.cost.with_x_value(x_value).cmc();
+            let mv = fdef.cost.with_x_value(x_value).cmc();
             me.greatest_is_mana_value_this_turn = me.greatest_is_mana_value_this_turn.max(mv);
         }
-        if card.definition.cost.color_set().is_multicolored() {
+        if fdef.cost.color_set().is_multicolored() {
             me.multicolored_spells_cast_this_turn += 1;
         }
-        if !card.casting_alt_half() && card.definition.is_creature() {
+        if fdef.is_creature() {
             me.creatures_cast_this_turn += 1;
         }
         // Spell-type tallies for the per-turn lock pieces (Deafening Silence,
-        // Ethersworn Canonist). Read the cast half's types so an Adventure/Omen
-        // instant-or-sorcery half counts as a noncreature spell.
-        let cast_types = alt_types.unwrap_or(&card.definition.card_types);
+        // Ethersworn Canonist).
+        let cast_types = &fdef.card_types;
         if !cast_types.contains(&CardType::Creature) {
             me.noncreature_spells_cast_this_game_turn += 1;
         }
@@ -11583,7 +11575,7 @@ impl GameState {
         // spell (color read off the printed mana cost). The full profile
         // (colors + cast half's types) backs the Trap alternative costs.
         {
-            let colors = card.definition.cost.color_set();
+            let colors = fdef.cost.color_set();
             if colors.contains(crate::mana::Color::Blue)
                 || colors.contains(crate::mana::Color::Black)
             {

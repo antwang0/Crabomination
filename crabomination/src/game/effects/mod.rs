@@ -38430,7 +38430,8 @@ impl GameState {
                     let top = &self.players[p].library[0];
                     let cid = top.id;
                     let is_land = top.definition.card_types.contains(&CardType::Land);
-                    let mv = top.definition.cost.cmc();
+                    // CR 709.4b — a split card's mana value is both halves'.
+                    let mv = self.zone_mana_value(top);
                     let fits = filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, top, p));
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     exiled.push(cid);
@@ -38639,7 +38640,7 @@ impl GameState {
                         Some(f) => crate::game::layers::requirement_matches_card(f, top, p),
                         None => !top.definition.card_types.contains(&CardType::Land),
                     };
-                    let mv = top.definition.cost.cmc();
+                    let mv = self.zone_mana_value(top);
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     exiled.push(cid);
                     if matches && mv <= cap {
@@ -38654,7 +38655,7 @@ impl GameState {
                     exiled.retain(|&x| x != cid);
                 }
                 // Hit the Mother Lode reads what the discover found.
-                let found_mv = hit.and_then(|c| self.find_card_anywhere(c)).map_or(cap, |c| c.definition.cost.cmc());
+                let found_mv = hit.and_then(|c| self.find_card_anywhere(c)).map_or(cap, |c| self.zone_mana_value(c));
                 if self.scratch.discovered_mana_value != found_mv {
                     self.scratch.discovered_mana_value = found_mv;
                 }

@@ -19948,6 +19948,28 @@ impl GameState {
         events
     }
 
+    /// [`CardInstance::face_view`] for a card off the battlefield, knowing
+    /// whether it is a spell on the stack (CR 709.3b / 709.4 / 715.3b).
+    pub(crate) fn face_view_of(&self, card: &CardInstance) -> Option<CardInstance> {
+        let on_stack = self.stack.iter().any(|si| {
+            matches!(si, crate::game::types::StackItem::Spell { card: c, .. } if c.id == card.id)
+        });
+        card.face_view(on_stack)
+    }
+
+    /// A card's mana value in its current zone: a permanent's printed cost,
+    /// else its zone face's (CR 709.4b split cards combined, CR 715.3b an
+    /// Adventure spell's own).
+    pub(crate) fn zone_mana_value(&self, card: &CardInstance) -> u32 {
+        if card.has_face_view()
+            && self.battlefield_find(card.id).is_none()
+            && let Some(v) = self.face_view_of(card)
+        {
+            return v.definition.cost.cmc();
+        }
+        card.definition.cost.cmc()
+    }
+
     /// Nonland cards `p` has discarded in the current resolution scratch.
     pub(crate) fn nonland_discarded_this_resolution(&self, p: usize) -> u32 {
         self.scratch
@@ -24448,9 +24470,12 @@ impl GameState {
         // Veyran, whose magecraft trigger IS that pump under another filter.
         for ev in events {
             if let GameEvent::SpellCast { player, card_id, .. } = ev {
+                // CR 715.3b — Stomp is an instant spell, not a creature one.
                 let is_creature_spell = self.stack.iter().any(|si| matches!(
                     si,
-                    crate::game::types::StackItem::Spell { card, .. } if card.id == *card_id && card.definition.is_creature()
+                    crate::game::types::StackItem::Spell { card, .. } if card.id == *card_id
+                        && card.definition.is_creature()
+                        && !card.casting_alt_half()
                 ));
                 if !is_creature_spell {
                     let prowess_ids: Vec<_> = self.battlefield.iter()
