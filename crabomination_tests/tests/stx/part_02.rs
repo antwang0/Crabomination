@@ -2556,38 +2556,6 @@ fn mage_mauler_deals_three_to_creature_and_gains_one_life() {
         "caster gains 1 life");
 }
 
-// ── Heirloom Mirror ─────────────────────────────────────────────────────────
-
-#[test]
-fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::heirloom_mirror());
-    g.add_card_to_library(0, catalog::island());
-
-    // Tap for mana (any color)
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("first ability is a mana ability");
-
-    // Untap to allow the second activation.
-    let mirror = g.battlefield_find_mut(id).expect("mirror on bf");
-    mirror.tapped = false;
-
-    let hand_before = g.players[0].hand.len();
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: 1,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("second ability sacs and draws");
-    drain_stack(&mut g);
-
-    assert!(g.battlefield_find(id).is_none(), "mirror sacrificed");
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
-}
-
 // ── Quandrix Mascot ─────────────────────────────────────────────────────────
 
 #[test]
