@@ -11504,6 +11504,12 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         if threat >= bar && finalists.iter().any(spends) {
             finalists.retain(spends);
         }
+        let index_of = |f: &Finalist| match &f.action {
+            GameAction::ActivateLoyaltyAbility { ability_index, .. } => *ability_index,
+            _ => usize::MAX,
+        };
+        let candidates: Vec<usize> = finalists.iter().map(index_of).collect();
+        finalists.retain(|f| !super::loyalty_pick::drop_mana_for_impulse(&effective, &candidates, index_of(f)));
         // Pods: an affordable emblem ultimate is taken — its payoff is the
         // rest of the game, which no material eval prices (Ob Nixilis
         // Reignited's −8 and Sorin's −8 were never activated in 183 decks).
@@ -20859,6 +20865,27 @@ mod tests {
                 assert_eq!(ability_index, 1, "picked the targetless draw, not the dead burn");
             }
             _ => panic!("expected a loyalty activation"),
+        }
+    }
+
+    /// Chandra, Torch of Defiance's "+1: exile the top card, you may cast it"
+    /// beats her "+1: Add {R}{R}" (the mana always won and the impulse was
+    /// never activated in 183 pod decks — `server/loyalty_pick.rs`).
+    #[test]
+    fn bot_walker_takes_the_impulse_plus_over_the_mana_plus() {
+        let mut g = two_player_game();
+        let pw = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        match pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("walker activates something") {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, pw);
+                assert_eq!(ability_index, 0, "the impulse +1, not the mana +1");
+            }
+            other => panic!("expected a loyalty activation, got {other:?}"),
         }
     }
 
