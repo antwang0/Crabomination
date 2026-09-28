@@ -324,7 +324,7 @@ pub fn judith_the_scourge_diva() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::NotToken.and(R::OtherThanSource),
+                    filter: R::NotToken,
                 },
             ),
             effect: Effect::DealDamage {

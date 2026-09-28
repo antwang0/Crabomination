@@ -767,6 +767,25 @@ mod recent53 {
         assert_eq!(g.players[1].life, before - 1, "Judith dealt 1 on a nontoken death");
     }
 
+    /// Judith's ruling: "Judith's last ability triggers when Judith dies if
+    /// it's not a token." It excluded its own death.
+    #[test]
+    fn judith_pings_on_her_own_death() {
+        let mut g = two_player_game();
+        let judith = g.add_card_to_battlefield(0, catalog::judith_the_scourge_diva());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+        let before = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Permanent(judith)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt Judith");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(judith).is_none(), "Judith died");
+        assert_eq!(g.players[1].life, before - 1, "and her own death pinged");
+    }
+
     #[test]
     fn marchesas_decree_bleeds_attackers() {
         let mut g = two_player_game();
