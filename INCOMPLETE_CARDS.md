@@ -481,7 +481,7 @@ plain missing fan-out:
 | Kaya, Spirits' Justice | the −2's "for each other player, exile up to one target creature that player controls" can't take `ForEachOpponentTarget`: slot 0 is a fixed own-creature target and `ApplyToTargets` rebinds every supplied target to slot 0. |
 | Absolute Virtue | "you have protection from each of your opponents" is modelled as `ControllerHasHexproof` — the can't-be-targeted half only, not the damage or aura halves. |
 | Damping Engine | the whole "controls more permanents than each other player" lock, plus its sacrifice-to-ignore rider. |
-| Lavinia, Azorius Renegade | "each opponent can't cast noncreature spells with mana value greater than the number of lands **that player** controls" — a per-opponent threshold. |
+| ~~Lavinia, Azorius Renegade~~ ✅ | Stale row (checked 2026-09-28, `01MgDzfC`): `cast_lock::ABOVE_LANDS` compares the spell against the **caster's own** land count (`game/mod.rs`), which is the per-opponent threshold. |
 | Spikeshell Harrier | the speed-comparison clause is dropped (the bounce half is complete). |
 | Grim Reminder | not a gap — `Effect::SearchRevealPunishSameNameCasters` is the per-opponent walk, under a name the regex can't see. |
 
@@ -491,7 +491,7 @@ off by name rather than fixes, both filed here:
 
 | Card | Residual |
 | --- | --- |
-| Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
+| ~~Quartzwood Crasher~~ ✅ | Stale row (checked 2026-09-28, `01MgDzfC`): the trigger is `once_per_batch_summing_damage()` — X is the batch's summed damage to that player. |
 | Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
 ## Cultural Exchange's two player slots (2026-09-20)
