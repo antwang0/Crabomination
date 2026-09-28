@@ -4851,6 +4851,7 @@ impl GameState {
         // Forbidding Spirit's "until your next turn" attack tax expires when
         // the taxed player's own turn begins.
         self.players[self.active_player_idx].attack_tax_until_your_turn = 0;
+        self.players[self.active_player_idx].attack_life_tax_until_your_turn = 0;
         // Deep Water / Dark Sphere / Blood of the Martyr all expire with the
         // turn they were made in.
         for pl in &mut self.players {

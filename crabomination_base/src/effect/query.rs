@@ -1117,7 +1117,8 @@ impl Effect {
             // Coin-flip board wipe — untargeted.
             Effect::CoinFlipEachCreatureDestroyOnTails { .. } => false,
             // Installs a player-scoped attack tax; no cast-time target.
-            Effect::TaxAttackersUntilYourNextTurn { .. } => false,
+            Effect::TaxAttackersUntilYourNextTurn { .. }
+            | Effect::TaxAttackersInLifeUntilYourNextTurn { .. } => false,
             // Player-scoped ETB-counter grant; no cast-time target.
             Effect::CreaturesEnterWithExtraCounterThisTurn { .. } => false,
             Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { .. } => false,

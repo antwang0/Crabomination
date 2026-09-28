@@ -8976,6 +8976,12 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TaxAttackersInLifeUntilYourNextTurn { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                self.players[ctx.controller].attack_life_tax_until_your_turn = n;
+                Ok(())
+            }
+
             Effect::TaxAttackersUntilYourNextTurn { amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 self.players[ctx.controller].attack_tax_until_your_turn = n;

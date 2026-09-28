@@ -11554,7 +11554,8 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0))
+    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0));
+    super::pod_attack::trim_life_taxed_attacks(state, seat, attacks)
 }
 
 /// [`pick_attacks`] under a profile: the greedy declaration every sim,

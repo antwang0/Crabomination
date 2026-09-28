@@ -141,6 +141,19 @@ pub(crate) fn retarget_taxed_attacks(
     moved
 }
 
+/// CR 508.1g / 119.4 — a declaration under a life tax (Sivitri) that would
+/// cost `seat` its life, or more life than it has, loses taxed attackers from
+/// the back until it costs less than its life total. Without a life tax up anywhere
+/// the declaration is returned untouched.
+pub(crate) fn trim_life_taxed_attacks(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+    let life = state.players[seat].life;
+    while state.attack_life_tax_for(&attacks) as i32 >= life {
+        let Some(i) = attacks.iter().rposition(|a| state.attack_life_tax_for(std::slice::from_ref(a)) > 0) else { break };
+        attacks.remove(i);
+    }
+    attacks
+}
+
 /// A defender whose board prohibits *some* attackers ("creatures with power
 /// 2 or less can't attack you") — the spill would have to ask which, so it
 /// leaves that seat alone.

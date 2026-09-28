@@ -4839,6 +4839,11 @@ pub enum Effect {
     /// each." Sets `Player.attack_tax_until_your_turn` on the controller;
     /// cleared at that player's next untap step.
     TaxAttackersUntilYourNextTurn { amount: Value },
+    /// Sivitri, Dragon Master's +1 — "until your next turn, creatures can't
+    /// attack you or planeswalkers you control unless their controller pays
+    /// {amount} life for each of those creatures." Sets
+    /// `Player.attack_life_tax_until_your_turn` on the controller.
+    TaxAttackersInLifeUntilYourNextTurn { amount: Value },
     /// Channel — until end of turn the controller may pay 1 life per point
     /// of colorless shortfall when paying costs ("you may pay 1 life: add
     /// {C}"). Sets `Player.channel_life_for_mana`; the payment funnel

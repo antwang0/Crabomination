@@ -1818,6 +1818,15 @@ impl GameState {
                 return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
             }
         }
+        // CR 508.1g / 119.4 — a life tax (Sivitri): payable only with that
+        // much life.
+        let life_tax = self.attack_life_tax_for(&attacks);
+        if life_tax > 0 {
+            if self.players[p].life < life_tax as i32 {
+                return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
+            }
+            self.pay_life_cost(p, life_tax);
+        }
 
         // CR 508.1g — Floodtide Serpent's attack cost: each such attacker
         // returns one matching permanent its controller controls to hand. The
@@ -6157,6 +6166,24 @@ impl GameState {
     /// lookup — and re-deriving it inside would cost the engine its memo.
     ///
     /// [`declare_attackers_banded`]: Self::declare_attackers_banded
+    /// CR 508.1g — the life `attacks` cost under a defender's "pays N life for
+    /// each" window (Sivitri): per attacker at that player or a planeswalker
+    /// they control.
+    pub(crate) fn attack_life_tax_for(&self, attacks: &[Attack]) -> u32 {
+        if self.players.iter().all(|pl| pl.attack_life_tax_until_your_turn == 0) {
+            return 0;
+        }
+        attacks
+            .iter()
+            .filter_map(|a| match a.target {
+                crate::game::types::AttackTarget::Player(d) => Some(d),
+                crate::game::types::AttackTarget::Planeswalker(pw) => self.battlefield_find(pw).map(|c| c.controller),
+                crate::game::types::AttackTarget::Battle(_) => None,
+            })
+            .map(|d| self.players[d].attack_life_tax_until_your_turn)
+            .sum()
+    }
+
     pub(crate) fn attack_tax_for(
         &self,
         attacks: &[Attack],

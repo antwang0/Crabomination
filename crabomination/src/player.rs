@@ -1144,6 +1144,10 @@ pub struct PlayerData {
     /// statics in `declare_attackers`.
     #[serde(default)]
     pub attack_tax_until_your_turn: u32,
+    /// Sivitri, Dragon Master's +1 — the same window, paid in **life** per
+    /// attacker (CR 119.4 gates it on the attacker's life total).
+    #[serde(default)]
+    pub attack_life_tax_until_your_turn: u32,
     /// Number of upcoming turns this player must skip. Read by the
     /// turn-advance logic in `do_cleanup` — when the engine would hand
     /// the next turn to this player, the counter is decremented and the
@@ -1664,6 +1668,7 @@ impl Player {
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,
             attack_tax_until_your_turn: 0,
+            attack_life_tax_until_your_turn: 0,
             spell_names_cast_this_turn: crate::copyvec::CopyVec::new(),
             spell_ids_cast_this_turn: crate::copyvec::CopyVec::new(),
             forage_graveyard_casts_turn: None,
