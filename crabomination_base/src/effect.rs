@@ -8770,7 +8770,7 @@ pub enum Effect {
         #[serde(default)]
         non_legendary: bool,
     },
-    /// CR 707.9b — the "except …" of a copy effect that just ran on `what`:
+    /// CR 707.9a/b — the "except …" of a copy effect that just ran on `what`:
     /// rewrites the copiable values it installed, so a later copy of `what`
     /// sees them too. `keep_activated` / `keep_triggered` index the copier's
     /// *printed* abilities ("and it has this ability" — Volrath, the

@@ -1982,7 +1982,7 @@ fn worn_powerstone_enters_tapped_as_a_replacement() {
 /// CR 707.9b — Volrath, the Shapestealer's copy is "7/5 and it has this
 /// ability": the copied Bears keep Volrath's P/T and its {1} copy ability.
 #[test]
-fn volrath_copy_is_seven_five_and_keeps_its_ability() {
+fn cr_707_9a_volrath_copy_is_seven_five_and_keeps_its_ability() {
     let mut g = main_phase();
     let volrath = g.add_card_to_battlefield(0, catalog::volrath_the_shapestealer());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2007,7 +2007,7 @@ fn volrath_copy_is_seven_five_and_keeps_its_ability() {
 /// CR 707.9b — Mizzium Transreliquat's {1}{U}{R} copy keeps "this ability"
 /// (its second one) and not its {3} one.
 #[test]
-fn mizzium_transreliquat_permanent_copy_keeps_only_this_ability() {
+fn cr_707_9a_mizzium_transreliquat_permanent_copy_keeps_only_this_ability() {
     let mut g = main_phase();
     let mizz = g.add_card_to_battlefield(0, catalog::mizzium_transreliquat());
     let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
@@ -2033,7 +2033,7 @@ fn mizzium_transreliquat_permanent_copy_keeps_only_this_ability() {
 /// CR 707.9b — Lazav, Dimir Mastermind's copy keeps his name, legendary,
 /// hexproof and the trigger, so he can copy again.
 #[test]
-fn lazav_dimir_mastermind_copy_keeps_name_hexproof_and_trigger() {
+fn cr_707_9b_lazav_dimir_mastermind_copy_keeps_name_hexproof_and_trigger() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = main_phase();
     let lazav = g.add_card_to_battlefield(0, catalog::lazav_dimir_mastermind());
@@ -2054,7 +2054,7 @@ fn lazav_dimir_mastermind_copy_keeps_name_hexproof_and_trigger() {
 /// CR 707.9b — Saheeli, Sublime Artificer's −2 copy is "an artifact in
 /// addition to its other types".
 #[test]
-fn saheeli_sublime_artificer_copy_stays_an_artifact() {
+fn cr_707_9b_saheeli_sublime_artificer_copy_stays_an_artifact() {
     let mut g = main_phase();
     let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_sublime_artificer());
     let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
@@ -2402,7 +2402,7 @@ fn holy_light_mastery_and_loyalist_riders() {
 /// or an artifact was a legal target; Arc Trail's "another target" could
 /// also name the first one twice.
 #[test]
-fn any_target_is_not_any_permanent() {
+fn cr_115_4_any_target_is_not_any_permanent() {
     let mut g = main_phase();
     let land = g.add_card_to_battlefield(1, catalog::forest());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

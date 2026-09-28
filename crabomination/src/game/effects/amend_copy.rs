@@ -1,4 +1,4 @@
-//! `Effect::AmendCopy` — CR 707.9b: the "except …" of a copy effect becomes
+//! `Effect::AmendCopy` — CR 707.9a/b: the "except …" of a copy effect becomes
 //! part of the copiable values it installed (Volrath, the Shapestealer's
 //! "except it's 7/5 and it has this ability").
 
