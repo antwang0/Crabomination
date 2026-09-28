@@ -601,6 +601,19 @@ fn stage_view(cv: &mut crabomination::net::ClientView, scene: CombatScene) {
     cv.step = step;
     cv.active_player = active;
     cv.priority = priority;
+    // What the viewer may choose from, as the server would say: their
+    // untapped creatures, as attackers or as blockers.
+    let untapped: Vec<_> = cv
+        .battlefield
+        .iter()
+        .filter(|p| p.controller == viewer && p.is_creature() && !p.tapped)
+        .map(|p| p.id)
+        .collect();
+    match scene {
+        CombatScene::Plan => cv.legal_attackers = untapped,
+        CombatScene::Blocks => cv.legal_blockers = untapped,
+        _ => {}
+    }
     let (attacker_seat, defender): (usize, fn(usize, usize) -> usize) = match scene {
         CombatScene::Blocks => (1, |_, _| 0),
         CombatScene::Declared => (viewer, defender_for),

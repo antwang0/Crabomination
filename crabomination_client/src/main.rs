@@ -447,6 +447,13 @@ fn main() {
         // Combat, targeting and stack arrows, as geometry (`systems::arrows`).
         .init_resource::<systems::arrows::Arrows>()
         .add_systems(PostUpdate, systems::arrows::render_arrows)
+        // A hovered battlefield card's tilt toward the camera is taken off
+        // before `Update` and put back after it (`animate::HoverTilt`).
+        .add_systems(First, systems::animate::untilt_hovered_cards)
+        .add_systems(
+            PostUpdate,
+            systems::animate::tilt_hovered_cards.before(bevy::transform::TransformSystems::Propagate),
+        )
         .add_systems(Startup, layout_harness::ignore_mouse_for_screenshot)
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
@@ -862,6 +869,7 @@ fn main() {
             (
                 draw_block_arrows,
                 crate::systems::combat_badge::sync_combat_chips,
+                crate::systems::focus::apply_focus_dim,
                 draw_stack_arrows,
                 draw_attack_plan_arrows,
                 draw_legal_target_rings,
@@ -1088,6 +1096,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     asset_server: Res<AssetServer>,
     gfx: Res<GraphicsConfig>,
     quality: Res<RenderQuality>,
@@ -1146,13 +1155,18 @@ fn setup(
     ));
 
     // Ground plane. Dark slate keeps glare off the card faces and lets the
-    // (lit) cards read as the brightest thing on the table.
+    // (lit) cards read as the brightest thing on the table. Felt, under a
+    // pool of light over a duel's boards (`table_cloth`); a game's seat
+    // tints lie over it with the pool fitted to their table.
     const TABLE_COLOR: Color = Color::srgb(0.20, 0.20, 0.23);
+    let cloth = systems::table_cloth::ClothTexture(images.add(systems::table_cloth::cloth_texture()));
+    let ground = Rect::from_center_size(Vec2::ZERO, Vec2::splat(90.0));
     commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(90.0, 90.0).subdivisions(quality.ground_subdivisions()))),
-        MeshMaterial3d(materials.add(TABLE_COLOR)),
+        Mesh3d(meshes.add(systems::table_cloth::table_mesh(ground, systems::table_cloth::play_area(0, 2)))),
+        MeshMaterial3d(materials.add(systems::table_cloth::cloth_material(TABLE_COLOR, &cloth))),
         GroundPlane,
     ));
+    commands.insert_resource(cloth);
 
     let cam = commands.spawn((
         Camera3d::default(),
@@ -1216,7 +1230,6 @@ fn apply_render_quality_change(
     highlight_assets: Option<Res<CardHighlightAssets>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    ground_query: Query<&Mesh3d, With<GroundPlane>>,
     camera_query: Query<Entity, With<MainCamera>>,
     mut commands: Commands,
 ) {
@@ -1237,13 +1250,6 @@ fn apply_render_quality_change(
     if let Some(assets) = &highlight_assets
         && let Some(mut mesh) = meshes.get_mut(&assets.border_mesh) {
             *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
-        }
-
-    if let Ok(ground_mesh) = ground_query.single()
-        && let Some(mut mesh) = meshes.get_mut(&ground_mesh.0) {
-            *mesh = Plane3d::default().mesh().size(90.0, 90.0)
-                .subdivisions(new_quality.ground_subdivisions())
-                .into();
         }
 
     shadow_map.size = new_quality.shadow_map_size();

@@ -2227,7 +2227,7 @@ pub fn sync_game_visuals(
             &CardOwner,
             &BattlefieldCard,
             &Transform,
-            Option<&TapState>,
+            (Option<&TapState>, Option<&CardHoverLift>),
         ),
         (Without<HandCard>, Without<Animating>),
     >,
@@ -3252,7 +3252,7 @@ pub fn sync_game_visuals(
     }
 
     // ── Rebalance battlefield positions + sync tapped state ──────────────────
-    for (entity, game_id, owner, bf, _transform, tap_state) in &bf_cards {
+    for (entity, game_id, owner, bf, _transform, (tap_state, hover)) in &bf_cards {
         if !all_bf_ids.contains(&game_id.0) { continue; }
         let is_land = bf.is_land;
 
@@ -3293,9 +3293,14 @@ pub fn sync_game_visuals(
                 .insert(TapState { tapped: game_tapped });
         }
 
+        // A new view moves the card's resting place, not its hover: zeroing
+        // the lift here dropped a hovered card back onto the table whenever
+        // a view landed under the pointer (an opponent acting), though it
+        // stayed hovered until the pointer left it.
+        let (current_lift, target_lift) = hover.map_or((0.0, 0.0), |h| (h.current_lift, h.target_lift));
         commands.entity(entity).insert(CardHoverLift {
-            current_lift: 0.0,
-            target_lift: 0.0,
+            current_lift,
+            target_lift,
             base_translation: target.translation,
         });
     }

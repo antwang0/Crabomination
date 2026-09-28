@@ -202,6 +202,40 @@ damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
   card on the table and no target arrows, which start at it. It drops
   onto the stack from above. Layout harness: `--stack`.
 
+## Focus while choosing, a felt table, hover tilt (2026-09-28) — shipped
+
+Read off layout-harness screenshots (`--combat target|blocks|plan`,
+`--hover-card`, plain fixture; duel and pod, 1920x1080).
+
+- ✅ **Focus while choosing** (`systems::focus`). While the viewer aims a
+  spell or ability, picks attackers or picks blockers, every card on the
+  table that isn't a choice dims to 38 % through its own face material,
+  fading in and out. The choices: the target's legal set; the server's
+  `legal_attackers` and the planeswalkers and battles an attack may aim
+  at; its `legal_blockers` and the attackers. With no legal set to go by
+  nothing dims. The hand doesn't dim, and neither do a dimmed card's
+  overlays (P/T badge, counter chips): they stay readable.
+- ✅ **A felt table** (`systems::table_cloth`). The ground and the seat tints
+  share a generated, tiling felt texture (mottling, fibres, a faint weave,
+  with its mip chain), and their vertex colours carry a pool of light
+  fitted to the table's boards, falling off past them. Each seat's area
+  has zones printed on it in its colour, as a playmat's: an outline round
+  its board and a card slot under its deck and graveyard, which shows
+  when the pile is empty.
+- ✅ **A hovered battlefield card tilts toward the camera** as it lifts
+  (`animate::HoverTilt`, 8° at full lift). A card's rotation is written
+  outright by the layout, the tap animation and more, so the tilt is taken
+  off in `First` and put back in `PostUpdate` before transform
+  propagation: every other system sees and writes the card's own rotation,
+  and the chips and borders parented to it tilt with it. No pivot entity.
+- ✅ **Bug: a hovered card dropped when a view landed.** The layout's
+  rebalance re-inserted every battlefield card's `CardHoverLift` with its
+  lift zeroed, so an opponent acting under the pointer dropped the hovered
+  card back onto the table while it stayed hovered. The rebalance now
+  moves only the card's resting place.
+- ✅ `CounterType::Ritual` (upstream) named in the client's counter labels;
+  a pod's seat plate never wraps.
+
 ## Life that counts, compact token piles, a phase rail (2026-09-28) — shipped, with a residual
 
 Read off layout-harness screenshots (`--life-change`, `--tokens`; duel and
@@ -311,9 +345,8 @@ Read off layout-harness screenshots of every combat and targeting state
   `BF_HOVER_GROW`): it rises off the table — its shadow slides out — and
   scales up 6 %, and what sits on it (chips, badges) follows. Only a hand
   card lifted; a battlefield card sat still while its preview appeared.
-  - Not done: a tilt toward the camera. A card's rotation is written by the
-    tap animation, the layout and more; a tilt needs a pivot between the
-    card and its face meshes (and the borders and chips parented to it).
+  - The tilt toward the camera followed (2026-09-28, "Focus while
+    choosing, a felt table, hover tilt" above) without a pivot.
 - ✅ **Layout harness:** a `--screenshot` run ignores the mouse (the
   desktop cursor over the window hovered a card and popped its preview
   into the shot); `--hover-card NAME` hovers one on purpose;
@@ -525,12 +558,6 @@ with the name in faint grey — a pile of them reads poorly
 or a drawn token frame, would disambiguate multiple different tokens on the
 battlefield.
 
-### Card Hover Polish
-`animate_hover_lift` currently only translates the card on Y. Modern MTG
-clients combine the lift with a small scale-up (×1.03–1.05), a tilt-
-toward-camera (~5°), and a shadow boost — much more tactile. The
-`CardHovered` marker is already tracked; just extend the animation.
-
 ---
 
 ## Client — UX
@@ -667,7 +694,8 @@ indicator + click target. Slims the 2-D chip strip.
   Modal vs 3-D Hand Consistency.
 - Token stacking ✅ — identical tokens pile with a ×N chip; piles fan
   only three steps (2026-09-28).
-- Valid-target affordance ⏳ — make `ValidTarget` pulse, dim non-targets.
+- Valid-target affordance ✅ — non-choices dim while choosing
+  (`systems::focus`, 2026-09-28); legal targets carry pulsing rings.
 - Card-name → log preview ⏳ — hover region pops Scryfall image. See
   Hover-Dwell Card Preview.
 - Theme variants ⏳ — light / high-contrast / colorblind palette in

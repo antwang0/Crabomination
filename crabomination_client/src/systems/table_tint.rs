@@ -27,13 +27,29 @@ const TABLE: Color = Color::srgb(0.20, 0.20, 0.23);
 /// apart at a glance, little enough that cards stay the brightest thing on
 /// the table.
 const TINT_STRENGTH: f32 = 0.16;
+/// Share of the seat colour in the zones printed on a seat's mat: its
+/// board's outline and its deck and graveyard slots.
+const PRINT_STRENGTH: f32 = 0.42;
+/// Height of the print: just over the tint.
+const PRINT_Y: f32 = TINT_Y + 0.002;
+/// The board outline's line width and corner radius, and a pile slot's
+/// line width and margin around its card.
+const ZONE_LINE: f32 = 0.07;
+const ZONE_CORNER: f32 = 0.9;
+const SLOT_LINE: f32 = 0.06;
+const SLOT_MARGIN: f32 = 0.12;
 
 /// A seat's tint: the table colour moved [`TINT_STRENGTH`] of the way toward
 /// its seat colour. Pure helper.
 pub fn tint_color(seat: usize) -> Color {
+    toward_seat(seat, TINT_STRENGTH)
+}
+
+/// The table colour moved `strength` of the way toward `seat`'s colour.
+fn toward_seat(seat: usize, strength: f32) -> Color {
     let base = TABLE.to_srgba();
     let seat = crate::systems::game_ui::table_awareness::seat_color(seat).to_srgba();
-    let mix = |a: f32, b: f32| a + (b - a) * TINT_STRENGTH;
+    let mix = |a: f32, b: f32| a + (b - a) * strength;
     Color::srgb(mix(base.red, seat.red), mix(base.green, seat.green), mix(base.blue, seat.blue))
 }
 
@@ -44,6 +60,7 @@ pub fn sync_seat_tints(
     view: Res<CurrentView>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    cloth: Res<crate::systems::table_cloth::ClothTexture>,
     existing: Query<Entity, With<SeatTint>>,
     mut built_for: Local<Option<(usize, usize)>>,
 ) {
@@ -56,17 +73,63 @@ pub fn sync_seat_tints(
     }
     *built_for = key;
     let Some((n, viewer)) = key else { return };
+    // Felt, under a pool of light fitted to this table's boards
+    // (`table_cloth`).
+    let area = crate::systems::table_cloth::play_area(viewer, n);
     for seat in 0..n {
         let r = crate::card::layout::seat_region(seat, viewer, n);
         let c = r.center();
         commands.spawn((
-            Mesh3d(meshes.add(Plane3d::default().mesh().size(r.width(), r.height()))),
-            MeshMaterial3d(materials.add(tint_color(seat))),
+            Mesh3d(meshes.add(crate::systems::table_cloth::table_mesh(r, area))),
+            MeshMaterial3d(materials.add(crate::systems::table_cloth::cloth_material(tint_color(seat), &cloth))),
             Transform::from_xyz(c.x, TINT_Y, c.y),
             SeatTint,
             // Despawned with the rest of the match on leaving it.
             crate::systems::game_ui::InGameRoot,
         ));
+
+        // The zones printed on the seat's mat, like a playmat's: an outline
+        // round its board and a slot under its deck and its graveyard, which
+        // shows once the pile beside it is empty.
+        let ink = materials.add(StandardMaterial {
+            base_color: toward_seat(seat, PRINT_STRENGTH),
+            perceptual_roughness: 0.92,
+            reflectance: 0.25,
+            // The outline's mesh faces +Z; laid flat, either side may face up.
+            cull_mode: None,
+            ..default()
+        });
+        let (min, max) = crate::card::layout::seat_board_outline(seat, viewer, n);
+        let board = Rect::new(min.x, min.z, max.x, max.z);
+        let outline = crate::card::create_border_mesh(board.width(), board.height(), ZONE_CORNER, ZONE_LINE, 8);
+        commands.spawn((
+            Mesh3d(meshes.add(outline)),
+            MeshMaterial3d(ink.clone()),
+            Transform::from_xyz(board.center().x, PRINT_Y, board.center().y)
+                .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+            SeatTint,
+            crate::systems::game_ui::InGameRoot,
+        ));
+        let slot = meshes.add(crate::card::create_border_mesh(
+            crate::card::CARD_WIDTH + SLOT_MARGIN * 2.0,
+            crate::card::CARD_HEIGHT + SLOT_MARGIN * 2.0,
+            crate::card::CORNER_RADIUS + SLOT_MARGIN,
+            SLOT_LINE,
+            4,
+        ));
+        let rotation = crate::card::back_face_rotation(seat, viewer, n);
+        for at in [
+            crate::card::deck_position(seat, viewer, n),
+            crate::card::graveyard_position(seat, viewer, n),
+        ] {
+            commands.spawn((
+                Mesh3d(slot.clone()),
+                MeshMaterial3d(ink.clone()),
+                Transform::from_xyz(at.x, PRINT_Y, at.z).with_rotation(rotation),
+                SeatTint,
+                crate::systems::game_ui::InGameRoot,
+            ));
+        }
     }
 }
 
@@ -140,6 +203,9 @@ pub fn sync_seat_name_plates(
             SeatNamePlate(p.seat),
             Text::new(plate_label(cv, p, ticker.shown(p.seat, p.life))),
             ui_fonts.tf(13.0),
+            // One line, always: laid out while parked off screen, a plate at
+            // the window's edge could wrap "You ♥ 40" under itself.
+            TextLayout::no_wrap(),
             TextColor(crate::theme::TEXT_PRIMARY),
             BackgroundColor(crate::theme::HUD_BG),
             BorderColor::all(crate::systems::game_ui::table_awareness::seat_color(p.seat)),

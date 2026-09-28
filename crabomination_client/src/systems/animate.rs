@@ -68,6 +68,69 @@ pub fn animate_hover_lift(
     }
 }
 
+/// How far a hovered battlefield card turns its face toward the camera at
+/// full lift.
+const BF_HOVER_TILT: f32 = 0.14;
+
+/// The turn a hovered battlefield card's face takes toward the camera, on
+/// top of the rotation the rest of the game gives it. Recorded so it can be
+/// taken off again: a card's rotation belongs to the layout, the tap
+/// animation and more, which write it outright, and a tilt folded into it
+/// would compound frame on frame. [`untilt_hovered_cards`] takes the tilt off
+/// before `Update`, so every other system sees and writes the card's own
+/// rotation; [`tilt_hovered_cards`] puts it back after them, before the
+/// transforms propagate — no pivot entity between a card and its face, and
+/// the badges, borders and chips parented to it tilt with it.
+#[derive(Component)]
+pub struct HoverTilt(Quat);
+
+/// The turn toward `eye` for a card at `at` whose face points along
+/// `normal`, lifted `lift` (0-1) of the way: its face turns
+/// [`BF_HOVER_TILT`] toward the eye, or straight at it if that's nearer.
+pub(crate) fn hover_tilt(normal: Vec3, at: Vec3, eye: Vec3, lift: f32) -> Quat {
+    let to_eye = (eye - at).normalize_or_zero();
+    let axis = normal.cross(to_eye);
+    if axis.length_squared() < 1e-8 || lift <= 0.0 {
+        return Quat::IDENTITY;
+    }
+    let angle = normal.angle_between(to_eye).min(BF_HOVER_TILT) * lift.clamp(0.0, 1.0);
+    Quat::from_axis_angle(axis.normalize(), angle)
+}
+
+/// Bevy system (`First`): take last frame's hover tilt off each card.
+pub fn untilt_hovered_cards(mut cards: Query<(&mut Transform, &mut HoverTilt)>) {
+    for (mut transform, mut tilt) in &mut cards {
+        if tilt.0 != Quat::IDENTITY {
+            transform.rotation = tilt.0.inverse() * transform.rotation;
+            tilt.0 = Quat::IDENTITY;
+        }
+    }
+}
+
+/// Bevy system (`PostUpdate`, before transform propagation): tilt each
+/// hovered battlefield card's face toward the camera as it lifts.
+pub fn tilt_hovered_cards(
+    mut commands: Commands,
+    camera: Query<&GlobalTransform, With<crate::MainCamera>>,
+    mut cards: Query<(Entity, &mut Transform, &CardHoverLift, Option<&mut HoverTilt>), With<BattlefieldCard>>,
+) {
+    let Ok(eye) = camera.single().map(GlobalTransform::translation) else { return };
+    for (entity, mut transform, lift, applied) in &mut cards {
+        let lifted = lift.current_lift / BF_HOVER_LIFT;
+        if lifted < 0.01 {
+            continue;
+        }
+        let tilt = hover_tilt(transform.rotation * Vec3::Z, transform.translation, eye, lifted);
+        transform.rotation = tilt * transform.rotation;
+        match applied {
+            Some(mut applied) => applied.0 = tilt,
+            None => {
+                commands.entity(entity).try_insert(HoverTilt(tilt));
+            }
+        }
+    }
+}
+
 /// How fast a [`CombatLurch`] strike plays: `progress` advances by this per
 /// second, so the full out-and-back arc resolves in ~1/this seconds (0.4 s).
 const COMBAT_STRIKE_SPEED: f32 = 2.5;
@@ -701,5 +764,26 @@ pub fn dispatch_animation_queue(
             QueuedAnim::HandSlide(anim) => { e.insert(anim); }
             QueuedAnim::SendToGraveyard(anim) => { e.insert(anim); }
         }
+    }
+}
+
+#[cfg(test)]
+mod hover_tilt_tests {
+    use super::*;
+
+    #[test]
+    fn a_hovered_card_turns_its_face_toward_the_camera() {
+        let (normal, at, eye) = (Vec3::Y, Vec3::ZERO, Vec3::new(0.0, 30.0, 20.0));
+        let to_eye = eye.normalize();
+        let tilted = hover_tilt(normal, at, eye, 1.0) * normal;
+        // A full lift turns the face BF_HOVER_TILT toward the eye...
+        assert!((normal.angle_between(tilted) - BF_HOVER_TILT).abs() < 1e-4);
+        assert!(tilted.angle_between(to_eye) < normal.angle_between(to_eye));
+        // ...half a lift, half as far; none, not at all.
+        let half = hover_tilt(normal, at, eye, 0.5) * normal;
+        assert!((normal.angle_between(half) - BF_HOVER_TILT / 2.0).abs() < 1e-4);
+        assert_eq!(hover_tilt(normal, at, eye, 0.0), Quat::IDENTITY);
+        // A card already facing the eye stays put.
+        assert_eq!(hover_tilt(to_eye, at, eye, 1.0), Quat::IDENTITY);
     }
 }

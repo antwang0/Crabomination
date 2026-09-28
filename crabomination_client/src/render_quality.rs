@@ -115,16 +115,6 @@ impl RenderQuality {
         }
     }
 
-    /// Ground plane mesh subdivisions. Higher = smoother lighting across the ground.
-    pub fn ground_subdivisions(self) -> u32 {
-        match self {
-            Self::Low => 0,
-            Self::Medium => 4,
-            Self::High => 8,
-            Self::Ultra => 10,
-        }
-    }
-
     /// MSAA sample count. Higher = smoother geometry edges at increased GPU cost.
     /// Low disables MSAA (SMAA post-process still applies on Medium+).
     pub fn msaa(self) -> Msaa {
