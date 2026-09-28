@@ -2981,6 +2981,29 @@ fn anim_pakal_mints_gnomes_on_attack() {
     assert!(g.attacking_ids().contains(&gnomes[0]), "Gnome is attacking");
 }
 
+/// Anim Pakal's trigger is "whenever you attack with one or more non-Gnome
+/// creatures" (CR 508.1): a Bears attack without Anim Pakal fires it.
+#[test]
+fn anim_pakal_fires_when_another_non_gnome_attacks() {
+    let mut g = two_player_game();
+    let anim = g.add_card_to_battlefield(0, catalog::anim_pakal_thousandth_moon());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(anim).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "the Bears' attack grew Anim Pakal",
+    );
+    let gnomes = g.battlefield.iter().filter(|c| c.definition.name == "Gnome").count();
+    assert_eq!(gnomes, 1);
+}
+
 /// Cavernous Maw animates into a 3/3 only with three+ Caves (board + graveyard).
 #[test]
 fn cavernous_maw_needs_three_caves() {

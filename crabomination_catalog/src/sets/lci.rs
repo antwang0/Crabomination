@@ -5992,9 +5992,9 @@ pub fn kutzil_malamet_exemplar() -> CardDefinition {
     }
 }
 
-/// Anim Pakal, Thousandth Moon — {1}{R}{W} 1/2 Legendary Human Soldier. When it
-/// attacks, put a +1/+1 counter on it, then create that many tapped, attacking
-/// 1/1 Gnome artifact tokens. (Modeled off Anim's own attack.)
+/// Anim Pakal, Thousandth Moon — {1}{R}{W} 1/2 Legendary Human Soldier. Whenever
+/// you attack with one or more non-Gnome creatures, put a +1/+1 counter on it,
+/// then create that many tapped, attacking 1/1 Gnome artifact tokens.
 pub fn anim_pakal_thousandth_moon() -> CardDefinition {
     use crate::card::TokenDefinition;
     let gnome = TokenDefinition {
@@ -6019,23 +6019,35 @@ pub fn anim_pakal_thousandth_moon() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![on_attack(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-            Effect::CreateTokenAttacking {
-                who: PlayerRef::You,
-                count: Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
+        // "Whenever you attack with one or more non-Gnome creatures" — any
+        // attack of yours with a non-Gnome in it, Anim Pakal's own or not.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
+                Predicate::AttackedWithCreatureMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Gnome),
+                    ))),
                 },
-                definition: std::sync::Arc::new(gnome),
-                cleanup: crate::effect::AttackingTokenCleanup::None,
-                defender: None,
-            },
-        ]))],
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    definition: std::sync::Arc::new(gnome),
+                    cleanup: crate::effect::AttackingTokenCleanup::None,
+                    defender: None,
+                },
+            ]),
+        }],
         ..Default::default()
     }
 }
