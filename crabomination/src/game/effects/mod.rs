@@ -32,6 +32,7 @@ mod exchange_power;
 mod library_dig;
 mod order_of_succession;
 mod owners_control;
+mod return_own;
 mod player_counters;
 mod counter_kinds;
 mod counter_blitz;
@@ -20963,6 +20964,10 @@ impl GameState {
                 self.separated_piles =
                     (vec![one], ids.into_iter().filter(|id| *id != one).collect());
                 self.run_piles_then_clear(chosen, other, ctx, events)
+            }
+
+            Effect::ReturnOneYouControl { filter, keep_best } => {
+                self.return_one_you_control(filter, *keep_best, effect, ctx, events)
             }
 
             Effect::ChooseOneAtRandomAmong { what, chosen, other } => {

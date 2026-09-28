@@ -4756,6 +4756,11 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// "Return a [`filter`] you control to its owner's hand", chosen as the
+    /// effect resolves — not a target (Whitemane Lion's ruling), so hexproof
+    /// is no bar and nothing fizzles. `keep_best` names the most valuable one
+    /// (Time Wipe saves it); otherwise the cheapest, a tapped one first.
+    ReturnOneYouControl { filter: SelectionRequirement, keep_best: bool },
     /// "Choose one of [`what`] at random" — `ChooseOneAmong` with a uniform
     /// pick instead of a player's: `chosen` runs against it and `other`
     /// against the rest (The Nipton Lottery's "choose a creature at random …

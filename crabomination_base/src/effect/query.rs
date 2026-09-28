@@ -799,6 +799,7 @@ impl Effect {
             | Effect::SecretCouncilPermanentVote { .. }
             | Effect::SecretCouncilPermanentVoteMost { .. }
             | Effect::RemoveCountersFromAmongThen { .. }
+            | Effect::ReturnOneYouControl { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens
