@@ -26,6 +26,10 @@ CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 ATTACKS = re.compile(r"whenever (?:~|this creature|one or more [^,.]{0,40}?) attacks? (?:a player|an opponent)\b"
                      r"|whenever you attack (?:a player|an opponent) with", re.I)
 PLAYER_SIDE = re.compile(r"IsAttackingOpponentPlayer|on_attack_player|YouAttackedPlayer|AttackersOfPlayerMatching")
+ONE_OR_MORE = re.compile(r"whenever one or more [^.]{0,60}? deal combat damage to (?:a player|an opponent|one or more players)", re.I)
+# Forth Eorlingas!: its own delayed effect, and becoming the monarch twice is
+# becoming it once.
+BATCH_ALLOW = {"Killian's Confidence", "Forth Eorlingas!"}
 TEXT = re.compile(r"combat damage to a player or (?:a )?planeswalker|combat damage to an opponent or (?:a )?planeswalker", re.I)
 
 
@@ -63,8 +67,15 @@ def main():
     attackers = [n for n in names if ATTACKS.search(oracle(n))]
     src.update(bodies([n for n in attackers if n not in src]))
     rows += sorted(f"{n}\t(attacks a player)" for n in attackers if n in src and not PLAYER_SIDE.search(src[n]))
+    batchers = [n for n in names if ONE_OR_MORE.search(oracle(n)) and "only once each turn" not in oracle(n)
+                and n not in BATCH_ALLOW]
+    src.update(bodies([n for n in batchers if n not in src]))
+    rows += sorted(f"{n}\t(one or more: no batch)" for n in batchers
+                   if n in src and "once_per_batch" not in src[n] and "your_creatures_hit" not in src[n]
+                   and "_connect(" not in src[n])
     print("\n".join(rows))
-    print(f"# {len(rows)} rows ({len(hits)} damage, {len(attackers)} attack cards)", file=sys.stderr)
+    print(f"# {len(rows)} rows ({len(hits)} damage, {len(attackers)} attack, {len(batchers)} one-or-more cards)",
+          file=sys.stderr)
     if "--gate" in sys.argv and rows:
         sys.exit(1)
 
