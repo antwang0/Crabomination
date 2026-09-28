@@ -91,8 +91,7 @@ pub fn lyzolda_the_blood_witch() -> CardDefinition {
 
 /// Stormscale Anarch — {2}{R}{R} 2/2 Lizard Shaman. `{2}{R}, Discard a card at
 /// random: This creature deals 2 damage to any target. If the discarded card
-/// was multicolored, it deals 4 damage instead.` (The random discard is
-/// modeled as the lowest-value hand card.)
+/// was multicolored, it deals 4 damage instead.`
 pub fn stormscale_anarch() -> CardDefinition {
     CardDefinition {
         name: "Stormscale Anarch",
@@ -107,6 +106,7 @@ pub fn stormscale_anarch() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
             effect: Effect::DealDamage {
                 to: target_any(),
                 amount: Value::IfPred {
