@@ -64823,11 +64823,10 @@ pub fn luminous_broodmoth() -> CardDefinition {
     }
 }
 
-/// Quartzwood Crasher — {2}{R}{R}{G} 6/6 Dinosaur Beast with trample. Whenever it
-/// deals combat damage to a player, create an X/X green Dinosaur Beast with
-/// trample, where X is that damage. Fires per trampler you control that
-/// connects (the printed "one or more … X is the total" batch is per
-/// creature here).
+/// Quartzwood Crasher — {2}{R}{R}{G} 6/6 Dinosaur Beast with trample. Whenever
+/// one or more creatures you control with trample deal combat damage to a
+/// player, create an X/X green Dinosaur Beast with trample, where X is the
+/// damage those creatures dealt to that player (one per damaged player).
 pub fn quartzwood_crasher() -> CardDefinition {
     CardDefinition {
         name: "Quartzwood Crasher",
@@ -64845,7 +64844,9 @@ pub fn quartzwood_crasher() -> CardDefinition {
                 .with_filter(crate::effect::Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasKeyword(Keyword::Trample),
-                }),
+                })
+                // CR 603.2c — one per damaged player, X the tramplers' total.
+                .once_per_batch_summing_damage(),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,

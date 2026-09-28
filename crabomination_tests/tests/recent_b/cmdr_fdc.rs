@@ -893,6 +893,32 @@ fn cr_603_2c_anowon_mills_the_batch_total_and_draws_once() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the batch");
 }
 
+/// CR 603.2c — Quartzwood Crasher: "one or more creatures you control with
+/// trample deal combat damage to a player" is one trigger per player, and its
+/// token is X/X for the damage those tramplers dealt — the Bears' hit adds
+/// nothing.
+#[test]
+fn cr_603_2c_quartzwood_crasher_makes_one_token_for_the_trample_total() {
+    let mut g = main_phase();
+    let q = g.add_card_to_battlefield(0, catalog::quartzwood_crasher());
+    let maw = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: q, target: AttackTarget::Player(1) },
+            Attack { attacker: maw, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ],
+        0,
+        |_| {},
+    );
+    let tokens: Vec<CardId> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Dinosaur Beast").map(|c| c.id).collect();
+    assert_eq!(tokens.len(), 1, "one trigger for the batch");
+    assert_eq!(pt(&g, tokens[0]), (12, 12), "6 + 6 trample damage");
+}
+
 /// CR 601.2c — for each opponent, up to one of their nonland permanents.
 #[test]
 fn enigma_thief_bounces_one_permanent_from_each_opponent() {
