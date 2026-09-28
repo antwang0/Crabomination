@@ -204,6 +204,28 @@ fn coram_plays_from_whatever_was_milled() {
     assert!(g.perform_action(cast_action(mine, None, None, None)).is_err(), "one spell a turn");
 }
 
+/// Coram's permission reaches every graveyard: the bot's candidate gate
+/// skipped it when the bot's OWN graveyard was empty (a strict debug pod,
+/// seed 3404040, tripped `gated_block!`'s "skipped a real candidate"; in
+/// release the cast was silently missed).
+#[test]
+fn coram_bot_sees_an_opponents_milled_spell_with_an_empty_graveyard() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::coram_the_undertaker());
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    let mill = crabomination::effect::Effect::Mill {
+        who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::EachOpponent),
+        amount: crabomination::effect::Value::ONE,
+    };
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mill, &ctx).expect("mill");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    assert!(g.players[0].graveyard.is_empty());
+    flood(&mut g, 0);
+    let _ = HeuristicBot::new().next_action(&g, 0);
+}
+
 /// An instant aimed at one opponent's nonland permanent is copied onto a
 /// different opponent's (CR 707.10c — the copy is yours).
 #[test]

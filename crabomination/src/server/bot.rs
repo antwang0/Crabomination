@@ -7384,7 +7384,8 @@ pub(super) fn cast_candidates<'a>(
         | if facts.prepared { spec::PREPARED } else { 0 }
         | if facts.grants_gy_cast
             && (state.active_player_idx == seat || facts.grants_gy_cast_any_turn)
-            && !state.players[seat].graveyard.is_empty()
+            // Coram casts from ANY graveyard, so an empty own one isn't a skip.
+            && (!state.players[seat].graveyard.is_empty() || state.has_milled_play_permission(seat))
         {
             spec::GY_GRANT
         } else {
