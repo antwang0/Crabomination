@@ -2204,6 +2204,32 @@ fn vraska_grows_deathtouch_attacker() {
     assert_eq!(g.battlefield_find(biter).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "grew from connecting");
 }
 
+/// Vraska's "deals damage to a player" is any damage: a deathtouch Prodigal
+/// Sorcerer pinging a player grows too (it was combat-only).
+#[test]
+fn vraska_grows_a_deathtouch_pinger() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vraska_swarms_eminence());
+    let mut tim = catalog::prodigal_sorcerer();
+    tim.keywords.push(Keyword::Deathtouch);
+    let tim = g.add_card_to_battlefield(0, tim);
+    g.clear_sickness(tim);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tim).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// Vraska's Assassin token destroys a planeswalker it deals combat damage to.
 #[test]
 fn vraska_assassin_destroys_planeswalker() {

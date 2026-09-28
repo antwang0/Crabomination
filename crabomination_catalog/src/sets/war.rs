@@ -4485,9 +4485,12 @@ pub fn vraska_swarms_eminence() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![
+            // "Deals damage", combat or not (a deathtouch pinger grows too).
+            // The planeswalker half is combat-only: no noncombat
+            // planeswalker-damage event exists.
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
+                    EventKind::DealsDamageToPlayer,
                     EventScope::YourControl,
                 )
                 .with_filter(deathtouch_dealer()),
