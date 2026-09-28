@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_lorehold.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Archaeomancer's Map** — "that player controls more lands than you" is
-//!   read as *an* opponent controlling more.
 //! - **Key to the City** — "up to one target creature" always takes a target.
 //! - **Laelia, the Blade Reforged** — only her own attack's library exile
 //!   counts (no event announces one), and an exile from your battlefield

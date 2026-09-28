@@ -9,8 +9,6 @@
 //! - **Heroic Sacrifice** — damage to your noncreature permanents is
 //!   redirected too.
 //! - **Scarlet Witch, Chaotic Avenger** — the two cards are exiled face up.
-//! - **Speed, Young Avenger** — "can't be blocked except by creatures with
-//!   haste" is unblockable.
 //! - **Winter Soldier, Reborn Avenger** — the Hero's counter is put on as it
 //!   lands, not as it enters.
 

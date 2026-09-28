@@ -3709,9 +3709,6 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
 - **The Epic copy doesn't re-choose targets.** CR 702.50a's copies "may choose
   new targets"; `process_epic` reuses the original's. Eternal Dominion /
   Neverending Torment / Undying Flames all want it.
-- **Erayo's Essence counters the first *opponent* spell via `once_per_turn`.**
-  Exact at two players; in multiplayer it should be per-opponent, which needs a
-  per-actor trigger budget rather than the per-trigger one.
 - **Sasaya's Essence doubles by `ExtraManaKind::Mirror`, not by same-named
   land count.** One extra mana per tap instead of one per other same-named
   land you control.

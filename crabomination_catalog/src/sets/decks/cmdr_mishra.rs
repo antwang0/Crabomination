@@ -8,8 +8,6 @@
 //!   rename would.
 //! - **Ashnod the Uncaring** — the copy is found through the ability's source,
 //!   so an ability whose source was itself sacrificed can't be copied.
-//! - **Blast-Furnace Hellkite** — "creatures attacking your opponents" also
-//!   counts creatures attacking an opponent's planeswalker.
 //! - **Smelting Vat** — each card is capped at the sacrificed artifact's mana
 //!   value, not the pair's total.
 //! - **Lithoform Engine** — the ability copy is Strionic Resonator's (the

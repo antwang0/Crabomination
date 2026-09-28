@@ -185,7 +185,7 @@ lists were picked.
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
 | **Riveteers Rampage** (NCC precon) BRG | Henzie "Toolbox" Torre | BRG | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Grand Larceny** (OTC precon) BGU | Gonti, Canny Acquisitor | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Party Time** (CLB precon) WB | Nalia de'Arnise | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (Calculating Lich, Glorious Protector) |
+| **Party Time** (CLB precon) WB | Nalia de'Arnise | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (Glorious Protector) |
 | **Faceless Menace** (C19 precon) BGU | Kadena, Slinking Sorcerer | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (Gift of Doom, Rayami, Road of Return, Vesuvan Shapeshifter, Volrath) |
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
@@ -686,8 +686,7 @@ opponent's top spell in a clone and, when it would take two or more of our
 nonland permanents, casts a phase-out / indestructible instant aimed at every
 own-side slot. Residuals: **Collective Effort**'s escalate is paid at
 resolution, **Goldwardens' Gambit** hands each token your best unattached
-Equipment (no pick), **Neyali** counts a token attacking a planeswalker as
-attacking a player. Four-seat pods beside Adriana / Giada / Gisela (seed
+Equipment (no pick). Four-seat pods beside Adriana / Giada / Gisela (seed
 10131, 1,000 games, 999 decided + 1 draw, every card played): Neyali 13.0 %.
 Seed 10141, 300 games at 43 seats: **299 decided + 1 draw, 0 caps, zero
 panics** (230.8 k actions/game, 427 s on 4 threads). `--bench` byte-identical.
@@ -2209,8 +2208,7 @@ Eminent One. Seventeen cards were missing; the primitives:
 (`affected_includes_gated`), so Workshop Elders' flying misses the artifact it
 animates (CR 613.8) — ENGINE_BACKLOG. Residuals: **Mishra**'s Warform keeps the
 artifact's name; **Ashnod** can't copy an ability whose source was the thing
-sacrificed; **Blast-Furnace Hellkite** also counts attacks on planeswalkers;
-**Smelting Vat** caps each card, not the pair's total; **Lithoform Engine**
+sacrificed; **Smelting Vat** caps each card, not the pair's total; **Lithoform Engine**
 copies abilities as Strionic Resonator does; **Workshop Elders** (above);
 **Glint Raker**'s reveal isn't optional.
 Four-seat pods beside Ms. Bumbleflower / Derevi / Lord Windgrace (seed 10170, 1,000 games, all decided): Mishra 14.6 %; a 300-game census (seed 10171) leaves no card of the four unplayed; 12 seats (85..74, seed 10192): 200 / 200 decided. `--bench` byte-identical. ⚠ The first gate, on a binary built before rebasing over the Insatiable Frugivore / Chatterfang loop fixes, ran 1h45m on one 1,000-game block without finishing; the rebuilt binary does it in 6.6 s — the hang was not this list's.

@@ -7,8 +7,6 @@
 //!   standing `Escalate` approximation), tapping your first untapped creature.
 //! - **Goldwardens' Gambit** — each token takes your highest-mana-value
 //!   *unattached* Equipment (no pick); an attached one is never moved.
-//! - **Neyali** — "tokens attack a player" counts tokens attacking a
-//!   planeswalker an opponent controls too.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

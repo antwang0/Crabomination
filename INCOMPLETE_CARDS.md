@@ -2134,7 +2134,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Nashi, Moon Sage's Scion | Grand Larceny (OTC) | any of the exiled cards may be played this turn, not only one. |
 | 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card is the engine's pick and may be cast with mana of any type. |
 | 🟡 Thief of Sanity | Grand Larceny (OTC) | the exiled card is the engine's pick (the highest mana value nonland). |
-| 🟡 Calculating Lich | Party Time (CLB) | a creature attacking a planeswalker drains that planeswalker's controller too. |
 | 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |
@@ -2253,7 +2252,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gimbal, Gremlin Prodigy | Tinker Time (MOC) | the trample grant matches printed card types, so an animated artifact doesn't get it (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
 | 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |
-| 🟡 Blast-Furnace Hellkite | Mishra's Burnished Banner (BRC) | "creatures attacking your opponents" also counts creatures attacking an opponent's planeswalker. |
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
 | 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the ability copy is Strionic Resonator's: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
