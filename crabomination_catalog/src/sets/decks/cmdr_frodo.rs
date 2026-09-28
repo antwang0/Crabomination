@@ -488,7 +488,7 @@ pub fn lobelia_defender_of_bag_end() -> CardDefinition {
             sac_other_filter: Some((R::Artifact, 1)),
             effect: Effect::ChooseMode(vec![
                 Effect::GrantMayPlay {
-                    what: Selector::one_of(Selector::CardExiledWithSource),
+                    what: Selector::best_of(Selector::CardExiledWithSource),
                     duration: MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,

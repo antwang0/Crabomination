@@ -253,7 +253,7 @@ pub fn evercoat_ursine() -> CardDefinition {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
                     .with_filter(Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::ONE)),
                 effect: Effect::CastWithoutPayingImmediate {
-                    what: Selector::one_of(Selector::CardExiledWithSource),
+                    what: Selector::best_of(Selector::CardExiledWithSource),
                     source_zone: Zone::Exile,
                     exile_after: false,
                     copy: false,

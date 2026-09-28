@@ -546,7 +546,7 @@ pub fn quintorius_loremaster() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Spirit)), 1)),
             effect: Effect::CastWithoutPayingImmediate {
-                what: Selector::Take { inner: Box::new(Selector::CardExiledWithSource), count: Box::new(Value::ONE) },
+                what: Selector::TakeGreatestManaValue { inner: Box::new(Selector::CardExiledWithSource), count: Box::new(Value::ONE) },
                 source_zone: Zone::Exile,
                 exile_after: false,
                 pay_own_cost: false,
