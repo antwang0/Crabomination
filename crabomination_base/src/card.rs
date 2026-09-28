@@ -4570,6 +4570,10 @@ pub struct CardDefinition {
     /// instead of the graveyard.
     #[serde(default)]
     pub library_bottom_on_resolve: bool,
+    /// "Shuffle this card into its owner's library" as the spell finishes
+    /// resolving (the Sun's Zenith cycle).
+    #[serde(default)]
+    pub shuffle_into_library_on_resolve: bool,
     /// CR 702.62 — "Exile [this] with N time counters on it" as it resolves
     /// (Suspended Sentence): with suspend on the card, it is suspended again.
     #[serde(default)]

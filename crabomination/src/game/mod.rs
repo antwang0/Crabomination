@@ -28521,6 +28521,12 @@ impl GameState {
             self.players[owner].library.push(card);
             return Ok(events);
         }
+        if card.definition.shuffle_into_library_on_resolve && !card.is_token {
+            let owner = card.owner;
+            self.players[owner].library.push(card);
+            self.shuffle_library(owner, &mut events);
+            return Ok(events);
+        }
         if card.definition.exile_on_resolve || card.definition.exile_on_resolve_time_counters > 0 {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
