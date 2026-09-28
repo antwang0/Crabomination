@@ -7353,8 +7353,12 @@ pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
         station: vec![
             StationBand {
                 min: 10,
+                // "Whenever you attack" — once per declaration, not once per
+                // attacking creature (CR 508.3a, 603.2c). A station band's
+                // trigger rides the per-attacker walk (the `YouAttack` walk
+                // reads printed triggers only), batched to one fire.
                 triggers: vec![TriggeredAbility {
-                    event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                    event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_batch(),
                     effect: Effect::ApplyToTargets {
                         max_targets: 1,
                         min_targets: 0,

@@ -2890,6 +2890,31 @@ fn dawnsire_20plus_band_is_2020_flier() {
     assert!(post.keywords().contains(&Keyword::Flying));
 }
 
+/// Dawnsire at 10+: "Whenever you attack" is once per declaration — two
+/// attackers put ONE 100-damage trigger on the stack, not two (CR 508.3a).
+#[test]
+fn dawnsire_10plus_fires_once_per_attack() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::dawnsire_sunstar_dreadnought());
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 10);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::craw_wurm());
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    assert_eq!(g.stack.len(), 1, "one trigger for the declaration");
+}
+
 /// Infinite Guideline Station ETB mints a tapped Robot per multicolored permanent.
 #[test]
 fn infinite_guideline_station_etb_robots_per_multicolored() {
