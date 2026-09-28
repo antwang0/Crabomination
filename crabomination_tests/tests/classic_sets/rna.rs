@@ -981,7 +981,9 @@ fn silhana_wayfinder_stacks_top() {
     assert!(top.definition.card_types.contains(&CardType::Creature) || top.definition.card_types.contains(&CardType::Land), "top is a creature or land");
 }
 
-/// Gyre Engineer untaps whenever you activate an adapt ability (CR 702.108).
+/// Gyre Engineer is a plain mana creature: it shipped an invented "whenever you
+/// activate an adapt ability, untap it" rider, so it stays tapped (CR 701.46
+/// adapt has no such trigger on this card).
 #[test]
 fn gyre_engineer_untaps_on_adapt() {
     let mut g = two_player_game();
@@ -997,7 +999,7 @@ fn gyre_engineer_untaps_on_adapt() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility { card_id: munc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("adapt");
     drain_stack(&mut g);
-    assert!(!g.battlefield_find(eng).unwrap().tapped, "engineer untapped by adapt trigger");
+    assert!(g.battlefield_find(eng).unwrap().tapped, "no adapt trigger on Gyre Engineer");
 }
 
 // ── Batch 5 (2026-07-24) functionality tests ─────────────────────────────────

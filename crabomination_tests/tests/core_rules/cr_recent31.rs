@@ -18,12 +18,23 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
-/// CR 702.108c — activating an adapt ability triggers "whenever you activate an
-/// adapt ability" abilities, even on a different creature.
+/// CR 701.46 (adapt; this test cited 702.108c, which is prowess) — activating
+/// an adapt ability triggers "whenever you activate an adapt ability"
+/// abilities, even on a different creature. No printed card has the trigger
+/// (it rode Gyre Engineer by mistake), so a test body carries it.
 #[test]
 fn cr_702_108c_adapt_activation_triggers() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector};
     let mut g = two_player_game();
-    let eng = g.add_card_to_battlefield(0, catalog::gyre_engineer());
+    let untapper = crabomination::card::CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AdaptAbilityActivated, EventScope::YourControl),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..catalog::gyre_engineer()
+    };
+    let eng = g.add_card_to_battlefield(0, untapper);
     let eel = g.add_card_to_battlefield(0, catalog::skitter_eel()); // {5}{U}: Adapt 2
     g.clear_sickness(eng);
     g.clear_sickness(eel);
