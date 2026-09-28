@@ -227,7 +227,7 @@ pub fn ethereal_forager() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::MayDo {
             description: "Return an instant or sorcery card exiled with Ethereal Forager to its owner's hand?".into(),
             body: Box::new(Effect::Move {
-                what: Selector::Take {
+                what: Selector::TakeGreatestManaValue {
                     inner: Box::new(Selector::MatchingAmong {
                         inner: Box::new(Selector::CardExiledWithSource),
                         filter: instant_or_sorcery(),

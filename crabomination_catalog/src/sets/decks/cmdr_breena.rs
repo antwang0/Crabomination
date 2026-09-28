@@ -117,7 +117,8 @@ pub fn author_of_shadows() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent, filter: None },
             Effect::GrantMayPlay {
-                what: Selector::Take {
+                // "Choose a nonland card exiled this way": the priciest.
+                what: Selector::TakeGreatestManaValue {
                     inner: Box::new(Selector::ExiledThisResolution { filter: R::Nonland }),
                     count: Box::new(Value::ONE),
                 },

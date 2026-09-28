@@ -1989,7 +1989,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
 | 🟡 Breena, the Demagogue | Silverquill Statement (C21) | the two +1/+1 counters go on your greatest-power creature (the engine's pick). |
-| 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the first nonland card exiled this way, not a chosen one. |
+| 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the engine's pick (the greatest mana value among the nonland cards exiled), not a prompt. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
 | 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
@@ -2100,7 +2100,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
-| 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
+| 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the engine's pick (the greatest-mana-value linked instant or sorcery), not a prompt. |
 | 🟡 Nimble Obstructionist | Timeless Wisdom (C20) | "you don't control" reads the ability's source permanent's controller. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
 | 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
@@ -2156,7 +2156,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
-| 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles the first instant or sorcery card of each graveyard rather than a chosen one. |
+| 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles each graveyard's greatest-mana-value instant or sorcery card (the engine's pick, not a prompt). |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |

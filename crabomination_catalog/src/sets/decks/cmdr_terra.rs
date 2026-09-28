@@ -816,7 +816,7 @@ pub fn summon_esper_valigarmanda() -> CardDefinition {
                 Effect::ForEach {
                     selector: Selector::Player(PlayerRef::EachPlayer),
                     body: Box::new(Effect::Move {
-                        what: Selector::Take {
+                        what: Selector::TakeGreatestManaValue {
                             inner: Box::new(Selector::CardsInZone {
                                 who: PlayerRef::Triggerer,
                                 zone: Zone::Graveyard,

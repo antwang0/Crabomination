@@ -278,11 +278,14 @@ fn stinging_study_ignores_a_commander_in_the_graveyard() {
 fn author_of_shadows_steals_a_spell() {
     let mut g = pod(3);
     let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let dragon = g.add_card_to_graveyard(2, catalog::shivan_dragon());
     g.add_card_to_graveyard(2, catalog::forest());
     let au = g.add_card_to_hand(0, catalog::author_of_shadows());
     cast(&mut g, 0, au, None).expect("cast");
     assert!(g.players[1].graveyard.is_empty() && g.players[2].graveyard.is_empty());
-    assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_some()));
+    // The chosen card is the priciest nonland one, and only that one.
+    assert!(g.exile.iter().any(|c| c.id == dragon && c.may_play_until.is_some()));
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_none()));
 }
 
 /// Boreas Charger fetches the land gap to the landiest opponent in Plains.
