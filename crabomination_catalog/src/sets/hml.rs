@@ -455,9 +455,16 @@ pub fn narwhal() -> CardDefinition {
 pub fn reef_pirates() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
+            // "…deals damage to an opponent, that player mills a card": the
+            // damaged player (`Target(0)`), not every opponent.
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(
+                crate::effect::Predicate::EntityMatches {
+                    what: Selector::Player(PlayerRef::Target(0)),
+                    filter: R::OpponentPlayer,
+                },
+            ),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::ONE,
             },
         }],

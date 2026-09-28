@@ -6430,8 +6430,9 @@ fn siege_dragon_sweeps_only_the_defending_players_ground() {
 /// CR 506.2 — "defending player" is the one seat being attacked. Agate-Blade
 /// Assassin drained every opponent, Kogla's attack could destroy a
 /// bystander's artifact, and Nicol Bolas made every opponent discard their
-/// hand on any damage it dealt (also Bloodvial Purveyor, Reaper of Night,
-/// Rust Scarab, Spectral Bears, Siege Dragon).
+/// hand on any damage it dealt, Reef Pirates milled every opponent (also
+/// Bloodvial Purveyor, Reaper of Night, Rust Scarab, Spectral Bears, Siege
+/// Dragon).
 #[test]
 fn defending_player_clauses_reach_only_the_attacked_seat() {
     use crabomination::game::types::{Attack, AttackTarget};
@@ -6442,8 +6443,14 @@ fn defending_player_clauses_reach_only_the_attacked_seat() {
     let assassin = g.add_card_to_battlefield(0, catalog::agate_blade_assassin());
     let kogla = g.add_card_to_battlefield(0, catalog::kogla_the_titan_ape());
     let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas());
-    for c in [assassin, kogla, bolas] {
+    let pirates = g.add_card_to_battlefield(0, catalog::reef_pirates());
+    for c in [assassin, kogla, bolas, pirates] {
         g.clear_sickness(c);
+    }
+    for seat in [1, 2] {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
     }
     let bystander_ring = g.add_card_to_battlefield(2, catalog::sol_ring());
     for seat in [1, 2] {
@@ -6451,7 +6458,7 @@ fn defending_player_clauses_reach_only_the_attacked_seat() {
     }
     let (l1, l2) = (g.players[1].life, g.players[2].life);
     g.perform_action(GameAction::DeclareAttackers(
-        [assassin, kogla, bolas].iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
+        [assassin, kogla, bolas, pirates].iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
     ))
     .expect("attack seat 1");
     for _ in 0..40 {
@@ -6465,4 +6472,6 @@ fn defending_player_clauses_reach_only_the_attacked_seat() {
     assert!(g.players[1].life < l1 - 1, "the drain and the damage hit seat 1");
     assert!(g.players[1].hand.is_empty(), "Nicol Bolas emptied the damaged player's hand");
     assert_eq!(g.players[2].hand.len(), 1, "and only that player's");
+    assert_eq!(g.players[1].library.len(), 2, "Reef Pirates milled the damaged player");
+    assert_eq!(g.players[2].library.len(), 3, "and nobody else");
 }
