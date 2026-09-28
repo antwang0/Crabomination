@@ -116,6 +116,24 @@ fn calculating_lich_taxes_attacks() {
     assert_eq!(g.players[0].life, g.players[0].starting_life, "not us");
 }
 
+/// CR 506.3 / 508.1b — "attacks one of your opponents" is the player: an
+/// attack on an opponent's planeswalker drains nobody.
+#[test]
+fn cr_506_3_calculating_lich_ignores_planeswalker_attacks() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::calculating_lich());
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let a = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: a, target: AttackTarget::Planeswalker(walker) }]))
+        .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, g.players[1].starting_life);
+}
+
 /// Deep Gnome Terramancer: a land put onto the battlefield (not played, CR
 /// 305.1) under an opponent's control fetches a Plains; a played one doesn't.
 #[test]

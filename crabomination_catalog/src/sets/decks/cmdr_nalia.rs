@@ -2,8 +2,6 @@
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_nalia.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Calculating Lich** — an attack on a planeswalker drains its
-//!   controller too.
 //! - **Glorious Protector** — the exiled creatures are the controller's pick
 //!   through the choose-cards prompt (the bot keeps them all home).
 
@@ -147,14 +145,13 @@ pub fn burakos_party_leader() -> CardDefinition {
 
 /// Calculating Lich — {4}{B}{B} 5/5 Zombie Wizard, menace. A creature
 /// attacking one of your opponents drains that player 1.
-/// Residual: an attack on a planeswalker drains its controller too.
 pub fn calculating_lich() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
-                what: Selector::Player(PlayerRef::DefendingPlayer),
-                filter: R::OpponentPlayer,
+                what: Selector::TriggerSource,
+                filter: R::IsAttackingOpponentPlayer,
             }),
             effect: Effect::LoseLife { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
         }],
