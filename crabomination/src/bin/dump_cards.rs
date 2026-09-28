@@ -448,6 +448,38 @@ fn main() {
         }
         return;
     }
+    // `--activated`: `name\tindex\ttap\tuntap\tsac\tsorcery\tonce\tlife\tmv`
+    // per printed activated ability (the card's own, not a token's) —
+    // `scripts/audit_activated_costs.py` reads the cost flags against the oracle.
+    if args.iter().any(|a| a == "--activated") {
+        let mut seen: HashSet<String> = HashSet::default();
+        for factory in factories {
+            let def = factory();
+            let mut faces = vec![def];
+            if let Some(back) = faces[0].back_face.clone() {
+                faces.push(*back);
+            }
+            for face in faces {
+                if !seen.insert(face.name.to_string()) {
+                    continue;
+                }
+                for (i, a) in face.activated_abilities.iter().enumerate() {
+                    println!(
+                        "{}\t{i}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+                        face.name,
+                        u8::from(a.tap_cost),
+                        u8::from(a.untap_self_cost),
+                        u8::from(a.sac_cost),
+                        u8::from(a.sorcery_speed),
+                        u8::from(a.once_per_turn),
+                        a.life_cost,
+                        a.mana_cost.cmc(),
+                    );
+                }
+            }
+        }
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--grep") {
         let needle = args.get(i + 1).expect("--grep NEEDLE");
         let mut seen: HashSet<String> = HashSet::default();
