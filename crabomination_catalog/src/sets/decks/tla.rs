@@ -1560,7 +1560,7 @@ pub fn lo_and_li_twin_tutors() -> CardDefinition {
 
 /// Fire Navy Trebuchet — {2}{B} 0/4 artifact Wall. Defender, reach. Whenever
 /// you attack, make a tapped-and-attacking 2/1 flying Construct (Ballistic
-/// Boulder).
+/// Boulder), sacrificed at the beginning of the next end step.
 pub fn fire_navy_trebuchet() -> CardDefinition {
     CardDefinition {
         name: "Fire Navy Trebuchet",
@@ -1590,7 +1590,7 @@ pub fn fire_navy_trebuchet() -> CardDefinition {
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
                 }),
-                cleanup: Default::default(),
+                cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtNextEndStep,
                 defender: None,
             },
         }],

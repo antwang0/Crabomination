@@ -810,7 +810,8 @@ fn lo_and_li_anthem_and_tutor() {
 }
 
 /// Fire Navy Trebuchet mints a tapped, attacking Ballistic Boulder when you
-/// attack.
+/// attack, sacrificed at the beginning of the next end step (the sacrifice
+/// was missing: the Boulder stayed).
 #[test]
 fn fire_navy_trebuchet_makes_attacking_boulder() {
     let mut g = two_player_game();
@@ -822,6 +823,12 @@ fn fire_navy_trebuchet_makes_attacking_boulder() {
     let b = boulder.unwrap();
     assert!(b.tapped, "enters tapped");
     assert!(g.attacking.iter().any(|a| a.attacker == b.id), "and attacking");
+    let boulder = b.id;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(boulder).is_none(), "sacrificed at the end step");
 }
 
 /// Hog-Monkey gives menace to a counter-bearing creature at combat.
