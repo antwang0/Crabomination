@@ -757,9 +757,12 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
                                 what: Selector::TriggerSource,
                                 filter: R::Creature,
                             }),
-                            effect: Effect::Fight {
-                                attacker: Selector::TriggerSource,
-                                defender: target_filtered(R::Creature),
+                            effect: Effect::MayDo {
+                                description: "Have it fight target creature?".into(),
+                                body: Box::new(Effect::Fight {
+                                    attacker: Selector::TriggerSource,
+                                    defender: target_filtered(R::Creature),
+                                }),
                             },
                         }],
                         statics: vec![],

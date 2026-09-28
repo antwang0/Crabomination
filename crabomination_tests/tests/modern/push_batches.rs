@@ -922,6 +922,45 @@ fn liliana_last_hope_minus_two_mills_and_returns_a_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
 }
 
+/// Liliana, the Last Hope's emblem makes X Zombies, X = two plus the Zombies
+/// you control (it shipped as a flat two).
+#[test]
+fn liliana_last_hope_emblem_scales_with_zombies() {
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
+    g.battlefield_find_mut(lily).unwrap().add_counters(CounterType::Loyalty, 7);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 2, target: None, x_value: None,
+    }).expect("Lily -7");
+    drain_stack(&mut g);
+    let zombies = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(zombies(&g), 2, "two plus no Zombies");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(zombies(&g), 2 + 4, "two plus the two Zombies already there");
+}
+
+/// Kiora, Master of the Depths' emblem: "you MAY have it fight" — a declined
+/// fight leaves both creatures alone.
+#[test]
+fn kiora_master_of_the_depths_emblem_fight_is_optional() {
+    let mut g = two_player_game();
+    let kiora = g.add_card_to_battlefield(0, catalog::kiora_master_of_the_depths());
+    g.battlefield_find_mut(kiora).unwrap().add_counters(CounterType::Loyalty, 8);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kiora, ability_index: 2, target: None, x_value: None,
+    }).expect("Kiora -8");
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let ogre = g.add_card_to_battlefield(0, catalog::gray_ogre());
+    g.fire_self_etb_triggers(ogre, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.damage == 0), "declined: no fight");
+}
+
 #[test]
 fn teferi_hero_plus_one_draws() {
     let mut g = two_player_game();

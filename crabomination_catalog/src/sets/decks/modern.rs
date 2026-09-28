@@ -29219,9 +29219,8 @@ pub fn liliana_of_the_veil() -> CardDefinition {
 /// Liliana, the Last Hope — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
 /// **+1**: Up to one target creature gets -2/-1 until your next turn.
 /// **−2**: Mill two, then return a creature card from your graveyard to hand.
-/// **−7**: emblem that mints Zombies each end step (approximated as a fixed
-/// two-token end-step emblem; the "+number of Zombies you control" scaling is
-/// dropped).
+/// **−7**: emblem — at the beginning of your end step, create X 2/2 Zombies,
+/// X = two plus the number of Zombies you control.
 pub fn liliana_the_last_hope() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup, TokenDefinition};
     let zombie = TokenDefinition {
@@ -29294,9 +29293,16 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                             EventKind::StepBegins(crate::game::TurnStep::End),
                             EventScope::YourControl,
                         ),
+                        // X = two plus the number of Zombies you control.
                         effect: Effect::CreateToken {
                             who: PlayerRef::You,
-                            count: Value::Const(2),
+                            count: Value::Sum(vec![
+                                Value::Const(2),
+                                Value::CountOf(Box::new(Selector::EachPermanent(
+                                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ))),
+                            ]),
                             definition: std::sync::Arc::new(zombie),
                         },
                     }],
