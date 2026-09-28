@@ -39,6 +39,7 @@ mod fantastic_four;
 mod turtle_power;
 mod blast_from_the_past;
 mod voyage;
+mod amend_copy;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -33064,6 +33065,11 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::AmendCopy { what, keep_activated, keep_triggered, pt, keep_name, legendary, keywords, card_types } => {
+                let (pt, name, legend) = (*pt, *keep_name, *legendary);
+                self.amend_copy(what, keep_activated, keep_triggered, pt, name, legend, keywords, card_types, ctx)
             }
 
             Effect::BecomeCopyOfFor { what, source, duration, non_legendary } => {

@@ -2106,6 +2106,7 @@ impl Effect {
             | Effect::BecomeCopyOfFor { what, source, .. } => {
                 sel_has_target(what) || sel_has_target(source)
             }
+            Effect::AmendCopy { what, .. } => sel_has_target(what),
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
             Effect::TargetPlayerThen { .. } => true,
             Effect::CopySpell { what, count }

@@ -8757,6 +8757,33 @@ pub enum Effect {
         #[serde(default)]
         non_legendary: bool,
     },
+    /// CR 707.9b — the "except …" of a copy effect that just ran on `what`:
+    /// rewrites the copiable values it installed, so a later copy of `what`
+    /// sees them too. `keep_activated` / `keep_triggered` index the copier's
+    /// *printed* abilities ("and it has this ability" — Volrath, the
+    /// Shapestealer; Mizzium Transreliquat keeps only its second one).
+    AmendCopy {
+        what: Selector,
+        #[serde(default)]
+        keep_activated: Vec<u8>,
+        #[serde(default)]
+        keep_triggered: Vec<u8>,
+        /// "except it's 7/5" — base power and toughness.
+        #[serde(default)]
+        pt: Option<(i32, i32)>,
+        /// "except its name is [the copier's]".
+        #[serde(default)]
+        keep_name: bool,
+        /// "it's legendary in addition to its other types".
+        #[serde(default)]
+        legendary: bool,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+        /// "it's an artifact in addition to its other types" (Saheeli,
+        /// Sublime Artificer).
+        #[serde(default)]
+        card_types: Vec<crate::card::CardType>,
+    },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
     /// The controller chooses one basic land type, then every land picked by
