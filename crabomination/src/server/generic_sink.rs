@@ -4,7 +4,7 @@
 //! The ability census (`bot_ladder --card-census`) counted ~1,500 printed
 //! abilities of played cards that no pod seat ever activated. Each candidate
 //! is dry-run and scored against passing; the best improvement is taken, in
-//! the post-combat main phase.
+//! the post-combat main phase or the end step just before the seat's turn.
 //!
 //! Two seats never reach it, so the two-player bench pool is untouched.
 
@@ -19,9 +19,20 @@ use crate::effect::Effect;
 /// The best-scoring uncovered activation `seat` can make in its main phase,
 /// if any beats doing nothing.
 pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
-    // The post-combat main phase only: leftover mana, once a turn, with
-    // combat settled — half the probes of asking in both main phases.
-    if state.players.len() <= 2 || !state.stack.is_empty() || state.step != TurnStep::PostCombatMain {
+    // The post-combat main phase: leftover mana, once a turn, with combat
+    // settled — half the probes of asking in both main phases. And the end
+    // step of the opponent seated just before us: a creature tapped there
+    // untaps before it could block, so "tap five untapped Vampires"
+    // (Captivating Vampire) and "tap three untapped Zombies" (Cryptbreaker)
+    // are free — neither was ever activated in a 6-seat census.
+    let window = match state.step {
+        TurnStep::PostCombatMain => state.active_player_idx == seat,
+        TurnStep::End => {
+            state.active_player_idx != seat && state.next_alive_seat(state.active_player_idx) == seat
+        }
+        _ => false,
+    };
+    if state.players.len() <= 2 || !state.stack.is_empty() || !window {
         return None;
     }
     let mut baseline: Option<i32> = None;
@@ -45,7 +56,13 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
             }
             // A cost-free ability could be taken every tick; the no-progress
             // watch would catch it, but it never needs to start.
-            if !ab.tap_cost && ab.mana_cost.symbols.is_empty() && !ab.sac_cost && ab.sac_other_filter.is_none() {
+            if !ab.tap_cost
+                && ab.mana_cost.symbols.is_empty()
+                && !ab.sac_cost
+                && ab.sac_other_filter.is_none()
+                && ab.tap_others_cost.is_none()
+                && ab.tap_n_filter.is_none()
+            {
                 continue;
             }
             // What the material eval can't see (a library order, a shield
@@ -182,5 +199,30 @@ mod tests {
             matches!(got, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Player(0)), .. }) if card_id == rod),
             "got {got:?}"
         );
+    }
+
+    /// Captivating Vampire at the end step of the opponent seated before
+    /// us: tapping five Vampires is free there, so the steal is taken — and
+    /// not at an earlier opponent's end step (the Vampires would sit tapped
+    /// through the next opponent's turn).
+    #[test]
+    fn captivating_vampire_steals_at_the_end_step_before_our_turn() {
+        let mut g = crate::game::multi_player_game(4);
+        let cv = g.add_card_to_battlefield(0, crate::catalog::captivating_vampire());
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, crate::catalog::vampire_nighthawk());
+        }
+        g.add_card_to_battlefield(3, crate::catalog::serra_angel());
+        g.add_card_to_battlefield(1, crate::catalog::serra_angel());
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 2;
+        assert!(pick_generic_ability(&g, 0, &EvalWeights::default()).is_none(), "seat 3 still to go");
+        g.active_player_idx = 3;
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == cv), "got {got:?}");
+        g.perform_action(got.unwrap()).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Serra Angel"), "an Angel stolen");
     }
 }

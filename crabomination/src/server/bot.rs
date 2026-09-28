@@ -3419,6 +3419,7 @@ impl HeuristicBot {
                         .or_else(|| super::selection_sink::pick_cash_in(state, seat))
                         .or_else(|| super::end_step_ping::pick_end_step_ping(state, seat))
                         .or_else(|| super::graveyard_hate::pick_graveyard_hate(state, seat))
+                        .or_else(|| super::generic_sink::pick_generic_ability(state, seat, &self.weights))
                 {
                     return Some(BotStep::plain(cycle));
                 }

@@ -2699,9 +2699,14 @@ mod tests {
         // (0 → 2) change winner; aggregate within noise (3,000 games, seed
         // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
         // turns).
+        // Re-blessed 2026-09-28 (`server/generic_sink.rs`): the generic
+        // activation sink also runs at the end step of the opponent seated
+        // just before the bot. Same winners; seed 43 takes 21 more actions.
+        // Aggregate within noise (3,000 games, seed 43: 43.0/17.3/14.3/25.4
+        // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 68, 3132),
-            (43, Some(2), 86, 4155),
+            (43, Some(2), 86, 4176),
             (4242, Some(3), 61, 2962),
         ];
         let decks = rofellos_pod(4);
