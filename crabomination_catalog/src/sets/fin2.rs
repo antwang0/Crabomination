@@ -1389,10 +1389,15 @@ pub fn venat_heart_of_hydaelyn() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
+            // "This ability triggers only once each turn" (CR 603.3d) — not
+            // "your first legendary spell each turn": one cast before Venat
+            // arrived doesn't use it up.
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellFirstMatchingThisTurn(R::HasSupertype(
-                    Supertype::Legendary,
-                ))),
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasSupertype(Supertype::Legendary),
+                })
+                .once_per_turn(),
             effect: draw(1),
         }],
         activated_abilities: vec![ActivatedAbility {
