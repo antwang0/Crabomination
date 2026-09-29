@@ -25,6 +25,40 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Token faces, lighter textures, nested rings (2026-09-29) — shipped
+
+Read off layout-harness screenshots (`--tokens`, duel and pod; `--hover-card`);
+memory from `/proc` RSS and `nvidia-smi`, three runs a side on the pod fixture.
+
+- ✅ **Tokens without art get a drawn face** (`card::proxy`): a frame in the
+  token's colours, its name on a dark bar, a big initial in the art box (so
+  Goblins and Treasures differ at a glance), "Token Creature — Goblin", its
+  keywords and a P/T box where the P/T badge sits. The facts are encoded
+  into a `cards/proxy_….png` path and drawn by the placeholder reader, so
+  the 3-D face, the hover preview and the Alt popup all show it and
+  identical tokens share one texture. Any other art-less card's placeholder
+  is the same frame with just its name. A token with art on disk keeps it.
+- ✅ **Token art is fetched by exact name.** The prefetch searched
+  `is:token t:<name>` and took the first hit, which is often a *named*
+  token: "Soldier" was Ajani's Pridemate (a 2/2 Cat Soldier) and stood in
+  for every 1/1 Soldier. It is `is:token !"<name>"` now, first single-faced
+  printing; the old files are purged once (marker
+  `cards/.token_art_by_exact_name`) and refetched.
+- ✅ **Card textures reach the GPU once, with mips, and leave the CPU**
+  (`card::mipmap::generate_card_mipmaps`): a new card image is held from
+  the render world while its chain builds off-thread, then handed over as
+  `RENDER_WORLD` only. Pod fixture: RSS 1486-1554 → 1316-1372 MiB, GPU
+  1126 → 814 MiB over idle. No un-mipped first frames.
+- ✅ **Highlight rings nest**: hover and dying rings are wider than the
+  state rings they sit under, so a hovered castable (or activatable) card
+  shows both colours; one width for all let the top ring hide the rest.
+- ✅ The glow sorts after every other transparent mesh (its one mesh's
+  centre wandered with the lights, so light over an arrow swapped order
+  frame to frame). The felt, seat tints and prints and the eliminated
+  shroud are `Pickable::IGNORE`. The hover preview builds its notes once
+  per card and view instead of every frame. High and Ultra drop SMAA: over
+  4x MSAA it took 10 % of card text's edge energy for no visible edge gain.
+
 ## Sharper cards, true colour, fitted shadows, idle frame pacing (2026-09-29) — shipped
 
 Read off layout-harness screenshots at Low and High (duel, pod, `--hover-card`,
@@ -676,12 +710,10 @@ insertion order (most recently added = top) matches player intuition and helps
 with "top of graveyard" effects.
 
 ### Token Labeling
-Token cards in the 3D view use the Scryfall-fetched art path, which often
-resolves to a generic back image, or (no art on disk) to a blank white face
-with the name in faint grey — a pile of them reads poorly
-(`--layout-fixture 2 --tokens`).  A text overlay (name + P/T) on token cards,
-or a drawn token frame, would disambiguate multiple different tokens on the
-battlefield.
+✅ Shipped 2026-09-29 — art-less tokens get a drawn face (`card::proxy`),
+and token art is fetched by exact name. Residual ⏳: downloaded token art is
+the first printing *named* like the token, which can still differ from the
+game's token in colour or P/T (the P/T badge corrects the numbers).
 
 ---
 

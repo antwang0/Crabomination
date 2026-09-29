@@ -143,3 +143,12 @@ pub fn card_mesh(meshes: &mut Assets<Mesh>, segments: usize) -> Handle<Mesh> {
 pub fn card_border_mesh(meshes: &mut Assets<Mesh>, segments: usize) -> Handle<Mesh> {
     meshes.add(create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments))
 }
+
+/// How far the hover ring and the dying ring reach past the card's edge.
+/// Every highlight ring starts at the edge, and they stack in this order
+/// from the bottom — hover, dying, then the state rings (castable,
+/// activatable, …) at [`BORDER_WIDTH`] — so each ring below shows as a band
+/// outside the one above it: a hovered castable card reads green *and* gold.
+/// With one width for all, the top ring covered the rest exactly.
+pub const HOVER_BORDER_WIDTH: f32 = BORDER_WIDTH * 1.7;
+pub const DYING_BORDER_WIDTH: f32 = BORDER_WIDTH * 1.35;

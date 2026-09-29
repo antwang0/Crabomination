@@ -57,13 +57,18 @@ impl RenderQuality {
         }
     }
 
-    /// SMAA anti-aliasing preset. `None` disables SMAA entirely (Low quality).
+    /// SMAA anti-aliasing preset. `None` disables SMAA entirely.
+    ///
+    /// Only Medium runs it, over its 2x MSAA. High and Ultra have 4x MSAA,
+    /// which already smooths every geometry edge, and SMAA's edge detection
+    /// also finds the edges *inside* textures — the card's print: measured
+    /// on a card's text box at High (1920x1080), the post pass took 10 % of
+    /// the text's edge energy (Laplacian 286.6 → 258.7) for no visible gain
+    /// on card or chip edges, the tapped card's slanted ones included.
     pub fn smaa_preset(self) -> Option<SmaaPreset> {
         match self {
-            Self::Low => None,
+            Self::Low | Self::High | Self::Ultra => None,
             Self::Medium => Some(SmaaPreset::Low),
-            Self::High => Some(SmaaPreset::High),
-            Self::Ultra => Some(SmaaPreset::Ultra),
         }
     }
 

@@ -33,6 +33,11 @@ pub fn init_shared_assets(
 ) {
     let card_mesh_handle = card_mesh(meshes, segments);
     let border_mesh_handle = card_border_mesh(meshes, segments);
+    let ring = |width: f32| {
+        super::mesh::create_border_mesh(super::CARD_WIDTH, super::CARD_HEIGHT, super::CORNER_RADIUS, width, segments)
+    };
+    let hover_border_mesh = meshes.add(ring(super::HOVER_BORDER_WIDTH));
+    let dying_border_mesh = meshes.add(ring(super::DYING_BORDER_WIDTH));
 
     // Lives at the asset-dir root rather than under `cards/` because
     // `cards/` is gitignored (downloaded card art).
@@ -85,6 +90,8 @@ pub fn init_shared_assets(
     });
     commands.insert_resource(CardHighlightAssets {
         border_mesh: border_mesh_handle,
+        hover_border_mesh,
+        dying_border_mesh,
         border_material,
         castable_material,
         alt_castable_material,
@@ -247,8 +254,17 @@ pub fn card_front_material(
     materials: &mut Assets<StandardMaterial>,
     asset_server: &AssetServer,
 ) -> Handle<StandardMaterial> {
-    let asset_path = scryfall::card_asset_path(name);
-    let texture: Handle<Image> = asset_server.load(&asset_path);
+    card_face_material(&scryfall::card_asset_path(name), materials, asset_server)
+}
+
+/// [`card_front_material`] for a face image at `asset_path` — a card's art,
+/// or a drawn face (`card::proxy`).
+pub fn card_face_material(
+    asset_path: &str,
+    materials: &mut Assets<StandardMaterial>,
+    asset_server: &AssetServer,
+) -> Handle<StandardMaterial> {
+    let texture: Handle<Image> = asset_server.load(asset_path.to_string());
     // Unlit: render the card art exactly as authored, like the Alt-zoom
     // popup (a screen-space `ImageNode`). A lit PBR material dims the flat,
     // angled face below full white and lets ambient light lift the dark text

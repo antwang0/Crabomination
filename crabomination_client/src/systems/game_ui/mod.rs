@@ -88,6 +88,34 @@ pub struct InFlightAnims<'w, 's> {
     pub to_hand: Query<'w, 's, (&'static GameCardId, &'static crate::card::ReturnToHandAnimation)>,
     pub hand_zoom: Res<'w, crate::card::HandZoom>,
     pub gameplay: Res<'w, crate::config::GameplayConfig>,
+    /// Where card art is on disk, so an art-less token can be drawn a face
+    /// (`battlefield_face_path`). Absent on the web build.
+    pub art: Option<Res<'w, crate::scryfall::CardArtDir>>,
+}
+
+/// The image a permanent entering the battlefield shows: its card art, or —
+/// for a token whose art isn't on disk — a drawn face (`card::proxy`) with
+/// its name, colours, types, keywords and base P/T. A token's art is
+/// fetched only for a short list of common tokens, so without this most
+/// tokens were a white card with their name in faint grey.
+fn battlefield_face_path(c: &crabomination::net::PermanentView, art: Option<&crate::scryfall::CardArtDir>) -> String {
+    if !c.is_token || art.is_none_or(|a| a.has_art(&c.name)) {
+        return crate::scryfall::card_asset_path(&c.name);
+    }
+    let types: Vec<String> = c.card_types.iter().map(|t| format!("{t:?}")).collect();
+    let mut type_line = format!("Token {}", types.join(" "));
+    if !c.creature_types.is_empty() {
+        type_line.push_str(" — ");
+        type_line.push_str(&c.creature_types.join(" "));
+    }
+    let face = crate::card::proxy::ProxyFace {
+        name: c.name.clone(),
+        colors: c.colors.clone(),
+        type_line,
+        keywords: c.keywords.iter().map(crate::systems::counter_tooltip::keyword_label).collect(),
+        pt: c.is_creature().then_some((c.base_power, c.base_toughness)),
+    };
+    crate::card::proxy::proxy_asset_path(&face)
 }
 
 /// Bundled mutable resources for `handle_game_input` to stay within Bevy's 16-param limit.
@@ -2878,7 +2906,7 @@ pub fn sync_game_visuals(
         if seat == viewer {
             continue;
         }
-        let to_spawn: Vec<(CardId, String, bool, bool, bool)> = cv
+        let to_spawn: Vec<(CardId, String, bool, bool, bool, String)> = cv
             .battlefield
             .iter()
             .filter(|c| {
@@ -2887,10 +2915,13 @@ pub fn sync_game_visuals(
                     // Already on-screen as a stack-card entity (transition step above handles it).
                     && !visual_opp_stack_ids.contains(&c.id)
             })
-            .map(|c| (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token))
+            .map(|c| {
+                let face = battlefield_face_path(c, inflight.art.as_deref());
+                (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token, face)
+            })
             .collect();
 
-        for (card_id, card_name, is_land, tapped, is_token) in to_spawn {
+        for (card_id, card_name, is_land, tapped, is_token, face) in to_spawn {
             // Always animate to the *untapped* battlefield pose first. If the
             // engine state already has the card tapped (typical for a land
             // played-and-auto-tapped to pay a spell cost in the same tick),
@@ -2931,7 +2962,7 @@ pub fn sync_game_visuals(
                 (pos, back_face_rotation(seat, viewer, n_seats))
             };
 
-            let front_mat = card_front_material(&card_name, &mut materials, &asset_server);
+            let front_mat = crate::card::spawn::card_face_material(&face, &mut materials, &asset_server);
             let entity = spawn_single_card(
                 &mut commands,
                 &card_assets.card_mesh,
@@ -2943,6 +2974,8 @@ pub fn sync_game_visuals(
                 target.translation,
             );
             commands.entity(entity).insert((
+                // The previews show what the face shows.
+                crate::card::CardFrontTexture(face),
                 BattlefieldCard { is_land, is_token },
                 CardOwner(seat),
                 // Spawn untapped so the tap-state-sync pass below detects
@@ -3203,7 +3236,7 @@ pub fn sync_game_visuals(
     }
 
     // ── Spawn new viewer battlefield cards that don't have entities yet ──────
-    let viewer_to_spawn: Vec<(CardId, String, bool, bool, bool)> = cv
+    let viewer_to_spawn: Vec<(CardId, String, bool, bool, bool, String)> = cv
         .battlefield
         .iter()
         .filter(|c| {
@@ -3211,14 +3244,17 @@ pub fn sync_game_visuals(
                 && !visual_bf_ids.contains(&c.id)
                 && !hand_cards.iter().any(|(_, gid, _, _, _, _)| gid.0 == c.id)
         })
-        .map(|c| (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token))
+        .map(|c| {
+            let face = battlefield_face_path(c, inflight.art.as_deref());
+            (c.id, c.name.clone(), in_back_row(c), c.tapped, c.is_token, face)
+        })
         .collect();
 
     // Battlefield cards that didn't come from the viewer's hand (fetchlands,
     // tutors that drop directly onto the battlefield, reanimate, tokens) get
     // a `library → battlefield` arc animation starting from the top of the
     // viewer's deck pile, instead of teleporting in.
-    for (card_id, card_name, is_land, tapped, is_token) in viewer_to_spawn {
+    for (card_id, card_name, is_land, tapped, is_token, face) in viewer_to_spawn {
         // Same untapped-spawn pattern as the opponent path above: land at
         // the untapped pose, let tap-state-sync animate the tap on the
         // next frame if the engine state has the card already tapped.
@@ -3230,7 +3266,7 @@ pub fn sync_game_visuals(
                 .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, false, false))
         };
         let _ = tapped;
-        let front_mat = card_front_material(&card_name, &mut materials, &asset_server);
+        let front_mat = crate::card::spawn::card_face_material(&face, &mut materials, &asset_server);
         let entity = spawn_single_card(
             &mut commands,
             &card_assets.card_mesh,
@@ -3242,6 +3278,7 @@ pub fn sync_game_visuals(
             target.translation,
         );
         commands.entity(entity).insert((
+            crate::card::CardFrontTexture(face),
             BattlefieldCard { is_land, is_token },
             CardOwner(viewer),
             TapState { tapped: false },

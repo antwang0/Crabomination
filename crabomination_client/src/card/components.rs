@@ -370,6 +370,10 @@ pub struct RevealPeekAnimation {
 #[derive(Resource)]
 pub struct CardHighlightAssets {
     pub border_mesh: Handle<Mesh>,
+    /// The wider rings the hover and dying highlights draw with, so they
+    /// show round a state ring on the same card (`mesh::HOVER_BORDER_WIDTH`).
+    pub hover_border_mesh: Handle<Mesh>,
+    pub dying_border_mesh: Handle<Mesh>,
     pub border_material: Handle<StandardMaterial>,
     /// Green border for a hand card castable *for its normal cost* now.
     /// Distinct from the gold `border_material` (hover / valid-target /

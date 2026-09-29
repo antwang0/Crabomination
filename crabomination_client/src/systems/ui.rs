@@ -104,7 +104,7 @@ pub fn highlight_hovered_cards(
         let offset = CARD_THICKNESS / 2.0 + 0.001;
         let back_border = commands
             .spawn((
-                Mesh3d(assets.border_mesh.clone()),
+                Mesh3d(assets.hover_border_mesh.clone()),
                 MeshMaterial3d(assets.border_material.clone()),
                 Transform::from_xyz(0.0, 0.0, -offset),
                 Pickable::IGNORE,
@@ -112,7 +112,7 @@ pub fn highlight_hovered_cards(
             .id();
         let front_border = commands
             .spawn((
-                Mesh3d(assets.border_mesh.clone()),
+                Mesh3d(assets.hover_border_mesh.clone()),
                 MeshMaterial3d(assets.border_material.clone()),
                 Transform::from_xyz(0.0, 0.0, offset),
                 Pickable::IGNORE,
@@ -259,9 +259,9 @@ pub fn update_castable_highlights(
                 } else {
                     assets.castable_material.clone()
                 };
-                // Sits slightly proud of the hover border (0.001) so a card
-                // that is both playable and hovered shows both rings without
-                // z-fighting.
+                // Sits slightly proud of the hover border (0.001), which is
+                // wider (`HOVER_BORDER_WIDTH`), so a card that is both
+                // playable and hovered shows a green ring inside a gold one.
                 let offset = CARD_THICKNESS / 2.0 + 0.0018;
                 let back = commands
                     .spawn((
@@ -327,12 +327,13 @@ pub fn update_dying_highlights(
         match (should, marker) {
             (true, None) => {
                 // Offset between the hover gold (0.001) and castable green
-                // (0.0018) borders so a doomed, hovered creature shows all
-                // its rings without z-fighting.
+                // (0.0018) borders, and between them in width
+                // (`DYING_BORDER_WIDTH`), so a doomed, hovered creature shows
+                // its rings nested rather than the top one alone.
                 let offset = CARD_THICKNESS / 2.0 + 0.0015;
                 let back = commands
                     .spawn((
-                        Mesh3d(assets.border_mesh.clone()),
+                        Mesh3d(assets.dying_border_mesh.clone()),
                         MeshMaterial3d(assets.dying_material.clone()),
                         Transform::from_xyz(0.0, 0.0, -offset),
                         Pickable::IGNORE,
@@ -340,7 +341,7 @@ pub fn update_dying_highlights(
                     .id();
                 let front = commands
                     .spawn((
-                        Mesh3d(assets.border_mesh.clone()),
+                        Mesh3d(assets.dying_border_mesh.clone()),
                         MeshMaterial3d(assets.dying_material.clone()),
                         Transform::from_xyz(0.0, 0.0, offset),
                         Pickable::IGNORE,
@@ -415,8 +416,9 @@ pub fn update_activatable_highlights(
         match (should, marker) {
             (true, None) => {
                 // Offset proud of the hover gold (0.001), dying red (0.0015),
-                // and castable green (0.0018) borders so an activatable,
-                // hovered permanent shows every ring without z-fighting.
+                // and castable green (0.0018) borders; the hover and dying
+                // rings are wider, so an activatable, hovered permanent shows
+                // every ring nested.
                 let offset = CARD_THICKNESS / 2.0 + 0.0021;
                 let back = commands
                     .spawn((
@@ -1113,6 +1115,7 @@ pub fn hover_card_preview(
     ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
     ui_scale: Res<UiScale>,
+    mut info_cache: Local<Option<(String, Option<crabomination::card::CardId>, Vec<(String, bool)>)>>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
     let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview)>| {
@@ -1141,6 +1144,19 @@ pub fn hover_card_preview(
         return;
     };
 
+    // The notes change only with the hovered card or the game view: built
+    // once per either, not every frame the pointer rests — each build looks
+    // the card up in the catalog (a full `CardDefinition`) twice.
+    if let Some((cached_path, cached_id, info)) = info_cache.as_ref()
+        && *cached_path == path
+        && *cached_id == card_id
+        && !view.is_changed()
+        && !card_names.is_changed()
+    {
+        let info = info.clone();
+        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, cursor, path, info);
+        return;
+    }
     let mut info = card_id
         .map(|id| hover_info_lines(&card_names.get(id)))
         .unwrap_or_default();
@@ -1173,6 +1189,25 @@ pub fn hover_card_preview(
             &card_names.get(id),
         ));
     }
+    *info_cache = Some((path.clone(), card_id, info.clone()));
+    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, cursor, path, info);
+}
+
+/// Put the hover preview for the card art at `path` with its `info` notes
+/// next to `cursor` — moving the one that is up if it already shows exactly
+/// this, rebuilding it otherwise.
+#[allow(clippy::too_many_arguments)]
+fn place_hover_preview(
+    commands: &mut Commands,
+    existing: &mut Query<(Entity, &mut Node, &HoverCardPreview)>,
+    asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
+    ui_scale: &UiScale,
+    window: &Window,
+    cursor: Vec2,
+    path: String,
+    info: Vec<(String, bool)>,
+) {
     // Estimated panel height so the anchor keeps the whole column on screen
     // (reminder lines wrap to ~2 rows at this width).
     let info_height: f32 = if info.is_empty() {

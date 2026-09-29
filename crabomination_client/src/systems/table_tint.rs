@@ -84,6 +84,8 @@ pub fn sync_seat_tints(
             MeshMaterial3d(materials.add(crate::systems::table_cloth::cloth_material(tint_color(seat), &cloth))),
             Transform::from_xyz(c.x, TINT_Y, c.y),
             SeatTint,
+            // Printed on the felt: nothing to pick (see the felt in `setup`).
+            Pickable::IGNORE,
             // Despawned with the rest of the match on leaving it.
             crate::systems::game_ui::InGameRoot,
         ));
@@ -108,6 +110,7 @@ pub fn sync_seat_tints(
             Transform::from_xyz(board.center().x, PRINT_Y, board.center().y)
                 .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
             SeatTint,
+            Pickable::IGNORE,
             crate::systems::game_ui::InGameRoot,
         ));
         let slot = meshes.add(crate::card::create_border_mesh(
@@ -127,6 +130,7 @@ pub fn sync_seat_tints(
                 MeshMaterial3d(ink.clone()),
                 Transform::from_xyz(at.x, PRINT_Y, at.z).with_rotation(rotation),
                 SeatTint,
+                Pickable::IGNORE,
                 crate::systems::game_ui::InGameRoot,
             ));
         }

@@ -4,6 +4,7 @@ pub mod framing;
 pub mod layout;
 mod mesh;
 pub mod mipmap;
+pub mod proxy;
 mod observers;
 pub mod spawn;
 
@@ -26,5 +27,8 @@ pub use layout::{
     exile_position,
     creature_card_transform, graveyard_position, hand_card_transform, back_row_card_transform, in_back_row,
 };
-pub use mesh::{create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS};
+pub use mesh::{
+    create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS, DYING_BORDER_WIDTH,
+    HOVER_BORDER_WIDTH,
+};
 pub use spawn::{card_back_face_material, card_front_material, init_shared_assets, spawn_single_card};

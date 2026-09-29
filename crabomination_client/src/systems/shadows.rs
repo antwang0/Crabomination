@@ -136,7 +136,7 @@ fn quiet_flat_casters(
     }
     if let Some(highlight) = highlight {
         for (e, mesh) in &meshes {
-            if mesh.0 == highlight.border_mesh {
+            if [&highlight.border_mesh, &highlight.hover_border_mesh, &highlight.dying_border_mesh].contains(&&mesh.0) {
                 commands.entity(e).try_insert(NotShadowCaster);
             }
         }

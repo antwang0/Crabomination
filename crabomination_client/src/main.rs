@@ -224,9 +224,13 @@ fn main() {
         cfg.paths.resolved_asset_dir()
     };
     // A custom/fresh asset dir starts empty — materialize the embedded
-    // core assets (font, cardback, table model) before anything reads them.
+    // core assets (fonts, cardback) before anything reads them.
     #[cfg(not(target_arch = "wasm32"))]
     embedded_assets::materialize_core_assets(&asset_dir);
+    // Token art fetched by type rather than name is often the wrong token
+    // entirely; clear it once so the prefetch below fetches it by name.
+    #[cfg(not(target_arch = "wasm32"))]
+    scryfall::purge_type_matched_token_art(&asset_dir, token_names);
     // Card-art prefetch runs on a background thread — launch never blocks
     // on the network. Missing images render as name placeholders (see
     // `CardPlaceholderReader`) and hot-swap to real art as downloads land
@@ -409,6 +413,7 @@ fn main() {
         .insert_resource(menu::CliBootHint(load_state_arg))
         .insert_resource(menu::CliBootFormat(play_format_arg))
         .insert_resource(harness.clone())
+        .insert_resource(scryfall::CardArtDir(asset_dir.clone()))
         // Draw only when something changes; a harness screenshot run keeps
         // the continuous loop so its timed captures don't move.
         .add_plugins((
@@ -732,8 +737,10 @@ fn main() {
         // Give every freshly-loaded card-face texture a mip chain so the
         // sampler's 16× anisotropy keeps text legible at the table's oblique
         // angle. Ungated: card images load during draft/menu as well as in a
-        // match, and the system self-skips anything already mipmapped.
-        .add_systems(Update, crate::card::mipmap::generate_card_mipmaps)
+        // match, and the system self-skips anything already mipmapped. In
+        // `Last`: after the frame's asset events, before the render world
+        // extracts, so a new image is held back until its chain is built.
+        .add_systems(Last, crate::card::mipmap::generate_card_mipmaps)
         // Counter coins (3-D piles on top of permanents).
         .add_systems(
             Update,
@@ -1184,6 +1191,9 @@ fn setup(
         GroundPlane,
         // It lies flat under everything; see `systems::shadows`.
         bevy::light::NotShadowCaster,
+        // Nothing is picked on the bare felt, and its ~8 k triangles were
+        // ray-tested against every frame the pointer was over the table.
+        Pickable::IGNORE,
     ));
     commands.insert_resource(cloth);
 
@@ -1265,10 +1275,17 @@ fn apply_render_quality_change(
             *mesh = create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments);
         }
 
-    if let Some(assets) = &highlight_assets
-        && let Some(mut mesh) = meshes.get_mut(&assets.border_mesh) {
-            *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
+    if let Some(assets) = &highlight_assets {
+        for (handle, width) in [
+            (&assets.border_mesh, BORDER_WIDTH),
+            (&assets.hover_border_mesh, card::HOVER_BORDER_WIDTH),
+            (&assets.dying_border_mesh, card::DYING_BORDER_WIDTH),
+        ] {
+            if let Some(mut mesh) = meshes.get_mut(handle) {
+                *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, width, segments);
+            }
         }
+    }
 
     shadow_map.size = new_quality.shadow_map_size();
 

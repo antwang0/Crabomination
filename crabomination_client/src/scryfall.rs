@@ -41,13 +41,10 @@ use std::time::Duration;
 
 use std::sync::Arc;
 
-use ab_glyph::{FontVec, PxScale};
+use ab_glyph::FontVec;
 use bevy::asset::io::{
     AssetReader, AssetReaderError, ErasedAssetReader, PathStream, Reader, VecReader,
 };
-use image::{Rgba, RgbaImage};
-use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut, text_size};
-use imageproc::rect::Rect;
 
 /// One image to fetch. Built from the catalog walk; consumed by
 /// [`ensure_card_images`].
@@ -361,10 +358,12 @@ pub fn ensure_card_images_with_progress(
     }
 }
 
-/// Generated name-placeholder dimensions, in Scryfall "normal" card
-/// proportions (63 × 88).
-const PLACEHOLDER_W: u32 = 488;
-const PLACEHOLDER_H: u32 = 680;
+/// Generated placeholder dimensions: the 63 × 88 card proportion
+/// (`card::proxy`).
+#[cfg(test)]
+const PLACEHOLDER_W: u32 = crate::card::proxy::PROXY_W;
+#[cfg(test)]
+const PLACEHOLDER_H: u32 = crate::card::proxy::PROXY_H;
 
 /// Load the UI font for placeholder text. Returns `None` if the font file
 /// isn't where we expect — the placeholder then renders as a blank white
@@ -375,73 +374,28 @@ pub fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
     FontVec::try_from_vec(bytes).ok()
 }
 
-/// Render a white "card" carrying `name` as centered, word-wrapped text —
-/// the placeholder for cards with no Scryfall art (synthesized cards, MDFC
-/// backs, 404s). With `font == None` it's a blank white card.
-fn render_placeholder(name: &str, font: Option<&FontVec>) -> RgbaImage {
-    let mut img = RgbaImage::from_pixel(PLACEHOLDER_W, PLACEHOLDER_H, Rgba([245, 245, 245, 255]));
-
-    // Card frame: a couple of nested dark rectangles.
-    let frame = Rgba([70, 70, 70, 255]);
-    draw_hollow_rect_mut(
-        &mut img,
-        Rect::at(6, 6).of_size(PLACEHOLDER_W - 12, PLACEHOLDER_H - 12),
-        frame,
-    );
-    draw_hollow_rect_mut(
-        &mut img,
-        Rect::at(7, 7).of_size(PLACEHOLDER_W - 14, PLACEHOLDER_H - 14),
-        frame,
-    );
-
-    if let Some(font) = font {
-        let ink = Rgba([25, 25, 25, 255]);
-        let scale = PxScale::from(34.0);
-        let margin = 30u32;
-        let max_w = (PLACEHOLDER_W - margin * 2) as i32;
-
-        // Greedy word-wrap measured against the real glyph metrics.
-        let mut lines: Vec<String> = Vec::new();
-        let mut cur = String::new();
-        for word in name.split_whitespace() {
-            let trial = if cur.is_empty() {
-                word.to_string()
-            } else {
-                format!("{cur} {word}")
-            };
-            if text_size(scale, font, &trial).0 as i32 > max_w && !cur.is_empty() {
-                lines.push(std::mem::take(&mut cur));
-                cur = word.to_string();
-            } else {
-                cur = trial;
-            }
-        }
-        if !cur.is_empty() {
-            lines.push(cur);
-        }
-
-        let line_h = 42i32;
-        let total_h = line_h * lines.len() as i32;
-        let mut y = (PLACEHOLDER_H as i32 - total_h) / 2;
-        for line in &lines {
-            let line_w = text_size(scale, font, line).0 as i32;
-            let x = (PLACEHOLDER_W as i32 - line_w) / 2;
-            draw_text_mut(&mut img, ink, x, y, scale, font, line);
-            y += line_h;
-        }
-    }
-
-    img
-}
-
-/// PNG-encode a name-placeholder. Used by [`CardPlaceholderReader`] to
-/// serve a generated card image for a path that has no file on disk.
-fn placeholder_png_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
-    let img = render_placeholder(name, font);
+/// PNG-encode a drawn face (`card::proxy`). Used by [`CardPlaceholderReader`]
+/// to serve a generated card image for a path that has no file on disk.
+fn proxy_png_bytes(face: &crate::card::proxy::ProxyFace, font: Option<&FontVec>) -> Vec<u8> {
+    let img = crate::card::proxy::render_proxy(face, font);
     let mut buf = Vec::new();
     img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
         .expect("encode placeholder PNG to memory");
     buf
+}
+
+/// The name-only placeholder for an art-less card: a drawn face that knows
+/// just the name (the reader has only the path to go on).
+fn placeholder_png_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
+    proxy_png_bytes(&crate::card::proxy::ProxyFace::named(name), font)
+}
+
+/// The face a `cards/proxy_….png` path encodes (`card::proxy`), if it is one.
+fn proxy_face_from_asset_path(path: &Path) -> Option<crate::card::proxy::ProxyFace> {
+    if path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()) != Some("cards") {
+        return None;
+    }
+    crate::card::proxy::parse_proxy_stem(path.file_stem()?.to_str()?)
 }
 
 /// Recover a readable card name from a `cards/<sanitized>.png` asset path,
@@ -501,13 +455,19 @@ impl AssetReader for CardPlaceholderReader {
     async fn read<'a>(&'a self, path: &'a Path) -> Result<impl Reader + 'a, AssetReaderError> {
         match self.inner.read(path).await {
             Ok(reader) => Ok(reader),
-            Err(AssetReaderError::NotFound(_)) => match card_name_from_asset_path(path) {
-                Some(name) => {
-                    let bytes = placeholder_png_bytes(&name, self.font.as_ref().as_ref());
-                    Ok(Box::new(VecReader::new(bytes)) as Box<dyn Reader + 'a>)
+            Err(AssetReaderError::NotFound(_)) => {
+                let font = self.font.as_ref().as_ref();
+                // A drawn token face first (its path encodes the face), then
+                // any other missing card image by its name.
+                let bytes = match proxy_face_from_asset_path(path) {
+                    Some(face) => Some(proxy_png_bytes(&face, font)),
+                    None => card_name_from_asset_path(path).map(|name| placeholder_png_bytes(&name, font)),
+                };
+                match bytes {
+                    Some(bytes) => Ok(Box::new(VecReader::new(bytes)) as Box<dyn Reader + 'a>),
+                    None => Err(AssetReaderError::NotFound(path.to_path_buf())),
                 }
-                None => Err(AssetReaderError::NotFound(path.to_path_buf())),
-            },
+            }
             Err(e) => Err(e),
         }
     }
@@ -552,6 +512,18 @@ fn sanitize_name(name: &str) -> String {
     // separator, so the lossy reverse mapping stays consistent.
     name.to_lowercase()
         .replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
+}
+
+/// The asset directory card art is downloaded into (`<dir>/cards/…`), for
+/// asking whether a card's real art is on disk.
+#[derive(bevy::prelude::Resource, Clone)]
+pub struct CardArtDir(pub std::path::PathBuf);
+
+impl CardArtDir {
+    /// Whether real art for `name` has been downloaded.
+    pub fn has_art(&self, name: &str) -> bool {
+        self.0.join("cards").join(card_filename(name)).is_file()
+    }
 }
 
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
@@ -621,11 +593,15 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
 }
 
 /// Tokens (Clue / Treasure / Bird / etc.) aren't card names on
-/// Scryfall -- they're identified by `is:token` plus a type filter.
+/// Scryfall -- they're identified by `is:token` plus the token's name.
 /// Two-step fetch:
 ///
-/// 1. `cards/search?q=is%3Atoken+t%3A<name>` returns a JSON list of
-///    token printings; we pick the first result.
+/// 1. `cards/search?q=is:token !"<name>"` returns the token printings
+///    *named exactly* `<name>`; we pick the first result. It searched by
+///    type (`t:<name>`) until 2026-09-29, and the first token with the
+///    type in its line is often a *named* one: "Soldier" fetched Ajani's
+///    Pridemate (a 2/2 Cat Soldier), which then stood in for every 1/1
+///    Soldier token. See [`purge_type_matched_token_art`].
 /// 2. Pull `image_uris.png` (or `image_uris.large` as fallback) and
 ///    download the actual image bytes.
 ///
@@ -634,17 +610,22 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
 #[cfg(not(target_arch = "wasm32"))]
 fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
     let search_url = format!(
-        "https://api.scryfall.com/cards/search?unique=art&q=is%3Atoken+t%3A{}",
-        urlenccode(token_name),
+        "https://api.scryfall.com/cards/search?unique=art&q=is%3Atoken+{}",
+        urlenccode(&format!("!\"{token_name}\"")),
     );
     let body = scryfall_get_bytes(&search_url)?;
     let parsed: serde_json::Value =
         serde_json::from_slice(&body).map_err(|e| LookupError::Other(e.to_string()))?;
-    // No printing for this token type — treat as unavailable (placeholder),
-    // not a transient error, so it's negative-cached.
+    // The first single-faced printing named exactly this. `!"name"` also
+    // matches a double-faced token with a face of that name ("Goblin //
+    // Soldier", "Dinosaur // Treasure"), and those sort first and carry
+    // their art per face. None — treat as unavailable (placeholder), not a
+    // transient error, so it's negative-cached.
     let first = parsed["data"]
         .as_array()
-        .and_then(|a| a.first())
+        .and_then(|a| {
+            a.iter().find(|c| c["name"].as_str() == Some(token_name) && c["image_uris"].is_object())
+        })
         .ok_or(LookupError::Unavailable)?;
     let img_url = first["image_uris"]["png"]
         .as_str()
@@ -652,6 +633,30 @@ fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
         .or_else(|| first["image_uris"]["normal"].as_str())
         .ok_or(LookupError::Unavailable)?;
     scryfall_get_bytes(img_url)
+}
+
+/// Delete token art fetched by the old type-matched search (see
+/// [`download_token_image`]) once, so the prefetch fetches it again by exact
+/// name. A marker file records that it ran. Art the user placed by hand
+/// under the same names goes too — it is re-fetched, not lost for good.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn purge_type_matched_token_art(asset_dir: &Path, token_names: &[&str]) {
+    let cards = asset_dir.join("cards");
+    let marker = cards.join(".token_art_by_exact_name");
+    if marker.exists() || !cards.is_dir() {
+        return;
+    }
+    let files: std::collections::HashSet<String> = token_names.iter().map(|n| card_filename(n)).collect();
+    for file in &files {
+        let _ = fs::remove_file(cards.join(file));
+    }
+    // A token the type search found nothing for may exist by name.
+    let manifest = cards.join(UNAVAILABLE_MANIFEST);
+    if let Ok(listed) = fs::read_to_string(&manifest) {
+        let kept: String = listed.lines().filter(|l| !files.contains(l.trim())).map(|l| format!("{l}\n")).collect();
+        let _ = fs::write(&manifest, kept);
+    }
+    let _ = fs::write(&marker, b"token art is fetched by exact name (is:token !\"name\")\n");
 }
 
 #[derive(Debug)]

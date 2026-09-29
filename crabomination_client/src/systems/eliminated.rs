@@ -81,6 +81,7 @@ pub fn sync_eliminated_shrouds(
             })),
             Transform::from_xyz(center.x, SHROUD_Y, center.z),
             EliminatedShroud(seat),
+            Pickable::IGNORE,
         ));
     }
 }

@@ -176,15 +176,29 @@ impl Geometry {
 
 /// The material all light shares: unlit, adding its colour to what lies
 /// under it.
+///
+/// Transparent meshes are drawn back to front by their mesh's centre, and
+/// this one mesh holds every light at once, so its centre is the middle of
+/// whatever is lit this frame — it wandered as bursts and motes came and
+/// went, and where light crossed an arrow the two swapped draw order from
+/// frame to frame. The bias sorts the light after every other transparent
+/// thing, always: light added over an arrow, never under it one frame and
+/// over it the next. (As a depth offset it is a few ULPs of depth — nothing
+/// against the card a glow lies under.)
 fn glow_material() -> StandardMaterial {
     StandardMaterial {
         base_color: Color::WHITE,
         unlit: true,
         alpha_mode: AlphaMode::Add,
         cull_mode: None,
+        depth_bias: GLOW_SORT_BIAS,
         ..default()
     }
 }
+
+/// See [`glow_material`]: more than the depth of the whole table, so no
+/// other transparent mesh sorts after the light.
+const GLOW_SORT_BIAS: f32 = 100.0;
 
 /// The one entity the light is drawn on, and its mesh.
 pub struct GlowMesh {

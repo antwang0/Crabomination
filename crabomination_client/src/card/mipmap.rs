@@ -9,11 +9,12 @@
 //!
 //! There is no built-in CPU mipmap generator in this Bevy version, so we
 //! build one ourselves: whenever a `cards/…` (or the shared `cardback`)
-//! `Image` finishes loading, we downsample it into a full mip chain and
-//! hand the packed levels back to the asset. wgpu uploads the packed mips
-//! straight from `Image::data` (`create_texture_with_data`), so this is
-//! all that's needed for the sampler's mip + anisotropy settings to start
-//! doing their job.
+//! `Image` finishes loading, it is held back from the GPU while its full mip
+//! chain is built off the main thread, then handed over with the chain, GPU
+//! only ([`generate_card_mipmaps`]). wgpu uploads the packed mips straight
+//! from `Image::data` (`create_texture_with_data`), so this is all that's
+//! needed for the sampler's mip + anisotropy settings to start doing their
+//! job.
 
 use bevy::asset::AssetEvent;
 use bevy::image::Image;
@@ -165,16 +166,25 @@ pub struct MipJob {
     task: bevy::tasks::Task<(Vec<u8>, u32)>,
 }
 
-/// Watch for freshly-loaded card-face images and give each a mip chain.
+/// Give each freshly-loaded card-face image a mip chain before it reaches the
+/// GPU, then let go of its CPU copy.
 ///
 /// The chain is built on the async compute pool, not in the frame: a card
-/// image is 745×1040, its chain ~800 k gamma-correct averages, and a board
-/// or a deck loading at once used to spend that whole cost inside one frame
-/// on the main thread — in the `play` and `dev` builds, where the client
-/// crate is unoptimized, a visible stall per image. The art shows without
-/// mips for the few frames the job takes (as it did for one frame before),
-/// then the chain replaces it. While jobs are out the frame loop keeps
-/// drawing, so a finished chain is picked up at once.
+/// image is 745×1040 and its chain ~800 k gamma-correct averages, which in
+/// the `play` and `dev` builds — where the client crate is unoptimized —
+/// was a visible stall per image when a board or a deck loaded at once.
+///
+/// It must not reach the GPU without its mips, or it is uploaded twice (and
+/// shimmers, unfiltered, for the frames in between). So the frame an image
+/// arrives this system — in `Last`, after the frame's asset events and
+/// before the render world extracts — withholds it from the render world
+/// (`asset_usage = MAIN_WORLD`), and hands it back with its chain as
+/// `RENDER_WORLD` alone: uploaded once, with mips, after which Bevy drops the
+/// main world's copy of the pixels (~4 MB a card, about 600 MB over a pod's
+/// table). The texture's size and format stay in the main world for the UI.
+/// Until then a new card's face waits for its texture, as it waits for the
+/// file to load. A card image reloaded by the art prefetch (a placeholder
+/// swapped for real art) arrives as a fresh one and goes through the same.
 pub fn generate_card_mipmaps(
     mut events: MessageReader<AssetEvent<Image>>,
     asset_server: Res<AssetServer>,
@@ -182,43 +192,54 @@ pub fn generate_card_mipmaps(
     mut jobs: Local<Vec<MipJob>>,
     mut redraw: MessageWriter<bevy::window::RequestRedraw>,
 ) {
+    use bevy::asset::RenderAssetUsages;
     for event in events.read() {
-        let (AssetEvent::Added { id } | AssetEvent::LoadedWithDependencies { id }) = event else {
+        let (AssetEvent::Added { id } | AssetEvent::Modified { id } | AssetEvent::LoadedWithDependencies { id }) =
+            event
+        else {
             continue;
         };
-        // Immutable look first: only a finished chain takes `get_mut` (which
-        // fires `Modified`).
+        // Immutable look first: `get_mut` fires another `Modified`.
         let Some(image) = images.get(*id) else { continue };
-        let Some((width, height, srgb)) = mippable(image) else { continue };
-        if jobs.iter().any(|j| j.id == *id) {
+        // Fresh from the loader: pixels, one level, bound for the GPU. An
+        // image this system is holding (`MAIN_WORLD`) or has finished
+        // (mipped, pixels handed off) doesn't match.
+        if !image.asset_usage.contains(RenderAssetUsages::RENDER_WORLD) {
             continue;
         }
+        let Some((width, height, srgb)) = mippable(image) else { continue };
         let is_card =
             asset_server.get_path(*id).is_some_and(|p| is_card_texture(&p.path().to_string_lossy()));
         if !is_card {
             continue;
         }
         let Some(base) = image.data.clone() else { continue };
+        if let Some(mut held) = images.get_mut(*id) {
+            held.asset_usage = RenderAssetUsages::MAIN_WORLD;
+        }
         let task = bevy::tasks::AsyncComputeTaskPool::get()
             .spawn(async move { mip_chain(base, width, height, srgb) });
+        // A fresh image under an id with a chain still building is a reload:
+        // the old chain is for pixels that are gone (dropping its task
+        // cancels it).
+        jobs.retain(|j| j.id != *id);
         jobs.push(MipJob { id: *id, task });
     }
     jobs.retain_mut(|job| {
-        let Some(result) = bevy::tasks::block_on(bevy::tasks::futures_lite::future::poll_once(&mut job.task))
+        let Some((packed, levels)) =
+            bevy::tasks::block_on(bevy::tasks::futures_lite::future::poll_once(&mut job.task))
         else {
             return true;
         };
-        // The image may have been replaced or dropped while the chain was
-        // built; apply it only to the image it was built from.
-        let (packed, levels) = result;
+        // Released only onto the image it was built from.
         if images.get(job.id).is_some_and(|img| {
-                img.texture_descriptor.mip_level_count == 1
-                    && img.data.as_ref().is_some_and(|d| packed.len() > d.len() && packed.starts_with(d))
-            })
-            && let Some(mut image) = images.get_mut(job.id)
+            img.texture_descriptor.mip_level_count == 1
+                && img.data.as_ref().is_some_and(|d| packed.len() > d.len() && packed.starts_with(d))
+        }) && let Some(mut image) = images.get_mut(job.id)
         {
             image.texture_descriptor.mip_level_count = levels;
             image.data = Some(packed);
+            image.asset_usage = RenderAssetUsages::RENDER_WORLD;
         }
         false
     });
