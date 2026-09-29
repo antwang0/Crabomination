@@ -7602,3 +7602,42 @@ fn cr_614_1a_mindskinner_mills_each_live_opponent() {
     assert_eq!(gy(&g), vec![5, 5, 0], "combat: each live opponent mills 2");
     assert_eq!(g.players[1].life, 20);
 }
+
+/// CR 614.1 / 510.2 — combat damage to a player is replaced like any other
+/// damage: Crumbling Sanctuary exiles that many cards off the top of the
+/// player's library, Delaying Shield turns damage to its controller into
+/// delay counters. Both ran only on the noncombat damage path.
+#[test]
+fn cr_614_1_player_damage_replacements_cover_combat() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let swing = |g: &mut GameState, attacker| {
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.clear_sickness(attacker);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        drain_stack(g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(g);
+        }
+    };
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(2, catalog::crumbling_sanctuary());
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let exiled = g.exile.len();
+    swing(&mut g, bear);
+    assert_eq!((g.players[1].life, g.exile.len()), (20, exiled + 2), "Crumbling Sanctuary: two exiled, no life lost");
+
+    let mut g = multi_player_game(3);
+    let shield = g.add_card_to_battlefield(1, catalog::delaying_shield());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    swing(&mut g, bear);
+    assert_eq!(g.players[1].life, 20, "Delaying Shield: no life lost");
+    assert_eq!(g.battlefield_find(shield).unwrap().counter_count(CounterType::Delay), 2);
+}

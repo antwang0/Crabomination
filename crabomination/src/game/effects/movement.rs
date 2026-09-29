@@ -111,6 +111,117 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
 }
 
 impl GameState {
+    /// CR 614.1 — damage that would be dealt to player `p` (by a source
+    /// `dealer` controls, when known) replaced by a static: The Mindskinner's
+    /// mill, Crumbling Sanctuary's library exile, Delaying Shield's counters,
+    /// Nefarious Lich's graveyard exile. `true` when one applied — the damage
+    /// is not dealt. The noncombat and combat damage paths both ask this.
+    pub(crate) fn replace_damage_to_player(
+        &mut self,
+        p: usize,
+        amount: u32,
+        dealer: Option<usize>,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        // One lane read in front of the four player-damage
+        // replacement walks below (PERF `(-235)`): every static they
+        // match is in the lane's predicate.
+        let damage_statics = self.battlefield.has_damage_replacement_static();
+        if !damage_statics {
+            return false;
+        }
+        // The Mindskinner — "if a source you control would deal damage
+        // to an opponent, prevent that damage and each opponent mills
+        // that many cards."
+        if damage_statics
+            && amount > 0
+            && let Some(dealer) = dealer
+            && self.damage_to_opponent_becomes_mill(dealer, p)
+        {
+            self.mill_each_live_opponent(dealer, amount, events);
+            return true;
+        }
+        // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
+        // exiling that many cards off their library instead.
+        if damage_statics
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PlayerDamageBecomesExileFromLibrary
+                    )
+                })
+            })
+        {
+            // "From the top of their library" — index 0 is the top.
+            for _ in 0..amount {
+                if self.players[p].library.is_empty() {
+                    break;
+                }
+                let card = self.players[p].library.remove(0);
+                let cid = card.id;
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                self.note_exiled_from_library(p, cid, events);
+            }
+            return true;
+        }
+        // CR 614 — Delaying Shield: damage to its controller becomes
+        // delay counters on the enchantment instead.
+        if damage_statics
+            && let Some(shield) = self.battlefield.iter().find_map(|c| {
+            (c.controller == p).then(|| {
+                c.definition.static_abilities.iter().find_map(|sa| {
+                    match &sa.effect {
+                        crate::effect::StaticEffect::
+                            ReplaceDamageToYouWithCountersOnSource { kind } =>
+                            Some((c.id, *kind)),
+                        _ => None,
+                    }
+                })
+            }).flatten()
+        }) {
+            let (cid, kind) = shield;
+            if let Some(c) = self.battlefield_find_mut(cid) {
+                c.add_counters(kind, amount);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: cid,
+                counter_type: kind,
+                count: amount, placer: self.resolution_causer,
+            });
+            return true;
+        }
+        // CR 614 — Nefarious Lich: damage to its controller exiles
+        // that many graveyard cards instead; failing that, they lose.
+        if damage_statics
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::
+                                ReplaceDamageToYouWithGraveyardExile
+                        )
+                    })
+            })
+        {
+            if (self.players[p].graveyard.len() as u32) < amount {
+                self.players[p].eliminated = true;
+            } else {
+                for _ in 0..amount {
+                    let Some(card) = self.players[p].graveyard.pop() else { break };
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    self.note_exiled_from_graveyard(p, cid, events);
+                }
+            }
+            return true;
+        }
+        false
+    }
+
     /// The Mindskinner: does damage from a source `dealer` controls to player
     /// `p` become a mill (CR 614.1a)? `p` must be an opponent of `dealer`.
     pub(crate) fn damage_to_opponent_becomes_mill(&self, dealer: usize, p: usize) -> bool {
@@ -1521,98 +1632,11 @@ impl GameState {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
                     }
                 }
-                // One lane read in front of the four player-damage
-                // replacement walks below (PERF `(-235)`): every static they
-                // match is in the lane's predicate.
-                let damage_statics = self.battlefield.has_damage_replacement_static();
-                // The Mindskinner — "if a source you control would deal damage
-                // to an opponent, prevent that damage and each opponent mills
-                // that many cards."
-                if damage_statics
-                    && amount > 0
-                    && let Some(src) = source
-                    && let Some(dealer) = self.battlefield_find(src).map(|c| c.controller)
-                    && self.damage_to_opponent_becomes_mill(dealer, p)
-                {
-                    self.mill_each_live_opponent(dealer, amount, events);
-                    return;
-                }
-                // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
-                // exiling that many cards off their library instead.
-                if damage_statics
-                    && self.battlefield.iter().any(|c| {
-                        c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::PlayerDamageBecomesExileFromLibrary
-                            )
-                        })
-                    })
-                {
-                    // "From the top of their library" — index 0 is the top.
-                    for _ in 0..amount {
-                        if self.players[p].library.is_empty() {
-                            break;
-                        }
-                        let card = self.players[p].library.remove(0);
-                        let cid = card.id;
-                        self.exile.push(card);
-                        events.push(GameEvent::PermanentExiled { card_id: cid });
-                        self.note_exiled_from_library(p, cid, events);
-                    }
-                    return;
-                }
-                // CR 614 — Delaying Shield: damage to its controller becomes
-                // delay counters on the enchantment instead.
-                if damage_statics
-                    && let Some(shield) = self.battlefield.iter().find_map(|c| {
-                    (c.controller == p).then(|| {
-                        c.definition.static_abilities.iter().find_map(|sa| {
-                            match &sa.effect {
-                                crate::effect::StaticEffect::
-                                    ReplaceDamageToYouWithCountersOnSource { kind } =>
-                                    Some((c.id, *kind)),
-                                _ => None,
-                            }
-                        })
-                    }).flatten()
-                }) {
-                    let (cid, kind) = shield;
-                    if let Some(c) = self.battlefield_find_mut(cid) {
-                        c.add_counters(kind, amount);
-                    }
-                    events.push(GameEvent::CounterAdded {
-                        card_id: cid,
-                        counter_type: kind,
-                        count: amount, placer: self.resolution_causer,
-                    });
-                    return;
-                }
-                // CR 614 — Nefarious Lich: damage to its controller exiles
-                // that many graveyard cards instead; failing that, they lose.
-                if damage_statics
-                    && self.battlefield.iter().any(|c| {
-                        c.controller == p
-                            && c.definition.static_abilities.iter().any(|sa| {
-                                matches!(
-                                    sa.effect,
-                                    crate::effect::StaticEffect::
-                                        ReplaceDamageToYouWithGraveyardExile
-                                )
-                            })
-                    })
-                {
-                    if (self.players[p].graveyard.len() as u32) < amount {
-                        self.players[p].eliminated = true;
-                    } else {
-                        for _ in 0..amount {
-                            let Some(card) = self.players[p].graveyard.pop() else { break };
-                            let cid = card.id;
-                            self.exile.push(card);
-                            events.push(GameEvent::PermanentExiled { card_id: cid });
-                            self.note_exiled_from_graveyard(p, cid, events);
-                        }
-                    }
+                // CR 614.1 — the damage-to-a-player replacements (The
+                // Mindskinner, Crumbling Sanctuary, Delaying Shield,
+                // Nefarious Lich); combat damage takes the same walk.
+                let dealer = source.and_then(|src| self.battlefield_find(src).map(|c| c.controller));
+                if self.replace_damage_to_player(p, amount, dealer, events) {
                     return;
                 }
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.

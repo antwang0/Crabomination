@@ -5518,13 +5518,10 @@ impl GameState {
                     self.mill_instead_of_combat_damage(p, amount, events);
                     return;
                 }
-                // CR 614.1a — The Mindskinner: combat damage is damage too;
-                // it becomes a mill of that many for each opponent.
-                if amount > 0
-                    && self.battlefield.has_damage_replacement_static()
-                    && self.damage_to_opponent_becomes_mill(atk.controller, p)
-                {
-                    self.mill_each_live_opponent(atk.controller, amount, events);
+                // CR 614.1 — combat damage is damage too: The Mindskinner,
+                // Crumbling Sanctuary, Delaying Shield and Nefarious Lich
+                // replace it exactly as they replace a spell's.
+                if amount > 0 && self.replace_damage_to_player(p, amount, Some(atk.controller), events) {
                     return;
                 }
                 // CR 614 — Undead Alchemist: a matching attacker's combat
