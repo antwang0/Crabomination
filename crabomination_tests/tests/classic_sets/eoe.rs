@@ -3571,3 +3571,43 @@ fn the_eoe_cards_that_print_warp_carry_it() {
         assert_eq!(alt.mana_cost, want, "{name}'s warp cost");
     }
 }
+
+/// Tannuk — "If this is the second time this ability has resolved this turn,
+/// draw a card": the first landfall only pings, the second also draws.
+#[test]
+fn tannuk_draws_on_the_second_landfall() {
+    let mut g = two_player_game();
+    let tannuk = g.add_card_to_battlefield(0, catalog::tannuk_memorial_ensign());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let effect = catalog::tannuk_memorial_ensign().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(tannuk, 0, None, 0);
+    let hand = g.players[0].hand.len();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand, "first resolution: no draw");
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "second resolution draws");
+}
+
+/// Dyadrine — "whenever you attack, you may remove a +1/+1 counter from each
+/// of two creatures you control. If you do, draw a card and create a Robot."
+#[test]
+fn dyadrine_trades_two_counters_for_a_card_and_a_robot() {
+    let mut g = two_player_game();
+    let dy = g.add_card_to_battlefield(0, catalog::dyadrine_synthesis_amalgam());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [dy, bear] {
+        g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    }
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let effect = catalog::dyadrine_synthesis_amalgam().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &crabomination::game::effects::EffectContext::for_trigger(dy, 0, None, 0)).unwrap();
+    for id in [dy, bear] {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Robot").count(), 1);
+}

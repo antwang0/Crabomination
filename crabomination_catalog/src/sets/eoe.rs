@@ -6074,10 +6074,20 @@ pub fn tannuk_memorial_ensign() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+                // "If this is the second time this ability has resolved this
+                // turn, draw a card."
+                Effect::NthResolutionThisTurn {
+                    branches: vec![
+                        Effect::Noop,
+                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    ],
+                },
+            ]),
         }],
         ..Default::default()
     }
@@ -7841,6 +7851,41 @@ pub fn dyadrine_synthesis_amalgam() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Trample],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::CastSpellManaSpent)),
+        // "Whenever you attack, you may remove a +1/+1 counter from each of
+        // two creatures you control. If you do, draw a card and create a 2/2
+        // colorless Robot artifact creature token."
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: {
+                let countered = || {
+                    Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                    )
+                };
+                Effect::If {
+                    cond: Predicate::SelectorCountAtLeast { sel: countered(), n: Value::Const(2) },
+                    then: Box::new(Effect::MayDo {
+                        description: "Remove a +1/+1 counter from each of two creatures to draw and make a Robot?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::RemoveCounter {
+                                what: Selector::take(countered(), Value::Const(2)),
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::ONE,
+                            },
+                            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                            Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::Const(1),
+                                definition: std::sync::Arc::new(eoe_robot_token(false)),
+                            },
+                        ])),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }
+            },
+        }],
         ..Default::default()
     }
 }
