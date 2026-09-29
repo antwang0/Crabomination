@@ -472,8 +472,7 @@ pub fn harried_dronesmith() -> CardDefinition {
 }
 
 /// Vengeful Tracker — {1}{R} Human Detective 2/2. Whenever an opponent
-/// sacrifices an artifact, it deals 2 damage to them. (Modeled as each opponent,
-/// faithful in 1v1.)
+/// sacrifices an artifact, it deals 2 damage to them.
 pub fn vengeful_tracker() -> CardDefinition {
     CardDefinition {
         name: "Vengeful Tracker",
@@ -492,7 +491,8 @@ pub fn vengeful_tracker() -> CardDefinition {
                     filter: R::Artifact,
                 }),
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                // "it deals 2 damage to **them**" — the sacrificing player.
+                to: Selector::Player(PlayerRef::TriggerEventPlayer),
                 amount: Value::Const(2),
             },
         }],

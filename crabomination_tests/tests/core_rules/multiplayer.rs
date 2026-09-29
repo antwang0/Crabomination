@@ -7529,3 +7529,18 @@ fn cr_115_1_descendant_of_masumaro_reads_one_opponents_hand() {
     g.resolve_effect(&eff, &EffectContext::for_trigger(d, 0, Some(Target::Player(1)), 0)).unwrap();
     assert_eq!(g.battlefield_find(d).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
 }
+
+/// CR 603.2 — Vengeful Tracker: "Whenever an opponent sacrifices an
+/// artifact, it deals 2 damage to **them**" — the sacrificing seat (the
+/// event's player), not every opponent.
+#[test]
+fn cr_603_2_vengeful_tracker_hits_the_sacrificer() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::vengeful_tracker());
+    let treasure = g.add_card_to_battlefield(2, catalog::sol_ring());
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.remove_from_battlefield_to_graveyard_raw(treasure);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentSacrificed { card_id: treasure, who: 2 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), vec![life[0], life[1], life[2] - 2]);
+}

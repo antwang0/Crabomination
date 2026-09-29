@@ -125,8 +125,7 @@ pub fn fugitive_wizard() -> CardDefinition {
 }
 
 /// Highway Robber — {2}{B}{B} 2/2 Human Mercenary. When it enters, target
-/// opponent loses 2 life and you gain 2 life. (Drain hits each opponent —
-/// 1v1-faithful.)
+/// opponent loses 2 life and you gain 2 life.
 pub fn highway_robber() -> CardDefinition {
     CardDefinition {
         name: "Highway Robber",

@@ -155,7 +155,7 @@ pub fn fleetfoot_dancer() -> CardDefinition {
 }
 
 /// Stormscape Apprentice — {U} 1/1 Human Wizard. {W}, {T}: tap target creature.
-/// {B}, {T}: target player loses 1 life. (1v1-faithful: each opponent.)
+/// {B}, {T}: target player loses 1 life.
 pub fn stormscape_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Stormscape Apprentice",

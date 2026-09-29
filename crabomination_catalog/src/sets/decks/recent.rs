@@ -7942,8 +7942,7 @@ pub fn goblin_surveyor() -> CardDefinition {
 }
 
 /// Gastal Thrillseeker — {B}{R} 2/3 Lizard Berserker. Start your engines! When
-/// it enters, deal 1 damage to each opponent (printed "target opponent",
-/// 1v1-faithful) and you gain 1 life. Max speed — it has deathtouch and haste.
+/// it enters, deal 1 damage to target opponent and you gain 1 life. Max speed — it has deathtouch and haste.
 pub fn gastal_thrillseeker() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {

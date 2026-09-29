@@ -4405,11 +4405,9 @@ pub fn rubble_rouser() -> CardDefinition {
 /// gain life, target opponent loses that much life.'"
 ///
 /// All four abilities wired: `+2 gain 3`, `0 draw 1 / lose 1`, `-3
-/// destroy creature`, and the ultimate emblem ("whenever you gain life,
-/// each opponent loses that much life" — a triggered emblem via
-/// `Effect::CreateEmblem`). Approximation: the printed emblem says
-/// "*target opponent* loses that much life", but the wiring drains
-/// each opponent — a multiplayer-only difference (identical in 1v1).
+/// destroy creature`, and the ultimate emblem (a triggered emblem via
+/// `Effect::CreateEmblem` whose "target opponent loses that much life" is a
+/// target-opponent slot).
 pub fn professor_dellian_fel() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
     use crate::effect::shortcut::target_filtered;

@@ -171,9 +171,8 @@ pub fn suspicious_shambler() -> CardDefinition {
 }
 
 /// Kalastria Highborn — {B}{B} 2/2 Vampire Shaman. Whenever this or another
-/// Vampire you control dies, you may pay {B}. If you do, each opponent loses 2
-/// life and you gain 2 life. (Aristocrat drain modeled as each-opponent, per
-/// Blood Artist / Zulaport; "target player" collapses to that in 1v1.)
+/// Vampire you control dies, you may pay {B}. If you do, target player loses 2
+/// life and you gain 2 life.
 pub fn kalastria_highborn() -> CardDefinition {
     CardDefinition {
         name: "Kalastria Highborn",
