@@ -9810,10 +9810,10 @@ impl GameState {
             }
         }
 
-        // CR 702.16: Protection from [color] prevents targeting by spells
-        // of that color (`spell_protection_blocks`).
+        // CR 702.16b: Protection from [color] prevents targeting by spells
+        // of that color (`spell_protection_blocks`) — anyone's, the caster's
+        // own included; only hexproof has an opponents-only clause.
         if let Some(Target::Permanent(cid)) = target
-            && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
             && self.spell_protection_blocks(&card, p, cid)
         {
             cast_census::rollback(line!());

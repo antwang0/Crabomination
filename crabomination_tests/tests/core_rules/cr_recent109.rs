@@ -431,3 +431,27 @@ fn an_aura_spell_fizzles_on_protection_gained_in_response() {
     assert!(g.battlefield_find(pacifism).is_none());
     assert!(g.players[1].graveyard.iter().any(|c| c.id == pacifism));
 }
+
+/// CR 702.16b — protection stops spells of that colour from targeting the
+/// permanent whoever controls them: its own controller can't aim a white
+/// Gods Willing at a Bear that already has protection from white. (Unlike
+/// hexproof, CR 702.11b, there is no "your opponents" clause; the cast gate
+/// used to skip the caster's own permanents.)
+#[test]
+fn protection_stops_your_own_spells_too() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mut bear = catalog::grizzly_bears();
+    bear.keywords.push(Keyword::Protection(Color::White));
+    let bear = g.add_card_to_battlefield(0, bear);
+    let willing = g.add_card_to_hand(0, catalog::gods_willing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: willing, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err());
+}
