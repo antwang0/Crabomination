@@ -12550,23 +12550,28 @@ pub fn fuel_for_the_cause() -> CardDefinition {
     }
 }
 
-/// Contagion Engine — {6} Artifact. ETB put a -1/-1 counter on each creature an
-/// opponent controls (the "target player" prompt collapses to each opponent);
-/// {4}, {T}: Proliferate twice.
+/// Contagion Engine — {6} Artifact. ETB put a -1/-1 counter on each creature
+/// target player controls; {4}, {T}: Proliferate twice. Approximation: the
+/// target is restricted to an opponent (the bot's player-slot picker would
+/// otherwise weaken its own board); in a pod it is one seat, not all of them.
 pub fn contagion_engine() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Contagion Engine",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            body: Box::new(Effect::AddCounter {
-                what: Selector::TriggerSource,
-                kind: CounterType::MinusOneMinusOne,
-                amount: Value::Const(1),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::TargetPlayerThen {
+            filter: SelectionRequirement::OpponentPlayer,
+            then: Box::new(Effect::ForEach {
+                selector: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::MinusOneMinusOne,
+                    amount: Value::Const(1),
+                }),
             }),
         })],
         activated_abilities: vec![ActivatedAbility {

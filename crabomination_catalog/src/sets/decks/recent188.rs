@@ -54,18 +54,22 @@ pub fn neutralize_the_guards() -> CardDefinition {
         name: "Neutralize the Guards",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-                power: Value::Const(-1),
-                toughness: Value::Const(-1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        // One target opponent's creatures (a pod's other seats are spared).
+        effect: Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

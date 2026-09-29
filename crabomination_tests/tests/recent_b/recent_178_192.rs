@@ -1331,7 +1331,7 @@ mod recent188 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
-            target: None,
+            target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
             x_value: None,
@@ -1340,6 +1340,32 @@ mod recent188 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(victim).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "opponent creature is -1/-1");
+    }
+
+    /// "Creatures **target opponent** controls": a pod's other seat keeps its
+    /// creatures at full size.
+    #[test]
+    fn neutralize_the_guards_hits_one_opponent_of_a_pod() {
+        let mut g = crabomination::game::multi_player_game(3);
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let spared = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::neutralize_the_guards());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast at seat 1");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(victim).unwrap().power, 1);
+        assert_eq!(g.computed_permanent(spared).unwrap().power, 2, "seat 2 untouched");
     }
 
     /// Rise of the Varmints makes one 2/1 Varmint per creature card in your graveyard.
