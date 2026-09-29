@@ -17284,7 +17284,8 @@ type-changing state (animation, crew, bestow) is written. Base binary predates
 two upstream commits, so the +1.85 % is an upper bound. Later the same day the
 land-type / colour / granted-changeling reads (`permanent_has_land_type`,
 `permanent_is_changeling`, `changeling_grant_in_scope`) took it to **347.30 M
-(+2.43 % over base)**; `--bench` still byte-identical.
+(+2.43 % over base)**, and `computed_has_card_type` (artifact / enchantment /
+planeswalker reads) to **348.34 M (+2.74 %)**; `--bench` still byte-identical.
 
 ### 2026-09-27 — the pod crack-back horizon costs 27-57 % of default-pilot pod throughput
 
