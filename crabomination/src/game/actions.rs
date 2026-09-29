@@ -18115,8 +18115,7 @@ impl GameState {
                 // 9600037), so Hibernation Sliver's ability never reached it.
                 if f.creature_type.is_some()
                     || *gates[1].get_or_insert_with(|| {
-                        self.creature_type_change_in_scope()
-                            || self.keyword_grant_in_scope(|k| matches!(k, Keyword::Changeling))
+                        self.creature_type_change_in_scope() || self.changeling_grant_in_scope()
                     })
                 {
                     return false;
