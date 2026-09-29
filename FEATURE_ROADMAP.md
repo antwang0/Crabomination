@@ -259,8 +259,10 @@ Each unblocks a large swath of cards.
   `spell_protection_blocks` for spells and Aura spells,
   `ability_target_newly_untargetable` for a declared ability target, which
   also reads shroud / hexproof), so Mother of Runes in response fizzles the
-  removal; and it stops the controller's **own** spells (no opponents-only
-  clause, unlike hexproof). Multi-kind slots ship —
+  removal; colour hexproof (`spell_color_hexproof_blocks`, Veil of Summer)
+  and a player's protection are re-checked the same way, every target slot
+  is gated at cast; and protection stops the controller's **own** spells
+  (no opponents-only clause, unlike hexproof). Multi-kind slots ship —
   a spell can target a permanent in one slot and a *player* in another, with
   `Selector::ControlledBy { who: Target(n) }` declaring slot `n` as a player
   target (How to Start a Riot, Sokka's Haiku's spell+land slots). Ignore-hexproof
