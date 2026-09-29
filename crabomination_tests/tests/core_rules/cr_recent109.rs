@@ -358,3 +358,45 @@ fn protection_granted_in_response_fizzles_the_spell() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Protection(Color::Black)));
     assert!(g.players[1].graveyard.iter().any(|c| c.id == murder));
 }
+
+/// CR 608.2b / 702.11b / 702.16b — an ability's sole target that gains
+/// hexproof or protection from its source in response is illegal as the
+/// ability resolves: Prodigal Sorcerer's ping at a Bear does nothing after
+/// Blossoming Defense, or after Mother of Runes names blue. (The ability
+/// path re-read only the target filter.)
+#[test]
+fn an_ability_fizzles_when_its_target_gains_hexproof_or_protection() {
+    for answer in ["hexproof", "protection"] {
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let sorcerer = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+        g.clear_sickness(sorcerer);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sorcerer, ability_index: 0, target: Some(Target::Permanent(bear)),
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .expect("ping");
+        g.priority.player_with_priority = 0;
+        if answer == "hexproof" {
+            let defense = g.add_card_to_hand(0, catalog::blossoming_defense());
+            g.players[0].mana_pool.add(Color::Green, 1);
+            g.perform_action(GameAction::CastSpell {
+                card_id: defense, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+            })
+            .expect("Blossoming Defense");
+        } else {
+            let mother = g.add_card_to_battlefield(0, catalog::mother_of_runes());
+            g.clear_sickness(mother);
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: mother, ability_index: 0, target: Some(Target::Permanent(bear)),
+                additional_targets: Vec::new(), x_value: None, mode: None,
+            })
+            .expect("Mother of Runes");
+        }
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "{answer}: the ping fizzled");
+    }
+}

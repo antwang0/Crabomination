@@ -29221,6 +29221,22 @@ impl GameState {
                     self.drop_resume_channels_on_fizzle(resuming);
                     return Ok(());
                 }
+                // CR 702.18a / 702.11b / 702.16b — shroud, an opponent's
+                // hexproof or protection from the source, gained since the
+                // ability went on the stack, makes its sole target illegal too.
+                // The first pass only: a resumed ability may have granted it
+                // itself (Mother of Runes resuming after its colour prompt).
+                // A declared target only (the slot has a filter): a bare
+                // `Target(0)` bound from the event isn't targeted at all
+                // (Flayed Nim's "that creature's controller" reads the creature
+                // it damaged, hexproof or not).
+                Some(_) if !resuming
+                    && additional_targets.is_empty()
+                    && self.ability_target_newly_untargetable(t, controller, source) =>
+                {
+                    self.drop_resume_channels_on_fizzle(resuming);
+                    return Ok(());
+                }
                 _ => Some(t.clone()),
             },
             None => None,

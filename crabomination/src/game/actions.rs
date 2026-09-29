@@ -14776,6 +14776,68 @@ impl GameState {
         })
     }
 
+    /// CR 608.2b — whether an ability's stored permanent target has become
+    /// untargetable by it: shroud (CR 702.18a), hexproof against an opponent
+    /// (CR 702.11b) or protection from its source (CR 702.16b). Narrower than
+    /// [`check_target_legality`](Self::check_target_legality) on purpose — a
+    /// Peace Talks truce or a range-of-influence rule doesn't reach back to an
+    /// ability already on the stack.
+    pub(crate) fn ability_target_newly_untargetable(
+        &self,
+        target: &Target,
+        controller: usize,
+        source: CardId,
+    ) -> bool {
+        let Target::Permanent(cid) = target else { return false };
+        let Some(card) = self.battlefield_find(*cid) else { return false };
+        // The keywords `ability_target_has_protection` reads, plus the two
+        // above: a board with none of them (nearly every one) skips the
+        // layer read.
+        let asked = |k: &Keyword| {
+            matches!(
+                k,
+                Keyword::Shroud
+                    | Keyword::Hexproof
+                    | Keyword::HexproofFromAbilities
+                    | Keyword::HexproofFromColor(_)
+                    | Keyword::HexproofFromMonocolored
+                    | Keyword::HexproofFromMulticolored
+                    | Keyword::HexproofExceptColors(_)
+                    | Keyword::Protection(_)
+                    | Keyword::ProtectionFromCreatures
+                    | Keyword::ProtectionFromCreatureType(_)
+                    | Keyword::ProtectionFromMatching(_)
+                    | Keyword::ProtectionFromChosenPlayer
+                    | Keyword::ProtectionFromManaValueExcept(_)
+                    | Keyword::ProtectionFromManaValueParity { .. }
+                    | Keyword::ProtectionFromMulticolored
+                    | Keyword::ProtectionFromMonocolored
+                    | Keyword::ProtectionFromCardType(_)
+                    | Keyword::ProtectionFromOwnColors
+                    | Keyword::ProtectionFromColorsOutsideCommanderIdentity
+                    | Keyword::ProtectionFromEverything
+            )
+        };
+        if self.players[card.controller].hexproof_from_colors_this_turn.is_empty()
+            && !self.layers_memoized()
+            && !self.card_keyword_possible_on(card, asked)
+        {
+            return false;
+        }
+        let Some(cp) = self.computed_permanent(*cid) else { return false };
+        let kws = cp.keywords();
+        if kws.contains(&Keyword::Shroud) && !self.shroud_waivers.contains(&(*cid, controller)) {
+            return true;
+        }
+        if kws.contains(&Keyword::Hexproof)
+            && card.controller != controller
+            && !self.player_ignores_creature_hexproof(controller)
+        {
+            return true;
+        }
+        self.ability_target_has_protection(target, source)
+    }
+
     /// CR 702.16c — a permanent with protection from a quality can't be the
     /// target of an *ability* from a source with that quality. `source` is the
     /// ability's source permanent. Mirrors the cast-time spell gate but reads
