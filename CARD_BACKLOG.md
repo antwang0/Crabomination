@@ -1846,7 +1846,7 @@ in both directions. Over the 10,744 single-faced cards the cache adjudicates:
 comments and 0 body bugs: the bodies are oracle-clean (`audit_catalog_stats`
 reads 0 cost and 0 P/T drift), so every row was a comment describing a
 different card than the body builds — this file's own "the doc comment above
-the body is the tell", 338 times over. `scripts/fix_doc_drift.py` rewrote the
+the body is the tell", 338 times over. A one-shot `scripts/fix_doc_drift.py` (since removed) rewrote the
 326 whose substitution placed uniquely; the twelve that spelled the same cost
 twice were read by hand **and three of them were real card defects** (Ghost
 Vacuum's {2} surcharge on a free tap ability, Merfolk Skydiver built as a
@@ -5304,7 +5304,7 @@ Residuals in what shipped:
 
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
-Every single-faced FIN card is implemented (`python3 scripts/fin_gaps.py`
+Every single-faced FIN card is implemented (`python3 scripts/set_gaps.py fin`
 reports 0 missing), including the Vanille ↔ Fang meld into Ragnarok
 (`Effect::Meld`). Remaining known approximations, each documented on its
 factory doc comment:

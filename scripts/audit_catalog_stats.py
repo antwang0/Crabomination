@@ -7,8 +7,8 @@ subtypes, card / supertypes, keywords, activated-ability costs / timing /
 tap-sac halves, loyalty, token P/T, trigger events / scopes / filters, and
 the amounts an ability prints (`num` / `stat`) and the mana an activation
 adds (`mana`) — INCOMPLETE_CARDS "Amounts".
-Generalizes audit_stx_drift.py (cost+P/T, STX only) and audit_stx_types.py
-(type+keywords, STX only) to the whole catalog.
+Generalizes the retired STX-only audit_stx_drift.py (cost+P/T) and
+audit_stx_types.py (type+keywords) to the whole catalog.
 
   python3 scripts/audit_catalog_stats.py              # per-set summary table
   python3 scripts/audit_catalog_stats.py SET           # detail for one set (e.g. sos, thb)

@@ -2464,7 +2464,6 @@ version = "0.1.0"
 dependencies = [
  "ab_glyph",
  "bevy",
- "bevy_mesh",
  "crabomination",
  "dirs",
  "getrandom 0.4.2",

@@ -13,7 +13,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy_mesh::{Indices, PrimitiveTopology};
+use bevy::mesh::{Indices, PrimitiveTopology};
 
 /// World units one repeat of the felt covers.
 const CLOTH_TILE: f32 = 4.0;
@@ -209,7 +209,7 @@ mod tests {
     fn a_table_mesh_covers_its_rect_with_world_scaled_felt() {
         let rect = Rect::new(2.0, -3.0, 10.0, 5.0);
         let mesh = table_mesh(rect, rect);
-        let Some(bevy_mesh::VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) else {
+        let Some(bevy::mesh::VertexAttributeValues::Float32x2(uvs)) = mesh.attribute(Mesh::ATTRIBUTE_UV_0) else {
             panic!("no uvs")
         };
         assert_eq!(uvs.first(), Some(&[2.0 / CLOTH_TILE, -3.0 / CLOTH_TILE]));

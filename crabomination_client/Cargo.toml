@@ -27,7 +27,6 @@ bevy = { version = "0.19.0", default-features = false, features = [
     "custom_cursor",
     "sysinfo_plugin",
 ] }
-bevy_mesh = "0.19.0"
 rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"

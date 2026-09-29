@@ -1,26 +1,11 @@
 //! Secrets of Strixhaven — the Special Guests (SPG) sheet, the eleven
 //! library-and-copy cards printed alongside the set. Nine of them already
-//! live elsewhere in the catalog; `SPECIAL_GUEST_NAMES` is the whole sheet,
-//! and the two below are the ones SOS printed first.
+//! live elsewhere in the catalog; `sos_mode::sos_special_guests` is the whole
+//! sheet, and the two below are the ones SOS printed first.
 
 use crate::card::{ActivatedAbility, CardDefinition, CardType, StaticAbility, Subtypes};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, StaticEffect, Value};
 use crate::mana::{cost, g, generic};
-
-/// The SOS Special Guests sheet, in collector-number order.
-pub const SPECIAL_GUEST_NAMES: [&str; 11] = [
-    "Archaeomancer",
-    "Archmage Emeritus",
-    "Murmuring Mystic",
-    "Grim Haruspex",
-    "Dualcaster Mage",
-    "Magus of the Library",
-    "Sylvan Library",
-    "Adrix and Nev, Twincasters",
-    "Codie, Vociferous Codex",
-    "Library of Leng",
-    "Library of Alexandria",
-];
 
 /// Magus of the Library — {G}{G} 1/1. Taps for {C}, or draws a card while
 /// your hand is exactly seven cards deep.

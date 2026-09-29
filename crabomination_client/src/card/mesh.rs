@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy_mesh::{Indices, PrimitiveTopology};
+use bevy::mesh::{Indices, PrimitiveTopology};
 
 use super::components::{CARD_HEIGHT, CARD_WIDTH};
 

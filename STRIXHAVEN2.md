@@ -46,8 +46,9 @@ share Kasmina's loyalty abilities" static
   granting a pay-own-cost, exile-after may-play — total = spell cost + {2},
   matching the printed surcharge; only the "targets a single creature"
   sub-filter is approximated).
-- **Stats match real Scryfall.** `audit_stx_drift.py` (cost + P/T) and the new
-  `audit_stx_types.py` (type line + keywords) are both clean. The 2026-06-14/15
+- **Stats match real Scryfall.** `audit_catalog_stats.py stx` (cost, P/T, type
+  line, keywords — it replaced the STX-only `audit_stx_drift.py` /
+  `audit_stx_types.py`) is the live check. The 2026-06-14/15
   sweep fixed **47 creature types + 20 keywords** (e.g. Mavinda Cleric+Vigilance →
   Bird Advisor+Flying; Beledros Demon → Elder Dragon; Disciplined Duelist →
   Double strike; Inkfathom Witch → Fear), full suite green (8551). Remaining

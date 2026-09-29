@@ -9690,8 +9690,9 @@ finds, so only these survived the compaction.
   tree (148 mana-cost literals + 61 power/toughness literals corrected to the
   Scryfall cache this run, doc-comment titles synced via
   `scripts/fix_doc_costs.py`, coupled test fixtures rewritten via
-  `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
-  keep it at zero after adding cards.
+  `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_catalog_stats.py stx` (which replaced the
+  STX-only `audit_stx_drift.py` / `audit_stx_types.py`) to keep it at zero
+  after adding cards.
   ✅ **Type-line + keyword sweep (2026-06-14/15).** `audit_stx_drift.py` only
   checks cost + P/T; it never inspects type line or keywords. Added
   `scripts/audit_stx_types.py` to cover those (top-level keyword field only, so

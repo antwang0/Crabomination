@@ -63,14 +63,10 @@ pub struct FormatRules {
     pub max_copies: u32,
     /// Starting life total.
     pub starting_life: i32,
-    /// Number of cards drawn in the opening hand.
-    pub opening_hand_size: u32,
     /// Whether each player may have a sideboard and how large it can be.
     pub sideboard_size: Option<u32>,
     /// Whether the format is singleton (at most 1 copy of each non-basic card).
     pub singleton: bool,
-    /// Whether a commander/companion is required.
-    pub requires_commander: bool,
     /// Starting life total in multiplayer (overrides `starting_life` when > 2 players).
     pub multiplayer_starting_life: Option<i32>,
 }
@@ -159,10 +155,8 @@ impl Format {
                 max_deck_size: None,
                 max_copies: 4,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             Format::Vintage => FormatRules {
@@ -173,10 +167,8 @@ impl Format {
                 // included here; use max_copies=4 and handle restrictions externally.
                 max_copies: 4,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             Format::Pauper => FormatRules {
@@ -184,10 +176,8 @@ impl Format {
                 max_deck_size: None,
                 max_copies: 4,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             Format::Commander => FormatRules {
@@ -195,10 +185,8 @@ impl Format {
                 max_deck_size: Some(100),
                 max_copies: 1,
                 starting_life: 40,
-                opening_hand_size: 7,
                 sideboard_size: None,
                 singleton: true,
-                requires_commander: true,
                 multiplayer_starting_life: Some(40),
             },
             Format::Brawl => FormatRules {
@@ -206,10 +194,8 @@ impl Format {
                 max_deck_size: Some(60),
                 max_copies: 1,
                 starting_life: 25,
-                opening_hand_size: 7,
                 sideboard_size: None,
                 singleton: true,
-                requires_commander: true,
                 multiplayer_starting_life: None,
             },
             Format::TwoHeadedGiant => FormatRules {
@@ -218,10 +204,8 @@ impl Format {
                 max_copies: 4,
                 // Teams share 30 life in 2HG (sometimes house-ruled to 40).
                 starting_life: 30,
-                opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             // CR 904.5 — the archenemy starts at 40, everyone else at 20.
@@ -230,10 +214,8 @@ impl Format {
                 max_deck_size: None,
                 max_copies: 4,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             Format::Draft | Format::Sealed => FormatRules {
@@ -241,10 +223,8 @@ impl Format {
                 max_deck_size: None,
                 max_copies: u32::MAX,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: None,
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
             Format::Freeform => FormatRules {
@@ -252,10 +232,8 @@ impl Format {
                 max_deck_size: None,
                 max_copies: u32::MAX,
                 starting_life: 20,
-                opening_hand_size: 7,
                 sideboard_size: None,
                 singleton: false,
-                requires_commander: false,
                 multiplayer_starting_life: None,
             },
         }

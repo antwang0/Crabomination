@@ -19,7 +19,7 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy_mesh::{Indices, PrimitiveTopology};
+use bevy::mesh::{Indices, PrimitiveTopology};
 
 /// Columns the profile is turned through.
 const COLUMNS: usize = 64;
@@ -160,9 +160,9 @@ pub fn chip_material() -> StandardMaterial {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy_mesh::VertexAttributeValues;
+    use bevy::mesh::VertexAttributeValues;
 
-    fn attribute(mesh: &Mesh, id: bevy_mesh::MeshVertexAttribute) -> Vec<Vec3> {
+    fn attribute(mesh: &Mesh, id: bevy::mesh::MeshVertexAttribute) -> Vec<Vec3> {
         match mesh.attribute(id) {
             Some(VertexAttributeValues::Float32x3(v)) => v.iter().map(|&p| Vec3::from(p)).collect(),
             other => panic!("unexpected attribute {other:?}"),
