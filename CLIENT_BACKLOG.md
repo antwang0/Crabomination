@@ -713,9 +713,9 @@ grows — a newer card falls back to the phrased lines until
 it from `scripts/.scryfall_cache.json`.
 
 ### Graveyard Order and Timestamps
-The graveyard browser shows cards as a flat unordered list.  Preserving
-insertion order (most recently added = top) matches player intuition and helps
-with "top of graveyard" effects.
+✅ Order shipped 2026-09-29 — the graveyard browser lists newest first (the
+engine's last card is the top) and says so in its header. Residual ⏳: no
+per-card "went there on turn N" timestamps; the view doesn't carry them.
 
 ### Token Labeling
 ✅ Shipped 2026-09-29 — art-less tokens get a drawn face (`card::proxy`),
@@ -921,12 +921,12 @@ defender.
 as an alternative to click-to-assign (`systems::drag_act`, 2026-09-28).
 
 ### Hover-Dwell Card Preview
-Today the only way to read full rules text is to hold Alt while hovering
-(`ui.rs::peek_popup`). Add a hover-dwell state machine (~300ms over a card
-→ fade in large preview near cursor, with viewport-edge clamping). Reuse
-`scryfall::card_asset_path`. Extends "Card Tooltip with Full Oracle Text"
-above but specifically calls out the dwell-timer + cursor-relative
-placement that brings the UX in line with Arena / MTGO.
+✅ Shipped as `ui::hover_card_preview`: hovering a card shows its art and
+Oracle text beside it, clamped to the viewport. Since 2026-09-29 it sits
+beside the card's projected rect rather than the cursor, so it never
+covers the card it previews (the stack/log previews in `ui_card_hover`
+sit beside their row the same way). Residual ⏳: it appears at once — no
+~300 ms dwell or fade-in.
 
 ### Decision Modal vs 3-D Hand Consistency
 Mulligan and PutOnLibrary modals are transparent overlays over the 3-D

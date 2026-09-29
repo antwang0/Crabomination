@@ -1,17 +1,18 @@
 //! Enlarged card preview for hovered *UI* nodes — stack-panel tiles and
 //! game-log lines. The 3-D battlefield/hand counterpart lives in
 //! `ui::hover_card_preview`; this reuses its anchor math so the preview
-//! behaves identically (sits beside the cursor on whichever side has
-//! room, never covers the hovered element).
+//! behaves identically (sits beside the hovered element on whichever side
+//! has more room, clear of it where that side fits).
 //!
 //! Usage: attach `UiCardHover(asset_path)` plus Bevy's `Button` (for
 //! `Interaction` tracking) to any UI node. One preview shows at a time —
 //! the first hovered source wins.
 
 use bevy::prelude::*;
+use bevy::ui::{ComputedNode, UiGlobalTransform};
 
 use crate::systems::ui::{
-    preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
+    preview_beside, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
 };
 use crate::theme;
 
@@ -31,7 +32,7 @@ pub struct UiCardHoverPreview {
 pub fn ui_card_hover_preview(
     mut commands: Commands,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    sources: Query<(&Interaction, &UiCardHover)>,
+    sources: Query<(&Interaction, &UiCardHover, &UiGlobalTransform, &ComputedNode)>,
     asset_server: Res<AssetServer>,
     mut existing: Query<(Entity, &mut Node, &UiCardHoverPreview)>,
     ui_scale: Res<UiScale>,
@@ -47,31 +48,25 @@ pub fn ui_card_hover_preview(
         despawn_all(&mut commands, &existing);
         return;
     };
-    let desired: Option<(String, Vec2)> = match window.cursor_position() {
-        Some(cursor) => sources
-            .iter()
-            .find(|(i, _)| !matches!(i, Interaction::None))
-            .map(|(_, h)| (h.0.clone(), cursor)),
-        None => None,
-    };
-    let Some((path, cursor)) = desired else {
+    let hovered = sources.iter().find(|(i, ..)| !matches!(i, Interaction::None));
+    let Some((_, source, at, size)) = hovered.filter(|_| window.cursor_position().is_some()) else {
         despawn_all(&mut commands, &existing);
         return;
     };
+    let path = source.0.clone();
 
-    // Window px to the UI px the preview is laid out in.
-    let (cursor, win) = (cursor / ui_scale.0, Vec2::new(window.width(), window.height()) / ui_scale.0);
-    let (x, y) = preview_anchor(
-        cursor,
-        win,
-        HOVER_PREVIEW_WIDTH,
-        HOVER_PREVIEW_HEIGHT,
-        HOVER_PREVIEW_MARGIN,
-    );
+    // The hovered node's rect and the window, in the UI px the preview is
+    // laid out in.
+    let scale = size.inverse_scale_factor();
+    let target = Rect::from_center_size(at.translation * scale, size.size() * scale);
+    let win = Vec2::new(window.width(), window.height()) / ui_scale.0;
+    let (x, y) = preview_beside(target, win, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN);
 
     if let Ok((entity, mut node, marker)) = existing.single_mut() {
-        node.left = Val::Px(x);
-        node.top = Val::Px(y);
+        if node.left != Val::Px(x) || node.top != Val::Px(y) {
+            node.left = Val::Px(x);
+            node.top = Val::Px(y);
+        }
         if marker.path == path {
             return;
         }

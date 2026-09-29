@@ -834,24 +834,39 @@ pub struct HoverCardPreview {
 
 pub(crate) const HOVER_PREVIEW_WIDTH: f32 = 230.0;
 pub(crate) const HOVER_PREVIEW_HEIGHT: f32 = HOVER_PREVIEW_WIDTH * CARD_ASPECT_RATIO;
-/// Gap kept between the preview and both the cursor and the viewport edges.
+/// Gap kept between the preview and both what it previews and the viewport
+/// edges.
 pub(crate) const HOVER_PREVIEW_MARGIN: f32 = 16.0;
 
-/// Top-left (x, y) in logical px for a `pw × ph` preview placed beside the
-/// cursor. Picks whichever horizontal side has more room so the preview
-/// never covers the card the cursor is resting on, then clamps both axes so
-/// the whole card stays on screen. Vertically centered on the cursor.
-pub(crate) fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f32, f32) {
+/// Top-left (x, y) in UI px for a `pw × ph` preview beside `target`, the
+/// hovered thing's on-screen rect in UI px. It sits on whichever side of the
+/// target has more room — clear of all of it wherever that side fits the
+/// preview — vertically centred on it, and clamped so the whole preview
+/// stays on screen. Beside the cursor instead, it covered the half of the
+/// card the cursor wasn't on.
+pub(crate) fn preview_beside(target: Rect, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f32, f32) {
     let x_max = (win.x - pw - margin).max(margin);
-    // More room to the right → sit to the cursor's right, else to its left.
-    let x = if win.x - cursor.x >= cursor.x {
-        (cursor.x + margin).clamp(margin, x_max)
+    let x = if win.x - target.max.x >= target.min.x {
+        (target.max.x + margin).clamp(margin, x_max)
     } else {
-        (cursor.x - margin - pw).clamp(margin, x_max)
+        (target.min.x - margin - pw).clamp(margin, x_max)
     };
     let y_max = (win.y - ph - margin).max(margin);
-    let y = (cursor.y - ph * 0.5).clamp(margin, y_max);
+    let y = (target.center().y - ph * 0.5).clamp(margin, y_max);
     (x, y)
+}
+
+/// The on-screen rect, in UI px, of the card whose transform is `card`:
+/// the bounds of its four projected corners. `None` when a corner doesn't
+/// project.
+pub(crate) fn card_screen_rect(camera: &Camera, eye: &GlobalTransform, ui_scale: &UiScale, card: &GlobalTransform) -> Option<Rect> {
+    let (w, h) = (crate::card::CARD_WIDTH / 2.0, crate::card::CARD_HEIGHT / 2.0);
+    let mut rect: Option<Rect> = None;
+    for corner in [Vec3::new(-w, -h, 0.0), Vec3::new(w, -h, 0.0), Vec3::new(-w, h, 0.0), Vec3::new(w, h, 0.0)] {
+        let at = theme::project_to_ui(camera, eye, ui_scale, card.transform_point(corner))?;
+        rect = Some(rect.map_or(Rect::from_center_size(at, Vec2::ZERO), |r| r.union_point(at)));
+    }
+    rect
 }
 
 /// Live characteristic-override notes for a battlefield permanent whose
@@ -1191,7 +1206,8 @@ pub fn hover_card_preview(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
+    hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>, &GlobalTransform), (With<Card>, With<CardHovered>)>,
+    camera: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     card_names: Res<crate::game::CardNames>,
     view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
@@ -1214,18 +1230,18 @@ pub fn hover_card_preview(
 
     // Desired preview: front texture of the hovered card, when the cursor is
     // on-screen and Alt isn't held.
-    let desired: Option<(String, Option<crabomination::card::CardId>, Vec2)> = match (alt_held, window.cursor_position()) {
-        (false, Some(c)) => hovered_cards
-            .iter()
-            .next()
-            .map(|(t, id)| (t.0.clone(), id.map(|g| g.0), c)),
-        _ => None,
-    };
-
-    let Some((path, card_id, cursor)) = desired else {
+    let hovered = hovered_cards.iter().next().filter(|_| !alt_held);
+    let (Some((texture, card_id, at)), Some(cursor)) = (hovered, window.cursor_position()) else {
         despawn_all(&mut commands, &existing);
         return;
     };
+    let (path, card_id) = (texture.0.clone(), card_id.map(|g| g.0));
+    // Beside the card; beside the cursor if the card doesn't project.
+    let target = camera
+        .single()
+        .ok()
+        .and_then(|(camera, eye)| card_screen_rect(camera, eye, &ui_scale, at))
+        .unwrap_or_else(|| Rect::from_center_size(cursor / ui_scale.0, Vec2::ZERO));
 
     // The notes change only with the hovered card or the game view: built
     // once per either, not every frame the pointer rests — each build looks
@@ -1237,7 +1253,7 @@ pub fn hover_card_preview(
         && !card_names.is_changed()
     {
         let info = info.clone();
-        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, cursor, path, info);
+        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info);
         return;
     }
     let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
@@ -1272,12 +1288,12 @@ pub fn hover_card_preview(
         ));
     }
     *info_cache = Some((path.clone(), card_id, info.clone()));
-    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, cursor, path, info);
+    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info);
 }
 
 /// Put the hover preview for the card art at `path` with its `info` notes
-/// next to `cursor` — moving the one that is up if it already shows exactly
-/// this, rebuilding it otherwise.
+/// beside `target` (UI px) — moving the one that is up if it already shows
+/// exactly this, rebuilding it otherwise.
 #[allow(clippy::too_many_arguments)]
 fn place_hover_preview(
     commands: &mut Commands,
@@ -1286,7 +1302,7 @@ fn place_hover_preview(
     ui_fonts: &UiFonts,
     ui_scale: &UiScale,
     window: &Window,
-    cursor: Vec2,
+    target: Rect,
     path: String,
     info: Vec<(String, bool)>,
 ) {
@@ -1304,9 +1320,9 @@ fn place_hover_preview(
         }
     };
 
-    // Window px to the UI px the preview is laid out in.
-    let (cursor, win) = (cursor / ui_scale.0, Vec2::new(window.width(), window.height()) / ui_scale.0);
-    let (x, y) = preview_anchor(cursor, win, HOVER_PREVIEW_WIDTH, height, HOVER_PREVIEW_MARGIN);
+    // The window in the UI px the preview is laid out in.
+    let win = Vec2::new(window.width(), window.height()) / ui_scale.0;
+    let (x, y) = preview_beside(target, win, HOVER_PREVIEW_WIDTH, height, HOVER_PREVIEW_MARGIN);
 
     if let Some((entity, mut node, ..)) = shown {
         if node.left != Val::Px(x) || node.top != Val::Px(y) {
@@ -1456,7 +1472,8 @@ pub fn graveyard_browser(
         let own_graveyard = view.0.as_ref().is_some_and(|cv| cv.your_seat == owner);
         let card_names: Vec<(String, Option<String>, Option<(crabomination::card::CardId, GraveyardRecast)>)> =
             view.0.as_ref()
-            .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
+            // Newest first: the engine's last card is the graveyard's top.
+            .map(|cv| cv.players[owner].graveyard.iter().rev().map(|c| {
                 let (badge, recast) = if let Some(fb) = &c.flashback_cost {
                     (Some(format!("Flashback {{{}}}", fb.cmc())), Some(GraveyardRecast::Flashback))
                 } else if let Some(mh) = &c.mayhem_cost {
@@ -1532,7 +1549,7 @@ pub fn graveyard_browser(
                     ))
                     .with_children(|row| {
                         row.spawn((
-                            Text::new(format!("{owner_label} Graveyard ({count} cards)")),
+                            Text::new(format!("{owner_label} Graveyard ({count} cards) · newest first")),
                             ui_fonts.tf(18.0),
                             TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
@@ -2267,7 +2284,7 @@ pub fn reveal_popup(
 #[cfg(test)]
 mod tests {
     use super::{
-        hover_info_lines, live_override_lines, phrased_lines, preview_anchor, HOVER_PREVIEW_HEIGHT,
+        hover_info_lines, live_override_lines, phrased_lines, preview_beside, HOVER_PREVIEW_HEIGHT,
         HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
     };
     use bevy::math::Vec2;
@@ -2341,46 +2358,53 @@ mod tests {
     const PH: f32 = HOVER_PREVIEW_HEIGHT;
     const M: f32 = HOVER_PREVIEW_MARGIN;
 
-    #[test]
-    fn preview_sits_right_of_cursor_on_left_half() {
-        let win = Vec2::new(1600.0, 1000.0);
-        let (x, _) = preview_anchor(Vec2::new(200.0, 500.0), win, PW, PH, M);
-        // Cursor on the left → preview to its right, never covering the card.
-        assert!(x >= 200.0, "expected preview right of cursor, got x={x}");
+    const WIN: Vec2 = Vec2::new(1600.0, 1000.0);
+
+    /// A card-sized rect centred at `(x, y)`.
+    fn card_at(x: f32, y: f32) -> bevy::math::Rect {
+        bevy::math::Rect::from_center_size(Vec2::new(x, y), Vec2::new(120.0, 168.0))
     }
 
     #[test]
-    fn preview_sits_left_of_cursor_on_right_half() {
-        let win = Vec2::new(1600.0, 1000.0);
-        let cursor_x = 1400.0;
-        let (x, _) = preview_anchor(Vec2::new(cursor_x, 500.0), win, PW, PH, M);
-        // Cursor on the right → preview's right edge is left of the cursor.
-        assert!(x + PW <= cursor_x, "expected preview left of cursor, got x={x}");
+    fn preview_sits_right_of_a_card_on_the_left_half() {
+        let card = card_at(300.0, 500.0);
+        let (x, _) = preview_beside(card, WIN, PW, PH, M);
+        // Clear of the whole card, not just the point the cursor is on.
+        assert!(x >= card.max.x, "expected preview right of the card, got x={x}");
+    }
+
+    #[test]
+    fn preview_sits_left_of_a_card_on_the_right_half() {
+        let card = card_at(1300.0, 500.0);
+        let (x, _) = preview_beside(card, WIN, PW, PH, M);
+        assert!(x + PW <= card.min.x, "expected preview left of the card, got x={x}");
     }
 
     #[test]
     fn preview_stays_within_viewport() {
-        let win = Vec2::new(1600.0, 1000.0);
-        // Sweep cursor across extreme positions; the card must never clip.
-        for &(cx, cy) in &[
-            (0.0, 0.0),
-            (1600.0, 1000.0),
-            (0.0, 1000.0),
-            (1600.0, 0.0),
-            (800.0, 500.0),
-        ] {
-            let (x, y) = preview_anchor(Vec2::new(cx, cy), win, PW, PH, M);
-            assert!(x >= M && x + PW <= win.x - M + f32::EPSILON, "x out of bounds: {x}");
-            assert!(y >= M && y + PH <= win.y - M + f32::EPSILON, "y out of bounds: {y}");
+        // Cards at the extremes, and one too wide for either side: the
+        // preview must never clip.
+        let wide = bevy::math::Rect::from_center_size(Vec2::new(800.0, 500.0), Vec2::new(1500.0, 900.0));
+        for card in [card_at(0.0, 0.0), card_at(1600.0, 1000.0), card_at(0.0, 1000.0), card_at(1600.0, 0.0), wide] {
+            let (x, y) = preview_beside(card, WIN, PW, PH, M);
+            assert!(x >= M && x + PW <= WIN.x - M + f32::EPSILON, "x out of bounds: {x}");
+            assert!(y >= M && y + PH <= WIN.y - M + f32::EPSILON, "y out of bounds: {y}");
         }
     }
 
     #[test]
-    fn preview_centers_vertically_on_cursor_when_room() {
-        let win = Vec2::new(1600.0, 1000.0);
-        let (_, y) = preview_anchor(Vec2::new(200.0, 500.0), win, PW, PH, M);
-        // Mid-screen cursor → card centered on it (top = cursor.y - ph/2).
+    fn preview_centers_vertically_on_the_card_when_room() {
+        let (_, y) = preview_beside(card_at(300.0, 500.0), WIN, PW, PH, M);
         assert!((y - (500.0 - PH * 0.5)).abs() < 0.5, "expected centered, got y={y}");
+    }
+
+    /// A zero-size target — the cursor, when the card doesn't project —
+    /// places the preview beside that point.
+    #[test]
+    fn a_point_target_is_the_cursor_fallback() {
+        let at = bevy::math::Rect::from_center_size(Vec2::new(200.0, 500.0), Vec2::ZERO);
+        let (x, _) = preview_beside(at, WIN, PW, PH, M);
+        assert_eq!(x, 200.0 + M);
     }
 }
 
