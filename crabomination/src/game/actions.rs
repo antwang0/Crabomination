@@ -5541,7 +5541,7 @@ impl GameState {
             c.id == host
                 && c.owner == p
                 && self.computed_is_creature(c)
-                && !c.definition.has_creature_type(CreatureType::Human)
+                && !self.permanent_has_creature_type(c.id, CreatureType::Human)
         });
         if !legal_host {
             return Err(GameError::InvalidTarget);

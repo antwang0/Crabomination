@@ -944,7 +944,7 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == ctx.controller
-                            && c.definition.has_land_type(crate::card::LandType::Gate)
+                            && self.permanent_has_land_type(c, crate::card::LandType::Gate)
                     })
                     .map(|c| c.definition.name.to_string())
                     .collect();

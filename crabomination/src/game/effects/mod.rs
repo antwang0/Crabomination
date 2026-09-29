@@ -5300,7 +5300,7 @@ impl GameState {
                             .iter()
                             .find(|c| {
                                 c.controller == p
-                                    && c.definition.has_land_type(lt)
+                                    && self.permanent_has_land_type(c, lt)
                                     && !bounce.contains(&c.id)
                             })
                             .map(|c| c.id)
@@ -18677,7 +18677,7 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         self.computed_is_creature(c)
-                            && !exclude_types.iter().any(|t| c.definition.has_creature_type(*t))
+                            && !exclude_types.iter().any(|t| self.permanent_has_creature_type(c.id, *t))
                     })
                     .map(|c| c.id)
                     .collect();

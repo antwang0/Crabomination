@@ -18976,7 +18976,7 @@ impl GameState {
                 Keyword::DomainLandwalk => crate::card::LandType::BASICS.iter().any(|lt| {
                     self.battlefield
                         .iter()
-                        .any(|c| c.controller == attacker.controller && c.definition.has_land_type(*lt))
+                        .any(|c| c.controller == attacker.controller && self.permanent_has_land_type(c, *lt))
                         && self.defender_controls_land_type(defender, lt)
                 }),
                 // CR 509.1b — Illvoi Infiltrator's spell count.
