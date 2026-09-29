@@ -444,7 +444,11 @@ pub fn winding_way() -> CardDefinition {
 pub fn world_shaper() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            on_attack(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            // "you **may** mill three cards" — a forced mill decked long games.
+            on_attack(Effect::MayDo {
+                description: "Mill three cards?".into(),
+                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::ForEach {
