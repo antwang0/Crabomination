@@ -4268,7 +4268,7 @@ impl crate::game::GameState {
             if !is_land {
                 break;
             }
-            if land.definition.subtypes.land_types.contains(&land_type) {
+            if self.permanent_has_land_type(&land, land_type) {
                 grants.push((land_id, ExtraManaKind::Fixed(color)));
             }
         }

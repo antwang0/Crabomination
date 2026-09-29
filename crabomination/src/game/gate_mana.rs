@@ -9,7 +9,7 @@ impl GameState {
         use crate::card::LandType;
         let mut set = crate::mana::ColorSet::empty();
         for c in self.battlefield.iter().filter(|c| {
-            c.controller == p && c.definition.subtypes.land_types.contains(&LandType::Gate)
+            c.controller == p && self.permanent_has_land_type(c, LandType::Gate)
         }) {
             for a in &c.definition.activated_abilities {
                 if matches!(

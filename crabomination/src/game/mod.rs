@@ -10424,7 +10424,7 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == p && c.definition.is_land())
             .filter(|c| {
-                c.definition.subtypes.land_types.contains(&land_type)
+                self.permanent_has_land_type(c, land_type)
                     || granters
                         .iter()
                         .any(|req| self.evaluate_requirement_on_card(req, c, c.controller))

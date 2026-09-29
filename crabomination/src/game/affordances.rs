@@ -622,7 +622,7 @@ impl GameState {
                     Keyword::CantAttackUnlessLandTypeOnBattlefield(lt) => self
                         .battlefield
                         .iter()
-                        .any(|p| p.definition.subtypes.land_types.contains(lt)),
+                        .any(|p| self.permanent_has_land_type(p, *lt)),
                     // CR 508.1g — the whole pay-gate family is legal only if the
                     // seat can produce the tax (pool + auto-tappable sources).
                     Keyword::CantAttackOrBlockUnlessPay(_)

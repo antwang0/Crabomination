@@ -94,3 +94,24 @@ fn cr_613_1d_living_death_sacrifices_an_animated_land() {
     assert!(g.battlefield_find(village).is_none(), "the 3/3 Ape was a creature");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == village));
 }
+
+/// CR 702.14c / 305.7 — landwalk reads the defender's current land types:
+/// Urborg makes their Forest a Swamp, so Bog Wraith's swampwalk makes it
+/// unblockable (the check read the printed type line).
+#[test]
+fn cr_702_14c_swampwalk_sees_urborg() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::urborg_tomb_of_yawgmoth());
+    let wraith = g.add_card_to_battlefield(0, catalog::bog_wraith());
+    g.clear_sickness(wraith);
+    g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: wraith, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bear, wraith)])).is_err(), "the Forest is a Swamp");
+}

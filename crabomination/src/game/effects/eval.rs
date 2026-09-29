@@ -2236,7 +2236,7 @@ impl GameState {
                 self.battlefield.iter().any(|c| {
                     c.controller == seat
                         && c.definition.is_land()
-                        && c.definition.subtypes.land_types.contains(lt)
+                        && self.permanent_has_land_type(c, *lt)
                 })
             })
             .count()
@@ -4167,7 +4167,7 @@ impl GameState {
     pub(crate) fn seat_controls_land_type(&self, seat: usize, lt: crate::card::LandType) -> bool {
         self.battlefield
             .iter()
-            .any(|c| c.controller == seat && c.definition.subtypes.land_types.contains(&lt))
+            .any(|c| c.controller == seat && self.permanent_has_land_type(c, lt))
     }
 
     /// CR 702.121 — how many distinct players are being attacked this combat.

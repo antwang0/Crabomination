@@ -735,7 +735,7 @@ impl GameState {
                     if !self
                         .battlefield
                         .iter()
-                        .any(|c| c.definition.subtypes.land_types.contains(lt)) =>
+                        .any(|c| self.permanent_has_land_type(c, *lt)) =>
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
@@ -744,7 +744,7 @@ impl GameState {
                     if (self
                         .battlefield
                         .iter()
-                        .filter(|c| c.definition.subtypes.land_types.contains(lt))
+                        .filter(|c| self.permanent_has_land_type(c, *lt))
                         .count() as u32)
                         < *n =>
                 {
@@ -854,7 +854,7 @@ impl GameState {
                 Keyword::CantAttackUnlessDefenderControlsLandType(lt)
                     if defender.is_some_and(|d| {
                         !self.battlefield.iter().any(|c| {
-                            c.controller == d && c.definition.subtypes.land_types.contains(lt)
+                            c.controller == d && self.permanent_has_land_type(c, *lt)
                         })
                     }) =>
                 {
@@ -3742,7 +3742,7 @@ impl GameState {
         lt: &crate::card::LandType,
     ) -> bool {
         self.battlefield.iter().any(|c| {
-            c.controller == defender && c.definition.has_land_type(*lt)
+            c.controller == defender && self.permanent_has_land_type(c, *lt)
         })
     }
 
