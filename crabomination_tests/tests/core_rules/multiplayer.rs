@@ -7445,12 +7445,12 @@ fn the_player_to_your_left_ignores_a_reversed_turn_order() {
 /// you may destroy target artifact **that player** controls": in a pod the
 /// target is the damaged player's artifact, not any opponent's. Rustmouth
 /// Ogre and Caustic Wasps read "an opponent controls" and took the third
-/// seat's artifact.
+/// seat's artifact; Sunder Shaman took any artifact at all.
 #[test]
 fn cr_603_2_that_player_is_the_damaged_player() {
     use crabomination::decision::ScriptedDecider;
     use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
-    for make in [catalog::rustmouth_ogre as fn() -> _, catalog::caustic_wasps] {
+    for make in [catalog::rustmouth_ogre as fn() -> _, catalog::caustic_wasps, catalog::sunder_shaman] {
         let mut g = multi_player_game(3);
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
@@ -7475,4 +7475,17 @@ fn cr_603_2_that_player_is_the_damaged_player() {
         let name = make().name;
         assert!(g.battlefield_find(bystander).is_some(), "{name}: not the bystander's artifact");
     }
+}
+
+/// CR 115.1 — "tap all creatures **target opponent** controls" (Tempest
+/// Caller): in a pod one seat is tapped down, not every opponent.
+#[test]
+fn cr_115_1_tempest_caller_taps_one_opponent() {
+    let mut g = multi_player_game(3);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::tempest_caller());
+    drain_stack(&mut g);
+    let tapped = |g: &GameState, id| g.battlefield_find(id).unwrap().tapped;
+    assert!(tapped(&g, a) != tapped(&g, b), "exactly one seat's creatures are tapped");
 }

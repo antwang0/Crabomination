@@ -2577,14 +2577,13 @@ pub fn biogenic_ooze() -> CardDefinition {
 
 /// Sunder Shaman — {R}{R}{G}{G} 5/5 Giant Shaman. Can't be blocked by more than
 /// one creature. Whenever it deals combat damage to a player, destroy target
-/// artifact or enchantment. (The "that player controls" restriction is
-/// approximated as any artifact/enchantment.)
+/// artifact or enchantment that player controls (`ControlledByTriggerPlayer`).
 pub fn sunder_shaman() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Destroy {
-                what: target_filtered(R::Artifact.or(R::Enchantment)),
+                what: target_filtered(R::Artifact.or(R::Enchantment).and(R::ControlledByTriggerPlayer)),
             },
         }],
         ..body(

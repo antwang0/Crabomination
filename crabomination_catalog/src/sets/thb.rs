@@ -5635,8 +5635,8 @@ pub fn the_binding_of_the_titans() -> CardDefinition {
 }
 
 /// Kiora Bests the Sea God — {5}{U}{U} Saga. I: 8/8 hexproof Kraken. II: tap
-/// each nonland permanent your opponents control; it stays tapped through their
-/// next untap. III: gain control of a permanent an opponent controls, untapped.
+/// each nonland permanent target opponent controls; it stays tapped through
+/// their next untap (a stun counter). III: gain control of a permanent an opponent controls, untapped.
 pub fn kiora_bests_the_sea_god() -> CardDefinition {
     let kraken = TokenDefinition {
         name: "Kraken".into(),
@@ -5651,10 +5651,10 @@ pub fn kiora_bests_the_sea_god() -> CardDefinition {
         toughness: 8,
         ..Default::default()
     };
-    let opp_nonland = || {
-        Selector::EachPermanent(
-            SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
-        )
+    // Chapter II names one target opponent (one seat of a pod).
+    let opp_nonland = || Selector::ControlledBy {
+        who: PlayerRef::Target(0),
+        filter: SelectionRequirement::Nonland,
     };
     CardDefinition {
         name: "Kiora Bests the Sea God",
@@ -5675,16 +5675,19 @@ pub fn kiora_bests_the_sea_god() -> CardDefinition {
             ),
             (
                 2,
-                Effect::Seq(vec![
-                    Effect::Tap {
-                        what: opp_nonland(),
-                    },
-                    Effect::AddCounter {
-                        what: opp_nonland(),
-                        kind: CounterType::Stun,
-                        amount: Value::ONE,
-                    },
-                ]),
+                Effect::TargetPlayerThen {
+                    filter: SelectionRequirement::OpponentPlayer,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Tap {
+                            what: opp_nonland(),
+                        },
+                        Effect::AddCounter {
+                            what: opp_nonland(),
+                            kind: CounterType::Stun,
+                            amount: Value::ONE,
+                        },
+                    ])),
+                },
             ),
             (
                 3,
@@ -6686,9 +6689,8 @@ pub fn enemy_of_enlightenment() -> CardDefinition {
 
 /// Ashiok, Sculptor of Fears — {4}{U}{B} Ashiok planeswalker, 4 loyalty.
 /// +2: draw a card; each player mills two. −5: reanimate a creature card from
-/// a graveyard under your control. −11: gain control of all creatures your
-/// opponents control. (Single-target-opponent clause widened to all opponents
-/// — identical in two-player.)
+/// a graveyard under your control. −11: gain control of all creatures target
+/// opponent controls.
 pub fn ashiok_sculptor_of_fears() -> CardDefinition {
     CardDefinition {
         name: "Ashiok, Sculptor of Fears",
@@ -6730,13 +6732,16 @@ pub fn ashiok_sculptor_of_fears() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -11,
-                effect: Effect::GainControl {
-                    what: Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                    to: Some(PlayerRef::You),
-                    duration: Duration::Permanent,
+                effect: Effect::TargetPlayerThen {
+                    filter: SelectionRequirement::OpponentPlayer,
+                    then: Box::new(Effect::GainControl {
+                        what: Selector::ControlledBy {
+                            who: PlayerRef::Target(0),
+                            filter: SelectionRequirement::Creature,
+                        },
+                        to: Some(PlayerRef::You),
+                        duration: Duration::Permanent,
+                    }),
                 },
                 ..Default::default()
             },

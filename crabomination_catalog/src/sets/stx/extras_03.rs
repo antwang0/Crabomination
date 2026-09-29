@@ -200,9 +200,9 @@ pub fn reflective_golem() -> CardDefinition {
 /// controls."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A four-mana tempo enabler —
-/// taps the opponent's entire board so a wide swing pushes through. Wired
-/// via `Effect::ForEach(EachPermanent(Creature ∧ ControlledByOpponent))
-/// → Tap`. The "target opponent" prompt is auto-picked. Tests:
+/// taps one opponent's entire board so a wide swing pushes through. Wired
+/// as `TargetPlayerThen(OpponentPlayer)` over `ForEach(ControlledBy(Target(0),
+/// Creature)) → Tap` — one seat in a pod. Tests:
 /// `tempest_caller_etb_taps_opponent_creatures`.
 pub fn tempest_caller() -> CardDefinition {
     CardDefinition {
@@ -217,12 +217,16 @@ pub fn tempest_caller() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
-                body: Box::new(Effect::Tap {
-                    what: Selector::TriggerSource,
+            effect: Effect::TargetPlayerThen {
+                filter: SelectionRequirement::OpponentPlayer,
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::ControlledBy {
+                        who: crate::effect::PlayerRef::Target(0),
+                        filter: SelectionRequirement::Creature,
+                    },
+                    body: Box::new(Effect::Tap {
+                        what: Selector::TriggerSource,
+                    }),
                 }),
             },
         }],
