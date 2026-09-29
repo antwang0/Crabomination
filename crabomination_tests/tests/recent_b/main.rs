@@ -133,6 +133,7 @@ mod cmdr_quintorius;
 mod cmdr_top1000;
 mod cmdr_legends;
 mod cmdr_legends2;
+mod cmdr_familiars;
 mod cmdr_sefris;
 mod cmdr_morska;
 mod cmdr_inspirit;
