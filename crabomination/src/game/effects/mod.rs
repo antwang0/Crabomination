@@ -41178,7 +41178,15 @@ impl GameState {
                     .collect(),
             ),
             PlayerRef::EachOpponentExceptTriggerer => {
-                let skip = self.resolve_player(&PlayerRef::Triggerer, ctx);
+                // The trigger's own player: its source's damaged seat for a
+                // self-source trigger (Grenzo's Ruffians). On a "whenever a
+                // [creature] you control …" trigger `Triggerer` is the
+                // controller, never an opponent, so the event's player (the
+                // damaged seat — Kediss) is the one to leave out.
+                let skip = self
+                    .resolve_player(&PlayerRef::Triggerer, ctx)
+                    .filter(|&t| t != ctx.controller)
+                    .or_else(|| self.resolve_player(&PlayerRef::TriggerEventPlayer, ctx));
                 self.apnap_sort(
                     self.opponents_of(ctx.controller)
                         .into_iter()
