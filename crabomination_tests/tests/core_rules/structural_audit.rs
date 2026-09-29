@@ -1666,3 +1666,39 @@ fn library_top_is_index_zero() {
     walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src/game"), &mut hits);
     assert!(hits.is_empty(), "a library read from its end (index 0 is the top):\n  {}", hits.join("\n  "));
 }
+
+/// CR 205.3 / 305.7 / 613.1d — a battlefield permanent's creature-ness and
+/// types are its current ones. The printed reads left under `game/` are off
+/// the battlefield (a spell, a graveyard card), inside the layer pass, or
+/// base-characteristic reads; new battlefield code goes through
+/// `computed_is_creature`, `permanent_has_creature_type` and
+/// `permanent_has_land_type`. A ratchet: the counts may only fall.
+#[test]
+fn printed_type_line_reads_only_shrink() {
+    const CAPS: [(&str, usize); 4] = [
+        ("definition.is_creature()", 69),
+        ("definition.subtypes.creature_types.contains", 22),
+        ("definition.subtypes.land_types.contains", 10),
+        ("definition.has_creature_type(", 2),
+    ];
+    fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
+        for e in std::fs::read_dir(dir).expect("readable").flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs")
+                && !p.ends_with("layers.rs")
+                && !p.ends_with("creature_type.rs")
+            {
+                let src = std::fs::read_to_string(&p).expect("utf-8");
+                out.extend(src.lines().map(|l| l.split("//").next().unwrap_or("").to_string()));
+            }
+        }
+    }
+    let mut code = Vec::new();
+    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src/game"), &mut code);
+    for (pat, cap) in CAPS {
+        let n: usize = code.iter().map(|l| l.matches(pat).count()).sum();
+        assert!(n <= cap, "{n} printed `{pat}` reads under game/ (cap {cap}): use the layer-aware helper");
+    }
+}
