@@ -29699,12 +29699,20 @@ impl GameState {
     /// Neither is true on almost every board (PERF `(-207)`'s lane), so the
     /// common path is one word load and the printed read — which is why this
     /// is usable in a `filter` over the whole battlefield.
+    #[inline]
     pub(crate) fn computed_is_creature(&self, card: &CardInstance) -> bool {
         if self.layer_reads_are_printed()
             || (!card.bestowed && !self.card_type_change_in_scope())
         {
             return card.definition.is_creature();
         }
+        self.computed_is_creature_slow(card)
+    }
+
+    /// [`Self::computed_is_creature`] past its gate — out of line so the
+    /// ~300 call sites inline only the one-word fast path.
+    #[inline(never)]
+    fn computed_is_creature_slow(&self, card: &CardInstance) -> bool {
         // Off the battlefield (a spell, a graveyard card) there is no layer
         // view: the printed line, as the pre-layer readers had it.
         if self.battlefield.find_by_id(card.id).is_none() {

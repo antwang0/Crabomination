@@ -17239,6 +17239,21 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-09-29 — the exact card-type-changer walk behind `computed_is_creature`
+
+CR 613.1d sweep (`a022d2e2`): ~300 battlefield `definition.is_creature()`
+reads now go through `computed_is_creature`. `--bench` 196,176 / 27.64 /
+613.0 byte-identical, paired wall clock +1.28 % median (12 pairs, sd 7.2 —
+noise). Callgrind `--decks cube --games 6 --seed 9410001`, release-fast:
+339.05 M → 346.68 M Ir (+2.25 %) → **345.33 M (+1.85 %)** after inlining the
+gate and outlining the slow path. Of that, `card_type_change_unscoped` is
+4.07 M inclusive: when the `LANE_CARD_TYPE` memo reads PRESENT (a creature-land
+on the board — common in cube) every gate call re-runs the exact
+`battlefield.iter().any(card_can_change_card_types)` walk. Candidate: memoize
+the exact answer beside the lane, invalidated where an instance's
+type-changing state (animation, crew, bestow) is written. Base binary predates
+two upstream commits, so the +1.85 % is an upper bound.
+
 ### 2026-09-27 — the pod crack-back horizon costs 27-57 % of default-pilot pod throughput
 
 `EvalWeights::pod_horizon` (adopted on a pod A/B, ML_NOTES) runs the attack
