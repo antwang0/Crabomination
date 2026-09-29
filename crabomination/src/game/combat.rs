@@ -5565,6 +5565,17 @@ impl GameState {
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
                 if atk.has_infect || (self.players[p].life <= 0 && self.player_unlife_active(p)) {
                     self.add_poison(p, amount, events);
+                    // Infect damage is still damage dealt to the player (CR
+                    // 702.90b): "whenever you're dealt damage" sees it, as it
+                    // does on the noncombat path.
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: Some(p),
+                        to_card: None,
+                        combat: true,
+                        from_controller: Some(atk.controller),
+                        from_card: Some(atk.id),
+                    });
                 } else {
                     // Angel's Grace / Worship — damage lands in full, but the
                     // life reduction is clamped to the floor.

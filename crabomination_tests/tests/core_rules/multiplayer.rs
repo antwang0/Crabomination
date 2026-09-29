@@ -7622,7 +7622,8 @@ fn cr_614_1_player_damage_replacements_cover_combat() {
         g.step = TurnStep::DeclareBlockers;
         g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
         while g.step != TurnStep::EndCombat {
-            let _ = g.advance_step(Vec::new());
+            let evs = g.advance_step(Vec::new()).unwrap_or_default();
+            g.dispatch_triggers_for_events(&evs);
             drain_stack(g);
         }
     };
@@ -7642,6 +7643,15 @@ fn cr_614_1_player_damage_replacements_cover_combat() {
     let child = g.add_card_to_battlefield(0, catalog::child_of_night());
     swing(&mut g, child);
     assert_eq!(g.players[0].life, 20, "no lifelink off replaced damage");
+
+    // CR 702.90b — infect combat damage is damage dealt to the player:
+    // Sun Droplet ("whenever you're dealt damage") counts it.
+    let mut g = multi_player_game(3);
+    let droplet = g.add_card_to_battlefield(1, catalog::sun_droplet());
+    let elf = g.add_card_to_battlefield(0, catalog::glistener_elf());
+    swing(&mut g, elf);
+    assert_eq!(g.players[1].poison_counters, 1);
+    assert_eq!(g.battlefield_find(droplet).unwrap().counter_count(CounterType::Charge), 1, "Sun Droplet saw it");
 
     let mut g = multi_player_game(3);
     let shield = g.add_card_to_battlefield(1, catalog::delaying_shield());
