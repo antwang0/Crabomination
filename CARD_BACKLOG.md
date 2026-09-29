@@ -2723,9 +2723,9 @@ state-corrupting in ordinary play.
   (Spiders-Man, Scarlet Spider) — would need a `cast_via_web_slinging` mark like
   the new `cast_via_mayhem` flag.
 - **Noticed (TDM Renew/Mobilize batches):** Sibsig's Artisan's "perpetually gains
-  this ability" Renew rider and Rot-Curse Rakshasa's "X target creatures get a
-  decayed counter" (multi-target Renew) are deferred — perpetual ability-grants
-  and divided-counter Renew aren't wired.
+  this ability" Renew rider is deferred — perpetual ability-grants aren't wired.
+  (Rot-Curse Rakshasa's X-target decayed-counter Renew landed as
+  `TargetsExactlyX` over a graveyard `ActivatedAbility`.)
 - **Highspire Bell-Ringer / "second spell each turn costs {1} less"** — a
   cost-reduction keyed on the second-spell condition; no static for it yet.
 - **Deferred TDM cards (noticed this run, want a primitive):**

@@ -849,6 +849,36 @@ fn kheru_goldkeeper_renew_grants_counters() {
     assert!(g.exile.iter().any(|c| c.id == kheru), "Kheru exiled by Renew cost");
 }
 
+/// Rot-Curse Rakshasa's Renew ({X}{B}{B}, exile it from your graveyard) puts
+/// a decayed counter on each of X target creatures (CR 122.1b, 702.147): the
+/// two opposing Bears can't block afterwards.
+#[test]
+fn rot_curse_rakshasa_renew_decays_x_creatures() {
+    let mut g = two_player_game();
+    let rot = g.add_card_to_graveyard(0, catalog::rot_curse_rakshasa());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rot,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("Renew from graveyard");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Decayed));
+    }
+    assert!(g.exile.iter().any(|c| c.id == rot), "exiled by the Renew cost");
+}
+
 /// Dragonclaw Strike doubles your creature's P/T then fights.
 #[test]
 fn dragonclaw_strike_doubles_and_fights() {

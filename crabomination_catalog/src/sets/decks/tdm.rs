@@ -2215,9 +2215,9 @@ pub fn zurgo_thunders_decree() -> CardDefinition {
     }
 }
 
-/// Rot-Curse Rakshasa — {1}{B} 5/5 Demon with trample and decayed.
-/// (Its graveyard Renew ability — exile from the graveyard to distribute decayed
-/// counters — is approximated away; graveyard-activated abilities want a primitive.)
+/// Rot-Curse Rakshasa — {1}{B} 5/5 Demon with trample and decayed. Renew —
+/// {X}{B}{B}, exile it from your graveyard: a decayed counter on each of X
+/// target creatures. Sorcery speed.
 pub fn rot_curse_rakshasa() -> CardDefinition {
     CardDefinition {
         name: "Rot-Curse Rakshasa",
@@ -2230,6 +2230,25 @@ pub fn rot_curse_rakshasa() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Trample, Keyword::Decayed],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), b(), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 1,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::AddKeywordCounter {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Decayed,
+                        amount: Value::ONE,
+                    }),
+                }),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
