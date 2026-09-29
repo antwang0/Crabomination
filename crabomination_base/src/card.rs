@@ -3014,6 +3014,10 @@ pub enum SelectionRequirement {
     /// blocked by it (Sentinel's "target creature blocking or blocked by
     /// this creature"). Reads `block_map` both ways.
     BlockingOrBlockedBySource,
+    /// CR 509 — the permanent is blocking the creature the source Equipment
+    /// or Aura is attached to ("target creature that's blocking equipped
+    /// creature" — Plasma Caster). Reads `block_map`.
+    BlockingHostOfSource,
     /// "Creatures blocked by [source] this turn" — reads the game-level
     /// `blocks_declared_this_turn` pair log, so it still answers after combat
     /// has been torn down (Wall of Nets' end-of-combat exile).
