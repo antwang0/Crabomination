@@ -2965,7 +2965,7 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let mut kinds = crate::fxhash::HashSet::default();
                 for c in self.battlefield.iter().filter(|c| {
-                    c.controller == p && c.definition.card_types.contains(&crate::card::CardType::Creature)
+                    c.controller == p && self.computed_is_creature(c)
                 }) {
                     for (kind, n) in &c.counters {
                         if *n > 0 {
@@ -4522,7 +4522,7 @@ impl GameState {
             // whatever the gate says: `computed()` is `None` there and the
             // shallow read needs a battlefield permanent too.
             R::HasCreatureType(ct) => {
-                if on_bf && gates.creature(self) {
+                if on_bf && (gates.creature(self) || self.changeling_grant_in_scope()) {
                     return None;
                 }
                 Some(
@@ -5428,8 +5428,7 @@ impl GameState {
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
-                    R::HasCreatureType(ct) => has_ctype(ct)
-                        || card.has_keyword(&crate::card::Keyword::Changeling),
+                    R::HasCreatureType(ct) => has_ctype(ct) || self.permanent_is_changeling(card),
                     // CR 613.1d — an outlaw on the battlefield reads its
                     // layered types (Vihaan's Treasures, animated as Construct
                     // Assassins, are outlaws until end of turn).

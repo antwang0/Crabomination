@@ -132,3 +132,24 @@ fn cr_105_2_vivid_counts_an_animated_lands_colour() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "black + green");
 }
+
+/// CR 613.1d / 702.73a — Shared Animosity counts an animated Mutavault (a
+/// creature with every creature type while animated) as an attacker sharing
+/// the Elf's type: the walk read the printed, noncreature line.
+#[test]
+fn cr_613_1d_shared_animosity_counts_an_animated_mutavault() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::shared_animosity());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let vault = g.add_card_to_battlefield(0, catalog::mutavault());
+    g.clear_sickness(elf);
+    g.clear_sickness(vault);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, vault, 1, None);
+    g.step = TurnStep::DeclareAttackers;
+    let at = |attacker| Attack { attacker, target: AttackTarget::Player(1) };
+    g.perform_action(GameAction::DeclareAttackers(vec![at(elf), at(vault)])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 2, "1 + the other attacking Elf-typed creature");
+}

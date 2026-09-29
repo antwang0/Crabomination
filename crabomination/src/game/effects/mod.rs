@@ -27840,7 +27840,7 @@ impl GameState {
                     let controls_legend = self.battlefield.iter().any(|c| {
                         c.controller == opp
                             && c.definition.supertypes.contains(&Supertype::Legendary)
-                            && (c.definition.card_types.contains(&CardType::Creature)
+                            && (self.computed_is_creature(c)
                                 || c.definition.card_types.contains(&CardType::Planeswalker))
                     });
                     if !controls_legend && !self.player_cant_lose_game(opp) {
@@ -40506,12 +40506,8 @@ impl GameState {
                 let types = snap.definition.subtypes.creature_types.clone();
                 self.battlefield
                     .iter()
-                    .filter(|c| c.definition.card_types.contains(&CardType::Creature))
-                    .filter(|c| {
-                        wild
-                            || c.has_keyword(&Keyword::Changeling)
-                            || c.definition.subtypes.creature_types.iter().any(|t| types.contains(t))
-                    })
+                    .filter(|c| self.computed_is_creature(c))
+                    .filter(|c| wild || types.iter().any(|t| self.permanent_has_creature_type(c.id, *t)))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }

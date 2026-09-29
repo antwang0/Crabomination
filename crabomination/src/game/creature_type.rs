@@ -12,13 +12,26 @@ impl GameState {
     /// use inside the layer gather (it may compute the layer view).
     pub(crate) fn permanent_has_creature_type(&self, cid: CardId, ct: CreatureType) -> bool {
         let Some(c) = self.battlefield_find(cid) else { return false };
+        if self.permanent_is_changeling(c) {
+            return true;
+        }
         if !self.creature_type_change_in_scope() {
-            return c.has_keyword(&Keyword::Changeling) || c.definition.subtypes.creature_types.contains(&ct);
+            return c.definition.subtypes.creature_types.contains(&ct);
         }
-        match self.computed_permanent_on(c) {
-            Some(cp) => cp.subtypes().creature_types.contains(&ct) || cp.keywords().has_kw(&Keyword::Changeling),
-            None => c.has_keyword(&Keyword::Changeling) || c.definition.subtypes.creature_types.contains(&ct),
-        }
+        self.computed_permanent_on(c).map_or_else(
+            || c.definition.subtypes.creature_types.contains(&ct),
+            |cp| cp.subtypes().creature_types.contains(&ct),
+        )
+    }
+
+    /// CR 702.73a — changeling, printed or granted by a layer-6 effect (an
+    /// animated Mutavault). The instance's own keywords miss a layer grant,
+    /// so the computed view is asked when a changeling grant is in scope.
+    pub(crate) fn permanent_is_changeling(&self, c: &CardInstance) -> bool {
+        c.has_keyword(&Keyword::Changeling)
+            || (self.changeling_grant_in_scope()
+                && self.battlefield.find_by_id(c.id).is_some()
+                && self.computed_permanent_on(c).is_some_and(|cp| cp.keywords().has_kw(&Keyword::Changeling)))
     }
 
     /// "Creature of type `ct`" — a creature now, with that type now.
@@ -38,5 +51,12 @@ impl GameState {
         }
         self.computed_permanent_on(c)
             .map_or_else(|| c.definition.has_land_type(lt), |cp| cp.subtypes().land_types.contains(&lt))
+    }
+
+    /// Could a layer-6 effect be granting changeling (Maskwood Nexus, an
+    /// animated Mutavault)? `false` is authoritative: the printed keyword
+    /// list is the whole answer.
+    pub(crate) fn changeling_grant_in_scope(&self) -> bool {
+        !self.layer_reads_are_printed() && self.keyword_grant_in_scope(|k| *k == Keyword::Changeling)
     }
 }
