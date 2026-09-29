@@ -2061,6 +2061,13 @@ fn serde_true() -> bool {
 /// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResolutionScratch {
+    /// The spell `continue_spell_resolution` is resolving: its id and
+    /// definition. The card itself is held by the resolver, out of every
+    /// zone, so without this a lookup of the damage source (`source_colors`,
+    /// the protection check, a player's protection from a card type) found
+    /// nothing and a Pyroclasm killed a creature with protection from red
+    /// (CR 702.16e). Set and restored around each resolution pass.
+    pub(crate) resolving_spell: Option<(CardId, std::sync::Arc<crate::card::CardDefinition>)>,
     /// Transient: per-colour mana spent paying the activation currently
     /// resolving, stamped into `EffectContext.mana_spent_by_color`
     /// (Protective Sphere's "shares a color with the mana spent").
@@ -17621,6 +17628,12 @@ impl GameState {
         tgt.keywords().iter().any(Self::protection_keyword)
     }
 
+    /// The definition of the spell being resolved, when `id` is it — see
+    /// `ResolutionScratch::resolving_spell`.
+    pub(crate) fn resolving_spell_def(&self, id: CardId) -> Option<&crate::card::CardDefinition> {
+        self.scratch.resolving_spell.as_ref().filter(|(rid, _)| *rid == id).map(|(_, d)| &**d)
+    }
+
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -17676,12 +17689,18 @@ impl GameState {
         // `battlefield_find` up to four times a call, and `src_mv` runs it
         // unconditionally.
         let src_printed = self.battlefield_find(source);
+        // A resolving spell is on no battlefield: its printed definition.
+        let src_def: Option<&crate::card::CardDefinition> =
+            src_printed.map(|c| &**c.definition).or_else(|| self.resolving_spell_def(source));
         let src_colors: crate::mana::ColorSet = src_cp
             .map(|c| c.colors)
-            .unwrap_or_else(|| src_printed.map(|c| c.definition.cost.color_set()).unwrap_or_default());
+            .unwrap_or_else(|| src_def.map(|d| d.cost.color_set()).unwrap_or_default());
         let src_is_creature = src_cp
             .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
-            .unwrap_or_else(|| src_printed.is_some_and(|c| self.computed_is_creature(c)));
+            .unwrap_or_else(|| match src_printed {
+                Some(c) => self.computed_is_creature(c),
+                None => src_def.is_some_and(|d| d.is_creature()),
+            });
         // CR 702.16e — protection from a creature type prevents damage from a
         // source of that type.
         //
@@ -17694,12 +17713,12 @@ impl GameState {
         // there is nothing to own.
         let src_creature_types: &[crate::card::CreatureType] = match src_cp {
             Some(c) => &c.subtypes().creature_types,
-            None => src_printed.map_or(&[], |c| &c.definition.subtypes.creature_types),
+            None => src_def.map_or(&[], |d| &d.subtypes.creature_types),
         };
-        let src_mv = src_printed.map(|c| c.definition.cost.cmc()).unwrap_or(0);
+        let src_mv = src_def.map(|d| d.cost.cmc()).unwrap_or(0);
         let src_card_types: &[crate::card::CardType] = match src_cp {
             Some(c) => c.card_types(),
-            None => src_printed.map_or(&[], |c| &c.definition.card_types),
+            None => src_def.map_or(&[], |d| &d.card_types),
         };
         tgt.keywords().iter().filter_map(ProtectionKind::of).any(|kind| match kind {
             ProtectionKind::Color(color) => src_colors.contains(color),
@@ -28437,6 +28456,45 @@ impl GameState {
         override_effect: Option<Effect>,
         resume_stage: u8,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // Publish the resolving spell for the source lookups (see
+        // `ResolutionScratch::resolving_spell`), restoring whatever an outer
+        // resolution had there.
+        let prev = self
+            .scratch
+            .resolving_spell
+            .replace((card.id, card.definition.arc()));
+        let r = self.continue_spell_resolution_inner(
+            card,
+            caster,
+            target,
+            additional_targets,
+            mode,
+            x_value,
+            converged_value,
+            mana_spent,
+            override_effect,
+            resume_stage,
+        );
+        self.scratch.resolving_spell = prev;
+        r
+    }
+
+    /// The pass itself; [`continue_spell_resolution`](Self::continue_spell_resolution)
+    /// wraps it.
+    #[allow(clippy::too_many_arguments)]
+    fn continue_spell_resolution_inner(
+        &mut self,
+        card: CardInstance,
+        caster: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        mana_spent: u32,
+        override_effect: Option<Effect>,
+        resume_stage: u8,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let is_initial_pass = override_effect.is_none();
         // Borrow the resolving effect rather than deep-copying it. Every
         // branch below reads a subtree of the card's own `CardDefinition`, and
@@ -28531,7 +28589,14 @@ impl GameState {
                         .definition
                         .printed_colors()
                         .iter()
-                        .any(|c| self.players[*p].protection_colors_eot.contains(c)))
+                        .any(|c| self.players[*p].protection_colors_eot.contains(c))
+                    // CR 702.16j — protection from a card type (Serra's
+                    // Emissary naming the spell's type in response).
+                    || (*p != caster
+                        && self
+                            .player_protection_card_types(*p)
+                            .iter()
+                            .any(|ty| card.definition.card_types.contains(ty))))
             {
                 // CR 800.4a — its target player has left the game; CR
                 // 702.11e — or gained hexproof from its colour (Veil of
@@ -28593,7 +28658,11 @@ impl GameState {
                         .definition
                         .printed_colors()
                         .iter()
-                        .any(|c| g.players[*tp].protection_colors_eot.contains(c)))
+                        .any(|c| g.players[*tp].protection_colors_eot.contains(c))
+                        || (*tp != caster
+                            && g.player_protection_card_types(*tp)
+                                .iter()
+                                .any(|ty| card.definition.card_types.contains(ty))))
             };
             let all_illegal = slot_illegal(self, 0, t0)
                 && additional_targets

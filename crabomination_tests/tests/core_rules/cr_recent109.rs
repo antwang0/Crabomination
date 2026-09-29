@@ -588,3 +588,70 @@ fn an_ability_at_a_player_fizzles_after_veil_of_summer() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life, "the ping fizzled");
 }
+
+/// CR 702.16j / 608.2b — a player who gains protection from a card type while
+/// a spell of that type is on the stack is an illegal target for it: Serra's
+/// Emissary naming instant arrives (here, put into play mid-stack) under a
+/// Lightning Bolt at its controller, and the Bolt fizzles.
+#[test]
+fn player_protection_from_a_card_type_fizzles_the_spell() {
+    use crabomination::card::CardType;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt");
+    let angel = g.add_card_to_battlefield(0, catalog::serras_emissary());
+    g.battlefield_find_mut(angel).unwrap().chosen_card_type = Some(CardType::Instant);
+    let life = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "the Bolt fizzled");
+}
+
+/// CR 702.16e — a resolving spell's damage is prevented by protection from
+/// its colour, for a creature and for a player: Pyroclasm leaves a
+/// protection-from-red Bear unharmed, and Flame Rift does nothing to a
+/// player with protection from red. (The resolving card is held by the
+/// resolver, out of every zone, so the source lookups found no colours and
+/// both took the damage.)
+#[test]
+fn a_resolving_spell_s_damage_respects_protection() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let mut warded = catalog::grizzly_bears();
+    warded.keywords.push(Keyword::Protection(Color::Red));
+    let bear = g.add_card_to_battlefield(0, warded);
+    let clasm = g.add_card_to_hand(1, catalog::pyroclasm());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: clasm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Pyroclasm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the pro-red Bear took nothing");
+
+    // Flame Rift ("4 damage to each player") against a player with
+    // protection from red (Seht's Tiger's grant): only its caster is hurt.
+    g.players[0].protection_colors_eot.insert(Color::Red);
+    let rift = g.add_card_to_hand(1, catalog::flame_rift());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rift, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Flame Rift");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mine, "protection from red");
+    assert_eq!(g.players[1].life, theirs - 4);
+}

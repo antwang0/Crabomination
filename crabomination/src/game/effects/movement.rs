@@ -1357,6 +1357,7 @@ impl GameState {
                         self.find_card_anywhere(src)
                             .map(|c| c.definition.card_types.clone())
                     })
+                    .or_else(|| self.resolving_spell_def(src).map(|d| d.card_types.clone()))
                     .unwrap_or_default();
                 if types.iter().any(|t| src_types.contains(t)) {
                     return;

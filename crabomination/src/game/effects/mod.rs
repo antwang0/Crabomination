@@ -43275,7 +43275,10 @@ impl GameState {
         if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
             return cp.colors.iter().collect();
         }
-        self.find_card_anywhere(src).map(|c| c.definition.printed_colors()).unwrap_or_default()
+        self.find_card_anywhere(src)
+            .map(|c| c.definition.printed_colors())
+            .or_else(|| self.resolving_spell_def(src).map(|d| d.printed_colors()))
+            .unwrap_or_default()
     }
 }
 
