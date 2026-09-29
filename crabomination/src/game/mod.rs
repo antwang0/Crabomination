@@ -21949,6 +21949,16 @@ impl GameState {
         if energy_cost > 0 && self.players[p].energy < energy_cost {
             return Err(GameError::InsufficientEnergy);
         }
+        // "Equip {0}. Activate only once each turn." (Leather Armor) — CR
+        // 602.5b.
+        let capped = self.battlefield[equip_pos].definition.keyword_once_per_turn;
+        if capped
+            && self.battlefield[equip_pos]
+                .once_per_turn_used
+                .contains(&crate::card::KEYWORD_ACTIVATION_SLOT)
+        {
+            return Err(GameError::AbilityAlreadyUsedThisTurn);
+        }
         // "Equip—Pay 3 life" (Nightmare Lash): same up-front gate as energy.
         let life_cost = self.battlefield[equip_pos].definition.equip_life_cost;
         if !cast_cost::life_payable(self.players[p].life, life_cost) {
@@ -22003,6 +22013,9 @@ impl GameState {
         let Some(c) = self.battlefield.find_by_id_mut(equipment) else {
             return Err(GameError::CardNotOnBattlefield(equipment));
         };
+        if capped {
+            c.once_per_turn_used.push(crate::card::KEYWORD_ACTIVATION_SLOT);
+        }
         let old = c.attached_to.replace(target);
         if let Some(host) = old.filter(|&h| h != target) {
             let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
@@ -22129,13 +22142,32 @@ impl GameState {
     pub fn effective_crew_cost(&self, vehicle: crate::card::CardId) -> Option<u32> {
         let c = self.battlefield_find(vehicle)?;
         let printed = c.definition.crew_cost();
-        let granted = self.computed_permanent_on(c).and_then(|cp| {
-            cp.keywords().iter().filter_map(|k| if let Keyword::Crew(n) = k { Some(*n) } else { None }).min()
-        });
+        let granted = self.granted_crew_cost(vehicle);
         match (printed, granted) {
             (Some(a), Some(b)) => Some(a.min(b)),
             (a, b) => a.or(b),
         }
+    }
+
+    /// The cheapest crew N on the computed keyword line (a grant such as
+    /// Kotori's "Vehicles you control have crew 2"), less one instance of the
+    /// printed crew N — the computed line carries the printed keyword too.
+    fn granted_crew_cost(&self, vehicle: crate::card::CardId) -> Option<u32> {
+        let c = self.battlefield_find(vehicle)?;
+        let cp = self.computed_permanent_on(c)?;
+        let mut printed = c.definition.crew_cost();
+        cp.keywords()
+            .iter()
+            .filter_map(|k| if let Keyword::Crew(n) = k { Some(*n) } else { None })
+            .filter(|n| {
+                if printed == Some(*n) {
+                    printed = None;
+                    false
+                } else {
+                    true
+                }
+            })
+            .min()
     }
 
     fn crew(
@@ -22152,7 +22184,23 @@ impl GameState {
         if self.battlefield[veh_pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        let crew_n = self.effective_crew_cost(vehicle).ok_or(GameError::InvalidTarget)?;
+        // "Crew 1. Activate only once each turn." (Luxurious Locomotive, CR
+        // 602.5b) caps the printed crew ability only; a granted one (Kotori)
+        // is still there once it is spent.
+        let def = &self.battlefield[veh_pos].definition;
+        let capped = def.keyword_once_per_turn && def.crew_cost().is_some();
+        let spent = capped
+            && self.battlefield[veh_pos]
+                .once_per_turn_used
+                .contains(&crate::card::KEYWORD_ACTIVATION_SLOT);
+        let crew_n = if spent {
+            self.granted_crew_cost(vehicle).ok_or(GameError::AbilityAlreadyUsedThisTurn)?
+        } else {
+            self.effective_crew_cost(vehicle).ok_or(GameError::InvalidTarget)?
+        };
+        // The printed ability is the one activated whenever it is the cheapest.
+        let spends_printed =
+            capped && !spent && self.battlefield[veh_pos].definition.crew_cost() == Some(crew_n);
         // Validate the crew: distinct, controlled by p, untapped creatures,
         // none being the Vehicle itself. Sum their computed power.
         let computed = self.compute_battlefield();
@@ -22207,6 +22255,9 @@ impl GameState {
         // Remember the crew for "each creature that crewed it this turn"
         // payoffs (Luxurious Locomotive).
         if let Some(v) = self.battlefield.find_by_id_mut(vehicle) {
+            if spends_printed {
+                v.once_per_turn_used.push(crate::card::KEYWORD_ACTIVATION_SLOT);
+            }
             for &cid in crew_creatures {
                 if !v.crewed_by.contains(&cid) {
                     v.crewed_by.push(cid);

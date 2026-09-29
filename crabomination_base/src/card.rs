@@ -4256,6 +4256,11 @@ pub struct GraveyardExileCost {
     pub max: Option<u32>,
 }
 
+/// The `once_per_turn_used` slot a capped Equip / Crew keyword activation
+/// spends ([`CardDefinition::keyword_once_per_turn`]) — past every real
+/// ability index.
+pub const KEYWORD_ACTIVATION_SLOT: usize = usize::MAX;
+
 /// Static blueprint for a card; cloned into `CardInstance` at game-time.
 ///
 /// `Default` is derived so card constructors can use
@@ -4797,6 +4802,13 @@ pub struct CardDefinition {
     /// "Equip—Pay 3 life" (Nightmare Lash). Defaults to 0.
     #[serde(default)]
     pub equip_life_cost: u32,
+    /// "Equip {0}. Activate only once each turn." (Leather Armor) / "Crew 1.
+    /// Activate only once each turn." (Luxurious Locomotive): the printed
+    /// equip or crew keyword carries a per-turn cap (CR 602.5b). Spent in the
+    /// permanent's `once_per_turn_used` tally under
+    /// [`KEYWORD_ACTIVATION_SLOT`].
+    #[serde(default)]
+    pub keyword_once_per_turn: bool,
     /// "Equip—Sacrifice an artifact" (Piston Sledge): a sacrifice paid on top
     /// of (usually instead of) the mana equip cost. The lowest-power match is
     /// auto-picked; equipping fails cleanly when nothing matches.
