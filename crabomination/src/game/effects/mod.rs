@@ -3091,7 +3091,7 @@ impl GameState {
                 .unwrap_or(&[])
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id))
-                .any(|c| c.controller == p && c.definition.is_artifact());
+                .any(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
             // Jolene — a Treasure among them.
             let minted_treasure = self
                 .scratch.last_created_tokens
@@ -5055,7 +5055,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self.players[seat]
                     .library
                     .iter()
-                    .filter(|c| c.definition.is_artifact())
+                    .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() {
@@ -13253,7 +13253,7 @@ impl GameState {
                         for c in self.battlefield.iter().filter(|c| {
                             c.controller == p
                                 && c.definition.supertypes.contains(&Supertype::Legendary)
-                                && (self.computed_is_creature(c) || c.definition.is_planeswalker())
+                                && (self.computed_is_creature(c) || self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                         }) {
                             for col in c.definition.cost.colors() {
                                 if !legal.contains(&col) {
@@ -14024,7 +14024,7 @@ impl GameState {
                     let EntityRef::Permanent(cid) = ent else { continue; };
                     let is_pw = self
                         .battlefield_find(cid)
-                        .is_some_and(|c| c.definition.is_planeswalker());
+                        .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker));
                     self.remove_from_battlefield_to_exile(cid);
                     if ctx.controller < self.players.len() {
                         self.players[ctx.controller].cards_exiled_this_turn =
@@ -15716,7 +15716,7 @@ impl GameState {
                     .players
                     .iter()
                     .flat_map(|pl| pl.graveyard.iter())
-                    .filter(|c| self.computed_is_creature(c) || c.definition.is_planeswalker())
+                    .filter(|c| self.computed_is_creature(c) || self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
@@ -20174,7 +20174,7 @@ impl GameState {
                 let auras: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.attached_to == Some(host) && c.definition.is_enchantment())
+                    .filter(|c| c.attached_to == Some(host) && self.computed_has_card_type(c, crate::card::CardType::Enchantment))
                     .map(|c| c.id)
                     .collect();
                 for cid in std::iter::once(host).chain(auras) {
@@ -20260,7 +20260,7 @@ impl GameState {
                 let auras: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.attached_to == Some(host) && c.definition.is_enchantment())
+                    .filter(|c| c.attached_to == Some(host) && self.computed_has_card_type(c, crate::card::CardType::Enchantment))
                     .map(|c| c.id)
                     .collect();
                 for cid in std::iter::once(host).chain(auras.iter().copied()) {
@@ -28088,7 +28088,7 @@ impl GameState {
                 let ench: Vec<(CardId, usize, Option<CardId>)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_enchantment())
+                    .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Enchantment))
                     .map(|c| (c.id, c.controller, c.attached_to))
                     .collect();
                 for (id, controller, _) in &ench {
@@ -32085,7 +32085,7 @@ impl GameState {
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_artifact())
+                    .filter(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact))
                     .count() as u32;
                 let no_attacks = Effect::GrantKeywordToMatchingThisTurn {
                     filter: crate::card::SelectionRequirement::Creature,
@@ -37198,7 +37198,7 @@ impl GameState {
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_planeswalker())
+                    .filter(|c| c.controller == ctx.controller && self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                     .count();
                 self.players[ctx.controller].extra_loyalty_activations += n as u32;
                 Ok(())
@@ -40358,7 +40358,7 @@ impl GameState {
                         .iter()
                         .filter(|id| {
                             self.battlefield_find(**id)
-                                .is_some_and(|c| c.definition.is_planeswalker())
+                                .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                         })
                         .map(|&id| EntityRef::Permanent(id)),
                 );

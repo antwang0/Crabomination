@@ -20,7 +20,7 @@ impl GameState {
         let c = self.battlefield_find(pw)?;
         let walker = self
             .computed_permanent(pw)
-            .map_or(c.definition.is_planeswalker(), |cp| cp.card_types().contains(&CardType::Planeswalker));
+            .map_or(self.computed_has_card_type(c, crate::card::CardType::Planeswalker), |cp| cp.card_types().contains(&CardType::Planeswalker));
         (walker && c.controller != p && !self.same_team(p, c.controller)).then_some(pw)
     }
 
@@ -49,7 +49,7 @@ impl GameState {
         let c = self.battlefield_find(pw)?;
         let walker = self
             .computed_permanent(pw)
-            .map_or(c.definition.is_planeswalker(), |cp| cp.card_types().contains(&CardType::Planeswalker));
+            .map_or(self.computed_has_card_type(c, crate::card::CardType::Planeswalker), |cp| cp.card_types().contains(&CardType::Planeswalker));
         (walker && c.controller != p && !self.same_team(p, c.controller)).then_some(pw)
     }
 

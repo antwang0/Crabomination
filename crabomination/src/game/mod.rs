@@ -7766,7 +7766,7 @@ impl GameState {
         // Oath of Gideon's loyalty rider is the one spec that applies to a
         // non-creature entrant, so it's collected before the creature gate.
         let mut pw_specs = vec![];
-        if ec.definition.is_planeswalker() {
+        if self.computed_has_card_type(ec, crate::card::CardType::Planeswalker) {
             for src in &self.battlefield {
                 if src.controller != controller || src.id == entering {
                     continue;
@@ -15945,7 +15945,7 @@ impl GameState {
                     let greatest = self.battlefield.iter().filter(|c| {
                         c.id != card.id
                             && c.controller == card.controller
-                            && c.definition.is_artifact()
+                            && self.computed_has_card_type(c, crate::card::CardType::Artifact)
                     }).map(|c| c.definition.cost.cmc() as i32).max().unwrap_or(0);
                     (base_p + greatest, base_t)
                 }
@@ -15988,19 +15988,19 @@ impl GameState {
                 }
                 crate::card::DynamicPt::ArtifactsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
-                        c.controller == card.controller && c.definition.is_artifact()
+                        c.controller == card.controller && self.computed_has_card_type(c, crate::card::CardType::Artifact)
                     }).count() as i32;
                     (base + n, base + n)
                 }
                 crate::card::DynamicPt::ArtifactsControlledPower { base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
-                        c.controller == card.controller && c.definition.is_artifact()
+                        c.controller == card.controller && self.computed_has_card_type(c, crate::card::CardType::Artifact)
                     }).count() as i32;
                     (base_p + n, base_t)
                 }
                 crate::card::DynamicPt::EnchantmentsInPlay { base_p, base_t } => {
                     let n = self.battlefield.iter()
-                        .filter(|c| c.definition.is_enchantment())
+                        .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Enchantment))
                         .count() as i32;
                     (base_p + n, base_t + n)
                 }
@@ -18823,7 +18823,7 @@ impl GameState {
             && self
                 .battlefield
                 .iter()
-                .any(|o| o.attached_to == Some(id) && o.definition.is_enchantment())
+                .any(|o| o.attached_to == Some(id) && self.computed_has_card_type(o, crate::card::CardType::Enchantment))
     }
 
     /// An Aura `seat` controls is attached to `id`.
@@ -18833,7 +18833,7 @@ impl GameState {
             && self
                 .battlefield
                 .iter()
-                .any(|o| o.attached_to == Some(id) && o.controller == seat && o.definition.is_enchantment())
+                .any(|o| o.attached_to == Some(id) && o.controller == seat && self.computed_has_card_type(o, crate::card::CardType::Enchantment))
     }
 
     /// CR 509.1a/b — the whole blocker-side half of
@@ -23344,7 +23344,7 @@ impl GameState {
                     let was_artifact = self
                         .died_card_snapshots
                         .get(card_id)
-                        .is_some_and(|c| c.definition.is_artifact());
+                        .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact));
                     if let Some(pl) = self.players.get_mut(*who) {
                         pl.permanents_sacrificed_this_turn =
                             pl.permanents_sacrificed_this_turn.saturating_add(1);

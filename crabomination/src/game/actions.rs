@@ -7461,8 +7461,8 @@ impl GameState {
             let ok = self.battlefield.iter().any(|c| {
                 c.id == sac
                     && c.controller == p
-                    && (c.definition.is_artifact()
-                        || c.definition.is_enchantment()
+                    && (self.computed_has_card_type(c, crate::card::CardType::Artifact)
+                        || self.computed_has_card_type(c, crate::card::CardType::Enchantment)
                         || c.is_token)
             });
             if !ok {
@@ -9677,9 +9677,9 @@ impl GameState {
                     && c.controller == p
                     && !c.tapped
                     && ((has_convoke && self.computed_is_creature(c))
-                        || (has_improvise && c.definition.is_artifact())
+                        || (has_improvise && self.computed_has_card_type(c, crate::card::CardType::Artifact))
                         || (has_waterbend
-                            && (self.computed_is_creature(c) || c.definition.is_artifact())))
+                            && (self.computed_is_creature(c) || self.computed_has_card_type(c, crate::card::CardType::Artifact))))
             });
             if bad {
                 cast_census::rollback(line!());
@@ -11068,7 +11068,7 @@ impl GameState {
                                     self.computed_is_creature(c),
                                     self.effective_toughness_on(c),
                                     c.definition.cost.cmc(),
-                                    c.definition.is_artifact(),
+                                    self.computed_has_card_type(c, crate::card::CardType::Artifact),
                                     c.definition.is_vehicle(),
                                     c.definition.cost.colors(),
                                 )
@@ -18487,7 +18487,7 @@ impl GameState {
         // Trazyn the Infinite — the same, from the artifact cards in its
         // controller's own graveyard.
         if trazyn && let Some(pl) = self.players.get(me.controller) {
-            for card in pl.graveyard.iter().filter(|c| c.definition.is_artifact()) {
+            for card in pl.graveyard.iter().filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact)) {
                 for ab in &card.definition.activated_abilities {
                     if !(ab.from_graveyard || ab.exile_self_cost) {
                         out.push(ab);
@@ -18766,7 +18766,7 @@ impl GameState {
                     && c.controller == p
                     && !c.tapped
                     && (self.computed_is_creature(c)
-                        || (!creatures_only && c.definition.is_artifact()))
+                        || (!creatures_only && self.computed_has_card_type(c, crate::card::CardType::Artifact)))
             });
             if !ok {
                 return Err(GameError::CardNotOnBattlefield(*cid));
@@ -18976,11 +18976,11 @@ impl GameState {
             .map(|_| self.players[p].mana_pool.total());
         // Coin of Mastery — any artifact's mana is marked the same way.
         let artifact_before = source
-            .filter(|c| c.definition.is_artifact())
+            .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
             .map(|_| self.players[p].mana_pool.total());
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
-            && source.is_some_and(|c| c.controller == p && c.definition.is_artifact());
+            && source.is_some_and(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
         // Professor Hojo's "first activated ability … that targets a creature
         // you control" — spent by the first such activation, Hojo or not.
         let first_own_creature_target = self.own_creature_ability_unspent(p)
@@ -19582,13 +19582,13 @@ impl GameState {
             let src_is_artifact = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
-                    .is_some_and(|c| c.definition.is_artifact())
+                    .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
             } else if source_in_hand {
                 self.players[source_owner].hand.iter()
                     .find(|c| c.id == card_id)
-                    .is_some_and(|c| c.definition.is_artifact())
+                    .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
             } else {
-                bf_src!().is_some_and(|c| c.definition.is_artifact())
+                bf_src!().is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
             };
             if src_is_artifact
                 && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
@@ -19605,7 +19605,7 @@ impl GameState {
         {
             let src_artifact_on_bf = !source_in_gy
                 && !source_in_hand
-                && bf_src!().is_some_and(|c| c.definition.is_artifact());
+                && bf_src!().is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact));
             if src_artifact_on_bf
                 && self.battlefield.iter().any(|c| {
                     c.definition.static_abilities.iter().any(|sa| {
@@ -19629,7 +19629,7 @@ impl GameState {
             let src_is_ace = !source_in_gy
                 && !source_in_hand
                 && bf_src!().is_some_and(|c| {
-                    c.definition.is_artifact()
+                    self.computed_has_card_type(c, crate::card::CardType::Artifact)
                         || c.definition.card_types.contains(&crate::card::CardType::Creature)
                         || c.definition.card_types.contains(&crate::card::CardType::Enchantment)
                 });
@@ -21194,7 +21194,7 @@ impl GameState {
             && !effective_mana_cost.symbols.is_empty()
             && self
                 .battlefield_find(card_id)
-                .is_some_and(|c| c.controller == p && c.definition.is_artifact())
+                .is_some_and(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact))
         {
             let total: u32 = self
                 .battlefield

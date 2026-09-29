@@ -790,7 +790,7 @@ impl GameState {
                 EntityRef::Player(p) => Some(p),
                 EntityRef::Permanent(cid) => self
                     .battlefield_find(cid)
-                    .filter(|c| c.definition.is_planeswalker())
+                    .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                     .map(|c| c.controller),
                 EntityRef::Card(_) => None,
             };
@@ -1705,7 +1705,7 @@ impl GameState {
                 // loyalty — this aligns spell damage with the same rule.
                 let is_pw = self
                     .battlefield_find(cid)
-                    .map(|c| c.definition.is_planeswalker())
+                    .map(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                     .unwrap_or(false);
                 // CR 310.6 — damage dealt to a battle removes that many
                 // defense counters (the noncombat analogue of the combat path
@@ -1788,7 +1788,7 @@ impl GameState {
                         && src != cid
                         && self
                             .battlefield_find(cid)
-                            .is_some_and(|c| c.definition.is_planeswalker())
+                            .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                         && self
                             .battlefield_find(src)
                             .is_some_and(|c| c.definition.remembers_damage_victims())

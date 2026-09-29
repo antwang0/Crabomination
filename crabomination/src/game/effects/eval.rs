@@ -461,7 +461,7 @@ impl GameState {
                 .iter()
                 .flat_map(|p| p.graveyard.iter())
                 .filter(|c| {
-                    c.definition.is_artifact()
+                    self.computed_has_card_type(c, crate::card::CardType::Artifact)
                         && self.deaths.graveyard_from_battlefield_this_turn.contains(&c.id)
                 })
                 .count() as i32,
@@ -3967,7 +3967,7 @@ impl GameState {
                 let typed = self.card_type_change_unscoped();
                 let mut n = 0;
                 for c in self.battlefield.iter().filter(|c| c.controller == p) {
-                    let artifact = c.definition.is_artifact()
+                    let artifact = self.computed_has_card_type(c, crate::card::CardType::Artifact)
                         || (typed
                             && self.computed_permanent(c.id).is_some_and(|cp| {
                                 cp.card_types().contains(&crate::card::CardType::Artifact)
@@ -5543,8 +5543,8 @@ impl GameState {
                         card.counters.values().any(|&n| n > 0)
                             || self.battlefield.iter().any(|o| {
                                 o.attached_to == Some(*cid)
-                                    && (o.definition.is_artifact()
-                                        || (o.definition.is_enchantment()
+                                    && (self.computed_has_card_type(o, crate::card::CardType::Artifact)
+                                        || (self.computed_has_card_type(o, crate::card::CardType::Enchantment)
                                             && o.controller == card.controller))
                             })
                             // CR 603.10a — a death trigger looks back.
@@ -6269,7 +6269,7 @@ impl GameState {
         self.auras_at_death.get(&card.id).is_some_and(|riders| {
             riders.iter().any(|(a, ctrl)| {
                 *ctrl == card.controller
-                    || self.battlefield.find_by_id(*a).is_some_and(|o| o.definition.is_artifact())
+                    || self.battlefield.find_by_id(*a).is_some_and(|o| self.computed_has_card_type(o, crate::card::CardType::Artifact))
             })
         })
     }
@@ -6396,9 +6396,9 @@ impl GameState {
                     || (card.definition.creature_off_battlefield
                         && self.battlefield_find(card.id).is_none())
             }
-            R::Artifact => card.definition.is_artifact(),
-            R::Enchantment => card.definition.is_enchantment(),
-            R::Planeswalker => card.definition.is_planeswalker(),
+            R::Artifact => self.computed_has_card_type(card, crate::card::CardType::Artifact),
+            R::Enchantment => self.computed_has_card_type(card, crate::card::CardType::Enchantment),
+            R::Planeswalker => self.computed_has_card_type(card, crate::card::CardType::Planeswalker),
             R::Permanent | R::PermanentCard => card.definition.is_permanent(),
             R::ControllerDescend(n) => {
                 self.players[controller]

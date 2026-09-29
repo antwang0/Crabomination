@@ -77,7 +77,7 @@ impl GameState {
             let ids: Vec<CardId> = self.players[s]
                 .graveyard
                 .iter()
-                .filter(|c| c.definition.is_artifact())
+                .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
                 .map(|c| c.id)
                 .collect();
             for &id in &ids {
@@ -92,7 +92,7 @@ impl GameState {
             let mine: Vec<CardId> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == s && c.definition.is_artifact())
+                .filter(|c| c.controller == s && self.computed_has_card_type(c, crate::card::CardType::Artifact))
                 .map(|c| c.id)
                 .collect();
             for id in mine {

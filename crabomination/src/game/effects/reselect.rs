@@ -35,7 +35,7 @@ impl GameState {
         for s in seats {
             let bucket = if s == chooser { &mut mine } else { &mut theirs };
             bucket.push((AttackTarget::Player(s), format!("Player {}", s + 1)));
-            for pw in self.battlefield.iter().filter(|c| c.controller == s && c.definition.is_planeswalker()) {
+            for pw in self.battlefield.iter().filter(|c| c.controller == s && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)) {
                 bucket.push((AttackTarget::Planeswalker(pw.id), pw.definition.name.to_string()));
             }
         }

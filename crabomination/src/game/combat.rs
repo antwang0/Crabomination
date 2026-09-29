@@ -1209,7 +1209,7 @@ impl GameState {
                     let pw = self
                         .battlefield_find(pw_id)
                         .ok_or(GameError::InvalidPlaneswalkerAttackTarget(pw_id))?;
-                    if !pw.definition.is_planeswalker()
+                    if !self.computed_has_card_type(pw, crate::card::CardType::Planeswalker)
                         // CR 506.2 — "can't be attacked" (The Aetherspark
                         // while attached to a creature).
                         || self.permanent_cant_be_attacked(pw_id)
@@ -6933,7 +6933,7 @@ impl GameState {
             // player" — Pollenbright Wings). The trigger fires off the *Aura*,
             // so `Selector::AttachedTo(This)` reaches the host.
             for aura in &self.battlefield {
-                if aura.attached_to != Some(source) || !aura.definition.is_enchantment() {
+                if aura.attached_to != Some(source) || !self.computed_has_card_type(aura, crate::card::CardType::Enchantment) {
                     continue;
                 }
                 for (idx, t) in aura.definition.triggered_abilities.iter().enumerate() {

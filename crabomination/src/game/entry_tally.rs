@@ -13,7 +13,7 @@ impl GameState {
     /// nonland-permanent and artifact entry tallies.
     pub(crate) fn tally_permanent_entry(&mut self, card_id: crate::card::CardId) {
         let Some(c) = self.battlefield_find(card_id) else { return };
-        let (p, land, artifact) = (c.controller, c.definition.is_land(), c.definition.is_artifact());
+        let (p, land, artifact) = (c.controller, c.definition.is_land(), self.computed_has_card_type(c, crate::card::CardType::Artifact));
         let food = c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food);
         if artifact {
             self.players[p].artifacts_entered_this_turn += 1;

@@ -2707,7 +2707,7 @@ impl GameState {
                     // Gideon's loyalty rider, which is the planeswalker case
                     // the same collector serves.
                     if is_creature_resolve || self.battlefield.iter().any(|c| {
-                        c.id == card_id && c.definition.is_planeswalker()
+                        c.id == card_id && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
                     }) {
                         for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
@@ -7502,7 +7502,7 @@ impl GameState {
             self.battlefield
                 .iter()
                 .filter(|c| {
-                    c.definition.is_planeswalker()
+                    self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
                         && c.counter_count(crate::card::CounterType::Loyalty) == 0
                 })
                 .map(|c| c.id)

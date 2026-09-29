@@ -1280,7 +1280,7 @@ impl GameState {
                 c.controller == seat
                     && !c.tapped
                     && ((convoke || waterbend) && self.computed_is_creature(c)
-                        || (improvise || waterbend) && c.definition.is_artifact())
+                        || (improvise || waterbend) && self.computed_has_card_type(c, crate::card::CardType::Artifact))
             })
             .map(|c| c.id)
             .collect()

@@ -1671,15 +1671,19 @@ fn library_top_is_index_zero() {
 /// types are its current ones. The printed reads left under `game/` are off
 /// the battlefield (a spell, a graveyard card), inside the layer pass, or
 /// base-characteristic reads; new battlefield code goes through
-/// `computed_is_creature`, `permanent_has_creature_type` and
-/// `permanent_has_land_type`. A ratchet: the counts may only fall.
+/// `computed_is_creature`, `computed_has_card_type`,
+/// `permanent_has_creature_type` and `permanent_has_land_type`. A ratchet:
+/// the counts may only fall.
 #[test]
 fn printed_type_line_reads_only_shrink() {
-    const CAPS: [(&str, usize); 4] = [
+    const CAPS: [(&str, usize); 7] = [
         ("definition.is_creature()", 69),
         ("definition.subtypes.creature_types.contains", 22),
         ("definition.subtypes.land_types.contains", 10),
         ("definition.has_creature_type(", 2),
+        ("definition.is_artifact()", 8),
+        ("definition.is_enchantment()", 0),
+        ("definition.is_planeswalker()", 5),
     ];
     fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
         for e in std::fs::read_dir(dir).expect("readable").flatten() {

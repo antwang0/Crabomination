@@ -59,4 +59,24 @@ impl GameState {
     pub(crate) fn changeling_grant_in_scope(&self) -> bool {
         !self.layer_reads_are_printed() && self.keyword_grant_in_scope(|k| *k == Keyword::Changeling)
     }
+
+    /// CR 613.1d — does battlefield permanent `card` currently have card type
+    /// `t` (Liquimetal Coating's artifact, an animation's creature)? Gated the
+    /// way [`Self::computed_is_creature`] is; off the battlefield, printed.
+    #[inline]
+    pub(crate) fn computed_has_card_type(&self, card: &CardInstance, t: crate::card::CardType) -> bool {
+        if self.layer_reads_are_printed() || (!card.bestowed && !self.card_type_change_in_scope()) {
+            return card.definition.card_types.contains(&t);
+        }
+        self.computed_has_card_type_slow(card, t)
+    }
+
+    #[inline(never)]
+    fn computed_has_card_type_slow(&self, card: &CardInstance, t: crate::card::CardType) -> bool {
+        if self.battlefield.find_by_id(card.id).is_none() {
+            return card.definition.card_types.contains(&t);
+        }
+        self.computed_permanent_on(card)
+            .map_or_else(|| card.definition.card_types.contains(&t), |cp| cp.card_types().contains(&t))
+    }
 }

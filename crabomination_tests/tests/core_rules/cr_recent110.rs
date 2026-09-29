@@ -153,3 +153,24 @@ fn cr_613_1d_shared_animosity_counts_an_animated_mutavault() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(elf).unwrap().power, 2, "1 + the other attacking Elf-typed creature");
 }
+
+/// CR 613.1d — "an artifact" on the battlefield is the layer view: a Mutavault
+/// made an artifact by Liquimetal Coating is one to Tezzeret, Betrayer of
+/// Flesh, so its {1} animation costs nothing (the discount read the printed,
+/// non-artifact line).
+#[test]
+fn cr_613_1d_liquimetal_coated_land_is_an_artifact_to_tezzeret() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::tezzeret_betrayer_of_flesh());
+    let coating = g.add_card_to_battlefield(0, catalog::liquimetal_coating());
+    let vault = g.add_card_to_battlefield(0, catalog::mutavault());
+    // The Coating's effect, not its activation: activating the Coating (an
+    // artifact) would itself spend Tezzeret's once-a-turn discount.
+    let coat = catalog::liquimetal_coating().activated_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(coating, 0, Some(Target::Permanent(vault)), 0);
+    g.resolve_effect(&coat, &ctx).unwrap();
+    // Tapped, so it can't pay its own {1}: only the discount covers it.
+    g.battlefield_find_mut(vault).unwrap().tapped = true;
+    activate(&mut g, vault, 1, None);
+    assert!(g.computed_permanent(vault).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+}
