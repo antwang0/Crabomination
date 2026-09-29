@@ -672,3 +672,44 @@ fn a_granted_changeling_gets_sliver_grants() {
     g.battlefield_find_mut(sage).unwrap().add_counters(CounterType::Everything, 1);
     assert_eq!(g.granted_abilities_for(sage).len(), 1, "a Sliver through the granted changeling");
 }
+
+/// CR 608.2b / 702.16b — a COPY of a spell re-checks its target too: Murder,
+/// Reverberate copying it, and Mother of Runes giving the Bear protection
+/// from black in answer to the copy — the copy fizzles, then the Murder.
+/// (The copy inherits the original's `cast_target_was_battlefield`, so it
+/// takes the same re-check as the cast spell.)
+#[test]
+fn a_spell_copy_fizzles_on_protection_gained_in_response() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let mother = g.add_card_to_battlefield(0, catalog::mother_of_runes());
+    g.clear_sickness(mother);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(1, catalog::murder());
+    let rev = g.add_card_to_hand(1, catalog::reverberate());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.players[1].mana_pool.add(Color::Red, 3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Murder");
+    g.priority.player_with_priority = 1;
+    let murder_stack = g.stack.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: Some(Target::Permanent(murder)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Reverberate");
+    // Resolve Reverberate: the copy of Murder goes on the stack.
+    g.resolve_top_of_stack().expect("Reverberate resolves");
+    assert_eq!(g.stack.len(), murder_stack + 1, "the copy is on the stack");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mother, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("Mother of Runes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "both Murders fizzled");
+}
