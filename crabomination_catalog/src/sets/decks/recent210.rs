@@ -151,13 +151,12 @@ pub fn gnarlback_rhino() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        // "Whenever you CAST a spell that targets this creature" — the heroic
+        // shape; an ability of yours targeting it drew a card too.
+        triggered_abilities: vec![crate::effect::shortcut::heroic(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }

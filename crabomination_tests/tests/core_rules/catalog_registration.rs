@@ -3826,9 +3826,12 @@ fn every_target_of_a_spell_trigger_ignores_abilities() {
         else {
             continue;
         };
-        let spell_only = text.contains("the target of a spell")
+        // "Whenever you cast a spell that targets this" (heroic, Gnarlback
+        // Rhino) is a cast trigger: no `BecameTarget` at all.
+        let spell_only = (text.contains("the target of a spell")
             && !text.contains("spell or ability")
-            && !text.contains("spells or abilities");
+            && !text.contains("spells or abilities"))
+            || text.contains("cast a spell that targets this");
         let ungated = def.triggered_abilities.iter().any(|t| {
             matches!(t.event.kind, EventKind::BecameTarget) && t.event.causer_filter.is_none()
         });
