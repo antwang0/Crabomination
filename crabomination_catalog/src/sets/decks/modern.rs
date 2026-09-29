@@ -20713,24 +20713,8 @@ pub fn eldrazi_confluence() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
-                        name: "Eldrazi Scion".to_string(),
-                        power: 1,
-                        toughness: 1,
-                        keywords: vec![],
-                        card_types: vec![CardType::Creature],
-                        colors: vec![],
-                        supertypes: vec![],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Eldrazi, CreatureType::Scion],
-                            ..Default::default()
-                        },
-                        activated_abilities: vec![],
-                        triggered_abilities: vec![],
-
-                        static_abilities: vec![],
-                        ..Default::default()
-                    }),
+                    // The shared Scion — its "Sacrifice this token: Add {C}." was missing.
+                    definition: std::sync::Arc::new(crabomination_base::tokens::eldrazi_scion_token()),
                 },
                 Effect::Move {
                     what: target_filtered(
