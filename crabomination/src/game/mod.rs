@@ -28525,10 +28525,21 @@ impl GameState {
                     || self.spell_color_hexproof_blocks(&card, caster, t)
             } else if let Target::Player(p) = t
                 && (self.players.get(*p).is_some_and(|pl| !pl.is_alive())
-                    || self.spell_color_hexproof_blocks(&card, caster, t))
+                    || self.spell_color_hexproof_blocks(&card, caster, t)
+                    || self.check_target_legality(t, caster).is_err()
+                    || card
+                        .definition
+                        .printed_colors()
+                        .iter()
+                        .any(|c| self.players[*p].protection_colors_eot.contains(c)))
             {
                 // CR 800.4a — its target player has left the game; CR
-                // 702.11e — or gained hexproof from its colour (Veil of Summer).
+                // 702.11e — or gained hexproof from its colour (Veil of
+                // Summer); CR 702.18 / 702.11 / 702.16b — or shroud, hexproof
+                // or protection since the cast (Seht's Tiger naming red under
+                // a Bolt). The spell is held by this resolution, out of every
+                // zone, so its colours are read off the card here rather than
+                // through `check_target_legality`'s source lookup.
                 true
             } else {
                 // A card target whose filter names its zone ("target creature
@@ -28578,6 +28589,11 @@ impl GameState {
                     || g.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
                     || matches!(t, Target::Permanent(tid) if g.spell_protection_blocks(&card, caster, *tid))
                     || g.spell_color_hexproof_blocks(&card, caster, t)
+                    || matches!(t, Target::Player(tp) if card
+                        .definition
+                        .printed_colors()
+                        .iter()
+                        .any(|c| g.players[*tp].protection_colors_eot.contains(c)))
             };
             let all_illegal = slot_illegal(self, 0, t0)
                 && additional_targets

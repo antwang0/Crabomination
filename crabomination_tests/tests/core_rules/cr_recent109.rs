@@ -527,3 +527,36 @@ fn protection_blocks_a_later_target_slot() {
     assert!(g.perform_action(cast).is_err());
     assert!(g.players[1].hand.iter().any(|c| c.id == spite), "back in hand");
 }
+
+/// CR 702.16b / 608.2b — a player who gains protection from a colour in
+/// response is an illegal target for a spell of that colour: Seht's Tiger
+/// flashed in naming red (the colour of the Bolt on the stack) fizzles a
+/// Lightning Bolt at its controller's face.
+#[test]
+fn player_protection_gained_in_response_fizzles_the_spell() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt");
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Color(Color::Red),
+    ]));
+    let tiger = g.add_card_to_hand(0, catalog::sehts_tiger());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tiger, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Seht's Tiger");
+    let life = g.players[0].life;
+    drain_stack(&mut g);
+    assert!(g.players[0].protection_colors_eot.contains(&Color::Red));
+    assert_eq!(g.players[0].life, life, "the Bolt fizzled");
+}
