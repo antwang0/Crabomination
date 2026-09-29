@@ -17276,7 +17276,10 @@ on the board — common in cube) every gate call re-runs the exact
 `battlefield.iter().any(card_can_change_card_types)` walk. Candidate: memoize
 the exact answer beside the lane, invalidated where an instance's
 type-changing state (animation, crew, bestow) is written. Base binary predates
-two upstream commits, so the +1.85 % is an upper bound.
+two upstream commits, so the +1.85 % is an upper bound. Later the same day the
+land-type / colour / granted-changeling reads (`permanent_has_land_type`,
+`permanent_is_changeling`, `changeling_grant_in_scope`) took it to **347.30 M
+(+2.43 % over base)**; `--bench` still byte-identical.
 
 ### 2026-09-27 — the pod crack-back horizon costs 27-57 % of default-pilot pod throughput
 
