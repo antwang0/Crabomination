@@ -73,3 +73,24 @@ fn cr_702_73a_type_counts_include_changelings() {
     g.add_card_to_battlefield(1, catalog::changeling_outcast());
     assert_eq!(g.computed_permanent(legion).unwrap().power, 8, "7/7 + one other Sliver");
 }
+
+/// CR 613.1d — "is a creature" on the battlefield is the layer view: Living
+/// Death's "sacrifices all creatures they control" takes an animated Treetop
+/// Village (the walk read the printed type line and left it).
+#[test]
+fn cr_613_1d_living_death_sacrifices_an_animated_land() {
+    let mut g = main_phase();
+    let village = g.add_card_to_battlefield(0, catalog::treetop_village());
+    g.clear_sickness(village);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, village, 1, None);
+    let ld = g.add_card_to_hand(0, catalog::living_death());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: ld, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(village).is_none(), "the 3/3 Ape was a creature");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == village));
+}

@@ -4204,7 +4204,7 @@ impl GameState {
                 let ids: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 let n = ids.len() as i32;
@@ -4677,7 +4677,7 @@ impl GameState {
                 let cands: Vec<(CardId, String)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if cands.is_empty() {
@@ -5845,7 +5845,7 @@ impl GameState {
                 let mut best_by_name: crate::fxhash::HashMap<String, (CardId, u32)> =
                     crate::fxhash::HashMap::default();
                 for c in &self.players[p].library {
-                    if !c.definition.is_creature() {
+                    if !self.computed_is_creature(c) {
                         continue;
                     }
                     let mv = c.definition.cost.cmc();
@@ -8023,7 +8023,7 @@ impl GameState {
                 let mut recipients = vec![subj];
                 for c in &self.battlefield {
                     if c.id != subj
-                        && c.definition.is_creature()
+                        && self.computed_is_creature(c)
                         && self
                             .computed_permanent_on(c)
                             .is_some_and(|cp| cp.colors.iter().any(|col| subj_colors.contains(col)))
@@ -8053,7 +8053,7 @@ impl GameState {
                 };
                 let mut recipients = vec![subj];
                 for c in &self.battlefield {
-                    if c.id != subj && c.definition.is_creature() && c.definition.name == name {
+                    if c.id != subj && self.computed_is_creature(c) && c.definition.name == name {
                         recipients.push(c.id);
                     }
                 }
@@ -8071,7 +8071,7 @@ impl GameState {
                 let sources: Vec<_> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 for src in sources {
@@ -8288,7 +8288,7 @@ impl GameState {
                         Target::Permanent(id) => Some(*id),
                         _ => None,
                     })
-                    .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.definition.is_creature()))
+                    .filter(|id| self.battlefield_find(*id).is_some_and(|c| self.computed_is_creature(c)))
                     .collect();
                 for id in targets {
                     let ctrl = self.battlefield_find(id).map(|c| c.controller);
@@ -8508,7 +8508,7 @@ impl GameState {
                     // Hardened Scales) scale the placement.
                     let n = self
                         .battlefield_find(id)
-                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|c| (c.controller, self.computed_is_creature(c)))
                         .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, counter, n, cre))
                         .unwrap_or(n);
                     if let Some(c) = self.battlefield_find_mut(id) {
@@ -8937,7 +8937,7 @@ impl GameState {
                     for id in ids {
                         let is_creature = self
                             .battlefield_find(id)
-                            .map(|c| c.definition.is_creature())
+                            .map(|c| self.computed_is_creature(c))
                             .unwrap_or(false);
                         if is_creature {
                             if let Some(c) = self.battlefield_find(id) {
@@ -10679,7 +10679,7 @@ impl GameState {
                 let mine: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 // Snapshot first, so a keyword granted in this pass doesn't
@@ -10822,7 +10822,7 @@ impl GameState {
                     let auto = self.players[seat]
                         .hand
                         .iter()
-                        .filter(|c| c.definition.is_creature())
+                        .filter(|c| self.computed_is_creature(c))
                         .min_by_key(|c| c.definition.cost.cmc())
                         .or_else(|| {
                             self.players[seat].hand.iter().min_by_key(|c| c.definition.cost.cmc())
@@ -10855,7 +10855,7 @@ impl GameState {
                     .iter()
                     .filter_map(|(seat, id)| {
                         let c = self.players[*seat].hand.iter().find(|c| c.id == *id)?;
-                        c.definition.is_creature().then(|| c.definition.cost.cmc())
+                        self.computed_is_creature(c).then(|| c.definition.cost.cmc())
                     })
                     .min();
                 let Some(lowest) = lowest else { return Ok(()) };
@@ -10864,7 +10864,7 @@ impl GameState {
                         .hand
                         .iter()
                         .find(|c| c.id == id)
-                        .is_some_and(|c| c.definition.is_creature() && c.definition.cost.cmc() == lowest);
+                        .is_some_and(|c| self.computed_is_creature(c) && c.definition.cost.cmc() == lowest);
                     if !qualifies {
                         continue;
                     }
@@ -13253,7 +13253,7 @@ impl GameState {
                         for c in self.battlefield.iter().filter(|c| {
                             c.controller == p
                                 && c.definition.supertypes.contains(&Supertype::Legendary)
-                                && (c.definition.is_creature() || c.definition.is_planeswalker())
+                                && (self.computed_is_creature(c) || c.definition.is_planeswalker())
                         }) {
                             for col in c.definition.cost.colors() {
                                 if !legal.contains(&col) {
@@ -13599,7 +13599,7 @@ impl GameState {
                     if let Some(cid) = ent.as_permanent_id() {
                         let victim = self
                             .battlefield_find(cid)
-                            .map(|c| (c.controller, c.definition.is_creature()));
+                            .map(|c| (c.controller, self.computed_is_creature(c)));
                         if self.destroy_permanent(cid, no_regen, events)
                             && let Some((owner, is_creature)) = victim
                             && !self.same_team(owner, ctx.controller)
@@ -13727,7 +13727,7 @@ impl GameState {
                                 .battlefield
                                 .iter()
                                 .filter(|c| {
-                                    c.controller == ctx.controller && c.definition.is_creature()
+                                    c.controller == ctx.controller && self.computed_is_creature(c)
                                 })
                                 .map(|c| c.power())
                                 .max()
@@ -14209,7 +14209,7 @@ impl GameState {
                 let haunted = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature() && c.id != src)
+                    .filter(|c| self.computed_is_creature(c) && c.id != src)
                     .min_by_key(|c| (c.controller == ctrl) as u8)
                     .map(|c| c.id);
                 let Some(haunted) = haunted else { return Ok(()); };
@@ -14435,7 +14435,7 @@ impl GameState {
                 let dying: Vec<(CardId, usize)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| (c.id, c.controller))
                     .collect();
                 for (id, who) in dying {
@@ -15017,7 +15017,7 @@ impl GameState {
                     .map(|c| {
                         let class = if c.definition.is_land() {
                             0
-                        } else if !c.definition.is_creature() {
+                        } else if !self.computed_is_creature(c) {
                             1
                         } else {
                             2
@@ -15668,7 +15668,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .graveyard
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
@@ -15716,7 +15716,7 @@ impl GameState {
                     .players
                     .iter()
                     .flat_map(|pl| pl.graveyard.iter())
-                    .filter(|c| c.definition.is_creature() || c.definition.is_planeswalker())
+                    .filter(|c| self.computed_is_creature(c) || c.definition.is_planeswalker())
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
@@ -15793,7 +15793,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .library
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if !candidates.is_empty() {
@@ -15946,7 +15946,7 @@ impl GameState {
                 let mine: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 let want = mine.len();
@@ -16443,7 +16443,7 @@ impl GameState {
                 // Default pick: the sector holding the most creatures, so an
                 // auto-decided wipe or pump lands where it matters most.
                 let mut tally = [0u32; 3];
-                for c in self.battlefield.iter().filter(|c| c.definition.is_creature()) {
+                for c in self.battlefield.iter().filter(|c| self.computed_is_creature(c)) {
                     if let Some(i) = c.sector.and_then(|s| Sector::ALL.iter().position(|a| *a == s))
                     {
                         tally[i] += 1;
@@ -17270,7 +17270,7 @@ impl GameState {
                 let owner = self.players.iter().position(|p| {
                     p.graveyard.iter().any(|c| {
                         c.id == src
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                             && !c.definition.subtypes.creature_types.contains(unless)
                     })
                 });
@@ -18046,7 +18046,7 @@ impl GameState {
                 let candidates: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
@@ -18435,7 +18435,7 @@ impl GameState {
                     // CR 614.16 counter replacement chain like any other add.
                     let bf = self.battlefield_find(cid);
                     let add = bf
-                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|c| (c.controller, self.computed_is_creature(c)))
                         .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, *kind, cur, cre))
                         .unwrap_or(cur);
                     if let Some(c) = self.battlefield_find_mut(cid) {
@@ -18468,7 +18468,7 @@ impl GameState {
                     for (kind, cur) in kinds {
                         let add = self
                             .battlefield_find(cid)
-                            .map(|c| (c.controller, c.definition.is_creature()))
+                            .map(|c| (c.controller, self.computed_is_creature(c)))
                             .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, kind, cur, cre))
                             .unwrap_or(cur);
                         if let Some(c) = self.battlefield_find_mut(cid) {
@@ -18676,7 +18676,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| {
-                        c.definition.is_creature()
+                        self.computed_is_creature(c)
                             && !exclude_types.iter().any(|t| c.definition.has_creature_type(*t))
                     })
                     .map(|c| c.id)
@@ -18719,13 +18719,13 @@ impl GameState {
                 let n: u32 = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctrl && c.definition.is_creature())
+                    .filter(|c| c.controller == ctrl && self.computed_is_creature(c))
                     .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
                     .sum();
                 let foes: Vec<crate::card::CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature() && !self.same_team(c.controller, ctrl))
+                    .filter(|c| self.computed_is_creature(c) && !self.same_team(c.controller, ctrl))
                     .map(|c| c.id)
                     .collect();
                 for cid in foes {
@@ -18744,7 +18744,7 @@ impl GameState {
                 let ids: Vec<crate::card::CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctrl && c.definition.is_creature() && Some(c.id) != src)
+                    .filter(|c| c.controller == ctrl && self.computed_is_creature(c) && Some(c.id) != src)
                     .map(|c| c.id)
                     .collect();
                 let mut total = 0u32;
@@ -19241,7 +19241,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() {
@@ -19848,7 +19848,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self.players[ctx.controller]
                     .hand
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() {
@@ -19948,7 +19948,7 @@ impl GameState {
                         .iter()
                         .filter(|c| {
                             c.controller == caster
-                                && c.definition.is_creature()
+                                && self.computed_is_creature(c)
                                 && Some(c.id) != ctx.source
                                 && legal.contains(&Target::Permanent(c.id))
                         })
@@ -19957,7 +19957,7 @@ impl GameState {
                 } else {
                     self.battlefield
                         .iter()
-                        .filter(|c| c.definition.is_creature() && Some(c.id) != ctx.source)
+                        .filter(|c| self.computed_is_creature(c) && Some(c.id) != ctx.source)
                         .map(|c| c.id)
                         .collect()
                 };
@@ -20208,7 +20208,7 @@ impl GameState {
                     .find(|id| {
                         self.exile
                             .iter()
-                            .any(|c| c.id == **id && c.definition.is_creature())
+                            .any(|c| c.id == **id && self.computed_is_creature(c))
                     })
                     .or(linked.first())
                 else {
@@ -20329,7 +20329,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| {
-                        c.controller == seat && c.definition.is_creature() && c.id != host
+                        c.controller == seat && self.computed_is_creature(c) && c.id != host
                     })
                     .map(|c| c.id)
                     .next()
@@ -20342,7 +20342,7 @@ impl GameState {
                 let mine: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 for cid in mine {
@@ -21540,7 +21540,7 @@ impl GameState {
                 let best = self.battlefield.iter()
                     .filter(|c| c.controller == ctrl
                         && c.id != src
-                        && c.definition.is_creature()
+                        && self.computed_is_creature(c)
                         && !c.tapped
                         && !c.summoning_sick
                         && !attacking_ids.contains(&c.id))
@@ -21761,7 +21761,7 @@ impl GameState {
                 let pick = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.is_token && c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.is_token && c.controller == p && self.computed_is_creature(c))
                     .max_by_key(|c| c.power())
                     .map(|c| c.id);
                 let Some(src_id) = pick else { return Ok(()); };
@@ -22569,7 +22569,7 @@ impl GameState {
                     let ids: Vec<CardId> = self.players[p]
                         .graveyard
                         .iter()
-                        .filter(|c| c.definition.is_creature())
+                        .filter(|c| self.computed_is_creature(c))
                         .map(|c| c.id)
                         .collect();
                     for id in ids {
@@ -22581,7 +22581,7 @@ impl GameState {
                 let sac: Vec<(CardId, usize)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| (c.id, c.controller))
                     .collect();
                 for (id, who) in sac {
@@ -22624,7 +22624,7 @@ impl GameState {
                 // CR 800.4a — live seats only, seat order kept.
                 for p in (0..self.players.len()).filter(|s| self.players[*s].is_alive()) {
                     for c in &self.players[p].graveyard {
-                        if c.definition.is_creature() {
+                        if self.computed_is_creature(c) {
                             eligible.push((p, c.id));
                         }
                     }
@@ -22634,7 +22634,7 @@ impl GameState {
                 let sac: Vec<(CardId, usize)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature() && Some(c.id) != src)
+                    .filter(|c| self.computed_is_creature(c) && Some(c.id) != src)
                     .map(|c| (c.id, c.controller))
                     .collect();
                 for (id, who) in sac {
@@ -23041,7 +23041,7 @@ impl GameState {
                     && let Some(c) = self.battlefield_find(id)
                 {
                     let p = c.controller;
-                    let is_creature = c.definition.is_creature();
+                    let is_creature = self.computed_is_creature(c);
                     if is_creature {
                         self.died_card_snapshots.insert(id, self.lki_clone(c));
                         events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
@@ -23665,7 +23665,7 @@ impl GameState {
                     .hand
                     .iter()
                     .filter(|c| {
-                        c.definition.is_creature() && self.evaluate_requirement_on_card(filter, c, p)
+                        self.computed_is_creature(c) && self.evaluate_requirement_on_card(filter, c, p)
                     })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
@@ -24701,7 +24701,7 @@ impl GameState {
                     .graveyard
                     .iter()
                     .find(|c| c.id == pick)
-                    .is_some_and(|c| c.definition.is_creature());
+                    .is_some_and(|c| self.computed_is_creature(c));
                 if is_creature {
                     self.move_card_to(
                         pick,
@@ -25740,7 +25740,7 @@ impl GameState {
                     .filter_map(|&id| self.players[opp].library.iter().find(|c| c.id == id))
                     .filter(|c| match grant {
                         G::CastFreeNonland => !c.definition.is_land(),
-                        G::CreatureMayWhileExiled => c.definition.is_creature(),
+                        G::CreatureMayWhileExiled => self.computed_is_creature(c),
                         _ => true,
                     })
                     .collect();
@@ -26345,7 +26345,7 @@ impl GameState {
                     .find(|c| {
                         ctx.source.is_some()
                             && c.exiled_with == ctx.source
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                             && c.definition.cost.cmc() == x
                     })
                     .map(|c| c.id);
@@ -26375,7 +26375,7 @@ impl GameState {
                     .find(|id| {
                         self.exile
                             .iter()
-                            .any(|c| c.id == *id && c.definition.is_creature())
+                            .any(|c| c.id == *id && self.computed_is_creature(c))
                     });
                 let Some(id) = pick else { return Ok(()) };
                 let dest = ZoneDest::Battlefield {
@@ -26480,7 +26480,7 @@ impl GameState {
                     .exile
                     .iter()
                     .find(|c| c.exiled_with == Some(src) && c.face_down)
-                    .map(|c| (c.id, c.definition.is_creature()));
+                    .map(|c| (c.id, self.computed_is_creature(c)));
                 let Some((id, is_creature)) = pick else { return Ok(()) };
                 if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
                     c.face_down = false;
@@ -26764,7 +26764,7 @@ impl GameState {
                         .copied()
                         .filter(|id| {
                             self.players[p].library.iter().find(|c| c.id == *id)
-                                .map(|c| c.definition.is_creature()).unwrap_or(false)
+                                .map(|c| self.computed_is_creature(c)).unwrap_or(false)
                         })
                         .max_by_key(|id| {
                             self.players[p].library.iter().find(|c| c.id == *id)
@@ -26806,7 +26806,7 @@ impl GameState {
                     .copied()
                     .filter(|id| {
                         self.players[p].library.iter().find(|c| c.id == *id)
-                            .map(|c| c.definition.is_creature()).unwrap_or(false)
+                            .map(|c| self.computed_is_creature(c)).unwrap_or(false)
                     })
                     .max_by_key(|id| {
                         self.players[p].library.iter().find(|c| c.id == *id)
@@ -26887,7 +26887,7 @@ impl GameState {
                     // Deal that mana value to each creature.
                     if mv > 0 {
                         let creatures: Vec<CardId> = self.battlefield.iter()
-                            .filter(|c| c.definition.is_creature()).map(|c| c.id).collect();
+                            .filter(|c| self.computed_is_creature(c)).map(|c| c.id).collect();
                         for tgt in creatures {
                             self.deal_damage_to_from(EntityRef::Permanent(tgt), mv, ctx.source, events);
                         }
@@ -26977,7 +26977,7 @@ impl GameState {
                 if hit {
                     // Search your library for a creature card with flying → hand.
                     let flyer = self.players[ctx.controller].library.iter()
-                        .find(|c| c.definition.is_creature() && c.definition.keywords.has_kw(&crate::card::Keyword::Flying))
+                        .find(|c| self.computed_is_creature(c) && c.definition.keywords.has_kw(&crate::card::Keyword::Flying))
                         .map(|c| c.id);
                     if let Some(id) = flyer
                         && let Some(card) = Self::take_card(&mut self.players[ctx.controller].library, id) {
@@ -27675,7 +27675,7 @@ impl GameState {
                     let mut cands: Vec<(CardId, String)> = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == opp && c.definition.is_creature())
+                        .filter(|c| c.controller == opp && self.computed_is_creature(c))
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     if cands.is_empty() {
@@ -28049,7 +28049,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| {
-                        c.definition.is_creature() && (c.controller == me || c.controller == them)
+                        self.computed_is_creature(c) && (c.controller == me || c.controller == them)
                     })
                     .map(|c| (c.id, if c.controller == me { them } else { me }))
                     .collect();
@@ -28096,7 +28096,7 @@ impl GameState {
                 }
                 for (id, _, host) in &ench {
                     let Some(host) = host else { continue };
-                    if self.battlefield_find(*host).is_some_and(|c| c.definition.is_creature()) {
+                    if self.battlefield_find(*host).is_some_and(|c| self.computed_is_creature(c)) {
                         self.deal_damage_to_from(
                             EntityRef::Permanent(*host),
                             n,
@@ -28711,7 +28711,7 @@ impl GameState {
                 let mut ids: Vec<crate::card::CardId> = self
                     .exile
                     .iter()
-                    .filter(|c| c.exiled_with == Some(src) && c.definition.is_creature())
+                    .filter(|c| c.exiled_with == Some(src) && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 // "Return **a** card exiled with this" — Purgatory takes one,
@@ -29462,7 +29462,7 @@ impl GameState {
                 let mine: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == victim && c.definition.is_creature())
+                    .filter(|c| c.controller == victim && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 if !mine.is_empty() {
@@ -29614,7 +29614,7 @@ impl GameState {
                 let tokens: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.is_token && c.definition.is_creature())
+                    .filter(|c| c.is_token && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 for id in tokens {
@@ -29893,7 +29893,7 @@ impl GameState {
                     let pick = self.players[p]
                         .graveyard
                         .iter()
-                        .filter(|c| c.definition.is_creature() && c.definition.cost.cmc() <= *max_mv)
+                        .filter(|c| self.computed_is_creature(c) && c.definition.cost.cmc() <= *max_mv)
                         .max_by_key(|c| c.definition.cost.cmc())
                         .map(|c| c.id);
                     if let Some(cid) = pick {
@@ -30562,7 +30562,7 @@ impl GameState {
                     self.sacrificed_mana_value = Some(mv);
                     let is_creature = self
                         .battlefield_find(cid)
-                        .map(|c| c.definition.is_creature())
+                        .map(|c| self.computed_is_creature(c))
                         .unwrap_or(false);
                     if is_creature {
                         if let Some(c) = self.battlefield_find(cid) {
@@ -30661,7 +30661,7 @@ impl GameState {
                 } as usize;
                 for &cid in candidates.iter().take(n) {
                     let is_creature = self.battlefield_find(cid)
-                        .map(|c| c.definition.is_creature()).unwrap_or(false);
+                        .map(|c| self.computed_is_creature(c)).unwrap_or(false);
                     if is_creature {
                         if let Some(c) = self.battlefield_find(cid) {
                             self.died_card_snapshots.insert(cid, self.lki_clone(c));
@@ -31070,7 +31070,7 @@ impl GameState {
                 // The threshold is that seat's own graveyard before its own
                 // discard, which nothing between here and its run can move.
                 let creatures_in_graveyard = |g: &Self, p: usize| {
-                    g.players[p].graveyard.iter().filter(|c| c.definition.is_creature()).count()
+                    g.players[p].graveyard.iter().filter(|c| self.computed_is_creature(c)).count()
                 };
                 let life = *life as i32;
                 let per_seat = |before: usize, p: usize| {
@@ -31125,7 +31125,7 @@ impl GameState {
                     let n = self.players[p]
                         .hand
                         .iter()
-                        .filter(|c| c.definition.is_creature())
+                        .filter(|c| self.computed_is_creature(c))
                         .count();
                     if n == 0 {
                         continue;
@@ -32000,7 +32000,7 @@ impl GameState {
                     let mut mine: Vec<(CardId, i32)> = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .filter(|c| c.controller == p && self.computed_is_creature(c))
                         .map(|c| (c.id, self.effective_power_on(c).max(0)))
                         .collect();
                     mine.sort_by_key(|&(id, pw)| (std::cmp::Reverse(pw), id));
@@ -32712,7 +32712,7 @@ impl GameState {
                 let creatures: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature() && c.controller == p)
+                    .filter(|c| self.computed_is_creature(c) && c.controller == p)
                     .map(|c| c.id)
                     .collect();
                 for aid in aura_ids {
@@ -33809,7 +33809,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == caster && Some(c.id) != me)
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 let legal = self.enumerate_legal_targets(&def.effect, caster);
@@ -34398,7 +34398,7 @@ impl GameState {
                 let fodder: Vec<CardId> = self.players[p]
                     .graveyard
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .take(n)
                     .map(|c| c.id)
                     .collect();
@@ -34490,7 +34490,7 @@ impl GameState {
                     .filter(|c| {
                         c.id != source
                             && c.controller == ctx.controller
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                     })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
@@ -34945,7 +34945,7 @@ impl GameState {
                             .library
                             .iter()
                             .find(|c| c.id == *id)
-                            .is_some_and(|c| c.definition.is_creature())
+                            .is_some_and(|c| self.computed_is_creature(c))
                     });
                 if !all_creatures {
                     return Ok(());
@@ -35713,7 +35713,7 @@ impl GameState {
                     let Some((id, cost)) = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.definition.is_creature())
+                        .filter(|c| c.controller == seat && self.computed_is_creature(c))
                         .max_by_key(|c| c.definition.cost.cmc())
                         .map(|c| (c.id, c.definition.cost.clone()))
                     else {
@@ -36641,7 +36641,7 @@ impl GameState {
                 let host = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == owner && c.definition.is_creature())
+                    .filter(|c| c.controller == owner && self.computed_is_creature(c))
                     .max_by_key(|c| c.power())
                     .map(|c| c.id);
                 let Some(host) = host else { return Ok(()) };
@@ -39456,7 +39456,7 @@ impl GameState {
                 let mut creatures: Vec<(CardId, i32)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctrl && c.definition.is_creature())
+                    .filter(|c| c.controller == ctrl && self.computed_is_creature(c))
                     .map(|c| (c.id, c.power()))
                     .collect();
                 if creatures.is_empty() {
@@ -40401,7 +40401,7 @@ impl GameState {
             Selector::CreaturesInChosenSector => self
                 .battlefield
                 .iter()
-                .filter(|c| c.definition.is_creature() && c.sector == self.chosen_sector)
+                .filter(|c| self.computed_is_creature(c) && c.sector == self.chosen_sector)
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             Selector::LastMoved => self
@@ -40633,7 +40633,7 @@ impl GameState {
                 };
                 self.battlefield
                     .iter()
-                    .filter(|c| c.controller == owner && c.id != subj && c.definition.is_creature())
+                    .filter(|c| c.controller == owner && c.id != subj && self.computed_is_creature(c))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -41394,7 +41394,7 @@ impl GameState {
                 let count = |p: usize| {
                     self.battlefield
                         .iter()
-                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .filter(|c| c.controller == p && self.computed_is_creature(c))
                         .count()
                 };
                 self.living_seats().fold(None::<usize>, |best, p| match best {
@@ -42147,7 +42147,7 @@ impl GameState {
             .filter(|(_, _, owner)| !self.same_team(*owner, ctx.controller))
             .filter_map(|(id, _, owner)| {
                 let c = self.players[*owner].graveyard.iter().find(|c| c.id == *id)?;
-                Some((*id, c.definition.is_creature(), c.definition.cost.cmc(), *owner))
+                Some((*id, self.computed_is_creature(c), c.definition.cost.cmc(), *owner))
             })
             .collect();
         ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
@@ -42926,7 +42926,7 @@ impl GameState {
                             .battlefield
                             .iter()
                             .filter(|c| {
-                                c.controller == payer && c.definition.is_creature()
+                                c.controller == payer && self.computed_is_creature(c)
                             })
                             .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
                             .map(|c| c.id);
@@ -43114,7 +43114,7 @@ impl GameState {
                                 payer,
                                 ctx.source,
                             ),
-                            _ => c.definition.is_creature(),
+                            _ => self.computed_is_creature(c),
                         };
                         let pick = self
                             .battlefield
