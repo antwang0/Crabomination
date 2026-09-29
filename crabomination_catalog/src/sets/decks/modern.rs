@@ -55305,9 +55305,10 @@ pub fn springheart_nantuko() -> CardDefinition {
     }
 }
 
-/// Kozilek, the Broken Reality — {9} 9/9 Eldrazi. Cast: target opponent
-/// manifests two cards from their hand; you draw one per card manifested.
-/// Other colorless creatures you control get +3/+2.
+/// Kozilek, the Broken Reality — {9} 9/9 Eldrazi. When you cast it, up to two
+/// target players (you may be one) each manifest two cards from their hands;
+/// you draw one per card manifested. Other colorless creatures you control
+/// get +3/+2.
 pub fn kozilek_the_broken_reality() -> CardDefinition {
     CardDefinition {
         name: "Kozilek, the Broken Reality",
@@ -55322,13 +55323,15 @@ pub fn kozilek_the_broken_reality() -> CardDefinition {
         toughness: 9,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::ManifestFromHand {
-                who: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::OpponentPlayer,
-                },
-                count: Value::Const(2),
-                controller_draws: true,
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: SelectionRequirement::Player,
+                effect: Box::new(Effect::ManifestFromHand {
+                    who: Selector::Target(0),
+                    count: Value::Const(2),
+                    controller_draws: true,
+                }),
             },
         }],
         static_abilities: vec![StaticAbility {

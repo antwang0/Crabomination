@@ -4923,9 +4923,10 @@ pub fn kaya_orzhov_usurper() -> CardDefinition {
                 loyalty_cost: -5,
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
+                        // "target player" — any player, you included.
                         to: Selector::TargetFiltered {
                             slot: 0,
-                            filter: R::OpponentPlayer,
+                            filter: R::Player,
                         },
                         amount: Value::CardsInExileOwnedBy(PlayerRef::Target(0)),
                     },

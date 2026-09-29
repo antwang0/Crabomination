@@ -1876,6 +1876,31 @@ fn kozilek_broken_reality_manifests_opponent_hand() {
     assert_eq!(face_down_pt, Some((2, 2)), "opponent's manifest unaffected by my anthem");
 }
 
+/// "Up to two target players each manifest two cards": in a pod Kozilek hits
+/// two players, and its controller draws for all four manifests. It was one
+/// target opponent.
+#[test]
+fn kozilek_broken_reality_manifests_from_two_players() {
+    let mut g = crabomination::game::multi_player_game(3);
+    // The pod bots' profile: hostile player slots go to opponents first.
+    g.players[0].hostile_player_targets = true;
+    for seat in 1..=2 {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let koz = g.add_card_to_hand(0, catalog::kozilek_the_broken_reality());
+    g.players[0].mana_pool.add_colorless(9);
+    let hand_before = g.players[0].hand.len() - 1;
+    g.step = TurnStep::PreCombatMain;
+    crabomination::game::cast(&mut g, koz);
+    for seat in 1..=2 {
+        let n = g.battlefield.iter().filter(|c| c.controller == seat && c.face_down).count();
+        assert_eq!(n, 2, "seat {seat} manifested two");
+    }
+    assert_eq!(g.players[0].hand.len(), hand_before + 4, "one draw per manifest");
+}
+
 /// Ulamog, the Defiler: exiles half the library, enters with counters equal
 /// to the greatest exiled MV, computes annihilator from them, and wards with
 /// a two-permanent sacrifice.
@@ -2173,4 +2198,5 @@ fn epic_copy_does_not_stack_additional_snapshots() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].epic_spells.len(), 1, "copy resolution doesn't re-arm Epic");
 }
+
 
