@@ -7634,6 +7634,15 @@ fn cr_614_1_player_damage_replacements_cover_combat() {
     swing(&mut g, bear);
     assert_eq!((g.players[1].life, g.exile.len()), (20, exiled + 2), "Crumbling Sanctuary: two exiled, no life lost");
 
+    // CR 702.15b — lifelink gains for damage dealt: replaced damage gains
+    // nothing (Child of Night swung into Crumbling Sanctuary gained 2).
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(2, catalog::crumbling_sanctuary());
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let child = g.add_card_to_battlefield(0, catalog::child_of_night());
+    swing(&mut g, child);
+    assert_eq!(g.players[0].life, 20, "no lifelink off replaced damage");
+
     let mut g = multi_player_game(3);
     let shield = g.add_card_to_battlefield(1, catalog::delaying_shield());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

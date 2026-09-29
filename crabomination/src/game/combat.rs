@@ -4569,10 +4569,13 @@ impl GameState {
                     events,
                 );
                 if amount > 0 {
-                    self.deal_combat_damage_to_target(atk, amount, events);
-                    if atk.has_lifelink {
+                    // CR 702.15b — lifelink gains for the damage actually
+                    // dealt: a replacement (Crumbling Sanctuary, The
+                    // Mindskinner) or Thunderstaff's shave leaves less.
+                    let dealt = self.deal_combat_damage_to_target(atk, amount, events);
+                    if atk.has_lifelink && dealt > 0 {
                         let a = self.active_player_idx;
-                        let applied = self.adjust_life_applied(a, amount as i32);
+                        let applied = self.adjust_life_applied(a, dealt as i32);
                         if applied > 0 {
                             events.push(GameEvent::LifeGained { player: a, amount: applied as u32 });
                         }
@@ -4756,9 +4759,8 @@ impl GameState {
                         Some(atk.id),
                         events,
                     );
-                    lifelink_dealt += amount as i32;
                     if amount > 0 {
-                        self.deal_combat_damage_to_target(atk, amount, events);
+                        lifelink_dealt += self.deal_combat_damage_to_target(atk, amount, events) as i32;
                     }
                 }
 
@@ -5484,7 +5486,7 @@ impl GameState {
         atk: &AttackerInfo,
         amount: u32,
         events: &mut Vec<GameEvent>,
-    ) {
+    ) -> u32 {
         match atk.target {
             AttackTarget::Player(p) => {
                 // CR 615 — per-creature combat-damage shaving from an untapped
@@ -5492,7 +5494,7 @@ impl GameState {
                 let shave = self.combat_damage_shaved_for(p);
                 let amount = amount.saturating_sub(shave);
                 if amount == 0 && shave > 0 {
-                    return;
+                    return 0;
                 }
                 // CR 614 — Szadek: this attacker's combat damage to a player
                 // becomes that many +1/+1 counters on it, and the player mills
@@ -5516,19 +5518,19 @@ impl GameState {
                         count: amount, placer: self.resolution_causer,
                     });
                     self.mill_instead_of_combat_damage(p, amount, events);
-                    return;
+                    return 0;
                 }
                 // CR 614.1 — combat damage is damage too: The Mindskinner,
                 // Crumbling Sanctuary, Delaying Shield and Nefarious Lich
                 // replace it exactly as they replace a spell's.
                 if amount > 0 && self.replace_damage_to_player(p, amount, Some(atk.controller), events) {
-                    return;
+                    return 0;
                 }
                 // CR 614 — Undead Alchemist: a matching attacker's combat
                 // damage to a player is a mill of that many instead.
                 if amount > 0 && self.combat_damage_becomes_mill(atk.id, atk.controller) {
                     self.mill_instead_of_combat_damage(p, amount, events);
-                    return;
+                    return 0;
                 }
                 // CR 614.9 — Palisade-Giant-style redirect: combat damage
                 // aimed at the player lands on the redirector instead. Turn
@@ -5558,7 +5560,7 @@ impl GameState {
                         from_controller: Some(atk.controller),
                         from_card: Some(atk.id),
                     });
-                    return;
+                    return amount;
                 }
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
                 if atk.has_infect || (self.players[p].life <= 0 && self.player_unlife_active(p)) {
@@ -5680,6 +5682,7 @@ impl GameState {
                         }
                 }
                 self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
+                amount
             }
             AttackTarget::Planeswalker(pw_id) => {
                 // CR 702.19c — "trample over planeswalkers" (Thrasta): the
@@ -5744,13 +5747,15 @@ impl GameState {
                         true,
                     );
                 }
+                let mut spill_dealt = 0;
                 if let Some(p) = spill_to
                     && spill > 0
                 {
                     let mut spilled = atk.clone();
                     spilled.target = AttackTarget::Player(p);
-                    self.deal_combat_damage_to_target(&spilled, spill, events);
+                    spill_dealt = self.deal_combat_damage_to_target(&spilled, spill, events);
                 }
+                amount + spill_dealt
             }
             AttackTarget::Battle(b_id) => {
                 // CR 310.6 — combat damage to a battle removes that many
@@ -5770,6 +5775,7 @@ impl GameState {
                         from_card: Some(atk.id),
                     });
                 }
+                amount
             }
         }
     }
