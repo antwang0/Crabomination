@@ -516,12 +516,11 @@ pub fn noble_panther() -> CardDefinition {
 pub fn phyrexian_battleflies() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        // "Activate no more than twice each turn" collapses to the engine's
-        // once-per-turn gate on a second copy of the same ability.
-        activated_abilities: vec![
-            self_pump(cost(&[b()]), 1, 0),
-            ActivatedAbility { once_per_turn: true, ..self_pump(cost(&[b()]), 1, 0) },
-        ],
+        // "Activate no more than twice each turn" (CR 602.5b).
+        activated_abilities: vec![ActivatedAbility {
+            max_activations_per_turn: Some(2),
+            ..self_pump(cost(&[b()]), 1, 0)
+        }],
         ..creature(
             "Phyrexian Battleflies",
             cost(&[b()]),

@@ -267,3 +267,27 @@ fn crew_once_each_turn_caps_the_printed_crew_only() {
     g.perform_action(GameAction::Crew { vehicle: loco, crew_creatures: vec![c2] })
         .expect("Kotori's crew 2 is a separate ability");
 }
+
+/// CR 602.5b — Phyrexian Battleflies' "{B}: +1/+0. Activate no more than
+/// twice each turn." pumps twice and refuses a third (it was an uncapped copy
+/// plus a once-per-turn copy, so it pumped without limit).
+#[test]
+fn phyrexian_battleflies_pumps_at_most_twice() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let flies = g.add_card_to_battlefield(0, catalog::phyrexian_battleflies());
+    assert_eq!(g.battlefield_find(flies).unwrap().definition.activated_abilities.len(), 1);
+    g.players[0].mana_pool.add(Color::Black, 3);
+    let pump = GameAction::ActivateAbility {
+        card_id: flies, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    };
+    for _ in 0..2 {
+        g.perform_action(pump.clone()).expect("pump");
+        drain_stack(&mut g);
+    }
+    assert!(g.perform_action(pump).is_err(), "a third pump");
+    assert_eq!(g.computed_permanent(flies).unwrap().power, 2);
+}
