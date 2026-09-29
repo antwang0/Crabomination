@@ -2,7 +2,8 @@
 
 Per-set and per-run card residuals: what each closed set still
 approximates, and the remaining gap lists. `INCOMPLETE_CARDS.md` is the
-*generated* index over the same ground (`audit_incomplete`, `audit_stubs`);
+*generated* index over the same ground (`audit_incomplete`; blank cards are
+gated by `core_rules::structural_audit`);
 this file is the hand-written context behind it. `COMMANDER_BACKLOG.md` is
 the generated Commander worklist (EDHREC-ranked missing commanders, staples
 and commander-aware cards; `scripts/commander_backlog.py`).
@@ -2749,8 +2750,7 @@ state-corrupting in ordinary play.
   Hellkite). Worth auditing why `Target(0)` doesn't resolve in that context.
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
-Regenerate the remaining list with `cargo run -p crabomination_catalog
---example dump_names thb` diffed against a `set:thb` Scryfall name dump. The
+Regenerate the remaining list with `python3 scripts/set_gaps.py thb`. The
 earlier "still deferred" list (type/PT-change auras, scaled negative pump,
 conditional mana, land-search count, the planeswalkers, the demigods) all
 shipped — see git. **Genuinely-absent THB cards remaining** (each wants the

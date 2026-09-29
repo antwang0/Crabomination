@@ -2,8 +2,9 @@
 """Cross-reference the base crate's capability enums against the catalog and
 the engine, in both directions.
 
-Two questions `audit_stubs` and `audit_incomplete`'s structural pass cannot
-ask, because both look *inside* one card's effect tree:
+Two questions the blank-stub gate (core_rules::structural_audit, formerly
+`audit_stubs`) and `audit_incomplete`'s structural pass cannot ask, because
+both look *inside* one card's effect tree:
 
   DEAD CAPABILITY  a variant that shipped cards use and no engine code names
                    outside a no-op `match` arm. The card resolves, the tree is

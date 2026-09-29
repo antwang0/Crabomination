@@ -131,8 +131,6 @@ pub mod vocab_snapshot;
 pub mod decision_capture;
 pub mod leaf_capture;
 pub mod net_eval;
-pub mod puzzle;
-pub mod puzzle_corpus;
 pub mod lobby;
 mod decision_log;
 mod replay;

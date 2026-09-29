@@ -120,6 +120,77 @@ fn cost_only_abilities_are_not_dead() {
     assert_eq!(dead_capabilities(&vultures), Vec::new());
 }
 
+/// No shipped card "does nothing": no instant or sorcery that resolves to
+/// nothing, no non-creature permanent with no text, no planeswalker without
+/// loyalty abilities. This was the `audit_stubs` binary, run by hand; it read
+/// 0 flagged from 2026-08-14 on (59 before, every one a false positive from a
+/// stale carrier list), so the zero is now asserted.
+#[test]
+fn no_shipped_card_is_a_blank_stub() {
+    use crabomination::audit::stub_kind;
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        if let Some(kind) = stub_kind(&def) {
+            bad.push(format!("{}: {kind}", def.name));
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} card(s) do nothing — give each its printed text, or, if the text \
+         lives in a `CardDefinition` field `def_has_any_ability` doesn't list, \
+         add that field there:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
+
+/// One representative per carrier family. Each of these was flagged as a
+/// blank permanent before `def_has_any_ability` learned its field, and each
+/// is a shipped card with real text — so a regression here means the audit
+/// has started lying about the catalog again.
+#[test]
+fn blank_permanent_check_knows_every_carrier_field() {
+    use crabomination::audit::{def_has_any_ability, stub_kind};
+    use crabomination::catalog;
+
+    let cases: &[(&str, fn() -> crabomination::card::CardDefinition)] = &[
+        ("saga_chapters", catalog::history_of_benalia),
+        ("room", catalog::bottomless_pool_locker_room),
+        ("enter_modes", catalog::barrensteppe_siege),
+        ("enters_as_copy", catalog::copy_enchantment),
+        ("state_trigger", catalog::veiled_crocodile),
+    ];
+    for (field, factory) in cases {
+        let def = factory();
+        assert!(
+            def_has_any_ability(&def),
+            "{} carries its text in `{field}` and reads as blank",
+            def.name
+        );
+        assert_eq!(stub_kind(&def), None, "{} is flagged as a stub but is fully implemented", def.name);
+    }
+}
+
+/// The other half of the contract: a genuinely blank permanent is still
+/// caught. Built by hand rather than taken from the catalog, so the test
+/// keeps meaning if every real stub is fixed.
+#[test]
+fn a_permanent_with_no_text_at_all_is_still_flagged() {
+    let blank = crabomination::card::CardDefinition {
+        name: "Test Blank",
+        card_types: vec![crabomination::card::CardType::Enchantment],
+        ..Default::default()
+    };
+    assert_eq!(crabomination::audit::stub_kind(&blank), Some("BLANK PERMANENT (no abilities)"));
+}
+
 /// The two helpers that used to emit a filler trigger now emit none.
 #[test]
 fn tapped_etb_lands_without_an_etb_effect_have_no_trigger() {

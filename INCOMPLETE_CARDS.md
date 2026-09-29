@@ -2,8 +2,9 @@
 
 Cards that resolve and play, but whose implementation **drops or approximates a
 real-Magic capability** (the canonical example: a card that should be castable
-from the graveyard but isn't). Distinct from *blank* cards (see
-`audit_stubs.rs`) — these look done.
+from the graveyard but isn't). Distinct from *blank* cards (gated by
+`core_rules::structural_audit::no_shipped_card_is_a_blank_stub`, formerly the
+`audit_stubs` binary) — these look done.
 
 ## Reading key — most of the tables here are history, not a worklist
 

@@ -78,8 +78,9 @@ trig-census = []
 # only the link — one of these harnesses starts and finishes in 3.5 ms, so
 # there was no meaningful run-time cost to remove.
 #
-# `audit_stubs` and `replay_view` are left alone — they hold four real tests
-# over bin-local helpers (`classify` / `def_has_any_ability`, `narrate`).
+# `replay_view` is left alone — it holds real tests over its bin-local
+# `narrate`. (`audit_stubs` was the other; its check is now a
+# `core_rules::structural_audit` test and the binary is gone.)
 [[bin]]
 name = "audit_incomplete"
 test = false
@@ -90,10 +91,6 @@ test = false
 
 [[bin]]
 name = "bot_probe"
-test = false
-
-[[bin]]
-name = "bot_puzzles"
 test = false
 
 [[bin]]

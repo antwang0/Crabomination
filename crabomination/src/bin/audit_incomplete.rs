@@ -1,7 +1,8 @@
 //! Audit: find cards that are implemented but **incomplete** — a printed
 //! capability is missing or approximated.
 //!
-//! Companion to `audit_stubs.rs` (which finds *blank* cards). This binary
+//! Companion to `core_rules::structural_audit`'s `no_shipped_card_is_a_blank_stub`
+//! (which gates *blank* cards; it was the `audit_stubs` binary). This binary
 //! attacks the harder "looks done, isn't" class with two independent passes:
 //!
 //!   1. STRUCTURAL (comment-free, authoritative). Walks every catalog card's
@@ -40,9 +41,9 @@ use crabomination::catalog::all_known_factories;
 
 // ── Pass 1: structural (serde-walk the effect tree) ──────────────────────────
 //
-// The walker itself lives in `crabomination::audit` so this binary,
-// `audit_stubs`, and the `core_rules::structural_audit` regression test all
-// share one definition of "does nothing".
+// The walker itself lives in `crabomination::audit` so this binary and the
+// `core_rules::structural_audit` regression tests share one definition of
+// "does nothing".
 
 fn run_structural() {
     let mut seen: HashSet<String> = HashSet::default();

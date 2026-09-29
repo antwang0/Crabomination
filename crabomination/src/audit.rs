@@ -2,9 +2,9 @@
 //! effect tree does nothing.
 //!
 //! Two hand-written copies of this used to live in `bin/audit_incomplete.rs`
-//! (over the serialized JSON) and `bin/audit_stubs.rs` (over the typed
-//! `Effect`), and they had already drifted — the typed one didn't know about
-//! `Escalate`. One walker, over the JSON form, so a new combinator can't
+//! (over the serialized JSON) and the since-retired `bin/audit_stubs.rs`
+//! (over the typed `Effect`), and they had already drifted — the typed one
+//! didn't know about `Escalate`. One walker, over the JSON form, so a new combinator can't
 //! silently make one of them wrong: externally-tagged enums serialize a unit
 //! variant as the bare string `"Noop"` and everything else as
 //! `{"Variant": payload}`, so an unrecognized tag reads as "does something",
@@ -15,9 +15,10 @@
 //! with a dead mode or a dead ability fails the suite instead of waiting for
 //! someone to re-run the auditor. Dead abilities are gated outright; dead
 //! modes are gated against [`REVIEWED_DEAD_MODES`], because a `Noop` arm is
-//! also how a printed "you may … (or decline)" is spelled.
+//! also how a printed "you may … (or decline)" is spelled. [`stub_kind`]
+//! (blank spells and blank permanents) is gated outright by the same file.
 
-use crabomination_base::card::CardDefinition;
+use crabomination_base::card::{CardDefinition, CardType};
 use serde_json::Value;
 
 /// The dead *modes* that are correct, and why each one is.
@@ -184,7 +185,89 @@ pub fn dead_capabilities(def: &CardDefinition) -> Vec<DeadCapability> {
 }
 
 /// True if the card's *resolve* effect does nothing — a blank spell, once
-/// you've also checked it has no cast trigger. Used by `audit_stubs`.
+/// you've also checked it has no cast trigger. See [`stub_kind`].
 pub fn resolve_effect_is_empty(def: &CardDefinition) -> bool {
     serde_json::to_value(&def.effect).is_ok_and(|v| effect_is_empty(&v))
+}
+
+/// Does this definition give a permanent *any* text?
+///
+/// The four ability vectors plus keywords are the obvious carriers, but a
+/// permanent's rules text can live in a dedicated field instead, and every
+/// one of those is a card that reads as blank if it is not listed here. As
+/// of 2026-08-14 that was **59 of the 59 cards the stub audit flagged** —
+/// every Saga, Room, Siege, Case, enters-as-copy and state-triggered
+/// enchantment in the catalog — which is a broken audit, not a catalog of
+/// stubs.
+///
+/// **When a new mechanic adds a carrier field to `CardDefinition`, add it
+/// here.** `core_rules::structural_audit` pins one representative per family
+/// (`blank_permanent_check_knows_every_carrier_field`), and a new family with
+/// no entry fails `no_shipped_card_is_a_blank_stub` by name.
+pub fn def_has_any_ability(def: &CardDefinition) -> bool {
+    !def.triggered_abilities.is_empty()
+        || !def.activated_abilities.is_empty()
+        || !def.static_abilities.is_empty()
+        || !def.loyalty_abilities.is_empty()
+        || !def.keywords.is_empty()
+        // Chapter / door / mode / band carriers: the text is a list keyed by
+        // something other than "ability kind".
+        || !def.saga_chapters.is_empty()
+        || def.room.is_some()
+        || def.case.is_some()
+        || def.enter_modes.is_some()
+        || def.enters_as_choice.is_some()
+        || !def.level_bands.is_empty()
+        || !def.station.is_empty()
+        || !def.attraction_lights.is_empty()
+        // Replacement / as-enters text.
+        || def.enters_as_copy.is_some()
+        || def.as_enters_effect.is_some()
+        || def.as_transforms_effect.is_some()
+        || def.enters_with_counters.is_some()
+        || def.opening_hand.is_some()
+        // State-triggered ability (CR 603.8) — Veiled Crocodile, Hidden
+        // Predators wake into creatures without a `TriggeredAbility`.
+        || def.state_trigger.is_some()
+        // Self-sacrifice / countdown clocks.
+        || def.sacrifice_when.is_some()
+        || def.exile_countdown.is_some()
+        || def.sacrifice_when_you_control_no_other.is_some()
+        || def.sacrifice_and_burn_when_stolen.is_some()
+        // Characteristic-defining and attachment text.
+        || def.dynamic_pt.is_some()
+        || def.equipped_bonus.is_some()
+        || def.soulbond_bonus.is_some()
+        || def.copies_top_graveyard_creature
+        || def.max_counters_of_kind.is_some()
+        // A permanent whose other face carries the text.
+        || def.back_face.is_some()
+        || def.flip_face.is_some()
+}
+
+/// Why a card "does nothing", or `None` for a card with real text: an
+/// instant / sorcery that resolves to nothing and has no cast trigger, a
+/// non-creature permanent with no text at all, or a planeswalker with no
+/// loyalty abilities. Vanilla creatures are fine — the body is the card.
+///
+/// This was the `audit_stubs` binary, which read 0 flagged from 2026-08-14
+/// on; `core_rules::structural_audit` now asserts that zero instead.
+pub fn stub_kind(def: &CardDefinition) -> Option<&'static str> {
+    if def.is_instant() || def.is_sorcery() {
+        if resolve_effect_is_empty(def) && def.triggered_abilities.is_empty() {
+            return Some("BLANK SPELL (resolves to nothing)");
+        }
+        return None;
+    }
+    let non_creature_perm = (def.card_types.contains(&CardType::Artifact)
+        || def.card_types.contains(&CardType::Enchantment)
+        || def.card_types.contains(&CardType::Planeswalker))
+        && !def.is_creature();
+    if non_creature_perm && resolve_effect_is_empty(def) && !def_has_any_ability(def) {
+        return Some("BLANK PERMANENT (no abilities)");
+    }
+    if def.is_planeswalker() && def.loyalty_abilities.is_empty() {
+        return Some("PLANESWALKER without loyalty abilities");
+    }
+    None
 }

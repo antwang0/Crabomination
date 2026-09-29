@@ -5221,7 +5221,10 @@ had a better unseen mode; Artistic Process is the one card above 5 %),
 correctly sized), and the two threshold cards fixed by the general
 mechanism rather than a card rule. The audit shortlist's remaining item
 is the trick blind spot (nulls at incidence, r63/r64); the puzzle corpus
-still certifies one item (`save_the_removal`).
+still certifies one item (`save_the_removal`). (2026-09-29: the puzzle
+runner `bot_puzzles` and `server/puzzle{,_corpus}.rs` were removed — unrun
+since 2026-08-13, one certified position of eleven. The position and the
+solver are at `dc7143057` if this lead is picked up.)
 
 ## Round 77 — the shortlist census: a cut candidate beats the winner on 23 % of the picks that run past `EVAL_TOP`, two thirds of them under the magecraft spell-first rule (2026-09-17)
 
