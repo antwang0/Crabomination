@@ -204,8 +204,7 @@ pub fn thud() -> CardDefinition {
 /// Inquisition of Kozilek — {B} Sorcery. Target opponent reveals their hand;
 /// you choose a nonland card with mana value 3 or less; they discard it.
 /// `DiscardChosen` lets the caster pick (suspends to a UI modal for a human
-/// picker; AutoDecider takes the first match). `EachOpponent` is correct in
-/// 2-player.
+/// picker; AutoDecider takes the first match).
 pub fn inquisition_of_kozilek() -> CardDefinition {
     CardDefinition {
         name: "Inquisition of Kozilek",

@@ -422,7 +422,7 @@ pub fn spider_bot() -> CardDefinition {
 
 /// Morlun, Devourer of Spiders — {X}{B}{B} 2/1 Vampire Villain. Lifelink.
 /// Enters with X +1/+1 counters. When it enters, deals X damage to target
-/// opponent. (Modeled as X damage to each opponent — one in a duel.)
+/// opponent.
 pub fn morlun_devourer_of_spiders() -> CardDefinition {
     CardDefinition {
         name: "Morlun, Devourer of Spiders",

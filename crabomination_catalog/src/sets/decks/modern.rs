@@ -35025,8 +35025,7 @@ pub fn heartfire_hero() -> CardDefinition {
 }
 
 /// Kindlespark Duo — {2}{R} 1/3 Lizard Otter. {T}: deal 1 damage to a target
-/// opponent. Whenever you cast a noncreature spell, untap it. (In 1v1 the
-/// "target opponent" ping maps to the lone opponent.)
+/// opponent. Whenever you cast a noncreature spell, untap it.
 pub fn kindlespark_duo() -> CardDefinition {
     CardDefinition {
         name: "Kindlespark Duo",
@@ -35528,8 +35527,8 @@ pub fn frilled_sparkshooter() -> CardDefinition {
 }
 
 /// Iridescent Vinelasher — {B} 1/2 Lizard Assassin with Offspring {2}.
-/// Landfall — whenever a land you control enters, it deals 1 damage to each
-/// opponent. (In 1v1 the printed "target opponent" maps to the lone opponent.)
+/// Landfall — whenever a land you control enters, it deals 1 damage to target
+/// opponent.
 pub fn iridescent_vinelasher() -> CardDefinition {
     CardDefinition {
         name: "Iridescent Vinelasher",
@@ -39465,8 +39464,7 @@ pub fn ankh_of_mishra() -> CardDefinition {
 
 /// Bonfire of the Damned — {X}{X}{R} Sorcery. Miracle {X}{R}. Deal X damage to
 /// target player or planeswalker and X damage to each creature that player /
-/// that planeswalker's controller controls (collapsed to "each opponent
-/// creature" in 1v1).
+/// that planeswalker's controller controls.
 pub fn bonfire_of_the_damned() -> CardDefinition {
     CardDefinition {
         name: "Bonfire of the Damned",
@@ -39482,10 +39480,13 @@ pub fn bonfire_of_the_damned() -> CardDefinition {
                 ),
                 amount: Value::XFromCost,
             },
+            // "…each creature **that player** or that planeswalker's
+            // controller controls" — the target's seat only.
             Effect::DealDamage {
-                to: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
+                to: Selector::ControlledBy {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    filter: SelectionRequirement::Creature,
+                },
                 amount: Value::XFromCost,
             },
         ]),

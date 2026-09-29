@@ -7641,3 +7641,29 @@ fn cr_614_1_player_damage_replacements_cover_combat() {
     assert_eq!(g.players[1].life, 20, "Delaying Shield: no life lost");
     assert_eq!(g.battlefield_find(shield).unwrap().counter_count(CounterType::Delay), 2);
 }
+
+/// CR 115.1 — Bonfire of the Damned: "…and each creature **that player**
+/// controls". At a planeswalker it hits that planeswalker's controller's
+/// creatures; either way a third seat's creatures are untouched.
+#[test]
+fn cr_115_1_bonfire_hits_only_the_targets_creatures() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let hit = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spared = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bonfire = g.add_card_to_hand(0, catalog::bonfire_of_the_damned());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bonfire, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("X=2 at seat 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    assert!(g.battlefield_find(hit).is_none(), "seat 1's creature");
+    assert!(g.battlefield_find(spared).is_some(), "not seat 2's");
+    assert!(g.battlefield_find(mine).is_some(), "not the caster's");
+}
