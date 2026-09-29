@@ -1257,6 +1257,8 @@ fn wand_of_ith_bills_them_for_the_card_they_reveal() {
     let mut g = main_phase();
     let wand = g.add_card_to_battlefield(0, catalog::wand_of_ith());
     g.add_card_to_hand(1, catalog::grizzly_bears()); // mv 2
+    // "Activate only during your turn" — combat is fine (it was sorcery speed).
+    g.step = TurnStep::BeginCombat;
     activate(&mut g, 0, wand, Some(Target::Player(1)));
     // The auto-decider declines the life, so the card is discarded.
     assert!(g.players[1].hand.is_empty());

@@ -1143,7 +1143,9 @@ pub fn wand_of_ith() -> CardDefinition {
         vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            sorcery_speed: true,
+            // "Activate only during your turn" — any step, not just a main
+            // phase with an empty stack.
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::Seq(vec![
                 Effect::RevealRandomFromHand { who: Selector::Player(PlayerRef::Target(0)) },
                 Effect::PlayerMayPayLifeElse {
