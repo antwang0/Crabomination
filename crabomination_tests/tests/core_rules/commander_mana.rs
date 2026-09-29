@@ -670,7 +670,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | MountOrVehicleSpells | CreatureCastCounter
-                | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_) => {}
+                | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
+                | SpellsOnly => {}
             }
         }
         use SpendRestriction::*;
@@ -683,6 +684,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             SpellOrAbilityCopy,
             OutlawSpellsOrAbilities,
             SpellsYouDontOwn,
+            SpellsOnly,
             CreatureOfTypeOrItsAbility(CreatureType::Bear),
             CreatureOfTypeOrLegendaryCreature(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),

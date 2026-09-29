@@ -766,6 +766,9 @@ pub enum SpendRestriction {
     /// a [type]" for either of two types (Gallifrey Council Chamber: Time
     /// Lord or Alien). Changelings count.
     CreatureOfEitherTypeOrItsAbility(crate::card::CreatureType, crate::card::CreatureType),
+    /// "Spend this mana only to cast spells" (Klauth, Troyan, Thieving
+    /// Varmint, Rootcoil Creeper): any spell, no activated ability.
+    SpellsOnly,
 }
 
 impl SpendRestriction {
@@ -796,6 +799,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
             SpendRestriction::NoNonartifactSpells => "not on nonartifact spells",
             SpendRestriction::AbilitiesOnly => "only activated abilities",
+            SpendRestriction::SpellsOnly => "only spells",
             SpendRestriction::LessonSpellsOnly => "only Lesson spells",
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
@@ -909,6 +913,7 @@ impl SpendRestriction {
                 kind.creature || kind.creature_ability
             }
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
+            SpendRestriction::SpellsOnly => !kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
             SpendRestriction::ForetellOnly => kind.foretell,
@@ -1992,6 +1997,53 @@ impl ManaPool {
     /// and spend-restricted entries). Used to restore protected floating mana
     /// after paying a cost from freshly-tapped sources (the "keep my floating
     /// mana" branch of the float-spend confirmation).
+    /// The part of `self` — mana an effect keeps across steps (CR 500.4's
+    /// exception) — still floating in `pool`: each color and each restricted
+    /// entry capped by what `pool` holds, less `reserved_red` already claimed
+    /// by firebending. What was spent is gone and must not be re-seeded.
+    pub fn unspent_within(&self, pool: &ManaPool, reserved_red: u32) -> ManaPool {
+        let mut out = ManaPool::default();
+        for c in Color::ALL {
+            let reserved = if c == Color::Red { reserved_red } else { 0 };
+            let k = self.amount(c).min(pool.amount(c).saturating_sub(reserved));
+            if k > 0 {
+                out.add(c, k);
+            }
+        }
+        let k = self.colorless.min(pool.colorless);
+        if k > 0 {
+            out.add_colorless(k);
+        }
+        for &(c, n, r) in &self.restricted {
+            let have: u32 =
+                pool.restricted.iter().filter(|(pc, _, pr)| *pc == c && *pr == r).map(|(_, m, _)| *m).sum();
+            let k = n.min(have);
+            if k > 0 {
+                out.add_restricted(c, k, r);
+            }
+        }
+        out
+    }
+
+    /// Take `part` (a sub-pool of `self`, as [`Self::unspent_within`] builds
+    /// it) out of `self`: colors, colorless and restricted entries.
+    pub fn remove_part(&mut self, part: &ManaPool) {
+        for c in Color::ALL {
+            let slot = self.slot_mut(c);
+            *slot = slot.saturating_sub(part.amount(c));
+        }
+        self.colorless = self.colorless.saturating_sub(part.colorless);
+        for &(c, n, r) in &part.restricted {
+            let mut left = n;
+            for entry in self.restricted.iter_mut().filter(|(pc, _, pr)| *pc == c && *pr == r) {
+                let k = entry.1.min(left);
+                entry.1 -= k;
+                left -= k;
+            }
+        }
+        self.restricted.retain(|(_, n, _)| *n > 0);
+    }
+
     pub fn absorb(&mut self, other: &ManaPool) {
         self.white += other.white;
         self.blue += other.blue;

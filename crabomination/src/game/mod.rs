@@ -17118,7 +17118,7 @@ impl GameState {
         if self.players.iter().all(|p| {
             p.firebending_kept_red == 0
                 && p.mana_pool.is_empty()
-                && p.kept_mana_this_turn.total() == 0
+                && p.kept_mana_this_turn.is_empty()
         }) {
             return;
         }
@@ -17169,7 +17169,7 @@ impl GameState {
             if player.firebending_kept_red == 0
                 && (all_persist
                     || (player.mana_pool.is_empty()
-                        && player.kept_mana_this_turn.total() == 0))
+                        && player.kept_mana_this_turn.is_empty()))
             {
                 continue;
             }
@@ -17183,6 +17183,19 @@ impl GameState {
                 player.firebending_kept_red.min(player.mana_pool.amount(crate::mana::Color::Red))
             };
             player.firebending_kept_red = firebent;
+            // CR 500.4 — the same for mana kept "as steps and phases end"
+            // (Klauth, Savage Ventmaw): only its unspent part survives. The
+            // re-seed below used to restore the whole amount at every step.
+            // It is lifted out of the pool first, so a color keeper or the
+            // colorless conversion below doesn't also carry it (it came back
+            // twice), and re-seeded once after them.
+            if !player.kept_mana_this_turn.is_empty() {
+                let unspent = player.kept_mana_this_turn.unspent_within(&player.mana_pool, firebent);
+                if !all_persist {
+                    player.mana_pool.remove_part(&unspent);
+                }
+                player.kept_mana_this_turn = unspent;
+            }
             if all_persist {
                 // Pool survives intact, firebending red with it.
             } else if keepers.contains(&i) {
@@ -17215,7 +17228,7 @@ impl GameState {
             // end" (Savage Ventmaw). Re-seed after emptying; cleared at cleanup
             // so it doesn't survive the turn. Skipped under Upwelling
             // (`all_persist`), where the pool already carried it intact.
-            if !all_persist && player.kept_mana_this_turn.total() > 0 {
+            if !all_persist && !player.kept_mana_this_turn.is_empty() {
                 // Take-and-restore rather than a clone: `Player` is a CoW
                 // handle, so `&mut` one field borrows the whole seat.
                 let kept = std::mem::take(&mut player.kept_mana_this_turn);
