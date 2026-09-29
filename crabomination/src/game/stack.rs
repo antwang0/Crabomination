@@ -7400,9 +7400,7 @@ impl GameState {
                 self.note_creature_death(id);
                 // Zubera cycle: count Zubera deaths separately (read off the
                 // still-present dying creature's subtypes).
-                if self.battlefield.find_by_id(id).is_some_and(|c| {
-                    c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera)
-                })
+                if self.permanent_has_creature_type(id, crate::card::CreatureType::Zubera)
                 {
                     self.players[controller_idx].zuberas_died_this_turn =
                         self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
@@ -8748,9 +8746,7 @@ impl GameState {
             self.creatures_died_this_resolution =
                 self.creatures_died_this_resolution.saturating_add(1);
             self.note_creature_death(id);
-            if self.battlefield.find_by_id(id).is_some_and(|c| {
-                c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera)
-            })
+            if self.permanent_has_creature_type(id, crate::card::CreatureType::Zubera)
             {
                 self.players[controller_idx].zuberas_died_this_turn =
                     self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);

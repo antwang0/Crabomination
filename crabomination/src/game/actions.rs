@@ -4296,10 +4296,7 @@ impl crate::game::GameState {
                     let n = self
                         .battlefield
                         .iter()
-                        .filter(|x| {
-                            x.definition.is_creature()
-                                && x.definition.subtypes.creature_types.contains(&ct)
-                        })
+                        .filter(|x| self.permanent_is_creature_of_type(x.id, ct))
                         .count();
                     for _ in 0..n {
                         self.players[p].mana_pool.add(c, 1);

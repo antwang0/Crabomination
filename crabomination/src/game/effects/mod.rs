@@ -21262,11 +21262,12 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 // CR 701.43a — grow an existing Army you control, else mint a
                 // 0/0 black Army token first.
-                let army = self.battlefield.iter().find(|c| {
-                    c.controller == p
-                        && c.definition.is_creature()
-                        && c.definition.subtypes.creature_types.contains(&CreatureType::Army)
-                }).map(|c| c.id);
+                let army = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .map(|c| c.id)
+                    .find(|&id| self.permanent_is_creature_of_type(id, CreatureType::Army));
                 let army = match army {
                     Some(id) => id,
                     None => {
@@ -36999,11 +37000,8 @@ impl GameState {
                 let card_ids: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| {
-                        c.definition.is_creature()
-                            && !c.definition.subtypes.creature_types.contains(&ct)
-                    })
                     .map(|c| c.id)
+                    .filter(|&id| self.permanent_is_creature(id) && !self.permanent_has_creature_type(id, ct))
                     .collect();
                 for cid in card_ids {
                     if let Some(c) = self.battlefield_find_mut(cid) {

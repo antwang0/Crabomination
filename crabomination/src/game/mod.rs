@@ -152,6 +152,7 @@ mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;
+mod creature_type;
 mod cast_cost;
 mod own_creature_target;
 // CR 601.2c — a required target nothing could fill makes the cast illegal.
@@ -14017,7 +14018,11 @@ impl GameState {
                     let matching: Vec<CardId> = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.definition.subtypes.creature_types.contains(creature_type))
+                        // Printed line (inside the gather) plus changeling, CR 702.73a.
+                        .filter(|c| {
+                            c.definition.subtypes.creature_types.contains(creature_type)
+                                || c.has_keyword(&crate::card::Keyword::Changeling)
+                        })
                         .map(|c| c.id)
                         .collect();
                     let others = matching.len().saturating_sub(1) as i32;
