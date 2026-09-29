@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 90 |
@@ -108,6 +109,41 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour
+
+Found from a bot path, not a rules read: teaching a pod bot to answer
+removal with Mother of Runes (`server/keyword_shield.rs`) left the Bear
+dead **with protection from black** under the Murder it was meant to blank.
+Pulling that thread named six holes, all fixed with tests in
+`core_rules/cr_recent109.rs`:
+
+1. **The CR 608.2b re-check never read protection** (spells, both fizzle
+   paths, and the Aura re-check) — it read Shroud / Hexproof only.
+   `spell_protection_blocks` is now the one reader, shared with the cast gate.
+2. **Abilities re-read only their slot-0 filter** — a Prodigal Sorcerer ping
+   hit a creature that gained hexproof or protection in response.
+   `ability_target_newly_untargetable`, first pass only (a resumed Mother of
+   Runes granted the protection itself) and declared slots only (Flayed Nim's
+   event-bound `Target(0)` is not a target).
+3. **Colour hexproof (Veil of Summer) was cast-time only**, and the cast gate
+   read **slot 0 only** for both protection and colour hexproof (Reckless
+   Spite's second target).
+4. **Player targets** re-checked only "still in the game" (Seht's Tiger naming
+   red under a Bolt; protection from a card type, Serra's Emissary).
+5. **Protection stopped only opponents' spells** — CR 702.16b has no such
+   clause (hexproof does).
+6. 🔎 **A resolving spell has no colour to any source lookup**: the resolver
+   holds the card out of every zone, so `source_colors` /
+   `protection_prevents_views` / a player's card-type protection found
+   nothing, and **Pyroclasm killed a pro-red creature** (CR 702.16e).
+   `GameState::resolving_spell_def` reads the two stamps the resolver already
+   writes (`resolving_source`, `resolving_spell_snapshot`) — a first cut that
+   added its own scratch field cost +0.1 % Ir for nothing (PERF log).
+
+⚠ **Any new "where is this source" lookup must fall back to
+`resolving_spell_def`** (or `damage_source_controller`'s `resolving_source`
+arm) — `find_card_anywhere` cannot see the spell that is resolving.
 
 ## FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals
 
