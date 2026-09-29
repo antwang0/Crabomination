@@ -5948,3 +5948,12 @@ sacrifice / tap / discard", where declining is sometimes right — is **read
 to the end**. The **~337 remaining** are the "you may draw / search / put
 into hand" tail, where declining is almost never right; take them only when
 a specific card's ruling needs the choice.
+
+## "Can't be the target of [filtered] spells" (2026-09-29, `014veptd`)
+
+Karplusan Strider ("blue or black spells") ships as protection from blue and
+black (blocks damage, blocking and enchanting too); Autumn's Veil's rider is
+the same shape. Needs `Keyword::CantBeTargetedBySpellsMatching(filter)` beside
+`CantBeTargetedBySpells` in the cast-time target gate (`actions.rs`). Neither
+is in a pool or pod deck.
+

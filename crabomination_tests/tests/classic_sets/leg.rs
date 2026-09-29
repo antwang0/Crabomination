@@ -295,3 +295,37 @@ fn transmutation_switches_power_and_toughness() {
     let c = g.computed_permanent(snake).unwrap();
     assert_eq!((c.power, c.toughness), (1, 2));
 }
+
+/// Anti-Magic Aura: "can't be the target of spells" — a Bolt can't target the
+/// enchanted creature, a Prodigal Sorcerer ping can (it shipped as shroud).
+#[test]
+fn anti_magic_aura_stops_spells_not_abilities() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::anti_magic_aura());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err());
+    let tim = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("an ability can target it");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1);
+}
