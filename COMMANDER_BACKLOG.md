@@ -19,7 +19,7 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 100 commanders by decks built | 95 / 100 |
 | Top 300 commanders by decks built | 266 / 300 |
 
-## 1. Most-built commanders not in the catalog (34)
+## 1. Most-built commanders not in the catalog (31)
 
 A partner pair lists only its missing halves.
 
@@ -34,7 +34,6 @@ A partner pair lists only its missing halves.
 | 115 | Storm, Force of Nature | 16,537 | GRU | Legendary Creature — Mutant Hero |  |
 | 119 | Captain America, First Avenger | 16,091 | RUW | Legendary Creature — Human Soldier Hero |  |
 | 120 | Tovolar, Dire Overlord | 15,859 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
-| 133 | Kibo, Uktabi Prince | 14,834 | GR | Legendary Creature — Monkey Noble |  |
 | 135 | Satoru Umezawa | 14,675 | BU | Legendary Creature — Human Ninja |  |
 | 138 | Omnath, Locus of All | 14,395 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
 | 150 | Cosmic Spider-Man | 13,992 | BGRUW | Legendary Creature — Spider Human Hero |  |
@@ -52,41 +51,28 @@ A partner pair lists only its missing halves.
 | 222 | Ob Nixilis, Captive Kingpin | 10,698 | BR | Legendary Creature — Demon |  |
 | 229 | Volo, Guide to Monsters | 10,402 | GU | Legendary Creature — Human Wizard |  |
 | 230 | Ojer Axonil, Deepest Might | 10,372 | R | Legendary Creature — God // Land |  |
-| 245 | Aloy, Savior of Meridian | 9,981 | GU | Legendary Creature — Human Warrior |  |
 | 248 | Eddie Brock | 9,915 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
-| 257 | Shilgengar, Sire of Famine | 9,660 | BW | Legendary Creature — Elder Demon |  |
 | 269 | Rowan, Scion of War | 9,297 | BR | Legendary Creature — Human Wizard |  |
 | 275 | Indominus Rex, Alpha | 9,239 | BGU | Legendary Creature — Dinosaur Mutant |  |
 | 292 | Arna Kennerüd, Skycaptain | 8,994 | BUW | Legendary Creature — Human Knight |  |
 | 300 | Goro-Goro and Satoru | 8,859 | BRU | Legendary Creature — Goblin Human |  |
 
-## 2. Top 1000 Commander cards not in the catalog (1)
+## 2. Top 1000 Commander cards not in the catalog (0)
 
 | EDHREC rank | Card | Cost | Type | Flags |
 | --- | --- | --- | --- | --- |
-| 996 | Mines of Moria |  | Legendary Land |  |
 
 ## 3. Cards that name a commander / the command zone / colour identity (top 5000)
 
 These need Commander primitives (an "is a commander" selector, a
 commander's-colour-identity mana source, "if you control your commander").
 
-### Missing (12)
+### Missing (2)
 
 | EDHREC rank | Card | Type | Oracle |
 | --- | --- | --- | --- |
-| 1167 | Kediss, Emberclaw Familiar | Legendary Creature — Elemental Lizard | Whenever a commander you control deals combat damage to an opponent, it deals that much damage to each other opponent. Partner (You can have two commanders if b… |
-| 2286 | Agent of the Iron Throne | Legendary Enchantment — Background | Commander creatures you own have "Whenever an artifact or creature you control is put into a graveyard from the battlefield, each opponent loses 1 life." |
-| 2866 | Inspiring Leader | Legendary Enchantment — Background | Commander creatures you own have "Creature tokens you control get +2/+2." |
-| 3387 | Esior, Wardwing Familiar | Legendary Creature — Bird | Flying Spells your opponents cast that target one or more commanders you control cost {3} more to cast. Partner (You can have two commanders if both have partne… |
-| 3592 | Guild Artisan | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature attacks a player, if no opponent has more life than that player, you create two Treasure tokens." (They… |
-| 3703 | Astarion's Thirst | Instant | Exile target creature. Put X +1/+1 counters on a commander creature you control, where X is the power of the creature exiled this way. |
 | 3907 | Noble Heritage | Legendary Enchantment — Background | Commander creatures you own have "When this creature enters and at the beginning of your upkeep, each player may put two +1/+1 counters on a creature they contr… |
-| 4055 | Anara, Wolvid Familiar | Legendary Creature — Wolf Beast | During your turn, commanders you control have indestructible. (Effects that say "destroy" don't destroy them. A creature with indestructible can't be destroyed … |
-| 4276 | Tavern Brawler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your upkeep, exile the top card of your library. This creature gets +X/+0 until end of turn, where X is th… |
-| 4307 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman | Flying Whenever you cast an Adventure or Dragon spell, Lozhan deals damage equal to that spell's mana value to any target that isn't a commander. |
 | 4311 | Master Chef | Legendary Enchantment — Background | Commander creatures you own have "This creature enters with an additional +1/+1 counter on it" and "Other creatures you control enter with an additional +1/+1 c… |
-| 4745 | Far Traveler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your end step, exile up to one target tapped creature you control, then return it to the battlefield under… |
 
 ### In the catalog — check the commander clause is modelled (64)
 

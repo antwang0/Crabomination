@@ -445,6 +445,7 @@ on existing primitives. What each rounds off:
 | Card | Approximation | What it needs |
 |---|---|---|
 | Shilgengar, Sire of Famine | the returned creatures get their finality counter just after they enter, not "with" it (an ETB that counts counters sees none) | a mass `Move` that enters with counters |
+| Inspiring Leader | the token anthem follows the Background's controller (while they control a commander creature they own), not the commander's controller — a stolen commander doesn't pump the thief's tokens | a granted *static* ability (`GrantTriggeredAbility`'s static sibling) |
 
 ## Multiplayer wording — the N-seat audit, and what it still misses
 
