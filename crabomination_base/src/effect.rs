@@ -570,8 +570,8 @@ pub enum Selector {
     /// the first in resolution order (Capricious Hellraiser's random exile).
     TakeRandom { inner: Box<Selector>, count: Box<Value> },
     /// Like `Take` but keeps the `count` entities with the greatest power
-    /// (ties keep resolution order) — the auto-pick for "exile up to two
-    /// creature cards" whose total power sizes a token (Stitcher Geralf).
+    /// (ties keep resolution order) — a permanent's current power, a card's
+    /// printed one: Highcliff Felidar, Stitcher Geralf's exiled cards.
     TakeGreatestPower { inner: Box<Selector>, count: Box<Value> },
 
     /// Take entities of `inner` greedily, largest `value_of_each` first,

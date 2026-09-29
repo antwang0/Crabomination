@@ -41094,13 +41094,14 @@ impl GameState {
             Selector::TakeGreatestPower { inner, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let mut all = self.resolve_selector(inner, ctx);
-                // Stable sort: equal powers keep resolution order.
+                // Stable sort: equal powers keep resolution order. A permanent's
+                // power is its current one (Highcliff Felidar's "greatest power
+                // among creatures that player controls"); a card elsewhere, printed.
                 all.sort_by_key(|e| {
-                    std::cmp::Reverse(
-                        e.as_card_id()
-                            .and_then(|id| self.find_card_anywhere(id))
-                            .map_or(i32::MIN, |c| c.definition.power),
-                    )
+                    std::cmp::Reverse(e.as_card_id().map_or(i32::MIN, |id| match self.battlefield.find_by_id(id) {
+                        Some(c) => self.effective_power_on(c),
+                        None => self.find_card_anywhere(id).map_or(i32::MIN, |c| c.definition.power),
+                    }))
                 });
                 all.truncate(n);
                 all

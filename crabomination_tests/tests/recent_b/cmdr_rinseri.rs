@@ -275,6 +275,20 @@ fn highcliff_felidar_destroys_each_opponents_biggest() {
     assert!(g.battlefield_find(mine).is_some());
 }
 
+/// CR 208.3 — "greatest power" is current power: Grizzly Bears grown to 4/4
+/// by counters out-powers a Hill Giant (3/3); the printed read took the Giant.
+#[test]
+fn highcliff_felidar_reads_current_power() {
+    let mut g = main_phase(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let f = g.add_card_to_hand(0, catalog::highcliff_felidar());
+    cast(&mut g, f);
+    assert!(g.battlefield_find(bear).is_none(), "the 4/4 Bears");
+    assert!(g.battlefield_find(giant).is_some());
+}
+
 /// Komainu Battle Armor connecting goads every creature the damaged player
 /// controls.
 #[test]
