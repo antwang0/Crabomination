@@ -4229,9 +4229,9 @@ pub fn blade_splicer() -> CardDefinition {
 ///
 /// Wired via `Effect::BottomChosenFromHandAndDraw` (a sibling of
 /// `DiscardChosen`): the caster auto-picks a nonland card from the target's
-/// hand, it's bottomed, and they draw a replacement. Per the engine's
-/// ETB-trigger convention the target is `EachOpponent` (faithful in 1v1; the
-/// self-cast hand-fix mode awaits player-targeting on triggers).
+/// hand, it's bottomed, and they draw a replacement. The target is any
+/// player (yourself included); a pod bot aims it at an opponent
+/// (`player_slot_is_hostile`).
 pub fn vendilion_clique() -> CardDefinition {
     CardDefinition {
         name: "Vendilion Clique",

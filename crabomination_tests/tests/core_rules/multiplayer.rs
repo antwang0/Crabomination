@@ -7544,3 +7544,21 @@ fn cr_603_2_vengeful_tracker_hits_the_sacrificer() {
     drain_stack(&mut g);
     assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), vec![life[0], life[1], life[2] - 2]);
 }
+
+/// CR 115.1 — Vendilion Clique's "target player" may be anyone; a bot with
+/// hostile player targeting aims it at an opponent (it used to take the
+/// caster's own hand first: `BottomChosenFromHandAndDraw` wasn't hostile).
+#[test]
+fn cr_115_1_vendilion_clique_bot_targets_an_opponent() {
+    let mut g = multi_player_game(3);
+    g.players[0].hostile_player_targets = true;
+    for seat in 0..3 {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+        g.add_card_to_library(seat, catalog::island());
+    }
+    g.move_card_to_battlefield_for_test(0, catalog::vendilion_clique());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "not our own hand");
+    let bottomed = (1..3).filter(|&s| !g.players[s].hand.iter().any(|c| c.definition.name == "Grizzly Bears")).count();
+    assert_eq!(bottomed, 1, "one opponent's Bears went to the bottom");
+}

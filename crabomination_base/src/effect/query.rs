@@ -3258,7 +3258,9 @@ impl Effect {
                 | Effect::GoadWhile { .. }
                 // Kozilek, the Broken Reality: the manifests come out of the
                 // player's hand and its controller draws for them.
-                | Effect::ManifestFromHand { .. } => true,
+                | Effect::ManifestFromHand { .. }
+                // Vendilion Clique: you pick their best nonland card to bottom.
+                | Effect::BottomChosenFromHandAndDraw { .. } => true,
                 Effect::ApplyToTargets { effect, .. } => hostile(effect),
                 Effect::TargetPlayerThen { then, .. } => hostile(then),
                 Effect::MayDo { body, .. }
