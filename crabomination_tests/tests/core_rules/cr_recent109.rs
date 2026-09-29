@@ -400,3 +400,34 @@ fn an_ability_fizzles_when_its_target_gains_hexproof_or_protection() {
         assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "{answer}: the ping fizzled");
     }
 }
+
+/// CR 608.2b / 702.16b — an Aura spell whose target gains protection from its
+/// colour in response doesn't resolve: Pacifism at a Bear, Gods Willing
+/// naming white, and the Pacifism goes to the graveyard instead of the
+/// battlefield.
+#[test]
+fn an_aura_spell_fizzles_on_protection_gained_in_response() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pacifism = g.add_card_to_hand(1, catalog::pacifism());
+    g.players[1].mana_pool.add(Color::White, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pacifism, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Pacifism");
+    g.priority.player_with_priority = 0;
+    let willing = g.add_card_to_hand(0, catalog::gods_willing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: willing, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Gods Willing");
+    let events = drain_stack(&mut g);
+    // Not merely swept by CR 704.5m afterwards: it never entered.
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::PermanentEntered { card_id } if *card_id == pacifism)));
+    assert!(g.battlefield_find(pacifism).is_none());
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == pacifism));
+}

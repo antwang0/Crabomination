@@ -2465,7 +2465,12 @@ impl GameState {
                         });
                     let untargetable = self
                         .check_target_legality_with_source(t, caster, Some(card.id))
-                        .is_err();
+                        .is_err()
+                        // CR 702.16b — protection from the Aura's colour gained
+                        // in response (Gods Willing against a Pacifism).
+                        || matches!(t, Target::Permanent(tid)
+                            if self.battlefield_find(*tid).is_some_and(|c| c.controller != caster)
+                                && self.spell_protection_blocks(&card, caster, *tid));
                     if gone || filter_fail || untargetable {
                         if !card.is_token {
                             self.route_to_graveyard(card, &mut events);
