@@ -293,7 +293,7 @@ pub fn wheel_and_deal() -> CardDefinition {
         cost(&[generic(3), u()]),
         Effect::Seq(vec![
             Effect::ApplyToTargets {
-                max_targets: 4,
+                max_targets: 8,
                 min_targets: 0,
                 filter: R::OpponentPlayer,
                 effect: Box::new(Effect::Seq(vec![
@@ -997,7 +997,7 @@ pub fn kaboom() -> CardDefinition {
         "Kaboom!",
         cost(&[generic(4), r()]),
         Effect::ApplyToTargets {
-            max_targets: 4,
+            max_targets: 8,
             min_targets: 0,
             filter: R::Player.or(R::Planeswalker),
             effect: Box::new(Effect::RevealUntilNonlandThen {

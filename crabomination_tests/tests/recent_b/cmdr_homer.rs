@@ -179,6 +179,18 @@ fn homer_landfall_mills_targets_twice_the_sea_life_count() {
     assert!(milled.iter().all(|&n| n == 0 || n == 6), "only whole mills: {milled:?}");
 }
 
+/// "Any number of target players" at six seats: a pod bot mills all five
+/// opponents and spares itself (CR 115.1 — the trigger's player fan-out).
+#[test]
+fn homer_landfall_mills_every_opponent_of_a_six_seat_pod() {
+    let mut g = main_phase(6);
+    g.players[0].hostile_player_targets = true;
+    g.add_card_to_battlefield(0, catalog::homer_the_hermit());
+    play_land(&mut g, 0, catalog::forest());
+    let milled: Vec<usize> = (0..6).map(|p| gy(&g, p)).collect();
+    assert_eq!(milled, vec![0, 2, 2, 2, 2, 2], "Homer alone: two each, every opponent");
+}
+
 /// Rikala's tide ticks up each upkeep, pumps the team, feeds an extra {U} at
 /// three, and resets at four.
 #[test]

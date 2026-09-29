@@ -185,8 +185,8 @@ use super::super::cmdr::crowd_land as pod_dual;
 /// Homer, the Hermit — {B}{G}{U} Legendary Creature — Crab Druid 0/9.
 /// Landfall — Whenever a land you control enters, any number of target
 /// players each mill X cards, where X is twice the number of Crabs, Lobsters,
-/// Nautiluses, Starfish, and/or Trilobites you control. (Up to four targets —
-/// one per seat of a four-player pod.)
+/// Nautiluses, Starfish, and/or Trilobites you control. (Up to eight targets —
+/// one per seat of the largest pod.)
 pub fn homer_the_hermit() -> CardDefinition {
     let sea_life = R::HasCreatureType(CreatureType::Crab)
         .or(R::HasCreatureType(CreatureType::Lobster))
@@ -195,7 +195,7 @@ pub fn homer_the_hermit() -> CardDefinition {
         .or(R::HasCreatureType(CreatureType::Trilobite));
     CardDefinition {
         triggered_abilities: vec![landfall(Effect::ApplyToTargets {
-            max_targets: 4,
+            max_targets: 8,
             min_targets: 0,
             filter: R::Player,
             effect: Box::new(Effect::Mill {
