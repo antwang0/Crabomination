@@ -560,3 +560,31 @@ fn player_protection_gained_in_response_fizzles_the_spell() {
     assert!(g.players[0].protection_colors_eot.contains(&Color::Red));
     assert_eq!(g.players[0].life, life, "the Bolt fizzled");
 }
+
+/// CR 608.2b / 702.11e — an ability aimed at a player fizzles once that
+/// player gains hexproof from its source's colour: Prodigal Sorcerer (blue)
+/// pings a player who answers with Veil of Summer.
+#[test]
+fn an_ability_at_a_player_fizzles_after_veil_of_summer() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let sorcerer = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(sorcerer);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sorcerer, ability_index: 0, target: Some(Target::Player(0)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("ping");
+    g.priority.player_with_priority = 0;
+    let veil = g.add_card_to_hand(0, catalog::veil_of_summer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: veil, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Veil of Summer");
+    let life = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "the ping fizzled");
+}

@@ -14788,9 +14788,10 @@ impl GameState {
         })
     }
 
-    /// CR 608.2b — whether an ability's stored permanent target has become
+    /// CR 608.2b — whether an ability's stored target has become
     /// untargetable by it: shroud (CR 702.18a), hexproof against an opponent
-    /// (CR 702.11b) or protection from its source (CR 702.16b). Narrower than
+    /// (CR 702.11b) or protection from its source (CR 702.16b), for a
+    /// permanent or a player. Narrower than
     /// [`check_target_legality`](Self::check_target_legality) on purpose — a
     /// Peace Talks truce or a range-of-influence rule doesn't reach back to an
     /// ability already on the stack.
@@ -14800,7 +14801,27 @@ impl GameState {
         controller: usize,
         source: CardId,
     ) -> bool {
-        let Target::Permanent(cid) = target else { return false };
+        let cid = match target {
+            // A player: static shroud / hexproof, protection from everything
+            // or from a player (`check_target_legality`), and a colour grant
+            // — protection (Seht's Tiger) or hexproof (Veil of Summer, an
+            // opponent's ability only) — against the source's colours.
+            Target::Player(tp) => {
+                if self.check_target_legality(target, controller).is_err() {
+                    return true;
+                }
+                let pl = &self.players[*tp];
+                if pl.protection_colors_eot.is_empty() && pl.hexproof_from_colors_this_turn.is_empty() {
+                    return false;
+                }
+                let colors = self.source_colors(source);
+                return colors.iter().any(|c| {
+                    pl.protection_colors_eot.contains(c)
+                        || (*tp != controller && pl.hexproof_from_colors_this_turn.contains(c))
+                });
+            }
+            Target::Permanent(cid) => cid,
+        };
         let Some(card) = self.battlefield_find(*cid) else { return false };
         // The keywords `ability_target_has_protection` reads, plus the two
         // above: a board with none of them (nearly every one) skips the
