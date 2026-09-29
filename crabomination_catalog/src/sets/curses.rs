@@ -55,7 +55,7 @@ fn enchanted_player_upkeep(effect: Effect) -> TriggeredAbility {
 /// Psychic Possession — {2}{U}{U}. Skip your draw step; draw whenever the
 /// enchanted player draws.
 pub fn psychic_possession() -> CardDefinition {
-    player_aura(
+    let mut def = player_aura(
         "Psychic Possession",
         cost(&[generic(2), u(), u()]),
         false,
@@ -76,7 +76,11 @@ pub fn psychic_possession() -> CardDefinition {
                 }),
             },
         }],
-    )
+    );
+    // "Enchant OPPONENT" — `player_aura` targets any player, and on its own
+    // controller it would skip their draw step.
+    def.effect = Effect::Attach { what: Selector::This, to: target_filtered(R::OpponentPlayer) };
+    def
 }
 
 /// Curse of the Pierced Heart — {R}. 1 damage to the enchanted player each of
