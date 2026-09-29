@@ -1209,22 +1209,9 @@ pub fn gathering_throng() -> CardDefinition {
 /// choose one — loot (discard then draw); create a Treasure; or create a Wicked
 /// Role token attached to target creature you control.
 pub fn charming_scoundrel() -> CardDefinition {
-    use crate::card::EnchantmentSubtype;
-    let wicked_role = TokenDefinition {
-        name: "Wicked".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(crate::card::EquipBonus {
-            power: 1,
-            toughness: 1,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
+    // The shared Wicked Role: +1/+1, and "when this Aura is put into a
+    // graveyard from the battlefield, each opponent loses 1 life" (missing).
+    let wicked_role = super::woe_roles::wicked_role();
     CardDefinition {
         name: "Charming Scoundrel",
         cost: cost(&[generic(1), r()]),
