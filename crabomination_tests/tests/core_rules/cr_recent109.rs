@@ -104,3 +104,35 @@ fn cr_305_1_a_cast_permission_does_not_play_a_land() {
     assert!(perm(bolt).is_some(), "the Bolt is castable");
     assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "no land drop from a cast permission");
 }
+
+/// CR 500.4 — mana kept "as steps and phases end" (Savage Ventmaw) survives a step
+/// only while unspent: three kept, two spent, one crosses the step (the
+/// whole three used to be re-seeded at every step change), and none of it
+/// comes back after being spent too.
+#[test]
+fn cr_500_4_kept_mana_is_not_restored_once_spent() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    use crabomination::mana::{cost, generic, Color};
+    let mut g = two_player_game();
+    let keep = Effect::AddManaKeptThisTurnCount { who: PlayerRef::You, color: Color::Green, amount: Value::Const(3) };
+    g.resolve_effect(&keep, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.players[0].mana_pool.pay(&cost(&[generic(2)])).expect("pay two");
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.total(), 1, "only the unspent one kept");
+    g.players[0].mana_pool.pay(&cost(&[generic(1)])).expect("pay the last");
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// Klauth's kept mana is "only to cast spells" (`SpendRestriction::SpellsOnly`):
+/// it floats as restricted mana, and an unspent pip survives the step.
+#[test]
+fn cr_106_6_klauth_mana_is_for_spells_and_kept() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    let keep = Effect::AddManaKeptThisTurnAnyColors { who: PlayerRef::You, amount: Value::Const(2) };
+    g.resolve_effect(&keep, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert_eq!((g.players[0].mana_pool.total(), g.players[0].mana_pool.restricted_total()), (0, 2));
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "kept across the step");
+}

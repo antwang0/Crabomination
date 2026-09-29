@@ -6779,8 +6779,8 @@ pub enum Effect {
     AddManaKeptThisTurnCount { who: PlayerRef, color: Color, amount: Value },
     /// Klauth, Unrivaled Ancient — `AddManaKeptThisTurnCount` in any
     /// combination of colors: `amount` pips, each color chosen per pip, kept
-    /// through step and phase ends until cleanup. "Spend this mana only to cast
-    /// spells" is not enforced (the kept pool carries no spend restriction).
+    /// through step and phase ends until cleanup, restricted to spells
+    /// ("Spend this mana only to cast spells" — `SpendRestriction::SpellsOnly`).
     AddManaKeptThisTurnAnyColors { who: PlayerRef, amount: Value },
     /// "Add that much mana of any one color. Until end of turn, you don't lose
     /// this mana as steps and phases end" (Photon, Mighty Marvel).

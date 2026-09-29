@@ -166,8 +166,10 @@ impl GameState {
         let legal = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
         for _ in 0..(n * mult) {
             let color = self.chosen_mana_color(p, &legal, ctx.source);
-            self.players[p].mana_pool.add(color, 1);
-            self.players[p].kept_mana_this_turn.add(color, 1);
+            // "Spend this mana only to cast spells."
+            let only = crate::mana::SpendRestriction::SpellsOnly;
+            self.players[p].mana_pool.add_restricted(color, 1, only);
+            self.players[p].kept_mana_this_turn.add_restricted(color, 1, only);
             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
         }
         Ok(())

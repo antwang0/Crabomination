@@ -2186,12 +2186,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |
 | 🟡 Dragonborn Champion | Draconic Rage (AFC) | damage a source you control deals to you doesn't draw. |
 | 🟡 Druid of Purification | Draconic Rage (AFC) | every player chooses (no "may"). |
-| 🟡 Klauth, Unrivaled Ancient | Draconic Rage (AFC) | "spend this mana only to cast spells" isn't enforced. |
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
-| 🟡 Apex of Power | Prismari Performance (C21) | the exiled cards may also be played as lands, not only cast. |
 | 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
 | 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
 | 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |

@@ -5496,7 +5496,8 @@ fn cr_500_4_klauth_adds_kept_mana_equal_to_attacking_power() {
         0,
         |_| {},
     );
-    assert_eq!(g.players[0].mana_pool.total(), 6, "4 + 2, kept past the combat steps");
+    // Restricted to spells ("Spend this mana only to cast spells").
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 6, "4 + 2, kept past the combat steps");
 }
 
 /// The rest of Draconic Rage's new cards, one play pattern each.
