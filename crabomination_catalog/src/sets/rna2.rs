@@ -103,7 +103,8 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
 }
 
 /// Gideon, Champion of Justice — {2}{W}{W} planeswalker, loyalty 4.
-/// +1: a loyalty counter per creature target opponent controls. 0: becomes an
+/// +1: a loyalty counter per creature target opponent controls (one seat, via
+/// `TargetPlayerThen`). 0: becomes an
 /// indestructible, damage-proof Human Soldier with P/T = his loyalty.
 /// −15: exile all other permanents.
 pub fn gideon_champion_of_justice() -> CardDefinition {
@@ -120,12 +121,17 @@ pub fn gideon_champion_of_justice() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Loyalty,
-                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                        R::Creature.and(R::ControlledByOpponent),
-                    ))),
+                // One target opponent's creatures, not every opponent's.
+                effect: Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Loyalty,
+                        amount: Value::CountOf(Box::new(Selector::ControlledBy {
+                            who: PlayerRef::Target(0),
+                            filter: R::Creature,
+                        })),
+                    }),
                 },
                 ..Default::default()
             },

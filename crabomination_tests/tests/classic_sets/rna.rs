@@ -2546,7 +2546,7 @@ fn gideon_champion_of_justice_plus_one_and_animate() {
     g.step = TurnStep::PreCombatMain;
     let gid = g.add_card_to_battlefield(0, catalog::gideon_champion_of_justice());
     for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
-    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 0, target: None, x_value: None }).expect("+1");
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).expect("+1");
     drain_stack(&mut g);
     // +1 for the activation itself, then +3 for the opponent's creatures.
     assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), 8);
@@ -2557,6 +2557,27 @@ fn gideon_champion_of_justice_plus_one_and_animate() {
     assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Planeswalker));
     assert_eq!((cp.power, cp.toughness), (8, 8));
     assert!(cp.keywords().contains(&Keyword::Indestructible));
+}
+
+/// "A loyalty counter for each creature **target opponent** controls": in a
+/// pod only the targeted seat's creatures count (every opponent's did).
+#[test]
+fn gideon_champion_of_justice_counts_one_target_opponent() {
+    use crabomination::card::CounterType;
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let gid = g.add_card_to_battlefield(0, catalog::gideon_champion_of_justice());
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    for _ in 0..2 { g.add_card_to_battlefield(2, catalog::grizzly_bears()); }
+    assert!(
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 0, target: Some(Target::Player(0)), x_value: None }).is_err(),
+        "not yourself",
+    );
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 0, target: Some(Target::Player(2)), x_value: None }).expect("+1 at seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), 4 + 1 + 2);
 }
 
 /// Teysa Karlov doubles your permanents' death triggers and gives your tokens
