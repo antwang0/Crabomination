@@ -1771,6 +1771,21 @@ pub fn vampiric_embrace() -> CardDefinition {
             power: 2,
             toughness: 2,
             keywords: vec![Keyword::Flying],
+            // "Whenever a creature dealt damage by enchanted creature this turn
+            // dies, put a +1/+1 counter on that creature" — Sengir Vampire's
+            // trigger, granted to the host (`This` is the enchanted creature).
+            triggered_abilities: vec![crate::card::TriggeredAbility {
+                event: crate::card::EventSpec::new(crate::card::EventKind::CreatureDied, crate::card::EventScope::AnyPlayer)
+                    .with_filter(crate::card::Predicate::EntityMatches {
+                        what: crate::effect::Selector::TriggerSource,
+                        filter: crate::card::SelectionRequirement::DamagedBySourceThisTurn,
+                    }),
+                effect: crate::effect::Effect::AddCounter {
+                    what: crate::effect::Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: crate::effect::Value::ONE,
+                },
+            }],
             ..Default::default()
         },
     )

@@ -190,3 +190,37 @@ fn cr_106_6_printed_spend_restrictions_float_restricted() {
         assert_eq!(g.players[0].mana_pool.total(), 0);
     }
 }
+
+/// Vampiric Embrace — "Whenever a creature dealt damage by enchanted creature
+/// this turn dies, put a +1/+1 counter on that creature": the enchanted Wurm
+/// kills a blocking Hawk and grows (the trigger was missing).
+#[test]
+fn vampiric_embrace_grows_the_host_off_a_kill() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let aura = g.add_card_to_battlefield(0, catalog::vampiric_embrace());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(wurm);
+    // A flyer: the Embrace gives the Wurm flying.
+    let bear = g.add_card_to_battlefield(1, catalog::suntail_hawk());
+    g.clear_sickness(wurm);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: wurm, target: AttackTarget::Player(1) }]).expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, wurm)])).expect("block");
+    for _ in 0..30 {
+        if g.step == TurnStep::EndCombat || g.step == TurnStep::PostCombatMain {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the Hawk died");
+    assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
