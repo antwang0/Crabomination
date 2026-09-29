@@ -655,3 +655,20 @@ fn a_resolving_spell_s_damage_respects_protection() {
     assert_eq!(g.players[0].life, mine, "protection from red");
     assert_eq!(g.players[1].life, theirs - 4);
 }
+
+/// CR 702.73a / 205.3 — a GRANTED changeling is every creature type for a
+/// "Slivers have …" grant: Omo's everything counter makes Wonderscape Sage a
+/// Sliver, so it has Hibernation Sliver's "Pay 2 life: return this permanent
+/// to its owner's hand". (The grant scan's printed fast path read changeling
+/// off the printed line; a debug pod's grant audit caught it, seed 9600037.)
+#[test]
+fn a_granted_changeling_gets_sliver_grants() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::omo_queen_of_vesuva());
+    g.add_card_to_battlefield(0, catalog::hibernation_sliver());
+    let sage = g.add_card_to_battlefield(0, catalog::wonderscape_sage());
+    assert!(g.granted_abilities_for(sage).is_empty(), "not a Sliver yet");
+    g.battlefield_find_mut(sage).unwrap().add_counters(CounterType::Everything, 1);
+    assert_eq!(g.granted_abilities_for(sage).len(), 1, "a Sliver through the granted changeling");
+}

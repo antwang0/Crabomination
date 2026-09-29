@@ -18108,8 +18108,16 @@ impl GameState {
                 true
             }
             R::HasCreatureType(ct) => {
+                // A GRANTED changeling (CR 702.73a) is every creature type
+                // too, and `test`'s changeling read is the printed line: the
+                // walker made Wonderscape Sage a Sliver under a changeling
+                // grant and the printed test did not (debug pod, seed
+                // 9600037), so Hibernation Sliver's ability never reached it.
                 if f.creature_type.is_some()
-                    || *gates[1].get_or_insert_with(|| self.creature_type_change_in_scope())
+                    || *gates[1].get_or_insert_with(|| {
+                        self.creature_type_change_in_scope()
+                            || self.keyword_grant_in_scope(|k| matches!(k, Keyword::Changeling))
+                    })
                 {
                     return false;
                 }
