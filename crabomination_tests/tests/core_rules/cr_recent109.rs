@@ -455,3 +455,46 @@ fn protection_stops_your_own_spells_too() {
         })
         .is_err());
 }
+
+/// CR 702.11e / 608.2b — hexproof from a colour gained in response makes the
+/// spell's target illegal as it resolves: a Murder at a Bear, and a Sign in
+/// Blood at its controller, both fizzle after Veil of Summer ("you and
+/// permanents you control gain hexproof from blue and from black"). The
+/// colour-hexproof check ran at cast only.
+#[test]
+fn veil_of_summer_in_response_fizzles_the_spell() {
+    for at_player in [false, true] {
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let (spell, target) = if at_player {
+            (g.add_card_to_hand(1, catalog::sign_in_blood()), Target::Player(0))
+        } else {
+            (g.add_card_to_hand(1, catalog::murder()), Target::Permanent(bear))
+        };
+        g.players[1].mana_pool.add(Color::Black, 3);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(target), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        g.priority.player_with_priority = 0;
+        let veil = g.add_card_to_hand(0, catalog::veil_of_summer());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: veil, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("Veil of Summer");
+        let life = g.players[0].life;
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_some(), "at_player {at_player}");
+        assert_eq!(g.players[0].life, life, "at_player {at_player}");
+        // Veil's own draw only (an opponent cast a black spell this turn),
+        // not Sign in Blood's two.
+        assert_eq!(g.players[0].library.len(), 2, "at_player {at_player}");
+    }
+}

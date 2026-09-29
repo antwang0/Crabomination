@@ -2469,7 +2469,8 @@ impl GameState {
                         // CR 702.16b — protection from the Aura's colour gained
                         // in response (Gods Willing against a Pacifism).
                         || matches!(t, Target::Permanent(tid)
-                            if self.spell_protection_blocks(&card, caster, *tid));
+                            if self.spell_protection_blocks(&card, caster, *tid))
+                        || self.spell_color_hexproof_blocks(&card, caster, t);
                     if gone || filter_fail || untargetable {
                         if !card.is_token {
                             self.route_to_graveyard(card, &mut events);

@@ -28522,10 +28522,13 @@ impl GameState {
                     // CR 702.16b — protection gained since the cast (Mother
                     // of Runes in response) makes it an illegal target too.
                     || self.spell_protection_blocks(&card, caster, *tid)
+                    || self.spell_color_hexproof_blocks(&card, caster, t)
             } else if let Target::Player(p) = t
-                && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
+                && (self.players.get(*p).is_some_and(|pl| !pl.is_alive())
+                    || self.spell_color_hexproof_blocks(&card, caster, t))
             {
-                // CR 800.4a — its target player has left the game.
+                // CR 800.4a — its target player has left the game; CR
+                // 702.11e — or gained hexproof from its colour (Veil of Summer).
                 true
             } else {
                 // A card target whose filter names its zone ("target creature
@@ -28574,6 +28577,7 @@ impl GameState {
                     || filter_fail
                     || g.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
                     || matches!(t, Target::Permanent(tid) if g.spell_protection_blocks(&card, caster, *tid))
+                    || g.spell_color_hexproof_blocks(&card, caster, t)
             };
             let all_illegal = slot_illegal(self, 0, t0)
                 && additional_targets

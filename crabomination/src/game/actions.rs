@@ -8922,6 +8922,51 @@ impl GameState {
         })
     }
 
+    /// CR 702.11e / 702.11f — hexproof from [color] (and from monocolored /
+    /// multicolored): `target` can't be targeted by an opponent's spell of
+    /// that color. Covers both printed `Keyword::HexproofFromColor` and the
+    /// turn-scoped controller grant (Veil of Summer's "you and permanents you
+    /// control gain hexproof from blue and black"). Read by the cast gate and
+    /// by the CR 608.2b resolution re-checks, so a Veil cast in response
+    /// fizzles the spell.
+    pub(crate) fn spell_color_hexproof_blocks(&self, card: &CardInstance, p: usize, target: &Target) -> bool {
+        let spell_colors = card.definition.cost.color_set();
+        match *target {
+            Target::Permanent(cid) => self
+                .battlefield_find(cid)
+                .filter(|tc| tc.controller != p)
+                .is_some_and(|tc| {
+                    let controller = tc.controller;
+                    if self.players[controller]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| spell_colors.contains(c))
+                    {
+                        return true;
+                    }
+                    let cp = self.computed_permanent(cid);
+                    let kws: &[Keyword] = match &cp {
+                        Some(cp) => cp.keywords(),
+                        None => &tc.definition.keywords,
+                    };
+                    kws.iter().any(|kw| match kw {
+                        Keyword::HexproofFromColor(c) => spell_colors.contains(c),
+                        // CR 702.11f — exactly one color on the spell.
+                        Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
+                        Keyword::HexproofFromMulticolored => spell_colors.len() >= 2,
+                        _ => false,
+                    })
+                }),
+            Target::Player(tp) => {
+                tp != p
+                    && self.players[tp]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| spell_colors.contains(c))
+            }
+        }
+    }
+
     /// CR 702.16b — whether a protection (or "can't be the target of …
     /// spells") keyword on battlefield permanent `cid` stops `card`, a spell
     /// `p` casts, from targeting it. The cast gate and the resolution re-check
@@ -9821,47 +9866,9 @@ impl GameState {
             return Err(GameError::TargetHasProtection(cid));
         }
 
-        // CR 702.11e — hexproof from [color]: this object can't be targeted
-        // by opponents' spells of that color. Covers both printed
-        // `Keyword::HexproofFromColor` and the turn-scoped controller grant
-        // (Veil of Summer's "you and permanents you control gain hexproof
-        // from blue and black"). Applies to permanent and player targets.
-        let spell_colors = card.definition.cost.color_set();
-        let hexproof_violation = match target {
-            Some(Target::Permanent(cid)) => self
-                .battlefield_find(cid)
-                .filter(|tc| tc.controller != p)
-                .is_some_and(|tc| {
-                    let controller = tc.controller;
-                    let cp = self.computed_permanent(cid);
-                    let kws: &[Keyword] = match &cp {
-                        Some(cp) => cp.keywords(),
-                        None => &tc.definition.keywords,
-                    };
-                    let printed = kws
-                        .iter()
-                        .any(|kw| match kw {
-                            Keyword::HexproofFromColor(c) => spell_colors.contains(c),
-                            // CR 702.11f — exactly one color on the spell.
-                            Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
-                            Keyword::HexproofFromMulticolored => spell_colors.len() >= 2,
-                            _ => false,
-                        });
-                    printed
-                        || self.players[controller]
-                            .hexproof_from_colors_this_turn
-                            .iter()
-                            .any(|c| spell_colors.contains(c))
-                }),
-            Some(Target::Player(tp)) => {
-                tp != p
-                    && self.players[tp]
-                        .hexproof_from_colors_this_turn
-                        .iter()
-                        .any(|c| spell_colors.contains(c))
-            }
-            None => false,
-        };
+        // CR 702.11e — hexproof from [color] (`spell_color_hexproof_blocks`).
+        let hexproof_violation =
+            target.as_ref().is_some_and(|t| self.spell_color_hexproof_blocks(&card, p, t));
         if hexproof_violation {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
