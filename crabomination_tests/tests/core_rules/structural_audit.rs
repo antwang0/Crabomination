@@ -160,7 +160,8 @@ fn blank_permanent_check_knows_every_carrier_field() {
     use crabomination::audit::{def_has_any_ability, stub_kind};
     use crabomination::catalog;
 
-    let cases: &[(&str, fn() -> crabomination::card::CardDefinition)] = &[
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let cases: &[(&str, Factory)] = &[
         ("saga_chapters", catalog::history_of_benalia),
         ("room", catalog::bottomless_pool_locker_room),
         ("enter_modes", catalog::barrensteppe_siege),
