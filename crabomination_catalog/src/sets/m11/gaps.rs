@@ -935,13 +935,14 @@ pub fn autumns_veil() -> CardDefinition {
     )
 }
 
-/// Hunters' Feast — {3}{G}: any number of target players gain 6.
+/// Hunters' Feast — {3}{G}: any number of target players gain 6 (eight slots:
+/// a pod has at most eight seats).
 pub fn hunters_feast() -> CardDefinition {
     sorcery(
         "Hunters' Feast",
         cost(&[generic(3), g()]),
         Effect::ApplyToTargets {
-            max_targets: 2,
+            max_targets: 8,
             min_targets: 0,
             filter: R::Player,
             effect: Box::new(Effect::GainLife {

@@ -638,6 +638,31 @@ fn hunters_feast_gains_six() {
     assert_eq!(g.players[0].life, 26);
 }
 
+/// "Any number of target players": in a four-seat pod all four can gain 6
+/// (the slot cap was two).
+#[test]
+fn hunters_feast_reaches_every_seat_of_a_pod() {
+    let mut g = crabomination::game::multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::hunters_feast());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Player(1), Target::Player(2), Target::Player(3)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("four targets");
+    drain_stack(&mut g);
+    for (seat, b) in before.iter().enumerate() {
+        assert_eq!(g.players[seat].life, b + 6, "seat {seat}");
+    }
+}
+
 /// Destructive Force strips five lands each and sweeps the board.
 #[test]
 fn destructive_force_wrecks_lands_and_creatures() {
