@@ -1438,7 +1438,8 @@ fn murasa_ranger_landfall_pays_for_counters() {
 }
 
 /// Thought-Knot Seer ETB exiles a nonland card from the opponent's hand; when
-/// it leaves, that opponent draws a card.
+/// it leaves, **target player** draws a card — the auto-picker names the
+/// caster (a draw is caster-first).
 #[test]
 fn thought_knot_seer_etb_exiles_and_ltb_draws() {
     let mut g = two_player_game();
@@ -1451,13 +1452,14 @@ fn thought_knot_seer_etb_exiles_and_ltb_draws() {
     drain_stack(&mut g);
     assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt exiled from hand");
     assert!(g.exile.iter().any(|c| c.id == bolt), "Bolt in exile");
-    g.add_card_to_library(1, catalog::forest());
-    let hand_before = g.players[1].hand.len();
+    g.add_card_to_library(0, catalog::forest());
+    let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
     // Kill TKS via SBA so its self-source LTB trigger fires.
     g.battlefield_find_mut(tks).unwrap().damage = 4;
     g.check_state_based_actions();
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), hand_before + 1, "opponent draws when TKS leaves");
+    assert_eq!(g.players[0].hand.len(), mine + 1, "the caster takes the draw");
+    assert_eq!(g.players[1].hand.len(), theirs);
     // The exiled card stays exiled (not linked to the source).
     assert!(g.exile.iter().any(|c| c.id == bolt), "Bolt remains exiled");
 }

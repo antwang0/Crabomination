@@ -145,7 +145,7 @@ pub fn voyage_home() -> CardDefinition {
 
 /// Aggressive Negotiations — {2}{B} Sorcery. Target opponent reveals their hand;
 /// you exile a nonland card from it. Put a +1/+1 counter on up to one target
-/// creature you control. (Reveal targeting approximated as each opponent.)
+/// creature you control.
 pub fn aggressive_negotiations() -> CardDefinition {
     CardDefinition {
         name: "Aggressive Negotiations",

@@ -3144,7 +3144,7 @@ pub fn gates_ablaze() -> CardDefinition {
 
 /// Undercity's Embrace — {2}{B} Instant. Target opponent sacrifices a creature
 /// of their choice. If you control a creature with power 4 or greater, you gain
-/// 4 life. (The single "target opponent" is modeled as each opponent — exact in 1v1.)
+/// 4 life.
 pub fn undercitys_embrace() -> CardDefinition {
     CardDefinition {
         name: "Undercity's Embrace",

@@ -1874,7 +1874,8 @@ pub fn blight_herder() -> CardDefinition {
 }
 
 /// Thought-Knot Seer — {3}{C} 4/4 Eldrazi. ETB: target opponent reveals their
-/// hand, you choose a nonland card and exile it. LTB: that player draws a card.
+/// hand, you choose a nonland card and exile it. LTB: target player draws a card
+/// (any player — the bot's caster-first pick draws it itself).
 pub fn thought_knot_seer() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
     use crate::effect::Value;
@@ -1899,14 +1900,13 @@ pub fn thought_knot_seer() -> CardDefinition {
                     face_down: false,
                 },
             },
-            // "That player draws a card" — modeled as each opponent (exact in 1v1).
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::PermanentLeavesBattlefield,
                     EventScope::SelfSource,
                 ),
                 effect: Effect::Draw {
-                    who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
+                    who: target_filtered(crate::card::SelectionRequirement::Player),
                     amount: Value::Const(1),
                 },
             },

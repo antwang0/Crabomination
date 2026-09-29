@@ -261,8 +261,8 @@ pub fn stonecloaker() -> CardDefinition {
     }
 }
 
-/// Stonehorn Dignitary — {3}{W} 1/4 Rhino Soldier. ETB: an opponent skips their
-/// next combat phase (1v1-faithful: each opponent).
+/// Stonehorn Dignitary — {3}{W} 1/4 Rhino Soldier. ETB: target opponent skips
+/// their next combat phase.
 pub fn stonehorn_dignitary() -> CardDefinition {
     CardDefinition {
         name: "Stonehorn Dignitary",

@@ -399,11 +399,8 @@ pub fn rushed_rebirth() -> CardDefinition {
 /// • You draw a card and you lose 1 life.
 /// • Exile target player's graveyard."
 ///
-/// Approximation: player-targeting on ETB triggers is an engine-wide
-/// gap (see Bojuka Bog / Archon of Cruelty), so mode 2's "target
-/// player's graveyard" is modeled as `ExilePlayerGraveyard` on
-/// `EachOpponent` — faithful in two-player games, but the self-cast
-/// "exile my own graveyard" line is unavailable.
+/// Mode 2's "target player's graveyard" is `ExilePlayerGraveyard` on the
+/// targeted player (`PlayerRef::Target(0)`).
 pub fn callous_bloodmage() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
