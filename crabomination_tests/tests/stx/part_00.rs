@@ -2985,7 +2985,7 @@ fn specter_of_the_fens_drains_two() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spec, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: spec, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{5}{B} drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 2, "opponent loses 2");

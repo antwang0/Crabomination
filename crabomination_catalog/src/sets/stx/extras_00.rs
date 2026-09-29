@@ -960,7 +960,7 @@ pub fn specter_of_the_fens() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5), b()]),
-            effect: crate::effect::shortcut::drain(2),
+            effect: crate::effect::shortcut::drain_target_opponent(2),
             ..Default::default()
         }],
         ..Default::default()

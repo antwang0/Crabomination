@@ -5,7 +5,7 @@ use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CreatureType, EntersAsCopy, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{each_opponent, etb, investigate};
+use crate::effect::shortcut::{etb, investigate, target_filtered};
 use crate::effect::{Duration, Effect, Predicate, Selector, Value};
 use crate::mana::{b, cost, generic, u, w};
 
@@ -31,7 +31,7 @@ pub fn persuasive_interrogators() -> CardDefinition {
                         filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
                     }),
                 effect: Effect::AddPoison {
-                    who: each_opponent(),
+                    who: target_filtered(R::OpponentPlayer),
                     amount: Value::Const(2),
                 },
             },

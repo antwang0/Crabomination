@@ -195,20 +195,20 @@ pub fn skitterskin() -> CardDefinition {
 }
 
 /// Mindmelter — {1}{U}{B} 2/2 Eldrazi Drone. Devoid, can't be blocked,
-/// {3}{C}: target opponent discards a card (sorcery-speed). (The printed
-/// "exiles a card from their hand" is approximated as a discard.)
+/// {3}{C}: target opponent exiles a card from their hand (sorcery-speed).
 pub fn mindmelter() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::{PlayerRef, Selector, Value};
+    use crate::effect::Value;
     CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Unblockable],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), crate::mana::colorless(1)]),
             sorcery_speed: true,
-            effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+            effect: Effect::ExileFromHand {
+                who: crate::effect::shortcut::target_filtered(
+                    crate::card::SelectionRequirement::OpponentPlayer,
+                ),
                 amount: Value::Const(1),
-                random: false,
             },
             ..Default::default()
         }],

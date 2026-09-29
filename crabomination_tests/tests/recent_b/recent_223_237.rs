@@ -541,7 +541,8 @@ mod recent227 {
         let pi = g.add_card_to_battlefield(0, catalog::persuasive_interrogators());
         // The Clue-sac trigger (index 1) adds two poison to the opponent.
         let effect = catalog::persuasive_interrogators().triggered_abilities[1].effect.clone();
-        g.resolve_effect(&effect, &EffectContext::for_trigger(pi, 0, None, 1)).unwrap();
+        let opp = Some(crabomination::game::types::Target::Player(1));
+        g.resolve_effect(&effect, &EffectContext::for_trigger(pi, 0, opp, 1)).unwrap();
         assert_eq!(g.players[1].poison_counters, 2, "opponent got two poison");
     }
 

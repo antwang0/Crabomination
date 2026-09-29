@@ -9,7 +9,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{drain, etb, target_filtered};
+use crate::effect::shortcut::{drain_target_opponent, etb, target_filtered};
 use crate::effect::{LookPick, Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
@@ -119,7 +119,8 @@ pub fn deepmuck_desperado() -> CardDefinition {
 }
 
 /// Blood Hustler — {1}{B} 1/1 Vampire Rogue. Whenever you commit a crime, put a
-/// +1/+1 counter on it (once each turn). {3}{B}: drain 1.
+/// +1/+1 counter on it (once each turn). {3}{B}: target opponent loses 1 life
+/// and you gain 1 life.
 pub fn blood_hustler() -> CardDefinition {
     CardDefinition {
         name: "Blood Hustler",
@@ -142,7 +143,7 @@ pub fn blood_hustler() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), b()]),
-            effect: drain(1),
+            effect: drain_target_opponent(1),
             ..Default::default()
         }],
         ..Default::default()

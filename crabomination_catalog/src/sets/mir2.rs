@@ -261,7 +261,7 @@ pub fn ebony_charm() -> CardDefinition {
         "Ebony Charm",
         cost(&[b()]),
         Effect::ChooseMode(vec![
-            crate::effect::shortcut::drain(1),
+            crate::effect::shortcut::drain_target_opponent(1),
             Effect::ExileFromGraveyard {
                 who: PlayerRef::Target(0),
                 count: Value::Const(3),

@@ -7489,3 +7489,25 @@ fn cr_115_1_tempest_caller_taps_one_opponent() {
     let tapped = |g: &GameState, id| g.battlefield_find(id).unwrap().tapped;
     assert!(tapped(&g, a) != tapped(&g, b), "exactly one seat's creatures are tapped");
 }
+
+/// CR 115.1 — "target opponent gets two poison counters" (Persuasive
+/// Interrogators) and "target opponent loses 2 life and you gain 2 life"
+/// (Specter of the Fens) name one seat; both hit every opponent.
+#[test]
+fn cr_115_1_target_opponent_is_one_seat() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let pi = g.add_card_to_battlefield(0, catalog::persuasive_interrogators());
+    let poison = catalog::persuasive_interrogators().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&poison, &EffectContext::for_trigger(pi, 0, Some(Target::Player(2)), 1)).unwrap();
+    assert_eq!((g.players[1].poison_counters, g.players[2].poison_counters), (0, 2));
+    let spec = g.add_card_to_battlefield(0, catalog::specter_of_the_fens());
+    let drain = catalog::specter_of_the_fens().activated_abilities[0].effect.clone();
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.resolve_effect(&drain, &EffectContext::for_trigger(spec, 0, Some(Target::Player(1)), 0)).unwrap();
+    assert_eq!(
+        g.players.iter().map(|p| p.life).collect::<Vec<_>>(),
+        vec![life[0] + 2, life[1] - 2, life[2]],
+    );
+}

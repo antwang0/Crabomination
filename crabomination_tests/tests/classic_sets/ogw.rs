@@ -318,10 +318,11 @@ fn mindmelter_discards_deepfathom_grants_unblockable() {
     let hand_before = g.players[1].hand.len();
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mm, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("opp discards");
+        card_id: mm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("target opponent exiles a card");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), hand_before - 1, "opponent discarded one");
+    assert_eq!(g.players[1].hand.len(), hand_before - 1, "opponent lost one card");
+    assert!(g.players[1].graveyard.is_empty(), "exiled, not discarded");
 
     let skulker = g.add_card_to_battlefield(0, catalog::deepfathom_skulker());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
