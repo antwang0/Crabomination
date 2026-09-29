@@ -9337,6 +9337,8 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
         Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } => {
             m |= if ab.sac_cost { sink::AB_SAC_DESTROY } else { sink::AB_DESTROY };
         }
+        // `pick_removal_fight` — removal too, under the same bit.
+        Effect::Fight { attacker: Selector::This, .. } => m |= sink::AB_DESTROY,
         Effect::DealDamage { .. } => m |= sink::AB_DAMAGE,
         Effect::Draw { who: Selector::You, .. } => m |= sink::AB_DRAW,
         Effect::PumpPT { what: Selector::EachPermanent(_), .. } => m |= sink::AB_TEAM_PUMP,
@@ -9951,6 +9953,12 @@ fn main_phase_action_with(
     // Possessed cycle's Threshold ability, Royal Assassin-style tappers) on
     // the biggest legal foe. No trade math — the source survives.
     gated_pick!(state, sinks, sink::AB_DESTROY, pick_removal_destroy(state, seat));
+
+    // Fire a "{cost}: this fights target creature" ability (Brash Taunter,
+    // Vein Drinker) when the fight kills the foe and the fighter lives — or,
+    // for an indestructible fighter that turns damage it is dealt into damage
+    // to an opponent (Taunter), at the biggest hitter. Commander games only.
+    gated_pick!(state, sinks, sink::AB_DESTROY, pick_removal_fight(state, seat));
 
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
@@ -10689,6 +10697,73 @@ fn pick_removal_destroy(state: &GameState, seat: usize) -> Option<GameAction> {
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
+            }
+        }
+    }
+    None
+}
+
+/// A "{cost}: this creature fights target creature" activation worth taking
+/// (see the `main_phase` call site). Never activated before: a 183-deck
+/// `--card-census` (seed 9460001) listed Brash Taunter in three decks.
+fn pick_removal_fight(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::{CounterType, Keyword};
+    use crate::effect::Selector;
+    if state.players[seat].commanders.is_empty() {
+        return None;
+    }
+    let indestructible = |c: &crate::card::CardInstance, kws: &[Keyword]| {
+        kws.contains(&Keyword::Indestructible) || c.counter_count(CounterType::Indestructible) > 0
+    };
+    let scan = state.grant_scan();
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
+            let Effect::Fight { attacker: Selector::This, defender } = &ab.effect else { continue };
+            if !matches!(defender, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            let Some(me) = state.computed_permanent(card.id) else { continue };
+            let my_left = me.toughness - card.damage as i32;
+            let me_safe = indestructible(card, me.keywords());
+            let me_deathtouch = me.keywords().contains(&Keyword::Deathtouch);
+            // Damage dealt to it becomes damage to an opponent (Brash Taunter).
+            let redirects = card.definition.triggered_abilities.iter().any(|t| {
+                t.event.kind == crate::card::EventKind::DealtDamage
+                    && matches!(t.event.scope, crate::card::EventScope::SelfSource)
+            });
+            let mut best: Option<(i32, crate::card::CardId)> = None;
+            for foe in state.battlefield.iter().filter(|c| !state.same_team(c.controller, seat)) {
+                let Some(cp) = state.computed_permanent(foe.id) else { continue };
+                if !cp.card_types().contains(&crate::card::CardType::Creature) {
+                    continue;
+                }
+                let kills = !indestructible(foe, cp.keywords())
+                    && me.power > 0
+                    && (me_deathtouch || cp.toughness - foe.damage as i32 <= me.power);
+                let lives = me_safe
+                    || (cp.power < my_left && !cp.keywords().contains(&Keyword::Deathtouch));
+                let score = if kills && lives {
+                    cp.power + cp.toughness
+                } else if me_safe && redirects && cp.power >= 2 {
+                    cp.power
+                } else {
+                    continue;
+                };
+                if best.is_none_or(|(b, _)| score > b) {
+                    best = Some((score, foe.id));
+                }
+            }
+            let Some((_, foe)) = best else { continue };
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: Some(crate::game::Target::Permanent(foe)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if ward_gate_ok(state, seat, &action) && state.would_accept(action.clone()) {
+                return Some(action);
             }
         }
     }
@@ -21438,6 +21513,35 @@ mod tests {
             panic!("expected a Discard answer");
         };
         assert_eq!(ids, vec![land], "a flooded bot pitches the surplus land");
+    }
+
+    /// A pod bot fights with Brash Taunter (indestructible; damage it is dealt
+    /// goes to an opponent) at the biggest hitter, and not in a two-player
+    /// game, where its traces stay as they were.
+    #[test]
+    fn pod_bot_fights_with_brash_taunter_at_the_biggest_hitter() {
+        for (pod, fires) in [(true, true), (false, false)] {
+            let mut g = if pod { crate::game::multi_player_game(3) } else { two_player_game() };
+            if pod {
+                g.seat_commanders(0, vec![catalog::llanowar_elves()]);
+            }
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.step = crate::game::types::TurnStep::PreCombatMain;
+            let taunter = g.add_card_to_battlefield(0, catalog::brash_taunter());
+            g.clear_sickness(taunter);
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+            g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+            g.players[0].mana_pool.add_colorless(2);
+            let picked = pick_removal_fight(&g, 0);
+            assert_eq!(
+                matches!(picked, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                    if card_id == taunter && t == wurm),
+                fires,
+                "pod {pod}"
+            );
+        }
     }
 
     /// A lethal constant-damage ping ability aims at an opposing planeswalker
