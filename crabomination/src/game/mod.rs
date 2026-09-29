@@ -2061,13 +2061,6 @@ fn serde_true() -> bool {
 /// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResolutionScratch {
-    /// The spell `continue_spell_resolution` is resolving: its id and
-    /// definition. The card itself is held by the resolver, out of every
-    /// zone, so without this a lookup of the damage source (`source_colors`,
-    /// the protection check, a player's protection from a card type) found
-    /// nothing and a Pyroclasm killed a creature with protection from red
-    /// (CR 702.16e). Set and restored around each resolution pass.
-    pub(crate) resolving_spell: Option<(CardId, std::sync::Arc<crate::card::CardDefinition>)>,
     /// Transient: per-colour mana spent paying the activation currently
     /// resolving, stamped into `EffectContext.mana_spent_by_color`
     /// (Protective Sphere's "shares a color with the mana spent").
@@ -17628,10 +17621,18 @@ impl GameState {
         tgt.keywords().iter().any(Self::protection_keyword)
     }
 
-    /// The definition of the spell being resolved, when `id` is it — see
-    /// `ResolutionScratch::resolving_spell`.
+    /// The definition of the spell being resolved, when `id` is it. While a
+    /// spell resolves its card is held by the resolver, out of every zone, so
+    /// a lookup of the damage source (`source_colors`, the protection check,
+    /// a player's protection from a card type) found nothing and a Pyroclasm
+    /// killed a creature with protection from red (CR 702.16e). The id is
+    /// `resolving_source`'s (stamped around the effect), the definition
+    /// `resolving_spell_snapshot`'s (set as each spell starts resolving).
     pub(crate) fn resolving_spell_def(&self, id: CardId) -> Option<&crate::card::CardDefinition> {
-        self.scratch.resolving_spell.as_ref().filter(|(rid, _)| *rid == id).map(|(_, d)| &**d)
+        match (&self.scratch.resolving_source, &self.scratch.resolving_spell_snapshot) {
+            (Some((sid, ..)), Some(snap)) if *sid == id => Some(&*snap.definition),
+            _ => None,
+        }
     }
 
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
@@ -28444,45 +28445,6 @@ impl GameState {
     // struct doesn't reduce coupling at the call sites.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_spell_resolution(
-        &mut self,
-        card: CardInstance,
-        caster: usize,
-        target: Option<Target>,
-        additional_targets: Vec<Target>,
-        mode: usize,
-        x_value: u32,
-        converged_value: u32,
-        mana_spent: u32,
-        override_effect: Option<Effect>,
-        resume_stage: u8,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        // Publish the resolving spell for the source lookups (see
-        // `ResolutionScratch::resolving_spell`), restoring whatever an outer
-        // resolution had there.
-        let prev = self
-            .scratch
-            .resolving_spell
-            .replace((card.id, card.definition.arc()));
-        let r = self.continue_spell_resolution_inner(
-            card,
-            caster,
-            target,
-            additional_targets,
-            mode,
-            x_value,
-            converged_value,
-            mana_spent,
-            override_effect,
-            resume_stage,
-        );
-        self.scratch.resolving_spell = prev;
-        r
-    }
-
-    /// The pass itself; [`continue_spell_resolution`](Self::continue_spell_resolution)
-    /// wraps it.
-    #[allow(clippy::too_many_arguments)]
-    fn continue_spell_resolution_inner(
         &mut self,
         card: CardInstance,
         caster: usize,

@@ -9683,29 +9683,34 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
-### Commander 2026-09-29 (session `012RbSk7`) — a correctness fix priced: the resolving spell as a damage source
+### Commander 2026-09-29 (session `012RbSk7`) — a correctness fix priced twice: the resolving spell as a damage source
 
-`ResolutionScratch::resolving_spell` publishes the spell `continue_spell_resolution`
-is resolving, so `source_colors` / `protection_prevents_views` / a player's
-card-type protection can read a source the resolver holds out of every zone
-(a Pyroclasm used to kill a protection-from-red creature, CR 702.16e). One
-guarded store and restore per resolution pass, through a wrapper around the
-old body. `profiling-fast --no-default-features`, system allocator,
-`--a gang --b gang --games 6 --threads 1 --seed 1`, base `2f0de808b`:
+`source_colors` / `protection_prevents_views` / a player's card-type
+protection could not read a source the resolver holds out of every zone (a
+Pyroclasm killed a protection-from-red creature, CR 702.16e).
+`profiling-fast --no-default-features`, system allocator,
+`--a gang --b gang --games 6 --threads 1 --seed 1`, base `83356bda0`:
 
 ```text
-  cube     1,197,168,235 -> 1,198,653,294   +0.124 %
-  fixed      785,618,394 ->   786,631,475   +0.129 %
-  sealed   2,489,635,227 -> 2,491,686,804   +0.082 %
+  first cut: a new ResolutionScratch field, stored and restored by a wrapper
+             around continue_spell_resolution
+    cube     1,197,168,235 -> 1,198,653,294   +0.124 %
+    fixed      785,618,394 ->   786,631,475   +0.129 %
+    sealed   2,489,635,227 -> 2,491,686,804   +0.082 %
+  kept: GameState::resolving_spell_def reads the two stamps the resolver
+        already writes (resolving_source's id, resolving_spell_snapshot's
+        definition) — no new store, no wrapper
+    cube     1,197,185,822 -> 1,197,181,580   -0.000 %
+    fixed      785,609,830 ->   785,611,196   +0.000 %
+    sealed   2,489,639,598 -> 2,489,683,928   +0.002 %
   --bench  196,176 decisions, byte-identical
 ```
 
-All three pools move together, `fixed` (which resolves few spells) as much as
-the others, so by NEXT's three-pool rule this is a **codegen** row (the
-wrapper moved an inlining decision), not the store's work: 2,136 resolutions
-on `cube` could not cost 1.5 M Ir at a refcount and a pointer write apiece.
-Accepted as the price of the fix; a lead for a later pass is to fold the
-store into the body and drop the wrapper.
+⚠ **Search the scratch before adding to it.** `resolving_source` (id, caster,
+colours, types — Torbran) and `resolving_spell_snapshot` (the definition —
+the Onslaught Chain copy rider) already covered this; the first cut
+duplicated them and paid a codegen row (all three pools together, `fixed`
+as much as the rest) for it.
 
 ### Commander 2026-09-26 (session `012put2X`) — guardrail read, no perf change intended
 
