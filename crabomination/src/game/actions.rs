@@ -19247,7 +19247,29 @@ impl GameState {
                 }
                 HeldAbility::Printed(def, ability_index)
             } else if ability_index < printed_count + granted.len() {
-                let g = granted[ability_index - printed_count].clone();
+                let mut g = granted[ability_index - printed_count].clone();
+                // Mairsil, the Pretender — "You may activate each of those
+                // abilities only once each turn." A borrowed ability carries
+                // the cap its lender never printed (CR 602.5b).
+                let src = &self.battlefield[pos];
+                if !g.once_per_turn
+                    && g.max_activations_per_turn.is_none()
+                    && let Some(kind) = src.definition.static_abilities.iter().find_map(|sa| {
+                        match sa.effect {
+                            crate::effect::StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter {
+                                counter,
+                            } => Some(counter),
+                            _ => None,
+                        }
+                    })
+                    && self.exile.iter().any(|e| {
+                        e.owner == src.controller
+                            && e.counter_count(kind) > 0
+                            && e.definition.activated_abilities.contains(&g)
+                    })
+                {
+                    g.once_per_turn = true;
+                }
                 // Stripped permanents keep granted mana abilities only.
                 if stripped && !is_mana_ability(&g.effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);

@@ -313,8 +313,9 @@ pub fn magus_of_the_mind() -> CardDefinition {
 
 /// Mairsil, the Pretender — cages an artifact or creature card from your hand
 /// or graveyard as it enters, and has the activated abilities of every card
-/// you own in exile with a cage counter. Residuals: no once-each-turn limit on
-/// a borrowed ability; the cage takes the highest-mana-value card.
+/// you own in exile with a cage counter, each once a turn (the activation
+/// path caps a borrowed ability). Residual: the cage takes the
+/// highest-mana-value card.
 pub fn mairsil_the_pretender() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

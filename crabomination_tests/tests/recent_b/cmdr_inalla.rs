@@ -217,7 +217,8 @@ fn magus_of_the_mind_scales_with_the_storm_count() {
     assert!(g.battlefield_find(free[0]).is_some());
 }
 
-/// Mairsil cages a creature card from the graveyard and uses its ability.
+/// Mairsil cages a creature card from the graveyard and uses its ability,
+/// once each turn.
 #[test]
 fn mairsil_borrows_a_caged_cards_ability() {
     let mut g = pod(2);
@@ -231,6 +232,11 @@ fn mairsil_borrows_a_caged_cards_ability() {
     let life = g.players[1].life;
     activate(&mut g, 0, m, 0, Some(Target::Player(1)), None).expect("the Sorcerer's ping");
     assert_eq!(g.players[1].life, life - 1);
+    drain_stack(&mut g);
+    // "You may activate each of those abilities only once each turn" — an
+    // untapped Mairsil still can't ping twice (CR 602.5b).
+    g.battlefield_find_mut(m).expect("Mairsil").tapped = false;
+    assert!(activate(&mut g, 0, m, 0, Some(Target::Player(1)), None).is_err());
 }
 
 /// Mirror of the Forebears names Bear and becomes a copy of your Bear until
