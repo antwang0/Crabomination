@@ -2552,6 +2552,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-29 (a pod bot no longer casts Walking Ballista /
+        // Hangarback Walker for X=0 — `dies_at_x0`; bisected: that commit
+        // alone): seed 4242 104→61 turns, same winner; the other two unmoved.
+        // `bot_ladder --commander --a dflt`, 2,000 games at seed 9991,
+        // before/after: 40.32/40.24, 60.37/59.84, 82.93/82.05 turns at 3/4/6
+        // seats, every block 2,000/2,000 decided; `--bench` byte-identical.
         // Re-blessed 2026-09-28 (CR 700.2a — 23 `ChooseN` spells choose their
         // modes at cast, so a pod bot picks Kolaghan's / Kozilek's / Austere
         // Command's modes instead of the fixed defaults; `git bisect` names
@@ -2794,7 +2800,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
             (43, Some(0), 71, 3349),
-            (4242, Some(3), 104, 4725),
+            (4242, Some(3), 61, 2941),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

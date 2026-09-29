@@ -7466,6 +7466,12 @@ pub(super) fn cast_candidates<'a>(
         {
             continue;
         }
+        // A 0-toughness creature that enters with X +1/+1 counters (Walking
+        // Ballista, Hangarback Walker) is a 0/0 at X=0 and dies on arrival:
+        // pod bots cast Ballista for 0 on turn 1. Pods only.
+        if x_value == Some(0) && state.players.len() > 2 && dies_at_x0(&c.definition) {
+            continue;
+        }
         // `skip_noop_x0`: an X spell whose every leaf scales with X does
         // nothing at X=0 — the cast waits for a real X.
         if w.skip_noop_x0 && x_value == Some(0) && x_zero_is_noop(&c.definition.effect) {
@@ -17607,6 +17613,17 @@ fn sacrifice_any_number_filter(def: &CardDefinition) -> Option<&crate::card::Sel
         crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } => Some(filter),
         _ => None,
     })
+}
+
+/// A creature with printed toughness 0 whose only toughness is its X
+/// +1/+1 counters — a 0/0 at X=0 (CR 704.5f).
+fn dies_at_x0(def: &CardDefinition) -> bool {
+    def.is_creature()
+        && def.toughness <= 0
+        && matches!(
+            &def.enters_with_counters,
+            Some((crate::card::CounterType::PlusOnePlusOne, crate::effect::Value::XFromCost))
+        )
 }
 
 /// `skip_noop_x0`: every leaf of the effect scales with X, so a cast at
@@ -29325,6 +29342,30 @@ mod stack_response_tests {
                 if *card_id == conf && spree_modes.len() == 3))
             .collect();
         assert!(!casts.is_empty(), "no three-mode cast offered");
+    }
+
+    /// CR 704.5f — a pod bot doesn't cast Walking Ballista for X=0 (a 0/0
+    /// that dies at once); with two spare mana ({X}{X}) it casts it for 1.
+    #[test]
+    fn a_pod_bot_does_not_cast_a_zero_toughness_x_creature_for_zero() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(4);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let b = g.add_card_to_hand(0, catalog::walking_ballista());
+        let casts = |g: &GameState| -> Vec<Option<u32>> {
+            cast_candidates(g, 0, &EvalWeights::default(), None)
+                .into_iter()
+                .filter_map(|(a, _)| match a {
+                    GameAction::CastSpell { card_id, x_value, .. } if card_id == b => Some(x_value),
+                    _ => None,
+                })
+                .collect()
+        };
+        assert!(casts(&g).is_empty(), "no X=0 Ballista");
+        g.players[0].mana_pool.add(Color::Red, 2);
+        assert_eq!(casts(&g), vec![Some(1)]);
     }
 
     /// A pod bot is offered every multi-mode pick of a "choose one or more"
