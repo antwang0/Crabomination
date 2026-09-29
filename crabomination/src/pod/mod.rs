@@ -2552,6 +2552,13 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-29 (seven "Remove a counter" costs paid on
+        // activation — a380ef08a; bisected: its parent 1f1b7bc71 passes):
+        // Icatian Javelineers' ping became a bare `DealDamage` the bot's ping
+        // pickers fire. Seed 43 71→66 turns, 4242 61→72, same winners;
+        // 0xC0FFEE unmoved. Pod smoke at that tip: 98 release groups (3 seats
+        // × 12 games, 5 × 10, seeds 9473000+ / 9475000+) all decided; cube /
+        // sos / sealed × 150 all decided; `--bench` byte-identical.
         // Re-blessed 2026-09-29 (a pod bot no longer casts Walking Ballista /
         // Hangarback Walker for X=0 — `dies_at_x0`; bisected: that commit
         // alone): seed 4242 104→61 turns, same winner; the other two unmoved.
@@ -2799,8 +2806,8 @@ mod tests {
         // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
-            (43, Some(0), 71, 3349),
-            (4242, Some(3), 61, 2941),
+            (43, Some(0), 66, 3225),
+            (4242, Some(3), 72, 3387),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
