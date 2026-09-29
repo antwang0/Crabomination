@@ -9712,6 +9712,13 @@ the Onslaught Chain copy rider) already covered this; the first cut
 duplicated them and paid a codegen row (all three pools together, `fixed`
 as much as the rest) for it.
 
+The same session's grant-scan fix (`7cbec237c`: the printed fast filter's
+`HasCreatureType` leaf yields to a changeling grant in scope — one memoized
+`keyword_grant_in_scope` per scan, and only on a board with such a grant
+filter) against its parent: cube **-0.167 %**, fixed **-0.168 %**, sealed
+**-0.144 %** — three pools together again, i.e. codegen, and in the good
+direction; `--bench` byte-identical.
+
 ### Commander 2026-09-26 (session `012put2X`) — guardrail read, no perf change intended
 
 A/B of the session-start tip (`939f85831`) against `470f7cb67` (this
