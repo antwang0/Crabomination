@@ -136,3 +136,33 @@ fn cr_106_6_klauth_mana_is_for_spells_and_kept() {
     g.empty_mana_pools();
     assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "kept across the step");
 }
+
+/// CR 614.9 — Heroic Sacrifice redirects damage to "you and CREATURES you
+/// control": a Bolt at you goes to the chosen creature, a Bolt at your
+/// planeswalker doesn't (Gideon's Sacrifice's "permanents" would take it).
+#[test]
+fn cr_614_9_heroic_sacrifice_covers_you_and_creatures_only() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let pw = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let hs = catalog::heroic_sacrifice();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(wurm)), 0, 0);
+    g.resolve_effect(&hs.effect, &ctx).expect("resolve");
+    let bolt_at = |g: &mut GameState, target| {
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::PreCombatMain;
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(target), additional_targets: vec![], mode: None, x_value: None })
+            .expect("Bolt");
+        drain_stack(g);
+    };
+    let (life, loyalty) = (g.players[0].life, g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty));
+    bolt_at(&mut g, Target::Player(0));
+    assert_eq!(g.players[0].life, life, "redirected to the Wurm");
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 3);
+    bolt_at(&mut g, Target::Permanent(pw));
+    assert_eq!(g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty), loyalty - 3, "a planeswalker isn't covered");
+}

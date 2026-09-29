@@ -1725,7 +1725,7 @@ impl Effect {
             Effect::ExchangeCreatureControlWith { who, .. } => sel_has_target(who),
             Effect::DoubleDamageFromSourceThisTurn { what }
             | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_has_target(what),
-            Effect::RedirectYourDamageToChosen { what }
+            Effect::RedirectYourDamageToChosen { what, .. }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. }
             | Effect::BottomThenRevealUntilCreature { what }
@@ -2798,7 +2798,7 @@ impl Effect {
             | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_filter(what),
             Effect::CounterSpellDiscardSplicedNames { what } => sel_filter(what),
             Effect::ExchangeCreatureControlWith { who, .. } => sel_filter(who),
-            Effect::RedirectYourDamageToChosen { what }
+            Effect::RedirectYourDamageToChosen { what, .. }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_filter(what),
             Effect::ManaClash { opponent } => {
@@ -5010,7 +5010,7 @@ impl Effect {
                 | Effect::TripleCombatDamageToYourOpponentsUntilYourNextTurn { what } => sel_find(what, slot),
                 Effect::CounterSpellDiscardSplicedNames { what } => sel_find(what, slot),
                 Effect::ExchangeCreatureControlWith { who, .. } => sel_find(who, slot),
-                Effect::RedirectYourDamageToChosen { what }
+                Effect::RedirectYourDamageToChosen { what, .. }
                 | Effect::RedirectYourCombatDamageToTarget { what }
                 | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),
                 Effect::ExileSpellWithDelayCounters { what, .. } => sel_find(what, slot),

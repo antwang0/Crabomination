@@ -6597,8 +6597,14 @@ pub enum Effect {
     /// Gideon's Sacrifice — "All damage that would be dealt this turn to you
     /// and permanents you control is dealt to the chosen permanent instead."
     /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
-    /// (CR 614.9), consulted by `damage_redirect_target`.
-    RedirectYourDamageToChosen { what: Selector },
+    /// (CR 614.9), consulted by `damage_redirect_target`. `creatures_only`:
+    /// "to you and CREATURES you control" (Heroic Sacrifice) — damage to your
+    /// noncreature permanents isn't redirected.
+    RedirectYourDamageToChosen {
+        what: Selector,
+        #[serde(default)]
+        creatures_only: bool,
+    },
     /// Turn the Tables — "All combat damage that would be dealt to you this
     /// turn is dealt to `what` instead." The combat-only, player-only sibling
     /// of `RedirectYourDamageToChosen`; registers a `(controller, what)` entry

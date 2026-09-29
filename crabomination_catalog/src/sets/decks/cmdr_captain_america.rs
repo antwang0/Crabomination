@@ -974,7 +974,7 @@ pub fn heroic_sacrifice() -> CardDefinition {
         cost(&[generic(1), w()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::RedirectYourDamageToChosen { what: target_filtered(yours(R::Creature)) },
+            Effect::RedirectYourDamageToChosen { what: target_filtered(yours(R::Creature)), creatures_only: true },
             Effect::WhenTargetDiesThisTurn {
                 body: Box::new(Effect::Seq(vec![
                     Effect::Reflexive {

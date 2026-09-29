@@ -5713,6 +5713,7 @@ pub fn gideons_sacrifice() -> CardDefinition {
             chooser: PlayerRef::You,
             chosen: Box::new(Effect::RedirectYourDamageToChosen {
                 what: Selector::SeparatedPile { chosen: true },
+                creatures_only: false,
             }),
             other: Box::new(Effect::Noop),
         },

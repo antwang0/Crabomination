@@ -1793,10 +1793,10 @@ pub struct ColdState {
     pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
     /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
     /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
-    /// is `(protected_player, redirect_target)`; consulted in
+    /// is `(protected_player, redirect_target, creatures_only)`; consulted in
     /// `damage_redirect_target` and cleared at cleanup.
     #[serde(default)]
-    pub damage_redirect_this_turn: Vec<(usize, CardId)>,
+    pub damage_redirect_this_turn: Vec<(usize, CardId, bool)>,
     /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
     /// `owner`'s hand and keeps seeing it (Wanderguard Sentry, Thought
     /// Prison). Surfaced through the server view so a UI seat renders it.

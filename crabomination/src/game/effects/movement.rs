@@ -189,9 +189,16 @@ impl GameState {
         // Gideon's Sacrifice — a one-shot "all damage to you and your
         // permanents this turn goes to the chosen permanent instead", so long
         // as it's still on the battlefield and isn't itself the aimed-at card.
-        self.damage_redirect_this_turn.iter().find_map(|(p, to)| {
-            (*p == protected && Some(*to) != aimed_at && self.battlefield_find(*to).is_some())
-                .then_some(*to)
+        // Heroic Sacrifice's "you and CREATURES you control" skips a
+        // noncreature permanent.
+        let aimed_noncreature =
+            aimed_at.and_then(|c| self.battlefield_find(c)).is_some_and(|c| !self.computed_is_creature(c));
+        self.damage_redirect_this_turn.iter().find_map(|(p, to, creatures_only)| {
+            (*p == protected
+                && Some(*to) != aimed_at
+                && !(*creatures_only && aimed_noncreature)
+                && self.battlefield_find(*to).is_some())
+            .then_some(*to)
         })
     }
 

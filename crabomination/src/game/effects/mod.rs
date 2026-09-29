@@ -24800,13 +24800,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RedirectYourDamageToChosen { what } => {
+            Effect::RedirectYourDamageToChosen { what, creatures_only } => {
                 let chosen = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
                     EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
                     _ => None,
                 });
                 if let Some(cid) = chosen {
-                    self.damage_redirect_this_turn.push((ctx.controller, cid));
+                    self.damage_redirect_this_turn.push((ctx.controller, cid, *creatures_only));
                 }
                 Ok(())
             }
