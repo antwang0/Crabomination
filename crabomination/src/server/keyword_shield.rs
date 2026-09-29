@@ -7,6 +7,9 @@
 //! the stack with a grant that stops it — hexproof/shroud against a targeted
 //! spell or ability (CR 702.11b / 702.18a: the target becomes illegal),
 //! indestructible against destroy or damage (CR 702.12b), a sweep included.
+//! A coloured one is also answered with "protection from the colour of your
+//! choice" (Mother of Runes — never activated in two decks, census seed
+//! 9460001), which names the removal's colour.
 //! Failing a grant, lethal removal is answered with a "when that creature dies
 //! this turn, return it to its owner's hand" ability (Together Forever — never
 //! activated in eight decks, census seed 3100001).
@@ -108,6 +111,35 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
             }
         }
     }
+    // "Protection from the colour of your choice" (Mother of Runes, Gods
+    // Willing's ability kin): a coloured removal spell or ability aimed at
+    // one of ours loses its target (CR 702.16b), and the grant names that
+    // colour as it resolves (`stack_threat_color`).
+    if let Some(v) = victim
+        && state.stack_threat_color(seat, &[v]).is_some()
+    {
+        for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+            for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+                let Effect::GrantProtectionFromChosenColor { what, .. } = &ab.effect else { continue };
+                let aim = match what {
+                    Selector::This if v == c.id => None,
+                    Selector::Target(_) | Selector::TargetFiltered { .. } => Some(Target::Permanent(v)),
+                    _ => continue,
+                };
+                let action = GameAction::ActivateAbility {
+                    card_id: c.id,
+                    ability_index: idx,
+                    target: aim,
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
     if threat == Threat::TargetedOther {
         return None;
     }
@@ -181,6 +213,33 @@ mod tests {
         g.players[0].mana_pool.add_colorless(1);
         let a = pick_keyword_shield(&g, 0).expect("shroud");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == mystics));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_some(), "Murder lost its target");
+    }
+
+    /// Mother of Runes answers a Murder aimed at a Bear with protection from
+    /// black: the Murder loses its target (CR 702.16b / 608.2b).
+    #[test]
+    fn mother_of_runes_answers_murder_with_protection_from_black() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        let mother = g.add_card_to_battlefield(0, crate::catalog::mother_of_runes());
+        g.clear_sickness(mother);
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let murder = g.add_card_to_hand(1, crate::catalog::murder());
+        g.players[1].mana_pool.add(Color::Black, 3);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("Murder");
+        g.priority.player_with_priority = 0;
+        let a = pick_keyword_shield(&g, 0).expect("protection");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
+            if card_id == mother && t == bear));
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert!(g.battlefield_find(bear).is_some(), "Murder lost its target");
