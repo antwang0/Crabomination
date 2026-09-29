@@ -445,7 +445,7 @@ impl GameState {
         if statics & prevent_static::COMBAT_UNPREVENTABLE != 0
             && let Some(src_id) = source
             && let Some(src) = self.battlefield_find(src_id)
-            && src.definition.is_creature()
+            && self.computed_is_creature(src)
         {
             let ctrl = src.controller;
             let unpreventable = self.battlefield.iter().any(|c| {
@@ -491,7 +491,7 @@ impl GameState {
                     }) && self
                         .battlefield
                         .iter()
-                        .any(|o| o.id != tgt && o.controller == c.controller && o.definition.is_creature())
+                        .any(|o| o.id != tgt && o.controller == c.controller && self.computed_is_creature(o))
                 }));
             if shielded {
                 if amount > 0 {
@@ -1197,7 +1197,7 @@ impl GameState {
         // dealt to the martyr instead. One redirect per event.
         if !self.in_damage_redirect
             && let EntityRef::Permanent(cid) = ent
-            && self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
+            && self.battlefield_find(cid).is_some_and(|c| self.computed_is_creature(c))
             // CR 800.4a — damage is never redirected to a seat that has left.
             // Collected rather than iterated: the `let` chain holds the
             // iterator's borrow of `self` across the body, which then writes
@@ -1857,7 +1857,7 @@ impl GameState {
                     if let Some(src) = source
                         && self
                             .battlefield_find(cid)
-                            .is_some_and(|c| c.definition.is_creature())
+                            .is_some_and(|c| self.computed_is_creature(c))
                     {
                         self.fire_noncombat_damage_to_creature_triggers(src, cid, amount);
                     }
@@ -1875,7 +1875,7 @@ impl GameState {
             EntityRef::Permanent(cid)
                 if self
                     .battlefield_find(cid)
-                    .is_some_and(|c| c.definition.is_creature()) =>
+                    .is_some_and(|c| self.computed_is_creature(c)) =>
             {
                 self.scratch.damaged_this_resolution.push(ent)
             }
@@ -2224,7 +2224,7 @@ impl GameState {
             && let Some(owner) = self
                 .exile
                 .iter()
-                .find(|c| c.id == cid && !c.face_down && c.definition.is_creature())
+                .find(|c| c.id == cid && !c.face_down && self.computed_is_creature(c))
                 .map(|c| c.owner)
         {
             let to_library = ZoneDest::Library {
@@ -2878,7 +2878,7 @@ impl GameState {
                         // to the "enters with N counters" replacement.
                         let bf = self.battlefield.find_by_id(cid);
                         let n = bf
-                            .map(|c| (c.controller, c.definition.is_creature()))
+                            .map(|c| (c.controller, self.computed_is_creature(c)))
                             .map(|(ctrl, cre)| {
                                 self.scaled_counter_count(ctrl, kind, base as u32, cre)
                             })

@@ -40,7 +40,7 @@ impl GameState {
                 hand.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
             let auto = hand
                 .iter()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .max_by_key(|c| c.definition.cost.cmc())
                 .or_else(|| hand.iter().min_by_key(|c| c.definition.cost.cmc()))
                 .map(|c| vec![c.id])

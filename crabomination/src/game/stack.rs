@@ -2389,7 +2389,7 @@ impl GameState {
                     let legal_host = self.battlefield.iter().any(|c| {
                         c.id == host_id
                             && c.controller == caster
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                             && !c
                                 .definition
                                 .has_creature_type(crate::card::CreatureType::Human)
@@ -2674,7 +2674,7 @@ impl GameState {
                     let is_creature_resolve = self
                         .battlefield
                         .find_by_id(card_id)
-                        .map(|c| c.definition.is_creature())
+                        .map(|c| self.computed_is_creature(c))
                         .unwrap_or(false);
                     let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =
                         Vec::new();
@@ -3766,7 +3766,7 @@ impl GameState {
         // Turn-scoped player locks (Bontu's Last Reckoning, Blinding Beam).
         let pl = &self.players[card.controller];
         if (pl.lands_dont_untap_next_untap > 0 && card.definition.is_land())
-            || (pl.creatures_dont_untap_next_untap > 0 && card.definition.is_creature())
+            || (pl.creatures_dont_untap_next_untap > 0 && self.computed_is_creature(card))
             || pl.skip_next_untap_step > 0
         {
             return true;
@@ -4134,7 +4134,7 @@ impl GameState {
             // Blinding Beam — block the active player's creatures.
             if active_creatures_skip_untap {
                 for c in &self.battlefield {
-                    if c.controller == p && c.definition.is_creature() {
+                    if c.controller == p && self.computed_is_creature(c) {
                         blocked.insert(c.id);
                     }
                 }
@@ -5867,7 +5867,7 @@ impl GameState {
         if !self
             .battlefield
             .iter()
-            .any(|c| c.sector.is_none() && c.definition.is_creature())
+            .any(|c| c.sector.is_none() && self.computed_is_creature(c))
         {
             return;
         }
@@ -5935,7 +5935,7 @@ impl GameState {
             let want = self.players[controller]
                 .graveyard
                 .last()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .map(|c| c.definition.arc());
             let target = match want {
                 Some(top) => {
@@ -6194,7 +6194,7 @@ impl GameState {
         let type_change = self.card_type_change_unscoped();
         let mut candidates: SmallVec<[CardId; 4]> = SmallVec::new();
         for c in &self.battlefield {
-            if (type_change || c.definition.is_creature()) && self.card_death_possible(c) {
+            if (type_change || self.computed_is_creature(c)) && self.card_death_possible(c) {
                 candidates.push(c.id);
             }
         }
@@ -6245,7 +6245,7 @@ impl GameState {
         let cp = computed.iter().find(|cp| cp.id == c.id);
         let is_creature = cp
             .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
-            .unwrap_or_else(|| c.definition.is_creature());
+            .unwrap_or_else(|| self.computed_is_creature(c));
         if !is_creature {
             return false;
         }
@@ -7044,7 +7044,7 @@ impl GameState {
             // dies (CR 700.4) — a legend-ruled planeswalker/artifact/enchant
             // leaves the battlefield without a CreatureDied event.
             if let Some(c) = self.battlefield.find_by_id(id) {
-                if c.definition.is_creature() {
+                if self.computed_is_creature(c) {
                     events.push(GameEvent::CreatureDied { card_id: id });
                 }
                 self.died_card_snapshots.insert(id, self.lki_clone(c));
@@ -7553,7 +7553,7 @@ impl GameState {
                         || !self
                             .computed_permanent(host)
                             .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
-                            .unwrap_or_else(|| h.definition.is_creature())
+                            .unwrap_or_else(|| self.computed_is_creature(h))
                         || c.definition.aura_enchant_filter().is_some_and(|f| {
                             !self.evaluate_requirement(f, &Target::Permanent(host), c.controller)
                         })
@@ -8657,7 +8657,7 @@ impl GameState {
             .battlefield
             .find_by_id(id)
             .map(|c| {
-                let is_creature = c.definition.is_creature();
+                let is_creature = self.computed_is_creature(c);
                 // Walk printed SelfSource LTB triggers + any transient
                 // granted ones (Rabid Attack-style "this creature gains
                 // 'when this creature dies, draw a card'" grants ride

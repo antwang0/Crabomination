@@ -49,7 +49,7 @@ impl GameState {
     fn creature_roles(&self, seat: usize) -> Vec<(CardId, i32, [bool; 4])> {
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat && c.definition.is_creature())
+            .filter(|c| c.controller == seat && self.computed_is_creature(c))
             .filter_map(|c| self.computed_permanent(c.id).map(|cp| (c.id, cp)))
             .map(|(id, cp)| {
                 let changeling = cp.keywords().has_kw(&Keyword::Changeling);

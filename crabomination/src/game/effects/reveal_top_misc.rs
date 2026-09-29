@@ -56,7 +56,7 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-        let Some(pos) = self.players[seat].library.iter().position(|c| c.definition.is_creature()) else {
+        let Some(pos) = self.players[seat].library.iter().position(|c| self.computed_is_creature(c)) else {
             return Ok(());
         };
         let revealed: Vec<CardId> = self.players[seat].library.iter().take(pos + 1).map(|c| c.id).collect();

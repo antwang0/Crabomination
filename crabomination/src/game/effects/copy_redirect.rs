@@ -111,7 +111,7 @@ impl GameState {
                 Target::Permanent(id) if id != me => self.battlefield_find(id),
                 _ => None,
             })
-            .filter(|c| c.definition.is_creature())
+            .filter(|c| self.computed_is_creature(c))
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();
         if candidates.is_empty() {

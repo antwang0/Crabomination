@@ -656,7 +656,7 @@ impl GameState {
         }
         let is_creature_now = cp
             .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
-            .unwrap_or_else(|| card.definition.is_creature());
+            .unwrap_or_else(|| self.computed_is_creature(card));
         // CR 701.35 — detain; CR 508.1a — Wall of Dust's one-turn ban. Both
         // report `CannotAttack`, as does a permanent that is not a creature
         // right now: a bestowed Aura (Kestia) or a de-animated Vehicle, which
@@ -1551,7 +1551,7 @@ impl GameState {
             }
             for c in &self.battlefield {
                 if c.controller == p
-                    && c.definition.is_creature()
+                    && self.computed_is_creature(c)
                     && able_to_attack(c)
                     && !attacks.iter().any(|a| a.attacker == c.id)
                 {
@@ -2196,7 +2196,7 @@ impl GameState {
                 FirebendKind::CreaturesYouControl => self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .count() as u32,
             });
             if let Some(n) = firebend_n
@@ -5331,7 +5331,7 @@ impl GameState {
     /// to it into counters.
     fn teammate_replaces_damage_with_counters(&self, id: CardId) -> Option<crate::card::CounterType> {
         let c = self.battlefield_find(id)?;
-        if !c.definition.is_creature() {
+        if !self.computed_is_creature(c) {
             return None;
         }
         let ctrl = c.controller;

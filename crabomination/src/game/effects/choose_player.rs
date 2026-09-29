@@ -80,7 +80,7 @@ impl GameState {
             .filter(|&p| p != me && !self.same_team(p, me) && self.players[p].is_alive())
             .collect();
         // Stable: turn order breaks ties.
-        opps.sort_by_key(|&p| self.battlefield.iter().filter(|c| c.controller == p && c.definition.is_creature()).count());
+        opps.sort_by_key(|&p| self.battlefield.iter().filter(|c| c.controller == p && self.computed_is_creature(c)).count());
         opps
     }
 

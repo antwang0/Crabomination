@@ -174,7 +174,7 @@ impl GameState {
         let others: Vec<CardId> = self
             .battlefield
             .iter()
-            .filter(|c| c.id != first && c.definition.is_creature())
+            .filter(|c| c.id != first && self.computed_is_creature(c))
             .map(|c| c.id)
             .collect();
         hit.extend(others.into_iter().filter(|&id| {
@@ -321,7 +321,7 @@ impl GameState {
         let mut kept: Vec<(CardId, i32)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == me && c.definition.is_creature())
+            .filter(|c| c.controller == me && self.computed_is_creature(c))
             .filter(|c| self.evaluate_requirement_on_card(keep, c, me))
             .map(|c| (c.id, self.computed_permanent(c.id).map_or(0, |cp| cp.power)))
             .collect();
@@ -330,7 +330,7 @@ impl GameState {
         let others: Vec<CardId> = self
             .battlefield
             .iter()
-            .filter(|c| c.definition.is_creature() && !kept.iter().any(|(k, _)| *k == c.id))
+            .filter(|c| self.computed_is_creature(c) && !kept.iter().any(|(k, _)| *k == c.id))
             .map(|c| c.id)
             .collect();
         self.run_effect(&Effect::Exile { what: Selector::ExactObjects(others) }, ctx, events)

@@ -45,14 +45,14 @@ impl GameState {
             let in_yard = self.players[p]
                 .graveyard
                 .iter()
-                .any(|c| c.definition.is_creature() && card_has(c, kw));
+                .any(|c| self.computed_is_creature(c) && card_has(c, kw));
             if !in_yard {
                 continue;
             }
             let pick = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == p && c.definition.is_creature())
+                .filter(|c| c.controller == p && self.computed_is_creature(c))
                 .max_by_key(|c| {
                     let has = self.computed_permanent(c.id).is_some_and(|cp| cp.keywords().iter().any(|k| k == kw));
                     (!has, c.power())
@@ -94,7 +94,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let p = ctx.controller;
         let mut have: Vec<Keyword> = Vec::new();
-        for c in self.battlefield.iter().filter(|c| c.controller == p && c.definition.is_creature()) {
+        for c in self.battlefield.iter().filter(|c| c.controller == p && self.computed_is_creature(c)) {
             if let Some(cp) = self.computed_permanent(c.id) {
                 for k in cp.keywords().iter() {
                     if keywords.iter().any(|w| keyword_matches(k, w)) && !have.contains(k) {
@@ -191,7 +191,7 @@ impl GameState {
         let donors: Vec<Donor> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == p && c.id != to && c.definition.is_creature())
+            .filter(|c| c.controller == p && c.id != to && self.computed_is_creature(c))
             .map(|c| {
                 let plain = c.counters.iter().map(|(k, n)| (*k, *n)).filter(|(_, n)| *n > 0).collect::<Vec<_>>();
                 let kws = c.keyword_counters.iter().map(|(k, n)| (k.clone(), *n)).filter(|(_, n)| *n > 0).collect();

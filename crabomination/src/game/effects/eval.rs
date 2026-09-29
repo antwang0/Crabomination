@@ -229,7 +229,7 @@ impl GameState {
             PlayerTally::CreaturesControlled => self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == seat && c.definition.is_creature())
+                .filter(|c| c.controller == seat && self.computed_is_creature(c))
                 .count() as i64,
             PlayerTally::LandsControlled => self
                 .battlefield
@@ -248,7 +248,7 @@ impl GameState {
             PlayerTally::CreatureCardsInGraveyard => self.players[seat]
                 .graveyard
                 .iter()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .count() as i64,
         }
     }
@@ -493,7 +493,7 @@ impl GameState {
                 let creatures: Vec<[bool; 4]> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id))
                     .map(|cp| {
                         let changeling = cp.keywords().has_kw(&Keyword::Changeling);
@@ -912,7 +912,7 @@ impl GameState {
                 let mut powers: Vec<i32> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .map(|c| self.effective_power(c))
                     .collect();
                 powers.sort_unstable();
@@ -959,7 +959,7 @@ impl GameState {
                     .filter(|c| {
                         c.controller == ctx.controller
                             && c.is_token
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                     })
                     .map(|c| c.definition.name.to_string())
                     .collect();
@@ -985,7 +985,7 @@ impl GameState {
                 let ids: Vec<_> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 ids.iter()
@@ -996,7 +996,7 @@ impl GameState {
                 let ids: Vec<_> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .map(|c| c.id)
                     .collect();
                 ids.iter()
@@ -1264,7 +1264,7 @@ impl GameState {
             Value::FaceDownCreatures => self
                 .battlefield
                 .iter()
-                .filter(|c| c.face_down && c.definition.is_creature())
+                .filter(|c| c.face_down && self.computed_is_creature(c))
                 .count() as i32,
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
@@ -1412,7 +1412,7 @@ impl GameState {
                     self.players.iter().any(|p| {
                         p.graveyard
                             .iter()
-                            .any(|c| c.id == cid && c.definition.is_creature())
+                            .any(|c| c.id == cid && self.computed_is_creature(c))
                     })
                 })
                 .count() as i32,
@@ -1493,7 +1493,7 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 self.battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
                     .max()
                     .unwrap_or(0)
@@ -1503,12 +1503,12 @@ impl GameState {
                 let bf = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power));
                 let gy = self.players[p]
                     .graveyard
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .map(|c| c.definition.power);
                 bf.chain(gy).max().unwrap_or(0)
             }
@@ -1595,7 +1595,7 @@ impl GameState {
                 let wild = subj.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
                 self.battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                     .filter(|c| {
                         wild || c.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                             || c.definition
@@ -2002,7 +2002,7 @@ impl GameState {
                 let powers: crate::fxhash::HashSet<i32> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
                     .collect();
                 powers.len() as i32
@@ -2164,7 +2164,7 @@ impl GameState {
                 .map(|seat| {
                     self.battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.definition.is_creature())
+                        .filter(|c| c.controller == seat && self.computed_is_creature(c))
                         .count() as i32
                 })
                 .unwrap_or(0),
@@ -3677,7 +3677,7 @@ impl GameState {
                 let count_creatures = |seat: usize, g: &Self| {
                     g.battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.definition.is_creature())
+                        .filter(|c| c.controller == seat && self.computed_is_creature(c))
                         .count()
                 };
                 let your_creatures = count_creatures(you, self);
@@ -3703,7 +3703,7 @@ impl GameState {
                 let powers: crate::fxhash::HashSet<i32> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
                     .collect();
                 powers.len() >= 3
@@ -3722,7 +3722,7 @@ impl GameState {
                 let powers: Vec<(usize, i32)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .filter_map(|c| {
                         self.computed_permanent(c.id).map(|cp| (c.controller, cp.power))
                     })
@@ -3862,7 +3862,7 @@ impl GameState {
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
             // CR 800.4a — a departed seat controls nothing and is no player.
             Predicate::AnyPlayerControlsNoCreatures => self.living_seats().any(|seat| {
-                !self.battlefield.iter().any(|c| c.controller == seat && c.definition.is_creature())
+                !self.battlefield.iter().any(|c| c.controller == seat && self.computed_is_creature(c))
             }),
             Predicate::VoidActive { who } => {
                 self.nonland_permanent_left_bf_this_turn
@@ -3926,11 +3926,11 @@ impl GameState {
                 let Some(name) = self.find_card_anywhere(id).map(|c| c.definition.name) else { return false };
                 let me = ctx.controller;
                 !self.battlefield.iter().any(|c| {
-                    c.id != id && c.controller == me && c.definition.is_creature() && c.definition.name == name
+                    c.id != id && c.controller == me && self.computed_is_creature(c) && c.definition.name == name
                 }) && !self.players[me]
                     .graveyard
                     .iter()
-                    .any(|c| c.definition.is_creature() && c.definition.name == name)
+                    .any(|c| self.computed_is_creature(c) && c.definition.name == name)
             }
             Predicate::AnOpponentsTopCardSharesCardTypeWith(sel) => self.an_opponents_top_card_shares_type(sel, ctx),
             Predicate::CelebrationActive { who } => self
@@ -3969,7 +3969,7 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .any(|c| self.computed_permanent(c.id).is_some_and(|cp| cp.power >= 4))
             }
             Predicate::HellbentActive { who } => self
@@ -3980,7 +3980,7 @@ impl GameState {
                 let total: i32 = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
                     .fold(0i32, i32::saturating_add);
                 total >= 8
@@ -3990,7 +3990,7 @@ impl GameState {
                 let powers: Vec<(usize, i32)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature())
+                    .filter(|c| self.computed_is_creature(c))
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| (c.controller, cp.power)))
                     .collect();
                 let Some(best) = powers.iter().map(|(_, pw)| *pw).max() else { return true };
@@ -5327,44 +5327,44 @@ impl GameState {
                     // until 2026-09-16, so "power greater than [source]'s
                     // power" compared two un-anthemed numbers.
                     R::PowerAtMost(n) => {
-                        card.definition.is_creature() && self.effective_power(card) <= *n
+                        self.computed_is_creature(card) && self.effective_power(card) <= *n
                     }
                     R::PowerAtMostSourcePower => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
                                 self.effective_power(card) <= self.effective_power(src)
                             })
                     }
                     R::ToughnessAtMost(n) => {
-                        card.definition.is_creature() && self.effective_toughness(card) <= *n
+                        self.computed_is_creature(card) && self.effective_toughness(card) <= *n
                     }
                     R::PowerAtLeast(n) => {
-                        card.definition.is_creature() && self.effective_power(card) >= *n
+                        self.computed_is_creature(card) && self.effective_power(card) >= *n
                     }
                     R::PowerParity { odd } => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && (self.effective_power(card).rem_euclid(2) == 1) == *odd
                     }
                     R::ToughnessAtLeast(n) => {
-                        card.definition.is_creature() && self.effective_toughness(card) >= *n
+                        self.computed_is_creature(card) && self.effective_toughness(card) >= *n
                     }
                     R::ToughnessGreaterThanPower => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self.effective_toughness(card) > self.effective_power(card)
                     }
                     // "…has power greater than its *base* power": the left
                     // half is the CR 613 answer, the right half is the
                     // printed line the wording names.
                     R::PowerGreaterThanBasePower => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self.effective_power(card) > card.definition.power
                     }
                     R::PowerDifferentFromBasePower => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self.effective_power(card) != card.definition.power
                     }
                     R::PowerPlusToughnessAtMost(n) => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .effective_power(card)
                                 .saturating_add(self.effective_toughness(card))
@@ -5372,13 +5372,13 @@ impl GameState {
                     }
                     R::PowerLessThanSource => {
                         source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
-                            card.definition.is_creature()
+                            self.computed_is_creature(card)
                                 && self.effective_power(card) < self.effective_power(src)
                         })
                     }
                     R::GreaterPowerOrToughnessThanSource => {
                         source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
-                            card.definition.is_creature()
+                            self.computed_is_creature(card)
                                 && (self.effective_power(card) > self.effective_power(src)
                                     || self.effective_toughness(card)
                                         > self.effective_toughness(src))
@@ -5386,7 +5386,7 @@ impl GameState {
                     }
                     R::PowerGreaterThanSource => {
                         source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
-                            card.definition.is_creature()
+                            self.computed_is_creature(card)
                                 && self.effective_power(card) > self.effective_power(src)
                         })
                     }
@@ -5396,16 +5396,16 @@ impl GameState {
                     R::HasNoCounters => !card.has_any_counter(),
                     R::HasForetell => card.definition.foretell_cost.is_some(),
                     R::BasePowerOrToughnessIs(n) => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && (card.definition.power == *n || card.definition.toughness == *n)
                     }
                     R::BasePowerOrToughnessAtMost(n) => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && (card.definition.power <= *n || card.definition.toughness <= *n)
                     }
-                    R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
+                    R::BasePowerIs(n) => self.computed_is_creature(card) && card.definition.power == *n,
                     R::BasePowerToughnessIs(p, t) => {
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && card.definition.power == *p
                             && card.definition.toughness == *t
                     }
@@ -5566,7 +5566,7 @@ impl GameState {
                         c.id == card.id
                             && target.iter().chain(additional_targets.iter()).any(|t| {
                                 matches!(t, crate::game::types::Target::Permanent(id)
-                                    if self.battlefield.find_by_id(*id).is_some_and(|o| o.definition.is_creature()))
+                                    if self.battlefield.find_by_id(*id).is_some_and(|o| self.computed_is_creature(o)))
                             })
                     }),
                     R::AbilityTargetsMatching(inner) => self.stack.iter().any(|si| {
@@ -5722,7 +5722,7 @@ impl GameState {
                             .iter()
                             .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                             .count() as i32;
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
                                 .map(|cp| cp.toughness)
@@ -5732,7 +5732,7 @@ impl GameState {
                     // Ghastly Demise — "toughness ≤ cards in your graveyard".
                     R::ToughnessAtMostGraveyardCount => {
                         let n = self.players[controller].graveyard.len() as i32;
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
                                 .map(|cp| cp.toughness)
@@ -5742,7 +5742,7 @@ impl GameState {
                     // Temporary Insanity — "power < cards in your graveyard".
                     R::PowerLessThanYourGraveyardCount => {
                         let n = self.players[controller].graveyard.len() as i32;
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
                                 .map(|cp| cp.power)
@@ -5761,7 +5761,7 @@ impl GameState {
                             })
                             .map(|c| c.counter_count(*kind))
                             .unwrap_or(0) as i32;
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
                                 .map(|cp| cp.power)
@@ -5774,7 +5774,7 @@ impl GameState {
                             .iter()
                             .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                             .count() as i32;
-                        card.definition.is_creature()
+                        self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
                                 .map(|cp| cp.power)
@@ -5983,14 +5983,14 @@ impl GameState {
                     }
                     R::HasGreatestPowerAmongAllCreatures => {
                         let Some(cand) = self.bf_hint_or_find(*cid, hint) else { return false };
-                        if !cand.definition.is_creature() {
+                        if !self.computed_is_creature(cand) {
                             return false;
                         }
                         // CR 613, as in the `AmongControlled` sibling above.
                         let cand_pow = self.effective_power(cand);
                         !self.battlefield.iter().any(|other| {
                             other.id != *cid
-                                && other.definition.is_creature()
+                                && self.computed_is_creature(other)
                                 && self.effective_power(other) > cand_pow
                         })
                     }
@@ -6377,7 +6377,7 @@ impl GameState {
             R::OwnedByDefendingPlayer | R::ControlledByDefendingPlayer => false,
             R::Creature => {
                 // CR 604.3 — Grist is a creature everywhere but the battlefield.
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     || (card.definition.creature_off_battlefield
                         && self.battlefield_find(card.id).is_none())
             }
@@ -6407,7 +6407,7 @@ impl GameState {
             R::ControllerCorrupted => self.players[card.controller].poison_counters >= 3,
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
-            R::Noncreature => !card.definition.is_creature(),
+            R::Noncreature => !self.computed_is_creature(card),
             // CR 105.2/202.2 — color is the union of the mana cost's colors
             // (incl. hybrid {R/W}, Phyrexian {R/P}, mono-hybrid {2/W}) and the
             // color indicator (tokens, DFC backs), and empty under Devoid.
@@ -6431,10 +6431,10 @@ impl GameState {
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,
-            R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+            R::PowerAtMost(n) => self.computed_is_creature(card) && card.power() <= *n,
             R::PowerAtMostSourcePower => false,
-            R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
-            R::PowerParity { odd } => card.definition.is_creature() && (card.power().rem_euclid(2) == 1) == *odd,
+            R::PowerAtLeast(n) => self.computed_is_creature(card) && card.power() >= *n,
+            R::PowerParity { odd } => self.computed_is_creature(card) && (card.power().rem_euclid(2) == 1) == *odd,
             R::ControlledByMonarch => self.monarch == Some(card.controller),
             R::ControlledByPlayerDamagedByAtLeast { filter, n } => {
                 let p = card.controller;
@@ -6455,19 +6455,19 @@ impl GameState {
             R::PowerLessThanSource => false,
             R::GreaterPowerOrToughnessThanSource => false,
             R::PowerGreaterThanSource => false,
-            R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
-            R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::ToughnessAtMost(n) => self.computed_is_creature(card) && card.toughness() <= *n,
+            R::ToughnessAtLeast(n) => self.computed_is_creature(card) && card.toughness() >= *n,
             R::ToughnessGreaterThanPower => {
-                card.definition.is_creature() && card.toughness() > card.power()
+                self.computed_is_creature(card) && card.toughness() > card.power()
             }
             R::PowerGreaterThanBasePower => {
-                card.definition.is_creature() && card.power() > card.definition.power
+                self.computed_is_creature(card) && card.power() > card.definition.power
             }
             R::PowerDifferentFromBasePower => {
-                card.definition.is_creature() && card.power() != card.definition.power
+                self.computed_is_creature(card) && card.power() != card.definition.power
             }
             R::PowerPlusToughnessAtMost(n) => {
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && card.power().saturating_add(card.toughness()) <= *n
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
@@ -6644,7 +6644,7 @@ impl GameState {
             }
             R::ToughnessAtMostGraveyardCount => {
                 let n = self.players[controller].graveyard.len() as i32;
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
                         .map(|cp| cp.toughness)
@@ -6653,7 +6653,7 @@ impl GameState {
             }
             R::PowerLessThanYourGraveyardCount => {
                 let n = self.players[controller].graveyard.len() as i32;
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
                         .map(|cp| cp.power)
@@ -6666,7 +6666,7 @@ impl GameState {
                     .iter()
                     .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                     .count() as i32;
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
                         .map(|cp| cp.toughness)
@@ -6679,7 +6679,7 @@ impl GameState {
                     .iter()
                     .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                     .count() as i32;
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
                         .map(|cp| cp.power)
@@ -6859,14 +6859,14 @@ impl GameState {
             R::HasNoCounters => !card.has_any_counter(),
             R::HasForetell => card.definition.foretell_cost.is_some(),
             R::BasePowerOrToughnessIs(n) => {
-                card.definition.is_creature() && (card.definition.power == *n || card.definition.toughness == *n)
+                self.computed_is_creature(card) && (card.definition.power == *n || card.definition.toughness == *n)
             }
             R::BasePowerOrToughnessAtMost(n) => {
-                card.definition.is_creature() && (card.definition.power <= *n || card.definition.toughness <= *n)
+                self.computed_is_creature(card) && (card.definition.power <= *n || card.definition.toughness <= *n)
             }
-            R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
+            R::BasePowerIs(n) => self.computed_is_creature(card) && card.definition.power == *n,
             R::BasePowerToughnessIs(p, t) => {
-                card.definition.is_creature()
+                self.computed_is_creature(card)
                     && card.definition.power == *p
                     && card.definition.toughness == *t
             }
@@ -6885,7 +6885,7 @@ impl GameState {
             R::AttachedToCreature => card
                 .attached_to
                 .and_then(|h| self.battlefield_find(h))
-                .is_some_and(|h| h.definition.is_creature()),
+                .is_some_and(|h| self.computed_is_creature(h)),
             R::HasConvoke => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
                     || self.convoke_granted_spells.contains(&card.id)

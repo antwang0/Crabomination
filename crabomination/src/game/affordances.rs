@@ -570,7 +570,7 @@ impl GameState {
                     // CR 506.2 / 613.1d — a crewed Vehicle, an animated land
                     // or a stationed Spacecraft is a creature by its computed
                     // type line (the layers are frozen for this walk).
-                    && (c.definition.is_creature()
+                    && (self.computed_is_creature(c)
                         || self.computed_permanent(c.id).is_some_and(|cp| {
                             cp.card_types().contains(&crate::card::CardType::Creature)
                         }))
@@ -1227,7 +1227,7 @@ impl GameState {
                 .filter(|c| {
                     c.controller == caster
                         && !c.tapped
-                        && c.definition.is_creature()
+                        && self.computed_is_creature(c)
                         && self
                             .computed_permanent(c.id)
                             .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(&col)))
@@ -1279,7 +1279,7 @@ impl GameState {
             .filter(|c| {
                 c.controller == seat
                     && !c.tapped
-                    && ((convoke || waterbend) && c.definition.is_creature()
+                    && ((convoke || waterbend) && self.computed_is_creature(c)
                         || (improvise || waterbend) && c.definition.is_artifact())
             })
             .map(|c| c.id)
@@ -1397,7 +1397,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .find(|c| {
-                    c.definition.is_creature()
+                    self.computed_is_creature(c)
                         && self
                             .check_target_legality_with_source(
                                 &Target::Permanent(c.id),
@@ -2043,7 +2043,7 @@ impl GameState {
         let any_creature = self
             .battlefield
             .iter()
-            .find(|c| c.definition.is_creature())
+            .find(|c| self.computed_is_creature(c))
             .map(|c| c.id);
         let Some(tid) = any_creature else { return vec![] };
         self.players[seat]

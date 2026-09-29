@@ -28,7 +28,7 @@ impl GameState {
         let Some(pick) = self.players[p]
             .graveyard
             .iter()
-            .filter(|c| c.definition.is_creature())
+            .filter(|c| self.computed_is_creature(c))
             .rev()
             .max_by_key(|c| c.definition.cost.cmc())
             .map(|c| c.id)

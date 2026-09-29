@@ -14,7 +14,7 @@ impl GameState {
         self.players[seat]
             .graveyard
             .iter()
-            .filter(|c| c.definition.is_creature())
+            .filter(|c| self.computed_is_creature(c))
             .map(|c| (c.id, c.definition.cost.cmc()))
             .min_by_key(|&(id, mv)| (mv, id.0))
     }

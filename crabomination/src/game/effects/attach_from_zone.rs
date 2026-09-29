@@ -25,15 +25,15 @@ impl GameState {
         let fits = |id: CardId| -> bool {
             let Some(h) = self.battlefield_find(id) else { return false };
             if def.is_aura() {
-                if creatures_only && !h.definition.is_creature() {
+                if creatures_only && !self.computed_is_creature(h) {
                     return false;
                 }
                 match def.aura_enchant_filter() {
                     Some(f) => self.evaluate_requirement_static(f, &Target::Permanent(id), p, Some(card)),
-                    None => h.definition.is_creature(),
+                    None => self.computed_is_creature(h),
                 }
             } else {
-                h.definition.is_creature()
+                self.computed_is_creature(h)
             }
         };
         if let Some(h) = host {
@@ -42,7 +42,7 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(|c| fits(c.id))
-            .max_by_key(|c| (c.controller == p, c.definition.is_creature(), c.power()))
+            .max_by_key(|c| (c.controller == p, self.computed_is_creature(c), c.power()))
             .map(|c| c.id)
     }
 

@@ -3356,7 +3356,7 @@ impl crate::game::GameState {
         }
         // Creature-spell-only grant (Domri, Anarch of Bolas's +1).
         if self.players[caster].creature_spells_uncounterable_this_turn
-            && card.definition.is_creature()
+            && self.computed_is_creature(card)
         {
             return true;
         }
@@ -3404,7 +3404,7 @@ impl crate::game::GameState {
         //   spells.
         // * `SpellsCantBeCounteredMatching` — the filtered symmetric sibling
         //   (Root Sliver).
-        let card_is_creature = card.definition.is_creature();
+        let card_is_creature = self.computed_is_creature(card);
         for src in self.battlefield.iter() {
             let own = src.controller == caster;
             for sa in &src.definition.static_abilities {
@@ -3501,7 +3501,7 @@ impl crate::game::GameState {
             out.extend(card.granted_activated_eot.iter().cloned());
         }
         // Varolz — scavenge on creature cards, unless the card prints its own.
-        if card.definition.is_creature()
+        if self.computed_is_creature(card)
             && !card
                 .definition
                 .activated_abilities
@@ -5540,7 +5540,7 @@ impl GameState {
         let legal_host = self.battlefield.iter().any(|c| {
             c.id == host
                 && c.owner == p
-                && c.definition.is_creature()
+                && self.computed_is_creature(c)
                 && !c.definition.has_creature_type(CreatureType::Human)
         });
         if !legal_host {
@@ -6080,7 +6080,7 @@ impl GameState {
             && self.can_forage(p)
             && self.players[p].graveyard.iter().any(|c| {
                 c.id == card_id
-                    && c.definition.is_creature()
+                    && self.computed_is_creature(c)
                     && !self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
             })
         {
@@ -6879,7 +6879,7 @@ impl GameState {
         let sac_ok = self.battlefield.iter().any(|c| {
             c.id == sacrifice
                 && c.controller == p
-                && c.definition.is_creature()
+                && self.computed_is_creature(c)
                 && self.effective_power_on(c).max(0) as u32 >= n
         });
         if !sac_ok {
@@ -7202,7 +7202,7 @@ impl GameState {
         // color with the spell (computed colors, so granted/hybrid count).
         for cid in [c0, c1] {
             let on_bf = self.battlefield.iter().any(|c| {
-                c.id == cid && c.controller == p && !c.tapped && c.definition.is_creature()
+                c.id == cid && c.controller == p && !c.tapped && self.computed_is_creature(c)
             });
             let shares = self
                 .computed_permanent(cid)
@@ -7271,7 +7271,7 @@ impl GameState {
             let ok = self
                 .battlefield
                 .iter()
-                .any(|c| c.id == *sac && c.controller == p && c.definition.is_creature());
+                .any(|c| c.id == *sac && c.controller == p && self.computed_is_creature(c));
             if !ok {
                 return Err(GameError::InvalidTarget);
             }
@@ -9499,7 +9499,7 @@ impl GameState {
             let creature_target = matches!(
                 target,
                 Some(Target::Permanent(tid))
-                    if self.battlefield.find_by_id(tid).is_some_and(|c| c.definition.is_creature())
+                    if self.battlefield.find_by_id(tid).is_some_and(|c| self.computed_is_creature(c))
             );
             if !creature_target {
                 cast_census::rollback(line!());
@@ -9631,10 +9631,10 @@ impl GameState {
                 c.id == *cid
                     && c.controller == p
                     && !c.tapped
-                    && ((has_convoke && c.definition.is_creature())
+                    && ((has_convoke && self.computed_is_creature(c))
                         || (has_improvise && c.definition.is_artifact())
                         || (has_waterbend
-                            && (c.definition.is_creature() || c.definition.is_artifact())))
+                            && (self.computed_is_creature(c) || c.definition.is_artifact())))
             });
             if bad {
                 cast_census::rollback(line!());
@@ -10854,8 +10854,8 @@ impl GameState {
             A::ForageOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
             A::ChooseOrRevealCreature => {
-                self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
-                    || self.players[p].hand.iter().any(|c| c.definition.is_creature())
+                self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
+                    || self.players[p].hand.iter().any(|c| self.computed_is_creature(c))
             }
             // Handing an opponent life is always payable.
             A::OpponentGainsLife { .. } => true,
@@ -10863,7 +10863,7 @@ impl GameState {
             A::RemoveCountersAmong { .. } => true,
             // CR 701.68b — no creature, no blight.
             A::Blight { .. } => {
-                self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
+                self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
             }
             A::OneOf(options) => options
                 .iter()
@@ -11053,7 +11053,7 @@ impl GameState {
                                     // CR 613 — a "for each sacrificed creature's
                                     // power" payoff reads the computed body.
                                     self.effective_power_on(c).max(0) as u32,
-                                    c.definition.is_creature(),
+                                    self.computed_is_creature(c),
                                     self.effective_toughness_on(c),
                                     c.definition.cost.cmc(),
                                     c.definition.is_artifact(),
@@ -11381,14 +11381,14 @@ impl GameState {
                     let on_bf = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .filter(|c| c.controller == p && self.computed_is_creature(c))
                         .map(|c| self.effective_power_on(c).max(0) as u32)
                         .max();
                     let power = on_bf.or_else(|| {
                         self.players[p]
                             .hand
                             .iter()
-                            .filter(|c| c.definition.is_creature())
+                            .filter(|c| self.computed_is_creature(c))
                             .map(|c| c.definition.power.max(0) as u32)
                             .max()
                     });
@@ -11419,7 +11419,7 @@ impl GameState {
                     let mut cands: Vec<&crate::card::CardInstance> = self
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .filter(|c| c.controller == p && self.computed_is_creature(c))
                         .collect();
                     cands.sort_by_key(|c| (c.toughness() <= *n as i32, c.definition.cost.cmc()));
                     if let Some(id) = cands.first().map(|c| c.id) {
@@ -11443,7 +11443,7 @@ impl GameState {
                         let Some(id) = self
                             .battlefield
                             .iter()
-                            .filter(|c| c.controller == p && c.definition.is_creature() && c.counter_count(*kind) > 0)
+                            .filter(|c| c.controller == p && self.computed_is_creature(c) && c.counter_count(*kind) > 0)
                             .max_by_key(|c| c.counter_count(*kind))
                             .map(|c| c.id)
                         else {
@@ -12571,7 +12571,7 @@ impl GameState {
                 .battlefield
                 .find_by_id(cid)
                 .ok_or(GameError::FlashbackTapInvalid)?;
-            if c.tapped || c.controller != p || !c.definition.is_creature() {
+            if c.tapped || c.controller != p || !self.computed_is_creature(c) {
                 return Err(GameError::FlashbackTapInvalid);
             }
             self.computed_permanent(cid).map(|c| c.power.max(0) as u32).unwrap_or(0)
@@ -12929,7 +12929,7 @@ impl GameState {
                 .iter()
                 .find(|c| c.id == *cid)
                 .ok_or(GameError::FlashbackTapInvalid)?;
-            if c.tapped || c.controller != p || !c.definition.is_creature() {
+            if c.tapped || c.controller != p || !self.computed_is_creature(c) {
                 return Err(GameError::FlashbackTapInvalid);
             }
             if let Some(f) = &tap_filter
@@ -13781,7 +13781,7 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == p
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
@@ -13810,7 +13810,7 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == p
-                            && c.definition.is_creature()
+                            && self.computed_is_creature(c)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
@@ -15834,7 +15834,7 @@ impl GameState {
             || self.flash_additional_cost_for(p, card).is_some()
             || ((self.players[p].creature_spells_as_flash_this_turn
                 || self.players[p].creature_flash_until_your_turn)
-                && card.definition.is_creature())
+                && self.computed_is_creature(card))
             || self.players[p].next_spell_flash_this_turn
             || self.players[p]
                 .next_typed_spell_flash_this_turn
@@ -18297,7 +18297,7 @@ impl GameState {
         // CR 804.2 — the deploy creatures option gives every creature
         // "{T}: Target teammate gains control of this creature. Activate
         // only as a sorcery."
-        if self.deploy_creatures && me.definition.is_creature() {
+        if self.deploy_creatures && self.computed_is_creature(me) {
             out.push(&DEPLOY_CREATURES_ABILITY);
         }
         // CR 315.5 — battlefield and command-zone `GrantActivatedAbility`
@@ -18377,7 +18377,7 @@ impl GameState {
         if ooze {
             for pl in &self.players {
                 for card in &pl.graveyard {
-                    if !card.definition.is_creature() {
+                    if !self.computed_is_creature(card) {
                         continue;
                     }
                     for ab in &card.definition.activated_abilities {
@@ -18423,7 +18423,7 @@ impl GameState {
             for other in &self.battlefield {
                 if other.controller != seat
                     || other.definition.name == name
-                    || !other.definition.is_creature()
+                    || !self.computed_is_creature(other)
                 {
                     continue;
                 }
@@ -18436,7 +18436,7 @@ impl GameState {
             let seat = me.controller;
             for other in &self.battlefield {
                 if other.id == card_id
-                    || !other.definition.is_creature()
+                    || !self.computed_is_creature(other)
                     || self.same_team(other.controller, seat)
                 {
                     continue;
@@ -18449,7 +18449,7 @@ impl GameState {
         if kraj {
             for other in &self.battlefield {
                 if other.id == card_id
-                    || !other.definition.is_creature()
+                    || !self.computed_is_creature(other)
                     || other.counter_count(crate::card::CounterType::PlusOnePlusOne) == 0
                 {
                     continue;
@@ -18510,7 +18510,7 @@ impl GameState {
         // counter at all, so an empty-bag check answers before
         // `is_creature`'s `Vec<CardType>` walk runs.
         if !me.counters.is_empty()
-            && me.definition.is_creature()
+            && self.computed_is_creature(me)
             && me.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
         {
             let cauldrons: Vec<CardId> = self
@@ -18528,7 +18528,7 @@ impl GameState {
                 .map(|c| c.id)
                 .collect();
             for exiled in &self.exile {
-                if exiled.definition.is_creature()
+                if self.computed_is_creature(exiled)
                     && exiled.exiled_with.is_some_and(|s| cauldrons.contains(&s))
                 {
                     for ab in &exiled.definition.activated_abilities {
@@ -18670,7 +18670,7 @@ impl GameState {
                 c.id == *cid
                     && c.controller == p
                     && !c.tapped
-                    && (c.definition.is_creature()
+                    && (self.computed_is_creature(c)
                         || (!creatures_only && c.definition.is_artifact()))
             });
             if !ok {
@@ -19207,7 +19207,7 @@ impl GameState {
                         .as_ref()
                         .is_some_and(|c| c.card_types().contains(&crate::card::CardType::Creature))
                 } else {
-                    card.definition.is_creature()
+                    self.computed_is_creature(card)
                 }
             };
             // CR 305.6 / 612 — a basic's printed `{T}: Add <color>` is the
@@ -19571,7 +19571,7 @@ impl GameState {
         // controls the static.
         if !source_in_gy && !source_in_hand {
             let locked_ctrl = bf_src!()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .map(|c| c.controller);
             if let Some(ctrl) = locked_ctrl
                 && self.opponent_has_static(ctrl, |e| {
@@ -19589,13 +19589,13 @@ impl GameState {
             let src_is_creature = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
-                    .is_some_and(|c| c.definition.is_creature())
+                    .is_some_and(|c| self.computed_is_creature(c))
             } else if source_in_hand {
                 self.players[source_owner].hand.iter()
                     .find(|c| c.id == card_id)
-                    .is_some_and(|c| c.definition.is_creature())
+                    .is_some_and(|c| self.computed_is_creature(c))
             } else {
-                bf_src!().is_some_and(|c| c.definition.is_creature())
+                bf_src!().is_some_and(|c| self.computed_is_creature(c))
             };
             if src_is_creature
                 && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
@@ -21024,7 +21024,7 @@ impl GameState {
         // mana of the printed cost).
         let source_is_your_creature = self
             .battlefield_find(card_id)
-            .is_some_and(|c| c.controller == p && c.definition.is_creature());
+            .is_some_and(|c| c.controller == p && self.computed_is_creature(c));
         if source_is_your_creature && !effective_mana_cost.symbols.is_empty() {
             let total: u32 = self
                 .battlefield
@@ -21878,7 +21878,7 @@ impl GameState {
             cost_sac_total_power = cost_sac_total_power.saturating_add(sac_power);
             let is_creature = self
                 .battlefield_find(other_cid)
-                .map(|c| c.definition.is_creature())
+                .map(|c| self.computed_is_creature(c))
                 .unwrap_or(false);
             let sac_who = self
                 .battlefield_find(other_cid)
@@ -21971,7 +21971,7 @@ impl GameState {
             let is_creature = self
                 .battlefield
                 .find_by_id(card_id)
-                .is_some_and(|c| c.definition.is_creature());
+                .is_some_and(|c| self.computed_is_creature(c));
             let scaled = self.scaled_counter_count(p, kind, count, is_creature);
             if scaled > 0
                 && let Some(c) = self.battlefield.find_by_id_mut(card_id)

@@ -85,6 +85,41 @@ fn cr_508_1d_gideon_juras_lure_binds_one_opponents_next_turn() {
     assert!(g.players[1].attack_lure.is_none());
 }
 
+/// CR 508.1d / 613.1d — the lure binds every creature able to attack, an
+/// animated land included: a Treetop Village made a 3/3 Ape that stays home
+/// makes the declaration illegal (the walk read the printed line).
+#[test]
+fn cr_508_1d_gideons_lure_binds_an_animated_land() {
+    let mut g = pod(3);
+    let gideon = g.add_card_to_battlefield(0, catalog::gideon_jura());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: gideon,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("+2");
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let village = g.add_card_to_battlefield(1, catalog::treetop_village());
+    for id in [bear, village] {
+        ready(&mut g, id);
+    }
+    g.players[1].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: village, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("animate");
+    drain_stack(&mut g);
+    g.turn_number += 1;
+    let pw = AttackTarget::Planeswalker(gideon);
+    let at = |id| Attack { attacker: id, target: pw };
+    assert!(declare(&mut g, 1, vec![at(bear)]).is_err(), "the animated Village stayed home");
+    declare(&mut g, 1, vec![at(bear), at(village)]).expect("both at Gideon");
+}
+
 /// Angler Turtle makes every creature an opponent controls attack each combat.
 #[test]
 fn angler_turtle_forces_opposing_attacks() {
