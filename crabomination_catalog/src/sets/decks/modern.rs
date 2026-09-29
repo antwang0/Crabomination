@@ -16912,11 +16912,10 @@ pub fn golgari_brownscale() -> CardDefinition {
 }
 
 /// Golgari Grave-Troll — {4}{G} Creature — Skeleton Troll. 0/0, enters
-/// with X +1/+1 counters. Dredge 6. `{T}`, remove four +1/+1 counters:
+/// with X +1/+1 counters. Dredge 6. `{1}`, remove a +1/+1 counter:
 /// regenerate this creature.
 pub fn golgari_grave_troll() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::Predicate;
     CardDefinition {
         name: "Golgari Grave-Troll",
         cost: cost(&[generic(4), g()]),
@@ -16932,23 +16931,10 @@ pub fn golgari_grave_troll() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             mana_cost: cost(&[generic(1)]),
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
-                },
-                Value::Const(1),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::Regenerate {
-                    what: Selector::This,
-                },
-            ]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -24917,24 +24903,11 @@ pub fn goblin_bomb() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Fuse,
-                },
-                Value::Const(5),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Fuse,
-                    amount: Value::Const(5),
-                },
-                Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
-                    amount: Value::Const(20),
-                },
-            ]),
+            remove_counter_cost: Some((CounterType::Fuse, 5)),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
+                amount: Value::Const(20),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -25395,22 +25368,9 @@ pub fn icatian_javelineers() -> CardDefinition {
         enters_with_counters: Some((CounterType::Charge, Value::Const(1))),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            // Gated on having a counter to remove (the counter is the cost).
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Charge,
-                },
-                Value::Const(1),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(1),
-                },
-                deal(1, crate::effect::shortcut::target_any()),
-            ]),
+            // Removing the javelin counter is the cost (CR 602.5b).
+            remove_counter_cost: Some((CounterType::Charge, 1)),
+            effect: deal(1, crate::effect::shortcut::target_any()),
             ..Default::default()
         }],
         ..Default::default()
@@ -65180,38 +65140,24 @@ pub fn ominous_seas() -> CardDefinition {
         }],
         activated_abilities: vec![crate::card::ActivatedAbility {
             // "Remove eight foreshadow counters from this enchantment:" — the
-            // removal is the cost, so the condition gates on having them, the
-            // way Spike Feeder's counter-removal activations do.
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Tide,
-                },
-                Value::Const(8),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Tide,
-                    amount: Value::Const(8),
-                },
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(TokenDefinition {
-                        name: "Kraken".into(),
-                        power: 8,
-                        toughness: 8,
-                        card_types: vec![CardType::Creature],
-                        colors: vec![Color::Blue],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Kraken],
-                            ..Default::default()
-                        },
+            // removal is the cost (CR 602.5b), paid on activation.
+            remove_counter_cost: Some((CounterType::Tide, 8)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: std::sync::Arc::new(TokenDefinition {
+                    name: "Kraken".into(),
+                    power: 8,
+                    toughness: 8,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Kraken],
                         ..Default::default()
-                    }),
-                },
-            ]),
+                    },
+                    ..Default::default()
+                }),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -2476,28 +2476,15 @@ pub fn fertilid() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             mana_cost: cost(&[generic(1), g()]),
-            condition: Some(crate::effect::Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
                 },
-                Value::Const(1),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: true,
-                    },
-                },
-            ]),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -2559,50 +2546,23 @@ pub fn spike_feeder() -> CardDefinition {
             // counter on target creature. (Absent until 2026-09-07.)
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
-                condition: Some(crate::effect::Predicate::ValueAtLeast(
-                    Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::PlusOnePlusOne,
-                    },
-                    Value::Const(1),
-                )),
-                effect: Effect::Seq(vec![
-                    Effect::RemoveCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                    Effect::AddCounter {
-                        what: target_filtered(SelectionRequirement::Creature),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            // "Remove a +1/+1 counter" is the cost — gate on having one so
-            // the lifegain can't fire off an empty creature.
-            condition: Some(crate::effect::Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
-                },
-                Value::Const(1),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
+            // "Remove a +1/+1 counter" is the cost (CR 602.5b).
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()

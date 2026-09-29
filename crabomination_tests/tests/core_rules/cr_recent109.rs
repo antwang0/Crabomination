@@ -291,3 +291,32 @@ fn phyrexian_battleflies_pumps_at_most_twice() {
     assert!(g.perform_action(pump).is_err(), "a third pump");
     assert_eq!(g.computed_permanent(flies).unwrap().power, 2);
 }
+
+/// CR 602.2b / 602.5b — "Remove a counter from this" is a COST, paid as the
+/// ability is activated: Spike Feeder with two +1/+1 counters can gain life
+/// twice while both activations wait on the stack, and not a third time
+/// (the removal used to happen on resolution, behind a condition that read
+/// the counters still there — so a one-counter creature activated forever).
+#[test]
+fn a_remove_counter_cost_is_paid_on_activation() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let feeder = g.add_card_to_battlefield(0, catalog::spike_feeder());
+    g.battlefield_find_mut(feeder).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let gain = GameAction::ActivateAbility {
+        card_id: feeder, ability_index: 1, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    };
+    g.perform_action(gain.clone()).expect("first");
+    assert_eq!(g.battlefield_find(feeder).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(gain.clone()).expect("second, holding priority");
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(gain).is_err(), "no counter left to pay with");
+    let life = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4);
+}

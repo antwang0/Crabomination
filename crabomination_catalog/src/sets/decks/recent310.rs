@@ -158,24 +158,11 @@ pub fn arcane_spyglass() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-                condition: Some(Predicate::ValueAtLeast(
-                    Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::Charge,
-                    },
-                    Value::Const(3),
-                )),
-                effect: Effect::Seq(vec![
-                    Effect::RemoveCounter {
-                        what: Selector::This,
-                        kind: CounterType::Charge,
-                        amount: Value::Const(3),
-                    },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::ONE,
-                    },
-                ]),
+                remove_counter_cost: Some((CounterType::Charge, 3)),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
