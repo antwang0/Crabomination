@@ -255,12 +255,9 @@ pub struct GraphicsConfig {
     /// Maximize the window on launch (legacy default). Picking an explicit
     /// resolution in the settings menu turns this off.
     pub maximize_on_launch: bool,
-    /// Render quality preset (shadows, AA, mesh detail). Default: low.
+    /// Render quality preset (shadows, AA, mesh detail — the shadow-map
+    /// size and SMAA preset follow from it). Default: medium.
     pub render_quality: crate::render_quality::RenderQuality,
-    /// Shadow map resolution (must be a power of two). Default: 8192.
-    pub shadow_map_size: usize,
-    /// SMAA anti-aliasing preset: "off", "low", "medium", "high", "ultra". Default: "ultra".
-    pub smaa_preset: SmaaPreset,
     /// Ambient light brightness. Default: 600.
     pub ambient_brightness: f32,
     /// Key directional light illuminance (lux). Default: 3500.
@@ -281,24 +278,12 @@ impl Default for GraphicsConfig {
             window_height: 1000,
             maximize_on_launch: true,
             render_quality: crate::render_quality::RenderQuality::default(),
-            shadow_map_size: 8192,
-            smaa_preset: SmaaPreset::Ultra,
             ambient_brightness: 600.0,
             key_light_illuminance: 3500.0,
             fill_light_illuminance: 1500.0,
             ui_size: 0,
         }
     }
-}
-
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum SmaaPreset {
-    Low,
-    Medium,
-    High,
-    #[default]
-    Ultra,
 }
 
 

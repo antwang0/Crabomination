@@ -196,7 +196,14 @@ impl ManaText {
         self
     }
 
-    /// Replace the text; the row is rebuilt only if it differs.
+    /// The text the row draws.
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Replace the text; the row is rebuilt only if it differs. Through a
+    /// `Mut` the call itself marks the component changed, so a caller that
+    /// runs every frame compares with [`Self::text`] first.
     pub fn set(&mut self, text: &str) {
         if self.text != text {
             self.text = text.to_string();

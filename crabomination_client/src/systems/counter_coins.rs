@@ -145,7 +145,7 @@ pub fn animate_coin_drops(
     mut coins: Query<(Entity, &mut CoinDrop, &mut Transform)>,
 ) {
     for (e, mut drop, mut transform) in &mut coins {
-        drop.elapsed += time.delta_secs();
+        drop.elapsed += crate::systems::animate::anim_dt(&time);
         transform.translation.z = drop.rest_z + drop_lift(drop.elapsed);
         if drop.elapsed >= DROP_SECS {
             // `try_`: the coin goes with its card, which can leave mid-fall.
@@ -281,6 +281,10 @@ pub fn sync_counter_coins(
                         MeshMaterial3d(assets.material.clone()),
                         Transform::from_translation(rest).with_rotation(lay_flat * twist),
                         CounterCoin { card_id: p.id, kind },
+                        // Pointing at a chip is pointing at its card: a
+                        // pickable chip took the hit and the card under it
+                        // un-hovered (the hover observers are on its face).
+                        Pickable::IGNORE,
                     ));
                     // A coin the pile didn't have falls onto it.
                     if i >= had {
@@ -686,14 +690,15 @@ pub fn sync_counter_labels(
             .filter(|_| !covered.contains(&(label.card_id, label.kind)))
             .and_then(|(_, t)| pile_on_screen(camera, cam_xform, &ui_scale, t, slot, count))
         else {
-            node.display = Display::None;
+            crate::theme::place_overlay(&mut node, None);
             continue;
         };
-        node.display = Display::Flex;
-        node.left = Val::Px(centre.x);
-        node.top = Val::Px(centre.y);
-        node.width = Val::Px(radius * 2.0);
-        node.height = Val::Px(radius * 2.0);
+        crate::theme::place_overlay(&mut node, Some(centre));
+        let across = Val::Px(radius * 2.0);
+        if node.width != across || node.height != across {
+            node.width = across;
+            node.height = across;
+        }
         for child in children.iter() {
             if let Ok((mut text, mut font)) = counts.get_mut(child) {
                 let n = count.to_string();

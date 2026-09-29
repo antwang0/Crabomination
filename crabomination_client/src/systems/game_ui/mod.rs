@@ -1095,43 +1095,70 @@ pub fn update_log_text(
     log: Res<GameLog>,
     ui_fonts: Res<UiFonts>,
     panel_q: Query<Entity, With<GameLogPanel>>,
+    mut rows: Query<(Entity, &LogRow, &mut Text, &mut TextColor)>,
 ) {
     if !log.is_changed() {
         return;
     }
     let Ok(panel) = panel_q.single() else { return };
-    commands.entity(panel).despawn_children();
-    commands.entity(panel).with_children(|p| {
-        for entry in log.entries.iter().rev() {
-            // Turn dividers get a little breathing room above/below so
-            // each turn reads as its own block in the scrollback.
-            let node = if entry.divider {
-                Node { margin: UiRect::vertical(Val::Px(3.0)), ..default() }
-            } else {
-                Node::default()
-            };
-            // Rows naming a resolvable card preview it on hover
-            // (`ui_card_hover`); the rest stay click-through.
-            let mut row = p.spawn((
-                Text::new(entry.text.clone()),
-                ui_fonts.tf(if entry.divider { 11.0 } else { 12.0 }),
-                TextColor(entry.color),
-                node,
-            ));
-            match &entry.card_art {
-                Some(path) => {
-                    row.insert((
-                        Button,
-                        crate::systems::ui_card_hover::UiCardHover(path.clone()),
-                    ));
+    // Rows are keyed by the entry's push order and only touched where the log
+    // moved: a new entry adds a row at the top, an evicted or cleared one
+    // loses its row, and a coalesced repeat rewrites its own text. The log
+    // used to be torn down and rebuilt — 200 text rows shaped again — on
+    // every change, which during a bot's turn is several times a second.
+    let entries: std::collections::HashMap<u64, &crate::game::LogEntry> =
+        log.entries.iter().map(|e| (e.seq(), e)).collect();
+    let mut shown = HashSet::new();
+    for (row_entity, row, mut text, mut color) in &mut rows {
+        match entries.get(&row.0) {
+            Some(entry) => {
+                shown.insert(row.0);
+                if text.0 != entry.text {
+                    text.0 = entry.text.clone();
                 }
-                None => {
-                    row.insert(Pickable::IGNORE);
-                }
+                color.set_if_neq(TextColor(entry.color));
+            }
+            None => commands.entity(row_entity).despawn(),
+        }
+    }
+    // New entries are always newer than every shown row, so they go on top,
+    // newest first.
+    let mut fresh = Vec::new();
+    for entry in log.entries.iter().rev().filter(|e| !shown.contains(&e.seq())) {
+        // Turn dividers get a little breathing room above/below so
+        // each turn reads as its own block in the scrollback.
+        let node = if entry.divider {
+            Node { margin: UiRect::vertical(Val::Px(3.0)), ..default() }
+        } else {
+            Node::default()
+        };
+        // Rows naming a resolvable card preview it on hover
+        // (`ui_card_hover`); the rest stay click-through.
+        let mut row = commands.spawn((
+            Text::new(entry.text.clone()),
+            ui_fonts.tf(if entry.divider { 11.0 } else { 12.0 }),
+            TextColor(entry.color),
+            node,
+            LogRow(entry.seq()),
+        ));
+        match &entry.card_art {
+            Some(path) => {
+                row.insert((Button, crate::systems::ui_card_hover::UiCardHover(path.clone())));
+            }
+            None => {
+                row.insert(Pickable::IGNORE);
             }
         }
-    });
+        fresh.push(row.id());
+    }
+    if !fresh.is_empty() {
+        commands.entity(panel).insert_children(0, &fresh);
+    }
 }
+
+/// A game-log row, carrying its entry's [`crate::game::LogEntry::seq`].
+#[derive(Component)]
+pub struct LogRow(pub u64);
 
 /// Keep the game log positioned just below the opponent status panel. The
 /// panel grows with the opponent count (one chip-row each, wrapping to a
@@ -1315,17 +1342,20 @@ pub fn update_phase_chart(
             .as_ref()
             .map(|s| s.mode(my_turn, label.0))
             .unwrap_or_default();
-        *bg = BackgroundColor(match progress {
+        // Every write in this system is compared first: it runs every frame,
+        // and a rewritten `Text` is re-shaped and re-laid-out even when the
+        // string is the same.
+        bg.set_if_neq(BackgroundColor(match progress {
             StepProgress::Current => turn_colour.with_alpha(0.32),
             _ => Color::NONE,
-        });
+        }));
         for child in children.iter() {
             if let Ok(mut rail) = rails.get_mut(child) {
-                rail.0 = match progress {
+                rail.set_if_neq(BackgroundColor(match progress {
                     StepProgress::Done => turn_colour.with_alpha(0.55),
                     StepProgress::Current => turn_colour.lighter(0.15),
                     StepProgress::Ahead => PHASE_RAIL_AHEAD,
-                };
+                }));
             }
         }
         // Each row has exactly one Text child — rewrite its content + colour.
@@ -1349,16 +1379,18 @@ pub fn update_phase_chart(
                 // CR 500.7 — flag a repeated combat/end step (extra combat,
                 // Y'shtola's extra end step) on the active row so the loop reads.
                 let extra_tag = if active && cv.extra_phase { "  ⟳ extra" } else { "" };
-                text.0 =
-                    format!("{marker}{}{extra_tag}{stop_tag}", step_short_label(label.0));
-                *color = TextColor(match (active, mode) {
+                let line = format!("{marker}{}{extra_tag}{stop_tag}", step_short_label(label.0));
+                if text.0 != line {
+                    text.0 = line;
+                }
+                color.set_if_neq(TextColor(match (active, mode) {
                     (true, _) => theme::ACCENT_YELLOW,
                     (false, StopMode::Always) => theme::ACCENT_ORANGE,
                     (false, StopMode::Skip) => theme::TEXT_MUTED.with_alpha(0.5),
                     // Steps the turn has passed recede.
                     (false, StopMode::Auto) if progress == StepProgress::Done => theme::TEXT_MUTED.with_alpha(0.6),
                     (false, StopMode::Auto) => theme::TEXT_MUTED,
-                });
+                }));
             }
         }
     }
@@ -1480,7 +1512,7 @@ pub fn animate_phase_banner(
     mut backgrounds: Query<&mut BackgroundColor>,
 ) {
     for (entity, mut banner, children) in &mut banners {
-        banner.remaining -= time.delta_secs();
+        banner.remaining -= crate::systems::animate::anim_dt(&time);
         if banner.remaining <= 0.0 {
             commands.entity(entity).despawn();
             continue;
@@ -1704,10 +1736,14 @@ pub fn update_hint(
 /// Apply `(text, colour, size)` to the hint chip, skipping the write
 /// when the field already matches. Avoids spurious change-detection
 /// fanout from per-frame writes (this system runs every frame).
+///
+/// Takes the `Mut`s themselves: coercing a `Mut<Text>` to `&mut Text` is
+/// a `DerefMut`, which marks the component changed before any comparison
+/// here could skip the write.
 fn apply_hint(
-    text: &mut Text,
-    color: &mut TextColor,
-    font: &mut TextFont,
+    text: &mut Mut<Text>,
+    color: &mut Mut<TextColor>,
+    font: &mut Mut<TextFont>,
     new_text: String,
     new_color: Color,
     new_size: f32,
@@ -1716,7 +1752,7 @@ fn apply_hint(
         text.0 = new_text;
     }
     if color.0 != new_color {
-        *color = TextColor(new_color);
+        color.0 = new_color;
     }
     // `TextFont::font_size` is a `FontSize` enum in Bevy 0.19; the UI sets
     // sizes in logical pixels, so compare/normalize on the `Px` value.
@@ -2200,6 +2236,22 @@ pub(crate) fn default_attack_target_seat(cv: &crabomination::net::ClientView) ->
 // ── Visual sync: reconcile 3D card entities with the server-projected view ───
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+/// Move a pile to rest at `pos` — only when it has moved. These run every
+/// frame (above `sync_game_visuals`' change gate), and an unconditional write
+/// re-propagates and re-extracts every pile card each frame and keeps the
+/// reactive frame loop awake. The lift is re-applied here so a hovered pile
+/// stays up whichever of this and `animate_hover_lift` runs first.
+fn rest_pile_at(
+    transform: &mut Mut<Transform>,
+    lift: &mut Mut<crate::card::CardHoverLift>,
+    pos: Vec3,
+) {
+    if lift.base_translation != pos {
+        lift.base_translation = pos;
+        transform.translation = pos + Vec3::Y * lift.current_lift;
+    }
+}
+
 pub fn sync_game_visuals(
     mut commands: Commands,
     view: Res<CurrentView>,
@@ -2284,8 +2336,7 @@ pub fn sync_game_visuals(
             let base = deck_position(pile.owner, viewer, n_seats);
             let y = pile.index as f32 * crate::card::pile_step(size) + 0.01;
             let pos = Vec3::new(base.x, y, base.z);
-            transform.translation = pos;
-            lift.base_translation = pos;
+            rest_pile_at(&mut transform, &mut lift, pos);
             *deck_pile_counts.entry(pile.owner).or_default() += 1;
         }
     }
@@ -2348,14 +2399,12 @@ pub fn sync_game_visuals(
     // number of exiled cards, hidden while exile is empty.
     for (mut transform, mut vis, mut lift) in &mut inflight.exile_pile {
         if cv.exile.is_empty() {
-            *vis = Visibility::Hidden;
+            vis.set_if_neq(Visibility::Hidden);
         } else {
-            *vis = Visibility::Visible;
+            vis.set_if_neq(Visibility::Visible);
             let base = crate::card::exile_position(n_seats);
             let y = cv.exile.len() as f32 * DECK_CARD_Y_STEP + 0.01;
-            let pos = Vec3::new(base.x, y, base.z);
-            transform.translation = pos;
-            lift.base_translation = pos;
+            rest_pile_at(&mut transform, &mut lift, Vec3::new(base.x, y, base.z));
         }
     }
 
@@ -2364,14 +2413,12 @@ pub fn sync_game_visuals(
         let in_flight = gy_in_flight.get(&gy.owner).copied().unwrap_or(0);
         let arrived = gy_count.saturating_sub(in_flight);
         if arrived == 0 {
-            *vis = Visibility::Hidden;
+            vis.set_if_neq(Visibility::Hidden);
         } else {
-            *vis = Visibility::Visible;
+            vis.set_if_neq(Visibility::Visible);
             let base_pos = graveyard_position(gy.owner, viewer, n_seats);
             let y = arrived as f32 * DECK_CARD_Y_STEP + 0.01;
-            let pos = Vec3::new(base_pos.x, y, base_pos.z);
-            transform.translation = pos;
-            lift.base_translation = pos;
+            rest_pile_at(&mut transform, &mut lift, Vec3::new(base_pos.x, y, base_pos.z));
         }
     }
 
@@ -2453,7 +2500,16 @@ pub fn sync_game_visuals(
         let arrived = gy_size(gy.owner).saturating_sub(in_flight);
         if arrived > 0 {
             let top_name: Option<String> = cv.players[gy.owner].graveyard.get(arrived - 1).map(|c| c.name.clone());
-            if let Some(name) = top_name {
+            // A new material only when the top card's art changes: this runs
+            // on every view, and a fresh material per view re-specialized
+            // and re-uploaded the pile and left the old one to the allocator.
+            let showing = materials
+                .get(&mat.0)
+                .and_then(|m| m.base_color_texture.as_ref())
+                .and_then(|t| asset_server.get_path(t.id()));
+            if let Some(name) = top_name
+                && showing.is_none_or(|p| p.path() != std::path::Path::new(&crate::scryfall::card_asset_path(&name)))
+            {
                 *mat = MeshMaterial3d(card_front_material(&name, &mut materials, &asset_server));
             }
         }

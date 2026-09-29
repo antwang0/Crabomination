@@ -185,12 +185,10 @@ pub fn sync_pt_labels(
         };
         seen.insert(label.0);
         let Some(&(centre, size)) = card_box.get(&label.0) else {
-            node.display = Display::None;
+            crate::theme::place_overlay(&mut node, None);
             continue;
         };
-        node.display = Display::Flex;
-        node.left = Val::Px(centre.x);
-        node.top = Val::Px(centre.y);
+        crate::theme::place_overlay(&mut node, Some(centre));
         let size = FontSize::Px(size);
         if font.font_size != size {
             font.font_size = size;

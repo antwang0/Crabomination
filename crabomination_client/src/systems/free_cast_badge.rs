@@ -69,12 +69,8 @@ pub fn sync_free_cast_badges(
         }
         seen.insert(badge.0);
         match card_corner.get(&badge.0).copied().and_then(anchor) {
-            Some((x, y)) => {
-                node.display = Display::Flex;
-                node.left = Val::Px(x);
-                node.top = Val::Px(y);
-            }
-            None => node.display = Display::None,
+            Some((x, y)) => crate::theme::place_overlay(&mut node, Some(Vec2::new(x, y))),
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
 

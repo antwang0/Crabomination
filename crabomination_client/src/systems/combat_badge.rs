@@ -239,14 +239,12 @@ pub fn sync_combat_chips(
         }
         match placed.get(&chip.card) {
             Some(&(at, size)) => {
-                node.display = Display::Flex;
-                node.left = Val::Px(at.x);
-                node.top = Val::Px(at.y);
+                crate::theme::place_overlay(&mut node, Some(at));
                 if font.font_size != FontSize::Px(size) {
                     font.font_size = FontSize::Px(size);
                 }
             }
-            None => node.display = Display::None,
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
 

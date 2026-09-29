@@ -628,7 +628,7 @@ pub fn animate_impacts(
     mut glow: ResMut<Glow>,
 ) {
     for (entity, mut impact) in &mut impacts {
-        impact.age += time.delta_secs();
+        impact.age += crate::systems::animate::anim_dt(&time);
         if impact.age >= impact.kind.ttl() {
             commands.entity(entity).despawn();
             continue;
@@ -644,7 +644,7 @@ pub fn animate_hit_vignettes(
     mut vignettes: Query<(Entity, &mut HitVignette, &mut BorderColor)>,
 ) {
     for (entity, mut v, mut border) in &mut vignettes {
-        v.age += time.delta_secs();
+        v.age += crate::systems::animate::anim_dt(&time);
         if v.age >= v.ttl {
             commands.entity(entity).despawn();
             continue;
@@ -666,7 +666,7 @@ pub fn animate_damage_numerals(
     mut texts: Query<&mut TextColor>,
 ) {
     for (entity, mut numeral, mut node, mut transform, children) in &mut numerals {
-        numeral.remaining -= time.delta_secs();
+        numeral.remaining -= crate::systems::animate::anim_dt(&time);
         if numeral.remaining <= 0.0 {
             commands.entity(entity).despawn();
             continue;
@@ -717,7 +717,7 @@ pub fn animate_mana_motes(
     mut glow: ResMut<Glow>,
 ) {
     for (entity, mut mote) in &mut motes {
-        mote.age += time.delta_secs();
+        mote.age += crate::systems::animate::anim_dt(&time);
         if mote.age >= MANA_MOTE_FLIGHT + MANA_MOTE_POP {
             commands.entity(entity).despawn();
             continue;

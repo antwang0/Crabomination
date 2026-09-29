@@ -78,19 +78,27 @@ pub fn update_attack_all_visibility(
     mut q: Query<&mut Node, With<AttackAllPanel>>,
 ) {
     let Ok(mut node) = q.single_mut() else { return };
+    // Every exit compares before it writes: this runs every frame, and a
+    // written `Node` is relaid out (see `theme::place_overlay`).
+    let mut show = |on: bool| {
+        let want = if on { Display::Flex } else { Display::None };
+        if node.display != want {
+            node.display = want;
+        }
+    };
     let Some(cv) = &view.0 else {
-        node.display = Display::None;
+        show(false);
         return;
     };
     if cv.game_over.is_some() {
-        node.display = Display::None;
+        show(false);
         return;
     }
     let your_seat = cv.your_seat;
     let attacking_step =
         cv.step == TurnStep::DeclareAttackers && cv.declares_attacks(your_seat);
     if !attacking_step {
-        node.display = Display::None;
+        show(false);
         return;
     }
     use crabomination::card::Keyword;
@@ -101,7 +109,7 @@ pub fn update_attack_all_visibility(
             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
             && (!c.keywords.contains(&Keyword::Defender) || c.can_attack_despite_defender)
     });
-    node.display = if has_attackers { Display::Flex } else { Display::None };
+    show(has_attackers);
 }
 
 /// Swap the attack-button label depending on whether the viewer has

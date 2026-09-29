@@ -24,6 +24,23 @@ impl Default for AnimationSpeed {
     fn default() -> Self { AnimationSpeed(1.0) }
 }
 
+/// The longest step a single frame may advance an animation, in seconds.
+pub const MAX_ANIM_STEP: f32 = 1.0 / 30.0;
+
+/// This frame's step for an animation: the frame time, capped at
+/// [`MAX_ANIM_STEP`].
+///
+/// The frame loop idles between changes (`systems::frame_pacing`), so the
+/// frame that wakes it — a server message, a click — can come a quarter of
+/// a second after the last one, and an animation started on it would jump
+/// that far into its run before its first frame is drawn. `Time` itself
+/// stays true (the rope and chess clocks read it); only animation steps are
+/// capped. Below 30 fps an animation plays a little slower rather than
+/// skipping.
+pub fn anim_dt(time: &Time) -> f32 {
+    time.delta_secs().min(MAX_ANIM_STEP)
+}
+
 
 pub fn ease_in_out(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
@@ -49,11 +66,23 @@ pub fn animate_hover_lift(
         ),
     >,
 ) {
-    let dt = time.delta_secs() * speed.0;
+    let dt = anim_dt(&time) * speed.0;
     for (mut transform, mut lift, battlefield) in &mut cards {
-        let spd = HOVER_LIFT_SPEED * dt;
-        lift.current_lift += (lift.target_lift - lift.current_lift) * spd.min(1.0);
-        transform.translation = lift.base_translation + Vec3::Y * lift.current_lift;
+        // Every write below is guarded: a settled card must not touch its
+        // `Transform` or its `CardHoverLift`, or it is re-propagated and
+        // re-extracted every frame and keeps the reactive frame loop awake
+        // (`systems::frame_pacing`). The ease snaps once it is within a
+        // hair of its target — an exponential approach never quite lands.
+        if lift.current_lift != lift.target_lift {
+            let spd = HOVER_LIFT_SPEED * dt;
+            let next = lift.current_lift + (lift.target_lift - lift.current_lift) * spd.min(1.0);
+            lift.current_lift =
+                if (lift.target_lift - next).abs() < 1e-4 { lift.target_lift } else { next };
+        }
+        let at = lift.base_translation + Vec3::Y * lift.current_lift;
+        if transform.translation != at {
+            transform.translation = at;
+        }
         // A battlefield card grows with its lift. (A hand card's scale is
         // the hand zoom's; a stack card's the lane's.)
         if battlefield.is_some() {
@@ -78,8 +107,22 @@ const BF_HOVER_TILT: f32 = 0.14;
 /// rotation; [`tilt_hovered_cards`] puts it back after them, before the
 /// transforms propagate — no pivot entity between a card and its face, and
 /// the badges, borders and chips parented to it tilt with it.
+///
+/// Both halves run every frame for a lifted card, so they keep the rotation
+/// exact and silent when nothing moved: `base` is the card's own rotation as
+/// the rest of the game left it (restored bit for bit, not by multiplying
+/// the tilt back out), and `shown` is the rotation it was last drawn with. A
+/// still, hovered card then writes nothing that change detection sees — or
+/// it would re-propagate and re-extract every frame and keep the reactive
+/// frame loop (`systems::frame_pacing`) awake while the pointer rests on it.
 #[derive(Component)]
-pub struct HoverTilt(Quat);
+pub struct HoverTilt {
+    /// The tilt currently folded into the rotation (identity once
+    /// [`untilt_hovered_cards`] has taken it off).
+    tilt: Quat,
+    base: Quat,
+    shown: Quat,
+}
 
 /// The turn toward `eye` for a card at `at` whose face points along
 /// `normal`, lifted `lift` (0-1) of the way: its face turns
@@ -97,10 +140,18 @@ pub(crate) fn hover_tilt(normal: Vec3, at: Vec3, eye: Vec3, lift: f32) -> Quat {
 /// Bevy system (`First`): take last frame's hover tilt off each card.
 pub fn untilt_hovered_cards(mut cards: Query<(&mut Transform, &mut HoverTilt)>) {
     for (mut transform, mut tilt) in &mut cards {
-        if tilt.0 != Quat::IDENTITY {
-            transform.rotation = tilt.0.inverse() * transform.rotation;
-            tilt.0 = Quat::IDENTITY;
+        if tilt.tilt == Quat::IDENTITY {
+            continue;
         }
+        if transform.rotation == tilt.shown {
+            // Untouched since it was tilted: put the card's own rotation back
+            // exactly, unannounced. `tilt_hovered_cards` announces whatever
+            // is drawn differently at the end of the frame.
+            transform.bypass_change_detection().rotation = tilt.base;
+        } else {
+            transform.rotation = tilt.tilt.inverse() * transform.rotation;
+        }
+        tilt.bypass_change_detection().tilt = Quat::IDENTITY;
     }
 }
 
@@ -115,14 +166,33 @@ pub fn tilt_hovered_cards(
     for (entity, mut transform, lift, applied) in &mut cards {
         let lifted = lift.current_lift / BF_HOVER_LIFT;
         if lifted < 0.01 {
+            // Not tilted this frame. If it was drawn tilted, the silent
+            // untilt above has to be published now, or the card stays drawn
+            // at its old tilt.
+            if let Some(mut applied) = applied
+                && applied.shown != transform.rotation
+            {
+                transform.set_changed();
+                applied.bypass_change_detection().shown = transform.rotation;
+            }
             continue;
         }
-        let tilt = hover_tilt(transform.rotation * Vec3::Z, transform.translation, eye, lifted);
-        transform.rotation = tilt * transform.rotation;
+        let base = transform.rotation;
+        let tilt = hover_tilt(base * Vec3::Z, transform.translation, eye, lifted);
+        let shown = tilt * base;
         match applied {
-            Some(mut applied) => applied.0 = tilt,
+            Some(mut applied) => {
+                if shown == applied.shown {
+                    // Drawn exactly as last frame: restore it silently.
+                    transform.bypass_change_detection().rotation = shown;
+                } else {
+                    transform.rotation = shown;
+                }
+                *applied.bypass_change_detection() = HoverTilt { tilt, base, shown };
+            }
             None => {
-                commands.entity(entity).try_insert(HoverTilt(tilt));
+                transform.rotation = shown;
+                commands.entity(entity).try_insert(HoverTilt { tilt, base, shown });
             }
         }
     }
@@ -236,7 +306,7 @@ pub fn animate_combat_lurch(
         ),
     >,
 ) {
-    let dt = time.delta_secs() * speed.0;
+    let dt = anim_dt(&time) * speed.0;
     for (entity, mut transform, mut lurch) in &mut q {
         lurch.progress += dt * COMBAT_STRIKE_SPEED;
         if lurch.progress >= 1.0 {
@@ -262,7 +332,7 @@ pub fn animate_mdfc_flip(
     mut cards: Query<(Entity, &mut Transform, &mut MdfcFlipAnimation)>,
 ) {
     for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
         let t = anim.progress.min(1.0);
         let eased = ease_in_out(t);
         let angle = eased * PI;
@@ -298,7 +368,7 @@ pub fn animate_draw_card(
         .unwrap_or((0, 2));
 
     for (entity, mut transform, mut anim, mut lift, hand_card) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 3.0;
@@ -328,7 +398,7 @@ pub fn animate_hand_slide(
     mut cards: Query<(Entity, &mut Transform, &mut HandSlideAnimation, &mut CardHoverLift)>,
 ) {
     for (entity, mut transform, mut anim, mut lift) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let pos = anim.start_translation.lerp(anim.target_translation, t);
         transform.translation = pos;
@@ -355,7 +425,7 @@ pub fn animate_play_card(
     )>,
 ) {
     for (entity, mut transform, mut anim, mut lift) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.0;
@@ -451,7 +521,7 @@ pub fn animate_send_to_graveyard(
     mut cards: Query<(Entity, &mut Transform, &mut SendToGraveyardAnimation, Option<&mut DeathBeat>, Option<&Children>)>,
     mut faces: CardFaces,
 ) {
-    let dt = time.delta_secs() * speed.0;
+    let dt = anim_dt(&time) * speed.0;
     for (entity, mut transform, mut anim, beat, children) in &mut cards {
         let died = beat.is_some();
         if let Some(mut beat) = beat
@@ -493,7 +563,7 @@ pub fn animate_vanishing(
     mut cards: Query<(Entity, &mut Transform, &mut Vanishing, Option<&mut DeathBeat>, Option<&Children>)>,
     mut faces: CardFaces,
 ) {
-    let dt = time.delta_secs() * speed.0;
+    let dt = anim_dt(&time) * speed.0;
     for (entity, mut transform, mut vanish, beat, children) in &mut cards {
         let size = if beat.is_some() { 1.0 - DEATH_SHRINK } else { 1.0 };
         if let Some(mut beat) = beat
@@ -564,7 +634,7 @@ pub fn animate_jolt(
         ),
     >,
 ) {
-    let dt = time.delta_secs() * speed.0;
+    let dt = anim_dt(&time) * speed.0;
     for (entity, mut transform, mut jolt) in &mut cards {
         jolt.age += dt;
         if jolt.age >= JOLT_SECS {
@@ -587,7 +657,7 @@ pub fn animate_return_to_deck(
     mut cards: Query<(Entity, &mut Transform, &mut ReturnToDeckAnimation)>,
 ) {
     for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.0;
@@ -613,7 +683,7 @@ pub fn animate_return_to_hand(
     mut cards: Query<(Entity, &mut Transform, &mut ReturnToHandAnimation, Option<&mut CardHoverLift>)>,
 ) {
     for (entity, mut transform, mut anim, mut lift) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.5;
         let mut pos = anim.start_translation.lerp(anim.target_translation, t);
@@ -657,7 +727,7 @@ pub fn animate_tap(
     mut cards: Query<(Entity, &mut Transform, &mut TapAnimation)>,
 ) {
     for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
 
@@ -676,7 +746,7 @@ pub fn animate_reveal_peek(
     mut cards: Query<(Entity, &mut Transform, &mut RevealPeekAnimation)>,
 ) {
     for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        anim.progress += anim_dt(&time) * speed.0 * anim.speed;
         let p = anim.progress.clamp(0.0, 1.0);
 
         let (rot_t, y_t) = if p < 0.25 {

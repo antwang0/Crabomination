@@ -25,6 +25,67 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Sharper cards, true colour, fitted shadows, idle frame pacing (2026-09-29) — shipped
+
+Read off layout-harness screenshots at Low and High (duel, pod, `--hover-card`,
+`--zoom-card`, `--stack`, `--impacts`, `--combat`), before and after; the
+colour numbers are Lab statistics of Walking Ballista at the zoom pose against
+its Scryfall image; frame rates from `CRAB_PERF=1`.
+
+- ✅ **Card art shows as authored** (`SCENE_TONEMAPPING` in `main.rs`: no
+  tonemapper). The source reads text box L* 82.5, art chroma 5.2; the old
+  `TonyMcMapface` + 0.9 post-saturation drew 71.4 / 3.9 — the white text box
+  eleven points grey, a quarter of the art's colour gone — and every filmic
+  tonemapper Bevy ships drew the text box at 69-74. None draws 86.6 / 4.6.
+  The lit felt and chips sit inside `[0, 1]`; glows driven past it clip toward
+  their hue, and bloom still reads them where it is on.
+- ✅ **Sharper table cards** (`MipBias(-0.5)` on the camera). A creature is
+  ~125 px of a 745 px image at 1080p, so it sampled mip ~2.6 (93 texels wide,
+  coarser than the pixels it covers); the 16x anisotropic filter barely
+  engages at the table's 66°.
+- ✅ **Shadows fitted to the table** (`systems::shadows`). Bevy's default
+  four cascades out to 39.2 spent two on the air in front of the camera and
+  cut off before the opponent's side (the duel's table spans view depths
+  ~30-43; a pod's further). Two cascades are refit from the live camera. The
+  felt, seat tints, zone prints, highlight rings, counter chips, the
+  eliminated seat's shroud, three of four library-pile cards and the stack
+  lane's cards no longer cast; with nothing flat in the map the biases drop
+  (0.02 / 1.8 → 0.005 / 0.4), and a resting card's shadow meets its edge
+  instead of a dark halo. Shadow maps: Low 512 → 1024, Ultra 8192 → 4096;
+  VRAM at Ultra 1 GiB → 128 MiB.
+- ✅ **The frame loop idles** (`systems::frame_pacing`). It rendered at the
+  display's refresh rate forever; now a frame follows at once only when
+  something changed (components, a material fade, art arriving, a short
+  arrow animation), ambient light (the seat glow's breathing, arrow flow)
+  ticks at ~30 fps, and a still table waits 250 ms (1 s unfocused — measured
+  1.0 fps). Server messages wake it through a relay in front of `NetInbox`.
+  Animations step by `animate::anim_dt` (capped at 1/30 s) so the frame that
+  ends a wait doesn't jump one; `Time` stays true for the clocks.
+  `CRAB_CONTINUOUS=1` restores continuous rendering; a harness screenshot run
+  always renders continuously.
+  - What held the loop awake, now written only when it changes (found with
+    `CRAB_PERF=changes`): the hover lift (every card and library-pile card's
+    `Transform`, every frame), pile positions and visibility, the camera's
+    ease (never landed), the phase chart (12 texts re-shaped per frame), the
+    P/T, keyword, counter, token, combat, lock, regen, agenda, free-cast and
+    commander overlays and seat plates (`theme::place_overlay`), the hover
+    preview, the attack-all panel, the HUD panel borders, the hint chip (its
+    compare was defeated by a `Mut` → `&mut` coercion) and the hover tilt
+    (untilt and retilt every frame).
+- ✅ **Mipmaps off the main thread** (`card::mipmap`): built on the async
+  compute pool (a stall per image in the `play` build, whose client crate is
+  unoptimized), without the two full-image copies, and the sRGB encode is a
+  table search instead of a `powf` per channel.
+- ✅ **The game log adds rows** (`LogRow`, `LogEntry::seq`): it respawned all
+  200 rows on every change — several times a second in a bot's turn.
+- ✅ The graveyard pile keeps its material while its top card is the same
+  (a new material per view); counter chips are `Pickable::IGNORE` (a chip
+  took the pointer and its card un-hovered — not checked with a real mouse).
+- ✅ Default quality is Medium (Low showed none of the post-processing);
+  the unread `shadow_map_size` / `smaa_preset` settings and the embedded,
+  never-loaded `models/woodtable_1.glb` are gone. `CRAB_PERF=1` shows a
+  frame-time readout.
+
 ## In-game display pass (2026-09-27) — shipped
 
 Read off layout-harness screenshots (1920x1080 and 1280x720, duel and
@@ -476,10 +537,10 @@ because the shape recurs.
     content height and outranks `max_height`, so the node grows to fit and
     never overflows. The audit picker documented this trap; the search grid
     had walked into it.
-  - ⏳ Residual: the log renders newest-first and `update_log_text`
-    rebuilds every row on each event, so a new entry arriving while the
-    player is scrolled back shifts the view by a row. Fixing that is the
-    stable-children work already queued below.
+  - ⏳ Residual: the log renders newest-first, so a new entry arriving
+    while the player is scrolled back shifts the view by a row. (It no
+    longer rebuilds every row on each event — 2026-09-29, `LogRow` — but a
+    row inserted at the top still moves what's below it.)
 - ✅ **Gameplay keybinds fired while you were typing.**
   `handle_export_prompt_input`'s docstring states the rule — "the caller's
   input handlers should bail out early in that same frame to avoid

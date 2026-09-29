@@ -189,12 +189,8 @@ pub fn sync_seat_name_plates(
             // laid-out size: layout rounds a node's size to whole pixels by
             // where it sits, so a plate placed by its own size moved its
             // size, which moved it back — it shook by a pixel every frame.
-            Some(at) => {
-                node.display = Display::Flex;
-                node.left = Val::Px(at.x);
-                node.top = Val::Px(at.y);
-            }
-            None => node.display = Display::None,
+            Some(at) => crate::theme::place_overlay(&mut node, Some(at)),
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
     for p in &cv.players {

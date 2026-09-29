@@ -195,10 +195,20 @@ pub fn camera_zoom(
         home
     };
 
-    // Exponential approach so it eases in/out and is frame-rate stable.
-    let t = (CAM_LERP_SPEED * time.delta_secs()).clamp(0.0, 1.0);
-    cam_xform.translation = cam_xform.translation.lerp(target.translation, t);
-    cam_xform.rotation = cam_xform.rotation.slerp(target.rotation, t);
+    // Exponential approach so it eases in/out and is frame-rate stable. It
+    // never quite lands, so it snaps once it is within a hair, and a camera
+    // at rest is not written at all: a moved camera re-projects every card
+    // overlay, relays the UI out and keeps the reactive frame loop awake.
+    if cam_xform.translation == target.translation && cam_xform.rotation == target.rotation {
+        return;
+    }
+    let t = (CAM_LERP_SPEED * crate::systems::animate::anim_dt(&time)).clamp(0.0, 1.0);
+    let translation = cam_xform.translation.lerp(target.translation, t);
+    let rotation = cam_xform.rotation.slerp(target.rotation, t);
+    let settled = translation.distance_squared(target.translation) < 1e-8
+        && rotation.angle_between(target.rotation) < 1e-5;
+    cam_xform.translation = if settled { target.translation } else { translation };
+    cam_xform.rotation = if settled { target.rotation } else { rotation };
 }
 
 /// Raycast the cursor against the table plane (`y = 0`) using the fixed

@@ -293,6 +293,33 @@ pub fn project_to_ui(
     camera.world_to_viewport(cam_xform, world).ok().map(|v| v / ui_scale.0)
 }
 
+/// Show a screen-space overlay with its top-left at `at` (`Val::Px`), or hide
+/// it with `None` — writing the `Node` only when that changes.
+///
+/// The card overlays (P/T badges, keyword strips, counter labels, the small
+/// status badges) are re-placed every frame from the cards' projections. A
+/// `Node` written through `Mut` is marked changed whether or not the value
+/// moved, and bevy_ui re-lays-out every changed node — so an unguarded write
+/// relays the whole overlay tree out every frame on a still board, and keeps
+/// the reactive frame loop (`systems::frame_pacing`) from ever going idle.
+pub fn place_overlay(node: &mut Mut<Node>, at: Option<Vec2>) {
+    match at {
+        Some(at) => {
+            let (left, top) = (Val::Px(at.x), Val::Px(at.y));
+            if node.display != Display::Flex || node.left != left || node.top != top {
+                node.display = Display::Flex;
+                node.left = left;
+                node.top = top;
+            }
+        }
+        None => {
+            if node.display != Display::None {
+                node.display = Display::None;
+            }
+        }
+    }
+}
+
 // ── Hover tint ───────────────────────────────────────────────────────────────
 
 /// Attach to any `Button` whose background should brighten on hover/press.
@@ -355,7 +382,7 @@ pub fn animate_overlay_pulses(
     mut q: Query<(Entity, &mut OverlayPulse, &mut UiTransform)>,
 ) {
     for (e, mut pulse, mut transform) in &mut q {
-        pulse.0 += time.delta_secs();
+        pulse.0 += crate::systems::animate::anim_dt(&time);
         transform.scale = Vec2::splat(pulse_scale(pulse.0));
         if pulse.0 >= PULSE_SECS {
             // `try_`: the overlay can be despawned this frame (its card

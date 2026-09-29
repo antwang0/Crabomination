@@ -4,10 +4,9 @@
 //! `paths.asset_dir` is user-configurable (and defaults differ between
 //! debug and release builds — see `config::PathsConfig`), so a fresh or
 //! custom directory starts empty. Card art streams in from Scryfall, but
-//! the UI font, the cardback, and the table model have no download
-//! source — without them a custom asset dir meant a broken client. They
-//! are small (≈600 KB total; the cardback ships at card-art resolution),
-//! so embedding keeps any asset dir self-sufficient.
+//! the UI font, the cardback and the symbol fonts have no download source
+//! — without them a custom asset dir meant a broken client. They are small
+//! (≈500 KB total), so embedding keeps any asset dir self-sufficient.
 
 use std::fs;
 use std::path::Path;
@@ -19,7 +18,6 @@ const EMBEDDED: &[(&str, &[u8])] = &[
         "fonts/MiranoExtendedFreebie-Light.ttf",
         include_bytes!("../assets/fonts/MiranoExtendedFreebie-Light.ttf"),
     ),
-    ("models/woodtable_1.glb", include_bytes!("../assets/models/woodtable_1.glb")),
     // The symbol fallbacks (`theme::FALLBACK_FONT_PATHS`, ~36 KB together).
     (
         "fonts/fallback/NotoSansSymbols2.subset.ttf",

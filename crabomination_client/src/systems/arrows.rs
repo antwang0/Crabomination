@@ -457,6 +457,7 @@ pub fn render_arrows(
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut material: Local<Option<Handle<StandardMaterial>>>,
     mut live: Local<HashMap<ArrowKey, Live>>,
+    mut motion: ResMut<crate::systems::frame_pacing::LightMotion>,
 ) {
     // Out of a game, nothing is drawn and nothing lingers into the next.
     if *state.get() != AppState::InGame {
@@ -467,7 +468,7 @@ pub fn render_arrows(
         }
         return;
     }
-    let dt = time.delta_secs();
+    let dt = crate::systems::animate::anim_dt(&time);
     let Ok(eye) = camera.single().map(GlobalTransform::translation) else { return };
     let material = material.get_or_insert_with(|| materials.add(arrow_material())).clone();
 
@@ -510,6 +511,10 @@ pub fn render_arrows(
             meshes.remove(&l.mesh);
             return false;
         }
+        // The bands flow for as long as the mark shows (slow: ambient); it
+        // grows in and fades out quickly (full frame rate).
+        motion.ambient = true;
+        motion.transient |= l.age < GROW_SECS || l.gone > 0.0;
         let grow = ease_out(l.age / GROW_SECS);
         let colour = l.mark.colour.to_linear();
         let alpha = colour.alpha * (1.0 - l.gone / FADE_SECS);

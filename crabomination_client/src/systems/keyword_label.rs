@@ -725,12 +725,10 @@ pub fn sync_keyword_labels(
             *text = Text::new(strip.clone());
         }
         let Some(&(end, run, size)) = placed.get(&label.0) else {
-            node.display = Display::None;
+            crate::theme::place_overlay(&mut node, None);
             continue;
         };
-        node.display = Display::Flex;
-        node.left = Val::Px(end.x);
-        node.top = Val::Px(end.y);
+        crate::theme::place_overlay(&mut node, Some(end));
         if transform.translation != run {
             transform.translation = run;
         }

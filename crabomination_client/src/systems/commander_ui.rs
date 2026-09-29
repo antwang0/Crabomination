@@ -280,15 +280,15 @@ pub fn sync_command_zone_cost_badges(
             continue;
         };
         seen.insert(badge.0);
-        text.set(label);
+        if text.text() != label.as_str() {
+            text.set(label);
+        }
         match anchor_of.get(&badge.0) {
             Some(at) => {
                 let (x, y) = place(*at);
-                node.display = Display::Flex;
-                node.left = Val::Px(x);
-                node.top = Val::Px(y);
+                crate::theme::place_overlay(&mut node, Some(Vec2::new(x, y)));
             }
-            None => node.display = Display::None,
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
     for (id, label) in &desired {
@@ -484,12 +484,8 @@ pub fn sync_lethal_commander_warnings(
             text.0 = l;
         }
         match anchor_of.get(&chip.0) {
-            Some(at) => {
-                node.display = Display::Flex;
-                node.left = Val::Px(at.x);
-                node.top = Val::Px(at.y);
-            }
-            None => node.display = Display::None,
+            Some(at) => crate::theme::place_overlay(&mut node, Some(*at)),
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
     for (id, total) in &want {
@@ -571,7 +567,7 @@ pub fn pulse_commander_damage_chips(
         flash.last = now;
         flash.primed = true;
     }
-    let dt = time.delta_secs();
+    let dt = crate::systems::animate::anim_dt(&time);
     for h in &mut flash.hot {
         h.2 -= dt;
     }

@@ -14,12 +14,11 @@ use std::f32::consts::PI;
 use bevy::asset::AssetApp;
 use bevy::asset::io::{AssetSource, AssetSourceBuilder, AssetSourceId, ErasedAssetReader};
 use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
-use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
+use bevy::light::{CascadeShadowConfig, DirectionalLightShadowMap, GlobalAmbientLight};
 use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::post_process::bloom::Bloom;
 use bevy::camera::Hdr;
-use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
 use bevy::{anti_alias::smaa::Smaa, prelude::*};
 
 mod audit;
@@ -410,6 +409,13 @@ fn main() {
         .insert_resource(menu::CliBootHint(load_state_arg))
         .insert_resource(menu::CliBootFormat(play_format_arg))
         .insert_resource(harness.clone())
+        // Draw only when something changes; a harness screenshot run keeps
+        // the continuous loop so its timed captures don't move.
+        .add_plugins((
+            systems::frame_pacing::FramePacingPlugin { continuous: harness.screenshot.is_some() },
+            systems::perf_hud::PerfHudPlugin,
+            systems::shadows::ShadowsPlugin,
+        ))
         .init_resource::<layout_harness::ScreenshotClock>()
         .add_systems(
             Update,
@@ -1092,6 +1098,16 @@ fn main() {
         .run();
 }
 
+/// Mip bias for the 3-D camera's texture sampling; see the camera in
+/// [`setup`]. Half a level: sharper card text without the texture shimmer a
+/// full level brings in motion.
+const CARD_MIP_BIAS: f32 = -0.5;
+
+/// The key light's shadow biases (world units; the normal bias is scaled by
+/// the shadow-map texel size). See the key light in [`setup`].
+const KEY_LIGHT_DEPTH_BIAS: f32 = 0.005;
+const KEY_LIGHT_NORMAL_BIAS: f32 = 0.4;
+
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -1127,21 +1143,22 @@ fn setup(
         ..default()
     });
 
-    // Key light (directional, with shadows).
-    let radius = 14.0;
+    // Key light (directional, with shadows). Its cascades are refit to the
+    // table from the live camera (`systems::shadows`); the biases are small
+    // because nothing that lies flat on the table casts, so the felt has
+    // nothing to shadow itself with — Bevy's defaults (0.02 depth, 1.8
+    // normal) lifted the shadow test above a card resting on the felt.
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, 1.0, -PI / 4.)),
         DirectionalLight {
             shadow_maps_enabled: true,
             illuminance: gfx.key_light_illuminance,
+            shadow_depth_bias: KEY_LIGHT_DEPTH_BIAS,
+            shadow_normal_bias: KEY_LIGHT_NORMAL_BIAS,
             ..default()
         },
-        CascadeShadowConfigBuilder {
-            first_cascade_far_bound: 0.9 * radius,
-            maximum_distance: 2.8 * radius,
-            ..default()
-        }
-        .build(),
+        CascadeShadowConfig::default(),
+        systems::shadows::KeyLight,
     ));
 
     // Fill light from the opposite side — further reduces shadow darkness.
@@ -1165,6 +1182,8 @@ fn setup(
         Mesh3d(meshes.add(systems::table_cloth::table_mesh(ground, systems::table_cloth::play_area(0, 2)))),
         MeshMaterial3d(materials.add(systems::table_cloth::cloth_material(TABLE_COLOR, &cloth))),
         GroundPlane,
+        // It lies flat under everything; see `systems::shadows`.
+        bevy::light::NotShadowCaster,
     ));
     commands.insert_resource(cloth);
 
@@ -1172,7 +1191,15 @@ fn setup(
         Camera3d::default(),
         Transform::from_xyz(0.0, 32.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
         quality.msaa(),
-        scene_color_grading(),
+        // Card art shows as authored; see `SCENE_TONEMAPPING`.
+        SCENE_TONEMAPPING,
+        // Sample textures half a mip level sharper. A creature on the table
+        // covers ~125 px of a 745 px card image at 1080p, so the GPU sampled
+        // around mip 2.6 — mostly the 93-texel-wide level, coarser than the
+        // pixels it covers — which is why table cards read softer than the
+        // Alt-zoom popup (mip ~1). The table looks down at 66°, so the 16x
+        // anisotropic filter barely engages and can't make up for it.
+        bevy::render::camera::MipBias(CARD_MIP_BIAS),
         MainCamera,
     )).id();
     // Only attach SMAA when the current quality preset asks for it. Low
@@ -1187,40 +1214,31 @@ fn setup(
     if let Some(bloom) = quality.bloom() {
         commands.entity(cam).insert((Hdr, bloom));
     }
-    // Contrast-adaptive sharpening — crisps up the (minified, tonemapped)
+    // Contrast-adaptive sharpening — crisps up the (minified)
     // 3-D card faces. Gated off on Low like SMAA; see `RenderQuality::sharpening`.
     if let Some(cas) = quality.sharpening() {
         commands.entity(cam).insert(cas);
     }
 }
 
-/// Post-tonemap colour grading for the main 3-D camera.
+/// The main camera's tonemapping: none.
 ///
-/// The card faces are **unlit** so they show their art as-authored, but the
-/// camera still runs the default `TonyMcMapface` tonemapper, which is a filmic
-/// curve tuned for HDR scenes — on flat SDR card art it slightly desaturates
-/// and lifts mid-tones, reading as "washed out" next to the un-tonemapped
-/// Alt-zoom popup. A gentle post-tonemap saturation lift plus a touch of
-/// section contrast pulls the rendered cards (and their dark text) back toward
-/// the authored look without the risk of disabling tonemapping wholesale
-/// (which would clip the lit ground/lights). Applies scene-wide; the ground is
-/// a flat table colour, so the boost is harmless there.
-///
-/// `post_saturation 0.9` read better than the default look (visual tuning via
-/// the temporary render-debug scrubber). Section `contrast` is left neutral:
-/// Bevy applies it pre-tonemap in log space, so it's a near-inert lever for
-/// flat SDR card art — `ColorGradingSection::lift` (black level) and the
-/// camera `Tonemapping` choice are the effective de-wash knobs, exposed live
-/// in the scrubber for further tuning.
-fn scene_color_grading() -> ColorGrading {
-    ColorGrading::with_identical_sections(
-        ColorGradingGlobal {
-            post_saturation: 0.9,
-            ..default()
-        },
-        ColorGradingSection::default(),
-    )
-}
+/// The card faces are **unlit** — their pixels are the authored sRGB art —
+/// and they are most of the screen. Every filmic tonemapper is a curve for
+/// HDR scenes that rolls off toward white, and on flat SDR art that is a
+/// grey-and-wash: measured on Walking Ballista at the zoom pose against its
+/// Scryfall image (Lab, text box / art), the source reads L* 82.5 / chroma
+/// 5.2; the old default (`TonyMcMapface` plus a 0.9 post-saturation grade)
+/// drew 71.4 / 3.9 — the white text box eleven points grey and a quarter of
+/// the art's colour gone. `AgX`, `AcesFitted`, `BlenderFilmic` and
+/// `SomewhatBoringDisplayTransform` all drew the text box at 73-74; none
+/// drew 86.6 / 4.6, the art as authored (the small lift is the sharpening
+/// pass). The lit felt and the chips sit well inside `[0, 1]`, and the
+/// glows that are driven past it (the seat frame, bursts) clip toward their
+/// hue rather than wash to cream; bloom still reads them from the HDR
+/// target on the tiers that have it.
+const SCENE_TONEMAPPING: bevy::core_pipeline::tonemapping::Tonemapping =
+    bevy::core_pipeline::tonemapping::Tonemapping::None;
 
 #[allow(clippy::too_many_arguments)]
 fn apply_render_quality_change(

@@ -126,7 +126,7 @@ pub fn apply_focus_dim(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let focus = view.0.as_ref().and_then(|cv| choices(cv, &targeting, &legal, &blocking));
-    let step = time.delta_secs() / FADE_SECS;
+    let step = crate::systems::animate::anim_dt(&time) / FADE_SECS;
     let card_back = card_assets.as_ref().map(|a| a.back_material.id());
     for (entity, gid, children, dim) in &mut cards {
         let want = if focus.as_ref().is_some_and(|choices| !choices.contains(&gid.0)) { 1.0 } else { 0.0 };

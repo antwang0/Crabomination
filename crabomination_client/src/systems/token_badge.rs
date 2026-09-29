@@ -141,14 +141,12 @@ pub fn sync_token_pile_badges(
         }
         match placed.get(&badge.0) {
             Some(&(at, size)) => {
-                node.display = Display::Flex;
-                node.left = Val::Px(at.x);
-                node.top = Val::Px(at.y);
+                crate::theme::place_overlay(&mut node, Some(at));
                 if font.font_size != FontSize::Px(size) {
                     font.font_size = FontSize::Px(size);
                 }
             }
-            None => node.display = Display::None,
+            None => crate::theme::place_overlay(&mut node, None),
         }
     }
 

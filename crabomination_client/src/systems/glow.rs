@@ -206,6 +206,7 @@ pub fn render_glow(
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut material: Local<Option<Handle<StandardMaterial>>>,
     mut drawn: Local<Option<GlowMesh>>,
+    mut motion: ResMut<crate::systems::frame_pacing::LightMotion>,
 ) {
     // Out of a game, nothing is drawn and nothing lingers into the next.
     if *state.get() != AppState::InGame {
@@ -247,6 +248,10 @@ pub fn render_glow(
         geometry.add(&light, eye.translation(), basis);
     }
     d.lit = !geometry.indices.is_empty();
+    // Every light here moves on its own (the seat glow breathes, bursts and
+    // motes run their course); the ones with a clock of their own — impacts,
+    // motes — also keep the frame loop at full rate through their components.
+    motion.ambient |= d.lit;
     let _ = meshes.insert(&d.mesh, geometry.into_mesh());
 }
 

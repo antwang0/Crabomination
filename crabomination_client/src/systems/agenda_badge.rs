@@ -84,13 +84,14 @@ pub fn sync_agenda_badges(
                 if let Some(world) = card_corner.get(&badge.0).copied()
                     && let Some((x, y)) = anchor(camera, cam_xform, &ui_scale, world)
                 {
-                    node.display = Display::Flex;
-                    node.left = Val::Px(x);
-                    node.top = Val::Px(y);
+                    crate::theme::place_overlay(&mut node, Some(Vec2::new(x, y)));
                 } else {
-                    node.display = Display::None;
+                    crate::theme::place_overlay(&mut node, None);
                 }
-                *text = Text::new(format!("named {names}"));
+                let want = format!("named {names}");
+                if text.0 != want {
+                    *text = Text::new(want);
+                }
             }
             None => {
                 commands.entity(e).despawn();

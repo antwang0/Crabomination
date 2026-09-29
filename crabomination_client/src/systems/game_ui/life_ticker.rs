@@ -158,7 +158,7 @@ pub fn tick_life_readouts(
     mut ticker: ResMut<LifeTicker>,
     mut readouts: Query<(&LifeReadout, &mut Text, &mut TextColor, &mut UiTransform)>,
 ) {
-    ticker.advance(time.delta_secs());
+    ticker.advance(crate::systems::animate::anim_dt(&time));
     let Some(cv) = &view.0 else { return };
     for (readout, mut text, mut ink, mut transform) in &mut readouts {
         let Some(life) = cv.players.iter().find(|p| p.seat == readout.seat).map(|p| p.life) else { continue };

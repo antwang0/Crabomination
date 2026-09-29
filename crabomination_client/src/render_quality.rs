@@ -13,8 +13,11 @@ pub struct ChangeQuality(pub RenderQuality);
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RenderQuality {
-    #[default]
     Low,
+    /// The default: antialiasing, bloom and sharpening on at modest cost.
+    /// Low turns all of them off, so a first launch there showed none of
+    /// the post-processing the client is tuned around.
+    #[default]
     Medium,
     High,
     Ultra,
@@ -37,13 +40,20 @@ impl RenderQuality {
         }
     }
 
-    /// Shadow map resolution (pixels per side). Higher = sharper shadows.
+    /// Shadow map resolution (pixels per side, per cascade). Higher =
+    /// sharper shadows.
+    ///
+    /// The key light has two cascades fitted to the table
+    /// (`systems::shadows`), so each texel lands on it: at 4096 a texel is
+    /// under a hundredth of a unit, smaller than a screen pixel at the home
+    /// pose, and Ultra stops there — 8192 cost 256 MiB a cascade (1 GiB over
+    /// the four the default config drew) for nothing a screen can show. Low
+    /// is 1024: 512 across a fitted table drew visibly stepped edges.
     pub fn shadow_map_size(self) -> usize {
         match self {
-            Self::Low => 512,
+            Self::Low => 1024,
             Self::Medium => 2048,
-            Self::High => 4096,
-            Self::Ultra => 8192,
+            Self::High | Self::Ultra => 4096,
         }
     }
 

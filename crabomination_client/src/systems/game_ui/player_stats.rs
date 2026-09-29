@@ -832,7 +832,7 @@ pub fn update_player_chip_target_outline(
 ) {
     let Some(cv) = &view.0 else {
         for (_, mut border) in &mut q {
-            *border = BorderColor::all(PLAYER_CHIP_BORDER_IDLE);
+            border.set_if_neq(BorderColor::all(PLAYER_CHIP_BORDER_IDLE));
         }
         return;
     };
@@ -921,7 +921,9 @@ pub fn update_player_chip_target_outline(
         } else {
             PLAYER_CHIP_BORDER_IDLE
         };
-        *border = BorderColor::all(color);
+        // Compared: this runs every frame, and only a pulsing border
+        // should keep the reactive frame loop awake.
+        border.set_if_neq(BorderColor::all(color));
     }
 }
 

@@ -20,6 +20,18 @@ pub struct LogEntry {
     /// private — callers read `text`.
     raw: String,
     count: u32,
+    /// Push order, unique for the life of the log: the log panel keys its
+    /// rows by it (`update_log_text`) so a new entry adds one row instead of
+    /// rebuilding all of them.
+    seq: u64,
+}
+
+impl LogEntry {
+    /// See the field. Only the last entry's `text` ever changes after it is
+    /// pushed (a coalesced repeat's `×N`).
+    pub fn seq(&self) -> u64 {
+        self.seq
+    }
 }
 
 /// Maximum number of log entries kept in memory. Older entries are
@@ -30,11 +42,12 @@ pub const GAME_LOG_CAP: usize = 200;
 #[derive(Resource)]
 pub struct GameLog {
     pub entries: VecDeque<LogEntry>,
+    next_seq: u64,
 }
 
 impl Default for GameLog {
     fn default() -> Self {
-        Self { entries: VecDeque::with_capacity(GAME_LOG_CAP) }
+        Self { entries: VecDeque::with_capacity(GAME_LOG_CAP), next_seq: 0 }
     }
 }
 
@@ -50,15 +63,7 @@ impl GameLog {
     /// export prompt, rematch banner).
     pub fn push_colored(&mut self, msg: impl Into<String>, color: Color) {
         let text = msg.into();
-        self.entries.push_back(LogEntry {
-            raw: text.clone(),
-            text,
-            color,
-            divider: false,
-            card_art: None,
-            count: 1,
-        });
-        self.trim();
+        self.append(text, color, false, None);
     }
 
     /// Push a per-event log line, coalescing a run of identical
@@ -90,15 +95,7 @@ impl GameLog {
             last.text = format!("{} ×{}", last.raw, last.count);
             return;
         }
-        self.entries.push_back(LogEntry {
-            raw: text.clone(),
-            text,
-            color,
-            divider: false,
-            card_art,
-            count: 1,
-        });
-        self.trim();
+        self.append(text, color, false, card_art);
     }
 
     /// Insert a turn-divider row (#5). Always a fresh entry — it breaks
@@ -106,18 +103,14 @@ impl GameLog {
     /// never merge across the boundary.
     pub fn push_divider(&mut self, label: impl Into<String>) {
         let text = label.into();
-        self.entries.push_back(LogEntry {
-            raw: text.clone(),
-            text,
-            color: theme::TEXT_SECONDARY,
-            divider: true,
-            card_art: None,
-            count: 1,
-        });
-        self.trim();
+        self.append(text, theme::TEXT_SECONDARY, true, None);
     }
 
-    fn trim(&mut self) {
+    /// A fresh entry at the back, the oldest evicted past [`GAME_LOG_CAP`].
+    fn append(&mut self, text: String, color: Color, divider: bool, card_art: Option<String>) {
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        self.entries.push_back(LogEntry { raw: text.clone(), text, color, divider, card_art, count: 1, seq });
         while self.entries.len() > GAME_LOG_CAP {
             self.entries.pop_front();
         }

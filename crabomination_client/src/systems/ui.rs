@@ -1195,8 +1195,10 @@ pub fn hover_card_preview(
     );
 
     if let Ok((entity, mut node, marker)) = existing.single_mut() {
-        node.left = Val::Px(x);
-        node.top = Val::Px(y);
+        if node.left != Val::Px(x) || node.top != Val::Px(y) {
+            node.left = Val::Px(x);
+            node.top = Val::Px(y);
+        }
         // Same card, same notes — repositioning above is all we need.
         if marker.path == path && marker.info == info {
             return;
