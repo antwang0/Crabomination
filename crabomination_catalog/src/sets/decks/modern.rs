@@ -67582,6 +67582,7 @@ pub fn leather_armor() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[]))],
+        keyword_once_per_turn: true,
         equipped_bonus: Some(EquipBonus {
             toughness: 1,
             keywords: vec![Keyword::Ward(WardCost::generic(1))],

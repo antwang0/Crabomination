@@ -7676,9 +7676,8 @@ pub fn the_masamune() -> CardDefinition {
 }
 
 /// Dark Knight's Greatsword — {2}{B} Equipment. Job select. Equipped creature
-/// gets +3/+0 and is a Knight in addition to its other types. Equip {3}.
-/// (The printed "Equip—Pay 3 life, once each turn" is approximated as a {3}
-/// generic equip.)
+/// gets +3/+0 and is a Knight in addition to its other types. Chaosbringer —
+/// Equip—Pay 3 life, once each turn.
 pub fn dark_knights_greatsword() -> CardDefinition {
     CardDefinition {
         name: "Dark Knight's Greatsword",
@@ -7688,7 +7687,9 @@ pub fn dark_knights_greatsword() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        keywords: vec![Keyword::Equip(cost(&[]))],
+        equip_life_cost: 3,
+        keyword_once_per_turn: true,
         triggered_abilities: vec![job_select_etb()],
         equipped_bonus: Some(EquipBonus {
             power: 3,

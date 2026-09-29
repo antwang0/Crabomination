@@ -20,7 +20,7 @@ fn vehicle() -> Subtypes {
     }
 }
 
-/// Luxurious Locomotive — {5} Artifact — Vehicle 6/5. Crew 1. When it attacks,
+/// Luxurious Locomotive — {5} Artifact — Vehicle 6/5. Crew 1, once each turn. When it attacks,
 /// create a Treasure for each creature that crewed it this turn.
 pub fn luxurious_locomotive() -> CardDefinition {
     CardDefinition {
@@ -31,6 +31,7 @@ pub fn luxurious_locomotive() -> CardDefinition {
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Crew(1)],
+        keyword_once_per_turn: true,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CreateToken {

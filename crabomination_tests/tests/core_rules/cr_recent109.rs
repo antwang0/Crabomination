@@ -224,3 +224,46 @@ fn vampiric_embrace_grows_the_host_off_a_kill() {
     assert!(g.battlefield_find(bear).is_none(), "the Hawk died");
     assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 602.5b — "Equip {0}. Activate only once each turn." (Leather Armor)
+/// and Dark Knight's Greatsword's "Equip—Pay 3 life. Activate only once each
+/// turn.": the second equip in a turn is refused, and the Greatsword's equip
+/// costs life, not mana.
+#[test]
+fn equip_once_each_turn() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_battlefield(0, catalog::leather_armor());
+    g.perform_action(GameAction::Equip { equipment: armor, target: a }).expect("first equip");
+    assert!(g.perform_action(GameAction::Equip { equipment: armor, target: b }).is_err());
+    assert_eq!(g.battlefield_find(armor).unwrap().attached_to, Some(a));
+
+    let sword = g.add_card_to_battlefield(0, catalog::dark_knights_greatsword());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::Equip { equipment: sword, target: b }).expect("pay 3 life");
+    assert_eq!(g.players[0].life, life - 3);
+    assert!(g.perform_action(GameAction::Equip { equipment: sword, target: a }).is_err());
+}
+
+/// CR 602.5b — Luxurious Locomotive's "Crew 1. Activate only once each
+/// turn." caps the printed crew only: a second crew is refused, but Kotori's
+/// granted crew 2 still animates it.
+#[test]
+fn crew_once_each_turn_caps_the_printed_crew_only() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let loco = g.add_card_to_battlefield(0, catalog::luxurious_locomotive());
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: loco, crew_creatures: vec![c1] }).expect("crew");
+    assert!(g.perform_action(GameAction::Crew { vehicle: loco, crew_creatures: vec![c2] }).is_err());
+    g.add_card_to_battlefield(0, catalog::kotori_pilot_prodigy());
+    g.perform_action(GameAction::Crew { vehicle: loco, crew_creatures: vec![c2] })
+        .expect("Kotori's crew 2 is a separate ability");
+}
