@@ -273,7 +273,7 @@ pub fn caustic_wasps() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Destroy target artifact that player controls".into(),
                 body: Box::new(Effect::Destroy {
-                    what: target_filtered(R::Artifact.and(R::ControlledByOpponent)),
+                    what: target_filtered(R::Artifact.and(R::ControlledByTriggerPlayer)),
                 }),
             },
         }],

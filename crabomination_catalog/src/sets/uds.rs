@@ -1967,7 +1967,7 @@ pub fn sigil_of_sleep() -> CardDefinition {
                 effect: Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature.and(R::ControlledByOpponent),
+                        filter: R::Creature.and(R::ControlledByTriggerPlayer),
                     },
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
                 },

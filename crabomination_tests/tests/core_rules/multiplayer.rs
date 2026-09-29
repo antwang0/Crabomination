@@ -7440,3 +7440,39 @@ fn the_player_to_your_left_ignores_a_reversed_turn_order() {
     g.concede(1);
     assert_eq!(g.player_to_left_of(0), 2, "a departed seat is skipped");
 }
+
+/// CR 603.2 / 510.2 — "Whenever this creature deals combat damage to a player,
+/// you may destroy target artifact **that player** controls": in a pod the
+/// target is the damaged player's artifact, not any opponent's. Rustmouth
+/// Ogre and Caustic Wasps read "an opponent controls" and took the third
+/// seat's artifact.
+#[test]
+fn cr_603_2_that_player_is_the_damaged_player() {
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    for make in [catalog::rustmouth_ogre as fn() -> _, catalog::caustic_wasps] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // The damaged seat has no artifact; the third seat does.
+        let bystander = g.add_card_to_battlefield(2, catalog::sol_ring());
+        let who = g.add_card_to_battlefield(0, make());
+        g.clear_sickness(who);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: who,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack seat 1");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        let name = make().name;
+        assert!(g.battlefield_find(bystander).is_some(), "{name}: not the bystander's artifact");
+    }
+}

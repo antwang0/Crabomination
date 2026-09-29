@@ -2301,7 +2301,7 @@ pub fn arm_with_aether() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Bounce a creature that player controls?".into(),
                     body: Box::new(Effect::Move {
-                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                        what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)),
                         to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
                 },
