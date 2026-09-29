@@ -590,7 +590,7 @@ mod recent76 {
     }
 
     #[test]
-    fn whirling_dervish_grows_on_combat_damage() {
+    fn whirling_dervish_grows_at_end_step_after_damage() {
         let mut g = two_player_game();
         let dervish = g.add_card_to_battlefield(0, catalog::whirling_dervish());
         g.clear_sickness(dervish);
@@ -604,8 +604,14 @@ mod recent76 {
         while g.step != TurnStep::PostCombatMain {
             g.perform_action(GameAction::PassPriority).expect("pass");
         }
+        // CR 603.4 — "At the beginning of each end step, if it dealt damage
+        // to an opponent this turn": not on the hit, once at end step.
+        assert_eq!(g.battlefield_find(dervish).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
         assert_eq!(g.battlefield_find(dervish).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
-            "grew after dealing combat damage to a player");
+            "grew at end step after dealing combat damage to a player");
         assert!(catalog::whirling_dervish().keywords.contains(&Keyword::Protection(Color::Black)));
     }
 

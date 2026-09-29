@@ -217,10 +217,9 @@ pub fn frozen_shade() -> CardDefinition {
     }
 }
 
-/// Whirling Dervish — {G}{G} 1/1 Human Monk. Protection from black. Whenever it
-/// deals combat damage to a player, put a +1/+1 counter on it. (Faithful to the
-/// end-step "if it dealt damage this turn" grow; combat is the only source in
-/// practice.)
+/// Whirling Dervish — {G}{G} 1/1 Human Monk. Protection from black. At the
+/// beginning of each end step, if it dealt damage to an opponent this turn,
+/// put a +1/+1 counter on it (CR 603.4 — once, however many hits).
 pub fn whirling_dervish() -> CardDefinition {
     CardDefinition {
         name: "Whirling Dervish",
@@ -234,7 +233,14 @@ pub fn whirling_dervish() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Protection(Color::Black)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::DamagedAPlayerThisTurn,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
