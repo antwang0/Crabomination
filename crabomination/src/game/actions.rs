@@ -9858,17 +9858,22 @@ impl GameState {
         // CR 702.16b: Protection from [color] prevents targeting by spells
         // of that color (`spell_protection_blocks`) — anyone's, the caster's
         // own included; only hexproof has an opponents-only clause.
-        if let Some(Target::Permanent(cid)) = target
-            && self.spell_protection_blocks(&card, p, cid)
-        {
+        // Every slot, not only the first: "two target creatures" can't name
+        // a protected one second either.
+        if let Some(cid) = target.iter().chain(additional_targets.iter()).find_map(|t| match *t {
+            Target::Permanent(cid) if self.spell_protection_blocks(&card, p, cid) => Some(cid),
+            _ => None,
+        }) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::TargetHasProtection(cid));
         }
 
         // CR 702.11e — hexproof from [color] (`spell_color_hexproof_blocks`).
-        let hexproof_violation =
-            target.as_ref().is_some_and(|t| self.spell_color_hexproof_blocks(&card, p, t));
+        let hexproof_violation = target
+            .iter()
+            .chain(additional_targets.iter())
+            .any(|t| self.spell_color_hexproof_blocks(&card, p, t));
         if hexproof_violation {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);

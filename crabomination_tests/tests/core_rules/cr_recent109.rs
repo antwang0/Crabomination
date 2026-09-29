@@ -498,3 +498,32 @@ fn veil_of_summer_in_response_fizzles_the_spell() {
         assert_eq!(g.players[0].library.len(), 2, "at_player {at_player}");
     }
 }
+
+/// CR 702.16b — protection blocks every target slot of a spell, not only the
+/// first: Reckless Spite ("destroy two target nonblack creatures") can't name
+/// a creature with protection from black second. (The cast gate read slot 0
+/// only.)
+#[test]
+fn protection_blocks_a_later_target_slot() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut warded = catalog::grizzly_bears();
+    warded.keywords.push(Keyword::Protection(Color::Black));
+    let b = g.add_card_to_battlefield(0, warded);
+    let spite = g.add_card_to_hand(1, catalog::reckless_spite());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.players[1].mana_pool.add_colorless(1);
+    let cast = GameAction::CastSpell {
+        card_id: spite,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast).is_err());
+    assert!(g.players[1].hand.iter().any(|c| c.id == spite), "back in hand");
+}
