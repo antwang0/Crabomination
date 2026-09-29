@@ -616,3 +616,41 @@ fn cr_105_3_colored_animation_sets_colors_for_its_duration() {
     g.expire_end_of_turn_effects();
     assert!(g.computed_permanent(land).unwrap().colors.is_empty(), "colorless again");
 }
+
+/// CR 115.1 / 603.3d — a triggered "up to two target players" names two
+/// players as it goes on the stack. The trigger-side fan-out walked
+/// permanents only, so the second player slot was never filled; a hostile
+/// body (here a mill) now takes two opponents and leaves the caster alone.
+#[test]
+fn cr_115_1_triggered_up_to_two_target_players_names_two() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut def = catalog::grizzly_bears();
+    def.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: SelectionRequirement::Player,
+            effect: Box::new(Effect::Mill { who: Selector::Target(0), amount: Value::Const(2) }),
+        },
+    });
+    let mut g = crabomination::game::multi_player_game(3);
+    g.players[0].hostile_player_targets = true;
+    for seat in 0..3 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let libs: Vec<usize> = g.players.iter().map(|p| p.library.len()).collect();
+    let bear = g.add_card_to_hand(0, def);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), libs[0], "the caster isn't milled");
+    assert_eq!(g.players[1].library.len(), libs[1] - 2, "seat 1 milled two");
+    assert_eq!(g.players[2].library.len(), libs[2] - 2, "seat 2 milled two");
+}

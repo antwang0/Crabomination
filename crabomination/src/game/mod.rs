@@ -25704,6 +25704,31 @@ impl GameState {
         if max <= 1 || primary.is_none() {
             return vec![];
         }
+        // CR 115.1 — "up to N target players" (Kozilek, the Broken Reality;
+        // Homer, the Hermit; Communal Brewing): the permanent walk below
+        // stops at the first player it is handed, so a player fan-out named
+        // one seat. Walk the seats instead — opponents first for a hostile
+        // body, and never the caster for one.
+        if let Some(Target::Player(first)) = primary {
+            let Effect::ApplyToTargets { filter, .. } = eff else { return vec![] };
+            let hostile = eff.player_slot_is_hostile(1, None);
+            let opps = self.opponents_of(controller);
+            let order: Vec<usize> = if hostile {
+                opps
+            } else {
+                std::iter::once(controller).chain(opps).collect()
+            };
+            return order
+                .into_iter()
+                .filter(|&p| p != first)
+                .map(Target::Player)
+                .filter(|t| {
+                    self.evaluate_requirement_static(filter, t, controller, Some(source))
+                        && self.check_target_legality(t, controller).is_ok()
+                })
+                .take(max - 1)
+                .collect();
+        }
         let mut chosen: Vec<Target> = Vec::new();
         // First avoid entry doubles as the OtherThanSource avoid-source; keep
         // the trigger source there, then grow the set with each pick.

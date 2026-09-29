@@ -3255,7 +3255,10 @@ impl Effect {
                 // Confluence): the bot goaded its own team.
                 | Effect::Goad { .. }
                 | Effect::GoadForTheGame { .. }
-                | Effect::GoadWhile { .. } => true,
+                | Effect::GoadWhile { .. }
+                // Kozilek, the Broken Reality: the manifests come out of the
+                // player's hand and its controller draws for them.
+                | Effect::ManifestFromHand { .. } => true,
                 Effect::ApplyToTargets { effect, .. } => hostile(effect),
                 Effect::TargetPlayerThen { then, .. } => hostile(then),
                 Effect::MayDo { body, .. }
