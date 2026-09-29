@@ -3420,6 +3420,7 @@ impl HeuristicBot {
                         .or_else(|| super::selection_sink::pick_cash_in(state, seat))
                         .or_else(|| super::end_step_ping::pick_end_step_ping(state, seat))
                         .or_else(|| super::graveyard_hate::pick_graveyard_hate(state, seat))
+                        .or_else(|| super::land_ramp::pick_land_ramp(state, seat))
                         .or_else(|| super::generic_sink::pick_generic_ability(state, seat, &self.weights))
                 {
                     return Some(BotStep::plain(cycle));
@@ -10014,6 +10015,12 @@ fn main_phase_action_with(
 
     // Pods: pay life for a card banked until the end step (Necropotence).
     if let Some(action) = super::life_draw::pick_life_draw(state, seat) {
+        return BotStep::plain(action);
+    }
+
+    // Pods: a land fetch (Sakura-Tribe Elder, Burnished Hart) the material
+    // eval won't price above its body.
+    if let Some(action) = super::land_ramp::pick_land_ramp(state, seat) {
         return BotStep::plain(action);
     }
 

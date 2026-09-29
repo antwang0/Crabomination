@@ -2804,9 +2804,12 @@ mod tests {
         // just before the bot. Same winners; seed 43 takes 21 more actions.
         // Aggregate within noise (3,000 games, seed 43: 43.0/17.3/14.3/25.4
         // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
+        // Re-blessed 2026-09-29 (`server/land_ramp.rs`): pod seats now take
+        // their land-fetch activations (Sakura-Tribe Elder, Burnished Hart).
+        // Same winners; seed 43 66→71 turns, the other two unmoved.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
-            (43, Some(0), 66, 3225),
+            (43, Some(0), 71, 3460),
             (4242, Some(3), 72, 3387),
         ];
         let decks = rofellos_pod(4);
