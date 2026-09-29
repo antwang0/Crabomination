@@ -99,7 +99,7 @@ fn cr_305_1_a_cast_permission_does_not_play_a_land() {
     let apex = catalog::apex_of_power();
     g.resolve_effect(&apex.effect, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0))
         .expect("resolve");
-    let perm = |id| g.exile.iter().find(|c| c.id == id).and_then(|c| c.may_play_until.clone());
+    let perm = |id| g.exile.iter().find(|c| c.id == id).and_then(|c| c.may_play_until);
     assert!(perm(forest).is_some_and(|p| p.cast_only), "the Forest is cast-only");
     assert!(perm(bolt).is_some(), "the Bolt is castable");
     assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "no land drop from a cast permission");
