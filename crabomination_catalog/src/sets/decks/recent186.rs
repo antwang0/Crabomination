@@ -126,8 +126,7 @@ pub fn tidecaller_mentor() -> CardDefinition {
 
 /// Thought-Stalker Warlock — {2}{B} 2/2 Lizard Warlock with menace. ETB: if the
 /// opponent lost life this turn, they reveal their hand and you choose a nonland
-/// card for them to discard; otherwise they discard a card. (Modeled against
-/// each opponent — faithful in 1v1.)
+/// card for them to discard; otherwise they discard a card.
 pub fn thought_stalker_warlock() -> CardDefinition {
     CardDefinition {
         name: "Thought-Stalker Warlock",
@@ -141,8 +140,9 @@ pub fn thought_stalker_warlock() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![etb(Effect::If {
+            // "If **they** lost life this turn" — the targeted opponent.
             cond: Predicate::PlayerLostLifeThisTurn {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::Target(0),
             },
             then: Box::new(Effect::DiscardChosen {
                 from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
