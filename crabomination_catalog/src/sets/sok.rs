@@ -739,18 +739,22 @@ pub fn evermind() -> CardDefinition {
 /// upkeep.
 pub fn descendant_of_masumaro() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_upkeep(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::HandSizeOf(PlayerRef::You),
-            },
-            Effect::RemoveCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::HandSizeOf(PlayerRef::EachOpponent),
-            },
-        ]))],
+        // "…for each card in **target opponent's** hand" — one seat.
+        triggered_abilities: vec![on_upkeep(Effect::TargetPlayerThen {
+            filter: crate::card::SelectionRequirement::OpponentPlayer,
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                },
+            ])),
+        })],
         ..creature(
             "Descendant of Masumaro",
             cost(&[generic(2), g()]),

@@ -671,21 +671,25 @@ pub fn mogis_god_of_slaughter() -> CardDefinition {
 }
 
 /// Athreos, God of Passage — {1}{W}{B} 5/4. Whenever another creature you
-/// control dies, return it to your hand unless an opponent pays 3 life.
+/// control dies, return it to your hand unless target opponent pays 3 life.
+/// (Printed "you own"; the trigger reads control.)
 pub fn athreos_god_of_passage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
-            effect: Effect::UnlessPlayerPays {
-                who: PlayerRef::EachOpponent,
-                cost: crate::card::WardCost::Life(3),
-                then: Box::new(Effect::Move {
-                    what: Selector::TriggerSource,
-                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
-                        Selector::TriggerSource,
-                    ))),
+            effect: Effect::TargetPlayerThen {
+                filter: crate::card::SelectionRequirement::OpponentPlayer,
+                then: Box::new(Effect::UnlessPlayerPays {
+                    who: PlayerRef::Target(0),
+                    cost: crate::card::WardCost::Life(3),
+                    then: Box::new(Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
+                            Selector::TriggerSource,
+                        ))),
+                    }),
+                    if_paid: None,
                 }),
-                if_paid: None,
             },
         }],
         ..god2(

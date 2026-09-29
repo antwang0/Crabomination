@@ -7511,3 +7511,21 @@ fn cr_115_1_target_opponent_is_one_seat() {
         vec![life[0] + 2, life[1] - 2, life[2]],
     );
 }
+
+/// CR 115.1 — Descendant of Masumaro reads **target opponent's** hand: with
+/// a one-card and a five-card opponent, targeting the one-card seat nets
+/// (your hand − 1), not (your hand − 5).
+#[test]
+fn cr_115_1_descendant_of_masumaro_reads_one_opponents_hand() {
+    use crabomination::card::CounterType;
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let d = g.add_card_to_battlefield(0, catalog::descendant_of_masumaro());
+    for _ in 0..4 { g.add_card_to_hand(0, catalog::island()); }
+    g.add_card_to_hand(1, catalog::island());
+    for _ in 0..5 { g.add_card_to_hand(2, catalog::island()); }
+    let eff = catalog::descendant_of_masumaro().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&eff, &EffectContext::for_trigger(d, 0, Some(Target::Player(1)), 0)).unwrap();
+    assert_eq!(g.battlefield_find(d).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
