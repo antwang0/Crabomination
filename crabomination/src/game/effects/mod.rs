@@ -17965,15 +17965,21 @@ impl GameState {
                 // to blank. The census used to be a fourth hand-written copy
                 // here, battlefield-only; it is `densest_color_among_opponents`
                 // now, which counts hands too.
+                //
+                // A removal spell aimed at a creature this covers names the
+                // colour outright: that is the one Mother of Runes is
+                // activated in answer to.
                 let source = ctx.source.unwrap_or(CardId(0));
-                let color =
-                    self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true);
-                let kw = Keyword::Protection(color);
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                let color = match self.stack_threat_color(ctx.controller, &ids) {
+                    Some(threat) => self.chosen_color_or(Some(source), &Color::ALL, threat),
+                    None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
+                };
+                let kw = Keyword::Protection(color);
                 for cid in ids {
                     self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
                 }

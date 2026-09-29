@@ -4139,6 +4139,34 @@ impl crate::game::GameState {
         self.chosen_color_or(source, legal, want)
     }
 
+    /// The colour of the newest opposing spell or ability on the stack that
+    /// targets one of `ids` — the colour a "protection from the colour of your
+    /// choice" grant names to blank it (CR 702.16b: the target becomes
+    /// illegal and the spell fizzles, CR 608.2b). `None` when nothing hostile
+    /// aims at them or the threat is colorless.
+    pub(crate) fn stack_threat_color(&self, p: usize, ids: &[CardId]) -> Option<ManaColor> {
+        use crate::game::types::{StackItem, Target};
+        let hits = |t: &Target| matches!(t, Target::Permanent(id) if ids.contains(id));
+        self.stack.iter().rev().find_map(|item| {
+            let (owner, aimed, colors) = match item {
+                StackItem::Spell { card, caster, target, additional_targets, .. } => (
+                    *caster,
+                    target.iter().chain(additional_targets.iter()).any(hits),
+                    card.definition.printed_colors(),
+                ),
+                StackItem::Trigger { source, controller, target, additional_targets, .. } => (
+                    *controller,
+                    target.iter().chain(additional_targets.iter()).any(hits),
+                    self.card_colors_anywhere(*source),
+                ),
+            };
+            if self.same_team(owner, p) || !aimed {
+                return None;
+            }
+            colors.first().copied()
+        })
+    }
+
     /// Ask a real decider for a colour out of `legal`; answer a headless one
     /// with `want`. The bottom of the three — the sites whose own body already
     /// knows the answer it wants (the most-common basic type among the lands a
@@ -8897,6 +8925,153 @@ impl GameState {
         })
     }
 
+    /// CR 702.16b — whether a protection (or "can't be the target of …
+    /// spells") keyword on battlefield permanent `cid` stops `card`, a spell
+    /// `p` casts, from targeting it. The cast gate and the resolution re-check
+    /// (CR 608.2b: a Mother of Runes grant in response makes the spell
+    /// fizzle) both read it, so the two can't drift.
+    pub(crate) fn spell_protection_blocks(&self, card: &CardInstance, p: usize, cid: CardId) -> bool {
+        let Some(target_card) = self.battlefield_find(cid) else { return false };
+        let spell_colors = card.definition.cost.color_set();
+        // Read computed keywords so granted protection (Mother of Runes,
+        // Gods Willing) is honored, not just printed protection.
+        let cp = self.computed_permanent(cid);
+        let kws: &[Keyword] = match &cp {
+            Some(cp) => cp.keywords(),
+            None => &target_card.definition.keywords,
+        };
+        for kw in kws {
+            if let Keyword::Protection(prot_color) = kw
+                && spell_colors.contains(prot_color)
+            {
+                return true;
+            }
+            // CR 702.16h — protection from colored spells (Emrakul).
+            if matches!(kw, Keyword::ProtectionFromColoredSpells)
+                && !spell_colors.is_empty()
+            {
+                return true;
+            }
+            // Protection from ALL spells (Emrakul, the World Anew), or from
+            // everything (Hexdrinker level 8+, Progenitus).
+            if matches!(kw, Keyword::ProtectionFromSpells | Keyword::ProtectionFromEverything) {
+                return true;
+            }
+            // CR 702.16 — protection from instants (Hexdrinker level 3-7):
+            // an instant spell can't target it.
+            if matches!(kw, Keyword::ProtectionFromInstants)
+                && card.definition.card_types.contains(&CardType::Instant)
+            {
+                return true;
+            }
+            // Lurker — "can't be the target of spells unless it attacked
+            // or blocked this turn". Abilities still reach it.
+            if matches!(kw, Keyword::CantBeTargetedBySpellsUnlessAttackedOrBlocked)
+                && self
+                    .battlefield_find(cid)
+                    .is_some_and(|c| !c.attacked_this_turn && !c.blocked_this_turn)
+            {
+                return true;
+            }
+            // "Creatures can't be the targets of spells" (Dense Foliage) —
+            // no spell may target it; abilities are unaffected.
+            if matches!(kw, Keyword::CantBeTargetedBySpells) {
+                return true;
+            }
+            // "…of blue or black spells" (Karplusan Strider).
+            if let Keyword::CantBeTargetedBySpellsMatching(f) = kw
+                && self.evaluate_requirement_on_card(f, card, p)
+            {
+                return true;
+            }
+            // "Can't be the target of Aura spells" (Bartel Runeaxe,
+            // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
+            if matches!(kw, Keyword::CantBeTargetedByAuras)
+                && card
+                    .definition
+                    .subtypes
+                    .enchantment_subtypes
+                    .contains(&crate::card::EnchantmentSubtype::Aura)
+            {
+                return true;
+            }
+            // CR 702.16 — protection from a spell subtype (Kitsune
+            // Riftwalker's "protection from Arcane").
+            if let Keyword::ProtectionFromSpellSubtype(sub) = kw
+                && card.definition.subtypes.spell_subtypes.contains(sub)
+            {
+                return true;
+            }
+            // CR 702.16 — protection from each mana value other than N
+            // (Haktos): can't be targeted by a spell whose mana value
+            // isn't N.
+            if let Keyword::ProtectionFromManaValueExcept(n) = kw
+                && card.definition.cost.cmc() != *n
+            {
+                return true;
+            }
+            // CR 702.16 — protection from each mana value of a parity
+            // (Lavabrink Venturer): can't be targeted by a spell whose
+            // mana value matches the chosen odd/even quality.
+            if let Keyword::ProtectionFromManaValueParity { odd } = kw
+                && (card.definition.cost.cmc() % 2 == 1) == *odd
+            {
+                return true;
+            }
+            // CR 702.16 — protection from multicolored: can't be targeted
+            // by a spell that is two or more colors.
+            if matches!(kw, Keyword::ProtectionFromMulticolored)
+                && spell_colors.len() >= 2
+            {
+                return true;
+            }
+            // CR 702.16 — protection from monocolored: can't be targeted by
+            // a spell that is exactly one color.
+            if matches!(kw, Keyword::ProtectionFromMonocolored)
+                && spell_colors.len() == 1
+            {
+                return true;
+            }
+            // CR 702.16 / 903.4 — protection from each colour outside the
+            // controller's commander identity (Commander's Plate): a spell
+            // carrying one such colour can't target it. Colourless spells
+            // have no colour outside the identity and get through.
+            if matches!(kw, Keyword::ProtectionFromColorsOutsideCommanderIdentity) && {
+                let identity = self.commander_identity_set(target_card.controller);
+                spell_colors.iter().any(|c| !identity.contains(c))
+            } {
+                return true;
+            }
+            // CR 702.16b — protection from a *filtered* quality
+            // (Empty-Shrine Kannushi, Pledge of Loyalty): the spell is
+            // still in transient ownership, so match it card-side.
+            if (matches!(kw, Keyword::ProtectionFromChosenPlayer)
+                && target_card.chosen_player == Some(p))
+                || matches!(kw, Keyword::ProtectionFromMatching(f)
+                    if self.evaluate_requirement_on_card(f, card, target_card.controller))
+            {
+                return true;
+            }
+            // CR 702.16j — protection from a card type (Serra's Emissary
+            // grant): can't be targeted by a spell of that type.
+            if let Keyword::ProtectionFromCardType(t) = kw
+                && card.definition.card_types.contains(t)
+            {
+                return true;
+            }
+            // "Can't be targeted by nongreen spells opponents control"
+            // (Thrun): an opponent's spell that shares none of the listed
+            // colors can't target this. Own spells are unaffected.
+            if let Keyword::HexproofExceptColors(colors) = kw
+                && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
+                && !colors.iter().any(|c| spell_colors.contains(c))
+            {
+                return true;
+            }
+        }
+        false
+    }
+
     /// CR 702.78 — the spell has conspire: printed, or granted by a
     /// `GrantConspireToSpells` static its caster controls (Wort).
     pub fn spell_has_conspire(&self, p: usize, card: &CardInstance) -> bool {
@@ -9639,183 +9814,14 @@ impl GameState {
         }
 
         // CR 702.16: Protection from [color] prevents targeting by spells
-        // of that color. Check the spell's colors against the target's
-        // protection keywords.
+        // of that color (`spell_protection_blocks`).
         if let Some(Target::Permanent(cid)) = target
-            && let Some(target_card) = self.battlefield_find(cid)
-            && target_card.controller != p
+            && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
+            && self.spell_protection_blocks(&card, p, cid)
         {
-            let spell_colors = card.definition.cost.color_set();
-            // Read computed keywords so granted protection (Mother of Runes,
-            // Gods Willing) is honored, not just printed protection.
-            let cp = self.computed_permanent(cid);
-            let kws: &[Keyword] = match &cp {
-                Some(cp) => cp.keywords(),
-                None => &target_card.definition.keywords,
-            };
-            for kw in kws {
-                if let Keyword::Protection(prot_color) = kw
-                    && spell_colors.contains(prot_color)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16h — protection from colored spells (Emrakul).
-                if matches!(kw, Keyword::ProtectionFromColoredSpells)
-                    && !spell_colors.is_empty()
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // Protection from ALL spells (Emrakul, the World Anew), or from
-                // everything (Hexdrinker level 8+, Progenitus).
-                if matches!(kw, Keyword::ProtectionFromSpells | Keyword::ProtectionFromEverything) {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from instants (Hexdrinker level 3-7):
-                // an instant spell can't target it.
-                if matches!(kw, Keyword::ProtectionFromInstants)
-                    && card.definition.card_types.contains(&CardType::Instant)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // Lurker — "can't be the target of spells unless it attacked
-                // or blocked this turn". Abilities still reach it.
-                if matches!(kw, Keyword::CantBeTargetedBySpellsUnlessAttackedOrBlocked)
-                    && self
-                        .battlefield_find(cid)
-                        .is_some_and(|c| !c.attacked_this_turn && !c.blocked_this_turn)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // "Creatures can't be the targets of spells" (Dense Foliage) —
-                // no spell may target it; abilities are unaffected.
-                if matches!(kw, Keyword::CantBeTargetedBySpells) {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // "…of blue or black spells" (Karplusan Strider).
-                if let Keyword::CantBeTargetedBySpellsMatching(f) = kw
-                    && self.evaluate_requirement_on_card(f, &card, p)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // "Can't be the target of Aura spells" (Bartel Runeaxe,
-                // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
-                if matches!(kw, Keyword::CantBeTargetedByAuras)
-                    && card
-                        .definition
-                        .subtypes
-                        .enchantment_subtypes
-                        .contains(&crate::card::EnchantmentSubtype::Aura)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from a spell subtype (Kitsune
-                // Riftwalker's "protection from Arcane").
-                if let Keyword::ProtectionFromSpellSubtype(sub) = kw
-                    && card.definition.subtypes.spell_subtypes.contains(sub)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from each mana value other than N
-                // (Haktos): can't be targeted by a spell whose mana value
-                // isn't N.
-                if let Keyword::ProtectionFromManaValueExcept(n) = kw
-                    && card.definition.cost.cmc() != *n
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from each mana value of a parity
-                // (Lavabrink Venturer): can't be targeted by a spell whose
-                // mana value matches the chosen odd/even quality.
-                if let Keyword::ProtectionFromManaValueParity { odd } = kw
-                    && (card.definition.cost.cmc() % 2 == 1) == *odd
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from multicolored: can't be targeted
-                // by a spell that is two or more colors.
-                if matches!(kw, Keyword::ProtectionFromMulticolored)
-                    && spell_colors.len() >= 2
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 — protection from monocolored: can't be targeted by
-                // a spell that is exactly one color.
-                if matches!(kw, Keyword::ProtectionFromMonocolored)
-                    && spell_colors.len() == 1
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16 / 903.4 — protection from each colour outside the
-                // controller's commander identity (Commander's Plate): a spell
-                // carrying one such colour can't target it. Colourless spells
-                // have no colour outside the identity and get through.
-                if matches!(kw, Keyword::ProtectionFromColorsOutsideCommanderIdentity) && {
-                    let identity = self.commander_identity_set(target_card.controller);
-                    spell_colors.iter().any(|c| !identity.contains(c))
-                } {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16b — protection from a *filtered* quality
-                // (Empty-Shrine Kannushi, Pledge of Loyalty): the spell is
-                // still in transient ownership, so match it card-side.
-                if (matches!(kw, Keyword::ProtectionFromChosenPlayer)
-                    && target_card.chosen_player == Some(p))
-                    || matches!(kw, Keyword::ProtectionFromMatching(f)
-                        if self.evaluate_requirement_on_card(f, &card, target_card.controller))
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // CR 702.16j — protection from a card type (Serra's Emissary
-                // grant): can't be targeted by a spell of that type.
-                if let Keyword::ProtectionFromCardType(t) = kw
-                    && card.definition.card_types.contains(t)
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-                // "Can't be targeted by nongreen spells opponents control"
-                // (Thrun): an opponent's spell that shares none of the listed
-                // colors can't target this. Own spells are unaffected.
-                if let Keyword::HexproofExceptColors(colors) = kw
-                    && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
-                    && !colors.iter().any(|c| spell_colors.contains(c))
-                {
-                    cast_census::rollback(line!());
-                    self.players[p].hand.push(card);
-                    return Err(GameError::TargetHasProtection(cid));
-                }
-            }
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::TargetHasProtection(cid));
         }
 
         // CR 702.11e — hexproof from [color]: this object can't be targeted

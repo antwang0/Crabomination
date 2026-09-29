@@ -28514,6 +28514,10 @@ impl GameState {
                 self.battlefield_find(*tid).is_none()
                     || filter_fails(self)
                     || self.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
+                    // CR 702.16b — protection gained since the cast (Mother
+                    // of Runes in response) makes it an illegal target too.
+                    || self.battlefield_find(*tid).is_some_and(|c| c.controller != caster)
+                        && self.spell_protection_blocks(&card, caster, *tid)
             } else if let Target::Player(p) = t
                 && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
             {
@@ -28565,6 +28569,9 @@ impl GameState {
                 gone
                     || filter_fail
                     || g.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
+                    || matches!(t, Target::Permanent(tid)
+                        if g.battlefield_find(*tid).is_some_and(|c| c.controller != caster)
+                            && g.spell_protection_blocks(&card, caster, *tid))
             };
             let all_illegal = slot_illegal(self, 0, t0)
                 && additional_targets

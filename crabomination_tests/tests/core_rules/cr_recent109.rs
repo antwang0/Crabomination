@@ -320,3 +320,41 @@ fn a_remove_counter_cost_is_paid_on_activation() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 4);
 }
+
+/// CR 702.16b / 608.2b — protection from a colour granted in response makes
+/// the spell's target illegal as it resolves: Mother of Runes answers a
+/// Murder aimed at a Bear, the Murder fizzles into the graveyard and the Bear
+/// lives. (The resolution re-check read Shroud and Hexproof, never
+/// protection, so the Bear died with protection from black; the colour pick
+/// also named the densest opposing colour rather than the Murder's.)
+#[test]
+fn protection_granted_in_response_fizzles_the_spell() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let mother = g.add_card_to_battlefield(0, catalog::mother_of_runes());
+    g.clear_sickness(mother);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A red board on the other side: the densest opposing colour isn't black.
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::goblin_guide());
+    }
+    let murder = g.add_card_to_hand(1, catalog::murder());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Murder");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mother, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("Mother of Runes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "Murder fizzled");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Protection(Color::Black)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == murder));
+}
