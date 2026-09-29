@@ -700,9 +700,17 @@ cut, and the first two would make the third and fourth reviewable:
 source annotations (linked exile, cipher, foretell, …).
 
 ### Card Tooltip with Full Oracle Text
-Hovering over a card shows its Scryfall art via the peek popup, but not the
-full rules text.  A tooltip panel (shown on hover or via a dedicated key)
-displaying the oracle text would reduce the need to look cards up externally.
+✅ Shipped 2026-09-29 — the hover preview and the Alt peek print the card's
+Oracle text (`card::oracle`, compiled in from `assets/oracle.tsv`): type
+line and stats, every paragraph, both halves of a split / adventure /
+prepare card, the shown face of a double-faced one, and a reminder for each
+keyword the text doesn't explain. Tokens the catalog can't name read from
+the view (type line, keywords, the engine's ability labels). Residual ⏳:
+the table covers 22,144 of the catalog's 25,884 names (the rest are
+synthesized cards Scryfall doesn't know) and goes stale as the catalog
+grows — a newer card falls back to the phrased lines until
+`CRAB_BLESS_ORACLE=1 cargo test -p crabomination_client oracle` rebuilds
+it from `scripts/.scryfall_cache.json`.
 
 ### Graveyard Order and Timestamps
 The graveyard browser shows cards as a flat unordered list.  Preserving

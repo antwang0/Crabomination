@@ -493,7 +493,9 @@ pub fn spawn_mana_gallery(
 }
 
 /// `--hover-card NAME`: hover that card as the pointer would
-/// (`card::observers::on_card_over`), once its entity is up and settled.
+/// (`card::observers::on_card_over`), once its entity is up and settled, and
+/// put the window's cursor on it for the hover preview beside it.
+#[allow(clippy::type_complexity)]
 pub fn hover_card_for_screenshot(
     mut commands: Commands,
     args: Res<HarnessArgs>,
@@ -502,6 +504,8 @@ pub fn hover_card_for_screenshot(
         (Entity, &crate::card::GameCardId, &Transform, &mut crate::card::CardHoverLift),
         (With<crate::card::BattlefieldCard>, Without<crate::card::Animating>),
     >,
+    mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     mut done: Local<bool>,
 ) {
     let (Some(name), Some(cv)) = (args.hover_card.as_deref(), view.0.as_ref()) else { return };
@@ -516,6 +520,13 @@ pub fn hover_card_for_screenshot(
     lift.base_translation = transform.translation - Vec3::Y * lift.current_lift;
     lift.target_lift = crate::card::BF_HOVER_LIFT;
     commands.entity(entity).insert(crate::card::CardHovered);
+    // Only the window's own record of the cursor, unseen by the winit
+    // sync: the desktop's pointer stays put (Wayland refuses to move it).
+    if let (Ok(mut window), Ok((camera, at))) = (windows.single_mut(), camera.single())
+        && let Ok(pos) = camera.world_to_viewport(at, lift.base_translation)
+    {
+        window.bypass_change_detection().set_cursor_position(Some(pos));
+    }
     *done = true;
 }
 

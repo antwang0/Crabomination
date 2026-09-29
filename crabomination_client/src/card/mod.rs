@@ -4,6 +4,7 @@ pub mod framing;
 pub mod layout;
 mod mesh;
 pub mod mipmap;
+pub mod oracle;
 pub mod proxy;
 mod observers;
 pub mod spawn;

@@ -693,6 +693,7 @@ pub fn peek_popup(
     keyboard: Res<ButtonInput<KeyCode>>,
     hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
     card_names: Res<crate::game::CardNames>,
+    view: Res<CurrentView>,
     existing_popup: Query<(Entity, &PeekPopup)>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
@@ -725,7 +726,8 @@ pub fn peek_popup(
         .as_ref()
         .and_then(|d| d.back_face.as_ref())
         .map(|b| scryfall::card_back_face_asset_path(b.name));
-    let info = name.as_deref().map(hover_info_lines).unwrap_or_default();
+    let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id.0));
+    let info = name.as_deref().map(|n| card_info_lines(n, permanent)).unwrap_or_default();
 
     let texture: Handle<Image> = asset_server.load(&front_texture.0);
     // Full-screen overlay, flex-centered, with dim background.
@@ -852,13 +854,6 @@ pub(crate) fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: 
     (x, y)
 }
 
-/// Rules-text lines for the hover preview's info panel, resolved from the
-/// catalog by card name. Since cards render art-only (no printed text box),
-/// this is where a player learns what a hovered card actually does: the
-/// type line, P/T, and each printed keyword with its CR reminder text
-/// ("Menace — can only be blocked by two or more creatures."). Returns
-/// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
-/// the name isn't in the catalog (tokens, fictional placeholders).
 /// Live characteristic-override notes for a battlefield permanent whose
 /// computed state diverges from its printed card (continuous effects —
 /// Ichthyomorphosis, Heliod's Punishment, Turn to Frog). Appended below the
@@ -916,10 +911,98 @@ fn live_override_lines(
     out
 }
 
+/// Rules-text lines for the hover preview's info panel, by card name.
+/// Since cards render art-only (no printed text box), this is where a player
+/// learns what a hovered card actually does: its printed Oracle text
+/// (`card::oracle`) with a reminder for each keyword ("Menace — can only be
+/// blocked by two or more creatures."), or — for a card the Oracle table
+/// doesn't hold — its abilities phrased from the catalog. Returns
+/// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
+/// the name isn't in the catalog (fictional placeholders).
 fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
-    let Some(def) = crabomination::catalog::lookup_by_name(name) else {
+    let Some(mut def) = crabomination::catalog::lookup_by_name(name) else {
         return Vec::new();
     };
+    // A double-faced card shown on its back face reads as the back face.
+    if def.back_face.as_ref().is_some_and(|back| back.name == name)
+        && let Some(back) = def.back_face.take()
+    {
+        def = *back;
+    }
+    match crate::card::oracle::printed(name) {
+        Some(faces) => printed_lines(faces, &def),
+        None => phrased_lines(&def),
+    }
+}
+
+/// The info lines for a card the Oracle table holds: each face's type line
+/// (dimmed) and rules text as printed — both halves of a split or adventure
+/// card, each under its name and cost — then the reminder for every keyword
+/// the printed text names without explaining.
+fn printed_lines(faces: &[crate::card::oracle::OracleFace], def: &crabomination::card::CardDefinition) -> Vec<(String, bool)> {
+    let mut lines: Vec<(String, bool)> = Vec::new();
+    for face in faces {
+        if faces.len() > 1 {
+            lines.push((format!("{} {}", face.name, face.cost).trim_end().to_string(), false));
+        }
+        let type_line = match face.stats {
+            "" => face.type_line.to_string(),
+            stats => format!("{}  ·  {stats}", face.type_line),
+        };
+        lines.push((type_line, true));
+        lines.extend(face.paragraphs().map(|p| (p.to_string(), false)));
+    }
+    for kw in &def.keywords {
+        let label = crate::systems::counter_tooltip::keyword_label(kw);
+        let explained = faces.iter().flat_map(|f| f.paragraphs()).any(|p| p.contains(&format!("{label} (")));
+        if let Some(reminder) = crate::systems::counter_tooltip::keyword_reminder(kw)
+            && !explained
+        {
+            lines.push((format!("{label} — {reminder}"), true));
+        }
+    }
+    lines
+}
+
+/// The info lines for a token the catalog can't name (a Goblin, a Soldier):
+/// its type line and stats, its keywords, then its abilities as the engine
+/// labels them.
+fn token_lines(pv: &crabomination::net::PermanentView) -> Vec<(String, bool)> {
+    let types: Vec<String> = pv.card_types.iter().map(|t| format!("{t:?}")).collect();
+    let mut type_line = format!("Token {}", types.join(" "));
+    if !pv.creature_types.is_empty() {
+        type_line.push_str(" — ");
+        type_line.push_str(&pv.creature_types.join(" "));
+    }
+    if pv.is_creature() {
+        type_line.push_str(&format!("  ·  {}/{}", pv.base_power, pv.base_toughness));
+    }
+    let mut lines = vec![(type_line, true)];
+    for kw in &pv.keywords {
+        let label = crate::systems::counter_tooltip::keyword_label(kw);
+        lines.push(match crate::systems::counter_tooltip::keyword_reminder(kw) {
+            Some(reminder) => (format!("{label} — {reminder}"), false),
+            None => (label, false),
+        });
+    }
+    let abilities = pv.static_ability_labels.iter().chain(&pv.triggered_ability_labels).chain(&pv.activated_ability_labels);
+    lines.extend(abilities.map(|a| (a.clone(), false)));
+    lines
+}
+
+/// The info lines for the card `name`, falling back to what the view says of
+/// it when it is a token the catalog doesn't hold.
+fn card_info_lines(name: &str, permanent: Option<&crabomination::net::PermanentView>) -> Vec<(String, bool)> {
+    match (hover_info_lines(name), permanent) {
+        (lines, Some(pv)) if lines.is_empty() && pv.is_token => token_lines(pv),
+        (lines, _) => lines,
+    }
+}
+
+/// The info lines for a card the Oracle table doesn't hold (a token, a card
+/// newer than the table): the type line, keyword reminders, and each ability
+/// phrased from its shape.
+fn phrased_lines(def: &crabomination::card::CardDefinition) -> Vec<(String, bool)> {
     let mut lines: Vec<(String, bool)> = Vec::new();
     let types = def
         .card_types
@@ -1113,13 +1196,13 @@ pub fn hover_card_preview(
     view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
-    mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
+    mut existing: Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>,
     ui_scale: Res<UiScale>,
     mut info_cache: Local<Option<(String, Option<crabomination::card::CardId>, Vec<(String, bool)>)>>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
-    let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview)>| {
-        for (e, _, _) in existing.iter() {
+    let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>| {
+        for (e, ..) in existing.iter() {
             commands.entity(e).despawn();
         }
     };
@@ -1157,8 +1240,9 @@ pub fn hover_card_preview(
         place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, cursor, path, info);
         return;
     }
+    let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
     let mut info = card_id
-        .map(|id| hover_info_lines(&card_names.get(id)))
+        .map(|id| card_info_lines(&card_names.get(id), permanent))
         .unwrap_or_default();
     // Double-faced cards: the other face is on the Alt peek — say so here,
     // since this small preview only shows the front.
@@ -1170,9 +1254,7 @@ pub fn hover_card_preview(
     }
     // Append live characteristic-override notes (type-changing / ability-
     // stripping continuous effects) from the current battlefield view.
-    if let (Some(id), Some(cv)) = (card_id, view.0.as_ref())
-        && let Some(pv) = cv.battlefield.iter().find(|p| p.id == id)
-    {
+    if let Some(pv) = permanent {
         info.extend(live_override_lines(
             &pv.name,
             pv.lost_all_abilities,
@@ -1199,7 +1281,7 @@ pub fn hover_card_preview(
 #[allow(clippy::too_many_arguments)]
 fn place_hover_preview(
     commands: &mut Commands,
-    existing: &mut Query<(Entity, &mut Node, &HoverCardPreview)>,
+    existing: &mut Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>,
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     ui_scale: &UiScale,
@@ -1208,34 +1290,31 @@ fn place_hover_preview(
     path: String,
     info: Vec<(String, bool)>,
 ) {
-    // Estimated panel height so the anchor keeps the whole column on screen
-    // (reminder lines wrap to ~2 rows at this width).
-    let info_height: f32 = if info.is_empty() {
-        0.0
-    } else {
-        16.0 + info
-            .iter()
-            .map(|(text, _)| if text.len() > 44 { 34.0 } else { 18.0 })
-            .sum::<f32>()
+    let shown = existing.single_mut().ok();
+    let same = shown.as_ref().is_some_and(|(_, _, marker, _)| marker.path == path && marker.info == info);
+    // The column's height, so the anchor keeps all of it on screen: measured
+    // once it has been laid out, estimated the frame it is built (a line
+    // wraps about every 30 characters at this width).
+    let height = match &shown {
+        Some((.., computed)) if same && computed.size().y > 0.0 => computed.size().y * computed.inverse_scale_factor(),
+        _ if info.is_empty() => HOVER_PREVIEW_HEIGHT,
+        _ => {
+            let rows = |text: &str| (text.chars().count() as f32 / 30.0).ceil().max(1.0);
+            HOVER_PREVIEW_HEIGHT + 16.0 + info.iter().map(|(text, _)| rows(text) * 15.0 + 3.0).sum::<f32>()
+        }
     };
 
     // Window px to the UI px the preview is laid out in.
     let (cursor, win) = (cursor / ui_scale.0, Vec2::new(window.width(), window.height()) / ui_scale.0);
-    let (x, y) = preview_anchor(
-        cursor,
-        win,
-        HOVER_PREVIEW_WIDTH,
-        HOVER_PREVIEW_HEIGHT + info_height,
-        HOVER_PREVIEW_MARGIN,
-    );
+    let (x, y) = preview_anchor(cursor, win, HOVER_PREVIEW_WIDTH, height, HOVER_PREVIEW_MARGIN);
 
-    if let Ok((entity, mut node, marker)) = existing.single_mut() {
+    if let Some((entity, mut node, ..)) = shown {
         if node.left != Val::Px(x) || node.top != Val::Px(y) {
             node.left = Val::Px(x);
             node.top = Val::Px(y);
         }
         // Same card, same notes — repositioning above is all we need.
-        if marker.path == path && marker.info == info {
+        if same {
             return;
         }
         // Hovered card changed, or a live note did (a commander connected
@@ -2188,17 +2267,43 @@ pub fn reveal_popup(
 #[cfg(test)]
 mod tests {
     use super::{
-        hover_info_lines, live_override_lines, preview_anchor, HOVER_PREVIEW_HEIGHT,
+        hover_info_lines, live_override_lines, phrased_lines, preview_anchor, HOVER_PREVIEW_HEIGHT,
         HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
     };
     use bevy::math::Vec2;
     use crabomination::card::CreatureType;
 
-    /// An Unearth ability's hover line is annotated as a sorcery-speed
-    /// graveyard ability.
+    /// A card the Oracle table holds reads as printed: the type line dimmed,
+    /// the rules text in full.
+    #[test]
+    fn hover_lines_print_the_oracle_text() {
+        let lines = hover_info_lines("Lightning Bolt");
+        let want = [("Instant", true), ("Lightning Bolt deals 3 damage to any target.", false)];
+        assert_eq!(lines, want.map(|(t, dim)| (t.to_string(), dim)));
+    }
+
+    /// An adventurer shows both halves, each under its name and cost.
+    #[test]
+    fn hover_lines_show_both_halves_of_an_adventure() {
+        let lines = hover_info_lines("Bonecrusher Giant");
+        let texts: Vec<&str> = lines.iter().map(|(t, _)| t.as_str()).collect();
+        assert!(texts.contains(&"Bonecrusher Giant {2}{R}") && texts.contains(&"Stomp {1}{R}"), "{texts:?}");
+    }
+
+    /// A double-faced card shown on its back face reads as the back face,
+    /// its keyword reminders included.
+    #[test]
+    fn hover_lines_follow_the_face_shown() {
+        let lines = hover_info_lines("Insectile Aberration");
+        assert_eq!(lines[0], ("Creature — Human Insect  ·  3/2".to_string(), true));
+        assert!(lines.iter().any(|(t, dim)| *dim && t.starts_with("Flying — ")), "{lines:?}");
+    }
+
+    /// An Unearth ability's phrased line (a card newer than the Oracle
+    /// table) is annotated as a sorcery-speed graveyard ability.
     #[test]
     fn unearth_ability_line_notes_graveyard_and_sorcery_speed() {
-        let lines = hover_info_lines("Viscera Dragger");
+        let lines = phrased_lines(&crabomination::catalog::lookup_by_name("Viscera Dragger").unwrap());
         assert!(
             lines.iter().any(|(t, _)| t.contains("from your graveyard")
                 && t.contains("sorcery speed only")),
