@@ -1797,6 +1797,15 @@ pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
                         creature_types: vec![CreatureType::Spirit],
                         ..Default::default()
                     },
+                    // "This token can't block or be blocked by non-Spirit creatures."
+                    keywords: vec![
+                        Keyword::CantBlockMatching(Box::new(
+                            crate::card::SelectionRequirement::HasCreatureType(CreatureType::Spirit).negate(),
+                        )),
+                        Keyword::CantBeBlockedExceptBy(Box::new(
+                            crate::card::SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+                        )),
+                    ],
                     ..Default::default()
                 }),
             },

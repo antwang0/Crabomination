@@ -1416,6 +1416,10 @@ fn pilot_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Pilot],
             ..Default::default()
         },
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This token saddles Mounts and crews Vehicles as though its power were 2 greater.",
+            effect: crate::effect::StaticEffect::CrewSaddlePowerBonus { applies_to: crate::effect::Selector::This, amount: 2 },
+        }],
         ..Default::default()
     }
 }
