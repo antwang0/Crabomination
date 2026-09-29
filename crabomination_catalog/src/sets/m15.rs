@@ -1845,7 +1845,11 @@ pub fn sliver_hive() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(1)),
+                    // "Spend this mana only to cast a Sliver spell."
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::AnyOneColor(Value::Const(1))),
+                        crate::mana::SpendRestriction::CreatureOfType(CreatureType::Sliver),
+                    ),
                 },
                 ..Default::default()
             },

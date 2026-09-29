@@ -166,3 +166,27 @@ fn cr_614_9_heroic_sacrifice_covers_you_and_creatures_only() {
     bolt_at(&mut g, Target::Permanent(pw));
     assert_eq!(g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty), loyalty - 3, "a planeswalker isn't covered");
 }
+
+/// CR 106.6 — "Spend this mana only to …" riders are restricted mana:
+/// Sliver Hive's colored mana (Sliver spells) and Cultivator Drone's {C}
+/// (colorless spells and abilities) float restricted, not free.
+#[test]
+fn cr_106_6_printed_spend_restrictions_float_restricted() {
+    for (def, ability) in [(catalog::sliver_hive(), 1usize), (catalog::cultivator_drone(), 0)] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(id);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: ability,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for mana");
+        assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
+        assert_eq!(g.players[0].mana_pool.total(), 0);
+    }
+}

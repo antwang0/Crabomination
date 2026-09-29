@@ -130,7 +130,12 @@ pub fn cultivator_drone() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::ONE),
+                // "Spend this mana only to cast a colorless spell, activate an
+                // ability of a colorless permanent, …"
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::ColorlessSpellsOrAbilities,
+                ),
             },
             ..Default::default()
         }],

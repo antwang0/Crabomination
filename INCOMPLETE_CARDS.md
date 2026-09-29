@@ -2342,3 +2342,4 @@ library-exile event.
 | Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
 | Jace, Vryn's Prodigy | the −9 emblem mills EACH opponent five, not one target opponent | an emblem trigger with a player target is untested ground; the ultimate is rarely reached |
 | Rayne, Academy Chancellor | only a PERMANENT of yours being targeted by an opponent draws; "you … become the target" doesn't | `YourPermanentTargetedByOpponent` binds permanents; a player-target twin scope is missing |
+| Jegantha, Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("can't be spent on generic costs", "artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
