@@ -1832,6 +1832,9 @@ pub enum Keyword {
     /// than shroud — abilities still reach it, and it isn't protection, so
     /// damage/enchant/block are unaffected.
     CantBeTargetedBySpells,
+    /// "This can't be the target of [filter] spells" (Karplusan Strider's
+    /// "blue or black spells") — `CantBeTargetedBySpells` for matching spells.
+    CantBeTargetedBySpellsMatching(Box<SelectionRequirement>),
     /// CR 704.5g — "can't be destroyed by lethal damage unless lethal damage
     /// dealt by a single source is marked on it" (Ogre Enforcer). Read against
     /// `CardInstance::max_damage_from_single_source` in the lethal-damage SBA.

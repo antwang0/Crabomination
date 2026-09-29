@@ -9703,6 +9703,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // "…of blue or black spells" (Karplusan Strider).
+                if let Keyword::CantBeTargetedBySpellsMatching(f) = kw
+                    && self.evaluate_requirement_on_card(f, &card, p)
+                {
+                    cast_census::rollback(line!());
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // "Can't be the target of Aura spells" (Bartel Runeaxe,
                 // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
                 if matches!(kw, Keyword::CantBeTargetedByAuras)

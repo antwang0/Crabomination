@@ -5951,9 +5951,7 @@ a specific card's ruling needs the choice.
 
 ## "Can't be the target of [filtered] spells" (2026-09-29, `014veptd`)
 
-Karplusan Strider ("blue or black spells") ships as protection from blue and
-black (blocks damage, blocking and enchanting too); Autumn's Veil's rider is
-the same shape. Needs `Keyword::CantBeTargetedBySpellsMatching(filter)` beside
-`CantBeTargetedBySpells` in the cast-time target gate (`actions.rs`). Neither
-is in a pool or pod deck.
-
+Autumn's Veil's "creatures you control can't be the targets of blue or black
+spells this turn" rider still needs a turn-scoped grant of
+`Keyword::CantBeTargetedBySpellsMatching` (Karplusan Strider has the keyword
+now). Not in a pool or pod deck.

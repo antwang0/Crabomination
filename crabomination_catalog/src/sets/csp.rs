@@ -333,11 +333,11 @@ pub fn kjeldoran_outrider() -> CardDefinition {
 /// Karplusan Strider — untouchable by the two colours that want it gone.
 pub fn karplusan_strider() -> CardDefinition {
     CardDefinition {
-        keywords: vec![
-            Keyword::ProtectionFromMatching(Box::new(
-                R::HasColor(Color::Blue).or(R::HasColor(Color::Black)),
-            )),
-        ],
+        // "Can't be the target of blue or black spells" — not protection:
+        // blue or black damage, blockers and abilities still reach it.
+        keywords: vec![Keyword::CantBeTargetedBySpellsMatching(Box::new(
+            R::HasColor(Color::Blue).or(R::HasColor(Color::Black)),
+        ))],
         ..creature("Karplusan Strider", cost(&[generic(3), g()]), vec![CreatureType::Yeti], 3, 4)
     }
 }

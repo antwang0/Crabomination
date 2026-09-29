@@ -453,3 +453,37 @@ fn frostweb_spider_counters_a_flying_blocker_target() {
         assert_eq!(n, want, "{}", attacker_def().name);
     }
 }
+
+/// Karplusan Strider: "can't be the target of blue or black spells" — not
+/// protection (it shipped as protection from blue and black). Unsummon can't
+/// target it; a blue creature's ability (Prodigal Sorcerer) can.
+#[test]
+fn karplusan_strider_dodges_only_blue_and_black_spells() {
+    let mut g = two_player_game();
+    let yeti = g.add_card_to_battlefield(1, catalog::karplusan_strider());
+    let cast = |g: &mut GameState, id: CardId| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(yeti)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(cast(&mut g, unsummon).is_err(), "a blue spell can't target it");
+    let tim = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim,
+        ability_index: 0,
+        target: Some(Target::Permanent(yeti)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("a blue ability can");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(yeti).unwrap().damage, 1);
+}
