@@ -24,10 +24,13 @@ const SHROUD_Y: f32 = 1.0;
 pub fn shroud_rect(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, Vec3) {
     use crate::card::{CARD_HEIGHT, CARD_WIDTH};
     let (mut min, mut max) = crate::card::layout::seat_board_outline(seat, viewer, n_seats);
+    // The command zone's two cards (a commander pair) bound it.
+    let command = |slot| crate::card::command_zone_card_transform(seat, viewer, n_seats, slot, 2).translation;
     let piles = [
         crate::card::graveyard_position(seat, viewer, n_seats),
         crate::card::deck_position(seat, viewer, n_seats),
-        crate::card::command_zone_card_transform(seat, viewer, n_seats, 0).translation,
+        command(0),
+        command(1),
     ];
     // Cards lie flat, so a pile spans half a card either way in X and Z
     // (the far-edge command zone draws at 1.3x — cover that too).
@@ -311,17 +314,21 @@ mod tests {
                 let rect = shroud_rect(seat, viewer, 4);
                 let (bmin, bmax) = crate::card::layout::seat_board_outline(seat, viewer, 4);
                 assert!(inside(bmin, rect) && inside(bmax, rect), "board of {seat}");
+                // Both cards of a commander pair.
+                let command = |s, slot| crate::card::command_zone_card_transform(s, viewer, 4, slot, 2).translation;
                 for p in [
                     crate::card::graveyard_position(seat, viewer, 4),
                     crate::card::deck_position(seat, viewer, 4),
-                    crate::card::command_zone_card_transform(seat, viewer, 4, 0).translation,
+                    command(seat, 0),
+                    command(seat, 1),
                 ] {
                     assert!(inside(p, rect), "pile {p:?} of seat {seat} (viewer {viewer})");
                 }
                 // A different opponent's command zone is not shrouded.
                 let other = (0..4).find(|s| *s != viewer && *s != seat).unwrap();
-                let cz = crate::card::command_zone_card_transform(other, viewer, 4, 0).translation;
-                assert!(!inside(cz, rect), "seat {seat}'s shroud spills onto seat {other}");
+                for cz in [command(other, 0), command(other, 1)] {
+                    assert!(!inside(cz, rect), "seat {seat}'s shroud spills onto seat {other}");
+                }
             }
         }
     }

@@ -25,6 +25,29 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Two commanders in the command zone (2026-09-30) — shipped
+
+Read off layout-harness screenshots (`--layout-fixture 2|3|4 --partners`,
+which seats the pod's two-commander decks); card sizes from
+`framing::tests::budget`.
+
+- ✅ **A Partner pair (or a commander and its Background) shows both
+  cards.** Every slot of a seat's command zone sat on one spot, a card's
+  thickness apart, so the second commander hid the first and their cost
+  chips overlapped. The zone is a lane now (`card::layout::command_lane`):
+  the second card shows half its length past the first — name bar and art
+  — toward the table centre in a pod; a fuller zone (schemes, conspiracies)
+  shares the same reach. A whole card beside it ran under the HUD's side
+  columns from a pod's side seats and cost 99 → 94 px viewer cards at
+  1920x1080; half a card leaves every framing budget unchanged.
+- ✅ **1v1 Commander's zone moved to the right-hand pile strip**, level
+  with the graveyard across the board, clear of exile. It sat at x −11,
+  inside the board, under the row's end card and the graveyard pile.
+- ✅ Each cost chip sits past the end of its card that shows — the top of
+  one its partner covers — and past a far seat's card rather than on it
+  (a far card's bottom faces up the screen). A partner cast from the zone
+  moves the other into the first slot.
+
 ## Token faces, lighter textures, nested rings (2026-09-29) — shipped
 
 Read off layout-harness screenshots (`--tokens`, duel and pod; `--hover-card`);

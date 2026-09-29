@@ -422,8 +422,9 @@ pub fn sample_board(n_seats: usize, hand_zoom: f32) -> Vec<Placed> {
             ..card(seat, Role::Pile, flat(deck_position(seat, 0, n_seats)))
         });
         out.push(card(seat, Role::Pile, flat(graveyard_position(seat, 0, n_seats))));
-        if n_seats > 2 {
-            out.push(card(seat, Role::Pile, command_zone_card_transform(seat, 0, n_seats, 0)));
+        // A commander pair, both cards — a 1v1 Commander game's too.
+        for slot in 0..2 {
+            out.push(card(seat, Role::Pile, command_zone_card_transform(seat, 0, n_seats, slot, 2)));
         }
     }
     out.push(card(1, Role::Pile, flat(exile_position(n_seats))));

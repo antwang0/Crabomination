@@ -230,6 +230,10 @@ pub fn risen_tallies(
 #[derive(Component)]
 pub struct CommandZoneCostBadge(pub CardId);
 
+/// How far a cost chip's centre sits past the card edge it labels: half the
+/// chip's height and a small gap.
+const CHIP_CLEARANCE: f32 = 12.0;
+
 /// Every commander in every command zone with its badge label. Conspiracies
 /// and Vanguards sharing the zone aren't commanders and get none.
 fn command_zone_cost_labels(cv: &ClientView) -> HashMap<CardId, String> {
@@ -260,18 +264,32 @@ pub fn sync_command_zone_cost_badges(
     let desired = view.0.as_ref().map(command_zone_cost_labels).unwrap_or_default();
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
 
-    // Anchor under the card's bottom edge.
-    let bottom_local = Vec3::new(0.0, -CARD_HEIGHT / 2.0, 0.0);
+    // Each card's end that shows (`command_zone_open_end`): its bottom
+    // edge, or the top of one its partner lies over.
+    let mut open_end: HashMap<CardId, f32> = HashMap::new();
+    if let Some(cv) = view.0.as_ref() {
+        for p in &cv.players {
+            for (slot, entry) in p.command.iter().enumerate() {
+                let end = crate::card::command_zone_open_end(p.seat, cv.your_seat, cv.players.len(), slot, p.command.len());
+                open_end.insert(entry.id(), end);
+            }
+        }
+    }
+    // The chip's centre, just past that end on screen — below a near seat's
+    // card, above a far seat's, whose bottom faces up the screen.
     let anchor_of: HashMap<CardId, Vec2> = cards
         .iter()
         .filter(|(gid, _)| desired.contains_key(&gid.0))
         .filter_map(|(gid, gtf)| {
-            crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(bottom_local))
-                .map(|v| (gid.0, v))
+            let end = open_end.get(&gid.0).copied().unwrap_or(-CARD_HEIGHT / 2.0);
+            let project = |local: Vec3| {
+                crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(local))
+            };
+            let (centre, edge) = (project(Vec3::ZERO)?, project(Vec3::Y * end)?);
+            Some((gid.0, edge + (edge - centre).normalize_or_zero() * CHIP_CLEARANCE))
         })
         .collect();
-    // Centred under the card (the chip's `UiTransform`), just below it.
-    let place = |at: Vec2| (at.x, at.y + 2.0);
+    let place = |at: Vec2| (at.x, at.y);
 
     let mut seen: HashSet<CardId> = HashSet::new();
     for (e, badge, mut node, mut text) in &mut badges {
@@ -309,7 +327,7 @@ pub fn sync_command_zone_cost_badges(
                 border_radius: BorderRadius::all(Val::Px(8.0)),
                 ..default()
             },
-            UiTransform::from_translation(Val2::percent(-50.0, 0.0)),
+            UiTransform::from_translation(Val2::percent(-50.0, -50.0)),
             Pickable::IGNORE,
             GlobalZIndex(BADGE_Z),
             InGameRoot,

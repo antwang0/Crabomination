@@ -5150,10 +5150,12 @@ pub fn sync_flipped_hand_cards(
 /// handling routes through `CastFromCommandZone` (see
 /// `try_cast_from_command_zone`).
 ///
-/// Simple model: each (owner, slot) pair gets one visual entity.
-/// On view sync, despawn entities for slot pairs that are no
-/// longer present and spawn new ones for arrivals. No animations
-/// — cards just appear/disappear with the view update.
+/// Simple model: each command-zone card gets one visual entity.
+/// On view sync, despawn entities for cards that are no longer
+/// present, spawn new ones for arrivals, and move the rest to their
+/// slot of the zone as it now stands (one partner cast, the other
+/// takes the first slot). No animations — cards just appear,
+/// disappear or step over with the view update.
 #[allow(clippy::type_complexity)]
 pub fn sync_command_zone(
     mut commands: Commands,
@@ -5161,16 +5163,19 @@ pub fn sync_command_zone(
     card_assets: Option<Res<crate::card::CardMeshAssets>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
-    existing: Query<(Entity, &GameCardId), With<crate::card::CommandZoneCard>>,
+    mut existing: Query<
+        (Entity, &GameCardId, &mut Transform, &mut crate::card::CardHoverLift),
+        With<crate::card::CommandZoneCard>,
+    >,
 ) {
     let Some(view) = cv.0.as_ref() else { return };
     let Some(card_assets) = card_assets else { return };
     let viewer = view.your_seat;
     let n_seats = view.players.len();
 
-    // Collect every (CardId, owner, slot) currently in any command
-    // zone, so the spawn loop can reuse the layout helper.
-    let mut want: HashMap<CardId, (usize, usize)> = HashMap::new();
+    // Collect every (CardId, owner, slot, zone size) currently in any
+    // command zone, so the spawn loop can reuse the layout helper.
+    let mut want: HashMap<CardId, (usize, usize, usize)> = HashMap::new();
     // `None` = render the card back: CR 315.7 hides another player's
     // face-down hidden-agenda conspiracy, but the object is still there.
     let mut want_name: HashMap<CardId, Option<String>> = HashMap::new();
@@ -5178,35 +5183,38 @@ pub fn sync_command_zone(
         for (slot, entry) in player.command.iter().enumerate() {
             match entry {
                 crabomination::net::HandCardView::Known(k) => {
-                    want.insert(k.id, (player.seat, slot));
+                    want.insert(k.id, (player.seat, slot, player.command.len()));
                     want_name.insert(k.id, Some(k.name.clone()));
                 }
                 crabomination::net::HandCardView::Hidden { id } => {
-                    want.insert(*id, (player.seat, slot));
+                    want.insert(*id, (player.seat, slot, player.command.len()));
                     want_name.insert(*id, None);
                 }
             }
         }
     }
 
-    // Despawn visuals for cards no longer in any command zone.
+    // Despawn visuals for cards no longer in any command zone; move the
+    // rest to their slot.
     let mut have: HashSet<CardId> = HashSet::new();
-    for (entity, game_id) in &existing {
-        if !want.contains_key(&game_id.0) {
+    for (entity, game_id, mut transform, mut lift) in &mut existing {
+        let Some(&(owner, slot, count)) = want.get(&game_id.0) else {
             commands.entity(entity).despawn();
-        } else {
-            have.insert(game_id.0);
-        }
+            continue;
+        };
+        have.insert(game_id.0);
+        let target = crate::card::command_zone_card_transform(owner, viewer, n_seats, slot, count);
+        rest_pile_at(&mut transform, &mut lift, target.translation);
     }
 
     // Spawn fresh visuals for newly-arrived command-zone cards.
-    for (card_id, (owner, slot)) in &want {
+    for (card_id, (owner, slot, count)) in &want {
         if have.contains(card_id) {
             continue;
         }
         let hidden = want_name.get(card_id).map(|n| n.is_none()).unwrap_or(false);
         let name = want_name.get(card_id).cloned().flatten().unwrap_or_default();
-        let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot);
+        let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot, *count);
         let back_mat = card_assets.back_material.clone();
         let front_mat = if hidden {
             back_mat.clone()

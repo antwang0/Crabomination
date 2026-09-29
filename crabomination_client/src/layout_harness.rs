@@ -21,7 +21,9 @@
 //! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
 //! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
 //! `--life-change` swings every seat's life total a
-//! moment before the screenshot, catching the life feedback in flight.
+//! moment before the screenshot, catching the life feedback in flight;
+//! `--partners` makes it a Commander game whose first seats each have two
+//! commanders.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -84,6 +86,9 @@ pub struct HarnessArgs {
     /// `--impacts AGE`: deaths, damage, a dig and mana, fired client-side
     /// AGE seconds before the screenshot ([`fire_impacts_for_screenshot`]).
     pub impacts: Option<f32>,
+    /// `--partners`: the fixture is a Commander game (a 1v1 one at two
+    /// seats) whose first seats have two commanders each ([`fixture_state`]).
+    pub partners: bool,
 }
 
 impl HarnessArgs {
@@ -120,6 +125,7 @@ impl HarnessArgs {
             tokens: args.iter().any(|a| a == "--tokens"),
             life_change: args.iter().any(|a| a == "--life-change"),
             impacts: value("--impacts").and_then(|v| v.parse().ok()),
+            partners: args.iter().any(|a| a == "--partners"),
         }
     }
 
@@ -165,11 +171,21 @@ fn defs(names: &[&str]) -> Vec<crabomination::card::CardDefinition> {
 /// pod), every seat with a full board, paused in seat 0's precombat main
 /// phase with seat 0 holding priority — the match waits on the human, so the
 /// table holds still for a screenshot.
-pub fn fixture_state(seats: usize) -> GameState {
-    let mut g = if seats <= 2 {
+///
+/// With `partners` it is a Commander game at any size, and its first seats
+/// play the pod's two-commander decks (a Partner pair, a commander and its
+/// Background), so both of a seat's commanders sit in its command zone.
+pub fn fixture_state(seats: usize, partners: bool) -> GameState {
+    let mut g = if seats <= 2 && !partners {
         crabomination::demo::build_demo_state_seeded(7)
     } else {
-        let decks = crabomination::pod::pod_field(seats);
+        let mut decks = crabomination::pod::pod_field(seats);
+        if partners {
+            let pairs = crabomination::pod::target_decks().into_iter().filter(|d| d.commanders.len() == 2);
+            for (seat, deck) in decks.iter_mut().zip(pairs) {
+                *seat = deck;
+            }
+        }
         let stock: Vec<crabomination::pod::SeatDeck<'_>> = decks
             .iter()
             .map(|d| crabomination::pod::SeatDeck { commanders: d.commanders, main: d.main })
@@ -928,7 +944,7 @@ mod tests {
     #[test]
     fn fixture_boards_are_full_and_paused_on_the_viewer() {
         for seats in [2, 4] {
-            let g = fixture_state(seats);
+            let g = fixture_state(seats, false);
             assert_eq!(g.players.len(), seats);
             for p in 0..seats {
                 let on_board = g.battlefield.iter().filter(|c| c.controller == p).count();

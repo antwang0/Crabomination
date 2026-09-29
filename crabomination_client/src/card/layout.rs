@@ -91,11 +91,18 @@ const GRAVEYARD_Z: f32 = 4.0;
 /// the two seats' pile strips and clear of both.
 const EXILE_X: f32 = 13.5;
 const EXILE_Z: f32 = 0.0;
-/// Command zone sits between the graveyard and the table edge,
-/// closer to the center, so the commander is always visible.
-/// Each card in the zone stacks slightly along Y for legibility.
-const COMMAND_X: f32 = -11.0;
-const COMMAND_Z: f32 = 4.0;
+/// 1v1 command zone: the seat's right-hand pile strip (its graveyard and
+/// deck are on its left), just clear of the shared exile pile at the
+/// midline. It sat at x −11, inside the board: the row's end card and the
+/// graveyard pile both lay over the commander.
+const COMMAND_Z_1V1: f32 = EXILE_Z + CARD_HEIGHT + 0.2;
+/// How far a second command-zone card sits from the first: half its length
+/// shows past it, name bar and art. A whole card's length, beside it, ran
+/// under the HUD's side columns from a pod's side seats and the fitted camera
+/// pulled back (99 → 94 px viewer cards at 1920x1080; 0.6 of a card cost the
+/// same, and in 1v1 a whole card cost 76 → 74 px at 1280x720). Half a card
+/// leaves every framing budget where it was.
+const COMMAND_STEP: f32 = CARD_HEIGHT * 0.5;
 /// Multiplayer command-zone depth: the outermost slot of the pile strip,
 /// past the deck (z 9.5) with clearance for the deck card (4.2/2) plus the
 /// far-edge commander at 1.3× scale (5.46/2) and margin, beside the hand
@@ -536,45 +543,100 @@ pub fn exile_position(n_seats: usize) -> Vec3 {
     Vec3::new(MULTI_HALF_X + CARD_WIDTH * 0.6, 0.0, EXILE_Z)
 }
 
-/// Transform for a card in `seat`'s command zone, slot `slot`. Cards
-/// are face-up and tilted toward the camera (viewer-side) or
-/// face-up but flipped for opponents (still legible from afar).
-/// Multiple commanders stack with a small Y offset.
+/// Where a seat's command zone lies: its first card, the direction the rest
+/// follow in, how far along it the last card's centre may go, and whether a
+/// later card goes under the one before it. A zone of two cards spans the
+/// reach; a fuller one (schemes, conspiracies) shares it.
+struct CommandLane {
+    first: Transform,
+    dir: Vec3,
+    reach: f32,
+    /// The lane runs toward the cards' tops, so a later card tucks under the
+    /// one before and shows its name bar past that card's top edge. Running
+    /// toward their bottoms, a later card lies on top instead and leaves the
+    /// earlier name bars showing.
+    later_under: bool,
+}
+
+fn command_lane(seat: usize, viewer: usize, n_seats: usize) -> CommandLane {
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        // The seat's right strip, level with its graveyard across the board,
+        // running toward the table centre, where the strip is clear.
+        return CommandLane {
+            first: f.place(Transform::from_xyz(f.strip_x(), 0.0, GRAVEYARD_Z).with_rotation(face_rotation(1.0))),
+            dir: f.rotation() * Vec3::NEG_Z,
+            reach: COMMAND_STEP,
+            later_under: true,
+        };
+    }
+    if n_seats <= 2 {
+        // Level with the seat's graveyard across the board, running out
+        // toward the seat's edge (the exile pile is on the other side).
+        let sign = z_sign(seat, viewer);
+        return CommandLane {
+            first: Transform::from_xyz(sign * DECK_X, 0.0, sign * COMMAND_Z_1V1).with_rotation(face_rotation(sign)),
+            dir: Vec3::Z * sign,
+            reach: COMMAND_STEP,
+            later_under: false,
+        };
+    }
+    if in_far_pile_row(seat, viewer, n_seats) {
+        // The pile row has the land row in front and the seat's hand beside,
+        // so a second card goes back toward the seat's edge.
+        let p = far_pile_slot(seat, viewer, n_seats, 2);
+        return CommandLane {
+            first: Transform::from_xyz(p.x, 0.0, p.z)
+                .with_rotation(face_rotation(-1.0))
+                .with_scale(Vec3::splat(FAR_COMMAND_SCALE)),
+            dir: Vec3::NEG_Z,
+            reach: CARD_HEIGHT * FAR_COMMAND_SCALE * 0.4,
+            later_under: false,
+        };
+    }
+    // Several seats share this edge (5-6 players): the third slot of the
+    // outer pile strip, past the deck toward the player (graveyard z 4.0 →
+    // deck z 9.5 → command z 15.0). A second card steps back toward the
+    // deck, as far as clears it — a quarter of its length.
+    let spot = seat_spot(seat, viewer, n_seats);
+    CommandLane {
+        first: Transform::from_xyz(pile_x(seat, viewer, &spot, CARD_WIDTH * 0.5), 0.0, spot.z_sign * COMMAND_Z_MULTI)
+            .with_rotation(face_rotation(spot.z_sign)),
+        dir: Vec3::Z * -spot.z_sign,
+        reach: COMMAND_Z_MULTI - DECK_Z - CARD_HEIGHT - 0.2,
+        later_under: true,
+    }
+}
+
+/// Transform for the `slot`th of the `count` cards in `seat`'s command zone.
+/// The cards shingle along a lane from the zone's first slot
+/// ([`command_lane`]): of two commanders (a Partner pair, a commander and its
+/// Background) the second shows half its length past the first
+/// ([`COMMAND_STEP`]), and a fuller zone shares the same reach, every card's
+/// name bar showing. Face-up; far-edge seats' flipped so they read from that
+/// side.
 pub fn command_zone_card_transform(
     seat: usize,
     viewer: usize,
     n_seats: usize,
     slot: usize,
+    count: usize,
 ) -> Transform {
-    let y = CARD_THICKNESS * (slot as f32) * 2.0;
-    if let Some(f) = pod_frame(seat, viewer, n_seats) {
-        // The seat's right strip, level with its graveyard across the board.
-        return f.place(
-            Transform::from_xyz(f.strip_x(), y, GRAVEYARD_Z).with_rotation(face_rotation(1.0)),
-        );
-    }
-    if n_seats <= 2 {
-        let sign = z_sign(seat, viewer);
-        let x = if is_viewer(seat, viewer) {
-            COMMAND_X
-        } else {
-            -COMMAND_X + opp_x_offset(seat, viewer, n_seats)
-        };
-        return Transform::from_xyz(x, y, sign * COMMAND_Z).with_rotation(face_rotation(sign));
-    }
-    if in_far_pile_row(seat, viewer, n_seats) {
-        let p = far_pile_slot(seat, viewer, n_seats, 2);
-        return Transform::from_xyz(p.x, y, p.z)
-            .with_rotation(face_rotation(-1.0))
-            .with_scale(Vec3::splat(FAR_COMMAND_SCALE));
-    }
-    let spot = seat_spot(seat, viewer, n_seats);
-    let x = pile_x(seat, viewer, &spot, CARD_WIDTH * 0.5);
-    // Several seats share this edge (5-6 players): the third slot of the
-    // outer pile strip, past the deck toward the player (graveyard z 4.0 →
-    // deck z 9.5 → command z 15.0).
-    let z = spot.z_sign * COMMAND_Z_MULTI;
-    Transform::from_xyz(x, y, z).with_rotation(face_rotation(spot.z_sign))
+    let lane = command_lane(seat, viewer, n_seats);
+    let count = count.max(slot + 1);
+    let pitch = if count > 1 { lane.reach / (count - 1) as f32 } else { 0.0 };
+    let layer = if lane.later_under { count - 1 - slot } else { slot };
+    let mut t = lane.first;
+    t.translation += lane.dir * pitch * slot as f32 + Vec3::Y * CARD_THICKNESS * 2.0 * layer as f32;
+    t
+}
+
+/// The card-local Y of the end of the `slot`th of `count` command-zone cards
+/// that shows, for a label past it: its bottom edge, unless the card beside
+/// it in the lane lies over that end — then its top.
+pub fn command_zone_open_end(seat: usize, viewer: usize, n_seats: usize, slot: usize, count: usize) -> f32 {
+    let lane = command_lane(seat, viewer, n_seats);
+    let bottom_covered = if lane.later_under { slot > 0 } else { slot + 1 < count.max(slot + 1) };
+    if bottom_covered { CARD_HEIGHT / 2.0 } else { -CARD_HEIGHT / 2.0 }
 }
 
 /// Rotation applied to a face-down card belonging to `seat` (deck pile,
@@ -1217,8 +1279,15 @@ mod tests {
             return Rect::from_corners(Vec2::new(a.x, a.z), Vec2::new(b.x, b.z));
         }
         let sp = seat_spot(seat, viewer, n);
+        let half = board_half_for(&sp, n);
         let (z0, z1) = if sp.z_sign > 0.0 { (0.0, far) } else { (-far, 0.0) };
-        Rect::new(sp.board_center - sp.board_half, z0, sp.board_center + sp.board_half, z1)
+        Rect::new(sp.board_center - half, z0, sp.board_center + half, z1)
+    }
+
+    /// The table-plane footprint of a card lying flat at `t`.
+    fn flat_footprint(t: &Transform) -> Rect {
+        let (w, d) = if (t.rotation * Vec3::Y).x.abs() > 0.5 { (CARD_HEIGHT, CARD_WIDTH) } else { (CARD_WIDTH, CARD_HEIGHT) };
+        Rect::from_center_size(Vec2::new(t.translation.x, t.translation.z), Vec2::new(w, d) * t.scale.x)
     }
     #[test]
     fn viewer_always_on_front_edge() {
@@ -1282,14 +1351,16 @@ mod tests {
         // far seats keep a row behind it, so the check is on footprints,
         // not on X alone.
         let rect = |c: Vec3, w: f32, h: f32| Rect::from_center_size(Vec2::new(c.x, c.z), Vec2::new(w, h));
-        for n in [3usize, 4, 5, 6] {
+        for n in [2usize, 3, 4, 5, 6] {
             let boards: Vec<Rect> = (0..n).map(|s| board_footprint(s, 0, n)).collect();
             for s in 0..n {
-                let cmd = command_zone_card_transform(s, 0, n, 0);
+                // Both commanders of a pair.
+                let command = |slot| flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2));
                 let mut piles = vec![
                     ("deck", rect(deck_position(s, 0, n), CARD_WIDTH, CARD_HEIGHT)),
                     ("graveyard", rect(graveyard_position(s, 0, n), CARD_WIDTH, CARD_HEIGHT)),
-                    ("command", rect(cmd.translation, CARD_WIDTH * cmd.scale.x, CARD_HEIGHT * cmd.scale.x)),
+                    ("command", command(0)),
+                    ("second command", command(1)),
                 ];
                 if s != 0 {
                     for slot in 0..7 {
@@ -1519,23 +1590,78 @@ mod tests {
         // command zone (board outer-front corner at hand depth) landed under
         // the deck pile. Footprints may not intersect for any seat. The
         // command card scales up to 1.3× on the far edge — use its scaled
-        // extents.
-        for n in [3usize, 4, 5, 6] {
+        // extents. Both cards of a commander pair, against every seat's
+        // piles, the exile pile and the face-down hands on the table.
+        for n in [2usize, 3, 4, 5, 6] {
+            let flat = |p: Vec3| flat_footprint(&Transform::from_translation(p));
+            let mut piles: Vec<(String, Rect)> = vec![("exile".into(), flat(exile_position(n)))];
             for s in 0..n {
-                let cmd = command_zone_card_transform(s, 0, n, 0);
-                let c = cmd.translation;
-                let (cw, ch) =
-                    (CARD_WIDTH * cmd.scale.x, CARD_HEIGHT * cmd.scale.x);
-                for pile in [deck_position(s, 0, n), graveyard_position(s, 0, n)] {
-                    let overlap_x = (pile.x - c.x).abs() < (CARD_WIDTH + cw) / 2.0;
-                    let overlap_z = (pile.z - c.z).abs() < (CARD_HEIGHT + ch) / 2.0;
-                    assert!(
-                        !(overlap_x && overlap_z),
-                        "n={n} seat={s}: command zone ({:.1},{:.1}) under a pile ({:.1},{:.1})",
-                        c.x, c.z, pile.x, pile.z,
-                    );
+                piles.push((format!("seat {s}'s deck"), flat(deck_position(s, 0, n))));
+                piles.push((format!("seat {s}'s graveyard"), flat(graveyard_position(s, 0, n))));
+                for slot in (0..7).filter(|_| s != 0) {
+                    let h = hand_card_transform(s, 0, n, slot, 7, 1.0);
+                    if h.translation.y < 1.0 {
+                        piles.push((format!("seat {s}'s hand"), flat_footprint(&h)));
+                    }
                 }
             }
+            for s in 0..n {
+                for slot in 0..2 {
+                    let cmd = flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2));
+                    for (what, pile) in &piles {
+                        assert!(
+                            cmd.intersect(*pile).is_empty(),
+                            "n={n} seat={s}: command card {slot} at {:?} under {what} at {:?}",
+                            cmd.center(),
+                            pile.center(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// Of two commanders, the second shows half its length past the first
+    /// in 1v1 and 3-4 player pods — where they sat on one spot, one hid the
+    /// other — and at least its name bar at a 5-6 player table. The two
+    /// never share a height (the depth buffer would flicker).
+    #[test]
+    fn a_commander_pair_shows_both_cards() {
+        for n in [2usize, 3, 4, 5, 6] {
+            for s in 0..n {
+                let [a, b] = [0, 1].map(|slot| command_zone_card_transform(s, 0, n, slot, 2));
+                let apart = a.translation.xz().distance(b.translation.xz());
+                let least = if n <= 4 { COMMAND_STEP - 1e-4 } else { CARD_HEIGHT * 0.25 };
+                assert!(apart >= least, "n={n} seat={s}: only {apart:.2} of the second card shows");
+                assert!(a.translation.y != b.translation.y, "n={n} seat={s}: the pair is coplanar");
+            }
+        }
+    }
+
+    /// A pair's labels go past the end of each card that shows: the one
+    /// on top keeps its bottom edge; the one under shows its top.
+    #[test]
+    fn a_pair_labels_the_ends_that_show() {
+        for n in [2usize, 4] {
+            let ends = [0, 1].map(|slot| command_zone_open_end(0, 0, n, slot, 2));
+            let [a, b] = [0, 1].map(|slot| command_zone_card_transform(0, 0, n, slot, 2));
+            let (top, under) = if a.translation.y > b.translation.y { (0, 1) } else { (1, 0) };
+            assert_eq!((ends[top], ends[under]), (-CARD_HEIGHT / 2.0, CARD_HEIGHT / 2.0), "n={n}");
+            assert_eq!(command_zone_open_end(0, 0, n, 0, 1), -CARD_HEIGHT / 2.0, "n={n}: a lone card's bottom");
+        }
+    }
+
+    /// A fuller zone shares the pair's reach: the cards step evenly along
+    /// it, a name bar apart at four cards, and none goes past it.
+    #[test]
+    fn a_full_command_zone_shares_the_lane() {
+        for n in [2usize, 4] {
+            let at: Vec<Vec3> = (0..4).map(|slot| command_zone_card_transform(0, 0, n, slot, 4).translation).collect();
+            let pair_span = at[0].xz().distance(command_zone_card_transform(0, 0, n, 1, 2).translation.xz());
+            for w in at.windows(2) {
+                assert!(w[0].xz().distance(w[1].xz()) >= CARD_HEIGHT * 0.15, "n={n}: {at:?}");
+            }
+            assert!(at[0].xz().distance(at[3].xz()) <= pair_span + 1e-4, "n={n}: the zone outgrew its lane");
         }
     }
     #[test]

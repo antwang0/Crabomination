@@ -24,7 +24,7 @@ pub use components::{
     CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
 };
 pub use layout::{
-    back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
+    back_face_rotation, bf_card_transform, command_zone_card_transform, command_zone_open_end, deck_position,
     exile_position,
     creature_card_transform, graveyard_position, hand_card_transform, back_row_card_transform, in_back_row,
 };
