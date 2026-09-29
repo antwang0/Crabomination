@@ -557,7 +557,7 @@ fn player_protection_gained_in_response_fizzles_the_spell() {
     .expect("Seht's Tiger");
     let life = g.players[0].life;
     drain_stack(&mut g);
-    assert!(g.players[0].protection_colors_eot.contains(&Color::Red));
+    assert!(g.players[0].protection_colors_eot.contains(Color::Red));
     assert_eq!(g.players[0].life, life, "the Bolt fizzled");
 }
 
