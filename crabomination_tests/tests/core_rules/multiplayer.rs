@@ -7562,3 +7562,43 @@ fn cr_115_1_vendilion_clique_bot_targets_an_opponent() {
     let bottomed = (1..3).filter(|&s| !g.players[s].hand.iter().any(|c| c.definition.name == "Grizzly Bears")).count();
     assert_eq!(bottomed, 1, "one opponent's Bears went to the bottom");
 }
+
+/// CR 614.1a / 800.4a — The Mindskinner: "prevent that damage and each
+/// opponent mills that many cards." Damage to one opponent mills every
+/// opponent still in the game, combat or not; an eliminated seat mills
+/// nothing.
+#[test]
+fn cr_614_1a_mindskinner_mills_each_live_opponent() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let mut g = multi_player_game(4);
+    let skinner = g.add_card_to_battlefield(0, catalog::the_mindskinner());
+    for seat in 1..4 {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.players[3].eliminated = true;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(1), 3, Some(skinner), &mut evs);
+    let gy = |g: &GameState| (1..4).map(|s| g.players[s].graveyard.len()).collect::<Vec<_>>();
+    assert_eq!(gy(&g), vec![3, 3, 0], "noncombat: each live opponent mills 3");
+    assert_eq!(g.players[1].life, 20);
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(gy(&g), vec![5, 5, 0], "combat: each live opponent mills 2");
+    assert_eq!(g.players[1].life, 20);
+}

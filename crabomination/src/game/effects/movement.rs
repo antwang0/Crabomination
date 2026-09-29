@@ -111,6 +111,39 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
 }
 
 impl GameState {
+    /// The Mindskinner: does damage from a source `dealer` controls to player
+    /// `p` become a mill (CR 614.1a)? `p` must be an opponent of `dealer`.
+    pub(crate) fn damage_to_opponent_becomes_mill(&self, dealer: usize, p: usize) -> bool {
+        !self.same_team(dealer, p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == dealer
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::YourDamageToOpponentsBecomesMill)
+                    })
+            })
+    }
+
+    /// "…each opponent mills that many cards" — every opponent of `dealer`
+    /// still in the game (CR 800.4a).
+    pub(crate) fn mill_each_live_opponent(&mut self, dealer: usize, amount: u32, events: &mut Vec<GameEvent>) {
+        let victims: Vec<usize> = (0..self.players.len())
+            .filter(|&o| !self.same_team(o, dealer) && self.players[o].is_alive())
+            .collect();
+        for o in victims {
+            for _ in 0..amount {
+                if self.players[o].library.is_empty() {
+                    break;
+                }
+                let card = self.players[o].library.remove(0);
+                let cid = card.id;
+                if !self.route_to_graveyard(card, events) {
+                    self.note_milled(o, cid);
+                    events.push(GameEvent::CardMilled { player: o, card_id: cid });
+                }
+            }
+        }
+    }
+
     /// Everlasting Torment — is every source's damage dealt as though it had
     /// wither right now? One lane read on a board without it.
     pub(crate) fn all_damage_is_wither_now(&self) -> bool {
@@ -1499,33 +1532,9 @@ impl GameState {
                     && amount > 0
                     && let Some(src) = source
                     && let Some(dealer) = self.battlefield_find(src).map(|c| c.controller)
-                    && !self.same_team(dealer, p)
-                    && self.battlefield.iter().any(|c| {
-                        c.controller == dealer
-                            && c.definition.static_abilities.iter().any(|sa| {
-                                matches!(
-                                    sa.effect,
-                                    crate::effect::StaticEffect::YourDamageToOpponentsBecomesMill
-                                )
-                            })
-                    })
+                    && self.damage_to_opponent_becomes_mill(dealer, p)
                 {
-                    let victims: Vec<usize> = (0..self.players.len())
-                        .filter(|o| !self.same_team(*o, dealer))
-                        .collect();
-                    for o in victims {
-                        for _ in 0..amount {
-                            if self.players[o].library.is_empty() {
-                                break;
-                            }
-                            let card = self.players[o].library.remove(0);
-                            let cid = card.id;
-                            if !self.route_to_graveyard(card, events) {
-                                self.note_milled(o, cid);
-                                events.push(GameEvent::CardMilled { player: o, card_id: cid });
-                            }
-                        }
-                    }
+                    self.mill_each_live_opponent(dealer, amount, events);
                     return;
                 }
                 // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
