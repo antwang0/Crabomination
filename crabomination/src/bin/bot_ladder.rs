@@ -192,10 +192,9 @@ fn cube_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
 /// give the same split view the four fixed archetypes do — a change that
 /// only helps Prismari shows up as a split result.
 ///
-/// Seeded from `--seed` (same construction `bot_probe --deck sos` uses, so
-/// the two tools describe the same decks), and each college plays a mirror
-/// of itself for the same reason the fixed decks do: deck strength cancels
-/// and only the pilots differ.
+/// Seeded from `--seed`, and each college plays a mirror of itself for the
+/// same reason the fixed decks do: deck strength cancels and only the
+/// pilots differ.
 fn sos_archetypes(seed: u64) -> Vec<Archetype> {
     let mut rng = StdRng::seed_from_u64(seed ^ 0x0505_ACAD);
     College::ALL
@@ -1286,10 +1285,10 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
             // The same 32 MiB every other game worker in the tree already
             // takes, and for the same reason its siblings give: resolution
             // recurses through `Effect` trees whose debug-build frames run
-            // the 2 MiB `scope.spawn` default out. `recommend.rs`'s search
-            // workers, the two-player worker below and `deck_gauntlet`'s all
-            // say so in their own comments — the pod worker was added after
-            // them and was the one site left on the default, so at every
+            // the 2 MiB `scope.spawn` default out. The two-player worker
+            // below says so in its own comment (as the since-retired
+            // recommender's search workers and `deck_gauntlet` did) — the pod
+            // worker was added after them and was the one site left on the default, so at every
             // seat count from 4 up the FIRST game aborted the process with
             // "has overflowed its stack" and the Commander smoke could only
             // ever be run on an optimized build.
@@ -2728,9 +2727,8 @@ fn main() {
 }
 
 // The paired-statistics tests that used to live here moved to
-// `crabomination::recommend` with `paired_stat` and `wilson` themselves —
-// `deck_duel` needs the same estimator, and one copy with its tests beats
-// two that drift.
+// `crabomination::recommend` with `paired_stat` and `wilson` themselves, when
+// a second binary (`deck_duel`, since retired) needed the same estimator.
 
 /// Which cards of each seated deck the run never played.
 ///

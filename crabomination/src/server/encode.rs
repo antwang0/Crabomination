@@ -916,8 +916,8 @@ pub(super) fn cover_with_extra(have: &[u32; 32]) -> [u32; 32] {
 
 /// Encode a decklist for the build net: vocab indices plus deck-level
 /// features (spell curve, land/creature counts, color pips). The factory
-/// list is the same shape the sealed builder and `recommend_pool` deal
-/// in, so both can score builds without touching a `GameState`.
+/// list is the same shape the sealed builder deals in, so a build can be
+/// scored without touching a `GameState`.
 pub fn encode_deck(
     deck: &[crate::cube::CardFactory],
     vocab: &Vocab,

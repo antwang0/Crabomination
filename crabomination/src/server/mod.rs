@@ -1554,9 +1554,9 @@ mod tests {
 
     /// End to end: a real bot-vs-bot match through `run_match` writes a
     /// v2 replay — header, first-appearance card names, footer — the
-    /// shape `replay_view` narrates. The narration arms themselves are
-    /// unit-tested in the bin; this pins the recorder against a full
-    /// live match rather than hand-fed events.
+    /// shape `scripts/replay_scan.py` reads (and the retired `replay_view`
+    /// narrated). This pins the recorder against a full live match rather
+    /// than hand-fed events.
     #[test]
     fn bot_match_records_a_narratable_replay() {
         let _env = crate::server::replay::env_lock();

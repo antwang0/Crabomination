@@ -801,9 +801,8 @@ converge-blind payment would have been caught from game data). The
 viewer's first tier exists (2026-08-18): replay files are v2 — each
 line carries first-appearance card names, since wire events hold only
 ids and a file has no live state to resolve them — and
-`cargo run -p crabomination --bin replay_view [file] [--all]` narrates
-one as readable prose (newest file under `$CRAB_REPLAY_DIR` by
-default; `--all` includes the mana/tap noise). Still open: an in-client
+`scripts/replay_scan.py DIR` reports over a directory of them (the
+`replay_view` narrator was retired 2026-09-29). Still open: an in-client
 replay mode driving the real renderer with step/seek, and state-hash
 checkpoints for deterministic reproduction.
 

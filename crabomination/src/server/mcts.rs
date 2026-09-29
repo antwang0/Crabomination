@@ -527,7 +527,7 @@ pub struct MctsBot {
 }
 
 /// Stack for a root-parallel search worker. The engine's other worker
-/// threads (`bot_ladder`, `deck_gauntlet`, `recommend`, `crossplay`) all
+/// threads (`bot_ladder`, `crossplay`, `selfplay_train`'s actors) all
 /// take 32 MB for the same reason: effect resolution recurses through
 /// trigger and token-copy chains, and an unoptimized build's frames brush
 /// the 8 MB default.
@@ -1207,7 +1207,7 @@ impl MctsBot {
 impl Bot for MctsBot {
     /// Only the player-slot polarity flag: the search's candidates come from
     /// the scored picker, so it self-targets without it, while a search seat
-    /// has never carried `smart_tap` (`recommend::play_seeded_game`'s push).
+    /// has never carried `smart_tap` (`recommend::play_one_game_traced`'s push).
     fn push_seat_flags(&self, player: &mut crate::player::Player) {
         player.hostile_player_targets = self.cfg.weights.hostile_player_targets;
     }

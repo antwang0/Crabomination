@@ -288,8 +288,8 @@ pub fn best_build_v3_in_colors(
 /// recipe) vs single-sample v2") — so turning the curve on in place silently
 /// changed what that race measures, from `builder_v3` to `builder_v3` plus a
 /// curve. The gate keeps measuring the builder it names; the client gets the
-/// curve; neither reaches `SimConfig::default()`, so the training field, the
-/// ladder's sealed gate decks and `recommend_pool` are untouched.
+/// curve; neither reaches `SimConfig::default()`, so the training field and
+/// the ladder's sealed gate decks are untouched.
 ///
 /// `builder_v3` already gives this build a curve at the *shape* level
 /// (`curve_penalty`). `curve_aggro` adds the two things still missing inside
@@ -585,7 +585,7 @@ fn play_recorded_game_mcts_inner(
 ) -> RecordedGame {
     let mut g = template.clone();
     // Profile settings the ENGINE reads off the seat, not the bot — the
-    // same push `recommend::play_seeded_game` and `deck_gauntlet` make.
+    // same push `recommend::play_one_game_traced` makes.
     // Until round 68 (2026-09-07) no actor ever carried them, so the
     // self-play stream was generated with the auto-target picker's
     // caster-first player slots even after round 67 fixed them for every

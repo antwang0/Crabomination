@@ -4107,8 +4107,8 @@ impl EventSpec {
 // locals their own stack slots rather than colouring non-overlapping ones
 // together — so its debug frame is roughly the *sum* over all arms even
 // though one executes. The frame was 2.56 MB, three of them nest, and
-// that overflowed the default 8 MB main-thread stack outright (see
-// `bin/deck_duel.rs`). Boxing took the frame to ~1.8 MB.
+// that overflowed the default 8 MB main-thread stack outright (the
+// since-retired `deck_duel` binary hit it). Boxing took the frame to ~1.8 MB.
 //
 // Keep new fat payloads boxed. `Box<T>` is serde-transparent, so the
 // on-disk format is unaffected, and `&Box<T>` derefs to `&T` at every

@@ -1880,8 +1880,8 @@ fn main() {
     std::thread::scope(|scope| {
         for i in 0..args.actors {
             let mcts_thread = mcts_all && (!fleet_split || i < args.mcts_fleet);
-            // SOS games overflow the default stack (see bot_probe) — match
-            // the ladder's 32 MB workers.
+            // SOS games overflow the default stack — match the ladder's
+            // 32 MB workers.
             std::thread::Builder::new()
                 .stack_size(32 * 1024 * 1024)
                 .spawn_scoped(scope, move || {

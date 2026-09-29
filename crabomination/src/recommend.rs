@@ -1,68 +1,39 @@
-//! Sealed-deck recommender.
+//! Sealed-deck building and bot-vs-bot match simulation.
 //!
-//! Given a sealed pool, enumerate candidate builds across the full color
-//! lattice (pairs, pair + splash, 3/4/5-color), rank them with a cheap
-//! static score, then evaluate the top K by playing bot-vs-bot matches
-//! against a *field gauntlet*: decks built (with per-pool seeded
-//! randomness) from independently generated sealed pools of the same
-//! set. Candidates never play each other — the question answered is
-//! "how does this build do against the format", not "who wins the
-//! mirror".
+//! Two halves, which used to sit under a simulation-ranked recommender
+//! (`Session`: race the top builds of a pool against a generated field,
+//! then refine and local-search the winner — retired 2026-09-29 with its
+//! only front end, the `recommend_pool` binary):
 //!
-//! Evaluation is embarrassingly parallel (every game is an independent
-//! `GameState`); a job-queue over `std::thread::scope` workers spreads
-//! games across cores, and an optional racing mode (successive halving)
-//! concentrates the game budget on statistically close candidates.
-//!
-//! A [`Session`] owns the gauntlet plus a per-deck outcome cache shared
-//! across the staged pipeline (rank → refine → local search): the
-//! gauntlet is generated once, and a deck re-raced in a later stage
-//! (the stage-1 winner returning as refine's v0, the incumbent entering
-//! every search generation) replays its recorded outcomes instead of
-//! re-simulating them. Per-game outcomes are kept per (opponent, game
-//! slot), so candidate comparisons — racing elimination, local-search
-//! acceptance — use paired differences over shared slots, which the CRN
-//! shuffles make far tighter than comparing independent intervals.
-//!
-//! Determinism: `SimConfig::seed` fully determines the gauntlet
-//! (pool contents and randomized builds). Match *outcomes* still use
-//! the global thread-local RNG (deck shuffles, bot tie-jitter), so win
-//! rates carry sampling noise — the confidence intervals reported per
-//! candidate are the honest error bars for that.
+//! * **Building.** Given a sealed pool, enumerate candidate builds across
+//!   the full color lattice (pairs, pair + splash, 3/4/5-color) and rank
+//!   them with a cheap static score, or sample a randomized build from the
+//!   top shapes ([`build_random_deck_from`]) so a field of them looks like
+//!   a room of humans rather than clones. `selfplay` and the client's
+//!   sealed opponents build here.
+//! * **Simulation.** Play two decks against each other under chosen
+//!   pilots ([`simulate_match_games_piloted`], the antithetic-pair loop
+//!   behind `bot_ladder`), plus the per-game stop diagnostics
+//!   ([`stop_reason`], [`cap_diagnosis`]) every simulator shares.
 
 use crate::fxhash::HashMap;
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt, SeedableRng};
 
 use crate::cube::CardFactory;
-use crate::draft::{
-    COPY_CAP, SosPacks, colors_of_cost, colors_of_picks,
-    sos_draft_pool_ref,
-};
+use crate::draft::{COPY_CAP, colors_of_picks};
 use crate::game::GameState;
 use crate::mana::{Color, ColorSet};
 use crate::player::Player;
 use crate::server::{Bot, EvalWeights, MctsBot, MctsConfig, HeuristicBot};
 
-/// Everything tunable about a recommender run. Maps 1:1 onto the client's
-/// simulation-settings panel; engine callers use `SimConfig::default()`.
+/// Everything tunable about a sealed build: candidate enumeration and the
+/// randomized builder. Engine callers use `SimConfig::default()` and set the
+/// builder flags they opt into.
 #[derive(Debug, Clone)]
 pub struct SimConfig {
-    /// Synthetic sealed pools in the opposing field.
-    pub gauntlet_size: usize,
-    /// Games per racing round per candidate *per sampled opponent*
-    /// (racing off: per gauntlet opponent, full round-robin).
-    pub games_per_pairing: usize,
-    /// Candidates advancing from static ranking to simulation.
-    pub candidate_cap: usize,
-    /// Successive-halving elimination between rounds.
-    pub racing: bool,
-    /// z-score for the racing elimination bound (1.96 ≈ 95%).
-    pub racing_confidence_z: f64,
     /// Gauntlet build randomness; 0.0 = deterministic greedy builds.
     pub build_temperature: f64,
     /// Gauntlet spell-count range (inclusive).
@@ -126,53 +97,11 @@ pub struct SimConfig {
     /// restriction is an empty candidate set rather than a mono deck.
     /// Callers that take this from a user reject that spelling up front.
     pub color_restriction: ColorSet,
-    /// Gauntlet seed — a run with the same (set, seed) faces the same field.
-    pub seed: u64,
-    /// Worker threads; 0 = available cores minus one.
-    pub threads: usize,
-    /// Pilot the gauntlet decks with the uniform-baseline bot instead of
-    /// the scored bot (candidates always use the scored bot).
-    pub uniform_opponent_bot: bool,
-    /// Safety cap on turns-worth of actions per game before calling it
-    /// undecided (mirrors the ladder-test guard).
-    pub max_actions_per_game: usize,
-    /// Common random numbers: seed each game's deck shuffles from
-    /// (opponent, game-index) — *not* the candidate — so every candidate
-    /// faces the same opponent draws. Sharply reduces the variance of
-    /// candidate-vs-candidate *differences*. Partial by design: bot
-    /// tie-jitter and in-game randomness still use the global RNG.
-    pub crn: bool,
-    /// Refinement stage: how many top-ranked shapes get variant builds.
-    pub refine_top: usize,
-    /// Refinement stage: builds per shape (the greedy build + jittered
-    /// variants with sampled spell/land counts).
-    pub variants_per_shape: usize,
-    /// Racing rounds. More rounds with a smaller `games_per_pairing`
-    /// prunes a big fleet cheaply and spends the saved games on the
-    /// finalists (each round widens the opponent sample and adds
-    /// `games_per_pairing` games per pairing).
-    pub racing_rounds: u32,
-    /// Stage-3 local search: generations of attribution-guided card swaps
-    /// around the incumbent winner. 0 disables (default).
-    pub search_generations: usize,
-    /// Stage-3 local search: swap children raced per generation.
-    pub search_children: usize,
-    /// Stage-3 local search: one-sided z for adopting a child over the
-    /// incumbent, applied to the paired win-rate difference over their
-    /// shared game slots. 1.0 ≈ 84% one-sided confidence — mild on
-    /// purpose: children are near-neighbors of the incumbent, so true
-    /// edges are small and a strict bar stalls the search.
-    pub search_accept_z: f64,
 }
 
 impl Default for SimConfig {
     fn default() -> Self {
         Self {
-            gauntlet_size: 20,
-            games_per_pairing: 20,
-            candidate_cap: 8,
-            racing: true,
-            racing_confidence_z: 1.96,
             builder_v2: true,
             builder_v3: false,
             curve_aggro: false,
@@ -184,17 +113,6 @@ impl Default for SimConfig {
             splash_max_cards: 3,
             splash_min_score: 12,
             color_restriction: ColorSet::empty(),
-            seed: 0,
-            threads: 0,
-            uniform_opponent_bot: false,
-            max_actions_per_game: 50_000,
-            crn: true,
-            refine_top: 3,
-            variants_per_shape: 6,
-            racing_rounds: 3,
-            search_generations: 0,
-            search_children: 8,
-            search_accept_z: 1.0,
         }
     }
 }
@@ -241,72 +159,6 @@ impl CandidateBuild {
 pub struct GauntletDeck {
     pub cards: Vec<CardFactory>,
     pub label: String,
-}
-
-/// Rolling evaluation state for one simulated candidate. `wins`/`losses`
-/// count decided games from the candidate's perspective; `undecided`
-/// counts stalls/draws (excluded from the win rate).
-#[derive(Debug, Clone)]
-pub struct CandidateEval {
-    /// Index into the simulated-candidates slice.
-    pub candidate: usize,
-    pub wins: u32,
-    pub losses: u32,
-    pub undecided: u32,
-    /// Racing round this candidate was eliminated in (`None` = survived).
-    pub eliminated_round: Option<u32>,
-}
-
-impl CandidateEval {
-    fn new(candidate: usize) -> Self {
-        Self { candidate, wins: 0, losses: 0, undecided: 0, eliminated_round: None }
-    }
-
-    pub fn decided(&self) -> u32 {
-        self.wins + self.losses
-    }
-
-    pub fn win_rate(&self) -> f64 {
-        let n = self.decided();
-        if n == 0 { 0.5 } else { self.wins as f64 / n as f64 }
-    }
-
-    /// Wilson score interval for the win rate at `z`. Well-behaved at
-    /// small n and at p̂ = 0 or 1, where the normal approximation
-    /// collapses to zero width — an undefeated candidate would claim a
-    /// lower bound of 1.0 and racing would eliminate the entire field.
-    pub fn ci_bounds(&self, z: f64) -> (f64, f64) {
-        let n = self.decided() as f64;
-        if n < 1.0 {
-            return (0.0, 1.0);
-        }
-        let p = self.win_rate();
-        let z2 = z * z;
-        let denom = 1.0 + z2 / n;
-        let center = (p + z2 / (2.0 * n)) / denom;
-        let half = (z / denom) * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt();
-        ((center - half).max(0.0), (center + half).min(1.0))
-    }
-
-    /// Half the Wilson interval width — the "± x%" for display. (The
-    /// interval is not centered on the raw win rate; comparisons should
-    /// use [`Self::ci_bounds`] directly.)
-    pub fn ci_halfwidth(&self, z: f64) -> f64 {
-        let (lo, hi) = self.ci_bounds(z);
-        (hi - lo) / 2.0
-    }
-}
-
-/// Full output of a recommender run.
-pub struct Recommendation {
-    /// Every enumerated candidate, sorted by descending static score.
-    pub candidates: Vec<CandidateBuild>,
-    /// Evaluations for the first `evals.len()` candidates (the top K).
-    pub evals: Vec<CandidateEval>,
-    /// Indices into `candidates` sorted by simulated win rate (best first).
-    pub ranking: Vec<usize>,
-    /// The seed the gauntlet was built from (echoed for reproduction).
-    pub seed: u64,
 }
 
 // ─────────────────────────────── candidates ───────────────────────────────
@@ -1253,7 +1105,7 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     } else {
         cfg.color_restriction
     };
-    let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
+    let mut rng = StdRng::seed_from_u64(0); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<ShapeBuild> = Vec::with_capacity(SHAPES);
     // Keyed on the copy-cap counts, which the builder already has: two shapes
     // agree iff their main decks are the same multiset, and that is exactly
@@ -1408,43 +1260,6 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         return GauntletDeck { label: "empty".to_string(), cards: Vec::new() };
     };
     GauntletDeck { label: build.label.clone(), cards: build.deck() }
-}
-
-/// Generate the opposing field: `gauntlet_size` independent sealed pools
-/// (6 SOS packs each), one randomized build per pool. Fully determined
-/// by `cfg.seed`.
-pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
-    let pool = sos_draft_pool_ref();
-    let n = cfg.gauntlet_size;
-    // Pools are independent and per-index seeded, so building them in
-    // parallel changes nothing about determinism — only wall clock.
-    let out: Mutex<Vec<Option<GauntletDeck>>> = Mutex::new((0..n).map(|_| None).collect());
-    let cursor = AtomicUsize::new(0);
-    let threads = worker_threads(cfg).min(n.max(1));
-    std::thread::scope(|s| {
-        for _ in 0..threads {
-            s.spawn(|| {
-                loop {
-                    let i = cursor.fetch_add(1, Ordering::Relaxed);
-                    if i >= n {
-                        break;
-                    }
-                    // Distinct stream per pool; the odd multiplier
-                    // decorrelates adjacent seeds.
-                    let mut rng = StdRng::seed_from_u64(
-                        cfg.seed
-                            ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1),
-                    );
-                    let rolls = SosPacks::new(pool);
-                    let pulls: Vec<CardFactory> =
-                        (0..6).flat_map(|_| rolls.roll(&mut rng)).collect();
-                    let deck = build_random_deck(&pulls, cfg, &mut rng);
-                    out.lock().unwrap()[i] = Some(deck);
-                }
-            });
-        }
-    });
-    out.into_inner().unwrap().into_iter().map(|d| d.expect("all pools built")).collect()
 }
 
 // ─────────────────────────────── simulation ──────────────────────────────
@@ -2867,781 +2682,6 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     s
 }
 
-// ─────────────────────────────── evaluation ──────────────────────────────
-
-/// Per-game outcomes keyed by (gauntlet opponent, game slot): +1 win,
-/// −1 loss, 0 undecided. Slot indices are shared across candidates (CRN
-/// seeds every candidate's slot identically), which is what makes two
-/// candidates' outcomes pairable game-for-game.
-pub type SlotOutcomes = HashMap<(u32, u32), i8>;
-
-/// Paired win-rate difference a − b over the slots both sides decided.
-pub struct PairedDiff {
-    /// Shared decided slots.
-    pub n: usize,
-    /// Mean per-slot difference on the win-rate scale (−1 ..= 1).
-    pub mean: f64,
-    /// Standard error of `mean`, from the empirical per-slot variance.
-    pub se: f64,
-}
-
-/// Compare two candidates game-for-game. On CRN slots this is the
-/// variance-reduced comparison the shared shuffles pay for: concordant
-/// slots (both win, or both lose) contribute zero variance, so the
-/// error shrinks with the discordant count rather than the game count.
-/// Still valid without CRN — it just degrades to an ordinary difference
-/// test. `None` when no slot is decided for both.
-pub fn paired_diff(a: &SlotOutcomes, b: &SlotOutcomes) -> Option<PairedDiff> {
-    let (mut n, mut pos, mut neg) = (0usize, 0usize, 0usize);
-    for (slot, &xa) in a {
-        if xa == 0 {
-            continue;
-        }
-        let Some(&xb) = b.get(slot) else { continue };
-        if xb == 0 {
-            continue;
-        }
-        n += 1;
-        if xa > xb {
-            pos += 1;
-        } else if xa < xb {
-            neg += 1;
-        }
-    }
-    if n == 0 {
-        return None;
-    }
-    let mean = (pos as f64 - neg as f64) / n as f64;
-    let var = (pos + neg) as f64 / n as f64 - mean * mean;
-    Some(PairedDiff { n, mean, se: (var.max(0.0) / n as f64).sqrt() })
-}
-
-/// Below this many shared decided slots the paired test yields to the
-/// Wilson-bound comparison — too few slots for the empirical per-slot
-/// variance to mean anything (smoke-test-sized configs live here).
-const MIN_PAIRED_SLOTS: usize = 20;
-
-struct EvalState {
-    evals: Vec<CandidateEval>,
-    slots: Vec<SlotOutcomes>,
-}
-
-struct Job {
-    candidate: usize,
-    opponent: usize,
-    games: usize,
-    /// Index of this chunk's first game within the (candidate, opponent)
-    /// pairing's full schedule — the CRN seed component, so re-visiting a
-    /// pairing in a later racing round plays *new* seeded games rather
-    /// than replaying earlier ones.
-    game_offset: usize,
-}
-
-fn worker_threads(cfg: &SimConfig) -> usize {
-    if cfg.threads > 0 {
-        return cfg.threads;
-    }
-    std::thread::available_parallelism().map(|n| n.get().saturating_sub(1)).unwrap_or(1).max(1)
-}
-
-/// Evaluate candidate decks against the gauntlet field in parallel, with
-/// per-candidate slot outcomes, seeded from `prefill`: any chunk of the schedule whose slots are all present in a
-/// candidate's prefill map (this exact deck already played those seeded
-/// games earlier in the session) is credited instantly instead of
-/// simulated.
-fn evaluate_candidates_slots<F>(
-    candidate_decks: &[Vec<CardFactory>],
-    gauntlet: &[GauntletDeck],
-    cfg: &SimConfig,
-    prefill: &[SlotOutcomes],
-    on_progress: &F,
-) -> (Vec<CandidateEval>, Vec<SlotOutcomes>)
-where
-    F: Fn(&[CandidateEval]) + Sync,
-{
-    let state = Mutex::new(EvalState {
-        evals: (0..candidate_decks.len()).map(CandidateEval::new).collect(),
-        slots: vec![SlotOutcomes::default(); candidate_decks.len()],
-    });
-    let mut active: Vec<usize> = (0..candidate_decks.len()).collect();
-    let rounds: u32 = if cfg.racing { cfg.racing_rounds.max(1) } else { 1 };
-    let threads = worker_threads(cfg);
-
-    for round in 0..rounds {
-        if active.len() <= 1 {
-            break;
-        }
-        // Opponent sample for this round (racing widens it each round;
-        // non-racing plays the whole field).
-        let opps_this_round = if cfg.racing {
-            (5usize << round).min(gauntlet.len())
-        } else {
-            gauntlet.len()
-        };
-        // Chunked jobs (~5 games each) keep tail latency low: workers
-        // stay busy instead of waiting on the slowest big pairing.
-        //
-        // Every active candidate faces the SAME opponent subset in the
-        // same game slots — the paired-comparison half of CRN. (The old
-        // per-candidate rotation traded that away for subset diversity;
-        // diversity comes from later rounds widening the subset instead.)
-        // A pairing sampled since round `entry(opp)` has already played
-        // `games_per_pairing` games per elapsed round — that's its offset.
-        let entry = |opp: usize| -> u32 {
-            if !cfg.racing {
-                return 0;
-            }
-            let mut r = 0u32;
-            while opp >= (5usize << r) {
-                r += 1;
-            }
-            r
-        };
-        // 10-game chunks amortize the per-job match-template build while
-        // keeping tail latency acceptable.
-        const CHUNK: usize = 10;
-        let mut jobs: Vec<Job> = Vec::new();
-        let mut credited = false;
-        {
-            let mut st = state.lock().unwrap();
-            for &cand in &active {
-                for opp in 0..opps_this_round {
-                    let base_offset =
-                        cfg.games_per_pairing * (round.saturating_sub(entry(opp))) as usize;
-                    let mut done = 0;
-                    while done < cfg.games_per_pairing {
-                        let n = (cfg.games_per_pairing - done).min(CHUNK);
-                        let offset = base_offset + done;
-                        // Fully cached chunk → replay the recorded outcomes.
-                        // (Chunks are played atomically, so a partial hit
-                        // only happens on a config change — resimulate.)
-                        let cached = (0..n).all(|i| {
-                            prefill[cand].contains_key(&(opp as u32, (offset + i) as u32))
-                        });
-                        if cached {
-                            for i in 0..n {
-                                let key = (opp as u32, (offset + i) as u32);
-                                let o = prefill[cand][&key];
-                                let e = &mut st.evals[cand];
-                                match o {
-                                    1 => e.wins += 1,
-                                    -1 => e.losses += 1,
-                                    _ => e.undecided += 1,
-                                }
-                                st.slots[cand].insert(key, o);
-                            }
-                            credited = true;
-                        } else {
-                            jobs.push(Job {
-                                candidate: cand,
-                                opponent: opp,
-                                games: n,
-                                game_offset: offset,
-                            });
-                        }
-                        done += n;
-                    }
-                }
-            }
-        }
-        if credited {
-            let snapshot = state.lock().unwrap().evals.clone();
-            on_progress(&snapshot);
-        }
-        let cursor = AtomicUsize::new(0);
-        std::thread::scope(|s| {
-            for _ in 0..threads {
-                // Deep SOS effect trees overflow the 2MB spawn default under
-                // the bot's dry-run recursion — give workers a roomy stack.
-                let builder = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
-                builder
-                    .spawn_scoped(s, || {
-                    loop {
-                        let i = cursor.fetch_add(1, Ordering::Relaxed);
-                        let Some(job) = jobs.get(i) else { break };
-                        // CRN seed: opponent + game slot, NEVER the
-                        // candidate — identical across candidates by
-                        // construction.
-                        let seed_base = cfg.crn.then(|| {
-                            cfg.seed
-                                ^ (job.opponent as u64).wrapping_mul(0xA24B_AED4_963E_E407)
-                                ^ (job.game_offset as u64)
-                                    .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-                        });
-                        let tally = simulate_match_games(
-                            &candidate_decks[job.candidate],
-                            &gauntlet[job.opponent].cards,
-                            job.games,
-                            false,
-                            cfg.uniform_opponent_bot,
-                            cfg.max_actions_per_game,
-                            seed_base,
-                        );
-                        let snapshot = {
-                            let mut st = state.lock().unwrap();
-                            {
-                                let e = &mut st.evals[job.candidate];
-                                e.wins += tally.wins_a;
-                                e.losses += tally.wins_b;
-                                e.undecided += tally.undecided;
-                            }
-                            for (i, &o) in tally.outcomes.iter().enumerate() {
-                                st.slots[job.candidate].insert(
-                                    (job.opponent as u32, (job.game_offset + i) as u32),
-                                    o,
-                                );
-                            }
-                            st.evals.clone()
-                        };
-                        on_progress(&snapshot);
-                    }
-                })
-                    .expect("spawn recommender worker");
-            }
-        });
-
-        // Successive halving: drop candidates significantly behind the
-        // leader. Every active candidate has played the same slots, so
-        // the paired test applies whenever the shared decided count is
-        // meaningful; the Wilson-bound overlap is the fallback.
-        if cfg.racing && round + 1 < rounds {
-            let mut st = state.lock().unwrap();
-            let EvalState { evals, slots } = &mut *st;
-            let z = cfg.racing_confidence_z;
-            // `active.len() >= 2` by the round's own guard a hundred lines up,
-            // so `max_by` cannot be `None` — but a proof that far away is not
-            // one this statement makes, and `scripts/audit_panics.py` is right
-            // to read it as bare. Ending the halving is the correct answer if
-            // it ever is empty, and it costs a dead branch to say so.
-            let Some(&leader) = active.iter().max_by(|&&a, &&b| {
-                evals[a].win_rate().partial_cmp(&evals[b].win_rate()).unwrap_or(std::cmp::Ordering::Equal)
-            }) else {
-                break;
-            };
-            let leader_lb =
-                active.iter().map(|&i| evals[i].ci_bounds(z).0).fold(f64::MIN, f64::max);
-            active.retain(|&i| {
-                if i == leader {
-                    return true;
-                }
-                let behind = match paired_diff(&slots[i], &slots[leader]) {
-                    Some(pd) if pd.n >= MIN_PAIRED_SLOTS => pd.mean + z * pd.se < 0.0,
-                    _ => evals[i].ci_bounds(z).1 < leader_lb,
-                };
-                if behind {
-                    evals[i].eliminated_round = Some(round);
-                }
-                !behind
-            });
-        }
-    }
-    let st = state.into_inner().unwrap();
-    (st.evals, st.slots)
-}
-
-/// One-shot [`Session::recommend`] over a throwaway session. Staged
-/// callers (refine / local search) should hold a [`Session`] instead, so
-/// the gauntlet and the outcome cache carry across stages.
-pub fn recommend<F>(pool: &[CardFactory], cfg: &SimConfig, on_progress: F) -> Recommendation
-where
-    F: Fn(&[CandidateEval]) + Sync,
-{
-    Session::new(cfg.clone()).recommend(pool, on_progress)
-}
-
-/// One card's attribution across an evaluated fleet: mean win rate of the
-/// builds playing it vs the builds benching it. Deck-level results can't
-/// credit single cards; this can (noisily — mind the sample counts).
-pub struct CardAttribution {
-    pub name: &'static str,
-    pub mean_in: f64,
-    pub n_in: usize,
-    pub mean_out: f64,
-    pub n_out: usize,
-    /// How many colour strata played *and* benched the card. Zero means
-    /// there is no within-archetype comparison at all and
-    /// [`delta`](Self::delta) is purely cross-archetype — see
-    /// [`stratified_delta`](Self::stratified_delta).
-    pub strata: usize,
-    /// Attribution with the archetype confound removed: the per-stratum
-    /// in-minus-out delta, pooled by inverse variance. `None` when no
-    /// stratum has the card on both sides.
-    pub stratified_delta: Option<f64>,
-}
-
-impl CardAttribution {
-    /// The raw in-minus-out delta.
-    ///
-    /// **This is a cross-archetype marginal, not a card grade**, and it
-    /// is the number that made Professor Dellian Fel read −2.4. A black
-    /// card is played by the black builds and benched by every white,
-    /// blue and red one, so its "out" group is a different deck rather
-    /// than the same deck without it — the delta measures the archetype.
-    /// Prefer [`stratified_delta`](Self::stratified_delta), which only
-    /// compares builds of the same colours.
-    pub fn delta(&self) -> f64 {
-        self.mean_in - self.mean_out
-    }
-
-    /// The best available attribution: within-archetype where the samples
-    /// support one, falling back to the raw marginal.
-    pub fn best_delta(&self) -> f64 {
-        self.stratified_delta.unwrap_or_else(|| self.delta())
-    }
-}
-
-/// Per-card attribution over `(build, win rate)` samples. Only names
-/// appearing in AND missing from at least `min_side` samples are
-/// comparable (a card in every build has no counterfactual). Sorted by
-/// descending delta.
-pub fn per_card_attribution(
-    samples: &[(&CandidateBuild, f64)],
-    min_side: usize,
-) -> Vec<CardAttribution> {
-    let all_names: crate::fxhash::HashSet<&'static str> = samples
-        .iter()
-        .flat_map(|(c, _)| c.main.iter().chain(c.duals.iter()).map(|&f| crate::cube::card_def(f).name))
-        .collect();
-    let mut per: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::default();
-    for (c, wr) in samples {
-        let in_deck: crate::fxhash::HashSet<&'static str> =
-            c.main.iter().chain(c.duals.iter()).map(|&f| crate::cube::card_def(f).name).collect();
-        for name in &all_names {
-            let e = per.entry(name).or_default();
-            if in_deck.contains(name) { e.0.push(*wr) } else { e.1.push(*wr) }
-        }
-    }
-    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
-
-    // Within-archetype comparison, keyed by the build's colour identity.
-    // Splash is part of the key: "B/G" and "B/G + u" are different mana
-    // bases and a card can be right in one and wrong in the other.
-    let mut strata: HashMap<String, Vec<(&CandidateBuild, f64)>> = HashMap::default();
-    for (c, wr) in samples {
-        let mut key: Vec<String> = c.colors.iter().map(|x| format!("{x:?}")).collect();
-        key.sort();
-        let mut sp: Vec<String> = c.splash.iter().map(|x| format!("{x:?}")).collect();
-        sp.sort();
-        key.push(format!("+{}", sp.join("")));
-        strata.entry(key.join("")).or_default().push((*c, *wr));
-    }
-
-    let mut rows: Vec<CardAttribution> = per
-        .into_iter()
-        .filter(|(_, (i, o))| i.len() >= min_side && o.len() >= min_side)
-        .map(|(name, (i, o))| {
-            // Pool the per-stratum deltas by inverse variance: a
-            // difference of means over n_in and n_out samples has
-            // variance proportional to 1/n_in + 1/n_out, so the weight is
-            // the harmonic term below.
-            let (mut num, mut den, mut used) = (0.0f64, 0.0f64, 0usize);
-            for group in strata.values() {
-                let (mut si, mut so) = (Vec::new(), Vec::new());
-                for (c, wr) in group {
-                    let plays =
-                        c.main.iter().chain(c.duals.iter()).any(|&f| crate::cube::card_def(f).name == name);
-                    if plays { si.push(*wr) } else { so.push(*wr) }
-                }
-                if si.len() < min_side || so.len() < min_side {
-                    continue;
-                }
-                let w = (si.len() * so.len()) as f64 / (si.len() + so.len()) as f64;
-                num += w * (mean(&si) - mean(&so));
-                den += w;
-                used += 1;
-            }
-            CardAttribution {
-                name,
-                mean_in: mean(&i),
-                n_in: i.len(),
-                mean_out: mean(&o),
-                n_out: o.len(),
-                strata: used,
-                stratified_delta: (den > 0.0).then(|| num / den),
-            }
-        })
-        .collect();
-    // Ranked by the confound-free number where there is one, so a card
-    // can no longer top (or bottom) the list purely for being the colour
-    // the winning archetype happens to be.
-    rows.sort_by(|a, b| {
-        b.best_delta().partial_cmp(&a.best_delta()).unwrap_or(std::cmp::Ordering::Equal)
-    });
-    rows
-}
-
-/// [`per_card_attribution`] restricted to the samples whose build plays
-/// `anchor` — the build-around lens. A card whose delta INSIDE anchor
-/// decks beats its global delta is a synergy partner (Professor Dellian
-/// Fel's emblem turning every lifegain trigger into a drain). Returns
-/// the subset size alongside the rows so callers can report the sample.
-pub fn per_card_attribution_within(
-    samples: &[(&CandidateBuild, f64)],
-    anchor: &str,
-    min_side: usize,
-) -> (usize, Vec<CardAttribution>) {
-    // Case-insensitive: the anchor arrives from the CLI, and an exact
-    // compare silently returned an empty subset for "professor dellian
-    // fel" vs the printed "Professor Dellian Fel" — which then let a
-    // cross-archetype marginal attribution stand in for the conditional
-    // one. An empty-looking anchor should be loud, never a quiet no-op.
-    let subset: Vec<(&CandidateBuild, f64)> = samples
-        .iter()
-        .filter(|(c, _)| {
-            c.main
-                .iter()
-                .chain(c.duals.iter())
-                .any(|&f| crate::cube::card_def(f).name.eq_ignore_ascii_case(anchor))
-        })
-        .map(|(c, w)| (*c, *w))
-        .collect();
-    let n = subset.len();
-    (n, per_card_attribution(&subset, min_side))
-}
-
-/// A single-swap child of `parent`: `main[out_idx]` goes to the bench,
-/// `in_card` comes off it, and the basics re-split for the new pips. The
-/// spell count (and so the 40-card total) is unchanged by construction.
-fn swap_child(parent: &CandidateBuild, out_idx: usize, in_card: CardFactory, label: String) -> CandidateBuild {
-    let mut child = parent.clone();
-    let removed = child.main[out_idx];
-    child.main[out_idx] = in_card;
-    if let Some(pos) = child.leftovers.iter().position(|&f| f as usize == in_card as usize) {
-        child.leftovers.remove(pos);
-    }
-    child.leftovers.push(removed);
-    // Land colors track the new main (a splash card swapped out may free
-    // its basics; one swapped in needs a source).
-    let mut land_colors = child.colors.clone();
-    for &c in &child.splash {
-        if child.main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(c)) {
-            land_colors.push(c);
-        }
-    }
-    let basic_total: u32 = parent.basics.values().sum();
-    // Swap children re-split the basics of a build that already exists;
-    // they inherit that build's mana model rather than re-deciding it.
-    child.basics = basic_split(&child.main, &land_colors, basic_total, true);
-    child.static_score = static_build_score(&child.main, child.main.len());
-    child.label = label;
-    child
-}
-
-// ─────────────────────────────── session ─────────────────────────────────
-
-/// Canonical cache key for a full deck: sorted factory addresses.
-fn deck_key(deck: &[CardFactory]) -> Vec<usize> {
-    let mut k: Vec<usize> = deck.iter().map(|&f| f as usize).collect();
-    k.sort_unstable();
-    k
-}
-
-/// A recommender session: the gauntlet plus a per-deck outcome cache,
-/// shared across pipeline stages. The staged flow re-races the same
-/// decks repeatedly — the stage-1 winner returns as refine's v0, the
-/// incumbent enters every search generation — and without the cache each
-/// re-race would replay its exact seeded schedule from scratch. Instead,
-/// outcomes are recorded per (deck, opponent, game slot) and replayed
-/// when the same deck meets the same slot again.
-pub struct Session {
-    cfg: SimConfig,
-    gauntlet: Vec<GauntletDeck>,
-    cache: HashMap<Vec<usize>, SlotOutcomes>,
-}
-
-impl Session {
-    /// Generate the gauntlet (fully determined by `cfg.seed`) once, up
-    /// front — every stage of this session faces the same field.
-    pub fn new(cfg: SimConfig) -> Self {
-        let gauntlet = generate_gauntlet(&cfg);
-        Self { cfg, gauntlet, cache: HashMap::default() }
-    }
-
-    pub fn cfg(&self) -> &SimConfig {
-        &self.cfg
-    }
-
-    pub fn gauntlet(&self) -> &[GauntletDeck] {
-        &self.gauntlet
-    }
-
-    /// Evaluate the first `cap` candidates against the session gauntlet,
-    /// crediting cached outcomes and folding fresh ones back into the
-    /// cache. Returns the recommendation plus the per-candidate slot
-    /// maps (parallel to `evals`).
-    fn eval_prepared(
-        &mut self,
-        candidates: Vec<CandidateBuild>,
-        cap: usize,
-        on_progress: &(impl Fn(&[CandidateEval]) + Sync),
-    ) -> (Recommendation, Vec<SlotOutcomes>) {
-        let top_k = candidates.len().min(cap);
-        let decks: Vec<Vec<CardFactory>> = candidates[..top_k].iter().map(|c| c.deck()).collect();
-        let keys: Vec<Vec<usize>> = decks.iter().map(|d| deck_key(d)).collect();
-        let prefill: Vec<SlotOutcomes> =
-            keys.iter().map(|k| self.cache.get(k).cloned().unwrap_or_default()).collect();
-        let (evals, slots) =
-            evaluate_candidates_slots(&decks, &self.gauntlet, &self.cfg, &prefill, on_progress);
-        for (key, s) in keys.into_iter().zip(&slots) {
-            self.cache.entry(key).or_default().extend(s.iter());
-        }
-        let mut ranking: Vec<usize> = (0..top_k).collect();
-        ranking.sort_by(|&a, &b| {
-            evals[b]
-                .win_rate()
-                .partial_cmp(&evals[a].win_rate())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        (Recommendation { candidates, evals, ranking, seed: self.cfg.seed }, slots)
-    }
-
-    /// End-to-end stage 1: enumerate → static-rank → simulate the top K.
-    pub fn recommend<F>(&mut self, pool: &[CardFactory], on_progress: F) -> Recommendation
-    where
-        F: Fn(&[CandidateEval]) + Sync,
-    {
-        let candidates = enumerate_candidates(pool, &self.cfg);
-        self.recommend_prepared(candidates, on_progress)
-    }
-
-    /// Like [`Session::recommend`] but with a caller-supplied candidate
-    /// list — the first `candidate_cap` entries are the ones simulated,
-    /// so callers can reorder to pin builds the static rank would cut.
-    pub fn recommend_prepared<F>(
-        &mut self,
-        candidates: Vec<CandidateBuild>,
-        on_progress: F,
-    ) -> Recommendation
-    where
-        F: Fn(&[CandidateEval]) + Sync,
-    {
-        let cap = self.cfg.candidate_cap;
-        self.eval_prepared(candidates, cap, &on_progress).0
-    }
-
-    /// Stage-2 refinement: take the top `refine_top` shapes from a
-    /// completed [`Recommendation`], generate `variants_per_shape` builds
-    /// of each (the greedy build plus jittered rebuilds with sampled
-    /// spell/land counts, deduplicated by contents), and race them
-    /// against the session gauntlet — the stage-1 winner's v0 replays
-    /// from cache. Variant labels carry a suffix ("U/B/G v3, 24+16").
-    ///
-    /// Coarse-to-fine on purpose: stage 1 answers "which colors", this
-    /// answers "which 40 cards" — expanding variants for *every* shape
-    /// would blow up the candidate list while still under-sampling the
-    /// shapes that matter. Pair with `crn: true`; within-shape variant
-    /// differences are small, and paired shuffles are what make them
-    /// resolvable.
-    pub fn refine<F>(
-        &mut self,
-        pool: &[CardFactory],
-        base: &Recommendation,
-        on_progress: F,
-    ) -> Recommendation
-    where
-        F: Fn(&[CandidateEval]) + Sync,
-    {
-        let cfg = self.cfg.clone();
-        let noise = (cfg.build_temperature.max(0.0) * 4.0).round() as i32;
-        let mut variants: Vec<CandidateBuild> = Vec::new();
-        let mut seen: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
-        // Invariant across every shape and variant below.
-        let scores = PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro);
-        for &ci in base.ranking.iter().take(cfg.refine_top) {
-            let shape = &base.candidates[ci];
-            for v in 0..cfg.variants_per_shape.max(1) {
-                let mut rng = StdRng::seed_from_u64(
-                    cfg.seed
-                        ^ (ci as u64).wrapping_mul(0xA24B_AED4_963E_E407)
-                        ^ (v as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15),
-                );
-                // v0 = the shape's greedy build, verbatim; later variants
-                // jitter picks and sample counts, with the jitter widening
-                // as the fleet grows so big sweeps explore past the
-                // near-greedy neighborhood instead of colliding into dedup.
-                let (spells, lands, n) = if v == 0 {
-                    (cfg.target_spells, cfg.total_lands, 0)
-                } else {
-                    let (s, l) = sample_deck_split(&cfg, &mut rng);
-                    (s, l, noise + (v as i32 / 16) * 2)
-                };
-                let Some(mut build) = build_shape(
-                    &shape.colors,
-                    &shape.splash,
-                    (spells, lands, n),
-                    &cfg,
-                    &mut rng,
-                    &scores,
-                ) else {
-                    continue;
-                };
-                // Dedup on the full 40 (main + lands), not just spells — a
-                // variant differing only in land count is still a variant.
-                if !seen.insert(deck_key(&build.deck())) {
-                    continue;
-                }
-                if v > 0 {
-                    build.label =
-                        format!("{} v{v}, {}+{}", build.label, build.main.len(), lands);
-                }
-                variants.push(build);
-            }
-        }
-        let cap = variants.len().max(1);
-        self.eval_prepared(variants, cap, &on_progress).0
-    }
-
-    /// Stage-3 refinement: attribution-guided local search around the
-    /// winning build. Each generation computes per-card attribution over
-    /// *every* build measured so far, proposes children that swap the
-    /// weakest in-deck cards for the strongest bench cards (plus seeded
-    /// random swaps for exploration), and races children + incumbent
-    /// against the session gauntlet — the incumbent's games replay from
-    /// cache, and the comparison is paired game-for-game. A child is
-    /// adopted only when it beats the incumbent on their shared slots at
-    /// `search_accept_z` (a raw win-rate edge at these sample sizes is
-    /// mostly noise, and chasing it walks the search randomly). Stops at
-    /// `search_generations`, on a generation with no adopted child, or
-    /// when no legal swap remains.
-    ///
-    /// This replaces "read the attribution table by hand and re-run with
-    /// a pin": the gradient the table exposes is followed automatically.
-    pub fn local_search<F>(&mut self, base: &Recommendation, on_progress: F) -> Recommendation
-    where
-        F: Fn(&[CandidateEval]) + Sync,
-    {
-        let cfg = self.cfg.clone();
-        let mut incumbent: CandidateBuild = base.candidates[base.ranking[0]].clone();
-        incumbent.label = format!("{} (incumbent)", incumbent.label);
-        let mut samples: Vec<(CandidateBuild, f64)> = base.candidates[..base.evals.len()]
-            .iter()
-            .zip(&base.evals)
-            .map(|(c, e)| (c.clone(), e.win_rate()))
-            .collect();
-        let mut last: Option<Recommendation> = None;
-        for generation in 0..cfg.search_generations {
-            // Which cards may come in: bench nonlands whose colors fit the
-            // build, honoring the copy cap.
-            let legal_in = |f: CardFactory, main: &[CardFactory]| -> bool {
-                let def = crate::cube::card_def(f);
-                if def.card_types.contains(&crate::card::CardType::Land) {
-                    return false;
-                }
-                let cs = colors_of_cost(&def.cost);
-                let fits = cs.is_empty()
-                    || cs
-                        .iter()
-                        .all(|c| incumbent.colors.contains(&c) || incumbent.splash.contains(&c));
-                fits && (main.iter().filter(|&&m| m as usize == f as usize).count() as u32)
-                    < COPY_CAP
-            };
-            let refs: Vec<(&CandidateBuild, f64)> =
-                samples.iter().map(|(c, w)| (c, *w)).collect();
-            let attribution = per_card_attribution(&refs, 3);
-            let delta_of = |f: CardFactory| -> f64 {
-                attribution.iter().find(|a| a.name == crate::cube::card_def(f).name).map(|a| a.delta()).unwrap_or(0.0)
-            };
-            // Candidate swaps: every (weak in-deck, strong bench) pair ranked
-            // by expected gain, then seeded random swaps to keep exploring
-            // when the gradient runs dry.
-            let mut proposals: Vec<(usize, CardFactory, f64)> = Vec::new();
-            for (i, &out_card) in incumbent.main.iter().enumerate() {
-                for &in_card in &incumbent.leftovers {
-                    if in_card as usize == out_card as usize
-                        || !legal_in(in_card, &incumbent.main)
-                    {
-                        continue;
-                    }
-                    let gain = delta_of(in_card) - delta_of(out_card);
-                    proposals.push((i, in_card, gain));
-                }
-            }
-            proposals
-                .sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
-            let mut rng = StdRng::seed_from_u64(
-                cfg.seed ^ (generation as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93),
-            );
-            let explore = cfg.search_children / 4;
-            let mut children: Vec<CandidateBuild> = Vec::new();
-            let mut seen: crate::fxhash::HashSet<Vec<usize>> =
-                crate::fxhash::HashSet::default();
-            seen.insert(deck_key(&incumbent.main));
-            // Gradient children first (positive expected gain only), then
-            // random exploration swaps.
-            for &(i, in_card, gain) in &proposals {
-                if children.len() >= cfg.search_children.saturating_sub(explore) || gain <= 0.0 {
-                    break;
-                }
-                let child = swap_child(
-                    &incumbent,
-                    i,
-                    in_card,
-                    format!("g{generation} s{}", children.len()),
-                );
-                if seen.insert(deck_key(&child.main)) {
-                    children.push(child);
-                }
-            }
-            for _ in 0..cfg.search_children * 4 {
-                if children.len() >= cfg.search_children || proposals.is_empty() {
-                    break;
-                }
-                let &(i, in_card, _) = &proposals[rng.random_range(0..proposals.len())];
-                let child = swap_child(
-                    &incumbent,
-                    i,
-                    in_card,
-                    format!("g{generation} x{}", children.len()),
-                );
-                if seen.insert(deck_key(&child.main)) {
-                    children.push(child);
-                }
-            }
-            if children.is_empty() {
-                break;
-            }
-            let mut cands = vec![incumbent.clone()];
-            cands.extend(children);
-            let cap = cands.len();
-            let (rec, slot_maps) = self.eval_prepared(cands, cap, &on_progress);
-            samples.extend(
-                rec.candidates[..rec.evals.len()]
-                    .iter()
-                    .zip(&rec.evals)
-                    .map(|(c, e)| (c.clone(), e.win_rate())),
-            );
-            let best = rec.ranking[0];
-            // Paired acceptance: the top child must beat the incumbent on
-            // their shared game slots at `search_accept_z`, not merely post
-            // a higher raw win rate — an unpaired nominal edge at these
-            // sample sizes is mostly noise, and chasing it walks the search
-            // randomly. Tiny overlaps (smoke-test configs) fall back to the
-            // raw comparison.
-            let improved = best != 0
-                && match paired_diff(&slot_maps[best], &slot_maps[0]) {
-                    Some(pd) if pd.n >= MIN_PAIRED_SLOTS => {
-                        pd.mean - cfg.search_accept_z * pd.se > 0.0
-                    }
-                    _ => rec.evals[best].win_rate() > rec.evals[0].win_rate(),
-                };
-            if improved {
-                incumbent = rec.candidates[best].clone();
-                incumbent.label = format!("{} (incumbent)", incumbent.label);
-            }
-            last = Some(rec);
-            if !improved {
-                break;
-            }
-        }
-        last.unwrap_or_else(|| Recommendation {
-            candidates: vec![incumbent],
-            evals: vec![base.evals[base.ranking[0]].clone()],
-            ranking: vec![0],
-            seed: cfg.seed,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3715,93 +2755,6 @@ mod tests {
             "expected most of {} scored pairs to split, got {splits}",
             t.pairs.len()
         );
-    }
-
-    /// The Dellian Fel defect, reproduced in miniature.
-    ///
-    /// Two archetypes: a strong one (65 % base) and a weak one (45 %).
-    /// The card under test is genuinely *bad* — it costs 4 points
-    /// wherever it appears — but it only appears in the strong
-    /// archetype's builds. The raw marginal therefore reports it as a
-    /// star, because its "out" group is mostly the weak archetype. The
-    /// stratified delta, comparing only same-colour builds, sees the
-    /// truth.
-    #[test]
-    fn stratified_attribution_removes_the_archetype_confound() {
-        let mut samples_owned: Vec<(CandidateBuild, f64)> = Vec::new();
-        for i in 0..8 {
-            // Strong archetype; half of them play the card.
-            let plays = i % 2 == 0;
-            let mut main = vec![catalog::grizzly_bears as CardFactory; 20];
-            if plays {
-                main.push(catalog::craw_wurm);
-            }
-            let wr = 0.65 - if plays { 0.04 } else { 0.0 };
-            samples_owned.push((build_with(vec![Color::Red, Color::White], main), wr));
-        }
-        for _ in 0..8 {
-            // Weak archetype; never plays the card.
-            let main = vec![catalog::grizzly_bears as CardFactory; 20];
-            samples_owned.push((build_with(vec![Color::Blue, Color::Black], main), 0.45));
-        }
-        let samples: Vec<(&CandidateBuild, f64)> =
-            samples_owned.iter().map(|(c, w)| (c, *w)).collect();
-
-        let rows = per_card_attribution(&samples, 3);
-        let wurm = rows
-            .iter()
-            .find(|r| r.name == "Craw Wurm")
-            .expect("the card under test should be comparable");
-
-        assert!(
-            wurm.delta() > 0.0,
-            "the raw marginal should be fooled into liking it, got {:+.3}",
-            wurm.delta()
-        );
-        let within = wurm.stratified_delta.expect("one stratum plays and benches it");
-        assert!(
-            (within + 0.04).abs() < 1e-9,
-            "within-archetype delta should recover the true −4 points, got {within:+.3}"
-        );
-        assert_eq!(wurm.strata, 1, "only the R/W stratum has it on both sides");
-    }
-
-    /// A card no single archetype both plays and benches has no
-    /// within-archetype comparison at all, and must say so rather than
-    /// quietly reporting the marginal as if it were one.
-    #[test]
-    fn a_card_confined_to_one_archetype_reports_no_strata() {
-        let mut samples_owned: Vec<(CandidateBuild, f64)> = Vec::new();
-        for _ in 0..6 {
-            let mut main = vec![catalog::grizzly_bears as CardFactory; 20];
-            main.push(catalog::craw_wurm);
-            samples_owned.push((build_with(vec![Color::Green], main), 0.6));
-        }
-        for _ in 0..6 {
-            let main = vec![catalog::grizzly_bears as CardFactory; 20];
-            samples_owned.push((build_with(vec![Color::Blue], main), 0.4));
-        }
-        let samples: Vec<(&CandidateBuild, f64)> =
-            samples_owned.iter().map(|(c, w)| (c, *w)).collect();
-        let rows = per_card_attribution(&samples, 3);
-        let wurm = rows.iter().find(|r| r.name == "Craw Wurm").unwrap();
-        assert_eq!(wurm.strata, 0);
-        assert!(wurm.stratified_delta.is_none());
-        // ...and `best_delta` falls back rather than pretending.
-        assert!((wurm.best_delta() - wurm.delta()).abs() < 1e-12);
-    }
-
-    fn build_with(colors: Vec<Color>, main: Vec<CardFactory>) -> CandidateBuild {
-        CandidateBuild {
-            colors,
-            splash: Vec::new(),
-            main,
-            duals: Vec::new(),
-            basics: HashMap::default(),
-            leftovers: Vec::new(),
-            static_score: 0,
-            label: String::new(),
-        }
     }
 
     fn deck_of(spec: &[(CardFactory, usize)]) -> Vec<CardFactory> {
@@ -3928,30 +2881,19 @@ mod tests {
         );
     }
 
-    /// Every variant and gauntlet deck is a legal 40-card sealed deck —
-    /// independent spell/land sampling used to mint 38-39-card decks,
-    /// which won tournaments on thinner-deck consistency.
+    /// Every randomized build is a legal 40-card sealed deck — independent
+    /// spell/land sampling used to mint 38-39-card decks, which won
+    /// tournaments on thinner-deck consistency. (This also pinned the
+    /// retired recommender's refine variants; the builder is what is left.)
     #[test]
-    fn variants_and_gauntlet_decks_are_forty_cards()  {
-        let cfg = SimConfig {
-            gauntlet_size: 4,
-            games_per_pairing: 1,
-            candidate_cap: 1,
-            racing: false,
-            threads: 2,
-            refine_top: 1,
-            variants_per_shape: 12,
-            ..Default::default()
-        };
-        for deck in generate_gauntlet(&cfg) {
-            assert_eq!(deck.cards.len(), 40, "gauntlet deck {} is 40 cards", deck.label);
-        }
-        let pool = wr_pool_with_green_bomb();
-        let mut session = Session::new(cfg);
-        let base = session.recommend(&pool, |_| {});
-        let refined = session.refine(&pool, &base, |_| {});
-        for c in &refined.candidates {
-            assert_eq!(c.deck().len(), 40, "variant {} is 40 cards", c.label);
+    fn random_builds_are_forty_cards() {
+        let cfg = SimConfig::default();
+        let packs = crate::draft::SosPacks::sos_default();
+        for seed in 0..4u64 {
+            let mut rng = StdRng::seed_from_u64(seed);
+            let pulls: Vec<CardFactory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+            let deck = build_random_deck(&pulls, &cfg, &mut rng);
+            assert_eq!(deck.cards.len(), 40, "seed {seed}: {} is 40 cards", deck.label);
         }
     }
 
@@ -3992,19 +2934,6 @@ mod tests {
     }
 
     #[test]
-    fn gauntlet_is_seed_deterministic() {
-        let cfg = SimConfig { gauntlet_size: 3, ..Default::default() };
-        let names = |g: &[GauntletDeck]| -> Vec<Vec<&'static str>> {
-            g.iter().map(|d| d.cards.iter().map(|&f| crate::cube::card_def(f).name).collect()).collect()
-        };
-        let a = generate_gauntlet(&cfg);
-        let b = generate_gauntlet(&cfg);
-        assert_eq!(names(&a), names(&b), "same seed → identical gauntlet");
-        let c = generate_gauntlet(&SimConfig { seed: 1234, ..cfg });
-        assert_ne!(names(&a), names(&c), "different seed → different gauntlet");
-    }
-
-    #[test]
     fn simulate_real_deck_crushes_land_pile() {
         // 23 spells + 17 mountains vs 40 lands: the real deck must win
         // essentially every decided game.
@@ -4039,46 +2968,6 @@ mod tests {
             (a.wins_a, a.wins_b, a.undecided),
             (b.wins_a, b.wins_b, b.undecided),
             "same CRN seeds → same outcomes against a static opponent",
-        );
-    }
-
-    /// Refinement: variants of the top shapes are generated, deduped, and
-    /// ranked; v0 of the top shape reproduces the stage-1 build.
-    #[test]
-    fn refine_generates_ranked_variants_of_top_shapes() {
-        let cfg = SimConfig {
-            gauntlet_size: 2,
-            games_per_pairing: 1,
-            candidate_cap: 2,
-            racing: false,
-            threads: 2,
-            refine_top: 2,
-            variants_per_shape: 3,
-            ..Default::default()
-        };
-        let pool = wr_pool_with_green_bomb();
-        let mut session = Session::new(cfg);
-        let base = session.recommend(&pool, |_| {});
-        let refined = session.refine(&pool, &base, |_| {});
-        assert!(
-            refined.candidates.len() >= 2,
-            "at least the two shapes' greedy builds survive dedup",
-        );
-        assert_eq!(refined.ranking.len(), refined.evals.len());
-        // v0 of the stage-1 winner is reproduced verbatim.
-        let winner = &base.candidates[base.ranking[0]];
-        let v0 = &refined.candidates[0];
-        assert_eq!(v0.label, winner.label, "variant 0 keeps the plain shape label");
-        let names = |b: &CandidateBuild| -> Vec<&'static str> {
-            let mut n: Vec<&'static str> = b.deck().iter().map(|&f| crate::cube::card_def(f).name).collect();
-            n.sort_unstable();
-            n
-        };
-        assert_eq!(names(v0), names(winner), "variant 0 is the stage-1 build");
-        // Jittered variants carry the suffix label.
-        assert!(
-            refined.candidates.iter().any(|c| c.label.contains(" v")),
-            "at least one jittered variant exists",
         );
     }
 
@@ -4318,60 +3207,6 @@ mod tests {
         assert_eq!(split.values().sum::<u32>(), 10);
     }
 
-    /// Local search: terminates, every candidate stays a legal 40-card
-    /// deck, and the incumbent is always in the raced set.
-    #[test]
-    fn local_search_produces_legal_swaps() {
-        let cfg = SimConfig {
-            gauntlet_size: 2,
-            games_per_pairing: 1,
-            candidate_cap: 4,
-            racing: false,
-            threads: 2,
-            refine_top: 2,
-            variants_per_shape: 4,
-            search_generations: 1,
-            search_children: 3,
-            ..Default::default()
-        };
-        let pool = wr_pool_with_green_bomb();
-        let mut session = Session::new(cfg);
-        let base = session.recommend(&pool, |_| {});
-        let refined = session.refine(&pool, &base, |_| {});
-        let searched = session.local_search(&refined, |_| {});
-        assert!(!searched.candidates.is_empty());
-        assert!(searched.candidates[0].label.contains("(incumbent)"));
-        for c in &searched.candidates {
-            assert_eq!(c.deck().len(), 40, "swap child {} stays 40 cards", c.label);
-        }
-    }
-
-    /// End-to-end smoke: tiny config, racing off, two threads — must
-    /// terminate with a populated ranking and progress callbacks fired.
-    #[test]
-    fn recommend_end_to_end_smoke() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        // Kept intentionally tiny — this is a wiring smoke test, not a
-        // ranking-quality test; real runs use SimConfig::default().
-        let cfg = SimConfig {
-            gauntlet_size: 2,
-            games_per_pairing: 1,
-            candidate_cap: 2,
-            racing: false,
-            threads: 2,
-            ..Default::default()
-        };
-        let progress_calls = AtomicUsize::new(0);
-        let rec = recommend(&wr_pool_with_green_bomb(), &cfg, |_evals| {
-            progress_calls.fetch_add(1, Ordering::Relaxed);
-        });
-        assert_eq!(rec.evals.len(), 2, "top-K candidates evaluated");
-        assert_eq!(rec.ranking.len(), 2);
-        assert!(progress_calls.load(Ordering::Relaxed) > 0, "progress streamed");
-        let games: u32 = rec.evals.iter().map(|e| e.decided() + e.undecided).sum();
-        assert_eq!(games as usize, 2 * 2 * cfg.games_per_pairing, "full round-robin game count");
-    }
-
     /// The paired estimator has to agree with the naive win rate on the
     /// mean — pairing buys precision, not a different answer. Four
     /// A-sweeps and one B-sweep out of ten is 13 of 20 games to A.
@@ -4433,80 +3268,13 @@ mod tests {
     /// entire rest of the field in round 0.
     #[test]
     fn wilson_interval_is_not_degenerate_at_extremes() {
-        let mut e = CandidateEval::new(0);
-        e.wins = 5;
-        let (lb, ub) = e.ci_bounds(1.96);
+        let (lb, ub) = wilson(5, 5, 1.96);
         assert!(lb < 1.0, "5-0 keeps a lower bound below certainty, got {lb}");
         assert!(ub <= 1.0);
-        assert!(e.ci_halfwidth(1.96) > 0.05, "5-0 keeps honest width");
-        e.wins = 0;
-        e.losses = 5;
-        let (lb, ub) = e.ci_bounds(1.96);
+        assert!((ub - lb) / 2.0 > 0.05, "5-0 keeps honest width");
+        let (lb, ub) = wilson(0, 5, 1.96);
         assert!(lb < 0.01);
         assert!(ub > 0.0 && ub < 1.0, "0-5 upper bound stays above zero, got {ub}");
     }
 
-    /// Paired comparison: concordant slots contribute no variance, so a
-    /// candidate losing every discordant slot is significantly behind
-    /// even when the records look close unpaired; unshared and undecided
-    /// slots are excluded.
-    #[test]
-    fn paired_diff_uses_shared_decided_slots_only() {
-        let mut a = SlotOutcomes::default();
-        let mut b = SlotOutcomes::default();
-        for i in 0..30u32 {
-            a.insert((0, i), 1);
-            b.insert((0, i), 1); // concordant wins: no variance
-        }
-        for i in 30..40u32 {
-            a.insert((0, i), -1);
-            b.insert((0, i), 1); // b wins every discordant slot
-        }
-        a.insert((1, 0), 1); // unshared → ignored
-        a.insert((0, 40), 1);
-        b.insert((0, 40), 0); // undecided on one side → ignored
-        let pd = paired_diff(&a, &b).unwrap();
-        assert_eq!(pd.n, 40);
-        assert!((pd.mean + 0.25).abs() < 1e-9, "mean −10/40, got {}", pd.mean);
-        assert!(pd.mean + 1.96 * pd.se < 0.0, "a is significantly behind b");
-        assert!(paired_diff(&SlotOutcomes::default(), &b).is_none(), "no shared slots → None");
-    }
-
-    /// Session cache: the same deck re-raced in a later stage replays its
-    /// recorded outcomes instead of re-simulating — identical evals (bot
-    /// jitter is unseeded, so fresh games would drift) and no per-job
-    /// progress callbacks, just the one credit snapshot per round.
-    #[test]
-    fn session_cache_replays_previous_outcomes() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        let cfg = SimConfig {
-            gauntlet_size: 2,
-            games_per_pairing: 2,
-            candidate_cap: 2,
-            racing: false,
-            threads: 2,
-            ..Default::default()
-        };
-        let pool = wr_pool_with_green_bomb();
-        let candidates = enumerate_candidates(&pool, &cfg);
-        let mut session = Session::new(cfg);
-        let first_calls = AtomicUsize::new(0);
-        let a = session.recommend_prepared(candidates.clone(), |_| {
-            first_calls.fetch_add(1, Ordering::Relaxed);
-        });
-        let second_calls = AtomicUsize::new(0);
-        let b = session.recommend_prepared(candidates, |_| {
-            second_calls.fetch_add(1, Ordering::Relaxed);
-        });
-        let stats = |r: &Recommendation| -> Vec<(u32, u32, u32)> {
-            r.evals.iter().map(|e| (e.wins, e.losses, e.undecided)).collect()
-        };
-        assert_eq!(stats(&a), stats(&b), "second run replays cached outcomes verbatim");
-        assert_eq!(
-            second_calls.load(Ordering::Relaxed),
-            1,
-            "fully cached run credits in one snapshot, no simulation jobs",
-        );
-        assert!(first_calls.load(Ordering::Relaxed) > 1, "first run actually simulated");
-    }
 }

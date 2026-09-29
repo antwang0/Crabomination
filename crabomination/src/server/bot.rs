@@ -261,7 +261,7 @@ pub trait Bot: Send {
     /// Push the profile settings the *engine* reads off the seat
     /// (`Player::smart_tap`, `converge_rarest`, `hostile_player_targets`)
     /// onto the seat this bot plays — the push every ladder driver makes
-    /// (`recommend::play_seeded_game`), done by the server for its bot
+    /// (`recommend::play_one_game_traced`), done by the server for its bot
     /// seats. Default: nothing to push.
     fn push_seat_flags(&self, _player: &mut crate::player::Player) {}
 }

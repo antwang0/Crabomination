@@ -17,7 +17,7 @@ debug/*
 # team's verification state survives across machines.
 !**/audited_cards.json
 
-# Replay and decision-log streams. `deck_gauntlet --replays DIR` and
+# Replay and decision-log streams. The replay recorder (`CRAB_REPLAY_DIR`) and
 # `crabomination::server::decision_log` write `replay-<ts>-<seq>.jsonl` /
 # `decisions-<ts>-<seq>.jsonl` into `<repo>/replays/`; the client writes the
 # same shapes under `debug/` (covered above). Per-run and per-machine —

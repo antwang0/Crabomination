@@ -78,9 +78,9 @@ trig-census = []
 # only the link — one of these harnesses starts and finishes in 3.5 ms, so
 # there was no meaningful run-time cost to remove.
 #
-# `replay_view` is left alone — it holds real tests over its bin-local
-# `narrate`. (`audit_stubs` was the other; its check is now a
-# `core_rules::structural_audit` test and the binary is gone.)
+# Every bin left in this crate carries `test = false`: the two that held real
+# tests are gone (`audit_stubs`' check is a `core_rules::structural_audit`
+# test now; `replay_view` was retired with its `narrate` tests).
 [[bin]]
 name = "audit_incomplete"
 test = false
@@ -90,21 +90,6 @@ name = "bot_ladder"
 test = false
 
 [[bin]]
-name = "bot_probe"
-test = false
-
-[[bin]]
-name = "deck_duel"
-test = false
-
-[[bin]]
-name = "deck_gauntlet"
-test = false
-
-[[bin]]
 name = "dump_cards"
 test = false
 
-[[bin]]
-name = "recommend_pool"
-test = false
