@@ -298,3 +298,33 @@ fn brotherhood_scribe_pumps_on_energy() {
     assert_eq!((c.power, c.toughness), (3, 3));
     let _ = PlayerRef::You;
 }
+
+/// Plasma Caster — "target creature that's blocking EQUIPPED creature": a
+/// blocker on another attacker isn't a legal target (it read any blocker).
+#[test]
+fn plasma_caster_targets_only_the_equipped_creatures_blocker() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let (a, b) = (g.add_card_to_battlefield(0, catalog::grizzly_bears()), g.add_card_to_battlefield(0, catalog::grizzly_bears()));
+    let caster = g.add_card_to_battlefield(0, catalog::plasma_caster());
+    g.battlefield_find_mut(caster).unwrap().attached_to = Some(a);
+    let (x, y) = (g.add_card_to_battlefield(1, catalog::grizzly_bears()), g.add_card_to_battlefield(1, catalog::grizzly_bears()));
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(x, a), (y, b)])).expect("block");
+    let legal = |t| g.evaluate_requirement_static(&R::BlockingHostOfSource, &Target::Permanent(t), 0, Some(caster));
+    assert!(legal(x), "blocking the equipped creature");
+    assert!(!legal(y), "blocking another attacker");
+}

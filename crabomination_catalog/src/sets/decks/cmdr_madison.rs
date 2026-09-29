@@ -976,7 +976,8 @@ pub fn plasma_caster() -> CardDefinition {
             energy_cost: 2,
             effect: Effect::FlipCoin {
                 count: Value::ONE,
-                on_heads: Box::new(Effect::Exile { what: target_filtered(R::Creature.and(R::IsBlocking)) }),
+                // "Target creature that's blocking EQUIPPED creature".
+                on_heads: Box::new(Effect::Exile { what: target_filtered(R::Creature.and(R::BlockingHostOfSource)) }),
                 on_tails: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE }),
             },
             ..Default::default()

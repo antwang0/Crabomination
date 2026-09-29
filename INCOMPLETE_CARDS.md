@@ -2252,7 +2252,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
 | 🟡 Endurance Bobblehead | Science! (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
-| 🟡 Plasma Caster | Science! (PIP) | the target may be any blocking creature, not only one blocking the equipped creature. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
 | 🟡 Agility Bobblehead | Scrappy Survivors (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted, and its host is the engine's pick. |
