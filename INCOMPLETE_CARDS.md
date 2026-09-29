@@ -787,7 +787,7 @@ abilities. One residual and two rule-implied allowances:
 
 | Card | Residual | Why |
 |---|---|---|
-| Phyrexian Battleflies | "{B}: …  Activate **no more than twice** each turn" ships as `once_per_turn: true`, i.e. once | `ActivatedAbility::once_per_turn` is a `bool`, and `CardCold::once_per_turn_used` is a `Vec<usize>` of ability indices with no count beside it. A per-turn *limit* wants both widened, plus the wire and serde forms — a primitive, not a card job |
+| ✅ Phyrexian Battleflies | closed 2026-09-29: one ability with `max_activations_per_turn: Some(2)` (it had become an uncapped copy plus a once-per-turn copy, i.e. unlimited) | `core_rules/cr_recent109.rs::phyrexian_battleflies_pumps_at_most_twice` |
 | Arcanum Wings | `sorcery_speed: true` with no printed clause | CR 702.64a — aura swap **is** "Activate only as a sorcery" by rule |
 | Roadkill Rodney | same, reported in the audit's token bucket | the flag is on the **Mutagen token**, whose own printed text says "Activate only as a sorcery"; a factory holds its tokens' rules text and the card's oracle does not |
 
@@ -1166,8 +1166,9 @@ Fear of Burning Alive, Teysa's "combat damage to you"); "a land enters"
 as `LandPlayed`; "becomes blocked by a creature" as a per-blocker
 `Blocks` + `TriggerBlocksSource` (Nessian Boar); "cast a spell that
 targets" as `BecameTarget` (Gnarlback Rhino). Residue, six rows:
-Whirling Dervish and Skizzik model an end-step conditional as the event
-that would satisfy it (a combat-damage counter; an ETB that schedules
+Skizzik models an end-step conditional as the event
+that would satisfy it (Whirling Dervish's became the printed end-step
+intervening-if, 2026-09-29) (a combat-damage counter; an ETB that schedules
 the sacrifice), and four `stx/extras_*` names (Sproutback Trudge,
 Cunning Rhetoric, Lorehold Archivist, Lone Rider) are supplemental
 inventions that predate the printed cards of the same name. Not
@@ -1201,7 +1202,7 @@ spelled). First run 298 rows, eleven reader rules later 12, nine real (the last 
 | Prosperous Thief | `SelfSource` | "one or more Ninja or Rogue creatures you control" — `YourControl` + the type filter (per creature) |
 | Voja, Jaws of the Conclave; Attack-in-the-Box | `YouAttack` / `SelfSource` — fired whenever you attacked with anything | "whenever this creature attacks" — `Attacks` / `SelfSource` (found once the `YouAttack` leniency was narrowed to the "you" scopes) |
 
-Residue, five rows: Whirling Dervish, Skizzik and Lone Rider (the
+Residue, five rows (Whirling Dervish closed 2026-09-29): Skizzik and Lone Rider (the
 end-step conditional modelled as the event that satisfies it, the
 `trig` residue), Teo, Spirited Glider (`YouAttack` on `SelfSource` with
 an `AttackedWithCreatureMatching` predicate — "you attack with a flyer",
