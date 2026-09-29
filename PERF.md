@@ -3015,6 +3015,26 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-29 (Commander session `0131vbd2`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: the friendly branch of the
+auto-target picker walks the effect once for a nested `Untap` (a tapped pick
+ranks first) and `prefers_friendly_target` reads `Untap` as friendly;
+`SacrificeAndRemember` / `EachPlayerKeepsOneSacrificeRest` / the look-and-exile
+arm ask only when a seat prompts (bots keep their old pick). Card fixes reach
+the cube / sealed pools (Gyre Engineer, Bloodfray Giant, Boggart Trawler).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 at three builds; determinism ok (all pairs split); peak_rss_mib 35.6
+bench_ab.py      16 pairs, bl before the targeting change vs the tip 6866136d:
+                 -0.51 % median (mean +1.48 %, sd 5.21) — noise
+two-player pools cube / sos / sealed x 300 an archetype, seeds 9450001 / 9480001 /
+                 9520001: all decided
+pod              release: 5,000 at the tip (3/4/5/6/8 seats x 1,000, seeds 9530003+)
+                 and 6,900 earlier builds — all decided, zero panics
+```
+
 ### 2026-09-28 (Commander session `01E9u8Mj`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: both requirement walkers take
