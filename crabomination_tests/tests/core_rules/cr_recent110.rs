@@ -115,3 +115,20 @@ fn cr_702_14c_swampwalk_sees_urborg() {
     g.priority.player_with_priority = 1;
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bear, wraith)])).is_err(), "the Forest is a Swamp");
 }
+
+/// CR 105.2 — "colors among permanents you control" are current colours: an
+/// animated Treetop Village is a green Ape, so Shimmercreep (black) drains 2,
+/// not 1 (the count read the Village's printed, colourless line).
+#[test]
+fn cr_105_2_vivid_counts_an_animated_lands_colour() {
+    let mut g = main_phase();
+    let village = g.add_card_to_battlefield(0, catalog::treetop_village());
+    g.clear_sickness(village);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, village, 1, None);
+    let opp = g.players[1].life;
+    g.move_card_to_battlefield_for_test(0, catalog::shimmercreep());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "black + green");
+}

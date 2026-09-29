@@ -1787,6 +1787,13 @@ impl GameState {
                 .resolve_selector(s, ctx)
                 .into_iter()
                 .find_map(|e| match e {
+                    // CR 105.2 — a permanent's current colours (an animation's
+                    // colour, Painter's Servant), a card's printed ones.
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid)
+                        if self.battlefield.find_by_id(cid).is_some() && self.card_color_change_unscoped() =>
+                    {
+                        Some(self.card_colors_anywhere(cid).len() as i32)
+                    }
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
                         .find_card_anywhere(cid)
                         .map(|c| c.definition.printed_colors().len() as i32),
@@ -1815,7 +1822,12 @@ impl GameState {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find(cid)
                     {
-                        seen.extend(c.definition.printed_colors());
+                        // CR 105.2 — current colours when anything recolours.
+                        if self.card_color_change_unscoped() {
+                            seen.extend(self.card_colors_anywhere(cid));
+                        } else {
+                            seen.extend(c.definition.printed_colors());
+                        }
                     }
                 }
                 seen.len() as i32
@@ -2366,7 +2378,11 @@ impl GameState {
                     && self.battlefield.iter().any(|c| {
                         c.controller == ctx.controller
                             && self.evaluate_requirement_on_card(filter, c, ctx.controller)
-                            && c.definition.printed_colors().iter().any(|x| colors.contains(x))
+                            && if self.card_color_change_unscoped() {
+                                self.card_colors_anywhere(c.id).iter().any(|x| colors.contains(x))
+                            } else {
+                                c.definition.printed_colors().iter().any(|x| colors.contains(x))
+                            }
                     })
             }
             Predicate::PlayerSacrificedThisResolution(pref) => self
