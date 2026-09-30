@@ -838,6 +838,9 @@ fn spawn_scry_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
 
@@ -885,6 +888,7 @@ fn spawn_scry_modal(
                         };
                         let mut tile = col.spawn((
                             Button,
+                            crate::systems::ui_card_hover::UiCardHover::card(name, Some(*card_id)),
                             Node {
                                 flex_direction: FlexDirection::Column,
                                 width: Val::Px(CARD_W),
@@ -1026,6 +1030,9 @@ fn spawn_order_triggers_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
 
@@ -1062,6 +1069,8 @@ fn spawn_order_triggers_modal(
                     })
                     .with_children(|col| {
                         col.spawn((
+                            Button,
+                            crate::systems::ui_card_hover::UiCardHover::card(name, Some(*source)),
                             Node {
                                 flex_direction: FlexDirection::Column,
                                 width: Val::Px(CARD_W),
@@ -1206,6 +1215,9 @@ fn spawn_damage_order_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
 
@@ -1242,6 +1254,8 @@ fn spawn_damage_order_modal(
                     })
                     .with_children(|col| {
                         col.spawn((
+                            Button,
+                            crate::systems::ui_card_hover::UiCardHover::card(name, Some(*blocker)),
                             Node {
                                 flex_direction: FlexDirection::Column,
                                 width: Val::Px(CARD_W),
@@ -1378,6 +1392,9 @@ fn spawn_damage_assign_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
 
@@ -1417,6 +1434,8 @@ fn spawn_damage_assign_modal(
                     })
                     .with_children(|col| {
                         col.spawn((
+                            Button,
+                            crate::systems::ui_card_hover::UiCardHover::card(name, Some(*blocker)),
                             Node {
                                 flex_direction: FlexDirection::Column,
                                 width: Val::Px(CARD_W),
@@ -1547,6 +1566,9 @@ fn spawn_search_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
 
@@ -1604,10 +1626,11 @@ fn spawn_search_modal(
                         },
                         BackgroundColor(MODAL_TILE_BG),
                     ));
+                    // Every tile previews (an unpickable one shows why it
+                    // isn't); only a pickable one selects.
+                    tile.insert((Button, crate::systems::ui_card_hover::UiCardHover::card(name, Some(*card_id))));
                     if pickable {
-                        tile.insert((Button, SearchSelectButton { card_id: *card_id }));
-                    } else {
-                        tile.insert(Pickable::IGNORE);
+                        tile.insert(SearchSelectButton { card_id: *card_id });
                     }
                     tile.with_children(|cb| {
                         cb.spawn((
@@ -1728,6 +1751,9 @@ fn spawn_card_picker_modal(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            // A hovered card's preview sits beside the panel, not over
+            // the next card in the row.
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
     commands.entity(root).add_child(panel);
@@ -1754,6 +1780,7 @@ fn spawn_card_picker_modal(
                     let legal = eligible.is_none_or(|e| e.contains(card_id));
                     let mut tile = row.spawn((
                         Button,
+                        crate::systems::ui_card_hover::UiCardHover::card(name, Some(*card_id)),
                         Node {
                             flex_direction: FlexDirection::Column,
                             width: Val::Px(CARD_W),

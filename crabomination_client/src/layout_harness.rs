@@ -22,6 +22,9 @@
 //! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
 //! `--life-change` swings every seat's life total a
 //! moment before the screenshot, catching the life feedback in flight;
+//! `--hand N` gives the viewer N cards in hand; `--decision scry|search|
+//! discard` opens that decision's modal over the board, client-side, and
+//! `--hover-card NAME` then hovers the modal's card of that name;
 //! `--partners` makes it a Commander game whose first seats each have two
 //! commanders.
 //!
@@ -89,6 +92,30 @@ pub struct HarnessArgs {
     /// `--partners`: the fixture is a Commander game (a 1v1 one at two
     /// seats) whose first seats have two commanders each ([`fixture_state`]).
     pub partners: bool,
+    /// `--hand N`: the viewer holds N cards ([`fixture_state`]).
+    pub hand: Option<usize>,
+    /// `--decision KIND`: a decision of that kind is up for the viewer
+    /// ([`stage_decision_for_screenshot`]).
+    pub decision: Option<HarnessDecision>,
+}
+
+/// The decision modals `--decision` can open.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum HarnessDecision {
+    Scry,
+    Search,
+    Discard,
+}
+
+impl HarnessDecision {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "scry" => Some(HarnessDecision::Scry),
+            "search" => Some(HarnessDecision::Search),
+            "discard" => Some(HarnessDecision::Discard),
+            _ => None,
+        }
+    }
 }
 
 impl HarnessArgs {
@@ -126,6 +153,8 @@ impl HarnessArgs {
             life_change: args.iter().any(|a| a == "--life-change"),
             impacts: value("--impacts").and_then(|v| v.parse().ok()),
             partners: args.iter().any(|a| a == "--partners"),
+            hand: value("--hand").and_then(|v| v.parse().ok()),
+            decision: value("--decision").and_then(|v| HarnessDecision::parse(&v)),
         }
     }
 
@@ -175,7 +204,9 @@ fn defs(names: &[&str]) -> Vec<crabomination::card::CardDefinition> {
 /// With `partners` it is a Commander game at any size, and its first seats
 /// play the pod's two-commander decks (a Partner pair, a commander and its
 /// Background), so both of a seat's commanders sit in its command zone.
-pub fn fixture_state(seats: usize, partners: bool) -> GameState {
+/// `viewer_hand` sets how many cards the viewer holds (the [`HAND`] list,
+/// repeated), `HAND.len()` by default.
+pub fn fixture_state(seats: usize, partners: bool, viewer_hand: Option<usize>) -> GameState {
     let mut g = if seats <= 2 && !partners {
         crabomination::demo::build_demo_state_seeded(7)
     } else {
@@ -224,8 +255,9 @@ pub fn fixture_state(seats: usize, partners: bool) -> GameState {
                 }
             }
         }
-        let hand = if seat == 0 { HAND.len() } else { 5 };
-        for def in defs(&HAND[..hand]) {
+        let hand = if seat == 0 { viewer_hand.unwrap_or(HAND.len()) } else { 5 };
+        let names: Vec<&str> = HAND.iter().copied().cycle().take(hand).collect();
+        for def in defs(&names) {
             g.add_card_to_hand(seat, def);
         }
         for def in defs(GRAVEYARD) {
@@ -522,10 +554,22 @@ pub fn hover_card_for_screenshot(
     >,
     mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    ui_cards: Query<(&crate::systems::ui_card_hover::UiCardHover, &bevy::ui::UiGlobalTransform, &bevy::ui::ComputedNode)>,
     mut done: Local<bool>,
 ) {
     let (Some(name), Some(cv)) = (args.hover_card.as_deref(), view.0.as_ref()) else { return };
     if *done {
+        return;
+    }
+    // A decision modal naming the card: the pointer goes over its tile.
+    if args.decision.is_some() {
+        if let (Some((_, at, _)), Ok(mut window)) =
+            (ui_cards.iter().find(|(card, ..)| card.name == name), windows.single_mut())
+        {
+            let pos = at.translation / window.scale_factor();
+            window.bypass_change_detection().set_cursor_position(Some(pos));
+            *done = true;
+        }
         return;
     }
     let Some(id) = cv.battlefield.iter().find(|p| p.controller == cv.your_seat && p.name == name).map(|p| p.id)
@@ -869,6 +913,45 @@ pub fn stage_combat_for_screenshot(
     }
 }
 
+/// `--decision`: put a decision of that kind up for the viewer, in the view
+/// only (the paused match asks nothing), over the cards in their hand — a
+/// scry of three, a search of all of them with every other one ineligible,
+/// or a discard of one. Re-staged whenever a fresh view replaces it.
+pub fn stage_decision_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut view: ResMut<crate::net_plugin::CurrentView>,
+) {
+    use crabomination::net::{DecisionWire, HandCardView, PendingDecisionView};
+    let Some(kind) = args.decision else { return };
+    if !view.is_changed() {
+        return;
+    }
+    let Some(cv) = view.bypass_change_detection().0.as_mut() else { return };
+    if cv.pending_decision.is_some() {
+        return;
+    }
+    let player = cv.your_seat;
+    let cards: Vec<_> = cv.players[player]
+        .hand
+        .iter()
+        .filter_map(|h| match h {
+            HandCardView::Known(k) => Some((k.id, k.name.clone())),
+            _ => None,
+        })
+        .collect();
+    let decision = match kind {
+        HarnessDecision::Scry => DecisionWire::Scry { player, cards: cards.into_iter().take(3).collect(), mode: Default::default() },
+        HarnessDecision::Search => DecisionWire::SearchLibrary {
+            player,
+            eligible: Some(cards.iter().step_by(2).map(|(id, _)| *id).collect()),
+            candidates: cards,
+        },
+        HarnessDecision::Discard => DecisionWire::Discard { player, count: 1, hand: cards },
+    };
+    cv.pending_decision = Some(PendingDecisionView { acting_player: player, decision: Some(decision), cancellable: false });
+    view.set_changed();
+}
+
 /// A screenshot run ignores the mouse: the desktop's cursor, wherever it
 /// happens to sit over the window, hovered a card and popped its preview
 /// into the shot.
@@ -939,12 +1022,15 @@ mod tests {
         let h = HarnessArgs::parse(&out);
         assert!(h.viewer_out);
         assert_eq!(h.hold_seat, Some(1));
+        let staged: Vec<String> = ["--hand", "15", "--decision", "search"].iter().map(|s| s.to_string()).collect();
+        let h = HarnessArgs::parse(&staged);
+        assert_eq!((h.hand, h.decision), (Some(15), Some(HarnessDecision::Search)));
     }
 
     #[test]
     fn fixture_boards_are_full_and_paused_on_the_viewer() {
         for seats in [2, 4] {
-            let g = fixture_state(seats, false);
+            let g = fixture_state(seats, false, None);
             assert_eq!(g.players.len(), seats);
             for p in 0..seats {
                 let on_board = g.battlefield.iter().filter(|c| c.controller == p).count();

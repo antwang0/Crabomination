@@ -1169,9 +1169,9 @@ pub fn update_log_text(
             node,
             LogRow(entry.seq()),
         ));
-        match &entry.card_art {
-            Some(path) => {
-                row.insert((Button, crate::systems::ui_card_hover::UiCardHover(path.clone())));
+        match &entry.card {
+            Some(card) => {
+                row.insert((Button, card.clone()));
             }
             None => {
                 row.insert(Pickable::IGNORE);
@@ -2031,10 +2031,10 @@ pub fn update_stack_panel(
             ));
             // Known items show the full card on hover (hidden ones have
             // nothing to reveal).
-            if matches!(item, StackItemView::Known(_)) {
+            if let StackItemView::Known(k) = item {
                 row_ec.insert((
                     Button,
-                    crate::systems::ui_card_hover::UiCardHover(art_path.clone()),
+                    crate::systems::ui_card_hover::UiCardHover { path: art_path.clone(), name: k.name.clone(), id: Some(k.source) },
                 ));
             }
             row_ec.with_children(|row| {
@@ -3698,16 +3698,16 @@ pub fn handle_game_input(
         if body.is_empty() {
             continue;
         }
-        let card_art = event_primary_card(ev)
-            .map(|id| card_names.get(id))
+        let card = event_primary_card(ev)
+            .map(|id| (id, card_names.get(id)))
             // "#N" placeholders mean the id never resolved to a real name
-            // (hidden zones) — no art to preview.
-            .filter(|n| !n.starts_with('#'))
-            .map(|n| crate::scryfall::card_asset_path(&n));
-        log.push_event_with_art(
+            // (hidden zones) — nothing to preview.
+            .filter(|(_, n)| !n.starts_with('#'))
+            .map(|(id, n)| crate::systems::ui_card_hover::UiCardHover::card(&n, Some(id)));
+        log.push_event_with_card(
             format!("{}{}", event_glyph(ev), body),
             event_color(ev),
-            card_art,
+            card,
         );
     }
 

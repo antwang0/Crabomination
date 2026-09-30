@@ -25,6 +25,37 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Rules text in decision modals, big hands, hover delay (2026-09-30) — shipped
+
+Read off layout-harness screenshots: `--decision scry|search|discard`
+opens that modal client-side over the fixture, `--hover-card NAME` then
+hovers its card of that name, and `--hand N` deals the viewer N cards.
+
+- ✅ **A card in a decision modal reads like one on the table.** Scry,
+  search, discard / card-pick, trigger order and damage order/assignment
+  tiles were 180 px art with no rules text, and the Alt peek only fired on
+  3-D cards. Every tile now carries `ui_card_hover::UiCardHover` (name and
+  id, not just an art path), and the one preview system
+  (`ui::hover_card_preview`) serves both kinds: art plus the Oracle panel,
+  a UI card winning over the table card under it. Alt over a modal card
+  opens the large peek. It sits beside the modal's panel
+  (`PreviewAnchor`), not beside the tile, where it covered the next card
+  in the row. An ineligible search result previews too (it says why it is
+  greyed out). The stack panel's rows, the log's lines and the graveyard /
+  exile browser tiles gain the rules text the same way.
+- ✅ **The preview waits for the pointer to settle, and fades in.** It
+  opens after 300 ms on one card (`HOVER_DWELL`) and fades in over
+  120 ms; moving straight to the next card, or back within a quarter
+  second, swaps it at once, so reading along a row isn't slowed.
+  `focus::fade_subtree` is the fade the card overlays already used, now
+  shared and taking images too (an overlay's own images used to stay lit
+  while the rest dimmed).
+- ✅ **A big hand keeps the seven-card fan.** Spacing already stopped
+  growing past seven, but the droop and tilt still grew by slot: a 15-card
+  hand's end cards sank 2.1 units and turned 24°, below the window. They
+  follow the card's place along the fan now (`layout::fan_arc`), so a big
+  hand is the same arc, denser. Opponents' face-down pod fans too.
+
 ## Card art cache and client dependencies (2026-09-30) — shipped
 
 - ✅ **Card art is cached as Scryfall's `large` JPEG, not its PNG.** The
@@ -970,8 +1001,8 @@ as an alternative to click-to-assign (`systems::drag_act`, 2026-09-28).
 Oracle text beside it, clamped to the viewport. Since 2026-09-29 it sits
 beside the card's projected rect rather than the cursor, so it never
 covers the card it previews (the stack/log previews in `ui_card_hover`
-sit beside their row the same way). Residual ⏳: it appears at once — no
-~300 ms dwell or fade-in.
+sit beside their row the same way). ✅ Since 2026-09-30 it opens after a
+300 ms dwell and fades in (see the section at the top).
 
 ### Decision Modal vs 3-D Hand Consistency
 Mulligan and PutOnLibrary modals are transparent overlays over the 3-D
@@ -990,10 +1021,10 @@ corner glyph on the card or a cursor-change to signal "right-click for
 alt cost" / "right-click to flip".
 
 ### Hand-Fan Spacing for Large Hands
-`card/layout.rs:18` sets `HAND_CARD_SPACING = CARD_WIDTH * 0.85`. A
-15-card hand (Frantic Search loops, no-mulligan shenanigans) spreads
-off-screen. Clamp total fan width to a viewport-relative target and
-reduce spacing proportionally when hand size > 7.
+✅ Shipped: past `HAND_FAN_SOFT_CAP` (7) the spacing shrinks to keep the
+seven-card width, and since 2026-09-30 the droop and tilt follow the
+card's place along that width (`layout::fan_arc`), so a 15-card hand keeps
+the seven-card arc instead of sinking its ends below the window.
 
 ### Drag-and-Drop for Hand → Battlefield
 ✅ Drag-to-target shipped (`systems::drag_act`, 2026-09-28): drag a spell
@@ -1014,11 +1045,9 @@ through their own turn priority-by-priority instead of having the engine
 fast-forward.
 
 ### Alt-Peek Inside Decision Modals
-Scry / search / discard modal cards are 180×250 (`decision_ui.rs:124`) —
-fine for art, illegible for rules text. The Alt-hold peek-popup
-(`ui.rs:90-92`, 340×475) works on 3-D cards but doesn't fire on 2-D
-modal cards. Wire Alt-hover inside `decision_ui` modals to spawn the
-same large preview.
+✅ Shipped 2026-09-30: every card tile in a decision modal previews with
+its rules text on hover and opens the large peek under Alt (see the
+section at the top).
 
 ---
 

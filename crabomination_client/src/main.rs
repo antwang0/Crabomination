@@ -441,6 +441,7 @@ fn main() {
             (
                 layout_harness::inject_damage_for_screenshot,
                 layout_harness::stage_combat_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::stage_decision_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::swing_life_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::fire_impacts_for_screenshot.run_if(in_state(AppState::InGame)),
             )
@@ -455,6 +456,7 @@ fn main() {
         // A card focus dims fades its overlays with it, after their own
         // systems have painted them (`systems::focus`).
         .add_systems(PostUpdate, systems::focus::fade_card_overlays.before(bevy::ui::UiSystems::Prepare))
+        .add_systems(PostUpdate, systems::ui::fade_in_hover_preview.before(bevy::ui::UiSystems::Prepare))
         // Combat, targeting and stack arrows, as geometry (`systems::arrows`).
         .init_resource::<systems::arrows::Arrows>()
         .add_systems(PostUpdate, systems::arrows::render_arrows)
@@ -831,13 +833,11 @@ fn main() {
             crate::systems::lock_badge::sync_lock_badges
                 .run_if(in_state(AppState::InGame)),
         )
-        // Clarity batch: hover-preview for UI tiles (stack panel / log
-        // lines), pulsing ring on the pending decision's source, and the
-        // low-life danger frame.
+        // Clarity batch: pulsing ring on the pending decision's source, and
+        // the low-life danger frame.
         .add_systems(
             Update,
             (
-                crate::systems::ui_card_hover::ui_card_hover_preview,
                 crate::systems::gizmos::draw_decision_source_ring,
                 crate::systems::ui::low_life_vignette,
             )

@@ -12,9 +12,9 @@ pub struct LogEntry {
     /// Turn-divider row — `update_log_text` renders these with extra
     /// spacing so each turn is visually separated in the scrollback.
     pub divider: bool,
-    /// Asset path of the event's primary card, when one was resolvable —
-    /// lets the log row preview the card on hover (`ui_card_hover`).
-    pub card_art: Option<String>,
+    /// The event's primary card, when one was resolvable — lets the log
+    /// row preview it on hover (`ui_card_hover`).
+    pub card: Option<crate::systems::ui_card_hover::UiCardHover>,
     /// The text *without* any `×N` repeat suffix, plus the current repeat
     /// count, used to coalesce a run of identical event lines (#7). Kept
     /// private — callers read `text`.
@@ -74,16 +74,16 @@ impl GameLog {
     /// Coalescing event push without a hover-preview card (tests and
     /// art-less call sites).
     pub fn push_event(&mut self, msg: impl Into<String>, color: Color) {
-        self.push_event_with_art(msg, color, None);
+        self.push_event_with_card(msg, color, None);
     }
 
-    /// Coalescing event push, plus the event's primary card-art path so
-    /// the log row can preview the card on hover (`None` = plain row).
-    pub fn push_event_with_art(
+    /// Coalescing event push, plus the event's primary card so the log
+    /// row can preview it on hover (`None` = plain row).
+    pub fn push_event_with_card(
         &mut self,
         msg: impl Into<String>,
         color: Color,
-        card_art: Option<String>,
+        card: Option<crate::systems::ui_card_hover::UiCardHover>,
     ) {
         let text = msg.into();
         if let Some(last) = self.entries.back_mut()
@@ -95,7 +95,7 @@ impl GameLog {
             last.text = format!("{} ×{}", last.raw, last.count);
             return;
         }
-        self.append(text, color, false, card_art);
+        self.append(text, color, false, card);
     }
 
     /// Insert a turn-divider row (#5). Always a fresh entry — it breaks
@@ -107,10 +107,10 @@ impl GameLog {
     }
 
     /// A fresh entry at the back, the oldest evicted past [`GAME_LOG_CAP`].
-    fn append(&mut self, text: String, color: Color, divider: bool, card_art: Option<String>) {
+    fn append(&mut self, text: String, color: Color, divider: bool, card: Option<crate::systems::ui_card_hover::UiCardHover>) {
         let seq = self.next_seq;
         self.next_seq += 1;
-        self.entries.push_back(LogEntry { raw: text.clone(), text, color, divider, card_art, count: 1, seq });
+        self.entries.push_back(LogEntry { raw: text.clone(), text, color, divider, card, count: 1, seq });
         while self.entries.len() > GAME_LOG_CAP {
             self.entries.pop_front();
         }

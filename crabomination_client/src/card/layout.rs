@@ -33,6 +33,15 @@ fn hand_spacing(total: usize) -> f32 {
     }
 }
 
+/// Where a card sits along the fan's arc, in full-spacing slots from the
+/// middle: its slot offset scaled by how tightly the fan is packed. The
+/// droop and tilt follow this rather than the raw offset, so a hand past the
+/// soft cap keeps the soft-cap hand's arc — denser, not deeper: by slot, a
+/// 15-card hand's end cards sank 2.1 units and turned 24°, below the window.
+fn fan_arc(offset: f32, spacing: f32) -> f32 {
+    offset * spacing / HAND_CARD_SPACING
+}
+
 /// The viewer's hand line. Far enough in front of the back row that the
 /// fan's top edge (with its lower half off the bottom of the window, see
 /// `framing::HAND_VISIBLE`) clears the land row instead of covering it.
@@ -726,11 +735,12 @@ pub fn hand_card_transform(
         let seat_origin = pod_frame(seat, viewer, n_seats)
             .map_or(Vec3::X * spot.board_center, |f| f.point(Vec3::ZERO));
         let x = offset * spacing * z + seat_origin.x;
-        let y = HAND_Y * z - offset.abs() * HAND_FAN_Y_DROP * z;
+        let arc = fan_arc(offset, spacing);
+        let y = HAND_Y * z - arc.abs() * HAND_FAN_Y_DROP * z;
         // Pull the hand a fraction closer to the camera as it scales up
         // so the (now larger) cards don't poke up into the battlefield.
         let world_z = HAND_CENTER_Z + (z - 1.0) * 1.5 + z_offset * CARD_THICKNESS * 4.0 + seat_origin.z;
-        let rot_z = -offset * HAND_FAN_ANGLE;
+        let rot_z = -arc * HAND_FAN_ANGLE;
         Transform::from_xyz(x, y, world_z)
             .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
             .with_scale(Vec3::splat(z))
@@ -781,14 +791,15 @@ pub fn hand_card_transform(
             spacing
         };
         let x = offset * spacing + spot.board_center;
+        let arc = fan_arc(offset, spacing);
         // Extra lift so cards clear the table at the far camera angle.
-        let y = HAND_Y + 3.0 - offset.abs() * HAND_FAN_Y_DROP;
+        let y = HAND_Y + 3.0 - arc.abs() * HAND_FAN_Y_DROP;
         // Far edge fans away from the camera (−Z), the viewer's edge toward it
         // (+Z); cards stack toward their owner's side of the table either way.
         let base_z = spot.z_sign * FAR_HAND_Z;
         let z = base_z + spot.z_sign * (z_offset * CARD_THICKNESS * 4.0);
         let tilt = if spot.z_sign > 0.0 { HAND_TILT_X } else { -HAND_TILT_X };
-        let rot_z = offset * HAND_FAN_ANGLE;
+        let rot_z = arc * HAND_FAN_ANGLE;
         Transform::from_xyz(x, y, z)
             .with_rotation(Quat::from_rotation_x(tilt) * Quat::from_rotation_z(PI + rot_z))
     }
@@ -1548,6 +1559,30 @@ mod tests {
                 assert!(per_row * (rows - 1) < total, "no empty trailing row");
             }
         }
+    }
+
+    /// A hand past the soft cap packs the soft-cap hand's fan tighter
+    /// instead of drooping and tilting its end cards further: by slot, a
+    /// 15-card hand's ends sank 2.1 units and turned 24°, below the window.
+    #[test]
+    fn a_big_hand_keeps_the_soft_cap_fan() {
+        let ends = |total: usize| {
+            let (left, right) = (
+                hand_card_transform(0, 0, 2, 0, total, 1.0),
+                hand_card_transform(0, 0, 2, total - 1, total, 1.0),
+            );
+            (right.translation.x - left.translation.x, left.translation.y, left.rotation.angle_between(Quat::from_rotation_x(HAND_TILT_X)))
+        };
+        let (width, low, turn) = ends(HAND_FAN_SOFT_CAP);
+        for total in HAND_FAN_SOFT_CAP + 1..=20 {
+            let (w, y, t) = ends(total);
+            assert!((w - width).abs() < 1e-3, "{total} cards: width {w} vs {width}");
+            assert!(y >= low - 1e-3, "{total} cards: the end card sinks to {y}, past {low}");
+            assert!(t <= turn + 1e-3, "{total} cards: the end card turns {t}, past {turn}");
+        }
+        // Up to the soft cap nothing moved.
+        let t = hand_card_transform(0, 0, 2, 0, 5, 1.0);
+        assert!((t.translation.y - (HAND_Y - 2.0 * HAND_FAN_Y_DROP)).abs() < 1e-4);
     }
 
     #[test]

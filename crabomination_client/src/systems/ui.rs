@@ -688,10 +688,12 @@ const CARD_ASPECT_RATIO: f32 = 88.0 / 63.0;
 const POPUP_WIDTH: f32 = 340.0;
 const POPUP_HEIGHT: f32 = POPUP_WIDTH * CARD_ASPECT_RATIO;
 
+#[allow(clippy::too_many_arguments)]
 pub fn peek_popup(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
+    ui_cards: crate::systems::ui_card_hover::UiCardSources,
     card_names: Res<crate::game::CardNames>,
     view: Res<CurrentView>,
     existing_popup: Query<(Entity, &PeekPopup)>,
@@ -699,20 +701,26 @@ pub fn peek_popup(
     ui_fonts: Res<UiFonts>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
-    let hovered = hovered_cards.iter().next();
-    let should_show = alt_held && hovered.is_some();
+    // A card a UI node names (a decision modal's, the stack panel's) first:
+    // it sits over the table.
+    let hovered = ui_cards.hovered()
+        .map(|(card, _)| (card.path.clone(), Some(card.name.clone()), card.id))
+        .or_else(|| {
+            let (texture, id) = hovered_cards.iter().next()?;
+            Some((texture.0.clone(), id.map(|g| card_names.get(g.0)), id.map(|g| g.0)))
+        })
+        .filter(|_| alt_held);
 
-    if !should_show {
+    let Some((front_path, name, card_id)) = hovered else {
         for (entity, _) in &existing_popup {
             commands.entity(entity).despawn();
         }
         return;
-    }
-    let Some((front_texture, card_id)) = hovered else { return };
+    };
     // Same card already showing — nothing to do; a different card under a
     // still-held Alt rebuilds the popup with the new faces.
     if let Ok((entity, popup)) = existing_popup.single() {
-        if popup.path == front_texture.0 {
+        if popup.path == front_path {
             return;
         }
         commands.entity(entity).despawn();
@@ -720,16 +728,15 @@ pub fn peek_popup(
 
     // The catalog knows whether this card has a back face (MDFC/TDFC) and
     // supplies the rules-text lines — both keyed by the card's name.
-    let name = card_id.map(|g| card_names.get(g.0));
     let def = name.as_deref().and_then(crabomination::catalog::lookup_by_name);
     let back_path = def
         .as_ref()
         .and_then(|d| d.back_face.as_ref())
         .map(|b| scryfall::card_back_face_asset_path(b.name));
-    let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id.0));
+    let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
     let info = name.as_deref().map(|n| card_info_lines(n, permanent)).unwrap_or_default();
 
-    let texture: Handle<Image> = asset_server.load(&front_texture.0);
+    let texture: Handle<Image> = asset_server.load(&front_path);
     // Full-screen overlay, flex-centered, with dim background.
     commands
         .spawn((
@@ -746,7 +753,7 @@ pub fn peek_popup(
             },
             BackgroundColor(theme::OVERLAY_BG_LIGHT),
             Pickable::IGNORE,
-            PeekPopup { path: front_texture.0.clone() },
+            PeekPopup { path: front_path },
             // Above `MODAL`: reading a card has to work from inside a
             // decision prompt (the Alt-peek-in-modals backlog item).
             GlobalZIndex(theme::layer::CARD_PEEK),
@@ -1195,18 +1202,92 @@ fn first_upper(s: &str) -> String {
     }
 }
 
+/// How long the pointer rests on a card before its preview opens: sweeping
+/// across the table would otherwise flash one up for every card it crossed.
+const HOVER_DWELL: f32 = 0.3;
+/// A preview that was up less than this long ago still counts as up: the
+/// next card's opens at once and without a fade, so reading along a row of
+/// cards isn't held up by the dwell.
+const HOVER_WARM: f32 = 0.25;
+/// How long a preview that opens cold takes to fade in.
+const HOVER_FADE_IN: f32 = 0.12;
+
+/// Where the pointer has been resting, for [`HOVER_DWELL`] / [`HOVER_WARM`].
+#[derive(Default)]
+pub struct HoverDwell {
+    /// The card under the pointer (art path, id) and when it got there.
+    resting: Option<(String, Option<crabomination::card::CardId>, f32)>,
+    /// The last time a preview was on screen.
+    last_shown: Option<f32>,
+}
+
+impl HoverDwell {
+    /// Whether the preview for `card` (the card under the pointer, if any)
+    /// shows at `now`: `None` while the pointer is still settling, else
+    /// whether a preview opened now should fade in (from nothing) rather
+    /// than appear at once (taking over from one that was up).
+    fn step(&mut self, card: Option<(&str, Option<crabomination::card::CardId>)>, now: f32) -> Option<bool> {
+        let warm = self.last_shown.is_some_and(|t| now - t <= HOVER_WARM);
+        let Some((path, id)) = card else {
+            self.resting = None;
+            return None;
+        };
+        let since = match &self.resting {
+            Some((p, i, since)) if p == path && *i == id => *since,
+            _ => {
+                self.resting = Some((path.to_string(), id, now));
+                now
+            }
+        };
+        if !warm && now - since < HOVER_DWELL {
+            return None;
+        }
+        self.last_shown = Some(now);
+        Some(!warm)
+    }
+}
+
+/// A hover preview opening cold: [`fade_in_hover_preview`] ramps its
+/// opacity up over [`HOVER_FADE_IN`].
+#[derive(Component)]
+pub struct PreviewFadeIn {
+    started: f32,
+}
+
+/// Bevy system (`PostUpdate`): fade a freshly opened hover preview in.
+pub fn fade_in_hover_preview(
+    mut commands: Commands,
+    time: Res<Time<Real>>,
+    previews: Query<(Entity, &PreviewFadeIn)>,
+    children: Query<&Children>,
+    mut paint: Query<crate::systems::focus::FadePaint>,
+) {
+    let now = time.elapsed_secs();
+    for (root, fade) in &previews {
+        let t = ((now - fade.started) / HOVER_FADE_IN).clamp(0.0, 1.0);
+        let factor = t * t * (3.0 - 2.0 * t);
+        crate::systems::focus::fade_subtree(&mut commands, root, factor, &children, &mut paint);
+        if t >= 1.0 {
+            commands.entity(root).try_remove::<PreviewFadeIn>();
+        }
+    }
+}
+
 /// Arena-style automatic card-zoom preview: while a card is hovered (and Alt
 /// isn't held — Alt drives the centered detailed peek + counter tooltip in
 /// `peek_popup` / `update_alt_tooltip`), show an enlarged copy of its face
-/// beside the cursor without dimming the board, plus a type-line/keyword
-/// reminder panel resolved from the catalog. Roadmap Tier 7 #1 / Tier 8
-/// reminder text.
-#[allow(clippy::type_complexity)]
+/// beside it without dimming the board, plus its rules text. The card is a
+/// table card or one a UI node names (`ui_card_hover`: the stack panel, the
+/// log, a decision modal); the UI one wins, since it sits over the table.
+/// It opens once the pointer has rested [`HOVER_DWELL`] and fades in.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn hover_card_preview(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    time: Res<Time<Real>>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>, &GlobalTransform), (With<Card>, With<CardHovered>)>,
+    ui_cards: crate::systems::ui_card_hover::UiCardSources,
     camera: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     card_names: Res<crate::game::CardNames>,
     view: Res<CurrentView>,
@@ -1214,7 +1295,8 @@ pub fn hover_card_preview(
     ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>,
     ui_scale: Res<UiScale>,
-    mut info_cache: Local<Option<(String, Option<crabomination::card::CardId>, Vec<(String, bool)>)>>,
+    mut dwell: Local<HoverDwell>,
+    mut info_cache: Local<Option<(String, Option<String>, Option<crabomination::card::CardId>, Vec<(String, bool)>)>>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
     let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>| {
@@ -1228,43 +1310,52 @@ pub fn hover_card_preview(
         return;
     };
 
-    // Desired preview: front texture of the hovered card, when the cursor is
-    // on-screen and Alt isn't held.
-    let hovered = hovered_cards.iter().next().filter(|_| !alt_held);
-    let (Some((texture, card_id, at)), Some(cursor)) = (hovered, window.cursor_position()) else {
+    // The card under the pointer: art, name, id, and the rect to sit
+    // beside — a UI card's node, or a table card's projection (the cursor
+    // if it doesn't project). None with Alt held or the pointer outside.
+    let hovered = window.cursor_position().filter(|_| !alt_held).and_then(|cursor| {
+        if let Some((card, rect)) = ui_cards.hovered() {
+            return Some((card.path.clone(), Some(card.name.clone()), card.id, rect));
+        }
+        let (texture, card_id, at) = hovered_cards.iter().next()?;
+        let card_id = card_id.map(|g| g.0);
+        let target = camera
+            .single()
+            .ok()
+            .and_then(|(camera, eye)| card_screen_rect(camera, eye, &ui_scale, at))
+            .unwrap_or_else(|| Rect::from_center_size(cursor / ui_scale.0, Vec2::ZERO));
+        Some((texture.0.clone(), card_id.map(|id| card_names.get(id)), card_id, target))
+    });
+    let now = time.elapsed_secs();
+    let Some(fade) = dwell.step(hovered.as_ref().map(|(path, _, id, _)| (path.as_str(), *id)), now) else {
         despawn_all(&mut commands, &existing);
         return;
     };
-    let (path, card_id) = (texture.0.clone(), card_id.map(|g| g.0));
-    // Beside the card; beside the cursor if the card doesn't project.
-    let target = camera
-        .single()
-        .ok()
-        .and_then(|(camera, eye)| card_screen_rect(camera, eye, &ui_scale, at))
-        .unwrap_or_else(|| Rect::from_center_size(cursor / ui_scale.0, Vec2::ZERO));
+    let Some((path, name, card_id, target)) = hovered else { return };
+    let fade_from = fade.then_some(now);
 
     // The notes change only with the hovered card or the game view: built
     // once per either, not every frame the pointer rests — each build looks
     // the card up in the catalog (a full `CardDefinition`) twice.
-    if let Some((cached_path, cached_id, info)) = info_cache.as_ref()
+    if let Some((cached_path, cached_name, cached_id, info)) = info_cache.as_ref()
         && *cached_path == path
+        && *cached_name == name
         && *cached_id == card_id
         && !view.is_changed()
         && !card_names.is_changed()
     {
         let info = info.clone();
-        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info);
+        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, fade_from);
         return;
     }
     let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
-    let mut info = card_id
-        .map(|id| card_info_lines(&card_names.get(id), permanent))
-        .unwrap_or_default();
+    let mut info = name.as_deref().map(|n| card_info_lines(n, permanent)).unwrap_or_default();
     // Double-faced cards: the other face is on the Alt peek — say so here,
     // since this small preview only shows the front.
-    if let Some(id) = card_id
-        && crabomination::catalog::lookup_by_name(&card_names.get(id))
-            .is_some_and(|d| d.back_face.is_some())
+    if name
+        .as_deref()
+        .and_then(crabomination::catalog::lookup_by_name)
+        .is_some_and(|d| d.back_face.is_some())
     {
         info.push(("Double-faced — hold Alt to see both faces.".to_string(), true));
     }
@@ -1280,20 +1371,17 @@ pub fn hover_card_preview(
     }
     // CR 903.10a — a hovered commander (battlefield or command zone) lists
     // the commander damage it has dealt each other player.
-    if let (Some(id), Some(cv)) = (card_id, view.0.as_ref()) {
-        info.extend(crate::systems::commander_ui::commander_hover_lines(
-            cv,
-            id,
-            &card_names.get(id),
-        ));
+    if let (Some(id), Some(name), Some(cv)) = (card_id, name.as_deref(), view.0.as_ref()) {
+        info.extend(crate::systems::commander_ui::commander_hover_lines(cv, id, name));
     }
-    *info_cache = Some((path.clone(), card_id, info.clone()));
-    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info);
+    *info_cache = Some((path.clone(), name, card_id, info.clone()));
+    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, fade_from);
 }
 
 /// Put the hover preview for the card art at `path` with its `info` notes
 /// beside `target` (UI px) — moving the one that is up if it already shows
-/// exactly this, rebuilding it otherwise.
+/// exactly this, rebuilding it otherwise. A preview built fades in from
+/// `fade_from` when there is one.
 #[allow(clippy::too_many_arguments)]
 fn place_hover_preview(
     commands: &mut Commands,
@@ -1305,6 +1393,7 @@ fn place_hover_preview(
     target: Rect,
     path: String,
     info: Vec<(String, bool)>,
+    fade_from: Option<f32>,
 ) {
     let shown = existing.single_mut().ok();
     let same = shown.as_ref().is_some_and(|(_, _, marker, _)| marker.path == path && marker.info == info);
@@ -1339,20 +1428,25 @@ fn place_hover_preview(
     }
 
     let texture: Handle<Image> = asset_server.load(&path);
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(x),
-                top: Val::Px(y),
-                width: Val::Px(HOVER_PREVIEW_WIDTH),
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-            Pickable::IGNORE,
-            HoverCardPreview { path: path.clone(), info: info.clone() },
-            crate::systems::game_ui::InGameRoot,
-        ))
+    let mut preview = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(x),
+            top: Val::Px(y),
+            width: Val::Px(HOVER_PREVIEW_WIDTH),
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        Pickable::IGNORE,
+        HoverCardPreview { path: path.clone(), info: info.clone() },
+        crate::systems::game_ui::InGameRoot,
+        // Over a decision modal, whose cards preview too.
+        GlobalZIndex(theme::layer::HOVER_PREVIEW),
+    ));
+    if let Some(started) = fade_from {
+        preview.insert(PreviewFadeIn { started });
+    }
+    preview
         .with_children(|col| {
             col.spawn((
                 Node {
@@ -1528,6 +1622,7 @@ pub fn graveyard_browser(
                 },
                 BackgroundColor(theme::PANEL_BG),
                 crate::systems::scroll::Scrollable::default(),
+                crate::systems::ui_card_hover::PreviewAnchor,
             ))
             .id();
 
@@ -1602,6 +1697,8 @@ pub fn graveyard_browser(
                                         name: name.clone(),
                                         recast: *recast,
                                     },
+                                    // Rules text beside the tile, like the table's.
+                                    crate::systems::ui_card_hover::UiCardHover::card(name, recast.map(|(id, _)| id)),
                                 ))
                                 .with_children(|tile| {
                                     tile.spawn((
@@ -1835,6 +1932,7 @@ pub fn exile_browser(
             },
             BackgroundColor(theme::PANEL_BG),
             crate::systems::scroll::Scrollable::default(),
+            crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
     commands.entity(root).add_child(panel);
@@ -1935,6 +2033,7 @@ pub fn exile_browser(
                                 name: name.clone(),
                                 recast: *may_play,
                             },
+                            crate::systems::ui_card_hover::UiCardHover::card(name, may_play.map(|(id, _)| id)),
                         ))
                         .with_children(tile_children);
                     }
@@ -1981,6 +2080,7 @@ pub fn exile_browser(
                                 ..default()
                             },
                             GraveyardCardItem { name: name.clone(), recast: None },
+                            crate::systems::ui_card_hover::UiCardHover::card(name, None),
                         ))
                         .with_children(|tile| {
                             tile.spawn((
@@ -2285,8 +2385,27 @@ pub fn reveal_popup(
 mod tests {
     use super::{
         hover_info_lines, live_override_lines, phrased_lines, preview_beside, HOVER_PREVIEW_HEIGHT,
-        HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
+        HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH, HoverDwell,
     };
+
+    /// The preview opens once the pointer has rested on a card, fading in;
+    /// moving straight on to another card (or back after a moment) swaps it
+    /// at once, and after a pause the rest is needed again.
+    #[test]
+    fn a_preview_waits_for_the_pointer_to_rest_then_keeps_up_with_it() {
+        let mut dwell = HoverDwell::default();
+        let (a, b) = (Some(("cards/a.jpg", None)), Some(("cards/b.jpg", None)));
+        assert_eq!(dwell.step(a, 0.0), None, "just arrived");
+        assert_eq!(dwell.step(a, 0.2), None, "still settling");
+        assert_eq!(dwell.step(a, 0.31), Some(true), "rested: it opens, fading in");
+        assert_eq!(dwell.step(a, 0.5), Some(false), "and stays");
+        assert_eq!(dwell.step(b, 0.52), Some(false), "the next card swaps in at once");
+        assert_eq!(dwell.step(None, 0.6), None, "off every card: gone");
+        assert_eq!(dwell.step(a, 0.7), Some(false), "back straight away: at once");
+        assert_eq!(dwell.step(None, 0.8), None);
+        assert_eq!(dwell.step(a, 2.0), None, "back after a pause: rest again");
+        assert_eq!(dwell.step(a, 2.31), Some(true));
+    }
     use bevy::math::Vec2;
     use crabomination::card::CreatureType;
 

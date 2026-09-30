@@ -88,15 +88,26 @@ pub fn dimmed_tint() -> Color {
 #[derive(Component, Clone, Copy)]
 pub struct CardOverlay(pub CardId);
 
-/// The opacities an overlay node had before it faded, so they can be
-/// scaled from and given back.
+/// The opacities a UI node had before it faded, so they can be scaled from
+/// and given back ([`fade_subtree`]).
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct FadeBase {
     background: Option<f32>,
     border: Option<f32>,
     text: Option<f32>,
     shadow: Option<f32>,
+    image: Option<f32>,
 }
+
+/// What [`fade_subtree`] repaints on each node.
+pub type FadePaint = (
+    Option<&'static mut BackgroundColor>,
+    Option<&'static mut BorderColor>,
+    Option<&'static mut TextColor>,
+    Option<&'static mut TextShadow>,
+    Option<&'static mut ImageNode>,
+    Option<&'static FadeBase>,
+);
 
 /// The face colour for a card dimmed `level` of the way. Linear, as the
 /// material's own white is, so an undimmed face compares equal to it.
@@ -184,70 +195,84 @@ fn overlay_factor(level: f32) -> f32 {
 /// Bevy system (`PostUpdate`, after every overlay's own system has
 /// painted it): fade each [`CardOverlay`] — its node and everything under
 /// it — with its card's [`FocusDim`], and give the opacity back when the
-/// card brightens. The alphas are scaled from those the overlay had before
-/// it faded ([`FadeBase`]), so an overlay's own system repainting it
-/// mid-fade doesn't compound the fade.
-#[allow(clippy::type_complexity)]
+/// card brightens.
 pub fn fade_card_overlays(
     mut commands: Commands,
     cards: Query<(&GameCardId, &FocusDim)>,
     overlays: Query<(Entity, &CardOverlay)>,
     children: Query<&Children>,
-    mut paint: Query<(
-        Option<&mut BackgroundColor>,
-        Option<&mut BorderColor>,
-        Option<&mut TextColor>,
-        Option<&mut TextShadow>,
-        Option<&FadeBase>,
-    )>,
+    mut paint: Query<FadePaint>,
 ) {
     let dims: std::collections::HashMap<CardId, f32> = cards.iter().map(|(g, d)| (g.0, d.0)).collect();
     for (root, overlay) in &overlays {
         let factor = overlay_factor(dims.get(&overlay.0).copied().unwrap_or(0.0));
-        for entity in std::iter::once(root).chain(children.iter_descendants(root)) {
-            let Ok((background, border, text, shadow, base)) = paint.get_mut(entity) else { continue };
-            // Unfaded and not fading: nothing to do.
-            if factor >= 1.0 && base.is_none() {
-                continue;
-            }
-            let recorded = base.is_some();
-            let base = base.copied().unwrap_or(FadeBase {
-                background: background.as_ref().map(|c| c.0.alpha()),
-                border: border.as_ref().map(|c| c.top.alpha()),
-                text: text.as_ref().map(|c| c.0.alpha()),
-                shadow: shadow.as_ref().map(|c| c.color.alpha()),
-            });
-            let fade = |c: &mut Color, a: Option<f32>| {
-                if let Some(a) = a {
-                    let want = a * factor;
-                    if (c.alpha() - want).abs() > 1e-3 {
-                        c.set_alpha(want);
-                    }
+        fade_subtree(&mut commands, root, factor, &children, &mut paint);
+    }
+}
+
+/// Paint `root` and everything under it at `factor` of the opacity each
+/// node had before it faded, and give it all back at 1. The alphas are
+/// scaled from the ones recorded when a node first faded ([`FadeBase`]),
+/// so a system repainting a node mid-fade doesn't compound the fade, and a
+/// node spawned under `root` mid-fade joins it.
+pub fn fade_subtree(
+    commands: &mut Commands,
+    root: Entity,
+    factor: f32,
+    children: &Query<&Children>,
+    paint: &mut Query<FadePaint>,
+) {
+    for entity in std::iter::once(root).chain(children.iter_descendants(root)) {
+        let Ok((background, border, text, shadow, image, base)) = paint.get_mut(entity) else { continue };
+        // Unfaded and not fading: nothing to do.
+        if factor >= 1.0 && base.is_none() {
+            continue;
+        }
+        let recorded = base.is_some();
+        let base = base.copied().unwrap_or(FadeBase {
+            background: background.as_ref().map(|c| c.0.alpha()),
+            border: border.as_ref().map(|c| c.top.alpha()),
+            text: text.as_ref().map(|c| c.0.alpha()),
+            shadow: shadow.as_ref().map(|c| c.color.alpha()),
+            image: image.as_ref().map(|i| i.color.alpha()),
+        });
+        let fade = |c: &mut Color, a: Option<f32>| {
+            if let Some(a) = a {
+                let want = a * factor.min(1.0);
+                if (c.alpha() - want).abs() > 1e-3 {
+                    c.set_alpha(want);
                 }
-            };
-            if let Some(mut c) = background {
-                fade(&mut c.0, base.background);
             }
-            if let Some(mut c) = border {
-                let mut sides = [c.top, c.right, c.bottom, c.left];
-                for side in &mut sides {
-                    fade(side, base.border);
-                }
-                if [c.top, c.right, c.bottom, c.left] != sides {
-                    [c.top, c.right, c.bottom, c.left] = sides;
-                }
+        };
+        if let Some(mut c) = background {
+            fade(&mut c.0, base.background);
+        }
+        if let Some(mut c) = border {
+            let mut sides = [c.top, c.right, c.bottom, c.left];
+            for side in &mut sides {
+                fade(side, base.border);
             }
-            if let Some(mut c) = text {
-                fade(&mut c.0, base.text);
+            if [c.top, c.right, c.bottom, c.left] != sides {
+                [c.top, c.right, c.bottom, c.left] = sides;
             }
-            if let Some(mut c) = shadow {
-                fade(&mut c.color, base.shadow);
+        }
+        if let Some(mut c) = text {
+            fade(&mut c.0, base.text);
+        }
+        if let Some(mut c) = shadow {
+            fade(&mut c.color, base.shadow);
+        }
+        if let Some(mut i) = image {
+            let mut color = i.color;
+            fade(&mut color, base.image);
+            if color != i.color {
+                i.color = color;
             }
-            if factor >= 1.0 {
-                commands.entity(entity).try_remove::<FadeBase>();
-            } else if !recorded {
-                commands.entity(entity).try_insert(base);
-            }
+        }
+        if factor >= 1.0 {
+            commands.entity(entity).try_remove::<FadeBase>();
+        } else if !recorded {
+            commands.entity(entity).try_insert(base);
         }
     }
 }
@@ -324,6 +349,23 @@ mod tests {
         let (bg, ink) = alphas(&app);
         assert!((bg - 0.9).abs() < 1e-4 && (ink - 1.0).abs() < 1e-4);
         assert!(app.world().entity(badge).get::<FadeBase>().is_none());
+    }
+
+    /// The fade reaches images under the root too: a hover preview's card
+    /// art fades in with its frame and text (`ui::fade_in_hover_preview`).
+    #[test]
+    fn a_fade_takes_the_images_under_it_and_gives_them_back() {
+        let mut app = App::new();
+        app.add_systems(Update, fade_card_overlays);
+        let card = app.world_mut().spawn((GameCardId(CardId(7)), FocusDim(1.0))).id();
+        let art = app.world_mut().spawn(ImageNode { color: Color::WHITE.with_alpha(0.8), ..default() }).id();
+        app.world_mut().spawn(CardOverlay(CardId(7))).add_child(art);
+        let alpha = |app: &App| app.world().entity(art).get::<ImageNode>().unwrap().color.alpha();
+        app.update();
+        assert!((alpha(&app) - 0.8 * OVERLAY_DIMMED).abs() < 1e-4);
+        app.world_mut().entity_mut(card).insert(FocusDim(0.0));
+        app.update();
+        assert!((alpha(&app) - 0.8).abs() < 1e-4);
     }
 
     #[test]
