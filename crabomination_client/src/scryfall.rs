@@ -64,7 +64,7 @@ pub enum CardImage {
     /// Faerie / Giant). Fetched via Scryfall's search endpoint
     /// (`q=is:token+t:<name>`) since `cards/named?exact=Clue` 404s --
     /// "Clue" isn't a card name, it's a token type. Saved under
-    /// `cards/<name>.png` so the runtime asset loader serves it
+    /// `cards/<name>.jpg` so the runtime asset loader serves it
     /// when `Effect::CreateToken` adds a new token to the
     /// battlefield.
     Token { name: &'static str },
@@ -175,6 +175,8 @@ pub struct ImagePrefetch {
     pub total: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     pub finished: std::sync::Arc<std::sync::atomic::AtomicBool>,
     pub completed: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    /// The counters are [`convert_png_art`]'s, not the downloads'.
+    pub converting: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Drain freshly downloaded image paths and hot-reload them so any
@@ -262,6 +264,8 @@ pub fn ensure_card_images_with_progress(
         return;
     }
 
+    convert_png_art(&cards_dir, progress);
+
     // Negative cache: card names Scryfall has already told us it can't serve
     // (404 / 422). Loaded from `cards/.unavailable.txt` so a doomed card
     // isn't re-requested on every launch — that repeated, pointless traffic
@@ -313,7 +317,7 @@ pub fn ensure_card_images_with_progress(
 
         println!("Downloading card image: {}...", spec.label());
         match download_card_image(spec) {
-            Ok(bytes) => match fs::write(&path, &bytes) {
+            Ok(bytes) => match write_whole(&path, &bytes) {
                 Ok(()) => {
                     println!("  Saved to {}", path.display());
                     downloaded += 1;
@@ -358,6 +362,122 @@ pub fn ensure_card_images_with_progress(
     }
 }
 
+/// Write `bytes` to `path` through a sibling temporary file, so an exit
+/// mid-write leaves no truncated image for the next launch to take as cached.
+#[cfg(not(target_arch = "wasm32"))]
+fn write_whole(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let part = path.with_extension("part");
+    fs::write(&part, bytes)?;
+    fs::rename(&part, path)
+}
+
+/// Width of Scryfall's `large` image, which the art cache is kept at.
+#[cfg(not(target_arch = "wasm32"))]
+const ART_WIDTH: u32 = 672;
+
+/// `bytes` as a JPEG: passed through when they already are one, re-encoded
+/// otherwise (a token printing with only a PNG, art cached before the
+/// switch) — scaled down to [`ART_WIDTH`] and at quality 85, which is about
+/// what Scryfall serves: 15 % of the PNG's size over a 40-card sample, where
+/// a full-size quality 90 was 26 % and read no better. Transparency — a
+/// PNG's rounded corners — is laid over black, as in Scryfall's own JPEGs;
+/// the card mesh is rounded anyway.
+#[cfg(not(target_arch = "wasm32"))]
+fn as_jpeg(bytes: Vec<u8>) -> Result<Vec<u8>, String> {
+    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return Ok(bytes);
+    }
+    let rgba = image::load_from_memory(&bytes).map_err(|e| e.to_string())?.to_rgba8();
+    let mut rgb = image::RgbImage::from_fn(rgba.width(), rgba.height(), |x, y| {
+        let [r, g, b, a] = rgba.get_pixel(x, y).0;
+        let over_black = |c: u8| ((c as u16 * a as u16 + 127) / 255) as u8;
+        image::Rgb([over_black(r), over_black(g), over_black(b)])
+    });
+    let (w, h) = rgb.dimensions();
+    if w > ART_WIDTH {
+        let scaled_h = (h * ART_WIDTH + w / 2) / w;
+        rgb = image::imageops::resize(&rgb, ART_WIDTH, scaled_h, image::imageops::FilterType::CatmullRom);
+    }
+    let mut out = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 85)
+        .encode_image(&rgb)
+        .map_err(|e| e.to_string())?;
+    Ok(out)
+}
+
+/// Convert art cached as PNG — every download before 2026-09-30, ~1.3 MB a
+/// card, 28 GB for the catalog — to the JPEG [`card_filename`] now names,
+/// on half the machine's threads, and point the negative cache at the new
+/// names. Each converted file is announced through `progress.completed`, so a
+/// placeholder already on screen swaps to it. A PNG that will not decode is
+/// dropped, and the prefetch downloads the card again; one whose JPEG cannot
+/// be written (a full disk) is kept for the next launch. Returns the count
+/// converted.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn convert_png_art(cards_dir: &Path, progress: &ImagePrefetch) -> usize {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let Ok(entries) = fs::read_dir(cards_dir) else { return 0 };
+    let legacy: Vec<std::path::PathBuf> = entries
+        .filter_map(|e| Some(e.ok()?.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "png"))
+        .collect();
+    if legacy.is_empty() {
+        return 0;
+    }
+    let manifest = cards_dir.join(UNAVAILABLE_MANIFEST);
+    if let Ok(listed) = fs::read_to_string(&manifest) {
+        let renamed: String = listed
+            .lines()
+            .map(|l| l.strip_suffix(".png").map_or_else(|| format!("{l}\n"), |stem| format!("{stem}.jpg\n")))
+            .collect();
+        let _ = fs::write(&manifest, renamed);
+    }
+
+    progress.converting.store(true, Ordering::Relaxed);
+    progress.done.store(0, Ordering::Relaxed);
+    progress.total.store(legacy.len(), Ordering::Relaxed);
+    let next = AtomicUsize::new(0);
+    let converted = AtomicUsize::new(0);
+    let threads = thread::available_parallelism().map_or(1, |n| n.get() / 2).max(1);
+    thread::scope(|scope| {
+        for _ in 0..threads {
+            scope.spawn(|| {
+                while let Some(png) = legacy.get(next.fetch_add(1, Ordering::Relaxed)) {
+                    progress.done.fetch_add(1, Ordering::Relaxed);
+                    let jpg = png.with_extension("jpg");
+                    if !jpg.exists() {
+                        match fs::read(png).map_err(|e| e.to_string()).and_then(as_jpeg) {
+                            Ok(bytes) => {
+                                if let Err(e) = write_whole(&jpg, &bytes) {
+                                    // Keep the PNG; the next launch tries again.
+                                    eprintln!("  failed to write {}: {e}", jpg.display());
+                                    continue;
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("  dropping unreadable cached art {}: {e}", png.display());
+                                let _ = fs::remove_file(png);
+                                continue;
+                            }
+                        }
+                    }
+                    let _ = fs::remove_file(png);
+                    converted.fetch_add(1, Ordering::Relaxed);
+                    if let (Ok(mut completed), Some(name)) = (progress.completed.lock(), jpg.file_name()) {
+                        completed.push(format!("cards/{}", name.to_string_lossy()));
+                    }
+                }
+            });
+        }
+    });
+    progress.converting.store(false, Ordering::Relaxed);
+    progress.done.store(0, Ordering::Relaxed);
+    progress.total.store(0, Ordering::Relaxed);
+    let converted = converted.into_inner();
+    println!("Card art cache: converted {converted} of {} PNGs to JPEG.", legacy.len());
+    converted
+}
+
 /// Generated placeholder dimensions: the 63 × 88 card proportion
 /// (`card::proxy`).
 #[cfg(test)]
@@ -374,20 +494,23 @@ pub fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
     FontVec::try_from_vec(bytes).ok()
 }
 
-/// PNG-encode a drawn face (`card::proxy`). Used by [`CardPlaceholderReader`]
-/// to serve a generated card image for a path that has no file on disk.
-fn proxy_png_bytes(face: &crate::card::proxy::ProxyFace, font: Option<&FontVec>) -> Vec<u8> {
-    let img = crate::card::proxy::render_proxy(face, font);
+/// Encode a drawn face (`card::proxy`) in `format`. Used by
+/// [`CardPlaceholderReader`] to serve a generated card image for a path that
+/// has no file on disk; the asset loader decodes by the path's extension, so
+/// the bytes must match it.
+fn proxy_bytes(face: &crate::card::proxy::ProxyFace, font: Option<&FontVec>, format: image::ImageFormat) -> Vec<u8> {
+    let img = image::DynamicImage::ImageRgba8(crate::card::proxy::render_proxy(face, font));
+    // JPEG has no alpha channel; the faces are opaque anyway.
+    let img = if format == image::ImageFormat::Jpeg { image::DynamicImage::ImageRgb8(img.to_rgb8()) } else { img };
     let mut buf = Vec::new();
-    img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
-        .expect("encode placeholder PNG to memory");
+    img.write_to(&mut std::io::Cursor::new(&mut buf), format).expect("encode placeholder to memory");
     buf
 }
 
 /// The name-only placeholder for an art-less card: a drawn face that knows
 /// just the name (the reader has only the path to go on).
-fn placeholder_png_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
-    proxy_png_bytes(&crate::card::proxy::ProxyFace::named(name), font)
+fn placeholder_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
+    proxy_bytes(&crate::card::proxy::ProxyFace::named(name), font, image::ImageFormat::Jpeg)
 }
 
 /// The face a `cards/proxy_….png` path encodes (`card::proxy`), if it is one.
@@ -398,7 +521,7 @@ fn proxy_face_from_asset_path(path: &Path) -> Option<crate::card::proxy::ProxyFa
     crate::card::proxy::parse_proxy_stem(path.file_stem()?.to_str()?)
 }
 
-/// Recover a readable card name from a `cards/<sanitized>.png` asset path,
+/// Recover a readable card name from a `cards/<sanitized>.jpg` asset path,
 /// for placeholder text. Reversing `sanitize_name` is lossy (we can't
 /// restore exact capitalization or punctuation), so we just title-case the
 /// de-underscored stem — fine for a placeholder. Returns `None` for any
@@ -431,8 +554,9 @@ fn card_name_from_asset_path(path: &Path) -> Option<String> {
 }
 
 /// Wraps the platform's default file [`AssetReader`] and, for any missing
-/// `cards/<name>.png`, synthesizes a white name-placeholder PNG on the fly
-/// instead of failing — so no placeholder files live on disk.
+/// `cards/<name>.jpg`, synthesizes a white name-placeholder on the fly
+/// instead of failing — so no placeholder files live on disk. A drawn proxy
+/// face (`cards/proxy_….png`) is served the same way, as a PNG.
 ///
 /// The prefetch now runs on a background thread, so a missing card image
 /// is either genuinely art-less (a synthesized card or a 404) or simply
@@ -460,8 +584,8 @@ impl AssetReader for CardPlaceholderReader {
                 // A drawn token face first (its path encodes the face), then
                 // any other missing card image by its name.
                 let bytes = match proxy_face_from_asset_path(path) {
-                    Some(face) => Some(proxy_png_bytes(&face, font)),
-                    None => card_name_from_asset_path(path).map(|name| placeholder_png_bytes(&name, font)),
+                    Some(face) => Some(proxy_bytes(&face, font, image::ImageFormat::Png)),
+                    None => card_name_from_asset_path(path).map(|name| placeholder_bytes(&name, font)),
                 };
                 match bytes {
                     Some(bytes) => Ok(Box::new(VecReader::new(bytes)) as Box<dyn Reader + 'a>),
@@ -488,20 +612,25 @@ impl AssetReader for CardPlaceholderReader {
     }
 }
 
-/// Convert a card name to a filename: lowercase, spaces to underscores, .png extension.
+/// Convert a card name to a filename: lowercase, spaces to underscores, .jpg extension.
 /// Path separators (`/`, `\`) are also collapsed to underscores so split-card
 /// names like "Wear // Tear" don't get interpreted as nested directories by
 /// `fs::write` (which panics with NotFound when the implied parent dirs
 /// don't exist).
+///
+/// Art is Scryfall's `large` JPEG (672 × 936, ~120 KB), not its PNG
+/// (745 × 1040, ~1.2 MB): the largest a card is ever drawn is the 230 px
+/// hover preview, and the PNGs of a full catalog were 28 GB on disk. Art
+/// cached as PNG before 2026-09-30 is converted by [`convert_png_art`].
 pub fn card_filename(name: &str) -> String {
-    format!("{}.png", sanitize_name(name))
+    format!("{}.jpg", sanitize_name(name))
 }
 
 /// Filename for an MDFC back-face image. The `_back` suffix avoids
 /// colliding with a stale front-face download for the same name when
 /// the prefetch is upgraded to pass `face=back` to Scryfall.
 pub fn card_back_face_filename(name: &str) -> String {
-    format!("{}_back.png", sanitize_name(name))
+    format!("{}_back.jpg", sanitize_name(name))
 }
 
 fn sanitize_name(name: &str) -> String {
@@ -581,13 +710,14 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
                 CardImage::MdfcBack { front, .. } => (scryfall_lookup_name(front), "&face=back"),
                 CardImage::Token { .. } => unreachable!("handled above"),
             };
-            match try_lookup("exact", lookup_name, face_param) {
+            let bytes = match try_lookup("exact", lookup_name, face_param) {
                 // Only an exact 404 is worth a fuzzy retry. A 422
                 // (`Unavailable`, e.g. no back face) won't be fixed by
                 // fuzzing the name, so don't spend a second request on it.
                 Err(LookupError::NotFound) => try_lookup("fuzzy", lookup_name, face_param),
                 other => other,
-            }
+            }?;
+            as_jpeg(bytes).map_err(LookupError::Other)
         }
     }
 }
@@ -602,7 +732,7 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
 ///    type in its line is often a *named* one: "Soldier" fetched Ajani's
 ///    Pridemate (a 2/2 Cat Soldier), which then stood in for every 1/1
 ///    Soldier token. See [`purge_type_matched_token_art`].
-/// 2. Pull `image_uris.png` (or `image_uris.large` as fallback) and
+/// 2. Pull `image_uris.large` (or `normal`, then `png`, as fallbacks) and
 ///    download the actual image bytes.
 ///
 /// Scryfall returns the token regardless of which set it came from,
@@ -627,12 +757,11 @@ fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
             a.iter().find(|c| c["name"].as_str() == Some(token_name) && c["image_uris"].is_object())
         })
         .ok_or(LookupError::Unavailable)?;
-    let img_url = first["image_uris"]["png"]
-        .as_str()
-        .or_else(|| first["image_uris"]["large"].as_str())
-        .or_else(|| first["image_uris"]["normal"].as_str())
+    let img_url = ["large", "normal", "png"]
+        .iter()
+        .find_map(|v| first["image_uris"][v].as_str())
         .ok_or(LookupError::Unavailable)?;
-    scryfall_get_bytes(img_url)
+    as_jpeg(scryfall_get_bytes(img_url)?).map_err(LookupError::Other)
 }
 
 /// Delete token art fetched by the old type-matched search (see
@@ -646,7 +775,15 @@ pub fn purge_type_matched_token_art(asset_dir: &Path, token_names: &[&str]) {
     if marker.exists() || !cards.is_dir() {
         return;
     }
-    let files: std::collections::HashSet<String> = token_names.iter().map(|n| card_filename(n)).collect();
+    // Each name as it is stored now and as it was before the JPEG switch.
+    let files: std::collections::HashSet<String> = token_names
+        .iter()
+        .flat_map(|n| {
+            let file = card_filename(n);
+            let legacy = Path::new(&file).with_extension("png").to_string_lossy().into_owned();
+            [file, legacy]
+        })
+        .collect();
     for file in &files {
         let _ = fs::remove_file(cards.join(file));
     }
@@ -693,7 +830,7 @@ fn try_lookup(
     face_param: &str,
 ) -> Result<Vec<u8>, LookupError> {
     let url = format!(
-        "https://api.scryfall.com/cards/named?{matcher}={}&format=image&version=png{face_param}",
+        "https://api.scryfall.com/cards/named?{matcher}={}&format=image&version=large{face_param}",
         urlenccode(lookup_name),
     );
     scryfall_get_bytes(&url)
@@ -810,10 +947,10 @@ mod tests {
     #[test]
     fn front_image_filename_matches_asset_path() {
         let spec = CardImage::Front("Lightning Bolt");
-        assert_eq!(spec.filename(), "lightning_bolt.png");
+        assert_eq!(spec.filename(), "lightning_bolt.jpg");
         assert_eq!(
             card_asset_path("Lightning Bolt"),
-            "cards/lightning_bolt.png"
+            "cards/lightning_bolt.jpg"
         );
     }
 
@@ -860,21 +997,21 @@ mod tests {
             front: "Cragcrown Pathway",
             back: "Timbercrown Pathway",
         };
-        assert_eq!(spec.filename(), "timbercrown_pathway_back.png");
+        assert_eq!(spec.filename(), "timbercrown_pathway_back.jpg");
     }
 
     #[test]
     fn split_card_name_collapses_path_separators() {
         // Split cards ("Wear // Tear", "Reduce // Rubble") embed `/` in
         // their printed names. Without sanitising, `fs::write` interprets
-        // `cards/wear_//_tear.png` as a nested path and panics with
+        // `cards/wear_//_tear.jpg` as a nested path and panics with
         // NotFound when the implied parent dirs don't exist.
-        assert_eq!(card_filename("Wear // Tear"), "wear____tear.png");
+        assert_eq!(card_filename("Wear // Tear"), "wear____tear.jpg");
         assert_eq!(
             card_asset_path("Reduce // Rubble"),
-            "cards/reduce____rubble.png"
+            "cards/reduce____rubble.jpg"
         );
-        assert_eq!(card_back_face_filename("Foo / Bar"), "foo___bar_back.png",);
+        assert_eq!(card_back_face_filename("Foo / Bar"), "foo___bar_back.jpg",);
     }
 
     #[test]
@@ -898,7 +1035,7 @@ mod tests {
         ] {
             let spec = CardImage::Token { name };
             assert!(!spec.is_fictional(), "{name} token must not be fictional");
-            assert_eq!(spec.filename(), format!("{}.png", name.to_lowercase()));
+            assert_eq!(spec.filename(), format!("{}.jpg", name.to_lowercase()));
         }
     }
 
@@ -921,7 +1058,7 @@ mod tests {
 
         // The prefetch no longer stamps placeholder files: the runtime
         // `CardPlaceholderReader` synthesizes them on demand instead.
-        let path = tmp.join("cards").join("mount_tyrhus.png");
+        let path = tmp.join("cards").join("mount_tyrhus.jpg");
         assert!(
             !path.exists(),
             "fictional card must NOT get a placeholder file on disk: {}",
@@ -960,36 +1097,82 @@ mod tests {
         // Empty / missing manifest → empty set.
         assert!(load_unavailable(&cards).is_empty());
 
-        mark_unavailable(&cards, "strixhaven_spawner.png");
-        mark_unavailable(&cards, "lightning_bolt_back.png");
+        mark_unavailable(&cards, "strixhaven_spawner.jpg");
+        mark_unavailable(&cards, "lightning_bolt_back.jpg");
         // Re-loading sees both entries, regardless of order.
         let set = load_unavailable(&cards);
-        assert!(set.contains("strixhaven_spawner.png"));
-        assert!(set.contains("lightning_bolt_back.png"));
+        assert!(set.contains("strixhaven_spawner.jpg"));
+        assert!(set.contains("lightning_bolt_back.jpg"));
         assert_eq!(set.len(), 2);
 
         let _ = fs::remove_dir_all(&tmp);
     }
 
     #[test]
-    fn placeholder_png_bytes_is_a_valid_card_proportioned_png() {
-        // The reader serves these bytes for a missing card image. No font
-        // here → blank white card, still a valid decodable PNG.
-        let bytes = placeholder_png_bytes("Awesome Presentation", None);
-        let img = image::load_from_memory(&bytes).expect("placeholder must be a valid PNG");
+    fn placeholder_bytes_are_a_card_proportioned_jpeg() {
+        // The reader serves these bytes for a missing card image, whose path
+        // ends `.jpg`. No font here → blank white card, still decodable.
+        let bytes = placeholder_bytes("Awesome Presentation", None);
+        assert_eq!(image::guess_format(&bytes).unwrap(), image::ImageFormat::Jpeg);
+        let img = image::load_from_memory(&bytes).expect("placeholder must decode");
         assert_eq!((img.width(), img.height()), (PLACEHOLDER_W, PLACEHOLDER_H));
+    }
+
+    /// Art cached as PNG before the JPEG switch becomes JPEG in place, its
+    /// transparent corners black, and the negative cache follows the rename.
+    #[test]
+    fn cached_png_art_is_converted_to_jpeg() {
+        use std::fs;
+        let tmp = std::env::temp_dir().join(format!("crab-scryfall-convert-{}", std::process::id()));
+        let cards = tmp.join("cards");
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&cards).expect("temp setup");
+        // Scryfall's PNG size, with a transparent corner.
+        let mut png = image::RgbaImage::from_pixel(745, 1040, image::Rgba([200, 30, 30, 255]));
+        for (x, y) in (0..40).flat_map(|x| (0..40).map(move |y| (x, y))) {
+            png.put_pixel(x, y, image::Rgba([255, 255, 255, 0]));
+        }
+        png.save(cards.join("lightning_bolt.png")).unwrap();
+        fs::write(cards.join("broken.png"), b"not a png").unwrap();
+        fs::write(cards.join(UNAVAILABLE_MANIFEST), "strixhaven_spawner.png\nfoo_back.png\n").unwrap();
+
+        let progress = ImagePrefetch::default();
+        assert_eq!(convert_png_art(&cards, &progress), 1);
+
+        let jpg = image::open(cards.join("lightning_bolt.jpg")).expect("converted").to_rgb8();
+        assert_eq!(jpg.dimensions(), (ART_WIDTH, 938), "scaled to Scryfall's `large` width");
+        assert!(jpg.get_pixel(0, 0).0.iter().all(|&c| c < 40), "corner laid over black: {:?}", jpg.get_pixel(0, 0));
+        assert!(jpg.get_pixel(300, 400).0[0] > 150, "art kept");
+        assert!(!cards.join("lightning_bolt.png").exists() && !cards.join("broken.png").exists());
+        assert!(!cards.join("broken.jpg").exists(), "an unreadable PNG is dropped and re-downloaded");
+        assert_eq!(
+            fs::read_to_string(cards.join(UNAVAILABLE_MANIFEST)).unwrap(),
+            "strixhaven_spawner.jpg\nfoo_back.jpg\n"
+        );
+        assert_eq!(*progress.completed.lock().unwrap(), ["cards/lightning_bolt.jpg"]);
+        assert_eq!(convert_png_art(&cards, &progress), 0, "nothing left to convert");
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn jpeg_bytes_are_stored_as_they_come() {
+        let mut jpeg = Vec::new();
+        image::DynamicImage::ImageRgb8(image::RgbImage::new(4, 4))
+            .write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg)
+            .unwrap();
+        assert_eq!(as_jpeg(jpeg.clone()).unwrap(), jpeg);
     }
 
     #[test]
     fn card_name_recovered_from_asset_path() {
         use std::path::Path;
         assert_eq!(
-            card_name_from_asset_path(Path::new("cards/awesome_presentation.png")).as_deref(),
+            card_name_from_asset_path(Path::new("cards/awesome_presentation.jpg")).as_deref(),
             Some("Awesome Presentation"),
         );
         // Back-face suffix is stripped; non-card paths are ignored.
         assert_eq!(
-            card_name_from_asset_path(Path::new("cards/searstep_pathway_back.png")).as_deref(),
+            card_name_from_asset_path(Path::new("cards/searstep_pathway_back.jpg")).as_deref(),
             Some("Searstep Pathway"),
         );
         assert_eq!(card_name_from_asset_path(Path::new("fonts/ui.ttf")), None);
@@ -1048,13 +1231,21 @@ mod tests {
             std::sync::Arc::new(None),
         );
 
-        // Missing card image → a synthesized placeholder PNG is served.
-        let mut r = block_on(AssetReader::read(&reader, Path::new("cards/test_card.png")))
+        // Missing card image → a synthesized placeholder is served, in the
+        // format the path's extension tells the loader to expect.
+        let mut r = block_on(AssetReader::read(&reader, Path::new("cards/test_card.jpg")))
             .expect("missing card image must be served a placeholder");
         let mut bytes = Vec::new();
         block_on(AsyncReadExt::read_to_end(&mut r, &mut bytes)).unwrap();
-        let img = image::load_from_memory(&bytes).expect("served bytes must be a valid PNG");
+        assert_eq!(image::guess_format(&bytes).unwrap(), image::ImageFormat::Jpeg);
+        let img = image::load_from_memory(&bytes).expect("served bytes must decode");
         assert_eq!((img.width(), img.height()), (PLACEHOLDER_W, PLACEHOLDER_H));
+        // A drawn proxy face keeps its `.png` path and is served as a PNG.
+        let proxy = crate::card::proxy::proxy_asset_path(&crate::card::proxy::ProxyFace::named("Goblin"));
+        let mut r = block_on(AssetReader::read(&reader, Path::new(&proxy))).expect("proxy served");
+        let mut bytes = Vec::new();
+        block_on(AsyncReadExt::read_to_end(&mut r, &mut bytes)).unwrap();
+        assert_eq!(image::guess_format(&bytes).unwrap(), image::ImageFormat::Png);
 
         // A missing non-card path is NOT synthesized — it still 404s.
         assert!(block_on(AssetReader::read(&reader, Path::new("fonts/ui.ttf"))).is_err());

@@ -7,15 +7,25 @@ edition = "2024"
 # Bevy's `default` feature set, spelled out so `wayland` and `audio` can be
 # split off behind our own default-on features (see [features] below).
 bevy = { version = "0.19.0", default-features = false, features = [
-    # `2d` + `3d` + `ui`, minus the `default_platform` they pull in
+    # `2d` + `3d` + `ui`, minus the `default_platform` they pull in, and
+    # minus glTF and scenes: the table is built from code, and nothing loads
+    # a model (`3d_bevy_render` spelled out without `bevy_gltf` /
+    # `gltf_animation`; `scene` dropped). Those, `sysinfo_plugin` below and
+    # the `image` / `imageproc` trims were 69 crates and 198 s of CPU of a
+    # cold client build (597 -> 529 units, `cargo build --timings`,
+    # 2026-09-30).
     "default_app",
     "2d_bevy_render",
-    "3d_bevy_render",
+    "3d_api",
+    "bevy_pbr",
+    "bevy_post_process",
+    "bevy_anti_alias",
     "ui_api",
     "ui_bevy_render",
     "bevy_ui_widgets",
-    "scene",
     "picking",
+    # Card art is cached as Scryfall's `large` JPEGs (`scryfall::card_filename`).
+    "jpeg",
     # `default_platform` minus `wayland`
     "std",
     "bevy_winit",
@@ -25,7 +35,6 @@ bevy = { version = "0.19.0", default-features = false, features = [
     "webgl2",
     "x11",
     "custom_cursor",
-    "sysinfo_plugin",
 ] }
 rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -35,11 +44,12 @@ toml = "1.1.2"
 # *program's* call and this program makes it below, in its own dependency
 # table, so the choice is visible in one place instead of two.
 crabomination = { path = "../crabomination", default-features = false }
-# Generating the white name-placeholder PNGs for cards with no Scryfall art
-# (see scryfall::ensure_card_images). All three are already in the tree via
-# Bevy, so they add no new compilation beyond imageproc itself.
-image = "0.25.10"
-imageproc = "0.27"
+# Drawing the placeholder and proxy faces for cards with no Scryfall art
+# (`card::proxy`), and converting art cached before the JPEG switch. Only the
+# two codecs the client reads: `image`'s defaults compile every format it
+# knows, the rav1e AV1 encoder among them.
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+imageproc = { version = "0.27", default-features = false, features = ["text"] }
 ab_glyph = "0.2.32"
 # Bevy's text shaper, named directly for one call it does not re-export:
 # registering the symbol fallback fonts (`theme::register_symbol_fallbacks`).

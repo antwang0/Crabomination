@@ -2,7 +2,7 @@
 //!
 //! Cards lie flat on the table and are viewed at a steep, foreshortened
 //! angle, so their textures are heavily minified — especially opponent
-//! boards and cards at the back of the table. Bevy's PNG loader produces
+//! boards and cards at the back of the table. Bevy's image loader produces
 //! a single mip level, which makes the configured 16× anisotropic filter
 //! (see `ImagePlugin` in `main.rs`) a no-op: with no mip chain to sample
 //! from, minified card text shimmers and aliases into mush.
@@ -21,7 +21,7 @@ use bevy::image::Image;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 
-/// True for the RGBA8 formats the PNG loader emits — the only formats our
+/// True for the RGBA8 formats the image loader emits — the only formats our
 /// byte-level box filter knows how to downsample.
 fn is_rgba8(format: TextureFormat) -> bool {
     matches!(format, TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Unorm)
@@ -56,7 +56,7 @@ fn linear_to_srgb(linear: f32) -> u8 {
 }
 
 /// Whether `path` names a card-face texture we want mipmapped (the per-card
-/// `cards/<name>.png` images plus the shared card back).
+/// `cards/…` images plus the shared card back).
 fn is_card_texture(path: &str) -> bool {
     path.starts_with("cards/") || path == "cardback.png"
 }

@@ -25,6 +25,28 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Card art cache and client dependencies (2026-09-30) — shipped
+
+- ✅ **Card art is cached as Scryfall's `large` JPEG, not its PNG.** The
+  PNGs (745 × 1040, ~1.2 MB each) were 28 GB for the 22,193 images of the
+  full catalog; `large` (672 × 936) is ~120 KB, a tenth of the disk and of
+  the first-run download. The biggest a card is drawn is the 230 px hover
+  preview, and a 2x crop of the rules text reads the same in both. The
+  transparent PNG corners never showed on the table (the card mesh is a
+  rounded rectangle); Scryfall's JPEGs fill them black.
+  `scryfall::convert_png_art` converts an existing PNG cache once, in
+  place, on the prefetch thread (scaled to 672 wide at quality 85 — 15 % of
+  the PNG over a 40-card sample, full size at 90 was 26 % and read no
+  better — with no re-download),
+  renames the negative-cache entries, and hot-swaps each converted image
+  in; the menu line reads "Converting cached card art". A missing `.jpg`
+  still gets a drawn placeholder, served as JPEG because Bevy picks the
+  decoder by extension; drawn proxy faces keep their `.png` paths.
+- ✅ **The client compiles 68 fewer crates.** `image` and `imageproc` ran
+  on default features (every codec, the rav1e AV1 encoder, rayon, FFT) for
+  a PNG encode; Bevy carried glTF, scenes and `sysinfo_plugin`, none of
+  them used. Cold `cargo build -p crabomination_client`: 597 -> 529 units.
+
 ## Two commanders in the command zone (2026-09-30) — shipped
 
 Read off layout-harness screenshots (`--layout-fixture 2|3|4 --partners`,

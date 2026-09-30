@@ -98,6 +98,15 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   `find target/debug/deps -maxdepth 1 -type f -size +50M -mmin +180 -delete`
   freed 16 GB and rebuilt nothing — a stale hash is one cargo will never look
   up again. Do it before a long optimized build, not after the build dies.
+  **`scripts/prune_target.py` does it by rule** (`--dry-run` lists first):
+  dirty workspace outputs, incremental caches of configs idle for 48 h, and
+  the superseded session rustc keeps beside each live one (half of every
+  incremental dir). It refuses while cargo or rustc runs in this checkout.
+  2026-09-30: `target/` 91 -> 45 GB, and the builds after it were no-ops.
+  ⚠ **Never delete an output cargo still thinks is fresh, however old or
+  unread** — it is rebuilt under the same hash and the new mtime cascades:
+  pruning dependencies unread for 14 days took `cc`/`pkg-config`/proc
+  macros with them and cost a 3-minute Bevy + engine rebuild per profile.
 - **A second worktree sharing `target/` builds NOTHING unless its sources are
   newer than the main tree's outputs.** Cargo keys a workspace member by its
   path *relative to the workspace root*, so `/home/user/crab_base/crabomination`

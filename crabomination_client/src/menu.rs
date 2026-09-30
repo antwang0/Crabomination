@@ -1578,6 +1578,8 @@ fn update_download_progress(
     let finished = prefetch.finished.load(Ordering::Relaxed);
     let label = if finished || total == 0 {
         String::new()
+    } else if prefetch.converting.load(Ordering::Relaxed) {
+        format!("Converting cached card art to JPEG…  {done}/{total} (once only)")
     } else {
         format!("Downloading card art…  {done}/{total} (playable now — missing art shows placeholders)")
     };
