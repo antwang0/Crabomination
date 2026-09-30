@@ -99,13 +99,17 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   freed 16 GB and rebuilt nothing — a stale hash is one cargo will never look
   up again. Do it before a long optimized build, not after the build dies.
   **`scripts/prune_target.py` does it by rule** (`--dry-run` lists first):
-  dirty workspace outputs, incremental caches of configs idle for 48 h, and
-  the superseded session rustc keeps beside each live one (half of every
-  incremental dir). It refuses while cargo or rustc runs in this checkout.
-  2026-09-30: `target/` 91 -> 45 GB, and the builds after it were no-ops.
-  ⚠ **Never delete an output cargo still thinks is fresh, however old or
+  dirty workspace outputs, incremental caches of configs idle for 48 h, the
+  superseded session rustc keeps beside each live one (half of every
+  incremental dir), and — in `debug`/`play` — every unit no configuration
+  used in 14 days depends on, by mark and sweep over cargo's own
+  `.fingerprint` records (the old Bevy a feature change leaves, a config
+  nobody builds any more). It refuses while cargo or rustc runs in this
+  checkout, and was checked to leave the everyday commands no-ops.
+  2026-09-30: `target/` 91 -> 46 GB.
+  ⚠ **Never delete an output a live unit was built against, however old or
   unread** — it is rebuilt under the same hash and the new mtime cascades:
-  pruning dependencies unread for 14 days took `cc`/`pkg-config`/proc
+  pruning dependencies by their own access time took `cc`/`pkg-config`/proc
   macros with them and cost a 3-minute Bevy + engine rebuild per profile.
 - **A second worktree sharing `target/` builds NOTHING unless its sources are
   newer than the main tree's outputs.** Cargo keys a workspace member by its
