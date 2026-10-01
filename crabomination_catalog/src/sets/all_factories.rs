@@ -4514,6 +4514,8 @@ static DECKS: &[Factory] = &[
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
+    super::decks::master_chef,
+    super::decks::noble_heritage,
     super::decks::tavern_brawler,
     super::decks::far_traveler,
     super::decks::guild_artisan,

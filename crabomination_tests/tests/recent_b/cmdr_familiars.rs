@@ -145,6 +145,82 @@ fn inspiring_leader_pumps_tokens_while_your_commander_is_out() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
+/// Cast a Grizzly Bears for `seat` — from the command zone as its commander
+/// when `commander`, else from hand.
+fn cast_bears(g: &mut GameState, seat: usize, commander: bool) -> CardId {
+    g.priority.player_with_priority = seat;
+    g.players[seat].mana_pool.add(Color::Green, 2);
+    let id = if commander {
+        let id = g.seat_commanders(seat, vec![catalog::grizzly_bears()])[0];
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+            alternative: false,
+            pitch_card: None,
+        })
+        .map(|_| id)
+    } else {
+        let id = g.add_card_to_hand(seat, catalog::grizzly_bears());
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .map(|_| id)
+    }
+    .expect("cast bears");
+    drain_stack(g);
+    id
+}
+
+/// CR 614.1c / 614.12 — Master Chef: the commander enters with an extra
+/// +1/+1 counter; other creatures get one only while that commander is out.
+#[test]
+fn master_chef_counters_the_commander_then_the_rest() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::master_chef());
+    let before = cast_bears(&mut g, 0, false);
+    assert_eq!(g.battlefield_find(before).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "no commander out");
+    let cmdr = cast_bears(&mut g, 0, true);
+    assert_eq!(g.battlefield_find(cmdr).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "its own rider only");
+    let after = cast_bears(&mut g, 0, false);
+    assert_eq!(g.battlefield_find(after).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.active_player_idx = 1;
+    let theirs = cast_bears(&mut g, 1, false);
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "yours only");
+}
+
+/// CR 702.16 / 608.2d — Noble Heritage: as the commander enters each player
+/// may put two counters on a creature of theirs; each opponent who does gives
+/// you protection from them until your next turn.
+#[test]
+fn noble_heritage_trades_counters_for_protection() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::noble_heritage());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    // Seat 0's commander is the next card id: yes + pick it, yes + seat 1's
+    // bear, then seat 2 declines.
+    let cmdr = CardId(b2.0 + 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![cmdr]),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![b1]),
+        DecisionAnswer::Bool(false),
+    ]));
+    assert_eq!(cast_bears(&mut g, 0, true), cmdr);
+    let pp = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((pp(&g, cmdr), pp(&g, b1), pp(&g, b2)), (2, 2, 0));
+    assert_eq!(g.players[0].protected_from_seats_until_next_turn, 1 << 1, "only from seat 1, who took the deal");
+}
+
 /// Tavern Brawler: at your upkeep your commander exiles your top card and gets
 /// +X/+0 for its mana value.
 #[test]

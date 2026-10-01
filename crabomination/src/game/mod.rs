@@ -7798,7 +7798,10 @@ impl GameState {
                 .keywords
                 .has_kw(&crate::card::Keyword::Changeling);
             for sa in &src.definition.static_abilities {
-                match &sa.effect {
+                // Gated riders (Master Chef's "while you control your
+                // commander") count only while their gate is open.
+                let Some(effect) = self.active_static(&sa.effect, src) else { continue };
+                match effect {
                     StaticEffect::ChosenTypeEntersWithCounter { kind }
                         if src
                             .chosen_creature_type

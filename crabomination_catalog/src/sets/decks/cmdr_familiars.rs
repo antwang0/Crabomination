@@ -1,17 +1,16 @@
 //! Cards that name a commander (COMMANDER_BACKLOG §3, "Missing"): the
 //! Battlebond-style familiars Kediss, Esior and Anara, Lozhan, the Backgrounds
-//! Agent of the Iron Throne, Inspiring Leader, Tavern Brawler, Far Traveler
-//! and Guild Artisan, Astarion's Thirst, and Mines of Moria (§2).
+//! Agent of the Iron Throne, Inspiring Leader, Tavern Brawler, Far Traveler,
+//! Guild Artisan, Master Chef and Noble Heritage, Astarion's Thirst, and
+//! Mines of Moria (§2).
 //!
 //! A Background's "Commander creatures you own have …" is a
 //! `GrantTriggeredAbility` to `Creature ∧ IsCommander ∧ OwnedByYou` (the Folk
-//! Hero shape). Not here: Master Chef (a granted enters-with-counters
-//! replacement) and Noble Heritage (each player's optional counters plus
-//! protection from a player) want primitives.
+//! Hero shape); Master Chef's riders are gated enters-with-counters statics.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement as R, Selector, SpellSubtype, StaticAbility, StaticEffect,
+    CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, Selector, SpellSubtype, StaticAbility, StaticEffect,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{mint_treasures, target_filtered};
@@ -293,6 +292,108 @@ pub fn guild_artisan() -> CardDefinition {
             treasures,
         )],
         ..background("Guild Artisan", cost(&[generic(1), r()]))
+    }
+}
+
+/// Master Chef — {2}{G} Background. Commander creatures you own have "This
+/// creature enters with an additional +1/+1 counter on it" and "Other creatures
+/// you control enter with an additional +1/+1 counter on them." Approximation:
+/// the second rider is the Background controller's while they control a
+/// commander creature they own (as Inspiring Leader's anthem).
+pub fn master_chef() -> CardDefinition {
+    let commander_out = Predicate::SelectorExists(Selector::EachPermanent(
+        R::Creature.and(R::IsCommander).and(R::OwnedByYou).and(R::ControlledByYou),
+    ));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Commander creatures you own have \"This creature enters with an additional +1/+1 \
+                              counter on it.\"",
+                effect: StaticEffect::MatchingEntersWithExtraCounters {
+                    filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Commander creatures you own have \"Other creatures you control enter with an \
+                              additional +1/+1 counter on them.\"",
+                effect: StaticEffect::WhileCondition {
+                    condition: commander_out,
+                    inner: Box::new(StaticEffect::MatchingEntersWithExtraCounters {
+                        filter: R::Creature.and(R::Not(Box::new(R::IsCommander.and(R::OwnedByYou)))),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: 1,
+                    }),
+                },
+            },
+        ],
+        ..background("Master Chef", cost(&[generic(2), g()]))
+    }
+}
+
+/// Noble Heritage — {1}{W} Background. Commander creatures you own have "When
+/// this creature enters and at the beginning of your upkeep, each player may
+/// put two +1/+1 counters on a creature they control. For each opponent who
+/// does, you gain protection from that player until your next turn."
+pub fn noble_heritage() -> CardDefinition {
+    // Each seat in APNAP order: its own "may", its own creature (CR 608.2d),
+    // and — an opponent of the commander's controller — that player's grant.
+    let offer = || Effect::ForEach {
+        selector: Selector::Player(PlayerRef::EachPlayer),
+        body: Box::new(Effect::MayDoBy {
+            who: PlayerRef::Triggerer,
+            description: "Put two +1/+1 counters on a creature you control?".into(),
+            body: Box::new(Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::ChooseOneAmong {
+                        what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::AddCounter {
+                            what: Selector::SeparatedPile { chosen: true },
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(2),
+                        }),
+                        other: Box::new(Effect::Noop),
+                    },
+                    Effect::If {
+                        cond: Predicate::PlayerIsOpponent {
+                            who: PlayerRef::ControllerOf(Box::new(Selector::This)),
+                        },
+                        then: Box::new(Effect::GainProtectionFromPlayer {
+                            what: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::This))),
+                            from: PlayerRef::You,
+                            duration: Duration::UntilNextTurn,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            }),
+        }),
+    };
+    let text = "Commander creatures you own have \"When this creature enters and at the beginning of your upkeep, \
+                each player may put two +1/+1 counters on a creature they control. For each opponent who does, \
+                you gain protection from that player until your next turn.\"";
+    CardDefinition {
+        static_abilities: vec![
+            grant_to_your_commanders(
+                text,
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                    effect: offer(),
+                },
+            ),
+            grant_to_your_commanders(
+                text,
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                    effect: offer(),
+                },
+            ),
+        ],
+        ..background("Noble Heritage", cost(&[generic(1), w()]))
     }
 }
 

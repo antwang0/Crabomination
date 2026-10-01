@@ -841,7 +841,7 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
     c.definition.static_abilities.iter().any(|sa| {
         matches!(
-            sa.effect,
+            sa.effect.ungated(),
             S::PlaneswalkersEnterWithExtraLoyalty { .. }
                 | S::ChosenTypeEntersWithCounter { .. }
                 | S::TypeEntersWithCounter { .. }
