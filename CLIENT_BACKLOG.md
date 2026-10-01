@@ -48,10 +48,13 @@ screenshots of a live fixture match (`--take-back play|undo`).
 
   Auto-pass holds the restored window until you act, and the log says
   "⟲ You took back: …".
-- Residual ⏳ (TODO steps 2–5):
-  - the coin / die rolls and the bots' randomness aren't pinned, so an undo
-    can fish for a different flip or reply;
-  - the log and match stats keep the undone branch's lines;
+- ✅ **No fishing, and the log follows the branch** (TODO steps 2–3, the
+  same day). A redo meets the same bot reply and the same coin; the
+  take-back line says what the undone stretch showed ("⟲ You took back:
+  cast Opt (you saw 1 draw, a scry)"). The log, the match stats and the
+  life graph go back to the point (`ServerMsg::UndoMark`): the undone
+  lines leave, chat and notices stay.
+- Residual ⏳ (TODO steps 4–5):
   - no take-backs with another human at the table;
   - no list for jumping back several at once.
 
@@ -1158,7 +1161,8 @@ indicator + click target. Slims the 2-D chip strip.
   first-spell tax / energy. Reuse `counter_coins.rs` palette.
 
 ### Undo / Take-Back
-✅ Against bots (2026-10-01, see the top). ⏳ Between players: a "request
+✅ Against bots, with no fishing and the log following the branch
+(2026-10-01, see the top). ⏳ Between players: a "request
 take-back" the opponent approves — TODO's step 4. **Full plan now lives at
 "Engine — Rollback / Undo system (plan)"** (snapshot-based; re-planned
 2026-10-01 against the server and client as mapped, five steps, the first

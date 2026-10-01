@@ -429,12 +429,23 @@ pub fn poll_net(
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
-    let (msgs, disconnected) = inbox.drain();
+    let (drained, disconnected) = inbox.drain();
+    let mut queue = std::mem::take(&mut takeback.held);
+    queue.extend(drained);
     // Set when a game-state message arrives, so a (re)established link resets
     // the reconnect backoff — but a bare `LobbyError` (a rejected resume) does
     // not, letting `maybe_reconnect` exhaust its attempts and bail to the menu.
     let mut got_game_msg = false;
-    for msg in msgs {
+    while let Some(msg) = queue.pop_front() {
+        // A take-back's mark or rewind is applied before this frame's events
+        // are folded into the log and stats (`takeback::apply_rewinds`): one
+        // behind events waits for the next frame, with everything after it,
+        // or it would land on the wrong side of them.
+        if matches!(msg, ServerMsg::UndoMark { .. } | ServerMsg::Rewound { .. }) && !events.0.is_empty() {
+            queue.push_front(msg);
+            takeback.held = std::mem::take(&mut queue);
+            break;
+        }
         match msg {
             ServerMsg::YourSeat(s) => {
                 seat.0 = s;
@@ -484,7 +495,10 @@ pub fn poll_net(
             ServerMsg::Notice { text } => log.push_colored(text, crate::theme::TEXT_INFO),
             // A take-back: `systems::takeback` resets the client once the
             // restored view (which follows) is in.
-            ServerMsg::Rewound { by, label } => takeback.rewinds.push((by, label)),
+            ServerMsg::Rewound { by, label, to, saw } => {
+                takeback.heard.push(crate::systems::takeback::Heard::Rewound { by, label, to, saw })
+            }
+            ServerMsg::UndoMark { id } => takeback.heard.push(crate::systems::takeback::Heard::Mark(id)),
             ServerMsg::UndoPoints(points) => takeback.points = points,
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
@@ -1437,6 +1451,66 @@ mod tests {
     use super::*;
     use crabomination::card::CardId;
 
+    /// A world `poll_net` can run in, reading `rx`.
+    fn poll_world(rx: mpsc::Receiver<ServerMsg>) -> World {
+        let mut world = World::new();
+        world.insert_resource(NetInbox(Mutex::new(rx)));
+        world.init_resource::<CurrentView>();
+        world.init_resource::<OurSeat>();
+        world.init_resource::<LatestServerEvents>();
+        world.init_resource::<MatchEnded>();
+        world.init_resource::<PendingManaCast>();
+        world.init_resource::<LobbyState>();
+        world.init_resource::<ResumeInfo>();
+        world.init_resource::<RopeClock>();
+        world.init_resource::<ChessClock>();
+        world.init_resource::<ChatInbox>();
+        world.init_resource::<crate::systems::takeback::Takeback>();
+        world.init_resource::<Time>();
+        world.init_resource::<crate::game::BlockingState>();
+        world.init_resource::<crate::game::GameLog>();
+        world
+    }
+
+    /// The turns of the `TurnStarted` events this frame polled.
+    fn polled_turns(world: &World) -> Vec<u32> {
+        world
+            .resource::<LatestServerEvents>()
+            .0
+            .iter()
+            .filter_map(|e| match e {
+                crabomination::net::GameEventWire::TurnStarted { turn, .. } => Some(*turn),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// An undo point's mark behind events waits for the next frame, and
+    /// what follows it with it: it is applied before the events after it are
+    /// folded into the log and stats, never after the ones before it.
+    #[test]
+    fn a_mark_behind_events_waits_for_the_next_frame() {
+        use bevy::ecs::system::RunSystemOnce;
+        use crabomination::net::GameEventWire;
+        use crate::systems::takeback::{Heard, Takeback};
+        let state = crabomination::demo::build_demo_state_seeded(7);
+        let update = |turn| ServerMsg::Update {
+            events: vec![GameEventWire::TurnStarted { player: 0, turn }],
+            view: Box::new(crabomination::server::view::project(&state, 0)),
+        };
+        let (tx, rx) = mpsc::channel();
+        for msg in [update(3), ServerMsg::UndoMark { id: 7 }, update(4)] {
+            tx.send(msg).unwrap();
+        }
+        let mut world = poll_world(rx);
+        world.run_system_once(poll_net).unwrap();
+        assert_eq!(polled_turns(&world), [3]);
+        assert!(world.resource::<Takeback>().heard.is_empty(), "the mark waits");
+        world.run_system_once(poll_net).unwrap();
+        assert_eq!(world.resource::<Takeback>().heard, [Heard::Mark(7)]);
+        assert_eq!(polled_turns(&world), [4], "and the update behind it with it");
+    }
+
     /// Every `Update` drained in one frame reaches the event buffer. Bots
     /// act back-to-back and the server sends one `Update` per action, so a
     /// pod frame routinely drains several; the buffer was assigned per
@@ -1454,33 +1528,9 @@ mod tests {
             })
             .unwrap();
         }
-        let mut world = World::new();
-        world.insert_resource(NetInbox(Mutex::new(rx)));
-        world.init_resource::<CurrentView>();
-        world.init_resource::<OurSeat>();
-        world.init_resource::<LatestServerEvents>();
-        world.init_resource::<MatchEnded>();
-        world.init_resource::<PendingManaCast>();
-        world.init_resource::<LobbyState>();
-        world.init_resource::<ResumeInfo>();
-        world.init_resource::<RopeClock>();
-        world.init_resource::<ChessClock>();
-        world.init_resource::<ChatInbox>();
-        world.init_resource::<crate::systems::takeback::Takeback>();
-        world.init_resource::<Time>();
-        world.init_resource::<crate::game::BlockingState>();
-        world.init_resource::<crate::game::GameLog>();
+        let mut world = poll_world(rx);
         world.run_system_once(poll_net).unwrap();
-        let turns: Vec<u32> = world
-            .resource::<LatestServerEvents>()
-            .0
-            .iter()
-            .filter_map(|e| match e {
-                GameEventWire::TurnStarted { turn, .. } => Some(*turn),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(turns, [3, 4], "both updates' events, in order");
+        assert_eq!(polled_turns(&world), [3, 4], "both updates' events, in order");
         // The next frame starts from an empty buffer.
         world.run_system_once(poll_net).unwrap();
         assert!(world.resource::<LatestServerEvents>().0.is_empty());

@@ -266,10 +266,26 @@ pub enum ServerMsg {
     /// didn't.
     Notice { text: String },
     /// Seat `by` took back `label`: the match was rewound to just before
-    /// that action. A full `View` follows; the client lays the table out
-    /// afresh rather than animating time backwards, and drops whatever it
-    /// was in the middle of.
-    Rewound { by: usize, label: String },
+    /// that action, undo point `to`. A full `View` follows; the client lays
+    /// the table out afresh rather than animating time backwards, drops
+    /// whatever it was in the middle of, and cuts its log and stats back to
+    /// [`ServerMsg::UndoMark`] `to`. `saw` is what the undone stretch showed
+    /// `by` and a rewind can't take back: "1 draw", "a coin flip",
+    /// "Bot's hand".
+    Rewound {
+        by: usize,
+        label: String,
+        #[serde(default)]
+        to: u64,
+        #[serde(default)]
+        saw: Vec<String>,
+    },
+    /// Undo point `id` was kept: everything sent after this belongs to its
+    /// action and after, everything before it to the game it rewinds to.
+    /// Sent to every seat and spectator, in the stream, so a client can cut
+    /// its log and stats at exactly this place on a [`ServerMsg::Rewound`].
+    /// Never dropped by the TCP outbox, which may drop an `Update`.
+    UndoMark { id: u64 },
     /// The receiving seat's undo points, oldest first — what
     /// [`ClientMsg::RequestUndo`] can go back to. Sent whenever the list
     /// changes.

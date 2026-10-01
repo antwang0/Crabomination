@@ -10,7 +10,7 @@ use crabomination::net::GameEventWire;
 
 use crate::net_plugin::LatestServerEvents;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone, Debug, PartialEq)]
 pub struct MatchStats {
     pub turns: u32,
     pub drawn: HashMap<usize, u32>,
@@ -72,10 +72,18 @@ impl MatchStats {
 
 /// Fold the latest event batch into the running stats. `LatestServerEvents`
 /// holds each batch for exactly one tick (cleared by `poll_net`), so a
-/// per-frame reader never double-counts. A `TurnStarted { turn: 1 }` after a
-/// running match resets the counters for the rematch.
+/// per-frame reader never double-counts.
 pub fn track_match_stats(events: Res<LatestServerEvents>, mut stats: ResMut<MatchStats>) {
     for ev in &events.0 {
+        stats.fold(ev);
+    }
+}
+
+impl MatchStats {
+    /// Count one event. A `TurnStarted { turn: 1 }` after a running match
+    /// resets the counters for the rematch.
+    pub fn fold(&mut self, ev: &GameEventWire) {
+        let stats = self;
         match ev {
             GameEventWire::TurnStarted { turn, .. } => {
                 if *turn <= 1 && stats.turns > 1 {

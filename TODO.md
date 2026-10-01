@@ -737,7 +737,8 @@ back your own actions. Time spent on the clock stays spent.
   - **Coin flips and die rolls are rolled on the client** (`rand::random`
     in `decision_ui`'s randomizer handler), so undo plus re-flip fishes
     for heads. For human seats the server must roll them from
-    `state.rng`; the button just asks.
+    `state.rng`; the button just asks. *(Wrong: no coin or die decision
+    ever reaches a client — see step 2.)*
   - **Bots aren't deterministic.** `HeuristicBot`'s tie-break jitter uses
     the thread RNG (`set_jitter_seed` is never called in a match), and
     MCTS rollouts use `rand::rng()` (`mcts.rs:578`). So undo-and-redo
@@ -864,12 +865,52 @@ so most of a backward jump just re-lays out. These would still break:
 
    Client: one test that dirties every reset resource, and a harness
    `--rewind` screenshot.
-2. **No fishing.** Server-rolled coin and die for human seats; seeded
-   live-match bot decisions; the "you saw" summary. Test: undo and redo
-   gets the same bot reply and the same flip.
-3. **The log and stats follow the branch.** The event history, rebuilt on
-   rewind; `LifeHistory` trimmed. Test: rebuilding from a truncated event
-   list gives the stats of a game that never took the undone branch.
+2. ✅ **No fishing** (2026-10-01). What the code turned out to be, and what
+   shipped:
+   - **Coins were never rolled on the client.** No coin or die decision
+     suspends: `flip_one_coin` draws from the game's stream and the live
+     server's `AutoDecider` takes that roll, so a rewind already replays
+     the flip. The client's randomizer button (`handle_randomizer_buttons`)
+     is unreachable; if a coin or die ever does suspend for a human, its
+     answer must come from the decision's roll, not the button. Test:
+     `undo::a_redo_flips_the_same_coin` (16 seeds, both faces seen).
+   - ⏳ **Die rolls in a live match always come out as the middle face**
+     (`AutoDecider` answers `DieRoll` with the midpoint, for tests). Pinned,
+     so nothing to fish, but not random either: Goblin Goliath's d6 is
+     always 3. Rolling from the game's stream would move every golden trace
+     and pool number with a die in it; its own change.
+   - **Bots are pinned per decision.** `drive_bots` pins each bot's
+     randomness to `undo::decision_seed` (the stream position mixed with
+     turn, step, priority, zone sizes and the effect timestamp) for that
+     decision: the scored bot's jitter and the search's rollouts and Gumbel
+     noise (`mcts::PinnedStreams`), each root-parallel worker given its own
+     stream in worker order. Unpinned (every ladder, bench and training
+     run) is the thread RNG as before; a thread that pinned its own jitter
+     (the server's seeded bot-vs-bot sweeps) keeps it. Tests:
+     `a_redo_meets_the_same_bot_reply` (the uniform bot, which fails it
+     unpinned, and a two-worker search bot, event for event),
+     `pinned_streams_replay_a_search`.
+   - **The take-back says what it showed**: `Rewound.saw`, from a journal
+     every broadcast feeds (`undo::note_seen`, armed per match like the
+     replay sink) plus new `hands_revealed_to` pairs: the seat's draws,
+     scries, surveils and searches, every revealed card, coin and die, and
+     a hand a choice laid open (Thoughtseize). Logged as "⟲ You took back:
+     cast Thoughtseize (you saw Bot's hand)". Test:
+     `a_take_back_names_what_it_showed`.
+3. ✅ **The log and stats follow the branch** (2026-10-01). Not by an event
+   count: the TCP outbox may drop an `Update` for a slow client, and a count
+   would cut in the wrong place. The server marks each undo point in every
+   stream instead (`ServerMsg::UndoMark`, never dropped), ahead of what its
+   action sends. At a mark the client notes its log (`GameLog::cut`), its
+   `MatchStats` and its `LifeHistory` samples; a rewind to the point puts
+   them back and drops the later marks. Lines that aren't the game's (chat,
+   notices, earlier take-backs) stay; a line coalesced past the mark gets
+   its count back. `poll_net` holds a mark or rewind behind events to the
+   next frame, so it lands before the events after it are folded in. Tests:
+   `a_rewind_cuts_the_log_and_stats_back_to_its_mark` (the stats equal a
+   game that never took the branch), `a_mark_behind_events_waits_for_the_
+   next_frame`. A client that never heard the mark (it reconnected since)
+   keeps its log and stats.
 4. **Consent** (lobby, LAN, pair server): request and response, the pause,
    the deadline, disconnects, the banner. Tests: decline keeps the state;
    actions are refused while pending; a timeout declines.

@@ -182,7 +182,53 @@ use crate::decision::{AutoDecider, Decider};
 use crate::game::{GameAction, GameState, TurnStep};
 use crate::recommend::STALE_ROUNDS;
 
+use rand::SeedableRng;
+use rand::rngs::StdRng;
+
 use super::bot::{Bot, EvalWeights, HeuristicBot};
+
+thread_local! {
+    /// This thread's pinned search stream: when set, each rollout's
+    /// determinisation and each decision's Gumbel noise draw their seed from
+    /// it instead of the thread RNG. `None` — every ladder, bench and
+    /// training run — is the thread RNG, as always.
+    static SEARCH: std::cell::RefCell<Option<StdRng>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The next seed off the pinned search stream, when there is one.
+fn search_draw() -> Option<u64> {
+    SEARCH.with(|s| s.borrow_mut().as_mut().map(|r| r.random()))
+}
+
+/// A bot's randomness pinned to one seed on this thread until the guard
+/// drops: the scored bot's tie-break jitter and the search's rollouts, its
+/// worker threads' included. The live server pins each bot decision this
+/// way from the state it is made in (`server::undo::decision_seed`), so the
+/// same position always gets the same reply and a take-back can't fish for
+/// a better one. Dropping it puts back whatever the thread had before.
+pub struct PinnedStreams {
+    jitter: Option<StdRng>,
+    search: Option<StdRng>,
+}
+
+impl PinnedStreams {
+    pub fn install(seed: u64) -> Self {
+        let jitter = super::bot::swap_jitter(Some(StdRng::seed_from_u64(seed)));
+        // A different stream from the same seed: the jitter and the search
+        // must not draw the same numbers.
+        let search = SEARCH.with(|s| {
+            s.replace(Some(StdRng::seed_from_u64(seed ^ 0x5EA2_C4ED_0000_0001)))
+        });
+        Self { jitter, search }
+    }
+}
+
+impl Drop for PinnedStreams {
+    fn drop(&mut self) {
+        super::bot::swap_jitter(self.jitter.take());
+        SEARCH.with(|s| *s.borrow_mut() = self.search.take());
+    }
+}
 
 /// Tunables for [`MctsBot`]. Every one of these trades search quality for
 /// wall clock, and the right setting is a measurement, so none of them are
@@ -572,31 +618,37 @@ impl MctsBot {
         0.5 + 0.5 * (material / 60.0).tanh()
     }
 
+    /// Determinise `g` for a rollout: the real top of each library is
+    /// information a search has no business exploiting.
+    fn determinise<R: rand::Rng>(&self, g: &mut GameState, seat: usize, r: &mut R) {
+        for p in &mut g.players {
+            let mut lib = std::mem::take(&mut p.library);
+            lib.shuffle(r);
+            p.library = lib;
+        }
+        // Under a determinizing profile the opponent's *hand* is
+        // redealt too (the library shuffle above never covered it —
+        // rollouts have been reading the held cards since the first
+        // MCTS experiment). Salted per rollout so the bandit averages
+        // over imagined hands.
+        if self.cfg.weights.determinize > 0 {
+            let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
+            if let Some(b) = super::bot::hand_belief(g, seat, &self.cfg.weights) {
+                super::bot::determinize_hidden_belief(g, seat, salt, &b);
+            } else {
+                super::bot::determinize_hidden(g, seat, salt);
+            }
+        }
+    }
+
     /// Play `g` forward to the horizon and score it.
     fn rollout(&self, mut g: GameState, seat: usize) -> f64 {
         timing::count(&timing::ROLLOUTS, 1);
-        let mut r = rng();
         {
             let _t = timing::lap(&timing::DET_NS);
-            // Determinise: the real top of each library is information a
-            // search has no business exploiting.
-            for p in &mut g.players {
-                let mut lib = std::mem::take(&mut p.library);
-                lib.shuffle(&mut r);
-                p.library = lib;
-            }
-            // Under a determinizing profile the opponent's *hand* is
-            // redealt too (the library shuffle above never covered it —
-            // rollouts have been reading the held cards since the first
-            // MCTS experiment). Salted per rollout so the bandit averages
-            // over imagined hands.
-            if self.cfg.weights.determinize > 0 {
-                let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
-                if let Some(b) = super::bot::hand_belief(&g, seat, &self.cfg.weights) {
-                    super::bot::determinize_hidden_belief(&mut g, seat, salt, &b);
-                } else {
-                    super::bot::determinize_hidden(&mut g, seat, salt);
-                }
+            match search_draw() {
+                Some(seed) => self.determinise(&mut g, seat, &mut StdRng::seed_from_u64(seed)),
+                None => self.determinise(&mut g, seat, &mut rng()),
             }
         }
         let _t = timing::lap(&timing::SIM_NS);
@@ -731,8 +783,16 @@ impl MctsBot {
             }
         }
 
-        let mut r = rng();
-        let noise: Vec<f64> = (0..n).map(|_| gumbel_noise(&mut r)).collect();
+        let noise: Vec<f64> = match search_draw() {
+            Some(seed) => {
+                let mut r = StdRng::seed_from_u64(seed);
+                (0..n).map(|_| gumbel_noise(&mut r)).collect()
+            }
+            None => {
+                let mut r = rng();
+                (0..n).map(|_| gumbel_noise(&mut r)).collect()
+            }
+        };
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
         // Arms are compared on `g + logit + σ(normalized q̂)` — σ terms
@@ -1052,10 +1112,15 @@ impl MctsBot {
             let (seeded_v, seeded_t) = (seed_visits.as_slice(), seed_total.as_slice());
             for w in 0..workers {
                 let chunk = per + u32::from((w as u32) < extra);
-                // Every capture is `Copy` (shared references and two
-                // counters), so the closure is too and the fallback below
-                // can still call it after `spawn_scoped` took it.
+                // A pinned search hands each worker a stream of its own,
+                // drawn in worker order, so the split budget replays too.
+                let pin = search_draw();
+                // Every capture is `Copy` (shared references and a few
+                // numbers), so the closure is too and the fallback below
+                // can still call it after `spawn_scoped` took it — on this
+                // thread, which is why the pin restores what it replaced.
                 let run = move || {
+                    let _pin = pin.map(PinnedStreams::install);
                     self.worker_chunk(
                         state, seat, candidates, priors, seeded_v, seeded_t, done, chunk,
                     )
@@ -1262,6 +1327,47 @@ mod tests {
             toughness: t,
             ..Default::default()
         }
+    }
+
+    /// Pinned to one seed, a bot's randomness replays: the tie-break jitter,
+    /// a rollout's reshuffle, and a root-parallel search's workers — so the
+    /// split budget lands the same rollouts on the same arms. A different
+    /// seed reshuffles differently, and dropping the pin puts back what the
+    /// thread had.
+    #[test]
+    fn pinned_streams_replay_a_search() {
+        // Seat 0 in its main phase with priority: both arms are legal.
+        let mut g = crate::game::two_player_game();
+        // Free creatures of four sizes: what a rollout draws, it plays.
+        for i in 0..24 {
+            for seat in 0..2 {
+                g.add_card_to_library(seat, creature(["Bear", "Elf", "Ox", "Yak"][i % 4], 1 + (i % 4) as i32, 2));
+            }
+        }
+        let forest = g.add_card_to_hand(0, crate::catalog::forest());
+        let bot = MctsBot::new(MctsConfig { iterations: 12, search_threads: 2, ..MctsConfig::default() });
+        let reshuffled = |seed: u64| {
+            let _pin = PinnedStreams::install(seed);
+            let jitter: Vec<usize> = (0..4).map(|_| super::super::bot::jitter_below(1 << 20)).collect();
+            let mut h = g.clone();
+            bot.determinise(&mut h, 0, &mut StdRng::seed_from_u64(search_draw().expect("pinned")));
+            (jitter, h.players[0].library.iter().map(|c| c.id).collect::<Vec<_>>())
+        };
+        assert_eq!(reshuffled(7), reshuffled(7));
+        assert_ne!(reshuffled(7).1, reshuffled(8).1, "another seed, another shuffle");
+        assert!(!super::super::bot::jitter_pinned() && search_draw().is_none(), "the pin is gone with its guard");
+
+        let arms = [GameAction::PassPriority, GameAction::PlayLand(forest)];
+        let spend = |seed: u64| {
+            let _pin = PinnedStreams::install(seed);
+            let (mut visits, mut total) = (vec![1u32; 2], vec![0.5f64; 2]);
+            bot.parallel_spend(&g, 0, &arms, &[0.5, 0.5], &mut visits, &mut total, 2, 12);
+            (visits, total)
+        };
+        let (visits, total) = spend(3);
+        assert_eq!(visits.iter().sum::<u32>(), 12, "the budget is spent");
+        assert_eq!((visits, total.clone()), spend(3), "and spent the same way");
+        assert_ne!(total, spend(4).1, "another seed, other rollouts");
     }
 
     /// The round-31 block arm: a searched declaration comes back from the

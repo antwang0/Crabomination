@@ -137,11 +137,16 @@ pub fn handle_game_input(
             {
                 let starter = player_name(cv, cv.starting_player);
                 let you = cv.starting_player == cv.your_seat;
-                log.push(if you {
-                    "You are on the play.".to_string()
-                } else {
-                    format!("{starter} is on the play — you are on the draw.")
-                });
+                // A game line, like the divider above it: a take-back of the
+                // mulligan takes both out.
+                log.push_event(
+                    if you {
+                        "You are on the play.".to_string()
+                    } else {
+                        format!("{starter} is on the play — you are on the draw.")
+                    },
+                    crate::theme::TEXT_BODY,
+                );
             }
             continue;
         }

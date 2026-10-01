@@ -1,4 +1,4 @@
-//! Take-backs (TODO "Engine — Rollback / Undo system", step 1): a match's
+//! Take-backs (TODO "Engine — Rollback / Undo system", steps 1–3): a match's
 //! recent undo points, one kept just before each deliberate action of a
 //! human seat, and what each is called.
 //!
@@ -17,11 +17,25 @@
 //! over the messages after it: the taps, then the client's re-submit. Those
 //! taps are part of the cast and keep no points of their own, so one
 //! take-back undoes the whole cast, mid-payment or after it, lands and all.
+//!
+//! **No fishing** (step 2). A take-back mustn't be a way to try again for a
+//! better roll of the dice:
+//! - the game's own randomness comes back with the state (its stream
+//!   position is part of the clone), so a shuffle, a draw or a coin flip
+//!   replays the same;
+//! - each bot decision is pinned to a seed from the state it is made in
+//!   ([`decision_seed`], [`pin_bot`]), so the same position always gets the
+//!   same reply — its blocks, its counterspell;
+//! - what the undone stretch *showed* can't be taken back, so the rewind
+//!   says what it was ([`seen_since`]): "1 draw", "a coin flip", "Bot's
+//!   hand".
 
+use std::cell::RefCell;
 use std::collections::VecDeque;
 
 use crate::game::{GameAction, GameState, TurnStep};
-use crate::net::UndoPointView;
+use crate::net::{GameEventWire, UndoPointView};
+use crate::server::mcts::PinnedStreams;
 
 /// The most points a match keeps.
 pub const MAX_POINTS: usize = 64;
@@ -37,6 +51,8 @@ pub struct UndoPoint {
     pub label: String,
     pub turn: u32,
     pub step: TurnStep,
+    /// How much of the match's [`Seen`] journal came before it.
+    seen_at: usize,
 }
 
 impl UndoPoint {
@@ -60,7 +76,7 @@ impl UndoHistory {
     pub fn record(&mut self, seat: usize, label: String, before: GameState) -> u64 {
         self.next_id += 1;
         let id = self.next_id;
-        let point = UndoPoint { id, seat, label, turn: before.turn_number, step: before.step };
+        let point = UndoPoint { id, seat, label, turn: before.turn_number, step: before.step, seen_at: seen_len() };
         self.points.push_back((point, before));
         while self.points.len() > MAX_POINTS {
             self.points.pop_front();
@@ -166,6 +182,172 @@ pub fn action_label(state: &GameState, action: &GameAction) -> String {
         Some(name) => format!("{verb} {name}"),
         None => verb.to_string(),
     }
+}
+
+// ── No fishing ──────────────────────────────────────────────────────────
+
+/// The seed a bot's decision as `seat` in `state` is pinned to: a function
+/// of the state alone, so a rewound position, played into the same way,
+/// gets the same reply. Mixed from the game's stream position (secret, and
+/// unique to the match) and the counters that move with play. Two different
+/// positions sharing a seed would cost nothing: each still gets one reply.
+pub fn decision_seed(state: &GameState, seat: usize) -> u64 {
+    use std::hash::{Hash, Hasher};
+    // Fixed keys: the same state hashes the same for the life of the
+    // process, which is all a rewind needs.
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (state.rng.position(), state.turn_number, state.step, state.active_player_idx, seat).hash(&mut h);
+    (state.player_with_priority(), state.stack.len(), state.battlefield.len()).hash(&mut h);
+    (state.next_effect_timestamp, state.pending_decision.is_some()).hash(&mut h);
+    for p in &state.players {
+        (p.life, p.hand.len(), p.library.len(), p.graveyard.len()).hash(&mut h);
+    }
+    h.finish()
+}
+
+/// Pin a bot's randomness for its decision as `seat` in `state`
+/// ([`decision_seed`]) until the guard drops. A thread that pinned its own
+/// stream for the whole match (the server's seeded bot-vs-bot sweeps) keeps
+/// it: those replay from their seed already, and their games stay the ones
+/// they were chosen for.
+pub fn pin_bot(state: &GameState, seat: usize) -> Option<PinnedStreams> {
+    (!super::bot::jitter_pinned()).then(|| PinnedStreams::install(decision_seed(state, seat)))
+}
+
+/// Something play showed that a rewind can't take back.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Seen {
+    /// `seat` drew a card.
+    Drew(usize),
+    Scried(usize),
+    Surveiled(usize),
+    Searched(usize),
+    /// A card was revealed to the table.
+    Revealed,
+    CoinFlip,
+    DieRoll,
+    /// `seat` was shown `of`'s hand by a choice it was asked (Thoughtseize).
+    Hand { seat: usize, of: usize },
+}
+
+thread_local! {
+    /// The match's journal of what play has shown, fed by every broadcast
+    /// batch ([`note_seen`]). Per thread, armed for the match by
+    /// [`SeenJournal`], like the replay sink: each match runs its loop on
+    /// one thread.
+    static SEEN: RefCell<Option<Vec<Seen>>> = const { RefCell::new(None) };
+}
+
+/// Arms this thread's [`Seen`] journal for one match; dropping it disarms.
+pub(crate) struct SeenJournal;
+
+impl SeenJournal {
+    pub(crate) fn arm() -> Self {
+        SEEN.with(|s| *s.borrow_mut() = Some(Vec::new()));
+        Self
+    }
+}
+
+impl Drop for SeenJournal {
+    fn drop(&mut self) {
+        SEEN.with(|s| *s.borrow_mut() = None);
+    }
+}
+
+fn seen_len() -> usize {
+    SEEN.with(|s| s.borrow().as_ref().map_or(0, Vec::len))
+}
+
+/// Journal what a broadcast batch showed: its `events`, and a choice it
+/// left `state` waiting on that lists another player's hand.
+pub(crate) fn note_seen(state: &GameState, events: &[GameEventWire]) {
+    SEEN.with(|s| {
+        let mut s = s.borrow_mut();
+        let Some(journal) = s.as_mut() else { return };
+        for ev in events {
+            match ev {
+                GameEventWire::CardDrawn { player, .. } => journal.push(Seen::Drew(*player)),
+                GameEventWire::ScryPerformed { player, looked_at, .. } if *looked_at > 0 => {
+                    journal.push(Seen::Scried(*player))
+                }
+                GameEventWire::SurveilPerformed { player, looked_at, .. } if *looked_at > 0 => {
+                    journal.push(Seen::Surveiled(*player))
+                }
+                GameEventWire::PlayerSearchedLibrary { player } => journal.push(Seen::Searched(*player)),
+                GameEventWire::TopCardRevealed { .. } => journal.push(Seen::Revealed),
+                GameEventWire::CoinFlipWon { .. } | GameEventWire::CoinFlipLost { .. } => {
+                    journal.push(Seen::CoinFlip)
+                }
+                GameEventWire::DiceRolled { count, .. } => {
+                    journal.extend(std::iter::repeat_n(Seen::DieRoll, (*count).max(1) as usize))
+                }
+                _ => {}
+            }
+        }
+        if let Some(pending) = &state.pending_decision {
+            use crate::decision::Decision;
+            let cards = match &pending.decision {
+                Decision::Discard { hand, .. } => hand,
+                Decision::ChooseCards { candidates, .. } => candidates,
+                _ => return,
+            };
+            let seat = pending.acting_player();
+            for (of, p) in state.players.iter().enumerate() {
+                if of != seat && p.hand.iter().any(|c| cards.iter().any(|(id, _)| *id == c.id)) {
+                    journal.push(Seen::Hand { seat, of });
+                }
+            }
+        }
+    });
+}
+
+/// What `point`'s seat saw between keeping it and `now` that rewinding to
+/// `before` (its state) can't take back, in words: "2 draws", "a coin
+/// flip", "Bot's hand". The journal forgets that stretch: it is no longer
+/// the game's.
+pub fn seen_since(point: &UndoPoint, before: &GameState, now: &GameState) -> Vec<String> {
+    let seat = point.seat;
+    let seen: Vec<Seen> = SEEN.with(|s| {
+        s.borrow_mut().as_mut().map_or_else(Vec::new, |journal| journal.split_off(point.seen_at.min(journal.len())))
+    });
+    let count = |f: &dyn Fn(&Seen) -> bool| seen.iter().filter(|x| f(x)).count();
+    let mut out = Vec::new();
+    for (n, one, many) in [
+        (count(&|x| *x == Seen::Drew(seat)), "1 draw", "draws"),
+        (count(&|x| *x == Seen::Scried(seat)), "a scry", "scries"),
+        (count(&|x| *x == Seen::Surveiled(seat)), "a surveil", "surveils"),
+        (count(&|x| *x == Seen::Searched(seat)), "a library search", "library searches"),
+        (count(&|x| *x == Seen::Revealed), "a revealed card", "revealed cards"),
+        (count(&|x| *x == Seen::CoinFlip), "a coin flip", "coin flips"),
+        (count(&|x| *x == Seen::DieRoll), "a die roll", "die rolls"),
+    ] {
+        match n {
+            0 => {}
+            1 => out.push(one.to_string()),
+            n => out.push(format!("{n} {many}")),
+        }
+    }
+    // A hand: shown by a choice, or looked at for good (`hands_revealed_to`).
+    let mut hands: Vec<usize> = seen
+        .iter()
+        .filter_map(|x| match x {
+            Seen::Hand { seat: s, of } if *s == seat => Some(*of),
+            _ => None,
+        })
+        .chain(
+            now.hands_revealed_to
+                .iter()
+                .filter(|pair| pair.0 == seat && !before.hands_revealed_to.contains(pair))
+                .map(|pair| pair.1),
+        )
+        .collect();
+    hands.sort_unstable();
+    hands.dedup();
+    for of in hands {
+        let name = now.players.get(of).map_or_else(|| format!("P{of}"), |p| p.name.clone());
+        out.push(format!("{name}'s hand"));
+    }
+    out
 }
 
 #[cfg(test)]
@@ -299,6 +481,90 @@ mod tests {
         g.rewind_to(before);
         assert!(forests.iter().all(|f| !g.battlefield_find(*f).unwrap().tapped), "and untapped again");
         assert_eq!(g.players[0].mana_pool.total(), 0);
+    }
+
+    /// Undo and redo flips the same coin: the flip comes off the game's own
+    /// stream, which the rewind puts back. Across matches it still lands
+    /// both ways.
+    #[test]
+    fn a_redo_flips_the_same_coin() {
+        use crate::game::GameEvent;
+        let mut heads_seen = Vec::new();
+        for seed in 0..16u64 {
+            let mut g = two_player_game();
+            g.rng.reseed(seed);
+            let stitch = g.add_card_to_hand(0, catalog::stitch_in_time());
+            g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+            g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+            let before = g.clone();
+            let flip = |g: &mut GameState| {
+                crate::game::cast(g, stitch).iter().any(|e| matches!(e, GameEvent::CoinFlipWon { .. }))
+            };
+            let heads = flip(&mut g);
+            g.rewind_to(before);
+            assert_eq!(flip(&mut g), heads, "seed {seed}: the redo flips the same coin");
+            heads_seen.push(heads);
+        }
+        assert!(heads_seen.contains(&true) && heads_seen.contains(&false), "{heads_seen:?}");
+    }
+
+    /// A bot decision's seed is a function of the position: a clone (a
+    /// rewound state) gets the same one, a move on the board another, and
+    /// each seat its own. A thread that pinned its own stream keeps it.
+    #[test]
+    fn a_bot_decision_is_seeded_by_its_position() {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::forest());
+        let seed = decision_seed(&g, 1);
+        assert_eq!(decision_seed(&g.clone(), 1), seed);
+        assert_ne!(decision_seed(&g, 0), seed);
+        let forest = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(forest)).expect("play the Forest");
+        assert_ne!(decision_seed(&g, 1), seed);
+
+        assert!(pin_bot(&g, 1).is_some());
+        crate::server::bot::set_jitter_seed(Some(9));
+        assert!(pin_bot(&g, 1).is_none(), "a pinned thread keeps its stream");
+        crate::server::bot::set_jitter_seed(None);
+    }
+
+    /// A take-back names what the undone stretch showed its seat: its own
+    /// draws and looks, every coin and die, and a hand a choice laid open
+    /// (Thoughtseize) — not the opponent's draws. The stretch is then
+    /// forgotten.
+    #[test]
+    fn a_take_back_names_what_it_showed() {
+        let _journal = SeenJournal::arm();
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        let seize = g.add_card_to_hand(0, catalog::thoughtseize());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        let mut h = UndoHistory::default();
+        h.record(0, "cast Thoughtseize".into(), g.clone());
+        note_seen(&g, &[GameEventWire::CardDrawn { player: 0, card_id: crate::card::CardId(90) }]);
+        g.perform_action(GameAction::CastSpell {
+            card_id: seize,
+            target: Some(crate::game::Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast Thoughtseize");
+        crate::game::drain_stack(&mut g);
+        assert!(g.pending_decision.is_some(), "the caster picks from the hand it sees");
+        note_seen(
+            &g,
+            &[
+                GameEventWire::CardDrawn { player: 0, card_id: crate::card::CardId(91) },
+                GameEventWire::CardDrawn { player: 1, card_id: crate::card::CardId(92) },
+                GameEventWire::CoinFlipLost { player: 1 },
+                GameEventWire::ScryPerformed { player: 0, looked_at: 2, bottomed: 1 },
+            ],
+        );
+        let (point, before) = h.take(0, None).unwrap();
+        assert_eq!(seen_since(&point, &before, &g), ["2 draws", "a scry", "a coin flip", "P1's hand"]);
+        assert!(seen_since(&point, &before, &before).is_empty(), "the stretch is forgotten");
     }
 
     /// Actions read as what they did, by the card they did it with.

@@ -588,13 +588,21 @@ fn main() {
                 .before(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
         )
-        // Take-backs: a rewind resets the client and clears the table before
-        // auto-pass or the visual sync see the restored view; the Undo
-        // button and `Z` ask for one.
+        // Take-backs: marks and rewinds apply right after the poll that heard
+        // them, so they land before this frame's events reach the log, the
+        // stats and the life graph, and a rewind's cleared table is gone
+        // before any `Update` system can touch a card in it (ordered among
+        // them, an unordered system's command on a card it despawned
+        // panicked). The Undo button and `Z` ask for one.
+        .add_systems(
+            PreUpdate,
+            systems::takeback::apply_rewinds
+                .after(crate::net_plugin::poll_net)
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(
             Update,
             (
-                systems::takeback::apply_rewinds.before(GameLogicSet),
                 systems::takeback::request_undo,
                 systems::takeback::update_undo_button,
                 systems::takeback::snap_rebuilt_table.after(sync_game_visuals),

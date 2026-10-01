@@ -565,6 +565,8 @@ fn run_match_inner(
     let _replay = replay::MatchReplay::begin(
         &state.players.iter().map(|p| p.name.clone()).collect::<Vec<_>>(),
     );
+    // What play shows each seat, for a take-back to name: the same shape.
+    let _seen = undo::SeenJournal::arm();
     // Optional human-decision shadow log (CRAB_DECISION_LOG): same RAII
     // shape — each human action is logged beside what the heuristic bot
     // would have done from the same position.
@@ -915,7 +917,7 @@ fn run_match_inner(
                             &seat_tx,
                         );
                         let accepted =
-                            handle_action(&mut state, actor, action, &seat_tx, &spectator_tx).accepted();
+                            handle_action(&mut state, actor, action, None, &seat_tx, &spectator_tx).accepted();
                         rope = None;
                         if accepted {
                             last_progress_at = Instant::now();
@@ -1060,7 +1062,9 @@ fn run_match_inner(
                     && !(tap && paying[seat]);
                 let point =
                     keeps_point.then(|| history.record(seat, undo::action_label(&state, &action), state.clone()));
-                let applied = handle_action(&mut state, seat, action, &seat_tx, &spectator_tx);
+                // Marked in every client's stream, ahead of what the action
+                // sends: a take-back cuts each log and its stats back to here.
+                let applied = handle_action(&mut state, seat, action, point, &seat_tx, &spectator_tx);
                 match applied {
                     Applied::Suspended => paying[seat] = true,
                     Applied::Accepted if !tap => paying[seat] = false,
@@ -1098,6 +1102,7 @@ fn run_match_inner(
                     report_error(seat, "nothing to take back", &seat_tx);
                     continue;
                 };
+                let saw = undo::seen_since(&point, &before, &state);
                 state.rewind_to(before);
                 for bot in bots.iter_mut().flatten() {
                     bot.rewound();
@@ -1105,7 +1110,7 @@ fn run_match_inner(
                 paying.fill(false);
                 rope = None;
                 last_progress_at = Instant::now();
-                broadcast_rewind(&state, seat, &point.label, &seat_tx, &spectator_tx);
+                broadcast_rewind(&state, &point, saw, &seat_tx, &spectator_tx);
                 send_undo_points(&history, &seat_tx);
                 publish_snapshot(&state, &snapshot_sink);
             }
@@ -1223,14 +1228,19 @@ fn drive_bots(
         let mut any_acted = false;
         for (seat, slot) in bots.iter_mut().enumerate() {
             let Some(bot) = slot.as_mut() else { continue };
-            let Some(action) = bot.next_action(state, seat) else {
+            // The same position gets the same reply: a take-back can't
+            // fish for a better one (`undo::pin_bot`).
+            let pinned = undo::pin_bot(state, seat);
+            let next = bot.next_action(state, seat);
+            drop(pinned);
+            let Some(action) = next else {
                 continue;
             };
             // Only count the action if it actually changed state. A rejected
             // action (wrong priority, illegal move, etc.) must not count as
             // progress — otherwise the loop burns the entire budget retrying
             // the same failing action.
-            if handle_action(state, seat, action, seat_tx, spectator_tx).accepted() {
+            if handle_action(state, seat, action, None, seat_tx, spectator_tx).accepted() {
                 publish_snapshot(state, snapshot_sink);
                 *last_progress_at = Instant::now();
                 if state.is_game_over() {
@@ -1394,6 +1404,7 @@ fn broadcast_update(
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) {
     replay::log_events(state, wire_events);
+    undo::note_seen(state, wire_events);
     for (i, maybe_tx) in seat_tx.iter().enumerate() {
         if let Some(tx) = maybe_tx {
             let _ = tx.send(ServerMsg::Update {
@@ -1427,13 +1438,23 @@ impl Applied {
 }
 
 /// Apply one action and broadcast results.
+///
+/// `mark`: the undo point kept for it, marked in every stream ahead of what
+/// the action sends (`ServerMsg::UndoMark`) — when it changes the state, so a
+/// rejected action leaves no mark.
 fn handle_action(
     state: &mut GameState,
     seat: usize,
     action: GameAction,
+    mark: Option<u64>,
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) -> Applied {
+    let send_mark = || {
+        if let Some(id) = mark {
+            send_to_all(ServerMsg::UndoMark { id }, seat_tx, spectator_tx);
+        }
+    };
     // CR 104.3a — a concession is legal at any time, by the conceding seat,
     // regardless of whose priority it is. Route it straight to the *sending*
     // seat (so a client can't concede on another's behalf) instead of through
@@ -1464,6 +1485,7 @@ fn handle_action(
         Ok(events) => {
             decision_log::commit(shadow_line);
             let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+            send_mark();
             broadcast_update(state, &wire_events, seat_tx, spectator_tx);
             Applied::Accepted
         }
@@ -1474,6 +1496,7 @@ fn handle_action(
             // path sends none) so the client sees the tapped sources.
             let suspended = matches!(e, crate::game::GameError::ManualTapRequired { .. });
             if suspended {
+                send_mark();
                 for (i, maybe_tx) in seat_tx.iter().enumerate() {
                     if let Some(tx) = maybe_tx {
                         let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
@@ -1489,6 +1512,13 @@ fn handle_action(
     }
 }
 
+/// Send `msg` to every seat and spectator.
+fn send_to_all(msg: ServerMsg, seat_tx: &[Option<mpsc::Sender<ServerMsg>>], spectator_tx: &[mpsc::Sender<ServerMsg>]) {
+    for tx in seat_tx.iter().flatten().chain(spectator_tx) {
+        let _ = tx.send(msg.clone());
+    }
+}
+
 /// Send each human seat its undo points.
 fn send_undo_points(history: &undo::UndoHistory, seat_tx: &[Option<mpsc::Sender<ServerMsg>>]) {
     for (seat, tx) in seat_tx.iter().enumerate() {
@@ -1498,17 +1528,18 @@ fn send_undo_points(history: &undo::UndoHistory, seat_tx: &[Option<mpsc::Sender<
     }
 }
 
-/// Tell every seat and spectator the match was rewound — `by` took back
-/// `label` — and send each the view of the restored state.
+/// Tell every seat and spectator the match was rewound — `point`'s seat
+/// took it back, having seen `saw` since — and send each the view of the
+/// restored state.
 fn broadcast_rewind(
     state: &GameState,
-    by: usize,
-    label: &str,
+    point: &undo::UndoPoint,
+    saw: Vec<String>,
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) {
-    replay::log_rewind(by, label);
-    let rewound = ServerMsg::Rewound { by, label: label.to_string() };
+    replay::log_rewind(point.seat, &point.label, &saw);
+    let rewound = ServerMsg::Rewound { by: point.seat, label: point.label.clone(), to: point.id, saw };
     for (i, maybe_tx) in seat_tx.iter().enumerate() {
         if let Some(tx) = maybe_tx {
             let _ = tx.send(rewound.clone());
@@ -1823,7 +1854,7 @@ mod tests {
 
     fn rewound_view(c: &ClientChannel) -> (String, crate::net::ClientView) {
         let label = match next_where(c, |m| matches!(m, ServerMsg::Rewound { .. })) {
-            ServerMsg::Rewound { by: 0, label } => label,
+            ServerMsg::Rewound { by: 0, label, .. } => label,
             other => panic!("expected seat 0's take-back, got {other:?}"),
         };
         match next_where(c, |m| matches!(m, ServerMsg::View(_))) {
@@ -1904,6 +1935,80 @@ mod tests {
         assert_eq!(view.players[0].mana_pool.total(), 0, "and no mana floats");
         drop(c0);
         handle.join().unwrap();
+    }
+
+    /// Send `msgs`, then a chat line, and gather every update's events until
+    /// the line comes back: what the server made of them, the bots' replies
+    /// included (bots move before the server reads its next message).
+    fn play_through(c: &ClientChannel, msgs: &[ClientMsg]) -> Vec<String> {
+        for m in msgs {
+            c.tx.send(m.clone()).unwrap();
+        }
+        c.tx.send(ClientMsg::Chat { text: "sync".into() }).unwrap();
+        let mut trace = Vec::new();
+        loop {
+            match c.rx.recv_timeout(Duration::from_secs(120)).expect("the server answers") {
+                ServerMsg::Update { events, .. } => trace.extend(events.iter().map(|e| format!("{e:?}"))),
+                ServerMsg::Chat { .. } => return trace,
+                _ => {}
+            }
+        }
+    }
+
+    /// No fishing, end to end (TODO's step 2): take an action back, play the
+    /// same moves again, and the bot answers the same way, event for event.
+    /// Against the uniform-random bot, whose every pick is a draw (unpinned,
+    /// it plays a different turn each time), and against a search bot on two
+    /// worker threads. The point is marked in the stream ahead of its action,
+    /// and the take-back names it.
+    #[test]
+    fn a_redo_meets_the_same_bot_reply() {
+        use crate::server::mcts::{MctsBot, MctsConfig};
+        let search = MctsConfig { iterations: 16, search_threads: 2, search_combat: true, ..MctsConfig::default() };
+        let bots: [Box<dyn Bot>; 2] = [Box::new(HeuristicBot::uniform_baseline()), Box::new(MctsBot::new(search))];
+        for bot in bots {
+            let mut state = two_player_game();
+            for _ in 0..3 {
+                state.add_card_to_battlefield(1, catalog::forest());
+            }
+            state.add_card_to_hand(1, catalog::forest());
+            for _ in 0..3 {
+                state.add_card_to_hand(1, catalog::grizzly_bears());
+            }
+            for _ in 0..8 {
+                state.add_card_to_library(1, catalog::grizzly_bears());
+                state.add_card_to_library(0, catalog::island());
+            }
+            let (s0, c0) = seat_pair();
+            let handle = thread::spawn(move || run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Bot(bot)]));
+            drain_initial(&c0);
+
+            // One deliberate pass, then automatic ones into the bot's turn —
+            // not through it: points are kept for this turn and the next.
+            let moves: Vec<ClientMsg> = std::iter::once(ClientMsg::SubmitAction(GameAction::PassPriority))
+                .chain(std::iter::repeat_n(ClientMsg::SubmitAuto(GameAction::PassPriority), 12))
+                .collect();
+            c0.tx.send(moves[0].clone()).unwrap();
+            let mark = match next_where(&c0, |m| matches!(m, ServerMsg::UndoMark { .. } | ServerMsg::Update { .. })) {
+                ServerMsg::UndoMark { id } => id,
+                other => panic!("the point is marked ahead of its action's update, got {other:?}"),
+            };
+            let first = play_through(&c0, &moves[1..]);
+            assert!(first.iter().any(|e| e.contains("TurnStarted { player: 1")), "into the bot's turn: {first:#?}");
+
+            c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+            match next_where(&c0, |m| matches!(m, ServerMsg::Rewound { .. })) {
+                ServerMsg::Rewound { by: 0, label, to, .. } => {
+                    assert_eq!((label.as_str(), to), ("passed priority", mark));
+                }
+                other => panic!("expected seat 0's take-back, got {other:?}"),
+            }
+            // Both traces start at the deliberate pass: the first one's
+            // update was still queued behind its mark.
+            assert_eq!(play_through(&c0, &moves), first, "the same reply, event for event");
+            drop(c0);
+            handle.join().unwrap();
+        }
     }
 
     /// Until consent lands (TODO's step 4), a take-back needs a table of
@@ -2010,9 +2115,12 @@ mod tests {
         c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
             .unwrap();
 
-        // Each seat receives a single combined Update frame (not a separate
+        // The land's undo point is marked in both streams first. Then each
+        // seat receives a single combined Update frame (not a separate
         // Events then View), carrying both the action's events and the
         // post-action view.
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::UndoMark { .. }));
+        assert!(matches!(c1.rx.recv().unwrap(), ServerMsg::UndoMark { .. }));
         match c0.rx.recv().unwrap() {
             ServerMsg::Update { events, view } => {
                 assert!(
@@ -2102,11 +2210,12 @@ mod tests {
         drain_initial(&c0);
 
         // Human plays a land — the human seat should still receive a
-        // combined Events+View Update.
+        // combined Events+View Update, behind the land's undo point's mark.
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
             .unwrap();
 
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::UndoMark { .. }));
         assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::Update { .. }));
 
         drop(c0);
@@ -2307,8 +2416,11 @@ mod tests {
         assert_ne!(actor, 0, "the game still waits on the seat that left");
         let tx = if actor == 1 { &c1 } else { &c2 };
         tx.tx.send(ClientMsg::SubmitAction(GameAction::PassPriority)).unwrap();
-        let after = drain_within(&tx.rx, 1, Duration::from_secs(2));
-        assert!(matches!(after.first(), Some(ServerMsg::Update { .. })), "{after:?}");
+        let after = drain_within(&tx.rx, 2, Duration::from_secs(2));
+        assert!(
+            matches!(after.as_slice(), [ServerMsg::UndoMark { .. }, ServerMsg::Update { .. }, ..]),
+            "the pass's mark, then its update: {after:?}"
+        );
 
         drop(c1);
         drop(c2);
@@ -2423,6 +2535,7 @@ mod tests {
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
             .unwrap();
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::UndoMark { .. }), "the land's undo point, marked");
         assert!(
             matches!(c0.rx.recv().unwrap(), ServerMsg::Update { .. }),
             "match still live for seat 0 after seat 1 dropped",

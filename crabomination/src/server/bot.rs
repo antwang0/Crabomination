@@ -74,6 +74,18 @@ pub fn install_jitter_seed_if_unset(seed: u64) -> bool {
     })
 }
 
+/// Put `next` in as this thread's jitter stream and hand back the one it
+/// replaces, so a scope can pin the stream and restore the caller's
+/// (`mcts::PinnedStreams`).
+pub(crate) fn swap_jitter(next: Option<StdRng>) -> Option<StdRng> {
+    JITTER.with(|j| std::mem::replace(&mut *j.borrow_mut(), next))
+}
+
+/// Whether this thread's jitter stream is pinned.
+pub(crate) fn jitter_pinned() -> bool {
+    JITTER.with(|j| j.borrow().is_some())
+}
+
 /// A creature's printed keywords that do something in play — the count the
 /// threat / removal-value heuristics score. Partner and its kin are
 /// deck-construction only ([`Keyword::is_deck_construction`]).
@@ -100,7 +112,7 @@ fn no_jitter() -> bool {
 }
 
 /// A jitter draw in `0..n`, from the seeded stream when one is installed.
-fn jitter_below(n: usize) -> usize {
+pub(crate) fn jitter_below(n: usize) -> usize {
     if n <= 1 || no_jitter() {
         return 0;
     }

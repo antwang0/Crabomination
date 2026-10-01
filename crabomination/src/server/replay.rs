@@ -119,10 +119,10 @@ pub(crate) fn log_events(state: &crate::game::GameState, events: &[GameEventWire
 /// Mark a take-back in the active match's replay: the events after the
 /// last undo point are a branch that was not kept, and what follows replays
 /// from `by`'s point before `label`.
-pub(crate) fn log_rewind(by: usize, label: &str) {
+pub(crate) fn log_rewind(by: usize, label: &str, saw: &[String]) {
     SINK.with(|s| {
         if let Some(sink) = s.borrow_mut().as_mut() {
-            let _ = writeln!(sink.w, "{}", serde_json::json!({ "rewound": { "by": by, "label": label } }));
+            let _ = writeln!(sink.w, "{}", serde_json::json!({ "rewound": { "by": by, "label": label, "saw": saw } }));
         }
     });
 }

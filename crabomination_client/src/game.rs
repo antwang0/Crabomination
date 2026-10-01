@@ -12,6 +12,10 @@ pub struct LogEntry {
     /// Turn-divider row — `update_log_text` renders these with extra
     /// spacing so each turn is visually separated in the scrollback.
     pub divider: bool,
+    /// Narrates the game (an event line or a turn divider), so a take-back
+    /// that undoes it takes it out ([`GameLog::rewind_to`]); chat, notices
+    /// and the take-back lines themselves stay.
+    pub event: bool,
     /// The event's primary card, when one was resolvable — lets the log
     /// row preview it on hover (`ui_card_hover`).
     pub card: Option<crate::systems::ui_card_hover::UiCardHover>,
@@ -52,6 +56,25 @@ impl Default for GameLog {
 }
 
 impl GameLog {
+    /// Where the log is now, to come back to on a take-back.
+    pub fn cut(&self) -> LogCut {
+        LogCut { next_seq: self.next_seq, tail: self.entries.back().map(|e| (e.seq, e.count)) }
+    }
+
+    /// Take out the game lines pushed since `cut`, and give its last line
+    /// back the repeat count it had then: what a take-back undid is no
+    /// longer the game's story. Other lines stay where they are.
+    pub fn rewind_to(&mut self, cut: &LogCut) {
+        self.entries.retain(|e| e.seq < cut.next_seq || !e.event);
+        if let Some((seq, count)) = cut.tail
+            && let Some(e) = self.entries.iter_mut().find(|e| e.seq == seq)
+            && e.count != count
+        {
+            e.count = count;
+            e.text = if count > 1 { format!("{} ×{count}", e.raw) } else { e.raw.clone() };
+        }
+    }
+
     /// Push a plain log entry (default body color). Used by non-event
     /// surfaces — menu, decision modal, export prompt, rematch banner.
     pub fn push(&mut self, msg: impl Into<String>) {
@@ -63,7 +86,7 @@ impl GameLog {
     /// export prompt, rematch banner).
     pub fn push_colored(&mut self, msg: impl Into<String>, color: Color) {
         let text = msg.into();
-        self.append(text, color, false, None);
+        self.append(text, color, false, false, None);
     }
 
     /// Push a per-event log line, coalescing a run of identical
@@ -95,7 +118,7 @@ impl GameLog {
             last.text = format!("{} ×{}", last.raw, last.count);
             return;
         }
-        self.append(text, color, false, card);
+        self.append(text, color, false, true, card);
     }
 
     /// Insert a turn-divider row (#5). Always a fresh entry — it breaks
@@ -103,18 +126,33 @@ impl GameLog {
     /// never merge across the boundary.
     pub fn push_divider(&mut self, label: impl Into<String>) {
         let text = label.into();
-        self.append(text, theme::TEXT_SECONDARY, true, None);
+        self.append(text, theme::TEXT_SECONDARY, true, true, None);
     }
 
     /// A fresh entry at the back, the oldest evicted past [`GAME_LOG_CAP`].
-    fn append(&mut self, text: String, color: Color, divider: bool, card: Option<crate::systems::ui_card_hover::UiCardHover>) {
+    fn append(
+        &mut self,
+        text: String,
+        color: Color,
+        divider: bool,
+        event: bool,
+        card: Option<crate::systems::ui_card_hover::UiCardHover>,
+    ) {
         let seq = self.next_seq;
         self.next_seq += 1;
-        self.entries.push_back(LogEntry { raw: text.clone(), text, color, divider, card, count: 1, seq });
+        self.entries.push_back(LogEntry { raw: text.clone(), text, color, divider, event, card, count: 1, seq });
         while self.entries.len() > GAME_LOG_CAP {
             self.entries.pop_front();
         }
     }
+}
+
+/// A place in the [`GameLog`] ([`GameLog::cut`]): the next line's push
+/// order, and the last line's with its repeat count then.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LogCut {
+    next_seq: u64,
+    tail: Option<(u64, u32)>,
 }
 
 /// Targeting-mode UI state (when a spell/ability is waiting for the player to pick a target).

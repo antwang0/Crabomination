@@ -52,6 +52,15 @@ impl GameRng {
         self.0.store(seed, Ordering::Relaxed);
     }
 
+    /// Where the stream is, without drawing from it: two states at one
+    /// position draw the same from here on. Never sent to a client (see
+    /// `Default`); the server mixes it into each bot decision's seed
+    /// (`server::undo::decision_seed`), so a take-back can't fish for a
+    /// different reply.
+    pub fn position(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
+
     /// A `rand`-compatible handle. Borrows `&self`, so it composes with a
     /// `&mut` borrow of any *other* field of the same struct.
     pub fn draw(&self) -> Draw<'_> {
