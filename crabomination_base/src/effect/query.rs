@@ -1742,7 +1742,8 @@ impl Effect {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)
                     | ManaPayload::AnyOneColor(v)
-                    | ManaPayload::AnyColors(v) => value_has_target(v),
+                    | ManaPayload::AnyColors(v)
+                    | ManaPayload::AnyTypeALandYouControlCouldProduce(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::AnyTypeTriggerSourceProduces
                     | ManaPayload::AnyTypeSacrificedLandProduces

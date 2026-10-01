@@ -3011,6 +3011,12 @@ pub enum ManaPayload {
     /// produce": the colors the Gates' own mana abilities (and chosen colors)
     /// make.
     AnyColorAGateYouControlCouldProduce,
+    /// CR 106.7 — "`n` mana of any type that a land you control could
+    /// produce" (Reflecting Pool, Naga Vitalist, Incubation Druid): the
+    /// colors — and {C} — your lands' own mana abilities make, read off the
+    /// board as it resolves. One type, `n` of it; nothing when no land could
+    /// produce any (two Reflecting Pools alone).
+    AnyTypeALandYouControlCouldProduce(Value),
     /// Add one mana of any type the *trigger's subject* land produced
     /// (Extraplanar Lens). Falls back to colorless if it produces nothing.
     AnyTypeTriggerSourceProduces,

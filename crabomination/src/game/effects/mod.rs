@@ -13352,6 +13352,23 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    ManaPayload::AnyTypeALandYouControlCouldProduce(v) => {
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let (colors, colorless) = self.types_lands_could_produce(p, false);
+                        let legal: Vec<Color> = colors.iter().collect();
+                        if !legal.is_empty() {
+                            let color = self.chosen_mana_color(p, &legal, ctx.source);
+                            for _ in 0..n {
+                                add_one(self, p, color);
+                                events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                            }
+                        } else if colorless {
+                            for _ in 0..n {
+                                self.players[p].mana_pool.add_colorless(mult);
+                                events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
+                            }
+                        }
+                    }
                     ManaPayload::AnyColorYouCouldProduce => {
                         // Star Compass — "a basic land you control could
                         // produce": the legal colors are your lands' basic
