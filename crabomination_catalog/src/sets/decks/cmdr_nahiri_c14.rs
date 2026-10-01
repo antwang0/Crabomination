@@ -15,7 +15,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{etb, on_attack, on_dies};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, cost, generic, w};
 use crate::sets::tap_add_colorless;
 use std::sync::Arc;
@@ -224,8 +224,9 @@ pub fn angel_of_the_dire_hour() -> CardDefinition {
     }
 }
 
-/// Arcane Lighthouse — {C}; {1}, {T}: opponents' creatures lose hexproof and
-/// shroud until end of turn. ⚠ Later grants that turn are not stopped.
+/// Arcane Lighthouse — {C}; {1}, {T}: until end of turn, creatures your
+/// opponents control as it resolves lose hexproof and shroud and can't regain
+/// them that turn, from a static or a later spell (the 2014-11-07 rulings).
 pub fn arcane_lighthouse() -> CardDefinition {
     let theirs = || Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent));
     CardDefinition {
@@ -237,16 +238,8 @@ pub fn arcane_lighthouse() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::LoseKeyword {
-                        what: theirs(),
-                        keyword: Keyword::Hexproof,
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::LoseKeyword {
-                        what: theirs(),
-                        keyword: Keyword::Shroud,
-                        duration: Duration::EndOfTurn,
-                    },
+                    Effect::CantHaveKeywordThisTurn { what: theirs(), keyword: Keyword::Hexproof },
+                    Effect::CantHaveKeywordThisTurn { what: theirs(), keyword: Keyword::Shroud },
                 ]),
                 ..Default::default()
             },

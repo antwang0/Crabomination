@@ -1,7 +1,7 @@
 //! Commander: precon batches — Keen Engineering (FDC, Sai, `decks::cmdr_sai`)
 //! and Reap the Tides (CMR, Aesi, `decks::cmdr_aesi`).
 
-use crabomination::card::{CardDefinition, CardId, CounterType, Keyword};
+use crabomination::card::{CardDefinition, CardId, CounterType, Keyword, KeywordSlice};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::effects::EntityRef;
@@ -2680,6 +2680,26 @@ fn arcane_lighthouse_strips_hexproof() {
     activate(&mut g, lh, 1, None).expect("{1}, {T}");
     try_cast(&mut g, 0, bolt, &[Target::Permanent(drove)]).expect("no hexproof now");
     assert!(g.battlefield_find(drove).is_none());
+}
+
+/// CR 611.2c — Arcane Lighthouse (rulings 2014-11-07): a creature it caught
+/// can't regain hexproof that turn from a later spell, but one that enters
+/// afterwards keeps its own.
+#[test]
+fn arcane_lighthouse_holds_against_a_later_grant() {
+    let mut g = main_phase();
+    let lh = g.add_card_to_battlefield(0, catalog::arcane_lighthouse());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, lh, 1, None).expect("{1}, {T}");
+    let defense = g.add_card_to_hand(1, catalog::blossoming_defense());
+    g.priority.player_with_priority = 1;
+    try_cast(&mut g, 1, defense, &[Target::Permanent(bear)]).expect("Blossoming Defense");
+    assert!(
+        !g.computed_permanent(bear).unwrap().keywords().has_kw(&Keyword::Hexproof),
+        "caught by the Lighthouse: the later grant doesn't stick"
+    );
+    let drove = g.add_card_to_battlefield(1, catalog::drove_of_elves());
+    assert!(g.computed_permanent(drove).unwrap().keywords().has_kw(&Keyword::Hexproof), "entered later");
 }
 
 /// Benevolent Offering — three Spirits each, then life by creature count.
