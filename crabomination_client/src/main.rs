@@ -106,7 +106,7 @@ use systems::ui::{
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_decision_cancel, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, handle_legend_keep_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_order_moves, handle_damage_assign_buttons, handle_card_pick_tiles, handle_card_pick_hand_click, update_card_pick_readout, update_card_pick_highlights, handle_decision_choices, handle_color_keys, handle_confirm, handle_decision_cancel, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_always, handle_choose_modes_toggle, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -995,33 +995,32 @@ fn main() {
             Update,
             (
                 spawn_decision_ui,
+                // Every ordered modal (scry, trigger order, damage order).
                 handle_scry_toggles,
-                handle_scry_reorder,
-                handle_trigger_reorder,
-                handle_damage_order_reorder,
+                handle_order_moves,
                 handle_damage_assign_buttons,
-                handle_search_select,
-                handle_put_on_library_hand_click,
-                handle_discard_select,
-                update_put_on_library_count_text,
-                update_put_on_library_visuals,
+                // Every card pick (search, put-on-library, discard, choose
+                // cards): grid tiles, 3-D hand clicks, the readout, the rings.
+                handle_card_pick_tiles,
+                handle_card_pick_hand_click,
+                update_card_pick_readout,
+                update_card_pick_highlights,
                 (handle_confirm, handle_decision_cancel).chain(),
                 handle_mulligan_buttons,
-                handle_choose_color_buttons,
-                handle_name_card_buttons,
-                handle_learn_buttons,
+                // Every one-click answer (colour, mode, ballot, legend, name,
+                // Learn, yes/no) is a `DecisionChoice`.
+                handle_decision_choices,
+                handle_color_keys,
                 // Resolution-time choice modals (modes / amounts / divided
                 // damage / creature type) — independent handlers grouped to
                 // stay inside Bevy's tuple-arity limit.
                 (
-                    handle_optional_buttons,
+                    handle_optional_always,
                     handle_choose_modes_toggle,
-                    handle_trigger_mode_buttons,
                     handle_amount_buttons,
                     handle_divide_damage_buttons,
                     handle_creature_type_buttons,
                     handle_randomizer_buttons,
-                    handle_legend_keep_buttons,
                 ),
                 spawn_mode_pick_ui,
                 handle_mode_pick_buttons,

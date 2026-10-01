@@ -25,6 +25,43 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## One decision picker (2026-10-01) — shipped
+
+`systems/decision_ui/` (was one 4,310-line `decision_ui.rs`; now 3,460 over
+`mod.rs` and three pickers), read off layout-harness screenshots of every
+picker (`--decision scry|search|discard|bottom|choose|color|triggers`).
+
+- ✅ **One card picker** (`card_pick`). A library search, the put-back after
+  a mulligan, a discard and the engine's generic "choose cards" were four
+  modals with three selection fields, two select-button kinds and four
+  count rules. A `CardPick` — candidates, which may be picked, min and max,
+  the Confirm word — now describes any of them; one selection, one tile
+  handler, one readout (the count, and a Confirm that names what it does:
+  "Discard", "Put on bottom", a search's "Find nothing" until a card is
+  picked, greyed until the pick is a full answer) and one confirm path.
+- ✅ **Where you pick follows where the cards are.** Cards in your own hand
+  are picked in the 3-D hand under a banner, as the mulligan is decided
+  over it; cards anywhere else (your library, an opponent's hand, a
+  graveyard) in a grid. A discard used to show your hand a second time, in
+  a grid, while the mulligan put-back was clicked in the 3-D hand.
+- ✅ **One button that answers** (`choice`). A colour, a trigger's mode, a
+  ballot option, the legend to keep, a card name, Learn's picks and yes/no
+  each had a button component and a handler that rebuilt the answer it
+  stood for. A `DecisionChoice` carries its answer and the decision it was
+  built for — a button left over from the one before answers nothing — and
+  one handler submits it. The colour keys and the "Always" buttons keep
+  small handlers of their own.
+- ✅ **One ordered modal** (`order`). Scry / surveil / rearrange, trigger
+  order and damage order were three copies of one row of tiles with three
+  ← / → buttons and handlers; one builder and one `OrderMove` now. A change
+  respawns the modal from the decision, which fixes a surveilled card
+  relabelled "Bottom" (not "Graveyard") when toggled.
+- Residual ⏳: the steppers (combat damage assignment, amount, divided
+  damage), the "choose N modes" toggles, the creature-type picks and the
+  coin / die buttons are still their own modals; a grid leaves a gap above
+  its footer (a text node measured at its narrowest width); ineligible hand
+  cards aren't dimmed during a hand pick.
+
 ## The card inspector (2026-10-01) — shipped
 
 `systems::inspector`, read off layout-harness screenshots of the 1v1 fixture
@@ -1067,10 +1104,8 @@ indicator + click target. Slims the 2-D chip strip.
   floating panel; hover for source-card preview; click to scroll log.
 
 **Tier 2**
-- Unify decision modals ⏳ — `decision_ui.rs` has 6 parallel pickers
-  (scry/search/put-on-library/discard/mulligan/color). Refactor into one
-  `Picker { items, min, max, ordered, confirm_label }`. See Decision
-  Modal vs 3-D Hand Consistency.
+- Unify decision modals ✅ — one card picker, one answering button, one
+  ordered modal (`systems/decision_ui/`, 2026-10-01, see the top).
 - Token stacking ✅ — identical tokens pile with a ×N chip; piles fan
   only three steps (2026-09-28).
 - Valid-target affordance ✅ — non-choices dim while choosing
@@ -1141,12 +1176,9 @@ sit beside their row the same way). ✅ Since 2026-09-30 it opens after a
 300 ms dwell and fades in (see the section at the top).
 
 ### Decision Modal vs 3-D Hand Consistency
-Mulligan and PutOnLibrary modals are transparent overlays over the 3-D
-hand (player clicks the 3-D cards). Scry / Search / Discard render their
-own 2-D card grid. No design rule says which decisions go which way, so
-users can't predict whether to click the 2-D modal cards or the 3-D table
-cards. Pick one rule (e.g., "decisions on the viewer's own hand → 3-D +
-banner; decisions on hidden zones → 2-D modal grid") and migrate.
+✅ The rule (2026-10-01): cards in your own hand are picked in the 3-D hand
+under a banner (mulligan, put-back, discard, a "discard a card" cost);
+cards anywhere else in a 2-D grid (`decision_ui::card_pick`).
 
 ### Right-Click Action Hint
 ✅ Shipped 2026-09-30 — a 🖰 chip names what right-click does with the
@@ -1200,13 +1232,11 @@ submodule takes the root's imports and its siblings' items through
 (1,100 in `visual_sync.rs`) are still one function each.
 
 ### Modal Builder Helper
-`decision_ui.rs` has 6+ near-identical "overlay root + panel + close-on-
-escape" spawn functions (`spawn_scry_modal`, `spawn_search_modal`,
-`spawn_discard_modal`, `spawn_put_on_library_modal`,
-`spawn_mulligan_modal`, `spawn_choose_color_modal`). Each new decision
-requires ~30 lines of root/panel boilerplate. Introduce a builder:
-`modal(commands, ui_fonts, title).body(|panel| {…}).buttons(|btns| {…}).spawn()`.
-Could halve `decision_ui.rs`.
+🟡 Mostly done (2026-10-01): the card picks, the one-click choices and the
+ordered modals each have one builder (`decision_ui::{card_pick, choice,
+order}`), on the shared `spawn_modal_panel`. The steppers (damage
+assignment, amount, divided damage) and the modes toggles still lay out
+their own roots.
 
 ### Stable-Children for Stack Panel + Pile Tooltip
 `update_stack_panel` (`game_ui/stack_panel.rs`) and the pile
@@ -1223,7 +1253,9 @@ to a separate `spawn_*_modal`; `handle_confirm`,
 `handle_put_on_library_select`, etc. repeat the same per-variant
 dispatch. A `trait DecisionView { fn spawn(...); fn confirm(...);
 fn cancel(...); }` implemented per variant would centralize. Roll up
-under the Modal Builder above when you tackle it.
+under the Modal Builder above when you tackle it. 🟡 The card picks share
+one spawn and one confirm arm (`card_pick` / `pick_answer`), and the
+one-click choices carry their answers (`DecisionChoice`).
 
 ### Move `format_event` to Engine Crate
 `format_event` (`game_ui/log.rs`) is a 75-line match on

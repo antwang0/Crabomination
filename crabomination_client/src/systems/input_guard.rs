@@ -87,7 +87,7 @@ mod tests {
         use crate::systems::{camera_zoom, decision_ui, game_ui, kb_cursor, quality, ui};
 
         assert_access_is_legal(decision_ui::handle_mulligan_buttons);
-        assert_access_is_legal(decision_ui::handle_choose_color_buttons);
+        assert_access_is_legal(decision_ui::handle_color_keys);
         assert_access_is_legal(game_ui::handle_auto_pass_toggle);
         assert_access_is_legal(game_ui::handle_export_keypress);
         assert_access_is_legal(game_ui::handle_planar_die_keypress);

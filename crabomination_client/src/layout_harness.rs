@@ -24,7 +24,9 @@
 //! `--life-change` swings every seat's life total a
 //! moment before the screenshot, catching the life feedback in flight;
 //! `--hand N` gives the viewer N cards in hand; `--decision scry|search|
-//! discard` opens that decision's modal over the board, client-side, and
+//! discard|bottom|choose|color|triggers` opens that decision's modal over the
+//! board, client-side (`bottom` is the put-back after a mulligan, `choose` a
+//! pick from the graveyard), and
 //! `--hover-card NAME` then hovers the modal's card of that name;
 //! `--partners` makes it a Commander game whose first seats each have two
 //! commanders.
@@ -111,6 +113,10 @@ pub enum HarnessDecision {
     Scry,
     Search,
     Discard,
+    Bottom,
+    Choose,
+    Color,
+    Triggers,
 }
 
 impl HarnessDecision {
@@ -119,6 +125,10 @@ impl HarnessDecision {
             "scry" => Some(HarnessDecision::Scry),
             "search" => Some(HarnessDecision::Search),
             "discard" => Some(HarnessDecision::Discard),
+            "bottom" => Some(HarnessDecision::Bottom),
+            "choose" => Some(HarnessDecision::Choose),
+            "color" => Some(HarnessDecision::Color),
+            "triggers" => Some(HarnessDecision::Triggers),
             _ => None,
         }
     }
@@ -556,16 +566,20 @@ pub fn spawn_mana_gallery(
             crate::systems::game_ui::InGameRoot,
         ))
         .id();
+    let options = [
+        "Pay {2}".to_string(),
+        "Pay {1}{U} and sacrifice a creature, then draw a card and scry {E}{E}".to_string(),
+        "Decline".to_string(),
+    ];
+    // No decision is pending, so the key answers nothing.
+    let key = crate::systems::decision_ui::DecisionKey::ChooseOption(crabomination::card::CardId(0), options.to_vec());
     crate::systems::decision_ui::fill_option_ballot(
         &mut commands,
         ballot,
         &ui_fonts,
+        &key,
         "Kitesail Freebooter — pay {2} for ward, or the spell is countered",
-        &[
-            "Pay {2}".to_string(),
-            "Pay {1}{U} and sacrifice a creature, then draw a card and scry {E}{E}".to_string(),
-            "Decline".to_string(),
-        ],
+        &options,
     );
 }
 
@@ -991,6 +1005,25 @@ pub fn stage_decision_for_screenshot(
             candidates: cards,
         },
         HarnessDecision::Discard => DecisionWire::Discard { player, count: 1, hand: cards },
+        HarnessDecision::Bottom => DecisionWire::PutOnLibrary { player, count: 2, hand: cards },
+        HarnessDecision::Color => {
+            use crabomination::mana::Color;
+            let legal = vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+            DecisionWire::ChooseColor { source: cards[0].0, legal }
+        }
+        HarnessDecision::Triggers => DecisionWire::OrderTriggers { player, triggers: cards.into_iter().take(3).collect() },
+        // Exile two from your graveyard, a land not among the choices.
+        HarnessDecision::Choose => {
+            let graveyard: Vec<_> = cv.players[player].graveyard.iter().map(|c| (c.id, c.name.clone())).collect();
+            DecisionWire::ChooseCards {
+                source: graveyard[0].0,
+                prompt: "Exile two cards from your graveyard".into(),
+                eligible: Some(graveyard.iter().filter(|(_, n)| n != "Forest").map(|(id, _)| *id).collect()),
+                candidates: graveyard,
+                min: 2,
+                max: 2,
+            }
+        }
     };
     cv.pending_decision = Some(PendingDecisionView { acting_player: player, decision: Some(decision), cancellable: false });
     view.set_changed();
