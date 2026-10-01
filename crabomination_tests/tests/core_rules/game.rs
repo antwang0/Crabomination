@@ -553,6 +553,41 @@ fn castable_hand_cards_reflects_mana_timing_and_lands() {
     );
 }
 
+/// CR 601.2g — a hand-paying seat (`manual_mana`, every human at the
+/// client) whose cost has more than one set of sources to pay it gets
+/// `ManualTapRequired` back from the cast: pick what taps. That is a cast
+/// they can begin, so it is castable. The probe read the bounce as a
+/// refusal, and the client's castable border — and every alt-cast set
+/// (kicker, conspire, …) — went missing from any card with two ways to pay:
+/// Grizzly Bears over two Forests and a Mountain, Lightning Bolt once a
+/// Stomping Ground joined the Mountain. An unpayable cost stays uncastable.
+#[test]
+fn castable_hand_cards_counts_a_cast_the_player_must_tap_for() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].manual_mana = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    for land in [catalog::mountain(), catalog::stomping_ground(), catalog::forest(), catalog::forest()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let castable = g.castable_hand_cards(0);
+    assert!(castable.contains(&bolt), "{{R}} off a Mountain or the Stomping Ground");
+    assert!(castable.contains(&bears), "{{1}}{{G}} off any two of four");
+    assert!(!castable.contains(&angel), "no white source");
+    assert!(
+        g.would_accept(GameAction::CastSpell {
+            card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }),
+        "the bare probe agrees",
+    );
+    assert_eq!(g.players[0].hand.len(), 3, "the probes cast nothing");
+    assert!(g.battlefield.iter().all(|c| !c.tapped), "and tapped nothing");
+}
+
 /// The affordance probes dry-run against a library-stripped clone of the
 /// state ([`GameState::affordance_probe_template`]) for speed. This pins the
 /// safety invariant: seeding both libraries with cards must NOT change the

@@ -334,7 +334,24 @@ impl GameState {
             let acting = template.priority.player_with_priority;
             let before =
                 scratch_census::on().then(|| template.resolution_scratch_fingerprint());
-            let mut ok = probe.perform_action_inner(action).is_ok();
+            let manual = template.players.get(acting).is_some_and(|p| p.manual_mana);
+            let retry = manual.then(|| action.clone());
+            let mut result = probe.perform_action_inner(action);
+            // CR 601.2g — a hand-paying seat's cast bounces with
+            // `ManualTapRequired` whenever more than one set of sources could
+            // pay: a suspension dressed as an `Err`, and one they can begin.
+            // Whether the sources can pay at all is the auto-tapper's call, so
+            // it runs again with the engine tapping. Reading the bounce as a
+            // refusal took the castable border (and every alt-cast set) off
+            // any card with two ways to pay — Grizzly Bears over two Forests
+            // and a Mountain.
+            if let (Err(crate::game::GameError::ManualTapRequired { .. }), Some(action)) = (&result, retry) {
+                probe = template.clone();
+                probe.players[acting].manual_mana = false;
+                result = probe.perform_action_inner(action);
+                probe.players[acting].manual_mana = true;
+            }
+            let mut ok = result.is_ok();
             // An "up to N targets" cast suspends to ask for its next optional
             // slot. A bot answers that prompt itself, and declining is always
             // one of its answers, so the probe declines and reads the cast

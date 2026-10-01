@@ -11,7 +11,8 @@
 //! Each row shows the deck's power tier ([`crabomination::pod::power`], its
 //! measured win share in bot pods), and a bot seat left on Random is dealt a
 //! deck near the power of yours, so a 60 % deck is not seated against decks
-//! that win one game in fifty.
+//! that win one game in fifty. Your saved Commander lists
+//! ([`crate::saved_decks`]) head the list, for any seat.
 
 use std::sync::OnceLock;
 
@@ -69,13 +70,50 @@ pub(crate) fn deck_matches(entry: &DeckEntry, query: &str) -> bool {
     query.split_whitespace().all(|t| entry.key.contains(&t.to_lowercase()))
 }
 
-/// The picker's state: open or not, the seat a click assigns, the search.
+/// The picker's state: open or not, the seat a click assigns, the search,
+/// and your saved Commander lists as it found them on opening.
 #[derive(Resource, Default)]
 pub(crate) struct DeckPicker {
     pub(crate) open: bool,
     /// 0 is the human, 1.. the bots.
     seat: usize,
     query: String,
+    saved: Vec<SavedEntry>,
+}
+
+/// One of your saved Commander lists, as the picker lists it.
+struct SavedEntry {
+    name: crate::saved_decks::DeckName,
+    commanders: String,
+    /// Lowercased name and commanders, as [`DeckEntry`]'s.
+    key: String,
+}
+
+impl SavedEntry {
+    fn matches(&self, query: &str) -> bool {
+        query.split_whitespace().all(|t| self.key.contains(&t.to_lowercase()))
+    }
+}
+
+impl DeckPicker {
+    /// Open on your own seat with an empty search, over the saved decks
+    /// on disk now.
+    pub(crate) fn open(&mut self) {
+        *self = DeckPicker { open: true, saved: saved_commander_decks(), ..default() };
+    }
+}
+
+/// Your saved decks that are legal Commander lists.
+fn saved_commander_decks() -> Vec<SavedEntry> {
+    crate::saved_decks::load_all()
+        .into_iter()
+        .filter_map(|d| {
+            let (commanders, _) = d.commander_seat()?;
+            let commanders = commanders.iter().map(|f| f().name).collect::<Vec<_>>().join(" + ");
+            let key = format!("{} {commanders}", d.name).to_lowercase();
+            Some(SavedEntry { name: d.name.into(), commanders, key })
+        })
+        .collect()
 }
 
 #[derive(Component)]
@@ -109,7 +147,7 @@ pub(crate) fn open_deck_picker(
     mut fields: ResMut<MenuFields>,
 ) {
     if q.iter().any(|i| *i == Interaction::Pressed) {
-        *picker = DeckPicker { open: true, ..default() };
+        picker.open();
         // Typing goes to the search box now, not a menu field behind it.
         fields.blur();
     }
@@ -159,6 +197,11 @@ pub(crate) fn sync_deck_picker(
             "a different deck each game, near your deck's power"
         };
         deck_row(l, &tf, DeckChoice::Random, "Random", random, "");
+        for d in picker.saved.iter().filter(|d| d.matches(&picker.query)) {
+            // A deck named for its commanders needn't list them again.
+            let detail = if *d.name == d.commanders { "your deck" } else { &d.commanders };
+            deck_row(l, &tf, DeckChoice::Saved(d.name.clone()), &d.name, detail, "yours");
+        }
         for (i, d) in deck_index().iter().enumerate().filter(|(_, d)| deck_matches(d, &picker.query)) {
             deck_row(l, &tf, DeckChoice::Stock(i), d.name, &d.commanders, &d.power());
         }
@@ -375,7 +418,7 @@ pub(crate) fn handle_deck_picker_clicks(
     for (i, row) in &rows {
         if *i == Interaction::Pressed {
             let seat = picker.seat;
-            fields.pod_decks.set_seat(seat, row.0);
+            fields.pod_decks.set_seat(seat, row.0.clone());
         }
     }
     if done.iter().any(|i| *i == Interaction::Pressed) {
@@ -421,8 +464,17 @@ pub(crate) fn decks_summary(decks: &crate::menu::PodDecks, pod_size: usize) -> S
         (k, 0) => format!("{k} picked"),
         (k, r) => format!("{k} picked, {r} random"),
     };
-    format!("Decks: {} vs {rest}", decks.you.label())
+    // A saved deck's name can run long; the button sits in one menu row.
+    let you = decks.you.label();
+    let you = match you.char_indices().nth(MAX_LABEL) {
+        Some((cut, _)) => format!("{}…", you[..cut].trim_end_matches([' ', ','])),
+        None => you.to_string(),
+    };
+    format!("Decks: {you} vs {rest}")
 }
+
+/// Longest deck name the menu button spells out.
+const MAX_LABEL: usize = 32;
 
 #[cfg(test)]
 mod tests {
@@ -437,6 +489,8 @@ mod tests {
         assert_eq!(decks_summary(&decks, 2), "Decks: Sigarda (GW) vs 1 picked");
         decks.you = DeckChoice::Random;
         assert_eq!(decks_summary(&decks, 2), "Decks: Random vs 1 picked");
+        decks.you = DeckChoice::Saved("Krark, the Thumbless + Rograkh, Son of Rohgahh".into());
+        assert_eq!(decks_summary(&decks, 2), "Decks: Krark, the Thumbless + Rograkh… vs 1 picked");
     }
 
     /// Every stock deck is listed, by the name the menu shows, and a search

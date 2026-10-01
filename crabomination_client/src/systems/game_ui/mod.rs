@@ -39,7 +39,7 @@ use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use crabomination::card::CardId;
+use crabomination::card::{CardId, CardType};
 use crabomination::game::{GameAction, Target, TurnStep};
 use crabomination::net::StackItemView;
 
@@ -4265,12 +4265,12 @@ pub fn handle_game_input(
         let kb_alt = keyboard.just_pressed(KeyCode::KeyL);
         let kb_menu = keyboard.just_pressed(KeyCode::KeyM);
         let any_right = mouse.just_pressed(MouseButton::Right);
-        // Right-click is "do whatever's most useful for this card":
-        // alt-cost if available, else flip if MDFC, else ability menu
-        // on the battlefield. With keyboard we expose the three actions
-        // as distinct keys (F / L / M) so the user can target whichever
-        // they actually want — the right-click branch keeps its current
-        // priority-cascade behaviour.
+        // Right-click is "do whatever's most useful for this card": the
+        // first quick-play shape `hand_menu::right_click` finds for a hand
+        // card (the card's chip names it, `hand_chips`), the ability menu on
+        // the battlefield. With keyboard we expose the three actions as
+        // distinct keys (F / L / M) so the user can target whichever they
+        // actually want — the right-click branch keeps its cascade.
         if any_right {
             if let Some(game_id) = hovered_hand.iter().next() {
                 let card_id = game_id.0;
@@ -4282,194 +4282,142 @@ pub fn handle_game_input(
                         _ => None,
                     });
                 if let Some(k) = known {
-                    if cv.pitchable_hand.contains(&card_id) {
-                        // From-hand mana ability (Elvish / Simian Spirit
-                        // Guide): right-click pitches it for its mana. The
-                        // Guides' pitch is their only ability, so index 0;
-                        // the engine validates the `from_hand` flag either
-                        // way.
-                        outbox.submit(GameAction::ActivateAbility {
-                            card_id,
-                            ability_index: 0,
-                            target: None,
-                            additional_targets: vec![],
-                            x_value: None, mode: None,
-                        });
-                    } else if k.has_alternative_cost && k.alt_cost_available {
-                        r.alt_cast.pending = Some(card_id);
-                        r.alt_cast.from_command_zone = false;
-                    } else if cv.squadable_hand.contains(&card_id) {
-                        r.pay_times.pending =
-                            Some((card_id, crate::game::PayTimesMechanic::Squad));
-                        r.pay_times.times = 1;
-                    } else if cv.replicatable_hand.contains(&card_id) {
-                        r.pay_times.pending =
-                            Some((card_id, crate::game::PayTimesMechanic::Replicate));
-                        r.pay_times.times = 1;
-                    } else if cv.multikickable_hand.contains(&card_id) {
-                        r.pay_times.pending =
-                            Some((card_id, crate::game::PayTimesMechanic::Multikicker));
-                        r.pay_times.times = 1;
-                    } else if cv.spreeable_hand.contains(&card_id)
-                        && !k.spree_mode_labels.is_empty()
-                    {
-                        // CR 702.172 — right-click a Spree/Tiered card opens
-                        // the mode picker; confirm casts via CastSpellSpree.
-                        r.spree_cast.pending = Some(card_id);
-                        r.spree_cast.labels = k.spree_mode_labels.clone();
-                        r.spree_cast.selected = vec![false; k.spree_mode_labels.len()];
-                        r.spree_cast.single_mode = k.spree_single_mode;
-                    } else if cv.splittable_right_hand.contains(&card_id) {
-                        r.split_cast.pending = Some(card_id);
-                    } else if k.has_gift {
-                        // CR 702.165 — right-click a Gift card promises its gift
-                        // and casts via `CastGift`. Arm targeting first when the
-                        // gifted effect needs a target; otherwise fire now.
-                        if k.gift_needs_target {
+                    use hand_menu::RightClick;
+                    match hand_menu::right_click(cv, &k) {
+                        RightClick::Pitch => {
+                            // From-hand mana ability (Elvish / Simian Spirit
+                            // Guide): the Guides' pitch is their only ability,
+                            // so index 0; the engine validates the `from_hand`
+                            // flag either way.
+                            outbox.submit(GameAction::ActivateAbility {
+                                card_id,
+                                ability_index: 0,
+                                target: None,
+                                additional_targets: vec![],
+                                x_value: None, mode: None,
+                            });
+                        }
+                        RightClick::AltCost => {
+                            r.alt_cast.pending = Some(card_id);
+                            r.alt_cast.from_command_zone = false;
+                        }
+                        RightClick::PayTimes(mechanic) => {
+                            r.pay_times.pending = Some((card_id, mechanic));
+                            r.pay_times.times = 1;
+                        }
+                        RightClick::Spree => {
+                            // Confirm casts via CastSpellSpree.
+                            r.spree_cast.pending = Some(card_id);
+                            r.spree_cast.labels = k.spree_mode_labels.clone();
+                            r.spree_cast.selected = vec![false; k.spree_mode_labels.len()];
+                            r.spree_cast.single_mode = k.spree_single_mode;
+                        }
+                        RightClick::SplitRight => r.split_cast.pending = Some(card_id),
+                        // Arm targeting first when the gifted effect needs a
+                        // target; otherwise fire now.
+                        RightClick::Gift if k.gift_needs_target => {
                             targeting.active = true;
                             targeting.pending_card_id = Some(card_id);
                             targeting.pending_gift = true;
-                        } else {
-                            outbox.submit(GameAction::CastGift {
-                                card_id, target: None, additional_targets: vec![],
-                                mode: None, x_value: None,
-                            });
                         }
-                    } else if k.has_omen && cv.omenable_hand.contains(&card_id) {
-                        // CR 702.183 — right-click an Omen card casts its Omen
-                        // half via `CastOmen`. Arm targeting first when the omen
-                        // effect needs a target; otherwise fire now.
-                        if k.omen_needs_target {
+                        RightClick::Gift => outbox.submit(GameAction::CastGift {
+                            card_id, target: None, additional_targets: vec![],
+                            mode: None, x_value: None,
+                        }),
+                        RightClick::Omen if k.omen_needs_target => {
                             targeting.active = true;
                             targeting.pending_card_id = Some(card_id);
                             targeting.pending_omen = true;
-                        } else {
-                            outbox.submit(GameAction::CastOmen {
-                                card_id, target: None, additional_targets: vec![],
-                                mode: None, x_value: None,
-                            });
                         }
-                    } else if let Some((_, splicers)) =
-                        cv.spliceable_hand.iter().find(|(host, _)| *host == card_id)
-                    {
-                        // CR 702.47 — right-click an Arcane spell whose splice
-                        // partners are in hand: tick which to splice on, then
-                        // Cast. Spliced clause targets are auto-aimed
-                        // server-side.
-                        let candidates: Vec<(CardId, String)> = splicers
-                            .iter()
-                            .filter_map(|sid| {
-                                cv.players.get(your_seat)?.hand.iter().find_map(|h| match h {
-                                    crabomination::net::HandCardView::Known(hk)
-                                        if hk.id == *sid =>
-                                    {
-                                        Some((*sid, hk.name.clone()))
-                                    }
-                                    _ => None,
+                        RightClick::Omen => outbox.submit(GameAction::CastOmen {
+                            card_id, target: None, additional_targets: vec![],
+                            mode: None, x_value: None,
+                        }),
+                        RightClick::Splice => {
+                            // Tick which partners in hand to splice on, then
+                            // Cast. Spliced clause targets are auto-aimed
+                            // server-side.
+                            let splicers = cv.spliceable_hand.iter()
+                                .find(|(host, _)| *host == card_id)
+                                .map(|(_, s)| s.as_slice())
+                                .unwrap_or_default();
+                            let candidates: Vec<(CardId, String)> = splicers
+                                .iter()
+                                .filter_map(|sid| {
+                                    cv.players.get(your_seat)?.hand.iter().find_map(|h| match h {
+                                        crabomination::net::HandCardView::Known(hk)
+                                            if hk.id == *sid =>
+                                        {
+                                            Some((*sid, hk.name.clone()))
+                                        }
+                                        _ => None,
+                                    })
                                 })
-                            })
-                            .collect();
-                        if !candidates.is_empty() {
-                            r.helper_tap.cap = None;
-                            r.helper_tap.selected = vec![false; candidates.len()];
-                            r.helper_tap.candidates = candidates;
-                            r.helper_tap.pending =
-                                Some((card_id, crate::game::HelperMechanic::Splice));
+                                .collect();
+                            r.helper_tap.open(card_id, crate::game::HelperMechanic::Splice, candidates, None);
                         }
-                    } else if cv.convokable_hand.contains(&card_id) || k.has_waterbend {
-                        // CR 702.51 / 702.126 / 701.67 — right-click opens the
-                        // helper picker: tick untapped creatures (convoke /
-                        // waterbend) or artifacts (improvise / waterbend) to
-                        // help pay, then Cast.
-                        let want_creatures = k.has_convoke || k.has_waterbend;
-                        let want_artifacts = k.has_improvise || k.has_waterbend;
-                        let candidates: Vec<(CardId, String)> = cv
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == your_seat
-                                    && !c.tapped
-                                    && (want_creatures
-                                        && c.card_types
-                                            .contains(&crabomination::card::CardType::Creature)
-                                        || want_artifacts
-                                            && c.card_types
-                                                .contains(&crabomination::card::CardType::Artifact))
-                            })
-                            .map(|c| {
-                                let label = if c
-                                    .card_types
-                                    .contains(&crabomination::card::CardType::Creature)
-                                {
-                                    format!("{} ({}/{})", c.name, c.power, c.toughness)
-                                } else {
-                                    c.name.clone()
-                                };
-                                (c.id, label)
-                            })
-                            .collect();
-                        if !candidates.is_empty() {
-                            let mechanic = if k.has_waterbend && !k.has_convoke && !k.has_improvise
-                            {
-                                crate::game::HelperMechanic::Waterbend
+                        RightClick::Helpers(mechanic) => {
+                            // Tick untapped creatures (convoke / waterbend) or
+                            // artifacts (improvise / waterbend) to help pay,
+                            // then Cast.
+                            let want_creatures = k.has_convoke || k.has_waterbend;
+                            let want_artifacts = k.has_improvise || k.has_waterbend;
+                            let candidates = helper_candidates(cv, |c| {
+                                want_creatures && c.card_types.contains(&CardType::Creature)
+                                    || want_artifacts && c.card_types.contains(&CardType::Artifact)
+                            });
+                            let cap = k.waterbend_amount
+                                .filter(|_| mechanic == crate::game::HelperMechanic::Waterbend);
+                            r.helper_tap.open(card_id, mechanic, candidates, cap);
+                        }
+                        RightClick::Conspire => {
+                            let candidates = conspire_candidates(cv, &k);
+                            r.helper_tap.open(card_id, crate::game::HelperMechanic::Conspire, candidates, Some(2));
+                        }
+                        RightClick::KickerOptions => {
+                            // Pay the largest affordable "and/or" kicker subset
+                            // (each rider is pure upside).
+                            let kickers = cv.kicker_option_sets.iter()
+                                .find(|(id, _)| *id == card_id)
+                                .and_then(|(_, sets)| sets.iter().max_by_key(|s| s.len()).cloned())
+                                .unwrap_or_default();
+                            if k.needs_target {
+                                targeting.active = true;
+                                targeting.pending_card_id = Some(card_id);
+                                targeting.pending_kicker_options = kickers;
                             } else {
-                                crate::game::HelperMechanic::Convoke
-                            };
-                            r.helper_tap.cap = k.waterbend_amount.filter(|_| {
-                                mechanic == crate::game::HelperMechanic::Waterbend
-                            });
-                            r.helper_tap.selected = vec![false; candidates.len()];
-                            r.helper_tap.candidates = candidates;
-                            r.helper_tap.pending = Some((card_id, mechanic));
+                                outbox.submit(GameAction::CastSpellKickers {
+                                    card_id, kickers, target: None, additional_targets: vec![],
+                                    mode: None, x_value: None,
+                                });
+                            }
                         }
-                    } else if let Some((_, sets)) =
-                        cv.kicker_option_sets.iter().find(|(id, _)| *id == card_id)
-                    {
-                        // CR 702.33b — right-click pays the largest affordable
-                        // "and/or" kicker subset (each rider is pure upside).
-                        let kickers = sets
-                            .iter()
-                            .max_by_key(|s| s.len())
-                            .cloned()
-                            .unwrap_or_default();
-                        if k.needs_target {
-                            targeting.active = true;
-                            targeting.pending_card_id = Some(card_id);
-                            targeting.pending_kicker_options = kickers;
-                        } else {
-                            outbox.submit(GameAction::CastSpellKickers {
-                                card_id, kickers, target: None, additional_targets: vec![],
-                                mode: None, x_value: None,
-                            });
-                        }
-                    } else if cv.kickable_hand.contains(&card_id) {
-                        // CR 702.32 / 702.166 — right-click a Kicker/Offspring
-                        // card casts it with the optional cost paid
-                        // (`CastSpellKicked`). Arm targeting when the effect
-                        // needs a target; otherwise fire now.
-                        if k.needs_target {
+                        // Cast with the optional cost paid (`CastSpellKicked`),
+                        // arming targeting first when the effect needs one.
+                        RightClick::Kicked if k.needs_target => {
                             targeting.active = true;
                             targeting.pending_card_id = Some(card_id);
                             targeting.pending_kicked = true;
-                        } else {
-                            outbox.submit(GameAction::CastSpellKicked {
-                                card_id, target: None, additional_targets: vec![],
-                                mode: None, x_value: None,
-                            });
                         }
-                    } else if k.back_face_name.is_some() {
-                        if !r.flipped_hand.flipped.insert(card_id) {
-                            r.flipped_hand.flipped.remove(&card_id);
+                        RightClick::Kicked => outbox.submit(GameAction::CastSpellKicked {
+                            card_id, target: None, additional_targets: vec![],
+                            mode: None, x_value: None,
+                        }),
+                        RightClick::Flip => {
+                            if !r.flipped_hand.flipped.insert(card_id) {
+                                r.flipped_hand.flipped.remove(&card_id);
+                            }
                         }
-                    } else {
-                        // No quick-play branch matched. Rather than doing
-                        // nothing — which is what Foretell, Plot, Suspend,
-                        // Bestow, Reinforce, morph and the Room doors used
-                        // to do — offer every play the engine says is legal.
-                        r.hand_menu.card_id = Some(card_id);
-                        r.hand_menu.spawn_pos = windows.single().ok()
-                            .and_then(|w| w.cursor_position())
-                            .unwrap_or(Vec2::new(400.0, 300.0));
+                        RightClick::Menu => {
+                            // No quick-play shape fits. Rather than doing
+                            // nothing — which is what Foretell, Plot, Suspend,
+                            // Bestow, Reinforce, morph and the Room doors used
+                            // to do — offer every play the engine says is legal.
+                            r.hand_menu.card_id = Some(card_id);
+                            r.hand_menu.spawn_pos = windows.single().ok()
+                                .and_then(|w| w.cursor_position())
+                                .unwrap_or(Vec2::new(400.0, 300.0));
+                        }
                     }
                 }
             } else if let Some((game_id, owner)) = hovered_bf.iter().next() {
@@ -4988,13 +4936,43 @@ fn build_pending_cast(
 /// be used), or a prepared preparation card's "Cast <spell>" entry (SOS
 /// Prepare — a vanilla prepared creature has no abilities but still offers
 /// its spell).
-fn has_ability_menu_entry(c: &crabomination::net::PermanentView) -> bool {
+pub(crate) fn has_ability_menu_entry(c: &crabomination::net::PermanentView) -> bool {
     c.abilities.iter().any(|a| !a.is_mana)
         || !c.loyalty_abilities.is_empty()
         || (c.prepare_spell_name.is_some()
             && c.counters.iter().any(|(k, n)| {
                 *k == crabomination::card::CounterType::Prepared && *n > 0
             }))
+}
+
+/// CR 702.78 — the creatures that can pay `spell`'s conspire: untapped,
+/// yours, and sharing a colour with it (its mana cost's colours; the engine
+/// checks the pair either way).
+fn conspire_candidates(cv: &crabomination::net::ClientView, spell: &crabomination::net::KnownCard) -> Vec<(CardId, String)> {
+    let colors = spell.cost.color_set();
+    helper_candidates(cv, |c| {
+        c.card_types.contains(&CardType::Creature) && c.colors.iter().any(|col| colors.contains(*col))
+    })
+}
+
+/// The viewer's untapped permanents `fits` accepts, as the helper picker
+/// lists them: "Name (2/2)" for a creature, the name for anything else.
+fn helper_candidates(
+    cv: &crabomination::net::ClientView,
+    fits: impl Fn(&crabomination::net::PermanentView) -> bool,
+) -> Vec<(CardId, String)> {
+    cv.battlefield
+        .iter()
+        .filter(|c| c.controller == cv.your_seat && !c.tapped && fits(c))
+        .map(|c| {
+            let label = if c.card_types.contains(&CardType::Creature) {
+                format!("{} ({}/{})", c.name, c.power, c.toughness)
+            } else {
+                c.name.clone()
+            };
+            (c.id, label)
+        })
+        .collect()
 }
 
 /// The action an ability-targeting session submits for `target`. Loyalty
@@ -5248,5 +5226,58 @@ mod phase_chart_tests {
         // First-strike damage lights the damage row, the blockers done.
         assert_eq!(step_progress(TurnStep::CombatDamage, TurnStep::FirstStrikeDamage), Current);
         assert_eq!(step_progress(TurnStep::DeclareBlockers, TurnStep::FirstStrikeDamage), Done);
+    }
+}
+
+#[cfg(test)]
+mod conspire_tests {
+    use super::*;
+    use crabomination::catalog;
+
+    /// CR 702.78 — the conspire picker offers the untapped creatures you
+    /// control that share a colour with the spell, and nothing else: not a
+    /// creature of another colour, not a tapped one, not an opponent's.
+    #[test]
+    fn conspire_offers_your_untapped_creatures_that_share_its_colour() {
+        let mut g = crabomination::game::two_player_game();
+        let spell = g.add_card_to_hand(0, catalog::burn_trail());
+        let red_a = g.add_card_to_battlefield(0, catalog::raging_goblin());
+        let red_b = g.add_card_to_battlefield(0, catalog::goblin_guide());
+        let tapped = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::raging_goblin());
+        if let Some(c) = g.battlefield_find_mut(tapped) {
+            c.tapped = true;
+        }
+        let cv = crabomination::server::view::project(&g, 0);
+        let k = cv.players[0].hand.iter().find_map(|h| match h {
+            crabomination::net::HandCardView::Known(k) if k.id == spell => Some(k.clone()),
+            _ => None,
+        });
+        let ids: Vec<CardId> = conspire_candidates(&cv, &k.expect("in hand")).into_iter().map(|(id, _)| id).collect();
+        assert_eq!(ids, [red_a, red_b]);
+    }
+
+    /// The picker holds Cast until exactly two are ticked, and the pair
+    /// rides `CastSpellConspire`.
+    #[test]
+    fn conspire_casts_with_exactly_two() {
+        use crate::game::{HelperMechanic, HelperTapState};
+        let (spell, a, b, c) = (CardId(1), CardId(2), CardId(3), CardId(4));
+        let mut state = HelperTapState::default();
+        state.open(spell, HelperMechanic::Conspire, vec![(a, "A".into()), (b, "B".into()), (c, "C".into())], Some(2));
+        assert!(!state.ready());
+        state.selected[0] = true;
+        assert!(!state.ready(), "one isn't enough");
+        state.selected[2] = true;
+        assert!(state.ready());
+        assert!(matches!(
+            popups::helper_cast_action(HelperMechanic::Conspire, spell, vec![a, c], None, None),
+            GameAction::CastSpellConspire { card_id, conspire_creatures, .. }
+                if card_id == spell && conspire_creatures == [a, c]
+        ));
+        // Convoke takes any number.
+        state.open(spell, HelperMechanic::Convoke, vec![(a, "A".into())], None);
+        assert!(state.ready());
     }
 }

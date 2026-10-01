@@ -8,6 +8,7 @@
 //! every problem — each unknown card with the names it probably meant — with
 //! a button that copies the list. The status line used to name four unknown
 //! cards and stop, so a list with forty had to be fixed four at a time.
+//! A list that imports is kept for next time ([`crate::saved_decks`]).
 
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
@@ -121,8 +122,10 @@ pub(crate) fn handle_import_buttons(
     import_q: Query<&Interaction, (Changed<Interaction>, With<ImportDeckButton>)>,
     paste_q: Query<&Interaction, (Changed<Interaction>, With<PasteDeckButton>)>,
 ) {
+    let mut file = None;
     let text = if import_q.iter().any(|i| *i == Interaction::Pressed) {
         let path = fields.deck_path.trim();
+        file = Some(std::path::PathBuf::from(path));
         match std::fs::read_to_string(path) {
             Ok(text) => text,
             Err(e) => {
@@ -144,6 +147,11 @@ pub(crate) fn handle_import_buttons(
     };
     match import_deck(&text, fields.format) {
         Ok(deck) => {
+            // Kept for "Your Decks" (`saved_decks`); a failed save costs
+            // only the copy.
+            if let Err(e) = crate::saved_decks::save(&text, file.as_deref()) {
+                eprintln!("saved decks: can't keep the list ({e})");
+            }
             status.0.clear();
             commands.insert_resource(deck);
             pending.0 = Some((NetMode::LocalBot, fields.format));

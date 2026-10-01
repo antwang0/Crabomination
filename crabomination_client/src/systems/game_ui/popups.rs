@@ -417,12 +417,7 @@ pub fn handle_ability_menu(
                     })
                     .map(|c| (c.id, format!("{} ({}/{})", c.name, c.power, c.toughness)))
                     .collect();
-                if !candidates.is_empty() {
-                    helper_tap.cap = None;
-                    helper_tap.selected = vec![false; candidates.len()];
-                    helper_tap.candidates = candidates;
-                    helper_tap.pending = Some((item.card_id, mechanic));
-                }
+                helper_tap.open(item.card_id, mechanic, candidates, None);
             }
             PermanentAction::Reconfigure => {
                 targeting.active = true;
@@ -1521,6 +1516,9 @@ pub struct HelperTapTick {
 pub struct HelperTapConfirmButton;
 
 #[derive(Component)]
+pub struct HelperTapConfirmText;
+
+#[derive(Component)]
 pub struct HelperTapCancelButton;
 
 /// Spawn or despawn the helper-tap picker based on `HelperTapState`.
@@ -1553,9 +1551,12 @@ pub fn spawn_helper_tap_modal(
             })
         })
         .unwrap_or_default();
-    let header = match state.cap {
-        Some(n) => format!("Cast {name} — tap up to {n} to help ({}):", mechanic.label()),
-        None => format!("Cast {name} — tap helpers ({}):", mechanic.label()),
+    let header = match (mechanic, state.cap) {
+        (crate::game::HelperMechanic::Conspire, _) => {
+            format!("Cast {name} with conspire — tap two creatures that share a colour with it, and copy it:")
+        }
+        (_, Some(n)) => format!("Cast {name} — tap up to {n} to help ({}):", mechanic.label()),
+        (_, None) => format!("Cast {name} — tap helpers ({}):", mechanic.label()),
     };
 
     commands
@@ -1638,16 +1639,28 @@ pub fn spawn_helper_tap_modal(
                         btn.insert(HelperTapCancelButton);
                     }
                     btn.with_children(|b| {
-                        b.spawn((
-                            Text::new(text),
+                        let mut label = b.spawn((
+                            Text::new(if marker == 0 { confirm_label(&state) } else { text.to_string() }),
                             ui_fonts.tf(13.0),
                             TextColor(theme::TEXT_PRIMARY),
                             bevy::picking::Pickable::IGNORE,
                         ));
+                        if marker == 0 {
+                            label.insert(HelperTapConfirmText);
+                        }
                     });
                 }
             });
         });
+}
+
+/// The Cast button's label: what's still to pick while a cost that takes
+/// an exact count is short of it.
+fn confirm_label(state: &crate::game::HelperTapState) -> String {
+    match state.pending.and_then(|(_, m)| m.exact()) {
+        Some(n) if state.ticked() < n => format!("Pick {} more", n - state.ticked()),
+        _ => "Cast".into(),
+    }
 }
 
 /// Toggle / confirm / cancel handling for the helper picker. Confirm submits
@@ -1661,7 +1674,8 @@ pub fn handle_helper_tap_buttons(
     toggle_q: Query<(&Interaction, &HelperTapToggle), Changed<Interaction>>,
     confirm_q: Query<&Interaction, (Changed<Interaction>, With<HelperTapConfirmButton>)>,
     cancel_q: Query<&Interaction, (Changed<Interaction>, With<HelperTapCancelButton>)>,
-    mut ticks: Query<(&mut Text, &HelperTapTick)>,
+    mut ticks: Query<(&mut Text, &HelperTapTick), Without<HelperTapConfirmText>>,
+    mut confirm_text: Query<&mut Text, With<HelperTapConfirmText>>,
 ) {
     if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
         state.pending = None;
@@ -1680,9 +1694,13 @@ pub fn handle_helper_tap_buttons(
                 let on = state.selected.get(tick.index).copied().unwrap_or(false);
                 *t = Text::new(if on { "[x]" } else { "[ ]" });
             }
+            for mut t in &mut confirm_text {
+                *t = Text::new(confirm_label(&state));
+            }
         }
     }
     if confirm_q.iter().any(|i| *i == Interaction::Pressed)
+        && state.ready()
         && let Some((spell_id, mechanic)) = state.pending
     {
         let helpers: Vec<CardId> = state
@@ -1747,6 +1765,13 @@ pub fn helper_cast_action(
         crate::game::HelperMechanic::Saddle => {
             GameAction::Saddle { mount: card_id, creatures: helpers }
         }
+        // The picker holds Cast until exactly two are ticked.
+        crate::game::HelperMechanic::Conspire => match helpers.as_slice() {
+            &[a, b] => GameAction::CastSpellConspire {
+                card_id, conspire_creatures: [a, b], target, additional_targets: vec![], mode, x_value: None,
+            },
+            _ => GameAction::CastSpell { card_id, target, additional_targets: vec![], mode, x_value: None },
+        },
     }
 }
 

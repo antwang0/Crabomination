@@ -194,6 +194,9 @@ fn section_header(line: &str) -> Option<Section> {
         // outside-the-game zone on import yet).
         "companion" => Some(Section::Main),
         "maybeboard" | "maybe" | "considering" | "tokens" => Some(Section::Ignored),
+        // Arena's export opens with `About` / `Name <deck name>` before its
+        // `Deck` header; the name isn't a card.
+        "about" => Some(Section::Ignored),
         _ => None,
     }
 }
@@ -529,6 +532,15 @@ SB: 1 Grizzly Bears
         assert!(parsed.sideboard.is_empty());
         assert_eq!(parsed.attractions.len(), 2);
         assert!(parsed.attractions.iter().all(|f| !f().attraction_lights.is_empty()));
+    }
+
+    /// Arena's export header — `About` and the deck's `Name` — is skipped,
+    /// not read as two unknown cards.
+    #[test]
+    fn an_arena_about_header_is_not_cards() {
+        let parsed = parse_decklist("About\nName Burn\n\nDeck\n4 Lightning Bolt\n");
+        assert!(parsed.unknown.is_empty(), "{:?}", parsed.unknown);
+        assert_eq!(parsed.main.len(), 4);
     }
 
     #[test]

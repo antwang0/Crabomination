@@ -627,7 +627,7 @@ fn rematch_in_place(
         .unwrap_or_else(|| "Player".to_string());
     let (pod_size, pod_decks) = menu_fields
         .as_ref()
-        .map_or((4, Default::default()), |f| (f.pod_size, f.pod_decks));
+        .map_or((4, Default::default()), |f| (f.pod_size, f.pod_decks.clone()));
     // Audit-mode rematch reuses the same target card so the user
     // can re-attempt the same setup without re-picking from the
     // catalog. Otherwise the rematch deals the deck the match started

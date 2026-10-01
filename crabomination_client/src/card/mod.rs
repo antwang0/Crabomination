@@ -21,7 +21,7 @@ pub use components::{
     PlayerTargetZone, RevealPeekAnimation,
     ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
     StackCard, SwapFrontMaterial, TapAnimation, TapState,
-    CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
+    CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_AMOUNT, HOVER_LIFT_SPEED, BF_HOVER_GROW, BF_HOVER_LIFT, pile_height, pile_step,
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, command_zone_open_end, deck_position,

@@ -25,6 +25,52 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Right-click hints, conspire, your decks (2026-09-30) — shipped
+
+Read off layout-harness screenshots: `--hover-card NAME` now hovers a
+hand card too, the fixture hand carries a kicker card and an MDFC, and
+`--saved-decks` opens "Your Decks" on the menu.
+
+- ✅ **A hand card says what right-click does with it.** Right-click was
+  a priority cascade in `handle_game_input` — pitch, alternative cost,
+  squad / replicate / multikicker, Spree, split, gift, Omen, splice,
+  convoke, kicker, flip, else the play menu — with nothing on the card to
+  say which branch it would take. The cascade is one pure function now
+  (`hand_menu::right_click`) that the input handler matches on and a chip
+  reads (`hand_chips`, which absorbed the FREE chip): a 🖰 at the card's
+  top-left corner, spelled out — "🖰 Pay kicker", "🖰 Flip to Shatterskull,
+  the Hammer Pass", "🖰 Alt. cost: …" — while the card is hovered or picked
+  by the keyboard cursor. A hovered permanent of yours with an ability
+  menu reads "🖰 Abilities". It hides while right-click belongs to
+  something else (targeting, attack or block picking, a decision, no
+  priority), and a card whose menu would be just "Cast" gets none.
+- ✅ **Conspire casts from the client** (CR 702.78). Right-clicking a
+  conspirable hand card opens the helper picker over your untapped
+  creatures that share a colour with it; Cast waits for exactly two ("Pick
+  1 more") and submits `CastSpellConspire`, arming the targeting cursor
+  first for a targeted spell. Closes "Conspire cast UI (follow-up)".
+- ✅ **Imported decks are kept, and the menu lists them.** Every list that
+  imports From File or From Clipboard is saved as text under
+  `<config>/crabomination/decks/` (`saved_decks`), named for the name an
+  Arena export's `About` header gives it, its commanders, the file it came
+  from, or its most-played spell — once, however often the same cards come
+  back. "Your Decks" lists them: a click plays one in the selected format
+  (or opens the import report saying why it can't), Delete asks once. The
+  Commander deck picker lists your legal Commander lists above the stock
+  decks, for any seat, bots included (`DeckChoice::Saved`); one deleted
+  since is dealt as Random. A list dropped into the folder by hand shows up
+  the same way. The decklist parser skips Arena's `About` / `Name` header,
+  which it had read as two unknown cards.
+- ✅ **Engine: a card you'd tap lands for is castable.** Found through the
+  chips. A human seat (`manual_mana`) whose cost has more than one set of
+  sources to pay it gets `ManualTapRequired` back from the cast — pick what
+  taps — and the affordance probe read that as a refusal, so the castable
+  border and every alt-cast set dropped off any card with two ways to pay:
+  in the harness fixture, Lightning Bolt, Burst Lightning and Shivan Dragon
+  over two Mountains and a Stomping Ground. `accept_on` re-probes such a
+  bounce with the engine tapping (bot seats never take the branch).
+  Regression: `core_rules::game::castable_hand_cards_counts_a_cast_the_player_must_tap_for`.
+
 ## Rules text in decision modals, big hands, hover delay (2026-09-30) — shipped
 
 Read off layout-harness screenshots: `--decision scry|search|discard`
@@ -857,8 +903,9 @@ Cross-references the detailed entries below where one exists.
   seat left on Random is dealt a deck within one tier of yours — the same
   decks ran 0-67 %, so a random pod could seat a two-in-three winner against
   decks that almost never win. Your default deck is a random middle-tier one
-  each launch (it was Sigarda, tier 1, every time). Remaining ⏳: save imported decks, list them
-  in the menu; the lobby's bot seats still take stock decks unbalanced.
+  each launch (it was Sigarda, tier 1, every time). ✅ Imported decks are
+  saved and listed ("Your Decks", 2026-09-30). Remaining ⏳: the lobby's
+  bot seats still take stock decks unbalanced.
 - ✅ **Deck import says what's wrong, all of it** (2026-09-26,
   `deck_import.rs`) — a list that can't play opens a report of every
   problem (each unknown card with the names it probably meant, or each
@@ -893,13 +940,8 @@ Cross-references the detailed entries below where one exists.
   "Theme variants". (Text scaling ✅ — the UI size setting.)
 
 ### Conspire cast UI (follow-up)
-
-Conspirable hand cards now highlight as alt-castable (`ClientView.
-conspirable_hand`, surfaced via the legal-play chain in `systems/ui.rs`).
-Remaining: a creature-picker flow to actually submit `CastSpellConspire`
-(choose exactly two untapped creatures sharing a color, like the
-sacrifice/convoke pickers) — until then the client can only cast such cards
-without the conspire copy. Engine + affordance + server view all ship.
+✅ Shipped 2026-09-30 — right-click opens the two-creature picker and
+submits `CastSpellConspire` (see the section at the top).
 
 ### UI Roadmap (push claude/modern_decks — session-derived)
 
@@ -1013,12 +1055,8 @@ cards. Pick one rule (e.g., "decisions on the viewer's own hand → 3-D +
 banner; decisions on hidden zones → 2-D modal grid") and migrate.
 
 ### Right-Click Action Hint
-`game_ui.rs::handle_game_input` dispatches right-click on a hand card to
-either the alt-cast modal (`has_alternative_cost`), the MDFC flip
-(`back_face_name`), or the ability menu (battlefield card). The user has
-no visual hint about which their right-click will trigger. Add a small
-corner glyph on the card or a cursor-change to signal "right-click for
-alt cost" / "right-click to flip".
+✅ Shipped 2026-09-30 — a 🖰 chip names what right-click does with the
+card (`hand_chips`; see the section at the top).
 
 ### Hand-Fan Spacing for Large Hands
 ✅ Shipped: past `HAND_FAN_SOFT_CAP` (7) the spacing shrinks to keep the

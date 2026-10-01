@@ -2,7 +2,7 @@
 //!
 //! A shield changes what "destroy that creature" means for the rest of the
 //! turn, but it left no mark on the board — you had to hover the permanent to
-//! find it in the counter tooltip. Mechanism mirrors `free_cast_badge`: a
+//! find it in the counter tooltip. Mechanism mirrors `hand_chips`: a
 //! screen-space node reprojected from the card's world position, reconciled
 //! against the engine view every frame.
 

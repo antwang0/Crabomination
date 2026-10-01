@@ -19,7 +19,7 @@ use crabomination::card::CardId;
 use crabomination::game::GameAction;
 use crabomination::net::{ClientView, KnownCard};
 
-use crate::game::{HandCastVariant, TargetingState};
+use crate::game::{HandCastVariant, HelperMechanic, PayTimesMechanic, TargetingState};
 use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::theme::{self, UiFonts};
 
@@ -161,6 +161,127 @@ pub fn hand_play_options(cv: &ClientView, card_id: CardId) -> Vec<HandPlayOption
         }
     }
     out
+}
+
+/// What right-clicking a hand card does: the first quick-play shape in the
+/// cascade that fits it, else this menu. `handle_game_input` acts on it and
+/// `hand_chips` spells it out on the card, so the hint and the click can't
+/// disagree.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RightClick {
+    /// Pitch it for its mana (Elvish / Simian Spirit Guide).
+    Pitch,
+    /// Open the alternative-cost picker.
+    AltCost,
+    /// Step how many times to pay squad / replicate / multikicker.
+    PayTimes(PayTimesMechanic),
+    /// CR 702.172 — pick Spree / Tiered modes.
+    Spree,
+    /// Cast a split card's right half.
+    SplitRight,
+    /// CR 702.165 — cast it promising its gift.
+    Gift,
+    /// CR 702.183 — cast its Omen half.
+    Omen,
+    /// CR 702.47 — pick the Splice cards to splice onto it.
+    Splice,
+    /// CR 702.51 / 702.126 / 701.67 — pick what helps pay.
+    Helpers(HelperMechanic),
+    /// CR 702.78 — pick the two creatures to conspire with.
+    Conspire,
+    /// CR 702.33b — cast it with the largest affordable set of its kickers.
+    KickerOptions,
+    /// CR 702.32 / 702.166 — cast it with its kicker or offspring paid.
+    Kicked,
+    /// Turn an MDFC to its other face.
+    Flip,
+    /// Open this menu.
+    Menu,
+}
+
+/// The right-click for `k`, a card in the viewer's hand, in cascade order.
+pub fn right_click(cv: &ClientView, k: &KnownCard) -> RightClick {
+    let id = k.id;
+    if cv.pitchable_hand.contains(&id) {
+        RightClick::Pitch
+    } else if k.has_alternative_cost && k.alt_cost_available {
+        RightClick::AltCost
+    } else if cv.squadable_hand.contains(&id) {
+        RightClick::PayTimes(PayTimesMechanic::Squad)
+    } else if cv.replicatable_hand.contains(&id) {
+        RightClick::PayTimes(PayTimesMechanic::Replicate)
+    } else if cv.multikickable_hand.contains(&id) {
+        RightClick::PayTimes(PayTimesMechanic::Multikicker)
+    } else if cv.spreeable_hand.contains(&id) && !k.spree_mode_labels.is_empty() {
+        RightClick::Spree
+    } else if cv.splittable_right_hand.contains(&id) {
+        RightClick::SplitRight
+    } else if k.has_gift {
+        RightClick::Gift
+    } else if k.has_omen && cv.omenable_hand.contains(&id) {
+        RightClick::Omen
+    } else if cv.spliceable_hand.iter().any(|(host, _)| *host == id) {
+        RightClick::Splice
+    } else if cv.convokable_hand.contains(&id) || k.has_waterbend {
+        RightClick::Helpers(if k.has_waterbend && !k.has_convoke && !k.has_improvise {
+            HelperMechanic::Waterbend
+        } else {
+            HelperMechanic::Convoke
+        })
+    } else if cv.conspirable_hand.contains(&id) {
+        RightClick::Conspire
+    } else if cv.kicker_option_sets.iter().any(|(card, _)| *card == id) {
+        RightClick::KickerOptions
+    } else if cv.kickable_hand.contains(&id) {
+        RightClick::Kicked
+    } else if k.back_face_name.is_some() {
+        RightClick::Flip
+    } else {
+        RightClick::Menu
+    }
+}
+
+impl RightClick {
+    /// What the click does, as the card's hint says it: `None` when it does
+    /// nothing a left-click doesn't (a menu of just "Cast", or no menu).
+    /// `flipped` is whether the card shows its back face.
+    pub fn hint(self, cv: &ClientView, k: &KnownCard, flipped: bool) -> Option<String> {
+        Some(match self {
+            RightClick::Pitch => "Pitch it for mana".into(),
+            RightClick::AltCost if k.alt_cost_label.is_empty() => "Alternative cost".into(),
+            RightClick::AltCost => format!("Alt. cost: {}", k.alt_cost_label),
+            RightClick::PayTimes(m) => m.label().into(),
+            RightClick::Spree => "Choose its modes".into(),
+            RightClick::SplitRight => "Cast the right half".into(),
+            RightClick::Gift if k.gift_label.is_empty() => "Promise the gift".into(),
+            RightClick::Gift => format!("Gift {}", k.gift_label),
+            RightClick::Omen if k.omen_label.is_empty() => "Cast its Omen".into(),
+            RightClick::Omen => format!("Cast {}", k.omen_label),
+            RightClick::Splice => "Splice onto it".into(),
+            RightClick::Helpers(HelperMechanic::Waterbend) => "Waterbend".into(),
+            RightClick::Helpers(_) => match (k.has_convoke, k.has_improvise) {
+                (true, true) => "Convoke / improvise",
+                (false, true) => "Improvise",
+                _ => "Convoke",
+            }
+            .into(),
+            RightClick::Conspire => "Conspire".into(),
+            RightClick::KickerOptions | RightClick::Kicked => {
+                let offspring = crate::card::oracle::printed(&k.name)
+                    .is_some_and(|faces| faces.iter().flat_map(|f| f.paragraphs()).any(|p| p.starts_with("Offspring")));
+                if offspring { "Pay offspring" } else { "Pay kicker" }.into()
+            }
+            RightClick::Flip => match (&k.back_face_name, flipped) {
+                (Some(_), true) => format!("Flip to {}", k.name),
+                (Some(back), false) => format!("Flip to {back}"),
+                (None, _) => return None,
+            },
+            RightClick::Menu => match hand_play_options(cv, k.id).as_slice() {
+                [] | [HandPlayOption::Cast] => return None,
+                _ => "Ways to play".into(),
+            },
+        })
+    }
 }
 
 /// Spawn or despawn the hand menu from `HandMenuState`.

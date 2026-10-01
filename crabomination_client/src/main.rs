@@ -35,6 +35,7 @@ mod mana_text;
 mod menu;
 mod net_plugin;
 mod render_quality;
+mod saved_decks;
 mod scryfall;
 mod storage;
 mod synthesized_cards;
@@ -814,10 +815,10 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
-        // "FREE" chip over hand cards a standing static casts for nothing.
+        // "FREE" and right-click chips over hand cards.
         .add_systems(
             Update,
-            crate::systems::free_cast_badge::sync_free_cast_badges
+            crate::systems::hand_chips::sync_hand_chips
                 .run_if(in_state(AppState::InGame)),
         )
         // CR 701.19 — shield chip over permanents that can regenerate.

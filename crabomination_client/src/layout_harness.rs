@@ -15,8 +15,8 @@
 //! client a batch of combat damage just before the screenshot, so it catches
 //! the damage numerals in flight; `--stack` starts with two spells on the
 //! stack; `--mana-gallery` lays every kind of mana symbol over the board;
-//! `--hover-card NAME` hovers one of the viewer's battlefield cards (a
-//! screenshot run ignores the real mouse); `--combat SCENE` stages a combat
+//! `--hover-card NAME` hovers one of the viewer's battlefield or hand cards
+//! (a screenshot run ignores the real mouse); `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
 //! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
 //! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
@@ -57,6 +57,8 @@ pub struct HarnessArgs {
     /// `--deck-picker`: stay on the menu with Commander selected and the deck
     /// picker open; the screenshot is of the menu, not a match.
     pub deck_picker: bool,
+    /// `--saved-decks`: stay on the menu with "Your Decks" open.
+    pub saved_decks: bool,
     /// `--import-report PATH`: import the decklist at PATH from the menu, as
     /// the decklist "From File" button would, so a screenshot shows the problems it finds.
     pub import_report: Option<std::path::PathBuf>,
@@ -139,6 +141,7 @@ impl HarnessArgs {
             viewer_out: args.iter().any(|a| a == "--viewer-out"),
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
             deck_picker: args.iter().any(|a| a == "--deck-picker"),
+            saved_decks: args.iter().any(|a| a == "--saved-decks"),
             import_report: value("--import-report").map(std::path::PathBuf::from),
             menu: args.iter().any(|a| a == "--menu"),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
@@ -160,7 +163,7 @@ impl HarnessArgs {
 
     /// The screenshot is of the menu, not a match.
     fn menu_shot(&self) -> bool {
-        self.deck_picker || self.import_report.is_some() || self.menu || self.menu_format.is_some()
+        self.deck_picker || self.saved_decks || self.import_report.is_some() || self.menu || self.menu_format.is_some()
     }
 }
 
@@ -186,8 +189,10 @@ const COUNTERED: &[(&str, &[(CounterType, u32)])] = &[
     ("History of Benalia", &[(CounterType::Lore, 2)]),
     ("Everflowing Chalice", &[(CounterType::Charge, 2)]),
 ];
+/// A kicker card and an MDFC among them, so the right-click chips
+/// (`hand_chips`) show.
 const HAND: &[&str] = &[
-    "Lightning Bolt", "Counterspell", "Wrath of God", "Grizzly Bears", "Forest",
+    "Lightning Bolt", "Counterspell", "Burst Lightning", "Shatterskull Smashing", "Forest",
     "Serra Angel", "Shivan Dragon",
 ];
 const GRAVEYARD: &[&str] = &["Lightning Bolt", "Grizzly Bears", "Counterspell", "Forest"];
@@ -350,11 +355,13 @@ pub fn knock_out_viewer(g: &mut GameState) {
 }
 
 /// `--deck-picker`: select Commander and open the deck picker, once.
+/// `--saved-decks`: open "Your Decks" (over the `--menu-format` if given).
 /// `--menu-format FORMAT`: select that format, once.
 pub fn open_deck_picker_for_screenshot(
     args: Res<HarnessArgs>,
     mut fields: ResMut<crate::menu::MenuFields>,
     mut picker: ResMut<crate::deck_picker::DeckPicker>,
+    mut saved: ResMut<crate::saved_decks::SavedDecksPanel>,
     mut done: Local<bool>,
 ) {
     if *done {
@@ -363,9 +370,14 @@ pub fn open_deck_picker_for_screenshot(
     *done = true;
     if args.deck_picker {
         fields.select_format(crate::menu::MatchFormat::Commander);
-        picker.open = true;
-    } else if let Some(format) = args.menu_format {
+        picker.open();
+        return;
+    }
+    if let Some(format) = args.menu_format {
         fields.select_format(format);
+    }
+    if args.saved_decks {
+        saved.open();
     }
 }
 
@@ -549,8 +561,8 @@ pub fn hover_card_for_screenshot(
     args: Res<HarnessArgs>,
     view: Res<crate::net_plugin::CurrentView>,
     mut cards: Query<
-        (Entity, &crate::card::GameCardId, &Transform, &mut crate::card::CardHoverLift),
-        (With<crate::card::BattlefieldCard>, Without<crate::card::Animating>),
+        (Entity, &crate::card::GameCardId, &Transform, &mut crate::card::CardHoverLift, Has<crate::card::HandCard>),
+        (Or<(With<crate::card::BattlefieldCard>, With<crate::card::HandCard>)>, Without<crate::card::Animating>),
     >,
     mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
@@ -572,13 +584,20 @@ pub fn hover_card_for_screenshot(
         }
         return;
     }
-    let Some(id) = cv.battlefield.iter().find(|p| p.controller == cv.your_seat && p.name == name).map(|p| p.id)
+    let in_hand = || {
+        cv.players.get(cv.your_seat)?.hand.iter().find_map(|h| match h {
+            crabomination::net::HandCardView::Known(k) if k.name == name => Some(k.id),
+            _ => None,
+        })
+    };
+    let Some(id) =
+        cv.battlefield.iter().find(|p| p.controller == cv.your_seat && p.name == name).map(|p| p.id).or_else(in_hand)
     else {
         return;
     };
-    let Some((entity, _, transform, mut lift)) = cards.iter_mut().find(|(_, g, ..)| g.0 == id) else { return };
+    let Some((entity, _, transform, mut lift, hand)) = cards.iter_mut().find(|(_, g, ..)| g.0 == id) else { return };
     lift.base_translation = transform.translation - Vec3::Y * lift.current_lift;
-    lift.target_lift = crate::card::BF_HOVER_LIFT;
+    lift.target_lift = if hand { crate::card::HOVER_LIFT_AMOUNT } else { crate::card::BF_HOVER_LIFT };
     commands.entity(entity).insert(crate::card::CardHovered);
     // Only the window's own record of the cursor, unseen by the winit
     // sync: the desktop's pointer stays put (Wayland refuses to move it).

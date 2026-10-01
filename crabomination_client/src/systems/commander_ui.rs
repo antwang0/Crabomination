@@ -16,7 +16,7 @@
 //! - **Chip pulse** — the HUD's `⚔ name N/21` chip whose tally just rose
 //!   pulses for a couple of seconds so the hit reads.
 //!
-//! Badges mirror `free_cast_badge`: screen-space nodes reprojected from the
+//! Badges mirror `hand_chips`: screen-space nodes reprojected from the
 //! card's world position and reconciled against the view every frame.
 
 use std::collections::{HashMap, HashSet};

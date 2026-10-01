@@ -445,7 +445,33 @@ pub struct HelperTapState {
     /// Which candidates are currently ticked; parallel to `candidates`.
     pub selected: Vec<bool>,
     /// Waterbend {N} clamp on the number of helpers; `None` when unbounded.
+    /// Conspire's two is exact (`HelperMechanic::exact`).
     pub cap: Option<u32>,
+}
+
+impl HelperTapState {
+    /// Open the picker for `spell` over `candidates`, none ticked. With no
+    /// candidates there is nothing to pick, and it stays shut.
+    pub fn open(&mut self, spell: CardId, mechanic: HelperMechanic, candidates: Vec<(CardId, String)>, cap: Option<u32>) {
+        if candidates.is_empty() {
+            return;
+        }
+        self.cap = cap;
+        self.selected = vec![false; candidates.len()];
+        self.candidates = candidates;
+        self.pending = Some((spell, mechanic));
+    }
+
+    /// How many helpers are ticked.
+    pub fn ticked(&self) -> usize {
+        self.selected.iter().filter(|s| **s).count()
+    }
+
+    /// Can Cast go ahead with what's ticked? Everything but conspire takes
+    /// any number (the engine checks the rest).
+    pub fn ready(&self) -> bool {
+        self.pending.is_none_or(|(_, m)| m.exact().is_none_or(|n| self.ticked() == n))
+    }
 }
 
 /// Which helper-tap cast shape the picker is configuring.
@@ -463,6 +489,9 @@ pub enum HelperMechanic {
     Crew,
     /// CR 702.171 Saddle — the Mount and the creatures tapped to saddle it.
     Saddle,
+    /// CR 702.78 Conspire — tap two untapped creatures that each share a
+    /// colour with the spell to copy it (`GameAction::CastSpellConspire`).
+    Conspire,
 }
 
 impl HelperMechanic {
@@ -473,6 +502,15 @@ impl HelperMechanic {
             Self::Splice => "Splice",
             Self::Crew => "Crew",
             Self::Saddle => "Saddle",
+            Self::Conspire => "Conspire",
+        }
+    }
+
+    /// The number of helpers the cost takes exactly, when it fixes one.
+    pub fn exact(self) -> Option<usize> {
+        match self {
+            Self::Conspire => Some(2),
+            _ => None,
         }
     }
 }
