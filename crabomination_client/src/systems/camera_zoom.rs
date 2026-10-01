@@ -24,9 +24,9 @@ const CAM_ZOOM_SCALE: f32 = 0.45;
 const CAM_LERP_SPEED: f32 = 7.0;
 
 /// The camera's resting pose, refit by [`adjust_camera_home_for_seats`]
-/// whenever the seat count, the window size or the UI size changes
-/// ([`crate::card::framing::home_pose`]: the closest pose that keeps the
-/// table on screen and clear of the HUD).
+/// whenever the seat count, the window size, the UI size or a duel's grown
+/// creature rows change ([`crate::card::framing::home_pose`]: the closest
+/// pose that keeps the table on screen and clear of the HUD).
 #[derive(Resource)]
 pub struct CameraHome {
     pub pose: Transform,
@@ -35,25 +35,69 @@ pub struct CameraHome {
     /// Where the 3-D stack hangs for this pose (`framing::stack_lane`):
     /// beside the table, so a spell doesn't cover what it targets.
     pub stack_lane: crate::card::framing::StackLane,
-    /// `(seats, logical window size, UiScale bits)` the pose was fit for.
-    fitted_for: Option<(usize, UVec2, u32)>,
+    /// What the pose was fit for.
+    fitted_for: Option<FitKey>,
+    /// A refit for a new spread, running off the main thread.
+    pending: Option<(FitKey, bevy::tasks::Task<Fit>)>,
+    /// Fits for this window's spreads so far: a crowded duel goes back and
+    /// forth between a few.
+    cache: Vec<(FitKey, Fit)>,
+}
+
+/// `(seats, logical window size, UiScale bits, spread)`.
+type FitKey = (usize, UVec2, u32, crate::card::Spread);
+
+/// A fitted home: pose, the table point it looks at, and the stack lane.
+#[derive(Clone, Copy)]
+struct Fit {
+    pose: Transform,
+    target: Vec3,
+    stack_lane: crate::card::framing::StackLane,
+}
+
+impl Fit {
+    fn compute(key: FitKey) -> Self {
+        let (n, size, scale, spread) = key;
+        let (size, scale) = (size.as_vec2(), f32::from_bits(scale));
+        let pose = crate::card::framing::home_pose(n, size, scale, &spread);
+        // The fit looks down the pose's forward axis at the table plane.
+        let forward = pose.forward();
+        let target = pose.translation + forward * (-pose.translation.y / forward.y);
+        let stack_lane = crate::card::framing::stack_lane(n, size, scale, &pose, &spread);
+        Fit { pose, target, stack_lane }
+    }
 }
 
 impl Default for CameraHome {
     fn default() -> Self {
         let pose = crate::card::framing::legacy_pose(2);
-        Self { pose, target: Vec3::ZERO, stack_lane: Default::default(), fitted_for: None }
+        Self { pose, target: Vec3::ZERO, stack_lane: Default::default(), fitted_for: None, pending: None, cache: Vec::new() }
+    }
+}
+
+impl CameraHome {
+    fn apply(&mut self, key: FitKey, fit: Fit) {
+        self.pose = fit.pose;
+        self.target = fit.target;
+        self.stack_lane = fit.stack_lane;
+        self.fitted_for = Some(key);
     }
 }
 
 /// Refit the home pose for the current seat count, window size and UI size
-/// (the HUD panels it keeps the table clear of scale with it). The fit
-/// is a few milliseconds and only runs when either changes.
+/// (the HUD panels it keeps the table clear of scale with it), and for a
+/// duel's creature rows once one grows past the land row's width
+/// (`layout::Spread`): the camera eases out to keep a crowded board on
+/// screen and back as it thins. A fit is ~0.1 s in an unoptimized client,
+/// so one for a new spread runs on a task pool thread (the camera eases
+/// there once it lands); a new window or table fits at once, as the frame
+/// it's for has nothing to show until it does.
 pub fn adjust_camera_home_for_seats(
     view: Res<crate::net_plugin::CurrentView>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     ui_scale: Res<UiScale>,
     mut home: ResMut<CameraHome>,
+    mut redraw: MessageWriter<bevy::window::RequestRedraw>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Ok(window) = windows.single() else { return };
@@ -61,16 +105,42 @@ pub fn adjust_camera_home_for_seats(
     if size.x < 1.0 || size.y < 1.0 {
         return;
     }
-    let key = (cv.players.len(), size.as_uvec2(), ui_scale.0.to_bits());
+    let n = cv.players.len();
+    let spread = crate::card::Spread::of(&cv.battlefield, n);
+    let key: FitKey = (n, size.as_uvec2(), ui_scale.0.to_bits(), spread);
+    // A landed refit is kept, and applied if it's still the one wanted.
+    if let Some((for_key, task)) = home.pending.as_mut()
+        && let Some(fit) = bevy::tasks::block_on(bevy::tasks::futures_lite::future::poll_once(task))
+    {
+        let for_key = *for_key;
+        home.pending = None;
+        home.cache.push((for_key, fit));
+        if for_key == key {
+            home.apply(key, fit);
+        }
+    }
     if home.fitted_for == Some(key) {
         return;
     }
-    let pose = crate::card::framing::home_pose(key.0, size, ui_scale.0);
-    // The fit looks down the pose's forward axis at the table plane.
-    let forward = pose.forward();
-    let target = pose.translation + forward * (-pose.translation.y / forward.y);
-    let stack_lane = crate::card::framing::stack_lane(key.0, size, ui_scale.0, &pose);
-    *home = CameraHome { pose, target, stack_lane, fitted_for: Some(key) };
+    let same_table = home.fitted_for.is_some_and(|(n0, s0, u0, _)| (n0, s0, u0) == (key.0, key.1, key.2));
+    if !same_table {
+        home.cache.clear();
+        home.pending = None;
+        let fit = Fit::compute(key);
+        home.cache.push((key, fit));
+        home.apply(key, fit);
+        return;
+    }
+    if let Some(&(_, fit)) = home.cache.iter().find(|(k, _)| *k == key) {
+        home.apply(key, fit);
+        return;
+    }
+    if home.pending.as_ref().is_none_or(|(k, _)| *k != key) {
+        let task = bevy::tasks::AsyncComputeTaskPool::get().spawn(async move { Fit::compute(key) });
+        home.pending = Some((key, task));
+    }
+    // The frame loop idles on a still table; keep it polling.
+    redraw.write(bevy::window::RequestRedraw);
 }
 
 /// Seat the camera is parked on via the seat-focus hotkeys (`1`–`6`).

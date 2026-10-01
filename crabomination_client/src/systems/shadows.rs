@@ -100,8 +100,12 @@ pub fn fit_shadow_cascades(
     mut lights: Query<&mut CascadeShadowConfig, With<KeyLight>>,
 ) {
     let Ok(camera) = camera.single() else { return };
-    let (viewer, seats) = view.0.as_ref().map(|cv| (cv.your_seat, cv.players.len())).unwrap_or((0, 2));
-    let area = crate::systems::table_cloth::play_area(viewer, seats);
+    let (viewer, seats, spread) = view
+        .0
+        .as_ref()
+        .map(|cv| (cv.your_seat, cv.players.len(), crate::card::Spread::of(&cv.battlefield, cv.players.len())))
+        .unwrap_or((0, 2, Default::default()));
+    let area = crate::systems::table_cloth::play_area(viewer, seats, &spread);
     let (near, far) = table_depth_span(camera, area);
     let want = fitted_cascades(near, far);
     for mut config in &mut lights {
@@ -179,9 +183,9 @@ mod tests {
     /// is inside it.
     #[test]
     fn the_fitted_cascades_cover_the_whole_table() {
-        let pose = crate::card::framing::home_pose(2, Vec2::new(1920.0, 1080.0), 1.0);
+        let pose = crate::card::framing::home_pose(2, Vec2::new(1920.0, 1080.0), 1.0, &Default::default());
         let camera = GlobalTransform::from(pose);
-        let area = crate::systems::table_cloth::play_area(0, 2);
+        let area = crate::systems::table_cloth::play_area(0, 2, &Default::default());
         let (near, far) = table_depth_span(&camera, area);
         assert!(near > 1.0 && far > near, "span {near}..{far}");
         let config = fitted_cascades(near, far);
@@ -193,9 +197,9 @@ mod tests {
     /// A pod's camera sits further back; the fit follows it.
     #[test]
     fn a_pod_table_is_covered_too() {
-        let pose = crate::card::framing::home_pose(4, Vec2::new(1920.0, 1080.0), 1.0);
+        let pose = crate::card::framing::home_pose(4, Vec2::new(1920.0, 1080.0), 1.0, &Default::default());
         let camera = GlobalTransform::from(pose);
-        let area = crate::systems::table_cloth::play_area(0, 4);
+        let area = crate::systems::table_cloth::play_area(0, 4, &Default::default());
         let (near, far) = table_depth_span(&camera, area);
         let config = fitted_cascades(near, far);
         assert!(*config.bounds.last().unwrap() >= far);

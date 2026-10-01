@@ -2337,6 +2337,9 @@ pub fn sync_game_visuals(
     let Some(cv) = &view.0 else { return };
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
+    // How far a duel's crowded creature rows have pushed the piles beside
+    // them.
+    let spread = crate::card::Spread::of(&cv.battlefield, n_seats);
     // A spectator's `viewer` is the sentinel `SPECTATOR_SEAT`, which indexes no
     // real player — they have no hand or library of their own. Resolve the
     // viewer's hand/library through these panic-safe accessors so the board
@@ -2430,7 +2433,7 @@ pub fn sync_game_visuals(
             vis.set_if_neq(Visibility::Hidden);
         } else {
             vis.set_if_neq(Visibility::Visible);
-            let base = crate::card::exile_position(n_seats);
+            let base = crate::card::exile_position(n_seats, &spread);
             let y = cv.exile.len() as f32 * DECK_CARD_Y_STEP + 0.01;
             rest_pile_at(&mut transform, &mut lift, Vec3::new(base.x, y, base.z));
         }
@@ -2444,7 +2447,7 @@ pub fn sync_game_visuals(
             vis.set_if_neq(Visibility::Hidden);
         } else {
             vis.set_if_neq(Visibility::Visible);
-            let base_pos = graveyard_position(gy.owner, viewer, n_seats);
+            let base_pos = graveyard_position(gy.owner, viewer, n_seats, &spread);
             let y = arrived as f32 * DECK_CARD_Y_STEP + 0.01;
             rest_pile_at(&mut transform, &mut lift, Vec3::new(base_pos.x, y, base_pos.z));
         }
@@ -2743,7 +2746,7 @@ pub fn sync_game_visuals(
             // fly it to the graveyard. Otherwise it was shuffled back into a
             // library (mulligan put-back) — fly it to the deck pile.
             if in_any_graveyard.contains(&game_id.0) {
-                let gy_pos = graveyard_position(viewer, viewer, n_seats);
+                let gy_pos = graveyard_position(viewer, viewer, n_seats, &spread);
                 let gy_rot = back_face_rotation(viewer, viewer, n_seats);
                 commands
                     .entity(entity)
@@ -2882,7 +2885,7 @@ pub fn sync_game_visuals(
             continue;
         }
         // Default: fly to the owner's graveyard pile.
-        let gy_pos = graveyard_position(owner.0, viewer, n_seats);
+        let gy_pos = graveyard_position(owner.0, viewer, n_seats, &spread);
         let gy_rot = back_face_rotation(owner.0, viewer, n_seats);
         commands
             .entity(entity)
@@ -5150,6 +5153,7 @@ pub fn sync_command_zone(
     let Some(card_assets) = card_assets else { return };
     let viewer = view.your_seat;
     let n_seats = view.players.len();
+    let spread = crate::card::Spread::of(&view.battlefield, n_seats);
 
     // Collect every (CardId, owner, slot, zone size) currently in any
     // command zone, so the spawn loop can reuse the layout helper.
@@ -5181,7 +5185,7 @@ pub fn sync_command_zone(
             continue;
         };
         have.insert(game_id.0);
-        let target = crate::card::command_zone_card_transform(owner, viewer, n_seats, slot, count);
+        let target = crate::card::command_zone_card_transform(owner, viewer, n_seats, slot, count, &spread);
         rest_pile_at(&mut transform, &mut lift, target.translation);
     }
 
@@ -5192,7 +5196,7 @@ pub fn sync_command_zone(
         }
         let hidden = want_name.get(card_id).map(|n| n.is_none()).unwrap_or(false);
         let name = want_name.get(card_id).cloned().flatten().unwrap_or_default();
-        let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot, *count);
+        let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot, *count, &spread);
         let back_mat = card_assets.back_material.clone();
         let front_mat = if hidden {
             back_mat.clone()

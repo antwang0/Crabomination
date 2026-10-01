@@ -2,9 +2,10 @@
 //! `viewer_seat` so they return anchors relative to the camera: the viewer's
 //! own seat sits at the front of the table, opponents at the back.
 //!
-//! For 2-player games the layout matches the historical hardcoded P0/P1
-//! constants exactly. For 3+ player games, opponents share the back of the
-//! table and are spread along X.
+//! A 2-player table keeps its rows to the land row's width until a creature
+//! row crowds, then grows that row out and moves the piles beside it (see
+//! the 1v1 section, [`Spread`]). For 3+ player games, opponents share the
+//! back of the table and are spread along X.
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
@@ -80,26 +81,42 @@ const BF_CREATURE_Z: f32 = 3.5;
 /// Distance from center to land row.
 const BF_LAND_Z: f32 = 8.5;
 
-// Row spacing lives in `bf_spacing_col`; the 1v1 bound comes from
-// `board_half_for` — pile inner face at |x| = DECK_X − CARD_WIDTH/2 with a
-// small margin so rows never butt up against the pile face.
-
 // ── Pile constants ───────────────────────────────────────────────────────────
 
-// Pile X positions sit far enough from the centre that the rightmost
-// land group (5 basics → group centre at ≈ 9.2 units from origin) still
-// has clearance for a CARD_WIDTH/2 = 1.5-unit-wide card without
-// poking into the deck/graveyard footprint. Previous 11.0 left the
-// deck pile sitting on top of the leftmost land.
-const DECK_X: f32 = 13.5;
+/// A pod seat's (and a 5-6 player column's) deck depth: level with its land
+/// row.
 const DECK_Z: f32 = 9.5;
-const GRAVEYARD_X: f32 = 13.5;
 const GRAVEYARD_Z: f32 = 4.0;
-/// Exile is a single shared zone (CR 406.2), so it gets one pile rather
-/// than one per seat: the right-hand edge at the table's midline, between
-/// the two seats' pile strips and clear of both.
-const EXILE_X: f32 = 13.5;
 const EXILE_Z: f32 = 0.0;
+
+// ── 1v1 table ───────────────────────────────────────────────────────────────
+//
+// A duel's window is short of height, not width, but the width it has
+// beside the creature rows is partly under the HUD's side columns, so a
+// wider table costs every card its size. Instead a row keeps the land row's
+// width while its groups fit, and a crowded creature row grows out into the
+// room beside it rather than wrapping into a second row that hides most of
+// the first: the graveyard, command zone and exile beside it move out with
+// it ([`Spread`]), and the camera fits the table that makes
+// (`framing::fit_pose`) — on a wide window for nothing, on 16:9 by pulling
+// back a little.
+
+/// Half-width of a 1v1 row while its groups fit at [`GROW_SPACING`].
+const BACK_HALF_1V1: f32 = 12.0;
+/// How far a 1v1 land row may stretch before it wraps: the seven groups of a
+/// typical board (five land names, a rock, an enchantment) in one line. The
+/// land row's ends are the table's corners, which the HUD binds, so it
+/// grows no further.
+const LAND_REACH_1V1: f32 = 12.2;
+/// How far a crowded 1v1 creature row may grow out before it wraps: ten
+/// groups in one row.
+const FRONT_REACH_1V1: f32 = 18.0;
+/// The decks: just past the land rows' outer edge, at the table's corners.
+const DECK_X: f32 = LAND_REACH_1V1 + CARD_WIDTH * 0.5;
+/// The piles level with the creature rows — graveyards, command zones, the
+/// shared exile — while the rows keep the land row's width. A crowded row
+/// moves them out ([`Spread::mid_pile_x`]).
+const MID_PILE_X: f32 = 13.5;
 /// 1v1 command zone: the seat's right-hand pile strip (its graveyard and
 /// deck are on its left), just clear of the shared exile pile at the
 /// midline. It sat at x −11, inside the board: the row's end card and the
@@ -502,12 +519,7 @@ pub fn deck_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
     }
     if n_seats <= 2 {
         let sign = z_sign(seat, viewer);
-        let x = if is_viewer(seat, viewer) {
-            -DECK_X
-        } else {
-            DECK_X + opp_x_offset(seat, viewer, n_seats)
-        };
-        return Vec3::new(x, 0.0, sign * DECK_Z);
+        return Vec3::new(-sign * DECK_X, 0.0, sign * DECK_Z);
     }
     if in_far_pile_row(seat, viewer, n_seats) {
         return far_pile_slot(seat, viewer, n_seats, 0);
@@ -517,18 +529,13 @@ pub fn deck_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
 }
 
 /// Bottom-card position of `seat`'s graveyard pile.
-pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize, spread: &Spread) -> Vec3 {
     if let Some(f) = pod_frame(seat, viewer, n_seats) {
         return f.point(Vec3::new(-f.strip_x(), 0.0, GRAVEYARD_Z));
     }
     if n_seats <= 2 {
         let sign = z_sign(seat, viewer);
-        let x = if is_viewer(seat, viewer) {
-            -GRAVEYARD_X
-        } else {
-            GRAVEYARD_X + opp_x_offset(seat, viewer, n_seats)
-        };
-        return Vec3::new(x, 0.0, sign * GRAVEYARD_Z);
+        return Vec3::new(-sign * spread.mid_pile_x(seat), 0.0, sign * GRAVEYARD_Z);
     }
     if in_far_pile_row(seat, viewer, n_seats) {
         return far_pile_slot(seat, viewer, n_seats, 1);
@@ -540,9 +547,10 @@ pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
 /// Bottom-card position of the shared exile pile. Exile isn't owned by a
 /// seat, so this takes no `seat` — one pile holds every exiled card and
 /// clicking it opens the browser.
-pub fn exile_position(n_seats: usize) -> Vec3 {
+pub fn exile_position(n_seats: usize, spread: &Spread) -> Vec3 {
     if n_seats <= 2 {
-        return Vec3::new(EXILE_X, 0.0, EXILE_Z);
+        // Between the two creature rows, so clear of both.
+        return Vec3::new(spread.mid_pile_x(0).max(spread.mid_pile_x(1)), 0.0, EXILE_Z);
     }
     if let Some(f) = pod_frame(0, 0, n_seats) {
         // The viewer's right strip, behind their command zone.
@@ -567,7 +575,7 @@ struct CommandLane {
     later_under: bool,
 }
 
-fn command_lane(seat: usize, viewer: usize, n_seats: usize) -> CommandLane {
+fn command_lane(seat: usize, viewer: usize, n_seats: usize, spread: &Spread) -> CommandLane {
     if let Some(f) = pod_frame(seat, viewer, n_seats) {
         // The seat's right strip, level with its graveyard across the board,
         // running toward the table centre, where the strip is clear.
@@ -583,7 +591,8 @@ fn command_lane(seat: usize, viewer: usize, n_seats: usize) -> CommandLane {
         // toward the seat's edge (the exile pile is on the other side).
         let sign = z_sign(seat, viewer);
         return CommandLane {
-            first: Transform::from_xyz(sign * DECK_X, 0.0, sign * COMMAND_Z_1V1).with_rotation(face_rotation(sign)),
+            first: Transform::from_xyz(sign * spread.mid_pile_x(seat), 0.0, sign * COMMAND_Z_1V1)
+                .with_rotation(face_rotation(sign)),
             dir: Vec3::Z * sign,
             reach: COMMAND_STEP,
             later_under: false,
@@ -629,8 +638,9 @@ pub fn command_zone_card_transform(
     n_seats: usize,
     slot: usize,
     count: usize,
+    spread: &Spread,
 ) -> Transform {
-    let lane = command_lane(seat, viewer, n_seats);
+    let lane = command_lane(seat, viewer, n_seats, spread);
     let count = count.max(slot + 1);
     let pitch = if count > 1 { lane.reach / (count - 1) as f32 } else { 0.0 };
     let layer = if lane.later_under { count - 1 - slot } else { slot };
@@ -643,7 +653,8 @@ pub fn command_zone_card_transform(
 /// that shows, for a label past it: its bottom edge, unless the card beside
 /// it in the lane lies over that end — then its top.
 pub fn command_zone_open_end(seat: usize, viewer: usize, n_seats: usize, slot: usize, count: usize) -> f32 {
-    let lane = command_lane(seat, viewer, n_seats);
+    // Which way the lane runs doesn't depend on where it starts.
+    let lane = command_lane(seat, viewer, n_seats, &Spread::default());
     let bottom_covered = if lane.later_under { slot > 0 } else { slot + 1 < count.max(slot + 1) };
     if bottom_covered { CARD_HEIGHT / 2.0 } else { -CARD_HEIGHT / 2.0 }
 }
@@ -807,16 +818,42 @@ pub fn hand_card_transform(
 
 // ── Battlefield cards ────────────────────────────────────────────────────────
 
-/// Per-card battlefield spacing for a row of `total` groups confined to a
-/// column of half-width `half`. Like [`bf_spacing`] but clamps to the seat's
-/// own column (3+ player seating) instead of the whole table.
-fn bf_spacing_col(total: usize, half: f32) -> f32 {
+/// The width a battlefield row may take: `half` while its groups fit at
+/// [`GROW_SPACING`], out to `reach` once they don't (a 1v1 creature row,
+/// whose band has width to spare; every other row has `reach == half`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct RowSpan {
+    half: f32,
+    reach: f32,
+}
+
+impl RowSpan {
+    fn fixed(half: f32) -> Self {
+        RowSpan { half, reach: half }
+    }
+}
+
+/// The furthest a row's outermost card centre may sit from the board's
+/// centre on a board of half-width `half`.
+fn max_outer_center(half: f32) -> f32 {
+    (half - CARD_WIDTH * 0.5 - 0.3).max(0.0)
+}
+
+/// The spacing a row that has outgrown its `half` keeps as it grows out to
+/// its `reach`: a finger's width between cards, so each still reads as its
+/// own card. It is about where a six-group 1v1 row already sits.
+const GROW_SPACING: f32 = CARD_WIDTH * 1.3;
+
+/// Per-group battlefield spacing for a row of `total` groups: as wide as
+/// [`BF_CARD_SPACING`] allows inside `span.half`; past that, never tighter
+/// than [`GROW_SPACING`] while the row can grow out to `span.reach`; past
+/// that, as wide as fits the reach.
+fn bf_spacing_col(total: usize, span: RowSpan) -> f32 {
     if total <= 1 {
         return BF_CARD_SPACING;
     }
-    let max_outer_center = (half - CARD_WIDTH * 0.5 - 0.3).max(0.0);
-    let max_spacing = 2.0 * max_outer_center / (total as f32 - 1.0);
-    BF_CARD_SPACING.min(max_spacing)
+    let fit = |half: f32| 2.0 * max_outer_center(half) / (total as f32 - 1.0);
+    BF_CARD_SPACING.min(fit(span.half).max(GROW_SPACING.min(fit(span.reach))))
 }
 
 /// Below this per-group spacing the front row stops compressing and wraps
@@ -860,8 +897,7 @@ fn front_row_shape(total: usize, half: f32) -> (usize, usize) {
     if total <= 1 {
         return (1, total.max(1));
     }
-    let max_outer_center = (half - CARD_WIDTH * 0.5 - 0.3).max(0.0);
-    let cap = ((2.0 * max_outer_center / MIN_WRAP_SPACING).floor() as usize + 1).max(1);
+    let cap = ((2.0 * max_outer_center(half) / MIN_WRAP_SPACING).floor() as usize + 1).max(1);
     if total <= cap {
         (1, total)
     } else {
@@ -870,14 +906,79 @@ fn front_row_shape(total: usize, half: f32) -> (usize, usize) {
     }
 }
 
-/// The seat's usable board half-width for battlefield rows.
-fn board_half_for(spot: &SeatSpot, n_seats: usize) -> f32 {
-    if n_seats <= 2 {
-        // Matches the historical [`bf_spacing`] bound (max outer centre at
-        // DECK_X − CARD_WIDTH − 0.3).
-        DECK_X - CARD_WIDTH * 0.5
-    } else {
-        spot.board_half
+/// A duel creature row's width.
+const DUEL_CREATURES: RowSpan = RowSpan { half: BACK_HALF_1V1, reach: FRONT_REACH_1V1 };
+
+/// The width the seat's creature (`back_row` false) or land row may take.
+fn row_span(spot: &SeatSpot, n_seats: usize, back_row: bool) -> RowSpan {
+    match (n_seats <= 2, back_row) {
+        (true, false) => DUEL_CREATURES,
+        (true, true) => RowSpan { half: BACK_HALF_1V1, reach: LAND_REACH_1V1 },
+        (false, _) => RowSpan::fixed(spot.board_half),
+    }
+}
+
+/// The outermost card centre of a row of `total` groups, from the board's
+/// centre (its fullest line, when it wraps).
+fn row_outer_center(total: usize, span: RowSpan) -> f32 {
+    if total <= 1 {
+        return 0.0;
+    }
+    let (_, per_row) = front_row_shape(total, span.reach);
+    (per_row as f32 - 1.0) * 0.5 * bf_spacing_col(per_row, span)
+}
+
+/// How many groups each seat's duel creature row holds. It decides how far a
+/// crowded row grows ([`row_span`]), and so where the graveyard, command
+/// zone and exile beside the rows sit ([`Self::mid_pile_x`]); the camera
+/// fits the table that makes. Outside a duel rows never grow, and it is the
+/// default — as it is for a duel whose rows keep the land row's width.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Spread {
+    creatures: [usize; 2],
+}
+
+impl Spread {
+    /// The spread of a table's board.
+    pub fn of(battlefield: &[crabomination::net::PermanentView], n_seats: usize) -> Self {
+        let mut creatures = [0; 2];
+        if n_seats <= 2 {
+            for (seat, groups) in creatures.iter_mut().enumerate() {
+                *groups = creature_group_count(battlefield, seat);
+            }
+        }
+        Spread { creatures }.settled()
+    }
+
+    /// Both seats' creature rows holding `groups` groups.
+    #[cfg(test)]
+    pub fn uniform(groups: usize) -> Self {
+        Spread { creatures: [groups; 2] }.settled()
+    }
+
+    /// Groups in `seat`'s creature row, where a row of fewer than it takes
+    /// no more room than one of none (so boards that keep the land row's
+    /// width all compare equal).
+    pub fn creatures(&self, seat: usize) -> usize {
+        self.creatures.get(seat).copied().unwrap_or(0)
+    }
+
+    /// Rows within the land row's width all spread alike: count them as
+    /// empty, so the camera refits only once a row grows.
+    fn settled(mut self) -> Self {
+        for groups in &mut self.creatures {
+            if row_outer_center(*groups, DUEL_CREATURES) <= max_outer_center(BACK_HALF_1V1) + 1e-4 {
+                *groups = 0;
+            }
+        }
+        self
+    }
+
+    /// |x| of the piles beside `seat`'s duel creature row: as far past its
+    /// outer card as they sit from a row of the land row's width.
+    fn mid_pile_x(&self, seat: usize) -> f32 {
+        let edge = row_outer_center(self.creatures(seat), DUEL_CREATURES);
+        (edge + MID_PILE_X - max_outer_center(BACK_HALF_1V1)).max(MID_PILE_X)
     }
 }
 
@@ -897,37 +998,38 @@ pub fn bf_card_transform(
 ) -> Transform {
     let tap = |rot: Quat| if tapped { Quat::from_rotation_y(-FRAC_PI_2) * rot } else { rot };
     if let Some(f) = pod_frame(seat, viewer, n_seats) {
-        let (x, z) = row_position(slot, total, back_row, f.half, f.offset);
+        let (x, z) = row_position(slot, total, back_row, RowSpan::fixed(f.half), f.offset);
         let local = Transform::from_xyz(x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z)
             .with_rotation(tap(face_rotation(1.0)));
         return f.place(local);
     }
     let spot = seat_spot(seat, viewer, n_seats);
-    let half = board_half_for(&spot, n_seats);
+    let span = row_span(&spot, n_seats, back_row);
     let x_base = if n_seats <= 2 {
         opp_x_offset(seat, viewer, n_seats)
     } else {
         spot.board_center
     };
-    let (x, row_z) = row_position(slot, total, back_row, half, 0.0);
+    let (x, row_z) = row_position(slot, total, back_row, span, 0.0);
     let z = spot.z_sign * row_z;
     Transform::from_xyz(x_base + x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z)
         .with_rotation(tap(face_rotation(spot.z_sign)))
 }
 
 /// Seat-local `(x, z)` of slot `slot` of a row of `total` groups on a board
-/// of half-width `half`: X from the board's centre, Z out from the table
-/// centre toward the seat. `inward_room` is how much further than
+/// `span` wide: X from the board's centre, Z out from the table centre
+/// toward the seat. A row wraps once it can't fit its reach at
+/// [`MIN_WRAP_SPACING`]. `inward_room` is how much further than
 /// [`BF_ROW_MIN_Z`] a wrapped creature row may reach toward the centre line
 /// (a pod's edge gap), up to a whole card's depth per row.
-fn row_position(slot: usize, total: usize, back_row: bool, half: f32, inward_room: f32) -> (f32, f32) {
-    let (rows, per_row) = front_row_shape(total, half);
+fn row_position(slot: usize, total: usize, back_row: bool, span: RowSpan, inward_room: f32) -> (f32, f32) {
+    let (rows, per_row) = front_row_shape(total, span.reach);
     let row = (slot / per_row.max(1)).min(rows - 1);
     let col = slot - row * per_row;
     // The last row takes the remainder; earlier rows are full.
     let row_count = if row + 1 == rows { total - row * per_row } else { per_row };
     let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
-    let x = offset * bf_spacing_col(row_count, half);
+    let x = offset * bf_spacing_col(row_count, span);
     if back_row {
         // The back row used to compress without limit: eight land groups in
         // 1v1 already sat 2.91 apart against a 3.0-wide card, and twenty sat
@@ -1041,21 +1143,10 @@ pub fn creature_group_info_from_view(
     owner: usize,
     card_id: CardId,
 ) -> Option<(usize, usize, usize)> {
-    // A pile key: tokens group by visual identity, nontokens by id (so
-    // two Grizzly Bears cards still sit apart — only tokens pile up).
-    #[derive(PartialEq)]
-    enum Key<'a> {
-        Token { name: &'a str, power: i32, toughness: i32, tapped: bool },
-        Single(CardId),
-    }
-    let mut groups: Vec<(Key<'_>, usize)> = Vec::new();
+    let mut groups: Vec<(PileKey<'_>, usize)> = Vec::new();
     let mut found: Option<(usize, usize)> = None;
     for c in battlefield.iter().filter(|c| c.owner == owner && !in_back_row(c)) {
-        let k = if c.is_token {
-            Key::Token { name: c.name.as_str(), power: c.power, toughness: c.toughness, tapped: c.tapped }
-        } else {
-            Key::Single(c.id)
-        };
+        let k = PileKey::of(c);
         let gi = match groups.iter().position(|(gk, _)| *gk == k) {
             Some(i) => {
                 groups[i].1 += 1;
@@ -1071,6 +1162,36 @@ pub fn creature_group_info_from_view(
         }
     }
     found.map(|(slot, index)| (slot, index, groups.len()))
+}
+
+/// A front-row group: tokens group by visual identity, nontokens by id (so
+/// two Grizzly Bears cards still sit apart — only tokens pile up).
+#[derive(PartialEq)]
+enum PileKey<'a> {
+    Token { name: &'a str, power: i32, toughness: i32, tapped: bool },
+    Single(CardId),
+}
+
+impl<'a> PileKey<'a> {
+    fn of(c: &'a crabomination::net::PermanentView) -> Self {
+        if c.is_token {
+            PileKey::Token { name: c.name.as_str(), power: c.power, toughness: c.toughness, tapped: c.tapped }
+        } else {
+            PileKey::Single(c.id)
+        }
+    }
+}
+
+/// How many groups `owner`'s creature row holds.
+fn creature_group_count(battlefield: &[crabomination::net::PermanentView], owner: usize) -> usize {
+    let mut keys: Vec<PileKey<'_>> = Vec::new();
+    for c in battlefield.iter().filter(|c| c.owner == owner && !in_back_row(c)) {
+        let k = PileKey::of(c);
+        if !keys.contains(&k) {
+            keys.push(k);
+        }
+    }
+    keys.len()
 }
 
 /// World transform for a creature-row permanent: identical tokens cascade
@@ -1099,8 +1220,9 @@ pub fn creature_card_transform(
 
 /// Table-level outline of a seat's board area — `(min, max)` corners at
 /// y = 0, spanning the column width and both battlefield rows plus a small
-/// margin. Used by the active-seat glow and the eliminated-player shroud.
-pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, Vec3) {
+/// margin, and a duel creature row as far as `spread` has grown it. Used by
+/// the active-seat glow, the eliminated-player shroud and the printed mat.
+pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize, spread: &Spread) -> (Vec3, Vec3) {
     if let Some(f) = pod_frame(seat, viewer, n_seats) {
         let half = f.half + 0.8;
         // A wrapped creature row may use the edge gap, up to the centre line.
@@ -1111,7 +1233,9 @@ pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, 
         return (a.min(b), a.max(b));
     }
     let spot = seat_spot(seat, viewer, n_seats);
-    let half = board_half_for(&spot, n_seats) + 0.8;
+    // The land row's width, or a grown duel creature row's.
+    let grown = row_outer_center(spread.creatures(seat), DUEL_CREATURES) + CARD_WIDTH * 0.5 + 0.3;
+    let half = row_span(&spot, n_seats, true).half.max(grown) + 0.8;
     let x_base = if n_seats <= 2 {
         opp_x_offset(seat, viewer, n_seats)
     } else {
@@ -1214,16 +1338,97 @@ mod tests {
         assert!(token.y > stack_stagger(8, true).y && token.y == land.y);
     }
 
+    /// A duel seats the viewer front-centre and the opponent back-centre,
+    /// each seat's deck in its corner beside its land row and its graveyard
+    /// and command zone beside its creature row — where they always were
+    /// while the rows keep the land row's width. A crowded creature row moves
+    /// the piles beside it out, clear of its end card, and the other seat's
+    /// piles stay put; the shared exile clears both rows.
     #[test]
-    fn two_player_layout_is_unchanged() {
-        // Viewer front-centre, opponent back-centre, diagonal piles — the
-        // historical 1v1 geometry must be byte-for-byte preserved.
+    fn a_crowded_duel_row_moves_the_piles_beside_it() {
+        let none = Spread::default();
         assert_eq!(seat_spot(0, 0, 2).z_sign, 1.0);
         assert_eq!(seat_spot(1, 0, 2).z_sign, -1.0);
-        assert_eq!(seat_spot(0, 0, 2).col_center, 0.0);
         assert_eq!(deck_position(0, 0, 2), Vec3::new(-DECK_X, 0.0, DECK_Z));
         assert_eq!(deck_position(1, 0, 2), Vec3::new(DECK_X, 0.0, -DECK_Z));
-        assert_eq!(graveyard_position(0, 0, 2), Vec3::new(-GRAVEYARD_X, 0.0, GRAVEYARD_Z));
+        assert_eq!(graveyard_position(0, 0, 2, &none), Vec3::new(-MID_PILE_X, 0.0, GRAVEYARD_Z));
+        assert_eq!(graveyard_position(1, 0, 2, &none), Vec3::new(MID_PILE_X, 0.0, -GRAVEYARD_Z));
+        assert_eq!(exile_position(2, &none), Vec3::new(MID_PILE_X, 0.0, EXILE_Z));
+        // Up to six groups nothing moves.
+        assert_eq!(Spread::uniform(6), none);
+        for groups in 7..=14 {
+            let mut battlefield = Vec::new();
+            for i in 0..groups {
+                battlefield.push(creature(i as u32, 0));
+            }
+            let spread = Spread::of(&battlefield, 2);
+            let end = (0..groups)
+                .map(|s| bf_card_transform(0, 0, 2, s, groups, false, false).translation.x.abs())
+                .fold(0.0, f32::max);
+            let viewer_piles = [
+                graveyard_position(0, 0, 2, &spread),
+                exile_position(2, &spread),
+                command_zone_card_transform(0, 0, 2, 0, 2, &spread).translation,
+                command_zone_card_transform(0, 0, 2, 1, 2, &spread).translation,
+            ];
+            for pile in viewer_piles {
+                assert!(pile.x.abs() - CARD_WIDTH * 0.5 >= end + CARD_WIDTH * 0.5 + 0.3 - 1e-4, "{groups} groups: {pile} on a row ending at {end}");
+            }
+            assert_eq!(graveyard_position(1, 0, 2, &spread), graveyard_position(1, 0, 2, &none), "{groups}: the far seat's graveyard stayed");
+            assert_eq!(deck_position(0, 0, 2), Vec3::new(-DECK_X, 0.0, DECK_Z), "the decks never move");
+        }
+    }
+
+    /// A creature permanent `id` of `owner`'s, for a board.
+    fn creature(id: u32, owner: usize) -> crabomination::net::PermanentView {
+        let g = {
+            let mut g = crabomination::game::two_player_game();
+            g.add_card_to_battlefield(owner, crabomination::catalog::grizzly_bears());
+            g
+        };
+        let mut p = crabomination::server::view::project(&g, 0).battlefield.remove(0);
+        p.id = CardId(id);
+        p
+    }
+
+    /// A 1v1 creature row lays out as it always has while its groups fit
+    /// the land row's width; a crowded one grows out into the creature
+    /// band, a readable gap between cards, instead of wrapping at seven —
+    /// and wraps only once it can't fit its reach.
+    #[test]
+    fn a_crowded_duel_creature_row_grows_out_before_it_wraps() {
+        let xs = |total: usize| -> Vec<f32> {
+            (0..total).map(|s| bf_card_transform(0, 0, 2, s, total, false, false).translation.x).collect()
+        };
+        let zs = |total: usize| -> Vec<f32> {
+            (0..total).map(|s| bf_card_transform(0, 0, 2, s, total, false, false).translation.z).collect()
+        };
+        // Six groups: the land row's width, unchanged.
+        let six = xs(6);
+        assert!((six[1] - six[0] - 2.0 * max_outer_center(BACK_HALF_1V1) / 5.0).abs() < 1e-4, "{six:?}");
+        for total in 7..=10 {
+            assert!(zs(total).iter().all(|z| (z - BF_CREATURE_Z).abs() < 1e-4), "{total} groups stay one row");
+            let x = xs(total);
+            let gap = x[1] - x[0];
+            assert!(gap >= MIN_WRAP_SPACING - 1e-4, "{total} groups: {gap:.2} apart");
+            assert!(x[total - 1] <= max_outer_center(FRONT_REACH_1V1) + 1e-4, "{total} groups: past the reach");
+            assert!(x[total - 1] > max_outer_center(BACK_HALF_1V1), "{total} groups grow out past the land row");
+        }
+        assert!((xs(7)[1] - xs(7)[0] - GROW_SPACING).abs() < 1e-4, "seven keep the growing gap");
+        let mut rows = zs(11);
+        rows.sort_by(f32::total_cmp);
+        rows.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
+        assert_eq!(rows.len(), 2, "eleven wrap");
+        // The land row stretches only to hold a typical board's seven
+        // groups in one line: its corners hold the piles.
+        let lands: Vec<f32> = (0..7).map(|s| bf_card_transform(0, 0, 2, s, 7, true, false).translation.x).collect();
+        assert!(lands[6] <= max_outer_center(LAND_REACH_1V1) + 1e-4, "{lands:?}");
+        let rows = |total: usize| {
+            let mut z: Vec<f32> = (0..total).map(|s| bf_card_transform(0, 0, 2, s, total, true, false).translation.z).collect();
+            z.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
+            z.len()
+        };
+        assert_eq!((rows(7), rows(8)), (1, 2), "seven land groups stay one row, eight wrap");
     }
 
     #[test]
@@ -1254,7 +1459,7 @@ mod tests {
         for n in [3usize, 4] {
             for s in 0..n {
                 let f = pod_frame(s, 0, n).unwrap();
-                for pile in [deck_position(s, 0, n), graveyard_position(s, 0, n)] {
+                for pile in [deck_position(s, 0, n), graveyard_position(s, 0, n, &Spread::default())] {
                     let x = f.local(pile).x.abs();
                     assert!(
                         x >= f.half + CARD_WIDTH * 0.5 - 0.01 && x <= f.half + CARD_WIDTH + 0.01,
@@ -1280,19 +1485,36 @@ mod tests {
 
     /// Where `seat`'s battlefield cards can lie on the table (XZ): its rows'
     /// card edges, from the innermost wrapped creature row out to a wrapped
-    /// second land row.
+    /// second land row. A duel's creature band and land band are two rects:
+    /// a crowded creature row grows wider than the land row.
     fn board_footprint(seat: usize, viewer: usize, n: usize) -> Rect {
+        let [a, b] = board_bands(seat, viewer, n, &Spread::default());
+        a.union(b)
+    }
+
+    /// `seat`'s creature band and land band: each row as far out as `spread`
+    /// has it (a pod's rows never grow).
+    fn board_bands(seat: usize, viewer: usize, n: usize, spread: &Spread) -> [Rect; 2] {
         let far = BF_LAND_Z + row_wrap_dz(2) + CARD_HEIGHT * 0.5;
         if let Some(f) = pod_frame(seat, viewer, n) {
             let edge = f.half - 0.3;
             let a = f.point(Vec3::new(-edge, 0.0, -f.offset));
             let b = f.point(Vec3::new(edge, 0.0, far));
-            return Rect::from_corners(Vec2::new(a.x, a.z), Vec2::new(b.x, b.z));
+            let r = Rect::from_corners(Vec2::new(a.x, a.z), Vec2::new(b.x, b.z));
+            return [r, r];
         }
         let sp = seat_spot(seat, viewer, n);
-        let half = board_half_for(&sp, n);
-        let (z0, z1) = if sp.z_sign > 0.0 { (0.0, far) } else { (-far, 0.0) };
-        Rect::new(sp.board_center - half, z0, sp.board_center + half, z1)
+        let band = |back_row: bool, groups: usize, near: f32, far: f32| {
+            let half = row_outer_center(groups, row_span(&sp, n, back_row)) + CARD_WIDTH * 0.5;
+            let (z0, z1) = if sp.z_sign > 0.0 { (near, far) } else { (-far, -near) };
+            Rect::new(sp.board_center - half, z0, sp.board_center + half, z1)
+        };
+        let creatures = BF_CREATURE_Z + CARD_HEIGHT * 0.5;
+        // The fullest rows the spread allows: six creature groups while it
+        // has none grown, a land row at its reach.
+        let groups = spread.creatures(seat).max(6);
+        let lands = (2.0 * max_outer_center(LAND_REACH_1V1) / MIN_WRAP_SPACING) as usize + 1;
+        [band(false, groups, 0.0, creatures), band(true, lands, BF_LAND_Z - CARD_HEIGHT * 0.5, far)]
     }
 
     /// The table-plane footprint of a card lying flat at `t`.
@@ -1322,7 +1544,7 @@ mod tests {
     fn piles_stay_on_table_for_four_players() {
         for s in 0..4 {
             let d = deck_position(s, 0, 4);
-            let g = graveyard_position(s, 0, 4);
+            let g = graveyard_position(s, 0, 4, &Spread::default());
             assert!(d.x.abs() <= MULTI_HALF_X + 0.01, "deck off table: {}", d.x);
             assert!(g.x.abs() <= MULTI_HALF_X + 0.01, "graveyard off table: {}", g.x);
         }
@@ -1347,7 +1569,7 @@ mod tests {
                         "n={n}: seat {i}'s board isn't in its region",
                     );
                 }
-                for pile in [deck_position(i, 0, n), graveyard_position(i, 0, n)] {
+                for pile in [deck_position(i, 0, n), graveyard_position(i, 0, n, &Spread::default())] {
                     assert!(a.contains(xz(pile)), "n={n}: seat {i}'s pile {pile} is outside its region");
                 }
             }
@@ -1362,14 +1584,19 @@ mod tests {
         // far seats keep a row behind it, so the check is on footprints,
         // not on X alone.
         let rect = |c: Vec3, w: f32, h: f32| Rect::from_center_size(Vec2::new(c.x, c.z), Vec2::new(w, h));
+        // A duel's piles against its rows at every spread they reach.
+        let spreads = |n: usize| -> Vec<Spread> {
+            if n > 2 { vec![Spread::default()] } else { (0..=14).map(Spread::uniform).collect() }
+        };
         for n in [2usize, 3, 4, 5, 6] {
-            let boards: Vec<Rect> = (0..n).map(|s| board_footprint(s, 0, n)).collect();
+          for spread in spreads(n) {
+            let boards: Vec<Rect> = (0..n).flat_map(|s| board_bands(s, 0, n, &spread)).collect();
             for s in 0..n {
                 // Both commanders of a pair.
-                let command = |slot| flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2));
+                let command = |slot| flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2, &spread));
                 let mut piles = vec![
                     ("deck", rect(deck_position(s, 0, n), CARD_WIDTH, CARD_HEIGHT)),
-                    ("graveyard", rect(graveyard_position(s, 0, n), CARD_WIDTH, CARD_HEIGHT)),
+                    ("graveyard", rect(graveyard_position(s, 0, n, &spread), CARD_WIDTH, CARD_HEIGHT)),
                     ("command", command(0)),
                     ("second command", command(1)),
                 ];
@@ -1389,17 +1616,19 @@ mod tests {
                         }
                     }
                 }
-                piles.push(("exile", rect(exile_position(n), CARD_WIDTH, CARD_HEIGHT)));
+                piles.push(("exile", rect(exile_position(n, &spread), CARD_WIDTH, CARD_HEIGHT)));
                 for (what, r) in &piles {
                     for (b, board) in boards.iter().enumerate() {
                         assert!(
                             board.intersect(*r).is_empty(),
-                            "n={n}: seat {s}'s {what} at {:?} sits on seat {b}'s board {board:?}",
+                            "n={n} {spread:?}: seat {s}'s {what} at {:?} sits on seat {}'s board {board:?}",
                             r.center(),
+                            b / 2,
                         );
                     }
                 }
             }
+          }
         }
     }
 
@@ -1437,7 +1666,7 @@ mod tests {
             assert!(p.x.abs() + CARD_WIDTH * 0.5 <= f.half + 0.01, "slot {s} leaks off its board");
         }
         // Wrapping must beat single-row compression decisively.
-        let single_row = bf_spacing_col(total, f.half);
+        let single_row = bf_spacing_col(total, RowSpan::fixed(f.half));
         for (a, b) in [(0usize, 1usize), (4, 5)] {
             let gap = (local[b].x - local[a].x).abs();
             assert!(gap >= single_row * 1.8, "wrapped spacing {gap} vs compressed {single_row}");
@@ -1448,9 +1677,9 @@ mod tests {
         // Regression: eight land groups in 1v1 compress below CARD_WIDTH,
         // so adjacent cards overlap. At a shared Y they are coplanar and
         // the depth buffer flickers. Every slot must sit at its own height.
-        let half = board_half_for(&seat_spot(0, 0, 2), 2);
+        let span = row_span(&seat_spot(0, 0, 2), 2, true);
         assert!(
-            bf_spacing_col(8, half) < CARD_WIDTH,
+            bf_spacing_col(8, span) < CARD_WIDTH,
             "precondition: eight back-row groups really do overlap in 1v1",
         );
         let ys: Vec<f32> =
@@ -1604,8 +1833,8 @@ mod tests {
                 }
             }
         }
-        // The outer edge of the 1v1 rows: their centres stop at
-        // DECK_X − CARD_WIDTH/2 (`board_half_for`).
+        // The outer edge of the 1v1 land row, which the hand spreads
+        // beside (the creature row that grows past it is nearer the centre).
         let row_edge = DECK_X;
         let mut last: Option<f32> = None;
         for slot in 0..10 {
@@ -1629,10 +1858,10 @@ mod tests {
         // piles, the exile pile and the face-down hands on the table.
         for n in [2usize, 3, 4, 5, 6] {
             let flat = |p: Vec3| flat_footprint(&Transform::from_translation(p));
-            let mut piles: Vec<(String, Rect)> = vec![("exile".into(), flat(exile_position(n)))];
+            let mut piles: Vec<(String, Rect)> = vec![("exile".into(), flat(exile_position(n, &Spread::default())))];
             for s in 0..n {
                 piles.push((format!("seat {s}'s deck"), flat(deck_position(s, 0, n))));
-                piles.push((format!("seat {s}'s graveyard"), flat(graveyard_position(s, 0, n))));
+                piles.push((format!("seat {s}'s graveyard"), flat(graveyard_position(s, 0, n, &Spread::default()))));
                 for slot in (0..7).filter(|_| s != 0) {
                     let h = hand_card_transform(s, 0, n, slot, 7, 1.0);
                     if h.translation.y < 1.0 {
@@ -1642,7 +1871,7 @@ mod tests {
             }
             for s in 0..n {
                 for slot in 0..2 {
-                    let cmd = flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2));
+                    let cmd = flat_footprint(&command_zone_card_transform(s, 0, n, slot, 2, &Spread::default()));
                     for (what, pile) in &piles {
                         assert!(
                             cmd.intersect(*pile).is_empty(),
@@ -1664,7 +1893,7 @@ mod tests {
     fn a_commander_pair_shows_both_cards() {
         for n in [2usize, 3, 4, 5, 6] {
             for s in 0..n {
-                let [a, b] = [0, 1].map(|slot| command_zone_card_transform(s, 0, n, slot, 2));
+                let [a, b] = [0, 1].map(|slot| command_zone_card_transform(s, 0, n, slot, 2, &Spread::default()));
                 let apart = a.translation.xz().distance(b.translation.xz());
                 let least = if n <= 4 { COMMAND_STEP - 1e-4 } else { CARD_HEIGHT * 0.25 };
                 assert!(apart >= least, "n={n} seat={s}: only {apart:.2} of the second card shows");
@@ -1679,7 +1908,7 @@ mod tests {
     fn a_pair_labels_the_ends_that_show() {
         for n in [2usize, 4] {
             let ends = [0, 1].map(|slot| command_zone_open_end(0, 0, n, slot, 2));
-            let [a, b] = [0, 1].map(|slot| command_zone_card_transform(0, 0, n, slot, 2));
+            let [a, b] = [0, 1].map(|slot| command_zone_card_transform(0, 0, n, slot, 2, &Spread::default()));
             let (top, under) = if a.translation.y > b.translation.y { (0, 1) } else { (1, 0) };
             assert_eq!((ends[top], ends[under]), (-CARD_HEIGHT / 2.0, CARD_HEIGHT / 2.0), "n={n}");
             assert_eq!(command_zone_open_end(0, 0, n, 0, 1), -CARD_HEIGHT / 2.0, "n={n}: a lone card's bottom");
@@ -1691,8 +1920,8 @@ mod tests {
     #[test]
     fn a_full_command_zone_shares_the_lane() {
         for n in [2usize, 4] {
-            let at: Vec<Vec3> = (0..4).map(|slot| command_zone_card_transform(0, 0, n, slot, 4).translation).collect();
-            let pair_span = at[0].xz().distance(command_zone_card_transform(0, 0, n, 1, 2).translation.xz());
+            let at: Vec<Vec3> = (0..4).map(|slot| command_zone_card_transform(0, 0, n, slot, 4, &Spread::default()).translation).collect();
+            let pair_span = at[0].xz().distance(command_zone_card_transform(0, 0, n, 1, 2, &Spread::default()).translation.xz());
             for w in at.windows(2) {
                 assert!(w[0].xz().distance(w[1].xz()) >= CARD_HEIGHT * 0.15, "n={n}: {at:?}");
             }

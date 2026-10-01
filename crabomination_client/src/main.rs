@@ -1187,7 +1187,7 @@ fn setup(
     let cloth = systems::table_cloth::ClothTexture(images.add(systems::table_cloth::cloth_texture()));
     let ground = Rect::from_center_size(Vec2::ZERO, Vec2::splat(90.0));
     commands.spawn((
-        Mesh3d(meshes.add(systems::table_cloth::table_mesh(ground, systems::table_cloth::play_area(0, 2)))),
+        Mesh3d(meshes.add(systems::table_cloth::table_mesh(ground, systems::table_cloth::play_area(0, 2, &Default::default())))),
         MeshMaterial3d(materials.add(systems::table_cloth::cloth_material(TABLE_COLOR, &cloth))),
         GroundPlane,
         // It lies flat under everything; see `systems::shadows`.

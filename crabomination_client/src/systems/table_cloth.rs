@@ -151,10 +151,10 @@ pub fn table_mesh(rect: Rect, area: Rect) -> Mesh {
 
 /// The play area a table of `n_seats` lights: every seat's board, from
 /// `layout::seat_board_outline`.
-pub fn play_area(viewer: usize, n_seats: usize) -> Rect {
+pub fn play_area(viewer: usize, n_seats: usize, spread: &crate::card::Spread) -> Rect {
     (0..n_seats.max(1))
         .map(|seat| {
-            let (min, max) = crate::card::layout::seat_board_outline(seat, viewer, n_seats);
+            let (min, max) = crate::card::layout::seat_board_outline(seat, viewer, n_seats, spread);
             Rect::new(min.x, min.z, max.x, max.z)
         })
         .reduce(|a, b| a.union(b))

@@ -54,7 +54,9 @@ fn toward_seat(seat: usize, strength: f32) -> Color {
 }
 
 /// Keep one tint quad per seat, rebuilt when the seat count or the viewer's
-/// seat changes (the regions are viewer-relative); none without a view.
+/// seat changes (the regions are viewer-relative), or a duel's crowded
+/// creature row moves the graveyard slot (`layout::Spread`); none without a
+/// view.
 pub fn sync_seat_tints(
     mut commands: Commands,
     view: Res<CurrentView>,
@@ -62,9 +64,12 @@ pub fn sync_seat_tints(
     mut materials: ResMut<Assets<StandardMaterial>>,
     cloth: Res<crate::systems::table_cloth::ClothTexture>,
     existing: Query<Entity, With<SeatTint>>,
-    mut built_for: Local<Option<(usize, usize)>>,
+    mut built_for: Local<Option<(usize, usize, crate::card::Spread)>>,
 ) {
-    let key = view.0.as_ref().map(|cv| (cv.players.len(), cv.your_seat));
+    let key = view.0.as_ref().map(|cv| {
+        let n = cv.players.len();
+        (n, cv.your_seat, crate::card::Spread::of(&cv.battlefield, n))
+    });
     if *built_for == key {
         return;
     }
@@ -72,10 +77,10 @@ pub fn sync_seat_tints(
         commands.entity(e).despawn();
     }
     *built_for = key;
-    let Some((n, viewer)) = key else { return };
+    let Some((n, viewer, spread)) = key else { return };
     // Felt, under a pool of light fitted to this table's boards
     // (`table_cloth`).
-    let area = crate::systems::table_cloth::play_area(viewer, n);
+    let area = crate::systems::table_cloth::play_area(viewer, n, &spread);
     for seat in 0..n {
         let r = crate::card::layout::seat_region(seat, viewer, n);
         let c = r.center();
@@ -101,7 +106,7 @@ pub fn sync_seat_tints(
             cull_mode: None,
             ..default()
         });
-        let (min, max) = crate::card::layout::seat_board_outline(seat, viewer, n);
+        let (min, max) = crate::card::layout::seat_board_outline(seat, viewer, n, &spread);
         let board = Rect::new(min.x, min.z, max.x, max.z);
         let outline = crate::card::create_border_mesh(board.width(), board.height(), ZONE_CORNER, ZONE_LINE, 8);
         commands.spawn((
@@ -123,7 +128,7 @@ pub fn sync_seat_tints(
         let rotation = crate::card::back_face_rotation(seat, viewer, n);
         for at in [
             crate::card::deck_position(seat, viewer, n),
-            crate::card::graveyard_position(seat, viewer, n),
+            crate::card::graveyard_position(seat, viewer, n, &spread),
         ] {
             commands.spawn((
                 Mesh3d(slot.clone()),

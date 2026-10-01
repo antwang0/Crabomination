@@ -25,6 +25,38 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## A crowded duel row grows instead of wrapping (2026-10-01) — shipped
+
+Measured with the framing budget (`card::framing`, `--nocapture`) and read
+off layout-harness screenshots of the 1v1 fixture (ten creature groups a
+seat) at 1280x720, 1920x1080 and 2560x1080.
+
+- ✅ **A 1v1 creature row grows out before it wraps.** Past six groups a
+  duel creature row wrapped into a second row a third of a card in front
+  of the first, hiding two thirds of every card behind it — while the
+  window had width to spare. A widened table measured no good: a duel is
+  short of height, and beside its creature band sit the HUD's side columns,
+  so every extra unit of width cost every card its size (+3 units: 129 →
+  123 px at 1920x1080, 76 → 67 at 1280x720). So a row keeps the land row's
+  width while its groups fit, and a crowded one grows out at a finger's
+  gap between cards (`GROW_SPACING`) to ten groups before it wraps. The
+  graveyard, command zone and exile beside it move out with it
+  (`layout::Spread`), and the camera refits for the table that makes —
+  off the main thread, as a fit is ~0.1 s in the unoptimized client — and
+  eases back as the row thins. Viewer card px at 6 / 8 / 10 groups a seat:
+  76 / 63 / 56 at 1280x720, 128 / 117 / 104 at 1920x1080, 137 / 137 / 132
+  at 2560x1080 (`framing::tests::a_crowded_duel_stays_on_screen`). The
+  printed mat, the lit area and the active-seat glow widen with the row.
+- ✅ **Seven land groups keep one line.** The land row stretches 0.2 so a
+  typical board's back row (five land names, a rock, an enchantment) no
+  longer wraps; the decks sit that much further out. Card sizes moved
+  ±1 px, and the viewer's hand no longer covers a wrapped land row.
+- Residual ⏳: past ten groups a row still wraps into the shingle (the
+  harness's `--tokens` board, thirteen groups). A duel's creature band is
+  2.5 cards deep, so a readable second row needs the land row moved out
+  and the camera to pull back further; the land row itself (whose ends are
+  the table's HUD-bound corners) still wraps past seven.
+
 ## Right-click hints, conspire, your decks (2026-09-30) — shipped
 
 Read off layout-harness screenshots: `--hover-card NAME` now hovers a

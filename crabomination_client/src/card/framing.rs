@@ -13,7 +13,7 @@ use bevy::prelude::*;
 
 use super::components::{CARD_HEIGHT, CARD_WIDTH, pile_height};
 use super::layout::{
-    bf_card_transform, command_zone_card_transform, deck_position, exile_position,
+    Spread, bf_card_transform, command_zone_card_transform, deck_position, exile_position,
     graveyard_position, hand_card_transform,
 };
 
@@ -36,9 +36,10 @@ pub fn legacy_pose(n_seats: usize) -> Transform {
 const VIEW_DIRECTION: Vec3 = Vec3::new(0.0, 32.0, 14.0);
 
 /// The camera's resting pose for a table of `n_seats` in a window of
-/// `viewport` logical pixels, its HUD drawn at `ui_scale` (`UiScale`).
-pub fn home_pose(n_seats: usize, viewport: Vec2, ui_scale: f32) -> Transform {
-    fit_pose(n_seats, viewport, ui_scale)
+/// `viewport` logical pixels, its HUD drawn at `ui_scale` (`UiScale`), with
+/// its duel rows as far out as `spread` has grown them.
+pub fn home_pose(n_seats: usize, viewport: Vec2, ui_scale: f32, spread: &Spread) -> Transform {
+    fit_pose(n_seats, viewport, ui_scale, spread)
 }
 
 /// The viewer's hand scale for a window `logical_height` px tall: larger
@@ -139,9 +140,9 @@ fn clear(cards: &[([Vec3; 8], bool)], cam: &Transform, viewport: Vec2, hud: &[Re
 /// out largest wins. Taking the closest distance alone let the view slide
 /// toward the viewer once the near corner had room, growing the viewer's
 /// cards at the far seats' expense.
-pub fn fit_pose(n_seats: usize, viewport: Vec2, ui_scale: f32) -> Transform {
+pub fn fit_pose(n_seats: usize, viewport: Vec2, ui_scale: f32, spread: &Spread) -> Transform {
     let back = VIEW_DIRECTION.normalize();
-    let board = sample_board(n_seats, hand_zoom_for(viewport.y));
+    let board = sample_board(n_seats, hand_zoom_for(viewport.y), spread);
     let cards = fit_cards(&board);
     let references: Vec<[Vec3; 8]> =
         board.iter().filter(|c| c.reference).map(|c| corners(&c.transform, 0.0)).collect();
@@ -285,11 +286,11 @@ fn area(r: Rect) -> f32 {
 /// larger card, the spot further right, and the one nearer the middle of the
 /// window's height. In a duel that is table the board leaves empty; a pod's
 /// table fills the window, and the pile takes its least-used corner.
-pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform) -> StackLane {
+pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform, spread: &Spread) -> StackLane {
     let projector = Projector::new(cam, viewport);
     // The lane is searched for in the right half of the window: only the
     // cards reaching into it can be covered.
-    let board: Vec<Rect> = sample_board(n_seats, hand_zoom_for(viewport.y))
+    let board: Vec<Rect> = sample_board(n_seats, hand_zoom_for(viewport.y), spread)
         .iter()
         .filter_map(|c| projector.rect_of(&corners(&c.transform, c.height)))
         .filter(|r| r.max.x > viewport.x * 0.5)
@@ -372,10 +373,10 @@ pub enum Role {
 /// Groups per seat in the representative board: the harness fixture's six
 /// creatures (two tapped) and seven back-row groups (five land names, a
 /// mana rock, an enchantment), with seven cards in the viewer's hand and
-/// five in each opponent's.
+/// five in each opponent's. A duel whose creature rows have grown past six
+/// groups is sampled with the rows it has ([`Spread`]).
 const CREATURES: usize = 6;
 const TAPPED: [usize; 2] = [1, 4];
-const _: () = assert!(TAPPED[0] != 2 && TAPPED[1] != 2, "slot 2 is the reference card");
 const BACK_GROUPS: usize = 7;
 const VIEWER_HAND: usize = 7;
 const OPP_HAND: usize = 5;
@@ -395,19 +396,22 @@ pub struct Placed {
     pub reference: bool,
 }
 
-/// Every card of the representative board for `n_seats`, from seat 0's chair.
-pub fn sample_board(n_seats: usize, hand_zoom: f32) -> Vec<Placed> {
+/// Every card of the representative board for `n_seats`, from seat 0's chair,
+/// with each duel creature row at least as full as `spread` says it is.
+pub fn sample_board(n_seats: usize, hand_zoom: f32, spread: &Spread) -> Vec<Placed> {
     let flat = |p: Vec3| {
         Transform::from_translation(p).with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
     };
     let card = |seat, role, transform| Placed { seat, role, transform, height: 0.0, reference: false };
     let mut out = Vec::new();
     for seat in 0..n_seats {
-        for slot in 0..CREATURES {
-            let tapped = TAPPED.contains(&slot);
-            let t = bf_card_transform(seat, 0, n_seats, slot, CREATURES, false, tapped);
-            // Slot 2 is the middle untapped creature of a six-card row.
-            out.push(Placed { reference: slot == 2, ..card(seat, Role::Creature, t) });
+        let creatures = CREATURES.max(spread.creatures(seat));
+        // The middle untapped creature of the row: slot 2 of six.
+        let reference = if creatures == CREATURES { 2 } else { creatures / 2 };
+        for slot in 0..creatures {
+            let tapped = TAPPED.contains(&slot) && slot != reference;
+            let t = bf_card_transform(seat, 0, n_seats, slot, creatures, false, tapped);
+            out.push(Placed { reference: slot == reference, ..card(seat, Role::Creature, t) });
         }
         for slot in 0..BACK_GROUPS {
             let t = bf_card_transform(seat, 0, n_seats, slot, BACK_GROUPS, true, false);
@@ -421,13 +425,13 @@ pub fn sample_board(n_seats: usize, hand_zoom: f32) -> Vec<Placed> {
             height: pile_height(LIBRARY),
             ..card(seat, Role::Pile, flat(deck_position(seat, 0, n_seats)))
         });
-        out.push(card(seat, Role::Pile, flat(graveyard_position(seat, 0, n_seats))));
+        out.push(card(seat, Role::Pile, flat(graveyard_position(seat, 0, n_seats, spread))));
         // A commander pair, both cards — a 1v1 Commander game's too.
         for slot in 0..2 {
-            out.push(card(seat, Role::Pile, command_zone_card_transform(seat, 0, n_seats, slot, 2)));
+            out.push(card(seat, Role::Pile, command_zone_card_transform(seat, 0, n_seats, slot, 2, spread)));
         }
     }
-    out.push(card(1, Role::Pile, flat(exile_position(n_seats))));
+    out.push(card(1, Role::Pile, flat(exile_position(n_seats, spread))));
     out
 }
 
@@ -451,7 +455,13 @@ pub struct Budget {
 
 #[cfg(test)]
 pub fn measure(n_seats: usize, viewport: Vec2, cam: &Transform) -> Budget {
-    let board = sample_board(n_seats, hand_zoom_for(viewport.y));
+    measure_spread(n_seats, viewport, cam, &Spread::default())
+}
+
+/// [`measure`] for a board whose duel creature rows are as `spread` has them.
+#[cfg(test)]
+pub fn measure_spread(n_seats: usize, viewport: Vec2, cam: &Transform, spread: &Spread) -> Budget {
+    let board = sample_board(n_seats, hand_zoom_for(viewport.y), spread);
     let window = Rect::from_corners(Vec2::ZERO, viewport);
     let mut content: Option<Rect> = None;
     let mut off_screen = 0;
@@ -547,8 +557,8 @@ mod tests {
             for (w, h) in VIEWPORTS {
                 let vp = Vec2::new(w, h);
                 let scale = auto(vp);
-                let cam = home_pose(seats, vp, scale);
-                let lane = stack_lane(seats, vp, scale, &cam);
+                let cam = home_pose(seats, vp, scale, &Spread::default());
+                let lane = stack_lane(seats, vp, scale, &cam, &Spread::default());
                 let p = Projector::new(&cam, vp);
                 let rects: Vec<Rect> =
                     (0..3).map(|i| p.card_rect(&lane.card(i), 0.0).expect("in front of the camera")).collect();
@@ -561,7 +571,7 @@ mod tests {
                 // Camera-facing: its projected width is the size the search chose.
                 assert!(rects[0].width() >= 70.0 * scale, "{seats} seats {vp}: {}px", rects[0].width());
                 if seats == 2 {
-                    let board = sample_board(seats, hand_zoom_for(vp.y));
+                    let board = sample_board(seats, hand_zoom_for(vp.y), &Spread::default());
                     let covered: f32 = board
                         .iter()
                         .filter_map(|c| p.card_rect(&c.transform, c.height))
@@ -578,7 +588,7 @@ mod tests {
     #[test]
     fn budget() {
         print("legacy fixed camera", &table(|n, _| legacy_pose(n)));
-        let fitted = table(|n, vp| home_pose(n, vp, auto(vp)));
+        let fitted = table(|n, vp| home_pose(n, vp, auto(vp), &Spread::default()));
         print("fitted camera", &fitted);
         // Floors: what this layout measured when it landed, less a few
         // percent. Before the fit, the fixed camera gave 121 px (1v1) and
@@ -620,15 +630,38 @@ mod tests {
         }
     }
 
+    /// A duel whose creature rows have grown keeps them on screen and clear
+    /// of the HUD: the camera refits for them, pulling back only as far as it
+    /// has to (run with `--nocapture` for the sizes). Six groups a seat is the
+    /// resting board, which the rows keep the land row's width for.
+    #[test]
+    fn a_crowded_duel_stays_on_screen() {
+        println!("crowded duel: viewer px / opp px per creature groups a seat");
+        println!("window       6         8         10        12");
+        for (w, h) in VIEWPORTS {
+            let vp = Vec2::new(w, h);
+            let mut line = format!("{w:>4}x{h:<4}  ");
+            for groups in [6usize, 8, 10, 12] {
+                let spread = Spread::uniform(groups);
+                let cam = home_pose(2, vp, auto(vp), &spread);
+                let cards = fit_cards(&sample_board(2, hand_zoom_for(h), &spread));
+                assert!(clear(&cards, &cam, vp, &hud_rects(vp, 2, auto(vp))), "{groups} groups at {vp}");
+                let b = measure_spread(2, vp, &cam, &spread);
+                line.push_str(&format!("{:>4.0}/{:<4.0}  ", b.viewer_card_px, b.opp_card_px));
+            }
+            println!("{line}");
+        }
+    }
+
     /// The home pose keeps the whole board on screen and clear of the HUD.
     #[test]
     fn home_pose_clears_the_hud() {
         for seats in [2, 3, 4] {
             for (w, h) in VIEWPORTS {
                 let vp = Vec2::new(w, h);
-                let cards = fit_cards(&sample_board(seats, hand_zoom_for(h)));
+                let cards = fit_cards(&sample_board(seats, hand_zoom_for(h), &Spread::default()));
                 assert!(
-                    clear(&cards, &home_pose(seats, vp, auto(vp)), vp, &hud_rects(vp, seats, auto(vp))),
+                    clear(&cards, &home_pose(seats, vp, auto(vp), &Spread::default()), vp, &hud_rects(vp, seats, auto(vp))),
                     "{seats} seats at {vp}",
                 );
             }

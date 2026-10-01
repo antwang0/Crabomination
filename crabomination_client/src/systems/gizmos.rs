@@ -111,7 +111,8 @@ pub fn draw_active_seat_glow(view: Res<CurrentView>, time: Res<Time>, mut glow: 
     if n <= 2 && cv.active_player == cv.your_seat {
         return;
     }
-    let (min, max) = crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n);
+    let spread = crate::card::Spread::of(&cv.battlefield, n);
+    let (min, max) = crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n, &spread);
     // Gentle breathing so the outline reads as "live" without pulsing
     // hard enough to pull the eye during someone else's long turn.
     let breathe = 0.75 + 0.25 * (time.elapsed_secs() * 1.6).sin();

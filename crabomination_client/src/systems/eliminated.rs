@@ -23,11 +23,13 @@ const SHROUD_Y: f32 = 1.0;
 /// battlefield rows.
 pub fn shroud_rect(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, Vec3) {
     use crate::card::{CARD_HEIGHT, CARD_WIDTH};
-    let (mut min, mut max) = crate::card::layout::seat_board_outline(seat, viewer, n_seats);
+    let (mut min, mut max) = crate::card::layout::seat_board_outline(seat, viewer, n_seats, &crate::card::Spread::default());
     // The command zone's two cards (a commander pair) bound it.
-    let command = |slot| crate::card::command_zone_card_transform(seat, viewer, n_seats, slot, 2).translation;
+    // A pod's piles don't move with its rows (`Spread` is a duel's).
+    let spread = crate::card::Spread::default();
+    let command = |slot| crate::card::command_zone_card_transform(seat, viewer, n_seats, slot, 2, &spread).translation;
     let piles = [
-        crate::card::graveyard_position(seat, viewer, n_seats),
+        crate::card::graveyard_position(seat, viewer, n_seats, &spread),
         crate::card::deck_position(seat, viewer, n_seats),
         command(0),
         command(1),
@@ -312,12 +314,12 @@ mod tests {
         for viewer in 0..4 {
             for seat in (0..4).filter(|s| *s != viewer) {
                 let rect = shroud_rect(seat, viewer, 4);
-                let (bmin, bmax) = crate::card::layout::seat_board_outline(seat, viewer, 4);
+                let (bmin, bmax) = crate::card::layout::seat_board_outline(seat, viewer, 4, &crate::card::Spread::default());
                 assert!(inside(bmin, rect) && inside(bmax, rect), "board of {seat}");
                 // Both cards of a commander pair.
-                let command = |s, slot| crate::card::command_zone_card_transform(s, viewer, 4, slot, 2).translation;
+                let command = |s, slot| crate::card::command_zone_card_transform(s, viewer, 4, slot, 2, &crate::card::Spread::default()).translation;
                 for p in [
-                    crate::card::graveyard_position(seat, viewer, 4),
+                    crate::card::graveyard_position(seat, viewer, 4, &crate::card::Spread::default()),
                     crate::card::deck_position(seat, viewer, 4),
                     command(seat, 0),
                     command(seat, 1),

@@ -105,7 +105,8 @@ pub fn init_shared_assets(
 
     // One graveyard pile per seat. Hidden until non-empty.
     for seat in 0..n_seats {
-        let pos = graveyard_position(seat, viewer_seat, n_seats);
+        // Where it lies with no row grown; `sync_game_visuals` moves it.
+        let pos = graveyard_position(seat, viewer_seat, n_seats, &super::layout::Spread::default());
         let rot = back_face_rotation(seat, viewer_seat, n_seats);
         commands
             .spawn((
@@ -129,7 +130,7 @@ pub fn init_shared_assets(
     // something is exiled; clicking it opens the exile browser, which is
     // otherwise only reachable by knowing the `V` key.
     {
-        let pos = exile_position(n_seats);
+        let pos = exile_position(n_seats, &super::layout::Spread::default());
         commands
             .spawn((
                 Mesh3d(card_mesh_handle.clone()),
