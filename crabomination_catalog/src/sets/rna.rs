@@ -4961,9 +4961,9 @@ pub fn biomancers_familiar() -> CardDefinition {
     }
 }
 
-/// Incubation Druid — {1}{G} 0/2 Elf Druid. {T}: add one mana of any color
-/// (any type a land could produce, approximated); three instead while it has a
-/// +1/+1 counter. {3}{G}{G}: Adapt 3.
+/// Incubation Druid — {1}{G} 0/2 Elf Druid. {T}: add one mana of any type a
+/// land you control could produce (CR 106.7); three of that type instead while
+/// it has a +1/+1 counter. {3}{G}{G}: Adapt 3.
 pub fn incubation_druid() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -4972,7 +4972,7 @@ pub fn incubation_druid() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::IfPred {
+                    pool: ManaPayload::AnyTypeALandYouControlCouldProduce(Value::IfPred {
                         pred: Box::new(Predicate::EntityMatches {
                             what: Selector::This,
                             filter: R::WithCounter(CounterType::PlusOnePlusOne),

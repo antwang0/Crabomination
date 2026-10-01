@@ -287,11 +287,8 @@ pub fn command_beacon() -> CardDefinition {
     }
 }
 
-/// Reflecting Pool — Land. "{T}: Add one mana of any color a land you control
-/// could produce." Wired faithfully via `ManaPayload::AnyColorYouCouldProduce`
-/// (the controller-side mirror used by Star Compass): the legal-color set is
-/// the union of basic-land types you control, falling back to colorless if you
-/// control no basic-typed land.
+/// Reflecting Pool — Land. "{T}: Add one mana of any type that a land you
+/// control could produce" (CR 106.7, `AnyTypeALandYouControlCouldProduce`).
 pub fn reflecting_pool() -> CardDefinition {
     CardDefinition {
         name: "Reflecting Pool",
@@ -300,7 +297,7 @@ pub fn reflecting_pool() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyColorYouCouldProduce,
+                pool: ManaPayload::AnyTypeALandYouControlCouldProduce(Value::ONE),
             },
             ..Default::default()
         }],

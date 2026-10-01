@@ -542,7 +542,7 @@ pub fn defiant_khenra() -> CardDefinition {
 }
 
 /// Naga Vitalist — {1}{G} 1/2 Snake Druid. {T}: Add one mana of any type a land
-/// you control could produce (modeled via `AnyColorYouCouldProduce`).
+/// you control could produce (CR 106.7).
 pub fn naga_vitalist() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::ManaPayload;
@@ -560,7 +560,7 @@ pub fn naga_vitalist() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyColorYouCouldProduce,
+                pool: ManaPayload::AnyTypeALandYouControlCouldProduce(crate::card::Value::ONE),
             },
             ..Default::default()
         }],

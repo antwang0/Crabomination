@@ -1646,6 +1646,41 @@ fn cr_106_7_colors_a_gate_could_produce() {
     assert_eq!(pool.amount(Color::Green), 0);
 }
 
+/// CR 106.7 — Reflecting Pool's "any type that a land you control could
+/// produce" reads the lands' own abilities: Command Tower beside it makes the
+/// commander's identity (green here) available, a Wastes makes {C}, and two
+/// Reflecting Pools alone make nothing.
+#[test]
+fn cr_106_7_reflecting_pool_reads_your_lands_abilities() {
+    use crabomination::mana::Color;
+    let tap = |g: &mut GameState, id: CardId| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap");
+        drain_stack(g);
+    };
+    let mut g = commander_game();
+    let pool = g.add_card_to_battlefield(0, catalog::reflecting_pool());
+    let other = g.add_card_to_battlefield(0, catalog::reflecting_pool());
+    tap(&mut g, pool);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "two Pools alone produce nothing");
+    g.add_card_to_battlefield(0, catalog::command_tower());
+    tap(&mut g, other);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "the Tower's identity colour");
+
+    let mut g = commander_game();
+    let pool = g.add_card_to_battlefield(0, catalog::reflecting_pool());
+    g.add_card_to_battlefield(0, catalog::wastes());
+    tap(&mut g, pool);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "{{C}} is a type a land could produce");
+}
+
 // ── Primitives for Eldrazi Incursion (M3C, Ulalek) ─────────────────────────
 
 /// CR 105.2 — Selective Obliteration: a permanent survives only if it's

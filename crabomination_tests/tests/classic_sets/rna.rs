@@ -2454,6 +2454,7 @@ fn ravager_wurm_riot_and_fight() {
 fn incubation_druid_counter_gated_mana() {
     let mut g = two_player_game();
     let druid = g.add_card_to_battlefield(0, catalog::incubation_druid());
+    g.add_card_to_battlefield(0, catalog::forest());
     g.clear_sickness(druid);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
