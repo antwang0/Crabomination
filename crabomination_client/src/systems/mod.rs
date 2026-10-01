@@ -26,6 +26,7 @@ pub mod frame_pacing;
 pub mod perf_hud;
 pub mod shadows;
 pub mod impact;
+pub mod inspector;
 pub mod input_guard;
 pub mod kb_cursor;
 pub mod keyword_label;

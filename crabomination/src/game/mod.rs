@@ -1250,6 +1250,9 @@ pub struct HandAffordances {
     /// than cast. See `GameState::may_play_playable_lands_on`.
     pub may_play_lands: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
+    /// `(permanent, ability index)` for each non-mana activated ability behind
+    /// `activatable_permanents` — which of a permanent's abilities are live.
+    pub activatable_abilities: Vec<(CardId, usize)>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
     /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit
     /// Guides' exile-for-mana). Surfaced so the client/bot can offer the

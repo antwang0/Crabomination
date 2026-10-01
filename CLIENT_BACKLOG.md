@@ -25,6 +25,36 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## The card inspector (2026-10-01) — shipped
+
+`systems::inspector`, read off layout-harness screenshots of the 1v1 fixture
+(`--hover-card "Walking Ballista"`, `"Luminarch Aspirant"`) at 1920x1080.
+
+- ✅ **The hover preview says what a permanent is now.** Under the printed
+  text, past an "on the battlefield" rule: its body against the printed one
+  and why ("6/4 (printed 2/2): +1/+1 from counters, +3/+1 from effects"),
+  keywords it has that the card doesn't and printed ones it lost, the
+  overwritten types and colours (the three "Now:" notes, moved here), its
+  counters and loyalty, what is equipping or enchanting it and what it is
+  attached to, who controls it when that isn't its owner, combat (attacking
+  whom, blocking what), tapped, summoning sick (on its controller's turn
+  only), goaded, detained, won't untap — green for better than printed, red
+  for worse, grey for state. A permanent as printed, doing nothing, adds
+  nothing. That state sat on chips and coins, or in the Alt list in the
+  corner, which stays for the long tail (shields, regeneration, sagas).
+- ✅ **And what the viewer can do with it.** "▶" lines for each activated
+  ability the engine would accept right now, attacking, blocking (naming the
+  attackers it can block) and turning it face up. The abilities are engine
+  truth: the view now carries `activatable_abilities` — `(permanent,
+  ability index)` from the same dry-run probes as `activatable_permanents`,
+  which is derived from it — so Walking Ballista with a counter and no mana
+  offers its ping and not its `{4}`.
+- Residual ⏳: loyalty abilities and abilities a static grants
+  (`printed_count + n`) aren't probed, so they get no "▶" (the activatable
+  highlight has the same gap); "from effects" isn't split by source (anthem,
+  Aura, pump); the Alt peek doesn't show the inspector; hand and stack cards
+  get nothing new.
+
 ## The stack panel clears the board (2026-10-01) — shipped
 
 Measured by `framing::tests::the_stack_lane_hangs_clear_of_the_board`
@@ -1019,10 +1049,10 @@ indicator + click target. Slims the 2-D chip strip.
   when `PlayerView.commanders` non-empty.
 
 **Tier 1**
-- X-ray card inspector ⏳ — extend Hover-Dwell Card Preview (below) to
-  render engine-truth rules text from `CardDefinition` plus current
-  modifications (layer P/T, granted keywords, attachments, counter net,
-  legal actions). Differentiator vs XMage/MTGO/Arena.
+- X-ray card inspector ✅ — the hover preview's "on the battlefield"
+  section: the body against the printed one, granted and lost keywords,
+  attachments, counters, control, combat state, and the engine-checked
+  actions (2026-10-01, see the top).
 - Stop settings + auto-pass ✅ — per-step Auto/Stop/Skip overrides on
   the clickable phase chart (`systems/phase_bar.rs::StopConfig`), wired
   into `auto_advance_p0`; right-click = pass-until-step. Persisted in

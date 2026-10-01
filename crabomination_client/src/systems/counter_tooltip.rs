@@ -1453,7 +1453,7 @@ fn humanize_keyword_debug(kw: &crabomination::card::Keyword) -> String {
     out
 }
 
-fn sort_key(kind: CounterType) -> u8 {
+pub(crate) fn sort_key(kind: CounterType) -> u8 {
     match kind {
         CounterType::PlusOnePlusOne => 0,
         CounterType::MinusOneMinusOne => 1,
@@ -1466,7 +1466,7 @@ fn sort_key(kind: CounterType) -> u8 {
     }
 }
 
-fn counter_label(kind: CounterType) -> &'static str {
+pub(crate) fn counter_label(kind: CounterType) -> &'static str {
     match kind {
         CounterType::PlusOnePlusOne => "+1/+1",
         CounterType::MinusOneMinusOne => "-1/-1",

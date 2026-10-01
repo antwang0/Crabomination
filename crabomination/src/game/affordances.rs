@@ -495,6 +495,18 @@ impl GameState {
     ///
     /// [`activatable_permanents`]: Self::activatable_permanents
     fn activatable_permanents_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.activatable_abilities_on(template, seat, false).into_iter().map(|(id, _)| id).collect()
+    }
+
+    /// `(permanent, ability index)` for each non-mana activated ability
+    /// `seat` could activate right now, by the same dry run as
+    /// [`activatable_permanents`] — every ability with `every`, else only
+    /// the first of each permanent (all that one needs, and the probes are
+    /// the cost). The client's card inspector names which of a permanent's
+    /// abilities are live.
+    ///
+    /// [`activatable_permanents`]: Self::activatable_permanents
+    fn activatable_abilities_on(&self, template: &GameState, seat: usize, every: bool) -> Vec<(CardId, usize)> {
         // Snapshot (id, [ability probes]) so the borrow of `self.battlefield`
         // is released before the cloning probes run.
         let perms: Vec<(CardId, Vec<AbilityProbe>)> = self
@@ -532,7 +544,7 @@ impl GameState {
 
         let mut out = Vec::new();
         for (id, ability_effects) in &perms {
-            let any = ability_effects.iter().enumerate().any(|(idx, (is_mana, targeted))| {
+            let live = ability_effects.iter().enumerate().filter(|(idx, (is_mana, targeted))| {
                 // Skip mana abilities — they don't use the stack and aren't a
                 // meaningful instant-speed play (see method doc).
                 if *is_mana {
@@ -544,15 +556,13 @@ impl GameState {
                 };
                 Self::would_accept_on(template, GameAction::ActivateAbility {
                     card_id: *id,
-                    ability_index: idx,
+                    ability_index: *idx,
                     target,
                     additional_targets: Vec::new(),
                     x_value: None, mode: None,
                 })
             });
-            if any {
-                out.push(*id);
-            }
+            out.extend(live.map(|(idx, _)| (*id, idx)).take(if every { usize::MAX } else { 1 }));
         }
         out
     }
@@ -1819,6 +1829,11 @@ impl GameState {
             return HandAffordances::default();
         }
         let template = self.affordance_probe_template();
+        // Every live ability, for the client's inspector; the permanents
+        // carrying one fall out of it, in the same order.
+        let activatable_abilities = self.activatable_abilities_on(&template, seat, true);
+        let mut activatable_permanents: Vec<CardId> = activatable_abilities.iter().map(|(id, _)| *id).collect();
+        activatable_permanents.dedup();
         HandAffordances {
             castable: self.castable_hand_cards_on(&template, seat),
             // Pitchable is a pure structural filter (no dry-run), so it
@@ -1850,7 +1865,8 @@ impl GameState {
             free_castable: self.free_castable_hand_cards_on(&template, seat),
             may_play_castable: self.may_play_castable_on(&template, seat),
             may_play_lands: self.may_play_playable_lands_on(&template, seat),
-            activatable_permanents: self.activatable_permanents_on(&template, seat),
+            activatable_permanents,
+            activatable_abilities,
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),
             turn_up_able: self.turn_up_able_permanents_on(&template, seat),

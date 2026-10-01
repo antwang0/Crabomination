@@ -327,6 +327,7 @@ mod tests {
             room_castable_hand: vec![],
             room_unlockable: vec![],
             activatable_permanents: vec![],
+            activatable_abilities: vec![],
             hand_activatable: vec![],
             morphable_hand: vec![],
             turn_up_able: vec![],

@@ -7,6 +7,7 @@ use crate::card::{
 };
 use crate::game::GraveyardBrowserState;
 use crate::net_plugin::CurrentView;
+use crate::systems::inspector::NowLine;
 use crate::theme::{self, UiFonts};
 
 /// Tracks a pending top-card reveal popup.
@@ -834,9 +835,12 @@ pub fn peek_popup(
 #[derive(Component)]
 pub struct HoverCardPreview {
     path: String,
-    /// The info lines under the art. Live ones (commander damage dealt, type
-    /// overrides) change while the same card stays hovered.
+    /// The info lines under the art. Live ones (commander damage dealt)
+    /// change while the same card stays hovered.
     info: Vec<(String, bool)>,
+    /// The inspector's lines under them: what the permanent is now
+    /// (`inspector::now_lines`).
+    now: Vec<NowLine>,
 }
 
 pub(crate) const HOVER_PREVIEW_WIDTH: f32 = 230.0;
@@ -876,63 +880,6 @@ pub(crate) fn card_screen_rect(camera: &Camera, eye: &GlobalTransform, ui_scale:
     rect
 }
 
-/// Live characteristic-override notes for a battlefield permanent whose
-/// computed state diverges from its printed card (continuous effects —
-/// Ichthyomorphosis, Heliod's Punishment, Turn to Frog). Appended below the
-/// printed `hover_info_lines` so the player sees what the permanent *is now*,
-/// not just what it was printed as. Returns dimmed `(text, true)` reminder
-/// lines; empty when nothing diverges.
-fn live_override_lines(
-    name: &str,
-    lost_all_abilities: bool,
-    creature_subtypes: &[crabomination::card::CreatureType],
-    colors: &[crabomination::mana::Color],
-) -> Vec<(String, bool)> {
-    let mut out = Vec::new();
-    if lost_all_abilities {
-        out.push(("Now: all abilities removed".to_string(), true));
-    }
-    // Computed creature subtypes that differ from the printed ones (a
-    // type-changing aura / animation). Only note it when there's an actual
-    // change so vanilla creatures stay quiet.
-    let printed = crabomination::catalog::lookup_by_name(name);
-    let printed_types = printed
-        .as_ref()
-        .map(|d| d.subtypes.creature_types.clone())
-        .unwrap_or_default();
-    if !creature_subtypes.is_empty() && creature_subtypes != printed_types.as_slice() {
-        let line = creature_subtypes
-            .iter()
-            .map(|t| format!("{t:?}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        out.push((format!("Now: {line}"), true));
-    }
-    // Computed colors that differ from the printed card's colors (a
-    // color-changing effect — Turn to Frog / Snakeform become blue/green).
-    if let Some(def) = printed.as_ref() {
-        let mut printed_colors = def.cost.colors();
-        for c in &def.color_indicator {
-            if !printed_colors.contains(c) {
-                printed_colors.push(*c);
-            }
-        }
-        if colors != printed_colors.as_slice() {
-            let label = if colors.is_empty() {
-                "colorless".to_string()
-            } else {
-                colors
-                    .iter()
-                    .map(|c| format!("{c:?}").to_lowercase())
-                    .collect::<Vec<_>>()
-                    .join(" and ")
-            };
-            out.push((format!("Now: {label}"), true));
-        }
-    }
-    out
-}
-
 /// Rules-text lines for the hover preview's info panel, by card name.
 /// Since cards render art-only (no printed text box), this is where a player
 /// learns what a hovered card actually does: its printed Oracle text
@@ -942,15 +889,10 @@ fn live_override_lines(
 /// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
 /// the name isn't in the catalog (fictional placeholders).
 fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
-    let Some(mut def) = crabomination::catalog::lookup_by_name(name) else {
+    // A double-faced card shown on its back face reads as the back face.
+    let Some(def) = crate::systems::inspector::printed_face(name) else {
         return Vec::new();
     };
-    // A double-faced card shown on its back face reads as the back face.
-    if def.back_face.as_ref().is_some_and(|back| back.name == name)
-        && let Some(back) = def.back_face.take()
-    {
-        def = *back;
-    }
     match crate::card::oracle::printed(name) {
         Some(faces) => printed_lines(faces, &def),
         None => phrased_lines(&def),
@@ -1296,7 +1238,7 @@ pub fn hover_card_preview(
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>,
     ui_scale: Res<UiScale>,
     mut dwell: Local<HoverDwell>,
-    mut info_cache: Local<Option<(String, Option<String>, Option<crabomination::card::CardId>, Vec<(String, bool)>)>>,
+    mut info_cache: Local<Option<PreviewNotes>>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
     let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview, &ComputedNode)>| {
@@ -1337,15 +1279,15 @@ pub fn hover_card_preview(
     // The notes change only with the hovered card or the game view: built
     // once per either, not every frame the pointer rests — each build looks
     // the card up in the catalog (a full `CardDefinition`) twice.
-    if let Some((cached_path, cached_name, cached_id, info)) = info_cache.as_ref()
-        && *cached_path == path
-        && *cached_name == name
-        && *cached_id == card_id
+    if let Some(notes) = info_cache.as_ref()
+        && notes.path == path
+        && notes.name == name
+        && notes.card_id == card_id
         && !view.is_changed()
         && !card_names.is_changed()
     {
-        let info = info.clone();
-        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, fade_from);
+        let (info, now) = (notes.info.clone(), notes.now.clone());
+        place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, now, fade_from);
         return;
     }
     let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
@@ -1359,29 +1301,31 @@ pub fn hover_card_preview(
     {
         info.push(("Double-faced — hold Alt to see both faces.".to_string(), true));
     }
-    // Append live characteristic-override notes (type-changing / ability-
-    // stripping continuous effects) from the current battlefield view.
-    if let Some(pv) = permanent {
-        info.extend(live_override_lines(
-            &pv.name,
-            pv.lost_all_abilities,
-            &pv.creature_subtypes,
-            &pv.colors,
-        ));
-    }
     // CR 903.10a — a hovered commander (battlefield or command zone) lists
     // the commander damage it has dealt each other player.
     if let (Some(id), Some(name), Some(cv)) = (card_id, name.as_deref(), view.0.as_ref()) {
         info.extend(crate::systems::commander_ui::commander_hover_lines(cv, id, name));
     }
-    *info_cache = Some((path.clone(), name, card_id, info.clone()));
-    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, fade_from);
+    // What a permanent is now, and what the viewer can do with it.
+    let now = permanent.zip(view.0.as_ref()).map(|(pv, cv)| crate::systems::inspector::now_lines(cv, pv)).unwrap_or_default();
+    *info_cache = Some(PreviewNotes { path: path.clone(), name, card_id, info: info.clone(), now: now.clone() });
+    place_hover_preview(&mut commands, &mut existing, &asset_server, &ui_fonts, &ui_scale, window, target, path, info, now, fade_from);
+}
+
+/// The notes last built for the hover preview, and the card they were built
+/// for.
+pub struct PreviewNotes {
+    path: String,
+    name: Option<String>,
+    card_id: Option<crabomination::card::CardId>,
+    info: Vec<(String, bool)>,
+    now: Vec<NowLine>,
 }
 
 /// Put the hover preview for the card art at `path` with its `info` notes
-/// beside `target` (UI px) — moving the one that is up if it already shows
-/// exactly this, rebuilding it otherwise. A preview built fades in from
-/// `fade_from` when there is one.
+/// and the inspector's `now` lines beside `target` (UI px) — moving the one
+/// that is up if it already shows exactly this, rebuilding it otherwise. A
+/// preview built fades in from `fade_from` when there is one.
 #[allow(clippy::too_many_arguments)]
 fn place_hover_preview(
     commands: &mut Commands,
@@ -1393,19 +1337,21 @@ fn place_hover_preview(
     target: Rect,
     path: String,
     info: Vec<(String, bool)>,
+    now: Vec<NowLine>,
     fade_from: Option<f32>,
 ) {
     let shown = existing.single_mut().ok();
-    let same = shown.as_ref().is_some_and(|(_, _, marker, _)| marker.path == path && marker.info == info);
+    let same = shown.as_ref().is_some_and(|(_, _, marker, _)| marker.path == path && marker.info == info && marker.now == now);
     // The column's height, so the anchor keeps all of it on screen: measured
     // once it has been laid out, estimated the frame it is built (a line
     // wraps about every 30 characters at this width).
     let height = match &shown {
         Some((.., computed)) if same && computed.size().y > 0.0 => computed.size().y * computed.inverse_scale_factor(),
-        _ if info.is_empty() => HOVER_PREVIEW_HEIGHT,
+        _ if info.is_empty() && now.is_empty() => HOVER_PREVIEW_HEIGHT,
         _ => {
             let rows = |text: &str| (text.chars().count() as f32 / 30.0).ceil().max(1.0);
-            HOVER_PREVIEW_HEIGHT + 16.0 + info.iter().map(|(text, _)| rows(text) * 15.0 + 3.0).sum::<f32>()
+            let texts = info.iter().map(|(text, _)| text).chain(now.iter().map(|l| &l.text));
+            HOVER_PREVIEW_HEIGHT + 16.0 + texts.map(|text| rows(text) * 15.0 + 3.0).sum::<f32>()
         }
     };
 
@@ -1438,7 +1384,7 @@ fn place_hover_preview(
             ..default()
         },
         Pickable::IGNORE,
-        HoverCardPreview { path: path.clone(), info: info.clone() },
+        HoverCardPreview { path: path.clone(), info: info.clone(), now: now.clone() },
         crate::systems::game_ui::InGameRoot,
         // Over a decision modal, whose cards preview too.
         GlobalZIndex(theme::layer::HOVER_PREVIEW),
@@ -1460,7 +1406,7 @@ fn place_hover_preview(
                 ImageNode { image: texture, ..default() },
                 Pickable::IGNORE,
             ));
-            if !info.is_empty() {
+            if !info.is_empty() || !now.is_empty() {
                 col.spawn((
                     Node {
                         width: Val::Px(HOVER_PREVIEW_WIDTH),
@@ -1474,14 +1420,9 @@ fn place_hover_preview(
                     Pickable::IGNORE,
                 ))
                 .with_children(|panel| {
-                    for (text, is_reminder) in info {
-                        let color = if is_reminder {
-                            theme::TEXT_SECONDARY
-                        } else {
-                            theme::TEXT_PRIMARY
-                        };
-                        // A line with a cost in it ("{2}{T}: …") draws
-                        // its mana as pips, wrapping between words.
+                    // A line with a cost in it ("{2}{T}: …") draws its mana
+                    // as pips, wrapping between words.
+                    let mut text_line = |text: String, color: Color| {
                         if crate::mana_text::has_pips(&text) {
                             panel.spawn((
                                 Node { width: Val::Percent(100.0), ..default() },
@@ -1489,12 +1430,21 @@ fn place_hover_preview(
                                 Pickable::IGNORE,
                             ));
                         } else {
-                            panel.spawn((
-                                Text::new(text),
-                                ui_fonts.tf(12.0),
-                                TextColor(color),
-                                Pickable::IGNORE,
-                            ));
+                            panel.spawn((Text::new(text), ui_fonts.tf(12.0), TextColor(color), Pickable::IGNORE));
+                        }
+                    };
+                    let printed = !info.is_empty();
+                    for (text, is_reminder) in info {
+                        text_line(text, if is_reminder { theme::TEXT_SECONDARY } else { theme::TEXT_PRIMARY });
+                    }
+                    // The inspector, under a rule and a heading: the board's
+                    // state, not the card's text.
+                    if !now.is_empty() {
+                        if printed {
+                            text_line("─── on the battlefield ───".to_string(), theme::ACCENT_GOLD);
+                        }
+                        for l in now {
+                            text_line(l.text, l.tone.color());
                         }
                     }
                 });
@@ -2384,8 +2334,8 @@ pub fn reveal_popup(
 #[cfg(test)]
 mod tests {
     use super::{
-        hover_info_lines, live_override_lines, phrased_lines, preview_beside, HOVER_PREVIEW_HEIGHT,
-        HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH, HoverDwell,
+        hover_info_lines, phrased_lines, preview_beside, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN,
+        HOVER_PREVIEW_WIDTH, HoverDwell,
     };
 
     /// The preview opens once the pointer has rested on a card, fading in;
@@ -2407,7 +2357,6 @@ mod tests {
         assert_eq!(dwell.step(a, 2.31), Some(true));
     }
     use bevy::math::Vec2;
-    use crabomination::card::CreatureType;
 
     /// A card the Oracle table holds reads as printed: the type line dimmed,
     /// the rules text in full.
@@ -2445,32 +2394,6 @@ mod tests {
                 && t.contains("sorcery speed only")),
             "expected a graveyard / sorcery-speed annotated line, got {lines:?}"
         );
-    }
-
-    #[test]
-    fn override_lines_note_fish_and_lost_abilities() {
-        // Serra Angel turned into a 0/1 Fish with no abilities (Ichthyomorphosis).
-        let lines = live_override_lines(
-            "Serra Angel",
-            true,
-            &[CreatureType::Fish],
-            &[crabomination::mana::Color::Blue],
-        );
-        assert!(lines.iter().any(|(t, _)| t.contains("abilities removed")));
-        assert!(lines.iter().any(|(t, _)| t.contains("Fish")));
-        assert!(lines.iter().any(|(t, _)| t.contains("blue")));
-    }
-
-    #[test]
-    fn override_lines_quiet_for_unchanged_creature() {
-        // A Grizzly Bears still a Bear with its abilities → no override notes.
-        let lines = live_override_lines(
-            "Grizzly Bears",
-            false,
-            &[CreatureType::Bear],
-            &[crabomination::mana::Color::Green],
-        );
-        assert!(lines.is_empty(), "no notes when nothing diverges");
     }
 
     const PW: f32 = HOVER_PREVIEW_WIDTH;

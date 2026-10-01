@@ -681,6 +681,29 @@ fn compute_hand_affordances_matches_individual_methods() {
     assert!(empty.castable.is_empty() && empty.kickable.is_empty());
 }
 
+/// The per-ability list says which of a permanent's abilities are live, for
+/// the client's card inspector: Walking Ballista with one counter and no mana
+/// can ping (remove a counter) but not grow ({4}); with four mana, both.
+#[test]
+fn activatable_abilities_name_the_live_ones() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let ballista = g.add_card_to_battlefield(0, catalog::walking_ballista());
+    g.battlefield_find_mut(ballista).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+
+    let a = g.compute_hand_affordances(0);
+    assert_eq!(a.activatable_abilities, vec![(ballista, 0)], "remove a counter: ping");
+    assert_eq!(a.activatable_permanents, vec![ballista]);
+
+    g.players[0].mana_pool.add_colorless(4);
+    let a = g.compute_hand_affordances(0);
+    assert_eq!(a.activatable_abilities, vec![(ballista, 0), (ballista, 1)], "and {{4}}: grow");
+    assert_eq!(a.activatable_permanents, vec![ballista], "one entry per permanent");
+}
+
 /// Conceding (CR 104.3a) eliminates the player, removes their objects, and
 /// runs state-based actions so the surviving opponent wins. It works
 /// regardless of priority and is a no-op once already eliminated / over.
