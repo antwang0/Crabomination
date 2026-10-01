@@ -135,6 +135,7 @@ pub mod net_eval;
 pub mod lobby;
 mod decision_log;
 mod replay;
+pub mod undo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tcp;
 pub mod view;
@@ -725,6 +726,12 @@ fn run_match_inner(
     let mut clock_left: Vec<Option<Duration>> =
         (0..n).map(|i| chess_clock.filter(|_| bots[i].is_none())).collect();
     let mut clock_since: Option<(usize, Instant)> = None;
+    // Take-backs: an undo point before each deliberate human action
+    // (`undo`). Kept here, beside the state, never inside it.
+    let mut history = undo::UndoHistory::default();
+    // Seats paying for a cast that stopped for them to tap mana: their
+    // taps belong to that cast's point (`undo`).
+    let mut paying: Vec<bool> = vec![false; n];
 
     loop {
         if drive_bots(
@@ -737,6 +744,11 @@ fn run_match_inner(
         ) {
             broadcast_match_over(&state, &seat_tx, &spectator_tx);
             return capture_outcome(&state);
+        }
+        // The bots may have moved the game into a new turn: points older
+        // than the one before it go.
+        if history.evict_before(state.turn_number) {
+            send_undo_points(&history, &seat_tx);
         }
 
         if human_seats == 0 && live_spectators == 0 {
@@ -903,7 +915,7 @@ fn run_match_inner(
                             &seat_tx,
                         );
                         let accepted =
-                            handle_action(&mut state, actor, action, &seat_tx, &spectator_tx);
+                            handle_action(&mut state, actor, action, &seat_tx, &spectator_tx).accepted();
                         rope = None;
                         if accepted {
                             last_progress_at = Instant::now();
@@ -981,6 +993,8 @@ fn run_match_inner(
                     let _ = ch.tx.send(ServerMsg::YourSeat(seat));
                     let _ = ch.tx.send(ServerMsg::MatchStarted);
                     let _ = ch.tx.send(ServerMsg::View(Box::new(view::project(&state, seat))));
+                    // Its take-backs survive the drop.
+                    let _ = ch.tx.send(ServerMsg::UndoPoints(history.points_for(seat)));
                     if let Some(fwd) = attach_forward_tx.as_ref() {
                         spawn_seat_forwarder(seat, seat_epoch[seat], ch.rx, fwd.clone());
                     }
@@ -1030,9 +1044,40 @@ fn run_match_inner(
 
         match msg {
             ClientMsg::JoinMatch { .. } => {}
-            ClientMsg::SubmitAction(action) => {
-                let accepted = handle_action(&mut state, seat, action, &seat_tx, &spectator_tx);
-                if accepted {
+            msg @ (ClientMsg::SubmitAction(_) | ClientMsg::SubmitAuto(_)) => {
+                let (action, deliberate) = match msg {
+                    ClientMsg::SubmitAction(action) => (action, true),
+                    ClientMsg::SubmitAuto(action) => (action, false),
+                    _ => unreachable!("matched above"),
+                };
+                // A human's deliberate action keeps an undo point: the state
+                // just before it. Not a concession, which may end the game,
+                // and not a tap paying for a cast that stopped for it.
+                let tap = undo::is_mana_activation(&state, &action);
+                let keeps_point = deliberate
+                    && bots[seat].is_none()
+                    && !matches!(action, GameAction::Concede)
+                    && !(tap && paying[seat]);
+                let point =
+                    keeps_point.then(|| history.record(seat, undo::action_label(&state, &action), state.clone()));
+                let applied = handle_action(&mut state, seat, action, &seat_tx, &spectator_tx);
+                match applied {
+                    Applied::Suspended => paying[seat] = true,
+                    Applied::Accepted if !tap => paying[seat] = false,
+                    _ => {}
+                }
+                // A rejected action changed nothing. A suspended cast tapped
+                // its forced pips, so its point stays: it is how the player
+                // gets those lands back.
+                if let Some(id) = point {
+                    if applied == Applied::Rejected {
+                        history.discard(id);
+                    } else {
+                        history.evict_before(state.turn_number);
+                        send_undo_points(&history, &seat_tx);
+                    }
+                }
+                if applied.accepted() {
                     last_progress_at = Instant::now();
                     rope = None;
                     publish_snapshot(&state, &snapshot_sink);
@@ -1041,6 +1086,28 @@ fn run_match_inner(
                     broadcast_match_over(&state, &seat_tx, &spectator_tx);
                     return capture_outcome(&state);
                 }
+            }
+            ClientMsg::RequestUndo { to } => {
+                // Consent between players is TODO's step 4; until then a
+                // take-back needs the table to be this seat and bots.
+                if human_seats > 1 {
+                    report_error(seat, "take-backs with another player at the table aren't supported yet", &seat_tx);
+                    continue;
+                }
+                let Some((point, before)) = history.take(seat, to) else {
+                    report_error(seat, "nothing to take back", &seat_tx);
+                    continue;
+                };
+                state.rewind_to(before);
+                for bot in bots.iter_mut().flatten() {
+                    bot.rewound();
+                }
+                paying.fill(false);
+                rope = None;
+                last_progress_at = Instant::now();
+                broadcast_rewind(&state, seat, &point.label, &seat_tx, &spectator_tx);
+                send_undo_points(&history, &seat_tx);
+                publish_snapshot(&state, &snapshot_sink);
             }
             ClientMsg::Debug(debug) => {
                 if apply_debug(&mut state, seat, debug, &seat_tx, &spectator_tx) {
@@ -1163,7 +1230,7 @@ fn drive_bots(
             // action (wrong priority, illegal move, etc.) must not count as
             // progress — otherwise the loop burns the entire budget retrying
             // the same failing action.
-            if handle_action(state, seat, action, seat_tx, spectator_tx) {
+            if handle_action(state, seat, action, seat_tx, spectator_tx).accepted() {
                 publish_snapshot(state, snapshot_sink);
                 *last_progress_at = Instant::now();
                 if state.is_game_over() {
@@ -1343,15 +1410,30 @@ fn broadcast_update(
     }
 }
 
-/// Apply one action and broadcast results. Returns `true` if the action was
-/// accepted (state changed), `false` if it was rejected.
+/// What became of an action `handle_action` applied.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Applied {
+    Accepted,
+    /// `ManualTapRequired`: the cast stopped for the player to tap mana, with
+    /// its forced pips already tapped — rejected, but the state changed.
+    Suspended,
+    Rejected,
+}
+
+impl Applied {
+    fn accepted(self) -> bool {
+        self == Applied::Accepted
+    }
+}
+
+/// Apply one action and broadcast results.
 fn handle_action(
     state: &mut GameState,
     seat: usize,
     action: GameAction,
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
-) -> bool {
+) -> Applied {
     // CR 104.3a — a concession is legal at any time, by the conceding seat,
     // regardless of whose priority it is. Route it straight to the *sending*
     // seat (so a client can't concede on another's behalf) instead of through
@@ -1359,11 +1441,11 @@ fn handle_action(
     if matches!(action, GameAction::Concede) {
         let events = state.concede(seat);
         if events.is_empty() {
-            return false; // already eliminated / game already over
+            return Applied::Rejected; // already eliminated / game already over
         }
         let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
         broadcast_update(state, &wire_events, seat_tx, spectator_tx);
-        return true;
+        return Applied::Accepted;
     }
 
     // CR 723.5 — while a player is controlled, their controller makes every
@@ -1372,7 +1454,7 @@ fn handle_action(
     if seat != expected {
         let err = format!("seat {seat} may not act now (expected seat {expected})");
         report_error(seat, &err, seat_tx);
-        return false;
+        return Applied::Rejected;
     }
     // Prepared against the pre-action state (the shadow bot needs the
     // position the human decided in), committed only if the action
@@ -1383,14 +1465,15 @@ fn handle_action(
             decision_log::commit(shadow_line);
             let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
             broadcast_update(state, &wire_events, seat_tx, spectator_tx);
-            true
+            Applied::Accepted
         }
         Err(e) => {
             // `ManualTapRequired` tapped the cost's forced colored sources
             // before stopping for the player's generic choice — that's a
             // real state change, so push an updated view (the normal error
             // path sends none) so the client sees the tapped sources.
-            if matches!(e, crate::game::GameError::ManualTapRequired { .. }) {
+            let suspended = matches!(e, crate::game::GameError::ManualTapRequired { .. });
+            if suspended {
                 for (i, maybe_tx) in seat_tx.iter().enumerate() {
                     if let Some(tx) = maybe_tx {
                         let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
@@ -1401,8 +1484,40 @@ fn handle_action(
                 }
             }
             report_error(seat, &e.to_string(), seat_tx);
-            false
+            if suspended { Applied::Suspended } else { Applied::Rejected }
         }
+    }
+}
+
+/// Send each human seat its undo points.
+fn send_undo_points(history: &undo::UndoHistory, seat_tx: &[Option<mpsc::Sender<ServerMsg>>]) {
+    for (seat, tx) in seat_tx.iter().enumerate() {
+        if let Some(tx) = tx {
+            let _ = tx.send(ServerMsg::UndoPoints(history.points_for(seat)));
+        }
+    }
+}
+
+/// Tell every seat and spectator the match was rewound — `by` took back
+/// `label` — and send each the view of the restored state.
+fn broadcast_rewind(
+    state: &GameState,
+    by: usize,
+    label: &str,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) {
+    replay::log_rewind(by, label);
+    let rewound = ServerMsg::Rewound { by, label: label.to_string() };
+    for (i, maybe_tx) in seat_tx.iter().enumerate() {
+        if let Some(tx) = maybe_tx {
+            let _ = tx.send(rewound.clone());
+            let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
+        }
+    }
+    for tx in spectator_tx {
+        let _ = tx.send(rewound.clone());
+        let _ = tx.send(ServerMsg::View(Box::new(view::project_spectator(state))));
     }
 }
 
@@ -1687,6 +1802,131 @@ mod tests {
         for _ in 0..3 {
             let _ = seat.rx.recv();
         }
+    }
+
+    /// The next message `f` picks, skipping the rest; a few seconds at most.
+    fn next_where(c: &ClientChannel, f: impl Fn(&ServerMsg) -> bool) -> ServerMsg {
+        loop {
+            let msg = c.rx.recv_timeout(Duration::from_secs(5)).expect("the server answers");
+            if f(&msg) {
+                return msg;
+            }
+        }
+    }
+
+    fn undo_labels(c: &ClientChannel) -> Vec<String> {
+        match next_where(c, |m| matches!(m, ServerMsg::UndoPoints(_))) {
+            ServerMsg::UndoPoints(points) => points.into_iter().map(|p| p.label).collect(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn rewound_view(c: &ClientChannel) -> (String, crate::net::ClientView) {
+        let label = match next_where(c, |m| matches!(m, ServerMsg::Rewound { .. })) {
+            ServerMsg::Rewound { by: 0, label } => label,
+            other => panic!("expected seat 0's take-back, got {other:?}"),
+        };
+        match next_where(c, |m| matches!(m, ServerMsg::View(_))) {
+            ServerMsg::View(v) => (label, *v),
+            _ => unreachable!(),
+        }
+    }
+
+    /// End to end against a bot: a deliberate action keeps an undo point, a
+    /// take-back rewinds the match to before it and says so, and an
+    /// automatic action (`SubmitAuto`) keeps none.
+    #[test]
+    fn a_take_back_against_a_bot_rewinds_the_match() {
+        let mut state = two_player_game();
+        let forest = state.add_card_to_hand(0, catalog::forest());
+        let mountain = state.add_card_to_hand(0, catalog::mountain());
+        let (s0, c0) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Bot(Box::new(HeuristicBot::new()))])
+        });
+        drain_initial(&c0);
+
+        c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(forest))).unwrap();
+        assert_eq!(undo_labels(&c0), ["played Forest"]);
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        let (label, view) = rewound_view(&c0);
+        assert_eq!(label, "played Forest");
+        assert!(view.players[0].hand.iter().any(|h| h.id() == forest), "the Forest is back in hand");
+        assert!(view.battlefield.is_empty());
+        assert!(undo_labels(&c0).is_empty(), "the point went with the take-back");
+
+        c0.tx.send(ClientMsg::SubmitAuto(GameAction::PlayLand(mountain))).unwrap();
+        next_where(&c0, |m| matches!(m, ServerMsg::Update { .. }));
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        match next_where(&c0, |m| matches!(m, ServerMsg::ActionError(_))) {
+            ServerMsg::ActionError(e) => assert_eq!(e, "nothing to take back", "an automatic action keeps no point"),
+            _ => unreachable!(),
+        }
+        drop(c0);
+        handle.join().unwrap();
+    }
+
+    /// A cast stopped for the player to tap mana (`ManualTapRequired`) has
+    /// tapped its forced sources: it keeps its point, the player's taps
+    /// paying for it keep none, and one take-back untaps them all — the
+    /// half-paid cast Esc used to leave behind.
+    #[test]
+    fn a_half_paid_cast_can_be_taken_back() {
+        let mut state = two_player_game();
+        let forests = [state.add_card_to_battlefield(0, catalog::forest()), state.add_card_to_battlefield(0, catalog::forest())];
+        let mountain = state.add_card_to_battlefield(0, catalog::mountain());
+        for _ in 0..3 {
+            state.add_card_to_battlefield(0, catalog::mountain());
+        }
+        state.add_card_to_battlefield(0, catalog::island());
+        let wurm = state.add_card_to_hand(0, catalog::craw_wurm());
+        let (s0, c0) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Bot(Box::new(HeuristicBot::new()))])
+        });
+        drain_initial(&c0);
+
+        let cast = GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None };
+        c0.tx.send(ClientMsg::SubmitAction(cast)).unwrap();
+        assert_eq!(undo_labels(&c0), ["cast Craw Wurm"], "the stopped cast keeps its point");
+        // A tap paying for it is part of the cast: no point of its own.
+        let tap = GameAction::ActivateAbility {
+            card_id: mountain, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        };
+        c0.tx.send(ClientMsg::SubmitAction(tap)).unwrap();
+        next_where(&c0, |m| matches!(m, ServerMsg::Update { .. }));
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        let (label, view) = rewound_view(&c0);
+        assert_eq!(label, "cast Craw Wurm", "one take-back undoes the cast and its taps");
+        for land in forests.into_iter().chain([mountain]) {
+            assert!(!view.battlefield.iter().find(|p| p.id == land).unwrap().tapped, "the lands untap");
+        }
+        assert_eq!(view.players[0].mana_pool.total(), 0, "and no mana floats");
+        drop(c0);
+        handle.join().unwrap();
+    }
+
+    /// Until consent lands (TODO's step 4), a take-back needs a table of
+    /// this seat and bots.
+    #[test]
+    fn a_take_back_with_another_player_is_refused() {
+        let mut state = two_player_game();
+        let forest = state.add_card_to_hand(0, catalog::forest());
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)]));
+        drain_initial(&c0);
+        drain_initial(&c1);
+        c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(forest))).unwrap();
+        assert_eq!(undo_labels(&c0), ["played Forest"]);
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        match next_where(&c0, |m| matches!(m, ServerMsg::ActionError(_))) {
+            ServerMsg::ActionError(e) => assert!(e.contains("aren't supported"), "{e}"),
+            _ => unreachable!(),
+        }
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
     }
 
     #[test]
@@ -2187,6 +2427,7 @@ mod tests {
             matches!(c0.rx.recv().unwrap(), ServerMsg::Update { .. }),
             "match still live for seat 0 after seat 1 dropped",
         );
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::UndoPoints(_)), "and the land's undo point");
 
         // Reconnect seat 1 with a brand-new channel.
         let (s1b, c1b) = seat_pair();

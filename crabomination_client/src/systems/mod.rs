@@ -42,5 +42,6 @@ pub mod token_badge;
 pub mod quality;
 pub mod scroll;
 pub mod settings_menu;
+pub mod takeback;
 pub mod ui;
 pub mod ui_card_hover;

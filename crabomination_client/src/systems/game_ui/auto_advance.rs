@@ -30,10 +30,14 @@ pub fn auto_advance_p0(
     mut ff: ResMut<FastForward>,
     stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
     blocking: Res<BlockingState>,
+    hold: Res<crate::systems::takeback::RewindHold>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
     if cv.game_over.is_some() { return; }
+    // A take-back put the player back in a window they had acted in: leave
+    // it to them, or it is passed straight away.
+    if hold.holds(outbox.deliberate_count()) { return; }
     // Any pending decision suspends normal step advancement. If it's our
     // decision, the dedicated decision UI submits the answer; if it's an
     // opponent's, we just wait. Spamming `PassPriority` every frame here
@@ -235,6 +239,6 @@ pub fn auto_advance_p0(
         || ((bookkeeping_step || cv.active_player != your_seat) && !has_instant_play);
 
     if should_advance {
-        outbox.submit(GameAction::PassPriority);
+        outbox.submit_auto(GameAction::PassPriority);
     }
 }

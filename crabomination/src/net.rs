@@ -65,7 +65,20 @@ pub enum ClientMsg {
     /// current view) if the token is valid and the match still alive.
     Resume { token: String },
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
+    /// A human seat's deliberate action: the server keeps an undo point
+    /// before it (`server::undo`).
     SubmitAction(GameAction),
+    /// A game action the client made on the player's behalf — an auto-pass,
+    /// an auto-answered prompt, a held cast re-submitted as mana arrives.
+    /// Applied exactly like [`Self::SubmitAction`] but keeps no undo point:
+    /// auto-pass alone would otherwise fill the history in a turn.
+    SubmitAuto(GameAction),
+    /// Take back: rewind the match to just before one of the sender's undo
+    /// points ([`ServerMsg::UndoPoints`]) — `None` for the latest. Every
+    /// seat's later actions go with it. Against bots only, for now; with
+    /// another human at the table the server answers with an `ActionError`
+    /// (consent is TODO's step 4).
+    RequestUndo { to: Option<u64> },
     /// In-match chat: relayed to every seat and spectator as
     /// [`ServerMsg::Chat`] stamped with the sender's seat + display name.
     /// The server sanitizes (trims, strips control characters, clamps
@@ -252,6 +265,25 @@ pub enum ServerMsg {
     /// how long it has to come back before it concedes), came back, or
     /// didn't.
     Notice { text: String },
+    /// Seat `by` took back `label`: the match was rewound to just before
+    /// that action. A full `View` follows; the client lays the table out
+    /// afresh rather than animating time backwards, and drops whatever it
+    /// was in the middle of.
+    Rewound { by: usize, label: String },
+    /// The receiving seat's undo points, oldest first — what
+    /// [`ClientMsg::RequestUndo`] can go back to. Sent whenever the list
+    /// changes.
+    UndoPoints(Vec<UndoPointView>),
+}
+
+/// One place a seat can take back to: just before its action `label`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoPointView {
+    pub id: u64,
+    /// What the action was: "cast Lightning Bolt", "declared blockers".
+    pub label: String,
+    pub turn: u32,
+    pub step: TurnStep,
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────

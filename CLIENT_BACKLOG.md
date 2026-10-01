@@ -25,6 +25,36 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Take-backs against bots (2026-10-01) — shipped
+
+TODO "Engine — Rollback / Undo system", step 1. Read off layout-harness
+screenshots of a live fixture match (`--take-back play|undo`).
+
+- ✅ **Undo (Z), and a button under Auto-pass naming what it takes back.**
+  The server keeps an undo point before each of your deliberate actions
+  (`server::undo`; auto-pass and auto-answers keep none) and rewinds the
+  whole match to it, bots' later actions included. The bots forget their
+  per-step bookkeeping. A cast that stopped for you to tap mana is undone
+  whole, its taps with it — the half-paid cast Esc used to leave tapped on
+  the server.
+- ✅ **The client survives a view that goes backwards** (`systems::takeback`).
+  The table is laid out afresh, each card straight to its place. These are
+  dropped:
+  - a target pick;
+  - a cast held for mana;
+  - blocks it thought were declared;
+  - an End Turn still fast-forwarding;
+  - open pickers, decision modals.
+
+  Auto-pass holds the restored window until you act, and the log says
+  "⟲ You took back: …".
+- Residual ⏳ (TODO steps 2–5):
+  - the coin / die rolls and the bots' randomness aren't pinned, so an undo
+    can fish for a different flip or reply;
+  - the log and match stats keep the undone branch's lines;
+  - no take-backs with another human at the table;
+  - no list for jumping back several at once.
+
 ## One decision picker (2026-10-01) — shipped
 
 `systems/decision_ui/` (was one 4,310-line `decision_ui.rs`; now 3,460 over
@@ -997,9 +1027,8 @@ Cross-references the detailed entries below where one exists.
   the footer offers a "Let resolve ▶" button while the viewer holds
   priority (else "Waiting for <name>…"). Hidden items show the cardback.
   Remaining ⏳: hover a tile → large preview, click → scroll the log.
-- ⏳ **Undo / mana-tap rollback** — see "Engine — Rollback / Undo system
-  (plan)"; the minimal client slice (un-tap floated mana before a cast
-  commits) is worth shipping ahead of the full plan.
+- ✅ **Undo / mana-tap rollback** — take-backs against bots, a half-paid
+  cast included (2026-10-01, see the top).
 - 🟡 **Battlefield organization at scale** — ✅ identical tokens cascade
   into piles with a ×N count chip (`creature_card_transform` +
   `token_badge.rs`); same-name lands already stacked. ✅ Pods seat two to
@@ -1129,10 +1158,11 @@ indicator + click target. Slims the 2-D chip strip.
   first-spell tax / energy. Reuse `counter_coins.rs` palette.
 
 ### Undo / Take-Back
-A "request take-back" action the opponent can approve would reduce frustration
-from misclicks, especially during the targeting flow. **Full plan now lives at
-"Engine — Rollback / Undo system (plan)"** (snapshot-based, four phases;
-Phase 4 is this UI).
+✅ Against bots (2026-10-01, see the top). ⏳ Between players: a "request
+take-back" the opponent approves — TODO's step 4. **Full plan now lives at
+"Engine — Rollback / Undo system (plan)"** (snapshot-based; re-planned
+2026-10-01 against the server and client as mapped, five steps, the first
+being undo against bots with this UI).
 
 ### Responsive Stack Display
 ✅ The panel sits where the stack lane's fit kept room for it, clear of the

@@ -1803,6 +1803,24 @@ pub fn cancel_pickers_on_escape(
     if !esc.owns(crate::systems::esc::EscSurface::Picker) {
         return;
     }
+    close_pickers(
+        &mut alt_cast, &mut helper_tap, &mut spree_cast, &mut split_cast, &mut pay_times, &mut ability_menu,
+        &mut hand_menu,
+    );
+}
+
+/// Close every open picker and menu (Esc, and a take-back, which threw away
+/// the moment they were opened in).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn close_pickers(
+    alt_cast: &mut crate::game::AltCastState,
+    helper_tap: &mut crate::game::HelperTapState,
+    spree_cast: &mut crate::game::SpreeCastState,
+    split_cast: &mut crate::game::SplitCastState,
+    pay_times: &mut crate::game::PayTimesState,
+    ability_menu: &mut crate::game::AbilityMenuState,
+    hand_menu: &mut super::hand_menu::HandMenuState,
+) {
     alt_cast.pending = None;
     alt_cast.from_command_zone = false;
     helper_tap.pending = None;

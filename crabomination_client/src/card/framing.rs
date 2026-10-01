@@ -80,16 +80,16 @@ pub fn hud_rects(viewport: Vec2, n_seats: usize, ui_scale: f32) -> [Rect; 6] {
         // second row at `player_panel_width`.
         Rect::new(0.0, 0.0, player_panel_width(w), 100.0),
         // The left control column under it: the phase chart, then the
-        // action buttons (Pass, End Turn, Next Turn, Auto-pass; the
-        // occasional ones are in the Esc menu). High on the left edge, where
-        // the table is narrow in the view: in the near-left corner these
-        // buttons cost a pod's cards 88 → 99 px at 1920x1080.
+        // action buttons (Pass, End Turn, Next Turn, Auto-pass, Undo with
+        // its caption; the occasional ones are in the Esc menu). High on the
+        // left edge, where the table is narrow in the view: in the near-left
+        // corner these buttons cost a pod's cards 88 → 99 px at 1920x1080.
         Rect::new(0.0, 100.0, 146.0, 346.0),
-        Rect::new(0.0, 346.0, 180.0, 516.0),
+        Rect::new(0.0, 346.0, 180.0, 562.0),
         // The prompt line under the buttons, four lines of it; a longer
         // prompt runs over the table while it's up. It costs a pod's cards
         // 47 → 46 px at 1280x720 and nothing at 1920x1080 or larger.
-        Rect::new(0.0, 516.0, 180.0, 600.0),
+        Rect::new(0.0, 562.0, 180.0, 646.0),
         // Opponent panel, top-right, with the game log hanging under it.
         Rect::new(w - 460.0, 0.0, w, opp_panel_h),
         Rect::new(w - 292.0, opp_panel_h, w, opp_panel_h + 436.0),

@@ -264,6 +264,11 @@ pub trait Bot: Send {
     /// (`recommend::play_one_game_traced`), done by the server for its bot
     /// seats. Default: nothing to push.
     fn push_seat_flags(&self, _player: &mut crate::player::Player) {}
+
+    /// The match was rewound (a player's take-back, `server::undo`): drop
+    /// whatever the bot remembers of the branch that is gone — the step it
+    /// last acted in, a combat declaration it made. Default: nothing kept.
+    fn rewound(&mut self) {}
 }
 
 /// A bot's step, with an optional settled state — the pre-committed result of
@@ -3135,6 +3140,16 @@ impl Default for HeuristicBot {
 }
 
 impl Bot for HeuristicBot {
+    /// The per-step bookkeeping: a rewind can land back in a step it already
+    /// acted in, and a stale "already declared" there would skip combat.
+    fn rewound(&mut self) {
+        self.last_step_key = None;
+        self.attackers_declared = false;
+        self.blocks_declared = false;
+        self.reveal_commit = None;
+        self.optional_yes_this_step = 0;
+    }
+
     /// A scored bot pushes all three seat flags; the uniform control pushes
     /// none (`Pilot::Uniform`'s convention in the ladder drivers).
     fn push_seat_flags(&self, player: &mut crate::player::Player) {

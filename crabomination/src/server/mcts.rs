@@ -1205,6 +1205,10 @@ impl MctsBot {
 }
 
 impl Bot for MctsBot {
+    fn rewound(&mut self) {
+        self.fallback.rewound();
+    }
+
     /// Only the player-slot polarity flag: the search's candidates come from
     /// the scored picker, so it self-targets without it, while a search seat
     /// has never carried `smart_tap` (`recommend::play_one_game_traced`'s push).

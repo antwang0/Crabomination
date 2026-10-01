@@ -19306,6 +19306,18 @@ impl GameState {
         result
     }
 
+    /// Rewind this game to `snapshot`, an earlier clone of it — a player's
+    /// take-back (`server::undo`). Everything is the snapshot's except the
+    /// decider: a clone carries a fresh one of the same kind, and swapping
+    /// that in would wipe a live one mid-script — the same swap
+    /// `perform_action` makes when it restores its checkpoint on a rejected
+    /// action. The RNG comes back with the rest, so a rewound shuffle or draw
+    /// comes out the same.
+    pub fn rewind_to(&mut self, mut snapshot: GameState) {
+        std::mem::swap(&mut snapshot.decider, &mut self.decider);
+        *self = snapshot;
+    }
+
     /// A `suspend_signal` still set when an action returns with NOTHING pending
     /// is a stranded suspension, and it is not inert: the next
     /// `continue_*_resolution` takes whatever is in that field and turns it into

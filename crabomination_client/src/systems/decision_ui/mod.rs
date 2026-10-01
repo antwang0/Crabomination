@@ -444,11 +444,11 @@ pub fn spawn_decision_ui(
             let standing = auto_answers.0.get(&(*source, description.clone())).copied();
             if paying_for_this {
                 if let Some(outbox) = &outbox {
-                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
+                    outbox.submit_auto(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
                 }
             } else if let Some(answer) = standing {
                 if let Some(outbox) = &outbox {
-                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
+                    outbox.submit_auto(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
                     log.push_event(
                         format!(
                             "Auto-answered \"{description}\": {} (set via Always)",
@@ -651,7 +651,7 @@ pub fn spawn_decision_ui(
             // without a modal, logged like an auto-answered trigger.
             if let Some(answer) = auto_answers.commander_redirect(*commander) {
                 if let Some(outbox) = &outbox {
-                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
+                    outbox.submit_auto(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
                     log.push_event(
                         format!(
                             "Auto-answered: {name} {} (set via Always)",

@@ -377,6 +377,9 @@ fn main() {
         .init_resource::<systems::game_ui::life_ticker::LifeTicker>()
         .insert_resource(LifeHistory::default())
         .insert_resource(FastForward::default())
+        .init_resource::<systems::takeback::Takeback>()
+        .init_resource::<systems::takeback::RewindHold>()
+        .init_resource::<systems::takeback::RewindSnap>()
         .insert_resource(TargetingState::default())
         .insert_resource(game::LegalTargets::default())
         .insert_resource(game::PendingModalCast::default())
@@ -433,6 +436,7 @@ fn main() {
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
                 layout_harness::hover_card_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::hold_alt_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::take_back_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::zoom_on_card_for_screenshot
                     .after(crate::systems::camera_zoom::camera_zoom)
                     .run_if(in_state(AppState::InGame)),
@@ -582,6 +586,19 @@ fn main() {
             Update,
             systems::kb_cursor::handle_keyboard_cursor_input
                 .before(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Take-backs: a rewind resets the client and clears the table before
+        // auto-pass or the visual sync see the restored view; the Undo
+        // button and `Z` ask for one.
+        .add_systems(
+            Update,
+            (
+                systems::takeback::apply_rewinds.before(GameLogicSet),
+                systems::takeback::request_undo,
+                systems::takeback::update_undo_button,
+                systems::takeback::snap_rebuilt_table.after(sync_game_visuals),
+            )
                 .run_if(in_state(AppState::InGame)),
         )
         // Game logic: auto-advance → player input

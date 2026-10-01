@@ -379,6 +379,8 @@ impl LobbyManager {
             | ClientMsg::ListSpectatable
             | ClientMsg::SpectateMatch { .. }
             | ClientMsg::SubmitAction(_)
+            | ClientMsg::SubmitAuto(_)
+            | ClientMsg::RequestUndo { .. }
             | ClientMsg::Debug(_) => LobbyOutcome::default(),
         }
     }

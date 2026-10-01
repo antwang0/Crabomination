@@ -652,35 +652,239 @@ read there (see PERF's forty-third pass and candidate (-13)). Any narrowing
 of it is a rules-correctness argument first and a perf change second.
 
 
-### Phase 2 — engine history ring
-- ⏳ `UndoHistory { ring: VecDeque<(UndoPoint, Box<GameState>)> }` on the
-  server-side game session (not inside `GameState` — snapshots must not
-  contain the history). Push at decision boundaries: before each accepted
-  human `GameAction` and before each `Decision` answer. `UndoPoint` carries
-  seat + monotonic id + a human label ("cast Lightning Bolt", "declared
-  blockers") for the UI.
-- ⏳ Cap (e.g. 32 entries) and measure real `GameState` sizes; if memory
-  matters, serialize+compress entries older than the last few.
+### Phases 2–5 — player take-back (plan, 2026-10-01)
 
-### Phase 3 — server protocol + consent
-- ⏳ Wire actions: `RequestUndo { to: UndoPointId }` /
-  `RespondUndo { accept }` + a pending-request broadcast. On accept:
-  swap in the snapshot, bump a view generation, re-broadcast full per-seat
-  views (the existing per-seat projection path is the resync mechanism).
-- ⏳ Policy: single-player undo is unconditional and instant. Multiplayer
-  requires every opponent's consent. Bot policy: auto-accept (configurable
-  later). Optionally restrict to "within the current priority window /
-  before new hidden information was revealed" as a server setting.
-- **Hidden-information stance (documented, not solved):** information a
-  player already saw stays seen (the casual-play standard). The Phase-0
-  seeded RNG guarantees a restored pre-shuffle state re-shuffles
-  identically, so undo cannot be used to fish randomness; it *can* still
-  be used to act on glimpsed information — consent is the mitigation.
+Re-planned against the code as it stands (server and client mapped
+2026-10-01); the old Phase 2–4 sketch is folded in. Phases 0/1 are the
+mechanism. What is left is where snapshots live, what makes one, who may
+rewind, what a rewind may *not* leak, and how the client survives a view
+that goes backwards.
 
-### Phase 4 — client UX
-- ⏳ Undo button + keybind, greyed when no eligible `UndoPoint`; opponent
-  banner with accept/decline; game-log entry ("Eric took back: cast …").
-  Supersedes the bare "Undo / Take-Back" stub under Client — UX.
+**What a take-back is.** You rewind the game to just before one of *your*
+recent deliberate actions. Everything after it is discarded, every seat's
+actions included (a bot's block, an opponent's response). Against bots it
+is instant. With two or more humans the others must agree. You can only take
+back your own actions. Time spent on the clock stays spent.
+
+#### The shape (decided)
+
+- **The history lives on the match thread, beside the state, not in it.**
+  A match is `run_match_inner`'s locals (`server/mod.rs:548`). Bots run on
+  that same thread (`drive_bots`, `mod.rs:1145`), so a rewind can't race a
+  bot. Add an `UndoHistory` local beside `bots` / `rope`: a ring of
+  `(UndoPoint, GameState)`. A snapshot is cheap. A `GameState` clone is a
+  ~1.6 KB copy plus refcount bumps (cards are `Arc<CardData>`, the big
+  groups are CoW, PERF `(-143)`), and a group is deep-copied only when the
+  live state next writes it. So the ring costs about what the game has
+  changed since its oldest point. Measure RSS over a long game in step 1.
+  `UndoPoint { id: u64 (monotonic), seat, label ("cast Lightning Bolt",
+  "declared blockers", "tapped Mountain"), turn, step, events_at: u64 }`.
+  `events_at` counts the events broadcast so far; the client cuts its log
+  and stats back to it.
+- **A point is taken before each *deliberate* action from a human seat.**
+  Auto-pass would otherwise fill the ring in a turn
+  (`auto_advance_p0` passes every bookkeeping window). So the client sends
+  automatic actions as a new `ClientMsg::SubmitAuto(GameAction)`, which
+  takes no point: auto-advance passes, auto-answered prompts ("Always",
+  the floating-mana confirm), and `drive_pending_mana_cast`'s re-submits.
+  The server rope's forced pass is automatic too. Everything else is
+  `SubmitAction` and takes a point.
+  - A rejected action pops its point (the Phase-1 checkpoint already
+    restored the state). The exception is `ManualTapRequired`, which leaves
+    forced pips tapped and mana floating (`game/mod.rs:19283`), so its
+    point stays.
+  - That closes today's half-paid-cast hole: Esc clears only the client's
+    `PendingManaCast` (`net_plugin.rs:733`), and the server keeps the
+    tapped lands and the floating mana. With the point kept, undo walks
+    back the manual taps one at a time, then the cast attempt, lands
+    untapped. This is the "minimal mana-tap slice" CLIENT_BACKLOG wanted
+    first.
+  - The ring keeps the current and previous turn's points, capped at 64.
+- **Rewinding** (`ClientMsg::RequestUndo { to: Option<u64> }`, `None` = your
+  latest point):
+  - **Validate:** the point is the requester's, the game isn't over
+    (`MatchOver` already deletes the resume token), and no request is
+    pending.
+  - **Restore:** a new `GameState::rewind_to(&mut self, snap)`. It shares
+    the checkpoint restore in `perform_action` and **keeps the live
+    decider** (Phase 1's lesson: the snapshot holds a blank one).
+  - **Trim the history:** drop the point and everything after it, so the
+    next Z goes one further back.
+  - **Reset bots:** a new `Bot::rewound(&mut self)`, default no-op.
+    `HeuristicBot` clears `last_step_key` / `attackers_declared` /
+    `blocks_declared` / `reveal_commit` / `optional_yes_this_step`
+    (`bot.rs:3051`); `MctsBot` forwards it to its fallback.
+  - **Restart the rope.**
+  - **Broadcast** a new `ServerMsg::Rewound { by, label, events_at }`, then a
+    full `View` to every seat and spectator. The TCP outbox collapses and
+    drops `View`/`Update` under load (`tcp.rs:118-131`), so `Rewound` goes
+    on the never-dropped path, like `MatchStarted`.
+  - **Mark** the replay (`CRAB_REPLAY_DIR`) and decision logs, and republish
+    the snapshot sink.
+- **The view carries the undo state.** `view::project` sees only the
+  `GameState`, so `broadcast_update` fills a new `ClientView.undo` after
+  projecting:
+  - the viewer's own latest points (`id`, `label`, `turn`, `step`), up to 10;
+  - whether undo is allowed;
+  - any pending request and whether this seat must answer it.
+
+#### What a rewind must not leak
+
+- **Randomness is already pinned.** The RNG (one `u64`, cloned with the
+  state) and library order are restored, so a rewound shuffle or draw comes
+  out the same. You can't re-roll; you can act on what you've already seen,
+  which is the casual standard. Three holes break that pin:
+  - **Coin flips and die rolls are rolled on the client** (`rand::random`
+    in `decision_ui`'s randomizer handler), so undo plus re-flip fishes
+    for heads. For human seats the server must roll them from
+    `state.rng`; the button just asks.
+  - **Bots aren't deterministic.** `HeuristicBot`'s tie-break jitter uses
+    the thread RNG (`set_jitter_seed` is never called in a match), and
+    MCTS rollouts use `rand::rng()` (`mcts.rs:578`). So undo-and-redo
+    fishes for a better bot reply (its blocks, its counterspell). Seed
+    each live-match bot decision from (match seed, turn, step, state
+    action counter): the same state gets the same reply. Ladder and bench
+    drivers keep their own seeding, so no PERF or ladder number moves.
+  - **Information seen while the action played stays seen.** The request,
+    and the log line, say what the rewind crosses, worked out from the
+    events between `events_at` and now: draws, library looks (scry,
+    search, reveal), a hand revealed, a coin or die result. For example
+    "takes back: cast Thoughtseize (you saw their hand)". Against bots
+    that is information; between humans it is what the opponent consents
+    to.
+
+#### Consent (two or more humans)
+
+`RequestUndo` from one human, with others present:
+- The server records `PendingUndo { by, to, answers, deadline: 30 s }` and
+  broadcasts it through `ClientView.undo`. Each other human answers
+  `ClientMsg::RespondUndo { accept }`; bots accept.
+- **While it is pending, the match is paused.** `SubmitAction` from any seat
+  gets an `ActionError` ("take-back pending") and the rope pauses. Chat
+  still works.
+- Any decline, the deadline, or a human seat dropping out ends it as
+  declined, with a log line. Every accept applies it, as above.
+- Spectators see it in the log.
+
+#### The client (mapped 2026-10-01)
+
+The 3-D board reconciles from the view by `CardId` (`sync_game_visuals`),
+so most of a backward jump just re-lays out. These would still break:
+
+- **Rebuild the table on `Rewound`.** Despawn every card entity and lay the
+  view out fresh (the `rematch_in_place` hard-reset path,
+  `game_over.rs:590-613`, minus its log wipe). A rewind is rare and a
+  quick fade beats animating time backwards. This sidesteps:
+  - a viewer's spell back from stack to hand keeps `StackCard` and sits in
+    the stack lane (visual_sync 497/559/579/1141; a latent Remand bug too,
+    fix it on its own);
+  - an undo during a hand→battlefield flight duplicates the card when the
+    flight lands (`animate.rs:710`);
+  - an MDFC played as its back face keeps the back art in hand;
+  - an undone attack plays a fake lunge;
+  - cards returning from graveyard or exile fly out of the deck.
+- **One `reset_after_rewind`.** Today the resets are scattered: match start
+  clears only the log; `teardown_net_session` / `cleanup_in_game_entities`
+  run at the end. Clear:
+  - `TargetingState`/`LegalTargets`;
+  - `PendingManaCast` (it re-submits on any pool change, so an undone tap
+    re-fires the cast);
+  - `NetOutbox.last_cast`;
+  - `BlockingState.declared` (left set, it makes blocking impossible and
+    auto-advance then passes);
+  - `AttackingState`;
+  - `FastForward` (End Turn / Next Turn stay armed otherwise);
+  - the pickers (`cancel_pickers_on_escape`'s list).
+  Re-baseline `LifeTicker` (a restored total would float a green "+N")
+  and `PhaseBannerTracker`.
+- **Hold auto-advance after a rewind** until the viewer acts or another
+  seat moves the game on. Otherwise it re-passes the restored window the
+  next frame.
+- **The log and stats follow the branch actually played.** `GameLog` and
+  `MatchStats` are built from events, forward only, and `LifeHistory`
+  from views, appending per turn. Keep the match's received events; on
+  `Rewound`, truncate them to `events_at` and rebuild the log and stats
+  from them. Drop `LifeHistory` columns past the restored turn. Add one
+  line: "⟲ You took back: cast Lightning Bolt (you saw: 1 draw)".
+- **Controls.**
+  - **Button:** Undo in the action column after Auto-pass
+    (`hud.rs:456-552`, a new `ButtonState.undo`). Greyed with no points;
+    the tooltip names the action.
+  - **Hotkey:** plain `Z` (free; Ctrl is camera zoom, so not Ctrl+Z), in
+    its own system behind `TextInputGuard`, like
+    `handle_auto_pass_toggle`. `handle_game_input` early-returns on
+    pending decisions and off priority, and undo must work in both.
+  - **Help:** a `HELP_SECTIONS` row.
+  - **Consent:** a banner, "<name> wants to take back: cast X (undoes: 1
+    draw) [Allow] [Decline]", with a countdown; the requester sees
+    "Waiting for …".
+
+#### Steps (each ships on its own)
+
+1. ✅ **Undo against bots** (2026-10-01). Shipped as planned, with three
+   changes:
+   - **Undo points get their own message.** `ServerMsg::UndoPoints`, sent
+     to the seat whose list changed, replaces the `ClientView.undo` field:
+     views are projected in six places, and the history isn't in reach of
+     any of them. A reattaching seat gets its points again.
+   - **Mana taps fold into their cast.** After a cast stops for mana
+     (`ManualTapRequired`), that seat's mana-ability taps keep no point
+     until it does something else, so one take-back undoes the whole cast,
+     mid-payment or after it. Taps outside a cast keep their own.
+   - **The hold is a count.** The auto-pass hold lasts until the player's
+     next deliberate action (`NetOutbox::deliberate_count`).
+
+   The rebuilt table goes straight to its places (`RewindSnap`) rather than
+   being dealt again from the decks.
+
+   Code: `server/undo.rs`, `GameState::rewind_to`, `Bot::rewound`,
+   `systems/takeback.rs`.
+
+   Tests: six in `undo` (the history, labels, exact state plus RNG,
+   re-posed decision, half-paid cast), three end to end in `server::tests`,
+   two in the client. Harness: `--take-back play|undo`.
+
+   What was planned:
+   - engine: `rewind_to`;
+   - server: the ring, `SubmitAuto`, immediate `RequestUndo` with one
+     human, `Rewound`, `Bot::rewound`, `ClientView.undo`;
+   - client: button and Z, `reset_after_rewind`, the table rebuild, the
+     auto-advance hold, the log line.
+
+   It includes the half-paid-cast fix and is the whole UX win. Tests:
+   - a cast undone leaves the state identical (the `cow` serde comparison,
+     plus a shuffle after restore that must match);
+   - undo before a decision answer re-poses the decision;
+   - undo after `ManualTapRequired` untaps the forced pips and empties the
+     pool;
+   - automatic actions take no point;
+   - undo is refused after game over (structural: the match loop returns
+     at game over, so no request reaches it);
+   - the ring evicts by turn.
+
+   Client: one test that dirties every reset resource, and a harness
+   `--rewind` screenshot.
+2. **No fishing.** Server-rolled coin and die for human seats; seeded
+   live-match bot decisions; the "you saw" summary. Test: undo and redo
+   gets the same bot reply and the same flip.
+3. **The log and stats follow the branch.** The event history, rebuilt on
+   rewind; `LifeHistory` trimmed. Test: rebuilding from a truncated event
+   list gives the stats of a game that never took the undone branch.
+4. **Consent** (lobby, LAN, pair server): request and response, the pause,
+   the deadline, disconnects, the banner. Tests: decline keeps the state;
+   actions are refused while pending; a timeout declines.
+5. **History and settings.** A list of your points (the Esc menu, or the
+   log) to jump back several at once. A Takebacks setting (Off / last
+   action / recent), defaulting to recent against bots and to consent
+   with humans. Maybe redo of the discarded branch until the next action.
+
+Later, the same ring feeds the replay scrubber and crash recovery. Those
+need persisted snapshots, so first the serde-skipped RNG and the ~78
+skipped scratch fields, plus the `CardInstanceWire` round-trip fix.
+
+**Untouched:** golden traces and every perf number. `perform_action`
+doesn't change, and the ring, `SubmitAuto` and the view field live only on
+the server's human-seat path, which neither bots nor the bench run.
 
 ---
 

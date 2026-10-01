@@ -551,6 +551,35 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ));
                 });
 
+                // Take back the latest action (`systems::takeback`); the
+                // caption names it, and both grey out with nothing to.
+                p.spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    Button,
+                    crate::systems::takeback::UndoButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Undo (Z)"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_MUTED),
+                        crate::systems::takeback::UndoButtonLabel,
+                    ));
+                    p.spawn((
+                        Text::new("nothing to take back"),
+                        tf(10.0),
+                        TextColor(theme::TEXT_MUTED),
+                        crate::systems::takeback::UndoButtonCaption,
+                    ));
+                });
+
                 // Audit-mode buttons. Display::None by default; the
                 // `sync_audit_buttons` system flips them visible
                 // whenever `AuditTarget.0.is_some()`.

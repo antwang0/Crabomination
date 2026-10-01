@@ -38,7 +38,13 @@ use crabomination::{
 /// re-submit it once the player taps enough mana (see `poll_net` /
 /// `drive_pending_mana_cast`).
 #[derive(Resource)]
-pub struct NetOutbox(pub mpsc::Sender<ClientMsg>, Mutex<Option<GameAction>>);
+pub struct NetOutbox(
+    pub mpsc::Sender<ClientMsg>,
+    Mutex<Option<GameAction>>,
+    /// Deliberate actions sent so far (`submit`, not `submit_auto`): the
+    /// auto-pass hold after a take-back lasts until the next one.
+    std::sync::atomic::AtomicU64,
+);
 
 /// Inbound chat lines `(seat, name, text)` relayed by the server
 /// (`ServerMsg::Chat`), drained into the game log by
@@ -71,16 +77,41 @@ fn is_cast_action(a: &GameAction) -> bool {
 
 impl NetOutbox {
     pub fn new(tx: mpsc::Sender<ClientMsg>) -> Self {
-        Self(tx, Mutex::new(None))
+        Self(tx, Mutex::new(None), std::sync::atomic::AtomicU64::new(0))
     }
 
+    /// The player's own action: the server keeps an undo point before it.
     pub fn submit(&self, action: GameAction) {
+        self.2.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.send(ClientMsg::SubmitAction, action);
+    }
+
+    /// An action the client takes on the player's behalf — an auto-pass, an
+    /// auto-answered prompt, a held cast re-submitted as mana arrives. No
+    /// undo point: auto-pass alone would fill the history in a turn.
+    pub fn submit_auto(&self, action: GameAction) {
+        self.send(ClientMsg::SubmitAuto, action);
+    }
+
+    fn send(&self, wrap: fn(GameAction) -> ClientMsg, action: GameAction) {
         if is_cast_action(&action)
             && let Ok(mut last) = self.1.lock()
         {
             *last = Some(action.clone());
         }
-        let _ = self.0.send(ClientMsg::SubmitAction(action));
+        let _ = self.0.send(wrap(action));
+    }
+
+    /// Deliberate actions sent so far.
+    pub fn deliberate_count(&self) -> u64 {
+        self.2.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Forget the held cast: a take-back threw away the branch it was in.
+    pub fn forget_last_cast(&self) {
+        if let Ok(mut last) = self.1.lock() {
+            *last = None;
+        }
     }
 
     /// The most recent cast action submitted — used to re-arm a cast the
@@ -389,7 +420,8 @@ pub fn poll_net(
     mut resume: ResMut<ResumeInfo>,
     mut rope: ResMut<RopeClock>,
     mut chess: ResMut<ChessClock>,
-    mut chat: ResMut<ChatInbox>,
+    // Paired: a system takes at most sixteen parameters.
+    (mut chat, mut takeback): (ResMut<ChatInbox>, ResMut<crate::systems::takeback::Takeback>),
     active_format: Option<Res<crate::systems::game_over::ActiveMatchFormat>>,
     time: Res<Time>,
     mut blocking: ResMut<crate::game::BlockingState>,
@@ -450,6 +482,10 @@ pub fn poll_net(
             }
             // Table news: a seat dropped, came back, or didn't.
             ServerMsg::Notice { text } => log.push_colored(text, crate::theme::TEXT_INFO),
+            // A take-back: `systems::takeback` resets the client once the
+            // restored view (which follows) is in.
+            ServerMsg::Rewound { by, label } => takeback.rewinds.push((by, label)),
+            ServerMsg::UndoPoints(points) => takeback.points = points,
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
                 // The drainers only run in Lobby/InGame; don't let the inbox
@@ -575,7 +611,9 @@ pub fn teardown_net_session(
     mut pending_cast: ResMut<PendingManaCast>,
     mut lobby: ResMut<LobbyState>,
     mut resume: ResMut<ResumeInfo>,
+    mut takeback: ResMut<crate::systems::takeback::Takeback>,
 ) {
+    *takeback = Default::default();
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(stream) = conn.0.take() {
         let _ = stream.shutdown(std::net::Shutdown::Both);
@@ -777,7 +815,7 @@ pub fn drive_pending_mana_cast(
     let total = me.mana_pool.total();
     if total != pc.last_pool_total {
         pc.last_pool_total = total;
-        outbox.submit(pc.action.clone());
+        outbox.submit_auto(pc.action.clone());
     }
 }
 
@@ -1428,6 +1466,7 @@ mod tests {
         world.init_resource::<RopeClock>();
         world.init_resource::<ChessClock>();
         world.init_resource::<ChatInbox>();
+        world.init_resource::<crate::systems::takeback::Takeback>();
         world.init_resource::<Time>();
         world.init_resource::<crate::game::BlockingState>();
         world.init_resource::<crate::game::GameLog>();

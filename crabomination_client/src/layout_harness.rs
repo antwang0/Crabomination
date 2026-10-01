@@ -17,7 +17,9 @@
 //! stack, `--stack-depth N` with N (up to six); `--mana-gallery` lays every
 //! kind of mana symbol over the board; `--hover-card NAME` hovers one of the
 //! viewer's battlefield or hand cards (a screenshot run ignores the real
-//! mouse), and `--alt` holds Alt over it; `--combat SCENE` stages a combat
+//! mouse), and `--alt` holds Alt over it; `--take-back play|undo` plays a
+//! Forest through the live match and, with `undo`, takes it back;
+//! `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
 //! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
 //! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
@@ -87,6 +89,9 @@ pub struct HarnessArgs {
     pub hover_card: Option<String>,
     /// `--alt`: Alt is held, for the large peek and its notes.
     pub alt: bool,
+    /// `--take-back play|undo`: the viewer plays a Forest from hand through
+    /// the live match (an undo point), and with `undo` then takes it back.
+    pub take_back: Option<TakeBackScene>,
     /// `--combat SCENE`: a combat or a targeting pick, staged client-side.
     pub combat: Option<CombatScene>,
     /// `--tokens`: piles of identical tokens on two seats.
@@ -168,6 +173,11 @@ impl HarnessArgs {
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
             hover_card: value("--hover-card"),
             alt: args.iter().any(|a| a == "--alt"),
+            take_back: value("--take-back").and_then(|v| match v.as_str() {
+                "play" => Some(TakeBackScene::Play),
+                "undo" => Some(TakeBackScene::Undo),
+                _ => None,
+            }),
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
             tokens: args.iter().any(|a| a == "--tokens"),
             life_change: args.iter().any(|a| a == "--life-change"),
@@ -638,6 +648,47 @@ pub fn hover_card_for_screenshot(
         window.bypass_change_detection().set_cursor_position(Some(pos));
     }
     *done = true;
+}
+
+/// `--take-back`: how far the harness takes its take-back.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TakeBackScene {
+    /// Play a Forest: the Undo button names it.
+    Play,
+    /// Play it, then take it back.
+    Undo,
+}
+
+/// `--take-back`: play a Forest from the viewer's hand as the player would
+/// (a deliberate action, so the server keeps an undo point), then — for
+/// `undo` — take it back once the point is in.
+pub fn take_back_for_screenshot(
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    outbox: Option<Res<crate::net_plugin::NetOutbox>>,
+    takeback: Res<crate::systems::takeback::Takeback>,
+    mut step: Local<u8>,
+) {
+    let (Some(scene), Some(cv), Some(outbox)) = (args.take_back, view.0.as_ref(), outbox) else { return };
+    match *step {
+        0 if cv.priority == cv.your_seat && cv.pending_decision.is_none() => {
+            let forest = cv.players[cv.your_seat].hand.iter().find_map(|h| match h {
+                crabomination::net::HandCardView::Known(k) if k.name == "Forest" => Some(k.id),
+                _ => None,
+            });
+            if let Some(id) = forest {
+                outbox.submit(crabomination::game::GameAction::PlayLand(id));
+                *step = 1;
+            }
+        }
+        1 if !takeback.points.is_empty() => {
+            if scene == TakeBackScene::Undo {
+                outbox.submit_msg(crabomination::net::ClientMsg::RequestUndo { to: None });
+            }
+            *step = 2;
+        }
+        _ => {}
+    }
 }
 
 /// `--alt`: hold Alt, as a reader holding it over the hovered card would —

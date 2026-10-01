@@ -116,6 +116,17 @@ pub(crate) fn log_events(state: &crate::game::GameState, events: &[GameEventWire
     });
 }
 
+/// Mark a take-back in the active match's replay: the events after the
+/// last undo point are a branch that was not kept, and what follows replays
+/// from `by`'s point before `label`.
+pub(crate) fn log_rewind(by: usize, label: &str) {
+    SINK.with(|s| {
+        if let Some(sink) = s.borrow_mut().as_mut() {
+            let _ = writeln!(sink.w, "{}", serde_json::json!({ "rewound": { "by": by, "label": label } }));
+        }
+    });
+}
+
 /// Card-id fields by name, wherever they sit in a wire event's shape —
 /// including tuple variants like `AttackerDeclared(CardId)`, whose id is
 /// the whole payload under the variant-name key. A field name missing
