@@ -3556,7 +3556,10 @@ impl GameState {
                 .battlefield
                 .iter()
                 .any(|c| c.controller == ctx.controller && self.is_commander(c.id)),
-            Predicate::YouControlledACommanderAsCast => ctx.cast_controlling_commander,
+            Predicate::CastConditionHeld => {
+                ctx.cast_condition_held
+                    || ctx.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.cast_condition_held)
+            }
             Predicate::UsedGraveyardThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()

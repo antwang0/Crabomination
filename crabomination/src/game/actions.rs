@@ -9516,10 +9516,13 @@ impl GameState {
             && (card.definition.has_entwine().is_some()
                 || card.definition.entwine_additional_cost.is_some());
         card.entwined = entwine;
-        // CR 601.2b — "if you control a commander as you cast this spell" is
-        // fixed now (the Will cycle); a commander-less game skips the walk.
-        card.cast_controlling_commander = self.players.iter().any(|pl| !pl.commanders.is_empty())
-            && self.battlefield.iter().any(|c| c.controller == p && self.is_commander(c.id));
+        // CR 601.2 — "if … as you cast this spell" is fixed now.
+        let held = card.definition.as_cast_condition.as_ref().is_some_and(|pred| {
+            self.evaluate_predicate(pred, &crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0))
+        });
+        if held || card.cast_condition_held {
+            card.cast_condition_held = held;
+        }
         // CR 702.165 — opt-in Gift; only sticks when the card has it. The
         // promised gift carries no mana cost, so nothing folds into the cost.
         card.gift_promised = gift && card.definition.gift.is_some();
@@ -12153,7 +12156,7 @@ impl GameState {
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
-                    cast_controlling_commander: false,
+                    cast_condition_held: false,
                     event_player: None,
                     spree_modes: Vec::new(),
                 };
@@ -13656,7 +13659,7 @@ impl GameState {
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,
-                    cast_controlling_commander: false,
+                    cast_condition_held: false,
                     event_player: None,
                     spree_modes: Vec::new(),
             };
@@ -15637,7 +15640,7 @@ impl GameState {
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
-                    cast_controlling_commander: false,
+                    cast_condition_held: false,
                     // CR 603.4 — "a player casts THEIR first spell" (Pain Distributor).
                     event_player: u8::try_from(controller).ok(),
                     spree_modes: Vec::new(),
@@ -19853,7 +19856,7 @@ impl GameState {
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,
-                    cast_controlling_commander: false,
+                    cast_condition_held: false,
                     event_player: None,
                     spree_modes: Vec::new(),
             };

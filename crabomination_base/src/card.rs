@@ -4849,6 +4849,13 @@ pub struct CardDefinition {
     /// cast (the Will cycle's "if you control a commander", CR 601.2b).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes_widen: Option<ModesWiden>,
+    /// CR 601.2 — "if [this] as you cast this spell" (not a cast gate — that is
+    /// `cast_condition`): evaluated once as the
+    /// spell is cast and stamped on it (`CardData::cast_condition_held`), so
+    /// `Predicate::CastConditionHeld` reads the cast, not the board now
+    /// (Orator of Ojutai's Dragon, Steer Clear's Mount).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub as_cast_condition: Option<crate::effect::Predicate>,
     /// "where X is … as you cast this spell": evaluated once in `finalize_cast`
     /// and stamped as the spell's X, so the body reads `Value::XFromCost`
     /// (Monstrous Onslaught, Volcanic Wind — CR 601.2d's division needs it then).
@@ -9056,9 +9063,9 @@ pub struct CardData {
     /// CR 702.41 — true if this spell was cast paying its optional Entwine
     /// cost: its `ChooseMode` runs every mode in order.
     pub entwined: bool,
-    /// CR 601.2b — its caster controlled a commander as this spell was cast
-    /// (the Will cycle's "you may choose both"). Stamped at cast; copies keep it.
-    pub cast_controlling_commander: bool,
+    /// CR 601.2 — its definition's `as_cast_condition` held as this spell was
+    /// cast. Stamped at cast; copies keep it; a non-cast entry clears it.
+    pub cast_condition_held: bool,
     /// CR 702.165 — true if this spell was cast with its Gift promised: on
     /// resolution it runs `definition.gift.gifted_effect` instead of `effect`.
     pub gift_promised: bool,
@@ -10127,7 +10134,7 @@ impl CardInstance {
             bargained: false,
             bought_back: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             gift_promised: false,
             bestowed: false,
             face_down: false,
@@ -11139,6 +11146,9 @@ impl CardInstance {
         // flickered or reanimated creature was not cast kicked (its ETB
         // rider and an offspring copy do not fire again).
         self.kicked = false;
+        if self.cast_condition_held {
+            self.cast_condition_held = false;
+        }
     }
 
     /// CR 400.7 — the leave-side half: what an object's next zone must not
@@ -11389,9 +11399,9 @@ struct CardInstanceWire {
     /// CR 702.41 entwine flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     entwined: bool,
-    /// CR 601.2b "controlled a commander as you cast" stamp.
+    /// CR 601.2 "as you cast this spell" stamp.
     #[serde(default)]
-    cast_controlling_commander: bool,
+    cast_condition_held: bool,
     /// CR 702.165 gift-promised flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     gift_promised: bool,
@@ -11711,7 +11721,7 @@ impl serde::Serialize for CardInstance {
             granted_activated_eot: self.granted_activated_eot.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
-            cast_controlling_commander: self.cast_controlling_commander,
+            cast_condition_held: self.cast_condition_held,
             gift_promised: self.gift_promised,
             bestowed: self.bestowed,
             face_down: self.face_down,
@@ -11847,7 +11857,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_activated_eot = wire.granted_activated_eot;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
-        c.cast_controlling_commander = wire.cast_controlling_commander;
+        c.cast_condition_held = wire.cast_condition_held;
         c.gift_promised = wire.gift_promised;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;

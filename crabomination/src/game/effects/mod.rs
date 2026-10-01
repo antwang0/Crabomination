@@ -417,9 +417,9 @@ pub struct EffectContext {
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
-    /// Stamped from `CardInstance.cast_controlling_commander`; read by
-    /// `Predicate::YouControlledACommanderAsCast`.
-    pub cast_controlling_commander: bool,
+    /// Stamped from `CardInstance.cast_condition_held`; read by
+    /// `Predicate::CastConditionHeld`.
+    pub cast_condition_held: bool,
     /// CR 603.4 — the seat the event being checked names, for a trigger
     /// condition read before the trigger is pushed (`PlayerRef::
     /// TriggerEventPlayer`). `None` falls back to the resolution scratch.
@@ -456,7 +456,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             event_player: None,
             spree_modes: Vec::new(),
         }
@@ -546,7 +546,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             event_player: None,
             spree_modes: Vec::new(),
         }
@@ -581,7 +581,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             event_player: None,
             spree_modes: Vec::new(),
         }
@@ -615,7 +615,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             event_player: None,
             spree_modes: Vec::new(),
         }
@@ -729,7 +729,7 @@ impl EffectContext {
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
-            cast_controlling_commander: false,
+            cast_condition_held: false,
             event_player: None,
             spree_modes: Vec::new(),
         }

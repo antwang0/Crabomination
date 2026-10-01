@@ -1354,7 +1354,7 @@ fn move_counter_transfers_counters_between_permanents() {
         cast_via_waterbend: false,
         cast_collected_evidence: false,
         entwined: false,
-        cast_controlling_commander: false,
+        cast_condition_held: false,
         event_player: None,
         spree_modes: Vec::new(),
     };
@@ -1408,7 +1408,7 @@ fn move_counter_clamps_at_source_pool() {
         cast_via_waterbend: false,
         cast_collected_evidence: false,
         entwined: false,
-        cast_controlling_commander: false,
+        cast_condition_held: false,
         event_player: None,
         spree_modes: Vec::new(),
     };

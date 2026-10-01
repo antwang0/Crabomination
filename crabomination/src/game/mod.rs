@@ -28700,7 +28700,7 @@ impl GameState {
             ctx.spell_cast_from_exile = card.cast_from_exile;
             ctx.cast_collected_evidence = card.cast_collected_evidence;
             ctx.entwined = card.entwined;
-            ctx.cast_controlling_commander = card.cast_controlling_commander;
+            ctx.cast_condition_held = card.cast_condition_held;
             ctx.spree_modes = card.spree_modes.clone();
             ctx.mana_spent_by_color = card.cast_mana_spent_by_color.to_vec();
             // Stamp the resolving spell's identity so source-aware damage

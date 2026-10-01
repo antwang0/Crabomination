@@ -864,7 +864,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         cast_via_waterbend: false,
         cast_collected_evidence: false,
         entwined: false,
-        cast_controlling_commander: false,
+        cast_condition_held: false,
         event_player: None,
         spree_modes: Vec::new(),
     };
