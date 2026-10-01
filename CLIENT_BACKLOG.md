@@ -996,8 +996,8 @@ indicator + click target. Slims the 2-D chip strip.
   legal actions). Differentiator vs XMage/MTGO/Arena.
 - Stop settings + auto-pass ✅ — per-step Auto/Stop/Skip overrides on
   the clickable phase chart (`systems/phase_bar.rs::StopConfig`), wired
-  into `auto_advance_p0`; right-click = pass-until-step. Remaining:
-  persistence via `config.rs` (in progress).
+  into `auto_advance_p0`; right-click = pass-until-step. Persisted in
+  `config.rs` (`persist_stops`).
 - Stack widget polish ⏳ — promote `update_stack_panel` to a permanent
   floating panel; hover for source-card preview; click to scroll log.
 
@@ -1019,10 +1019,8 @@ indicator + click target. Slims the 2-D chip strip.
 - Replay scrubber ⏳ — `GameSnapshot` recorder + Menu→Replay scrub UI.
 - Touch / controller input ⏳ — Bevy supports touch; `kb_cursor.rs` and
   input paths are mouse-centric.
-- Split `game_ui.rs` further ⏳ — the initial split into
-  `systems/game_ui/{mod,crest,player_stats,buttons,popups}.rs` shipped;
-  still to pull out: `sync_game_visuals` → `visual_sync.rs` (~1.1K lines),
-  `handle_game_input` → `input.rs` (~800 lines).
+- Split `game_ui.rs` further ✅ — `visual_sync.rs`, `input.rs` and seven
+  more (2026-10-01; see "Split `game_ui.rs`" below).
 
 **Session follow-ups**
 - Step-change → clear attack plan ⏳ — tiny watcher on `View.is_changed()`
@@ -1058,7 +1056,7 @@ lines (hover-preview the named card — see backlog above) and event
 filtering.
 
 ### Selective Attacker Picking
-✅ Click-based per-attacker picking is wired (`game_ui/mod.rs`, the
+✅ Click-based per-attacker picking is wired (`game_ui/input.rs`, the
 "Attacker selection" block): click an own creature to toggle it into the
 plan, click an opponent planeswalker / player disc / 2-D HUD chip to
 reassign the last-added attacker's defender, Esc / right-click to clear,
@@ -1109,7 +1107,7 @@ key rebinds, accessibility) would cleanly separate these and give a
 natural home for future global preferences. (UI size ✅, in both.)
 
 ### Auto-Pass Toggle
-`auto_advance_p0` (`game_ui.rs:2000+`) decides for the player when to pass
+`auto_advance_p0` (`game_ui/auto_advance.rs`) decides for the player when to pass
 priority. A toolbar toggle ("Auto-pass: On/Off") lets new players step
 through their own turn priority-by-priority instead of having the engine
 fast-forward.
@@ -1128,14 +1126,14 @@ reduce ongoing churn. Sequence them when scope or merge conflicts on the
 Client UI layer become a recurring problem.
 
 ### Split `game_ui.rs`
-2,850 lines mixing setup, view→entity sync (~1,000 lines), input,
-ability menu, alt-cast modal, and HUD updates. Inline comment at line 38
-admits `handle_game_input` is bumping Bevy's 16-param `SystemParam`
-limit. Split into `game_ui/hud.rs` (setup + `update_*` text/buttons),
-`game_ui/sync.rs` (`sync_game_visuals` only), `game_ui/input.rs`
-(`handle_game_input` + `auto_advance`), `game_ui/modals.rs` (ability
-menu, alt-cast). Keep `GameLogicSet` + `ButtonState` in `mod.rs`.
-Prerequisite for several upcoming features but invisible to users.
+✅ Shipped 2026-10-01 — `systems/game_ui/mod.rs` (5,287 lines) is now a
+100-line module root over `hud`, `phase`, `hint`, `log`, `stack_panel`,
+`combat_preview`, `visual_sync`, `input` and `auto_advance`, beside the
+earlier `buttons`, `popups`, `player_stats` and the rest. A pure move: each
+submodule takes the root's imports and its siblings' items through
+`use super::*`, the root re-exports them all, so no outside path changed.
+`handle_game_input` (1,240 lines in `input.rs`) and `sync_game_visuals`
+(1,100 in `visual_sync.rs`) are still one function each.
 
 ### Modal Builder Helper
 `decision_ui.rs` has 6+ near-identical "overlay root + panel + close-on-
@@ -1147,7 +1145,7 @@ requires ~30 lines of root/panel boilerplate. Introduce a builder:
 Could halve `decision_ui.rs`.
 
 ### Stable-Children for Stack Panel + Pile Tooltip
-`update_stack_panel` (`game_ui.rs::update_stack_panel`) and the pile
+`update_stack_panel` (`game_ui/stack_panel.rs`) and the pile
 tooltip (`ui.rs::pile_tooltip`) `despawn_children()` + rebuild on every
 change. The pile tooltip has a TODO comment explicitly admitting "we
 can't easily update the child text here, so just leave it" — i.e., the
@@ -1164,21 +1162,20 @@ fn cancel(...); }` implemented per variant would centralize. Roll up
 under the Modal Builder above when you tackle it.
 
 ### Move `format_event` to Engine Crate
-`format_event` (`game_ui.rs:91-167`) is a 75-line match on
+`format_event` (`game_ui/log.rs`) is a 75-line match on
 `GameEventWire`. Every new event type requires editing this client-side
 function. Move to a `Display` / `fmt_for_log` impl on the wire type
 itself in `crabomination/src/net.rs` so new event variants stay
 self-contained. Pairs with the log-color-coding work above.
 
 ### Relocate `stack_card_transform`
-`stack_card_transform` lives in `game_ui.rs:2752` but is a pure math /
-layout helper. Move to `card/layout.rs` next to the other transform
-helpers (`hand_card_transform`, `bf_card_transform`, `deck_position`).
+✅ Obsolete — the helper went with the stack lane (`730fb14f7`); stack
+cards are placed by `card/framing.rs::stack_lane`.
 
 ### Responsive HUD Layout
 Most HUD panels use hardcoded `Val::Px` margins and widths
-(`game_ui.rs:295-575`: `max_width: 560`, `min_width: 420`,
-`BROWSER_CARD_WIDTH: 220` × 4 cols = ~960 px island). At 720p the
+(`game_ui/hud.rs`, `decision_ui.rs`'s `max_width: 560`,
+`ui.rs`'s `BROWSER_CARD_WIDTH: 220` × 4 cols = ~960 px island). At 720p the
 bottom player panel collides with the stack panel + AttackAllPanel;
 at 1440p+ everything sits in a small island. Audit `Val::Px` →
 `Val::Percent` / `Val::Vw` / `Val::Vh` per panel and add a `UiScale`
