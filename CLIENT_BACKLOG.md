@@ -25,6 +25,35 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## The stack panel clears the board (2026-10-01) — shipped
+
+Measured by `framing::tests::the_stack_lane_hangs_clear_of_the_board`
+(duels at 6 / 8 / 10 creature groups a seat, pods at rest) and read off
+layout-harness screenshots of the 1v1 fixture (`--stack`, and the new
+`--stack-depth N`) at 1920x1080 and 1280x720.
+
+- ✅ **The 2-D stack panel no longer lies over the board.** The 3-D pile's
+  spot was searched to cover no card, but the panel was then hung at its
+  left, wherever that fell: over the end of the viewer's creature row,
+  38,000 px² of a resting duel board at 1920x1080 and 56,000 at eight
+  groups. The search now keeps room for the panel too (fixed at 340 px
+  wide, `STACK_PANEL_WIDTH`): at the pile's left, or under it in the free
+  column right of the board, and takes a spot where both clear the board.
+  Every duel window from 1920x1080 up now clears it at every crowding; the
+  pile is 150 px wide there rather than 170. Pods keep their spot (their
+  table fills the window, so the panel covers what it must).
+- ✅ **A deep stack keeps to its room.** The pile was sized for three items
+  and ran on down past them. Its steps now tighten (to 0.4 of one, each
+  older card still showing its name line) so the item that resolves next
+  lands where the third would, and settled stack cards slide as the depth
+  changes or the camera refits (`settle_stack_lane`; they used to stay
+  where they joined). The panel lists the newest three and
+  counts the rest.
+- Residual ⏳: a 1280x720 duel has no room for the panel; it lies over the
+  top of the opponent's land row (≤ 18,800 px², pinned), and the bottom of
+  its room, which only a four-deep stack's count line fills, is off the
+  window.
+
 ## A crowded duel row grows instead of wrapping (2026-10-01) — shipped
 
 Measured with the framing budget (`card::framing`, `--nocapture`) and read
@@ -1035,9 +1064,8 @@ from misclicks, especially during the targeting flow. **Full plan now lives at
 Phase 4 is this UI).
 
 ### Responsive Stack Display
-The stack panel (bottom-center) is a fixed-width overlay.  On narrow windows
-it can overlap the player panel.  Clamp its width to `min(420px, 40vw)` or
-reposition it to the right sidebar.
+✅ The panel sits where the stack lane's fit kept room for it, clear of the
+board in every duel from 1920x1080 up (2026-10-01, see the top).
 
 ### Per-Phase Auto-Stop Flags
 ✅ Shipped as click-to-cycle Auto/Stop/Skip on the phase chart, scoped to

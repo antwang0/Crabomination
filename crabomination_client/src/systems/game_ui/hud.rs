@@ -679,8 +679,9 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     flex_direction: FlexDirection::Column,
                     padding: UiRect::all(Val::Px(10.0)),
                     row_gap: Val::Px(3.0),
-                    min_width: Val::Px(300.0),
-                    max_width: Val::Px(400.0),
+                    // The width the lane's fit keeps room for; a long
+                    // line wraps.
+                    width: Val::Px(crate::card::framing::STACK_PANEL_WIDTH),
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
@@ -689,8 +690,9 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
         });
 
     // Bottom-right: a small, always-present affordance pointing at the
-    // keyboard-shortcut overlay (`toggle_shortcut_help`). The corner is
-    // otherwise unused — the hand and stack sit centre, the log up-right.
+    // keyboard-shortcut overlay (`toggle_shortcut_help`). Beneath the rest
+    // of the HUD: a duel's stack panel can sit in this corner, and a deep
+    // stack's reaches the hint.
     commands
         .spawn((
             Node {
@@ -700,6 +702,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             Pickable::IGNORE,
+            GlobalZIndex(theme::layer::HUD - 1),
             InGameRoot,
         ))
         .with_children(|p| {

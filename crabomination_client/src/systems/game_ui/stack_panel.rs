@@ -1,7 +1,8 @@
-//! The 2-D stack panel: each item on the stack, top first, with what it
-//! targets and a "Let resolve" button while the viewer holds priority.
+//! The 2-D stack panel: the newest items on the stack, top first, with what
+//! they target and a "Let resolve" button while the viewer holds priority.
 
 use super::*;
+use crate::card::framing::STACK_PANEL_ROWS;
 
 // ── Stack panel ───────────────────────────────────────────────────────────────
 
@@ -48,10 +49,10 @@ pub fn handle_stack_resolve_button(
 #[derive(Component)]
 pub struct StackPanelAnchor;
 
-/// Put the stack panel beside the 3-D stack lane (`framing::StackLane`),
-/// top-aligned with it on its left, so the stack reads in one place beside
-/// the table. Bottom-centre, it lay over the viewer's lands — at 1280x720,
-/// over their creatures.
+/// Put the stack panel where the lane's fit kept room for it
+/// (`framing::StackLane::panel`): top-aligned at the 3-D stack lane's left,
+/// so the stack reads in one place beside the table. Bottom-centre, it lay
+/// over the viewer's lands — at 1280x720, over their creatures.
 pub fn place_stack_panel(
     home: Res<crate::systems::camera_zoom::CameraHome>,
     ui_scale: Res<UiScale>,
@@ -61,18 +62,18 @@ pub fn place_stack_panel(
     if !home.is_changed() && !ui_scale.is_changed() {
         return;
     }
-    let lane = home.stack_lane.screen;
+    let panel = home.stack_lane.panel;
     let Ok(window) = windows.single() else { return };
-    if lane.is_empty() {
+    if panel.is_empty() {
         return;
     }
     // Logical px → UI px.
     let s = ui_scale.0;
     for mut node in &mut anchors {
-        node.top = Val::Px(lane.min.y / s);
+        node.top = Val::Px(panel.min.y / s);
         node.bottom = Val::Auto;
         node.left = Val::Auto;
-        node.right = Val::Px((window.width() - lane.min.x) / s + 8.0);
+        node.right = Val::Px((window.width() - panel.max.x) / s);
         node.justify_content = JustifyContent::FlexEnd;
         node.align_items = AlignItems::FlexStart;
     }
@@ -83,7 +84,8 @@ pub fn place_stack_panel(
 /// first, as a card-art tile pile: the top item gets a large gold-framed
 /// tile ("resolves next"), the rest smaller rows beneath, each with a
 /// controller-colored edge strip (green = yours, orange = an opponent's).
-/// A footer offers "Let resolve ▶" when the viewer holds priority.
+/// Past [`STACK_PANEL_ROWS`] items a line counts the older ones. A footer
+/// offers "Let resolve ▶" when the viewer holds priority.
 #[allow(clippy::too_many_arguments)]
 pub fn update_stack_panel(
     view: Res<CurrentView>,
@@ -145,8 +147,10 @@ pub fn update_stack_panel(
         // thumbnail rows. Each row carries a controller-colored edge strip
         // (green = yours, orange = an opponent's) and triggers keep their
         // tinted badge so a surprise trigger still pops.
+        // Only the newest few: the panel is kept room for that many
+        // (`framing::stack_lane`), and the 3-D pile shows every name.
         use crabomination::net::{StackItemKind, StackItemView};
-        for (offset, item) in cv.stack.iter().rev().enumerate() {
+        for (offset, item) in cv.stack.iter().rev().take(STACK_PANEL_ROWS).enumerate() {
             let is_top = offset == 0;
             let (kind_str, kind_color, name, ctrl_seat, tgt_str, is_trigger, art_path) =
                 match item {
@@ -299,6 +303,15 @@ pub fn update_stack_panel(
                     ));
                 });
             });
+        }
+
+        let older = cv.stack.len().saturating_sub(STACK_PANEL_ROWS);
+        if older > 0 {
+            p.spawn((
+                Text::new(format!("+ {older} older (in the pile beside)")),
+                tf(11.0),
+                TextColor(theme::TEXT_MUTED),
+            ));
         }
 
         // Footer: in-context priority affordance.

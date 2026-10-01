@@ -14,7 +14,7 @@
 //! look at what sits on it (counter chips, badges); `--demo-damage` feeds the
 //! client a batch of combat damage just before the screenshot, so it catches
 //! the damage numerals in flight; `--stack` starts with two spells on the
-//! stack; `--mana-gallery` lays every kind of mana symbol over the board;
+//! stack, `--stack-depth N` with N (up to six); `--mana-gallery` lays every kind of mana symbol over the board;
 //! `--hover-card NAME` hovers one of the viewer's battlefield or hand cards
 //! (a screenshot run ignores the real mouse); `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
@@ -75,8 +75,9 @@ pub struct HarnessArgs {
     /// `--demo-damage`: a batch of damage events, client-side only, a moment
     /// before the screenshot.
     pub demo_damage: bool,
-    /// `--stack`: the viewer has cast two spells and holds priority.
-    pub stack: bool,
+    /// `--stack`: the viewer has cast two spells and holds priority;
+    /// `--stack-depth N`, N of them.
+    pub stack: Option<usize>,
     /// `--mana-gallery`: a panel of sample costs over the board.
     pub mana_gallery: bool,
     /// `--hover-card NAME`: that card of the viewer's is hovered.
@@ -148,7 +149,9 @@ impl HarnessArgs {
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),
             demo_damage: args.iter().any(|a| a == "--demo-damage"),
-            stack: args.iter().any(|a| a == "--stack"),
+            stack: value("--stack-depth")
+                .and_then(|v| v.parse().ok())
+                .or(args.iter().any(|a| a == "--stack").then_some(2)),
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
             hover_card: value("--hover-card"),
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
@@ -289,18 +292,28 @@ pub fn fixture_state(seats: usize, partners: bool, viewer_hand: Option<usize>) -
 /// `--stack`: seat 0 casts Lightning Bolt at seat 1's Serra Angel and, holding
 /// priority, Giant Growth on its own Luminarch Aspirant — two items on the
 /// stack, the pump on top, with the match waiting on the viewer.
-pub fn put_spells_on_stack(g: &mut GameState) {
+/// `--stack-depth N` casts the first N of those and four more (a deep stack
+/// tightens the 3-D pile, `framing::StackLane::card`), within the viewer's
+/// red and green mana.
+pub fn put_spells_on_stack(g: &mut GameState, depth: usize) {
     use crabomination::game::{GameAction, Target};
     let find = |g: &GameState, seat: usize, name: &str| {
-        g.battlefield.iter().find(|c| c.controller == seat && c.definition.name == name).map(|c| c.id)
+        g.battlefield.iter().find(|c| c.controller == seat && c.definition.name == name).map(|c| Target::Permanent(c.id))
     };
-    let casts = [("Lightning Bolt", find(g, 1, "Serra Angel")), ("Giant Growth", find(g, 0, "Luminarch Aspirant"))];
-    for (spell, target) in casts {
+    let casts = [
+        ("Lightning Bolt", find(g, 1, "Serra Angel")),
+        ("Giant Growth", find(g, 0, "Luminarch Aspirant")),
+        ("Shock", Some(Target::Player(1))),
+        ("Giant Growth", find(g, 0, "Grizzly Bears")),
+        ("Lightning Bolt", Some(Target::Player(1))),
+        ("Giant Growth", find(g, 0, "Llanowar Elves")),
+    ];
+    for (spell, target) in casts.into_iter().take(depth) {
         let Some(def) = crabomination::catalog::lookup_by_name(spell) else { continue };
         let card_id = g.add_card_to_hand(0, def);
         let cast = GameAction::CastSpell {
             card_id,
-            target: target.map(Target::Permanent),
+            target,
             additional_targets: vec![],
             mode: None,
             x_value: None,

@@ -559,7 +559,7 @@ pub fn sync_game_visuals(
         } else if stack_spell_ids.contains(&game_id.0) {
             if stack_card.is_none() {
                 let idx = cv.stack.iter().position(|item| matches!(item, StackItemView::Known(k) if k.source == game_id.0)).unwrap_or(0);
-                let target = camera_home.stack_lane.card(idx);
+                let target = camera_home.stack_lane.card(idx, cv.stack.len());
                 commands
                     .entity(entity)
                     .remove::<CardHovered>()
@@ -860,7 +860,7 @@ pub fn sync_game_visuals(
         if visual_bf_ids.contains(&k.source) { continue; }
 
         let seat = k.controller;
-        let target = camera_home.stack_lane.card(idx);
+        let target = camera_home.stack_lane.card(idx, cv.stack.len());
 
         let pool = hand_pool_by_owner.entry(seat).or_default();
         let (start_pos, start_rot) = if seat == viewer {
@@ -1222,6 +1222,49 @@ pub fn sync_game_visuals(
 }
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
+
+/// Slide each settled stack card to where the lane puts it now. A card is
+/// placed when it joins the stack, but a deeper stack tightens the pile's
+/// steps (`framing::StackLane::card`) and a shallower one lets them out
+/// again, and a camera refit moves the lane. A card that was still flying in
+/// when the stack changed is settled when it lands.
+pub fn settle_stack_lane(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    home: Res<crate::systems::camera_zoom::CameraHome>,
+    mut landed: RemovedComponents<Animating>,
+    mut cards: Query<(Entity, &GameCardId, &mut Transform, &CardHoverLift), (With<StackCard>, Without<Animating>)>,
+) {
+    let landed = landed.read().count() > 0;
+    if !view.is_changed() && !home.is_changed() && !landed {
+        return;
+    }
+    let Some(cv) = &view.0 else { return };
+    let lane = &home.stack_lane;
+    for (entity, id, mut transform, lift) in &mut cards {
+        let Some(idx) =
+            cv.stack.iter().position(|item| matches!(item, StackItemView::Known(k) if k.source == id.0))
+        else {
+            continue;
+        };
+        let target = lane.card(idx, cv.stack.len());
+        if transform.scale.x != lane.scale {
+            transform.scale = Vec3::splat(lane.scale);
+        }
+        if lift.base_translation.distance(target.translation) > 1e-3 || transform.rotation != target.rotation {
+            commands.entity(entity).insert((
+                Animating,
+                HandSlideAnimation {
+                    progress: 0.0,
+                    speed: 4.0,
+                    start_translation: transform.translation,
+                    target_translation: target.translation,
+                    target_rotation: target.rotation,
+                },
+            ));
+        }
+    }
+}
 
 /// Reconcile each viewer hand card's persistent flip state
 /// (`FlippedFace` marker on the entity) against the user's intent

@@ -2211,8 +2211,8 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
 fn spawn_layout_fixture(world: &mut World, seats: usize) {
     let args = world.get_resource::<crate::layout_harness::HarnessArgs>().cloned().unwrap_or_default();
     let mut state = crate::layout_harness::fixture_state(seats, args.partners, args.hand);
-    if args.stack {
-        crate::layout_harness::put_spells_on_stack(&mut state);
+    if let Some(depth) = args.stack {
+        crate::layout_harness::put_spells_on_stack(&mut state, depth);
     }
     if args.tokens {
         crate::layout_harness::add_token_piles(&mut state);

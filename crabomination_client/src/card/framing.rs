@@ -239,10 +239,12 @@ pub struct StackLane {
     pub step: Vec3,
     pub rotation: Quat,
     pub scale: f32,
-    /// The window area (logical px) the lane was sized for, three items
-    /// deep; empty until a fit has placed it. The 2-D stack panel sits
-    /// beside it.
-    pub screen: Rect,
+    /// The window area (logical px) kept for the 2-D stack panel
+    /// (`game_ui::place_stack_panel`), beside the area the pile was sized
+    /// for three items deep: at its left, top-aligned with it, or — where
+    /// that leaves the board clear — under it, right-aligned. Empty until a
+    /// fit has placed it.
+    pub panel: Rect,
 }
 
 impl Default for StackLane {
@@ -253,15 +255,25 @@ impl Default for StackLane {
             step: Vec3::X * (CARD_WIDTH + 0.5),
             rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
             scale: 1.0,
-            screen: Rect::default(),
+            panel: Rect::default(),
         }
     }
 }
 
 impl StackLane {
-    /// The transform of stack item `idx` (0 = the bottom of the stack).
-    pub fn card(&self, idx: usize) -> Transform {
-        Transform::from_translation(self.first + self.step * idx as f32)
+    /// The transform of stack item `idx` (0 = the bottom of the stack) in a
+    /// stack `depth` items deep. Past [`LANE_ITEMS`] the steps tighten, to as
+    /// little as [`LANE_MIN_STEP`] of one, so the item that resolves next
+    /// still lands where the third would: the pile keeps to the window area
+    /// the fit cleared for it, with the panel under it. Only a stack deeper
+    /// than that runs on down.
+    pub fn card(&self, idx: usize, depth: usize) -> Transform {
+        let tighten = if depth as f32 > LANE_ITEMS {
+            ((LANE_ITEMS - 1.0) / (depth as f32 - 1.0)).max(LANE_MIN_STEP)
+        } else {
+            1.0
+        };
+        Transform::from_translation(self.first + self.step * idx as f32 * tighten)
             .with_rotation(self.rotation)
             .with_scale(Vec3::splat(self.scale))
     }
@@ -271,10 +283,26 @@ impl StackLane {
 const LANE_ITEMS: f32 = 3.0;
 /// Share of a card's height each newer item sits below the last.
 const LANE_STEP: f32 = 0.28;
+/// The tightest a deep stack's steps get, as a share of [`LANE_STEP`]: each
+/// older item still shows its name line.
+const LANE_MIN_STEP: f32 = 0.4;
 /// How far out the lane hangs, as a share of the camera's distance to the
 /// table: well in front of every card on it, so nothing on the table draws
 /// through the stack.
 const LANE_DEPTH: f32 = 0.6;
+/// The 2-D stack panel's width in UI px (`game_ui::setup_game_hud` pins it
+/// to this), and its height at its tallest: [`STACK_PANEL_ROWS`] items, the
+/// line counting the rest, and the footer.
+pub const STACK_PANEL_WIDTH: f32 = 340.0;
+const STACK_PANEL_HEIGHT: f32 = 215.0;
+/// Items the panel lists, newest first (`game_ui::update_stack_panel`); a
+/// line counts the older ones, whose names the pile still shows.
+pub const STACK_PANEL_ROWS: usize = LANE_ITEMS as usize;
+/// UI px between the panel and the lane.
+pub const STACK_PANEL_GAP: f32 = 8.0;
+/// Covered area (px²) that is a rounding sliver where the search's pixel
+/// grid met a card edge, not a card the stack hides.
+const SLIVER: f32 = 50.0;
 
 fn area(r: Rect) -> f32 {
     if r.is_empty() { 0.0 } else { r.width() * r.height() }
@@ -282,24 +310,45 @@ fn area(r: Rect) -> f32 {
 
 /// The [`StackLane`] for the camera at `cam`. Of a grid of spots and card
 /// sizes, the pile of three items that covers the least of the
-/// representative board, inside the window and clear of the HUD — then the
-/// larger card, the spot further right, and the one nearer the middle of the
-/// window's height. In a duel that is table the board leaves empty; a pod's
-/// table fills the window, and the pile takes its least-used corner.
+/// representative board, inside the window and clear of the HUD; then one
+/// whose 2-D panel clears the board, the HUD and the window's edge too; then
+/// the larger card, the panel losing less, the spot further right, and the
+/// one nearer the middle of the window's height. In a duel that is table the
+/// board leaves empty, the panel beside the pile or under it; a pod's table
+/// fills the window, and the pile takes its least-used corner, the panel
+/// what it must. The panel was once placed off the pile alone, and lay over
+/// the end of a duel's creature row (38,000 px² of the resting board at
+/// 1920x1080).
 pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform, spread: &Spread) -> StackLane {
     let projector = Projector::new(cam, viewport);
-    // The lane is searched for in the right half of the window: only the
-    // cards reaching into it can be covered.
+    let panel_size = Vec2::new(STACK_PANEL_WIDTH, STACK_PANEL_HEIGHT) * ui_scale;
+    let gap = STACK_PANEL_GAP * ui_scale;
+    // The lane is searched for in the right half of the window, its panel
+    // reaching left of it: only the cards reaching into that can be covered.
+    let reach = viewport.x * 0.5 - gap - panel_size.x;
     let board: Vec<Rect> = sample_board(n_seats, hand_zoom_for(viewport.y), spread)
         .iter()
         .filter_map(|c| projector.rect_of(&corners(&c.transform, c.height)))
-        .filter(|r| r.max.x > viewport.x * 0.5)
+        .filter(|r| r.max.x > reach)
         .collect();
     let hud = hud_rects(viewport, n_seats, ui_scale);
     let window = Rect::from_corners(Vec2::splat(MARGIN), viewport - MARGIN);
+    let fits = |r: Rect| {
+        window.contains(r.min) && window.contains(r.max) && hud.iter().all(|p| p.inflate(MARGIN).intersect(r).is_empty())
+    };
+    let covered = |r: Rect| -> f32 { board.iter().map(|c| area(c.intersect(r))).sum() };
+    // What the panel costs, px²: the cards it covers, and what of it the HUD
+    // hides or the window cuts off. Its height is for a deep stack, so on a
+    // short window this only weighs against the cards, not rules it out.
+    let lost = |r: Rect| -> f32 {
+        let hidden: f32 = hud.iter().map(|p| area(p.inflate(MARGIN).intersect(r))).sum();
+        covered(r) + hidden + area(r) - area(r.intersect(window))
+    };
     let aspect = CARD_HEIGHT / CARD_WIDTH;
-    // (covered px², −width, −x, off-centre) — lower is better.
-    let mut best: Option<((f32, f32, f32, f32), Rect, f32)> = None;
+    // (pile's cover px², panel loses any, −width, panel's loss, −x,
+    // off-centre) — lower is better.
+    type Key = (f32, bool, f32, f32, f32, f32);
+    let mut best: Option<(Key, Rect, Rect, f32)> = None;
     for width in [170.0, 150.0, 130.0, 110.0, 92.0, 76.0].map(|w| w * ui_scale) {
         let height = width * aspect * (1.0 + LANE_STEP * (LANE_ITEMS - 1.0));
         let mut x = viewport.x - MARGIN - width;
@@ -307,11 +356,24 @@ pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform
             let mut y = MARGIN;
             while y + height <= viewport.y - MARGIN {
                 let lane = Rect::new(x, y, x + width, y + height);
-                if window.contains(lane.max) && hud.iter().all(|p| p.inflate(MARGIN).intersect(lane).is_empty()) {
-                    let covered: f32 = board.iter().map(|c| area(c.intersect(lane))).sum();
-                    let key = (covered, -width, -x, (lane.center().y - viewport.y * 0.5).abs());
-                    if best.is_none_or(|(k, ..)| key < k) {
-                        best = Some((key, lane, width));
+                if fits(lane) {
+                    let left = Rect::from_corners(Vec2::new(x - gap - panel_size.x, y), Vec2::new(x - gap, y + panel_size.y));
+                    let below = Rect::from_corners(
+                        Vec2::new(lane.max.x - panel_size.x, lane.max.y + gap),
+                        Vec2::new(lane.max.x, lane.max.y + gap + panel_size.y),
+                    );
+                    // Under the pile, the panel hangs over the table's near
+                    // side; where it would cover cards there it covered the
+                    // most of them (12,000 → 44,000 px² at 1280x720), so it
+                    // goes there only to clear the board.
+                    let below = (lost(below) <= SLIVER).then_some(below);
+                    for panel in std::iter::once(left).chain(below) {
+                        let loss = lost(panel);
+                        let off_centre = (lane.center().y - viewport.y * 0.5).abs();
+                        let key = (covered(lane), loss > SLIVER, -width, loss, -x, off_centre);
+                        if best.is_none_or(|(k, ..)| key < k) {
+                            best = Some((key, lane, panel, width));
+                        }
                     }
                 }
                 y += 32.0;
@@ -319,7 +381,7 @@ pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform
             x -= 32.0;
         }
     }
-    let Some((_, lane, width)) = best else { return StackLane::default() };
+    let Some((_, lane, panel, width)) = best else { return StackLane::default() };
 
     // The pile faces the camera at a fixed depth along its forward axis, so a
     // pixel offset is a world offset in the camera's plane.
@@ -342,7 +404,7 @@ pub fn stack_lane(n_seats: usize, viewport: Vec2, ui_scale: f32, cam: &Transform
         step: cam.rotation * Vec3::new(0.0, -step_px * depth / focal, 0.0) - *forward * 0.02,
         rotation: cam.rotation,
         scale: width * depth / focal / CARD_WIDTH,
-        screen: lane,
+        panel,
     }
 }
 
@@ -547,38 +609,86 @@ mod tests {
         assert!((centre - Vec2::new(960.0, 540.0)).length() < 0.5, "{centre}");
     }
 
-    /// The stack lane lands in the window, clear of the HUD, and — in a duel,
-    /// whose table leaves room beside it — clear of every card on the board:
-    /// measured by projecting the lane's own card transforms, so the pixel
-    /// search and the world placement are checked against each other.
+    /// The stack lane and its 2-D panel land in the window, clear of the HUD,
+    /// and — in a duel, whose table leaves room beside it — clear of every
+    /// card on the board, crowded rows included: measured by projecting the
+    /// lane's own card transforms, so the pixel search and the world placement
+    /// are checked against each other. A stack deeper than the lane was sized
+    /// for keeps to the same area.
     #[test]
     fn the_stack_lane_hangs_clear_of_the_board() {
         for seats in [2, 4] {
+            let spreads: &[usize] = if seats == 2 { &[6, 8, 10] } else { &[6] };
             for (w, h) in VIEWPORTS {
-                let vp = Vec2::new(w, h);
-                let scale = auto(vp);
-                let cam = home_pose(seats, vp, scale, &Spread::default());
-                let lane = stack_lane(seats, vp, scale, &cam, &Spread::default());
-                let p = Projector::new(&cam, vp);
-                let rects: Vec<Rect> =
-                    (0..3).map(|i| p.card_rect(&lane.card(i), 0.0).expect("in front of the camera")).collect();
-                let window = Rect::from_corners(Vec2::ZERO, vp);
-                let hud = hud_rects(vp, seats, scale);
-                for r in &rects {
-                    assert!(window.contains(r.min) && window.contains(r.max), "{seats} seats {vp}: {r:?} off screen");
-                    assert!(hud.iter().all(|h| h.intersect(*r).is_empty()), "{seats} seats {vp}: {r:?} under the HUD");
-                }
-                // Camera-facing: its projected width is the size the search chose.
-                assert!(rects[0].width() >= 70.0 * scale, "{seats} seats {vp}: {}px", rects[0].width());
-                if seats == 2 {
-                    let board = sample_board(seats, hand_zoom_for(vp.y), &Spread::default());
-                    let covered: f32 = board
+                for &groups in spreads {
+                    let vp = Vec2::new(w, h);
+                    let scale = auto(vp);
+                    let spread = Spread::uniform(groups);
+                    let cam = home_pose(seats, vp, scale, &spread);
+                    let lane = stack_lane(seats, vp, scale, &cam, &spread);
+                    let p = Projector::new(&cam, vp);
+                    let at = format!("{seats} seats, {groups} groups, {vp}");
+                    let pile = |depth: usize| -> Vec<Rect> {
+                        (0..depth).map(|i| p.card_rect(&lane.card(i, depth), 0.0).expect("in front of the camera")).collect()
+                    };
+                    let cards = pile(3);
+                    // Camera-facing: its projected width is the size the search chose.
+                    assert!(cards[0].width() >= 70.0 * scale, "{at}: {}px", cards[0].width());
+                    // Each newer item hangs a hair nearer the camera, a
+                    // fraction of a pixel larger: the three-deep pile's own
+                    // footprint, not the searched rect, is the bound.
+                    let footprint = cards.iter().fold(cards[0], |acc, r| acc.union(*r));
+                    for depth in 4..=6 {
+                        for r in pile(depth) {
+                            let bound = footprint.inflate(0.5);
+                            assert!(bound.contains(r.min) && bound.contains(r.max),
+                                "{at}: a {depth}-deep stack runs out of its lane ({r:?} in {footprint:?})");
+                        }
+                    }
+                    let panel = lane.panel;
+                    let size = Vec2::new(STACK_PANEL_WIDTH, STACK_PANEL_HEIGHT) * scale;
+                    let gap = STACK_PANEL_GAP * scale;
+                    let near = |a: f32, b: f32| (a - b).abs() < 0.5;
+                    assert!((panel.size() - size).length() < 0.01, "{at}: {panel:?}");
+                    // The searched rect, from the oldest card, which lands
+                    // exactly where the search put it.
+                    let first = cards[0];
+                    let bottom = first.min.y + first.height() * (1.0 + LANE_STEP * (LANE_ITEMS - 1.0));
+                    let left = near(panel.max.x, first.min.x - gap) && near(panel.min.y, first.min.y);
+                    let below = near(panel.max.x, first.max.x) && near(panel.min.y, bottom + gap);
+                    assert!(left || below, "{at}: the panel {panel:?} isn't beside the pile {footprint:?}");
+                    let window = Rect::from_corners(Vec2::ZERO, vp);
+                    let hud = hud_rects(vp, seats, scale);
+                    for r in &cards {
+                        assert!(window.contains(r.min) && window.contains(r.max), "{at}: {r:?} off screen");
+                        assert!(hud.iter().all(|h| h.intersect(*r).is_empty()), "{at}: {r:?} under the HUD");
+                    }
+                    let board: Vec<Rect> = sample_board(seats, hand_zoom_for(vp.y), &spread)
                         .iter()
                         .filter_map(|c| p.card_rect(&c.transform, c.height))
-                        .flat_map(|c| rects.iter().map(move |r| area(c.intersect(*r))))
-                        .sum();
-                    // A rounding sliver, at most, where the pixel grid met a card edge.
-                    assert!(covered < 50.0, "{vp}: the stack lane covers {covered:.0} sq px of the board");
+                        .collect();
+                    let covered = |r: &Rect| -> f32 { board.iter().map(|c| area(c.intersect(*r))).sum() };
+                    let under_hud: f32 = hud.iter().map(|h| area(h.intersect(panel))).sum();
+                    let cut_off = area(panel) - area(panel.intersect(window));
+                    assert!(under_hud == 0.0, "{at}: the stack panel {panel:?} runs under the HUD");
+                    if seats == 2 {
+                        let on_cards: f32 = cards.iter().map(covered).sum();
+                        assert!(on_cards < SLIVER, "{at}: the stack covers {on_cards:.0} sq px of the board");
+                        let on_cards = covered(&panel);
+                        if vp.y >= 1080.0 {
+                            assert!(on_cards + cut_off < SLIVER, "{at}: the stack panel loses {:.0} sq px", on_cards + cut_off);
+                        } else {
+                            // A 1280x720 duel has no room for the panel. It
+                            // covers at most what it measured when this
+                            // landed (18,763 px² at six groups); placed off
+                            // the pile alone it covered 16,736 there, and at
+                            // ten groups 12,395 and ran under the player
+                            // panel. The bottom of its room, which a
+                            // four-deep stack's count line fills, is off the
+                            // window.
+                            assert!(on_cards < 19_000.0, "{at}: the stack panel covers {on_cards:.0} sq px of the board");
+                        }
+                    }
                 }
             }
         }

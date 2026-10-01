@@ -629,6 +629,14 @@ fn main() {
                 .after(sync_game_visuals)
                 .run_if(in_state(AppState::InGame)),
         )
+        // Settled stack cards follow the lane as the stack deepens or the
+        // camera refits; after visual sync, which places a card as it joins.
+        .add_systems(
+            Update,
+            systems::game_ui::settle_stack_lane
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Command zone sync — spawns visuals for each card in any
         // player's command zone. Independent of the main game-visual
         // sync (no animation handoff with hand/battlefield).
