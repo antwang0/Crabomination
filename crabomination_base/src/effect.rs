@@ -7660,6 +7660,11 @@ pub enum Effect {
     /// block this turn"). `filter` is matched card-locally, so a keyword
     /// granted by another continuous effect isn't seen.
     GrantKeywordToMatchingThisTurn { filter: SelectionRequirement, keyword: Keyword },
+    /// CR 611.2c / 613.1f — until end of turn, each permanent `what` picks as
+    /// this resolves loses `keyword` and can't have it: a later grant, static
+    /// or resolved, doesn't give it back this turn (Arcane Lighthouse's
+    /// rulings). A layer-6 `CantHaveKeyword` over that set.
+    CantHaveKeywordThisTurn { what: Selector, keyword: Keyword },
     /// CR 613 layer 7b — "[what]'s base power becomes `power`" for `duration`,
     /// leaving base toughness intact (Belligerent Yearling: base power becomes
     /// equal to the entering Dinosaur's power until end of turn).

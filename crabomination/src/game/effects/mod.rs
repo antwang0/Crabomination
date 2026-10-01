@@ -16996,6 +16996,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantHaveKeywordThisTurn { what, keyword } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                let ids: crate::game::layers::AffectedIds = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let timestamp = self.next_timestamp();
+                self.add_continuous_effect(ContinuousEffect {
+                    timestamp,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    affected: AffectedPermanents::Specific(ids),
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::UntilEndOfTurn,
+                    modification: Modification::CantHaveKeyword(keyword.clone()),
+                });
+                Ok(())
+            }
+
             Effect::GrantKeywordToMatchingThisTurn { filter, keyword } => {
                 use crate::game::layers::{
                     ContinuousEffect, EffectDuration, Layer, Modification,
