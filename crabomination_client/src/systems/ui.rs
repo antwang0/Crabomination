@@ -400,12 +400,14 @@ pub fn update_activatable_highlights(
     } else {
         view.0
             .as_ref()
-            // Face-down permanents the viewer can turn face up (CR 708.5) glow
-            // alongside permanents with an activatable ability.
+            // Face-down permanents the viewer can turn face up (CR 708.5) and
+            // planeswalkers with a live loyalty ability glow alongside
+            // permanents with an activatable ability.
             .map(|cv| {
                 cv.activatable_permanents
                     .iter()
                     .chain(cv.turn_up_able.iter())
+                    .chain(cv.activatable_loyalty.iter().map(|(id, _)| id))
                     .copied()
                     .collect()
             })
@@ -736,6 +738,7 @@ pub fn peek_popup(
         .map(|b| scryfall::card_back_face_asset_path(b.name));
     let permanent = card_id.zip(view.0.as_ref()).and_then(|(id, cv)| cv.battlefield.iter().find(|p| p.id == id));
     let info = name.as_deref().map(|n| card_info_lines(n, permanent)).unwrap_or_default();
+    let now = permanent.zip(view.0.as_ref()).map(|(pv, cv)| crate::systems::inspector::now_lines(cv, pv)).unwrap_or_default();
 
     let texture: Handle<Image> = asset_server.load(&front_path);
     // Full-screen overlay, flex-centered, with dim background.
@@ -792,39 +795,18 @@ pub fn peek_popup(
             // Rules-text panel — the big peek is the one place with room
             // for the full type line / keyword reminders, and cards render
             // art-only, so surface them here too (not just on the small
-            // cursor-side preview).
-            if !info.is_empty() {
-                parent
-                    .spawn((
-                        Node {
-                            width: Val::Px(300.0),
-                            max_height: Val::Px(POPUP_HEIGHT),
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect::all(Val::Px(12.0)),
-                            row_gap: Val::Px(4.0),
-                            overflow: Overflow::clip_y(),
-                            border_radius: BorderRadius::all(theme::RADIUS_PANEL),
-                            ..default()
-                        },
-                        BackgroundColor(theme::PANEL_BG),
-                        Pickable::IGNORE,
-                    ))
-                    .with_children(|panel| {
-                        for (text, is_reminder) in info {
-                            let color = if is_reminder {
-                                theme::TEXT_SECONDARY
-                            } else {
-                                theme::TEXT_PRIMARY
-                            };
-                            panel.spawn((
-                                Text::new(text),
-                                ui_fonts.tf(13.0),
-                                TextColor(color),
-                                Pickable::IGNORE,
-                            ));
-                        }
-                    });
-            }
+            // cursor-side preview), with the inspector under them.
+            let panel = Node {
+                width: Val::Px(300.0),
+                max_height: Val::Px(POPUP_HEIGHT),
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(12.0)),
+                row_gap: Val::Px(4.0),
+                overflow: Overflow::clip_y(),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            };
+            spawn_card_notes(parent, &ui_fonts, panel, 13.0, info, now);
         });
 }
 
@@ -1406,50 +1388,59 @@ fn place_hover_preview(
                 ImageNode { image: texture, ..default() },
                 Pickable::IGNORE,
             ));
-            if !info.is_empty() || !now.is_empty() {
-                col.spawn((
-                    Node {
-                        width: Val::Px(HOVER_PREVIEW_WIDTH),
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(8.0)),
-                        row_gap: Val::Px(3.0),
-                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                        ..default()
-                    },
-                    BackgroundColor(theme::PANEL_BG),
-                    Pickable::IGNORE,
-                ))
-                .with_children(|panel| {
-                    // A line with a cost in it ("{2}{T}: …") draws its mana
-                    // as pips, wrapping between words.
-                    let mut text_line = |text: String, color: Color| {
-                        if crate::mana_text::has_pips(&text) {
-                            panel.spawn((
-                                Node { width: Val::Percent(100.0), ..default() },
-                                crate::mana_text::ManaText::new(text, 12.0, color).wrapping(),
-                                Pickable::IGNORE,
-                            ));
-                        } else {
-                            panel.spawn((Text::new(text), ui_fonts.tf(12.0), TextColor(color), Pickable::IGNORE));
-                        }
-                    };
-                    let printed = !info.is_empty();
-                    for (text, is_reminder) in info {
-                        text_line(text, if is_reminder { theme::TEXT_SECONDARY } else { theme::TEXT_PRIMARY });
-                    }
-                    // The inspector, under a rule and a heading: the board's
-                    // state, not the card's text.
-                    if !now.is_empty() {
-                        if printed {
-                            text_line("─── on the battlefield ───".to_string(), theme::ACCENT_GOLD);
-                        }
-                        for l in now {
-                            text_line(l.text, l.tone.color());
-                        }
-                    }
-                });
-            }
+            let panel = Node {
+                width: Val::Px(HOVER_PREVIEW_WIDTH),
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(8.0)),
+                row_gap: Val::Px(3.0),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            };
+            spawn_card_notes(col, ui_fonts, panel, 12.0, info, now);
         });
+}
+
+/// The notes panel beside a card preview, laid out as `panel`: the printed
+/// `info` lines (reminders dimmed), then the inspector's `now` lines under a
+/// rule — the board's state, not the card's text. A line with a cost in it
+/// ("{2}{T}: …") draws its mana as pips, wrapping between words. Nothing
+/// when there are no lines.
+fn spawn_card_notes(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    panel: Node,
+    size: f32,
+    info: Vec<(String, bool)>,
+    now: Vec<NowLine>,
+) {
+    if info.is_empty() && now.is_empty() {
+        return;
+    }
+    parent.spawn((panel, BackgroundColor(theme::PANEL_BG), Pickable::IGNORE)).with_children(|panel| {
+        let mut text_line = |text: String, color: Color| {
+            if crate::mana_text::has_pips(&text) {
+                panel.spawn((
+                    Node { width: Val::Percent(100.0), ..default() },
+                    crate::mana_text::ManaText::new(text, size, color).wrapping(),
+                    Pickable::IGNORE,
+                ));
+            } else {
+                panel.spawn((Text::new(text), ui_fonts.tf(size), TextColor(color), Pickable::IGNORE));
+            }
+        };
+        let printed = !info.is_empty();
+        for (text, is_reminder) in info {
+            text_line(text, if is_reminder { theme::TEXT_SECONDARY } else { theme::TEXT_PRIMARY });
+        }
+        if !now.is_empty() {
+            if printed {
+                text_line("─── on the battlefield ───".to_string(), theme::ACCENT_GOLD);
+            }
+            for l in now {
+                text_line(l.text, l.tone.color());
+            }
+        }
+    });
 }
 
 const BROWSER_CARD_WIDTH: f32 = 220.0;

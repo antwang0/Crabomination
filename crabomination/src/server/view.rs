@@ -194,6 +194,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         splittable_right_hand: affordances.splittable_right,
         activatable_permanents: affordances.activatable_permanents,
         activatable_abilities: affordances.activatable_abilities,
+        activatable_loyalty: affordances.activatable_loyalty,
         hand_activatable: affordances.hand_activatable,
         morphable_hand: affordances.morphable,
         face_down_cast_cost: state.face_down_cast_cost(viewer_seat),

@@ -704,6 +704,35 @@ fn activatable_abilities_name_the_live_ones() {
     assert_eq!(a.activatable_permanents, vec![ballista], "one entry per permanent");
 }
 
+/// Loyalty abilities and the abilities statics grant are probed too:
+/// Liliana of the Veil at 3 loyalty in her controller's main phase offers
+/// +1 and −2 but not −6, and nothing outside it (CR 606.3); a Forest
+/// wearing Debtor's Pulpit offers the granted "{T}: Tap target creature" at
+/// the index past its printed abilities.
+#[test]
+fn loyalty_and_granted_abilities_are_probed() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let lili = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    g.battlefield_find_mut(lili).unwrap().counters.insert(CounterType::Loyalty, 3);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let pulpit = g.add_card_to_battlefield(0, catalog::debtors_pulpit());
+    g.battlefield_find_mut(pulpit).unwrap().attached_to = Some(forest);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let printed = g.battlefield_find(forest).unwrap().definition.activated_abilities.len();
+
+    let a = g.compute_hand_affordances(0);
+    assert_eq!(a.activatable_loyalty, vec![(lili, 0), (lili, 1)], "+1 and −2, not −6");
+    assert!(a.activatable_abilities.contains(&(forest, printed)), "{:?}", a.activatable_abilities);
+    assert!(a.activatable_permanents.contains(&forest));
+
+    g.step = TurnStep::End;
+    assert!(g.compute_hand_affordances(0).activatable_loyalty.is_empty(), "sorcery timing");
+}
+
 /// Conceding (CR 104.3a) eliminates the player, removes their objects, and
 /// runs state-based actions so the surviving opponent wins. It works
 /// regardless of priority and is a no-op once already eliminated / over.

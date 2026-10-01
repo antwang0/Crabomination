@@ -207,6 +207,7 @@ pub fn auto_advance_p0(
         || !cv.prepare_castable.is_empty()
         || !cv.spliceable_hand.is_empty()
         || !cv.activatable_permanents.is_empty()
+        || !cv.activatable_loyalty.is_empty()
         || !cv.kickable_hand.is_empty()
         || !cv.kicker_option_sets.is_empty()
         || !cv.buyback_hand.is_empty()

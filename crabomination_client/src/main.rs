@@ -432,6 +432,7 @@ fn main() {
                 layout_harness::capture_screenshot,
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
                 layout_harness::hover_card_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::hold_alt_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::zoom_on_card_for_screenshot
                     .after(crate::systems::camera_zoom::camera_zoom)
                     .run_if(in_state(AppState::InGame)),

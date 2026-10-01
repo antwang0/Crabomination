@@ -14,9 +14,10 @@
 //! look at what sits on it (counter chips, badges); `--demo-damage` feeds the
 //! client a batch of combat damage just before the screenshot, so it catches
 //! the damage numerals in flight; `--stack` starts with two spells on the
-//! stack, `--stack-depth N` with N (up to six); `--mana-gallery` lays every kind of mana symbol over the board;
-//! `--hover-card NAME` hovers one of the viewer's battlefield or hand cards
-//! (a screenshot run ignores the real mouse); `--combat SCENE` stages a combat
+//! stack, `--stack-depth N` with N (up to six); `--mana-gallery` lays every
+//! kind of mana symbol over the board; `--hover-card NAME` hovers one of the
+//! viewer's battlefield or hand cards (a screenshot run ignores the real
+//! mouse), and `--alt` holds Alt over it; `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
 //! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
 //! mana AGE seconds before the shot ([`fire_impacts_for_screenshot`]);
@@ -82,6 +83,8 @@ pub struct HarnessArgs {
     pub mana_gallery: bool,
     /// `--hover-card NAME`: that card of the viewer's is hovered.
     pub hover_card: Option<String>,
+    /// `--alt`: Alt is held, for the large peek and its notes.
+    pub alt: bool,
     /// `--combat SCENE`: a combat or a targeting pick, staged client-side.
     pub combat: Option<CombatScene>,
     /// `--tokens`: piles of identical tokens on two seats.
@@ -154,6 +157,7 @@ impl HarnessArgs {
                 .or(args.iter().any(|a| a == "--stack").then_some(2)),
             mana_gallery: args.iter().any(|a| a == "--mana-gallery"),
             hover_card: value("--hover-card"),
+            alt: args.iter().any(|a| a == "--alt"),
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
             tokens: args.iter().any(|a| a == "--tokens"),
             life_change: args.iter().any(|a| a == "--life-change"),
@@ -620,6 +624,14 @@ pub fn hover_card_for_screenshot(
         window.bypass_change_detection().set_cursor_position(Some(pos));
     }
     *done = true;
+}
+
+/// `--alt`: hold Alt, as a reader holding it over the hovered card would —
+/// the large peek and its notes (`ui::peek_popup`) instead of the preview.
+pub fn hold_alt_for_screenshot(args: Res<HarnessArgs>, mut keys: ResMut<ButtonInput<KeyCode>>) {
+    if args.alt && !keys.pressed(KeyCode::AltLeft) {
+        keys.press(KeyCode::AltLeft);
+    }
 }
 
 /// How each seat's life swings under `--life-change`: the viewer loses 3,

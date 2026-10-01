@@ -10,6 +10,8 @@ use super::*;
 /// auto-target)`. The mana flag lets the probe loop skip mana abilities
 /// without re-walking the effect tree.
 type AbilityProbe = (bool, Option<Effect>);
+/// A loyalty ability to probe: its effect when it targets, and whether it costs −X.
+type LoyaltyProbe = (Option<Effect>, bool);
 
 /// PERF `(-138)`: how many affordance probes ever write the resolution-scratch
 /// half of `GameState`.
@@ -503,31 +505,34 @@ impl GameState {
     /// [`activatable_permanents`] — every ability with `every`, else only
     /// the first of each permanent (all that one needs, and the probes are
     /// the cost). The client's card inspector names which of a permanent's
-    /// abilities are live.
+    /// abilities are live. Printed abilities first, then the ones statics
+    /// grant (Debtor's Pulpit, Urza's Saga's chapters) at the indices
+    /// `activate_ability` resolves them from — the printed ones alone left a
+    /// granted ability unhighlighted.
     ///
     /// [`activatable_permanents`]: Self::activatable_permanents
     fn activatable_abilities_on(&self, template: &GameState, seat: usize, every: bool) -> Vec<(CardId, usize)> {
         // Snapshot (id, [ability probes]) so the borrow of `self.battlefield`
         // is released before the cloning probes run.
+        let scan = self.grant_scan();
         let perms: Vec<(CardId, Vec<AbilityProbe>)> = self
             .battlefield
             .iter()
-            // Seat's own permanents, plus others' permanents carrying an
-            // `opponents_only` (Detention Vortex) or `any_player` (Damping
-            // Engine) ability the seat may activate.
-            .filter(|c| {
-                !c.definition.activated_abilities.is_empty()
-                    && (c.controller == seat
-                        || c.definition.activated_abilities.iter().any(|a| a.any_player)
-                        || (!self.same_team(c.controller, seat)
-                            && c.definition.activated_abilities.iter().any(|a| a.opponents_only)))
+            .filter_map(|c| {
+                let abilities: Vec<&crate::effect::ActivatedAbility> =
+                    c.definition.activated_abilities.iter().chain(self.granted_abilities_with(c.id, &scan)).collect();
+                // Seat's own permanents, plus others' permanents carrying an
+                // `opponents_only` (Detention Vortex) or `any_player` (Damping
+                // Engine) ability the seat may activate.
+                let reachable = c.controller == seat
+                    || abilities.iter().any(|a| a.any_player)
+                    || (!self.same_team(c.controller, seat) && abilities.iter().any(|a| a.opponents_only));
+                (!abilities.is_empty() && reachable).then_some((c, abilities))
             })
-            .map(|c| {
+            .map(|(c, abilities)| {
                 let owns = c.controller == seat;
-                let effs = c
-                    .definition
-                    .activated_abilities
-                    .iter()
+                let effs = abilities
+                    .into_iter()
                     .map(|a| {
                         // Only surface abilities the seat is actually allowed to
                         // use: own permanents' non-opponents_only abilities, or
@@ -563,6 +568,44 @@ impl GameState {
                 })
             });
             out.extend(live.map(|(idx, _)| (*id, idx)).take(if every { usize::MAX } else { 1 }));
+        }
+        out
+    }
+
+    /// `(planeswalker, loyalty ability index)` for each loyalty ability
+    /// `seat` could activate right now — its main phase on an empty stack,
+    /// an activation left this turn, the loyalty to pay (CR 606.3) — by the
+    /// same dry run: printed abilities and those statics grant
+    /// (`effective_loyalty_abilities`), a −X one probed at X = 0. Drives the
+    /// client's activatable outline and card inspector, which loyalty
+    /// abilities never reached (they aren't `activated_abilities`).
+    fn activatable_loyalty_on(&self, template: &GameState, seat: usize) -> Vec<(CardId, usize)> {
+        let walkers: Vec<(CardId, Vec<LoyaltyProbe>)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
+            .map(|c| {
+                let abilities = super::effective_loyalty_abilities(c, &self.battlefield)
+                    .into_iter()
+                    .map(|a| (a.effect.requires_target().then_some(a.effect), a.x_cost))
+                    .collect();
+                (c.id, abilities)
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, abilities) in &walkers {
+            for (idx, (targeted, x_cost)) in abilities.iter().enumerate() {
+                let target = targeted.as_ref().and_then(|eff| self.auto_targets_for_effect_all_slots(eff, seat, None).0);
+                let action = GameAction::ActivateLoyaltyAbility {
+                    card_id: *id,
+                    ability_index: idx,
+                    target,
+                    x_value: x_cost.then_some(0),
+                };
+                if Self::would_accept_on(template, action) {
+                    out.push((*id, idx));
+                }
+            }
         }
         out
     }
@@ -1867,6 +1910,7 @@ impl GameState {
             may_play_lands: self.may_play_playable_lands_on(&template, seat),
             activatable_permanents,
             activatable_abilities,
+            activatable_loyalty: self.activatable_loyalty_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),
             turn_up_able: self.turn_up_able_permanents_on(&template, seat),

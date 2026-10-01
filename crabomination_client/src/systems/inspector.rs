@@ -301,12 +301,24 @@ fn status(out: &mut Vec<NowLine>, cv: &ClientView, pv: &PermanentView) {
 }
 
 /// What the viewer can do with it now, each checked by the engine: the
-/// abilities `activatable_abilities` names, attacking (`legal_attackers`),
-/// blocking (`legal_block_targets`) and turning it face up.
+/// abilities `activatable_abilities` and `activatable_loyalty` name,
+/// attacking (`legal_attackers`), blocking (`legal_block_targets`) and
+/// turning it face up.
 fn actions(out: &mut Vec<NowLine>, cv: &ClientView, pv: &PermanentView) {
     for (_, index) in cv.activatable_abilities.iter().filter(|(id, _)| *id == pv.id) {
         let Some(ability) = pv.abilities.iter().find(|a| a.index == *index) else { continue };
         let cost = if ability.cost_label.is_empty() { "{0}" } else { ability.cost_label.as_str() };
+        out.push(line(format!("▶ {cost}: {}", ability.effect_label), Tone::Ready));
+    }
+    for (_, index) in cv.activatable_loyalty.iter().filter(|(id, _)| *id == pv.id) {
+        let Some(ability) = pv.loyalty_abilities.iter().find(|a| a.index == *index) else { continue };
+        // As printed: +2, 0, −1, −X.
+        let cost = match ability.loyalty_cost {
+            _ if ability.x_cost => "−X".to_string(),
+            0 => "0".to_string(),
+            c if c < 0 => format!("−{}", -c),
+            c => format!("+{c}"),
+        };
         out.push(line(format!("▶ {cost}: {}", ability.effect_label), Tone::Ready));
     }
     if cv.turn_up_able.contains(&pv.id) {
@@ -419,6 +431,23 @@ mod tests {
         assert_eq!(lines_for(&g, ready), vec![line("▶ Can attack", Tone::Ready)]);
         assert_eq!(texts(&lines_for(&g, fresh)), ["Summoning sick: can't attack or {T} this turn"]);
         assert_eq!(lines_for(&g, theirs), vec![], "sickness doesn't bind on your turn");
+    }
+
+    /// A planeswalker offers the loyalty abilities its loyalty pays for, in
+    /// its controller's main phase: Liliana of the Veil at 3, +1 and −2.
+    #[test]
+    fn the_live_loyalty_abilities_are_offered() {
+        let mut g = crabomination::game::two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let lili = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+        g.battlefield_find_mut(lili).unwrap().counters.insert(CounterType::Loyalty, 3);
+
+        let lines = lines_for(&g, lili);
+        assert_eq!(lines[0], line("Loyalty 3", Tone::Plain));
+        let ready: Vec<&str> = lines.iter().filter(|l| l.tone == Tone::Ready).map(|l| l.text.as_str()).collect();
+        assert_eq!(ready.len(), 2, "{ready:?}");
+        assert!(ready[0].starts_with("▶ +1: ") && ready[1].starts_with("▶ −2: "), "{ready:?}");
     }
 
     /// A stolen permanent names who controls it and who owns it.

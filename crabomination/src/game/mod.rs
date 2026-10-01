@@ -1253,6 +1253,9 @@ pub struct HandAffordances {
     /// `(permanent, ability index)` for each non-mana activated ability behind
     /// `activatable_permanents` — which of a permanent's abilities are live.
     pub activatable_abilities: Vec<(CardId, usize)>,
+    /// `(planeswalker, loyalty ability index)` for each loyalty ability the
+    /// seat could activate right now.
+    pub activatable_loyalty: Vec<(CardId, usize)>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
     /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit
     /// Guides' exile-for-mana). Surfaced so the client/bot can offer the

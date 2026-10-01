@@ -49,11 +49,17 @@ residual; bodies are otherwise verbatim.
   ability index)` from the same dry-run probes as `activatable_permanents`,
   which is derived from it — so Walking Ballista with a counter and no mana
   offers its ping and not its `{4}`.
-- Residual ⏳: loyalty abilities and abilities a static grants
-  (`printed_count + n`) aren't probed, so they get no "▶" (the activatable
-  highlight has the same gap); "from effects" isn't split by source (anthem,
-  Aura, pump); the Alt peek doesn't show the inspector; hand and stack cards
-  get nothing new.
+- ✅ **Loyalty and granted abilities too (2026-10-01).** The probe now
+  covers the abilities statics grant (Debtor's Pulpit's land, Urza's Saga's
+  chapters, at `printed_count + n`) and, in `activatable_loyalty`, each
+  loyalty ability (a −X one at X = 0). Both get their "▶" lines, a
+  planeswalker with a live loyalty ability gets the activatable outline
+  (it never had one), and auto-pass reads the new list with the rest. The
+  Alt peek shows the inspector under the printed text (harness: `--alt`).
+- Residual ⏳: "from effects" isn't split by source (anthem, Aura, pump);
+  hand and stack cards get nothing new; with Alt held, the corner list
+  (`counter_tooltip`) repeats some of what the peek now says — trim it to
+  the long tail (shields, regeneration, sagas).
 
 ## The stack panel clears the board (2026-10-01) — shipped
 

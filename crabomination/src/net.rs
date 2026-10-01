@@ -594,6 +594,11 @@ pub struct ClientView {
     /// off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub activatable_abilities: Vec<(CardId, usize)>,
+    /// `(planeswalker, its `LoyaltyAbilityView.index`)` for each loyalty
+    /// ability the viewer could activate right now. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub activatable_loyalty: Vec<(CardId, usize)>,
     /// CardIds in the viewer's hand carrying a `from_hand` activated ability
     /// (Talon Gates of Madara's `{4}` put-into-play, Spirit Guides' pitch
     /// mana). Lets the client offer the from-hand activation directly from the
