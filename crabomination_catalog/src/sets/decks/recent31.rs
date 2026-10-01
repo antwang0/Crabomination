@@ -665,14 +665,17 @@ pub fn glory() -> CardDefinition {
     }
 }
 
-/// Foul-Tongue Invocation — {2}{B} Instant. Target player sacrifices a creature
-/// of their choice. If you control a Dragon, you gain 4 life. (The "reveal a
-/// Dragon from hand" alt-trigger is approximated as the control check.)
+/// Foul-Tongue Invocation — {2}{B} Instant. As an additional cost you may
+/// reveal a Dragon card from your hand. Target player sacrifices a creature
+/// of their choice. If you revealed a Dragon card or controlled a Dragon as
+/// you cast this spell, you gain 4 life. The free reveal is always made
+/// (`dragon_as_cast`).
 pub fn foul_tongue_invocation() -> CardDefinition {
     CardDefinition {
         name: "Foul-Tongue Invocation",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
+        as_cast_condition: Some(crate::effect::shortcut::dragon_as_cast()),
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: target_filtered(SelectionRequirement::Player),
@@ -680,13 +683,7 @@ pub fn foul_tongue_invocation() -> CardDefinition {
                 filter: SelectionRequirement::Creature,
             },
             Effect::If {
-                cond: Predicate::ValueAtLeast(
-                    Value::CountOf(Box::new(Selector::EachPermanent(
-                        SelectionRequirement::HasCreatureType(CreatureType::Dragon)
-                            .and(SelectionRequirement::ControlledByYou),
-                    ))),
-                    Value::Const(1),
-                ),
+                cond: Predicate::CastConditionHeld,
                 then: Box::new(Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(4),

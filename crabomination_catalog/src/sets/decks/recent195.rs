@@ -96,18 +96,18 @@ pub fn tomb_trawler() -> CardDefinition {
 }
 
 /// Steer Clear — {W} Instant. Deals 2 damage to target attacking or blocking
-/// creature; 4 instead if you control a Mount (as you cast is approximated as at
-/// resolution).
+/// creature; 4 instead if you controlled a Mount as you cast it (CR 601.2).
 pub fn steer_clear() -> CardDefinition {
     let attacker_or_blocker = R::Creature.and(R::IsAttacking.or(R::IsBlocking));
     CardDefinition {
         name: "Steer Clear",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
+        as_cast_condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasCreatureType(CreatureType::Mount).and(R::ControlledByYou),
+        ))),
         effect: Effect::If {
-            cond: Predicate::SelectorExists(Selector::EachPermanent(
-                R::HasCreatureType(CreatureType::Mount).and(R::ControlledByYou),
-            )),
+            cond: Predicate::CastConditionHeld,
             then: Box::new(Effect::DealDamage {
                 to: target_filtered(attacker_or_blocker.clone()),
                 amount: Value::Const(4),

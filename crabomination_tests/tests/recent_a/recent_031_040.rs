@@ -266,9 +266,19 @@ mod recent31 {
         };
         g.add_card_to_battlefield(0, dragon);
         let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        let mut ctx = ctx0(&g);
-        ctx.targets = vec![Target::Player(1)];
-        g.resolve_effect(&catalog::foul_tongue_invocation().effect, &ctx).unwrap();
+        // CR 601.2 — the Dragon is read as the spell is cast, so cast it.
+        let spell = g.add_card_to_hand(0, catalog::foul_tongue_invocation());
+        g.step = crabomination::game::types::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 3);
+        g.perform_action(crabomination::game::types::GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
         drain_stack(&mut g);
         assert!(g.battlefield_find(victim).is_none(), "target player sacrificed a creature");
         assert_eq!(g.players[0].life, 24, "gained 4 — you control a Dragon");

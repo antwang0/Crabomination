@@ -91,12 +91,16 @@ pub fn taken_by_nightmares() -> CardDefinition {
 }
 
 /// Faerie Fencing — {X}{B} Instant. Target creature gets -X/-X until end of
-/// turn, plus an additional -3/-3 if you control a Faerie.
+/// turn, plus an additional -3/-3 if you controlled a Faerie as you cast it
+/// (CR 601.2).
 pub fn faerie_fencing() -> CardDefinition {
     CardDefinition {
         name: "Faerie Fencing",
         cost: cost(&[x(), b()]),
         card_types: vec![CardType::Instant],
+        as_cast_condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasCreatureType(CreatureType::Faerie).and(R::ControlledByYou),
+        ))),
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
@@ -105,12 +109,7 @@ pub fn faerie_fencing() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        R::HasCreatureType(CreatureType::Faerie).and(R::ControlledByYou),
-                    ),
-                    n: Value::ONE,
-                },
+                cond: Predicate::CastConditionHeld,
                 then: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
                     power: Value::Const(-3),

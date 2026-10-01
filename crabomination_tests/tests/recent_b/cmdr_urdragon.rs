@@ -288,6 +288,53 @@ fn orator_draws_with_a_dragon() {
     assert_eq!(g.players[0].hand.len(), h, "drew one");
 }
 
+/// CR 601.2 — Orator's condition is fixed as it is cast: a Dragon card in
+/// hand counts (the free reveal), a Dragon that dies before Orator resolves
+/// still counts, and an Orator put onto the battlefield uncast doesn't draw.
+#[test]
+fn orator_reads_its_dragon_as_cast() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 6);
+    g.add_card_to_hand(0, catalog::broodmate_dragon());
+    let o = g.add_card_to_hand(0, catalog::orator_of_ojutai());
+    let h = g.players[0].hand.len();
+    cast(&mut g, 0, o, None).expect("cast");
+    assert_eq!(g.players[0].hand.len(), h, "revealed a Dragon card: drew one");
+
+    g.players[0].hand.clear();
+    let whelp = g.add_card_to_battlefield(0, catalog::dragon_hatchling());
+    let o2 = g.add_card_to_hand(0, catalog::orator_of_ojutai());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: o2, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    bolt_in_response(&mut g, 1, whelp);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(whelp).is_none(), "the Dragon died first");
+    assert_eq!(g.players[0].hand.len(), 1, "it was there as Orator was cast");
+
+    g.players[0].hand.clear();
+    g.add_card_to_battlefield(0, catalog::broodmate_dragon());
+    let o3 = g.add_card_to_graveyard(0, catalog::orator_of_ojutai());
+    let r = g.add_card_to_hand(0, catalog::reanimate());
+    cast(&mut g, 0, r, Some(Target::Permanent(o3))).expect("reanimate");
+    assert!(g.battlefield_find(o3).is_some());
+    assert_eq!(g.players[0].hand.len(), 0, "not cast: no draw");
+}
+
+fn bolt_in_response(g: &mut GameState, from: usize, target: CardId) {
+    let b = g.add_card_to_hand(from, catalog::lightning_bolt());
+    flood(g, from);
+    g.priority.player_with_priority = from;
+    g.perform_action(GameAction::CastSpell {
+        card_id: b,
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt in response");
+}
+
 /// Niv-Mizzet, Dracogenius draws when it deals damage to a player — it
 /// shipped drawing when it was dealt damage instead.
 #[test]

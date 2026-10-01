@@ -3480,3 +3480,18 @@ pub fn token_copy_of(who: PlayerRef, count: Value, source: Selector) -> Effect {
         extra_keywords: vec![],
     }
 }
+
+/// The Dragons of Tarkir cycle's cast condition (CR 601.2): "you may reveal a
+/// Dragon card from your hand" as an additional cost, or control a Dragon. The
+/// reveal costs nothing, so it is always made when a Dragon is in hand.
+pub fn dragon_as_cast() -> Predicate {
+    let dragon = || SelectionRequirement::HasCreatureType(crate::card::CreatureType::Dragon);
+    Predicate::Any(vec![
+        Predicate::SelectorExists(Selector::EachPermanent(dragon().and(SelectionRequirement::ControlledByYou))),
+        Predicate::SelectorExists(Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone: crate::card::Zone::Hand,
+            filter: dragon(),
+        }),
+    ])
+}

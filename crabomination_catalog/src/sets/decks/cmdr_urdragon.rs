@@ -272,22 +272,15 @@ pub fn ojutai_soul_of_winter() -> CardDefinition {
     def
 }
 
-/// Orator of Ojutai — defender, flying; enters: draw if you control a Dragon
-/// or have one to reveal. Residual: the check reads board and hand as it
-/// enters.
+/// Orator of Ojutai — defender, flying; enters: draw if you revealed a Dragon
+/// card or controlled a Dragon as you cast it (CR 601.2, `dragon_as_cast`).
 pub fn orator_of_ojutai() -> CardDefinition {
-    let has_dragon = Predicate::Any(vec![
-        Predicate::SelectorExists(Selector::EachPermanent(dragon().and(R::ControlledByYou))),
-        Predicate::SelectorExists(Selector::CardsInZone {
-            who: PlayerRef::You,
-            zone: crate::card::Zone::Hand,
-            filter: dragon(),
-        }),
-    ]);
     CardDefinition {
         keywords: vec![Keyword::Defender, Keyword::Flying],
+        as_cast_condition: Some(crate::effect::shortcut::dragon_as_cast()),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(has_dragon),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::CastConditionHeld),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
         }],
         ..creature("Orator of Ojutai", cost(&[generic(1), w()]), vec![CreatureType::Bird, CreatureType::Monk], 0, 4)
