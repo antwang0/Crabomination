@@ -9122,8 +9122,8 @@ pub enum Effect {
     Connive { what: Selector, amount: Value },
     /// Gogo — copy target activated or triggered ability on the stack
     /// `times` times (the selector resolves to the ability's *source*
-    /// permanent, mirroring `CounterAbility`). Copies keep the original's
-    /// targets; the printed "you may choose new targets" is auto-kept.
+    /// permanent, mirroring `CounterAbility`). The copier controls each copy
+    /// and may choose new targets for it (CR 707.10c).
     CopyAbility { what: Selector, times: Value },
     /// Copy target spell **unless** its caster pays `mana_cost`. Used by
     /// Wandering Archaic ("Whenever an opponent casts an instant or sorcery

@@ -22597,25 +22597,26 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 for t in &targets {
                     let Some(cid) = t.as_permanent_id() else { continue };
-                    let found = self.stack.iter().rev().find(|si| {
-                        matches!(si, StackItem::Trigger { source, .. } if *source == cid)
-                    });
-                    if let Some(item) = found {
-                        let copy = item.clone();
-                        for _ in 0..n {
-                            let mut c = copy.clone();
-                            // CR 707.10 — the copy is the copier's; CR 707.10c
-                            // — it may choose new targets (the original first,
-                            // so the default keeps it).
-                            if let StackItem::Trigger { controller, effect, target, source, .. } = &mut c {
-                                *controller = ctx.controller;
-                                if target.is_some() {
-                                    let name = self.find_card_anywhere(*source).map_or("", |c| c.definition.name);
-                                    *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);
-                                }
+                    // The topmost ability from that source, the copier's first.
+                    let from = |mine: bool| {
+                        self.stack.iter().rev().find(|si| matches!(si,
+                            StackItem::Trigger { source, controller, .. }
+                                if *source == cid && (!mine || *controller == ctx.controller)))
+                    };
+                    let Some(item) = from(true).or_else(|| from(false)).cloned() else { continue };
+                    let name = self.find_card_anywhere(cid).map_or("ability", |c| c.definition.name);
+                    for _ in 0..n {
+                        let mut copy = item.clone();
+                        // CR 707.10 — the copier controls the copy and "may
+                        // choose new targets" (CR 707.10c); the default keeps
+                        // the original's.
+                        if let StackItem::Trigger { effect, target, controller, .. } = &mut copy {
+                            *controller = ctx.controller;
+                            if target.is_some() {
+                                *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);
                             }
-                            self.stack.push(c);
                         }
+                        self.stack.push(copy);
                     }
                 }
                 Ok(())

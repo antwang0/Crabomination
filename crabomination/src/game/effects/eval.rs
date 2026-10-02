@@ -4697,8 +4697,19 @@ impl GameState {
             Some(c) => Some(c.controller),
             None => self
                 .stack_spell_caster(cid)
-                .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller)),
+                .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller))
+                .or_else(|| self.stack_ability_controller(cid)),
         }
+    }
+
+    /// CR 603.3a — the controller of the topmost ability on the stack whose
+    /// source is `cid`: what "target triggered ability you control" reads
+    /// once that source has left the battlefield (a dies trigger).
+    fn stack_ability_controller(&self, cid: CardId) -> Option<usize> {
+        self.stack.iter().rev().find_map(|si| match si {
+            StackItem::Trigger { source, controller, .. } if *source == cid => Some(*controller),
+            _ => None,
+        })
     }
 
     fn evaluate_requirement_static_hinted<'a>(

@@ -1754,3 +1754,31 @@ fn hunting_velociraptor_grants_dinosaurs_prowl() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dreadmaw).is_some(), "a 6-drop for three mana");
 }
+
+/// CR 603.3a — "target triggered ability you control" is the ability's
+/// controller, so Strionic Resonator copies a dies trigger whose source is
+/// already in the graveyard: Doomed Traveler makes two Spirits.
+#[test]
+fn strionic_resonator_copies_a_dies_trigger() {
+    let mut g = main_phase_d();
+    let traveler = g.add_card_to_battlefield(0, catalog::doomed_traveler());
+    let resonator = g.add_card_to_battlefield(0, catalog::strionic_resonator());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood_d(&mut g, 0);
+    let act = |card_id, target| GameAction::CastSpell { card_id, target, additional_targets: vec![], mode: None, x_value: None };
+    g.perform_action(act(bolt, Some(Target::Permanent(traveler)))).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.stack.len(), 1, "the dies trigger");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: resonator,
+        ability_index: 0,
+        target: Some(Target::Permanent(traveler)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("a dies trigger you control");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name.contains("Spirit")).count(), 2);
+}
