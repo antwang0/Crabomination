@@ -1,10 +1,6 @@
 //! Commander: the cards the **Forged in Stone** precon (C14, Nahiri, the
 //! Lithomancer) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Arcane Lighthouse** — the creatures lose hexproof and shroud until end
-//!   of turn; a grant made later that turn is not stopped ("can't have").
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt,

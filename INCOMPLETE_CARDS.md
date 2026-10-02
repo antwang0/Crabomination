@@ -2186,7 +2186,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Siege Behemoth | Guided by Nature (C14) | the per-creature "you may assign as though unblocked" is always yes. |
 | 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
-| 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
