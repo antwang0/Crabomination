@@ -490,9 +490,8 @@ pub fn seize_the_spotlight() -> CardDefinition {
 }
 
 /// Sizzling Soloist — alliance: an opponent's creature can't block this
-/// turn; the second time each turn it also attacks next combat if able.
-///
-/// Approximation: must-attack until your next turn.
+/// turn; the second time each turn it also attacks during its controller's
+/// next combat phase if able (`GrantKeywordThroughControllersNextCombat`).
 pub fn sizzling_soloist() -> CardDefinition {
     let cant_block = || Effect::GrantKeyword {
         what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
@@ -505,10 +504,9 @@ pub fn sizzling_soloist() -> CardDefinition {
                 cant_block(),
                 Effect::Seq(vec![
                     cant_block(),
-                    Effect::GrantKeyword {
+                    Effect::GrantKeywordThroughControllersNextCombat {
                         what: Selector::Target(0),
                         keyword: Keyword::MustAttack,
-                        duration: Duration::UntilNextTurn,
                     },
                 ]),
                 cant_block(),

@@ -428,3 +428,30 @@ fn skyhunter_strike_force_lieutenant_grants_melee() {
     g.players[0].commanders.push(cmd);
     assert!(has(&g, bear, &Keyword::Melee));
 }
+
+/// Sizzling Soloist — CR 508.1d: the second resolution's "attacks during its
+/// controller's next combat phase if able" binds that player's next combat
+/// only: our own combat doesn't end it, theirs does.
+#[test]
+fn sizzling_soloist_binds_the_controllers_next_combat() {
+    let mut g = main_phase(3);
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(
+        &crabomination::effect::Effect::GrantKeywordThroughControllersNextCombat {
+            what: crabomination::effect::Selector::Target(0),
+            keyword: Keyword::MustAttack,
+        },
+        &ctx,
+    )
+    .unwrap();
+    let turn = g.turn_number;
+    for (seat, bound) in [(0, true), (1, true), (2, false)] {
+        g.active_player_idx = seat;
+        g.turn_number = turn + seat as u32;
+        g.step = TurnStep::EndCombat;
+        g.expire_end_of_combat_effects();
+        assert_eq!(has(&g, bear, &Keyword::MustAttack), bound, "after seat {seat}'s combat");
+    }
+}
