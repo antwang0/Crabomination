@@ -1968,7 +1968,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
-| 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | the engine exiles your highest mana value other creature; X reads its printed power. |
+| 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | X reads the exiled card's printed power, not its last power on the battlefield. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
 | 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
 | 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |

@@ -568,20 +568,22 @@ pub fn vitality_hunter() -> CardDefinition {
 /// Yannik, Scavenging Sentinel — partner with Nikara; vigilance; entering,
 /// exile another creature you control until Yannik leaves, then distribute
 /// its power in +1/+1 counters.
-/// Residual: the engine exiles your highest mana value other creature, and X
-/// reads its printed power.
+/// Residual: X reads the exiled card's printed power, not its last power on
+/// the battlefield.
 pub fn yannik_scavenging_sentinel() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::PartnerWith("Nikara, Lair Scavenger".into()), Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ExileUntilSourceLeaves {
-                what: Selector::GreatestManaValueControlledMatching {
-                    who: PlayerRef::You,
-                    filter: R::Creature.and(R::OtherThanSource),
+            // "Exile another creature you control" is chosen as it resolves.
+            crate::effect::shortcut::choose_one_then(
+                Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                PlayerRef::You,
+                Effect::ExileUntilSourceLeaves {
+                    what: crate::effect::shortcut::chosen_one(),
+                    return_to: ExileReturnZone::Battlefield,
                 },
-                return_to: ExileReturnZone::Battlefield,
-            },
+            ),
             Effect::DistributeCounters {
                 total: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
                 counter: CounterType::PlusOnePlusOne,

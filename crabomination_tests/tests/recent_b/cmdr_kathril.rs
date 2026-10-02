@@ -286,3 +286,23 @@ fn vitality_hunter_targets_up_to_x() {
         .count();
     assert_eq!(lifelinked, 2, "two targets for X = 2");
 }
+
+/// Yannik, Scavenging Sentinel — "exile another creature you control" is the
+/// controller's choice as it resolves (CR 608.2d), and X is that creature's
+/// power: exiling the Bears puts two counters on the target.
+#[test]
+fn yannik_exiles_the_chosen_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let yannik = g.add_card_to_battlefield(0, catalog::yannik_scavenging_sentinel());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let etb = catalog::yannik_scavenging_sentinel().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(yannik, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(wurm)];
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "the chosen one is exiled");
+    assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
