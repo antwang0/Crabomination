@@ -8,8 +8,6 @@
 //! - **Moraug, Fury of Akoum** — +1/+0 once for a creature that has attacked
 //!   this turn, however many times it attacked; the untap rides every later
 //!   combat this turn.
-//! - **Planetary Annihilation** — each player keeps their six lands of
-//!   highest mana value (the engine's pick).
 //! - **Scouring Swarm** — the token is tapped just after it is created.
 
 use crate::card::{
@@ -332,9 +330,7 @@ pub fn moraug_fury_of_akoum() -> CardDefinition {
 }
 
 /// Planetary Annihilation — each player keeps six lands and sacrifices the
-/// rest; 6 damage to each creature.
-///
-/// ⚠ Residual: the six kept are the engine's pick.
+/// rest (each player's own pick); 6 damage to each creature.
 pub fn planetary_annihilation() -> CardDefinition {
     CardDefinition {
         name: "Planetary Annihilation",

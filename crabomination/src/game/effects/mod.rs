@@ -11272,15 +11272,17 @@ impl GameState {
             }
 
             Effect::EachPlayerKeepsNSacrificesRest { keep, filter } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
-                // APNAP order; each player picks their own keepers, then every
-                // unpicked permanent is sacrificed by its controller.
+                // APNAP order; each player picks their own keepers (asked of
+                // that seat — CR 608.2d), then every unpicked permanent is
+                // sacrificed by its controller. A headless seat keeps its
+                // priciest.
                 let seats = self.apnap_sort(self.living_seats().collect());
+                let mut cursor = 0;
                 let mut doomed: Vec<CardId> = Vec::new();
                 for p in seats {
-                    let mine: Vec<(CardId, String)> = self
+                    let mut mine: Vec<(u32, CardId, String)> = self
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == p)
@@ -11294,26 +11296,39 @@ impl GameState {
                                 )
                             })
                         })
-                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .map(|c| (c.definition.cost.cmc(), c.id, c.definition.name.to_string()))
                         .collect();
                     if mine.len() <= keep {
                         continue;
                     }
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    mine.sort_by_key(|(mv, id, _)| (std::cmp::Reverse(*mv), *id));
+                    let auto: Vec<CardId> = mine.iter().take(keep).map(|(_, id, _)| *id).collect();
+                    let Some(mut kept) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        format!("Choose {keep} permanents to keep"),
                         source,
-                        prompt: format!("Choose {keep} permanents to keep"),
-                        candidates: mine.clone(),
-                        min: keep as u32,
-                        max: keep as u32,
-                        eligible: None,
-                        value: PickValue::Gain,
-                    });
-                    let kept = match answer {
-                        DecisionAnswer::Cards(picked) => picked,
-                        _ => mine.iter().take(keep).map(|(id, _)| *id).collect(),
+                        mine.iter().map(|(_, id, name)| (*id, name.clone())).collect(),
+                        keep as u32,
+                        keep as u32,
+                        PickValue::Gain,
+                        effect,
+                        auto.clone(),
+                    ) else {
+                        return Ok(());
                     };
-                    doomed.extend(mine.iter().map(|(id, _)| *id).filter(|id| !kept.contains(id)));
+                    // A short answer keeps the default's next picks.
+                    for id in auto {
+                        if kept.len() >= keep {
+                            break;
+                        }
+                        if !kept.contains(&id) {
+                            kept.push(id);
+                        }
+                    }
+                    doomed.extend(mine.iter().map(|(_, id, _)| *id).filter(|id| !kept.contains(id)));
                 }
+                self.clear_answer_log();
                 for cid in doomed {
                     let who = self.battlefield_find(cid).map(|c| c.controller);
                     if let Some(who) = who {

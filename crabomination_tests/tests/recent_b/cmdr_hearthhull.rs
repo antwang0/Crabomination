@@ -252,6 +252,22 @@ fn planetary_annihilation_keeps_six_lands() {
     assert!(g.battlefield_find(angel).is_none());
 }
 
+/// "Each player chooses six lands they control": the choice is the land's
+/// controller's (CR 608.2d) — seat 1 keeps its Island, a Forest goes.
+#[test]
+fn planetary_annihilation_each_player_chooses_their_six() {
+    let mut g = main_phase(2);
+    let forests: Vec<CardId> = (0..6).map(|_| g.add_card_to_battlefield(1, catalog::forest())).collect();
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    let mut keep = forests[1..].to_vec();
+    keep.push(island);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(keep)]));
+    let pa = g.add_card_to_hand(0, catalog::planetary_annihilation());
+    cast_at(&mut g, pa, &[]).expect("cast");
+    assert!(g.battlefield_find(island).is_some(), "kept by choice");
+    assert!(g.battlefield_find(forests[0]).is_none());
+}
+
 /// Scouring Swarm: a tapped Insect per land sacrificed, or a tapped copy once
 /// seven lands are in your graveyard.
 #[test]

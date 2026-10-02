@@ -1940,7 +1940,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
 | 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
-| 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, not secretly. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
