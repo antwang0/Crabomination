@@ -159,8 +159,8 @@ pub fn control_magic() -> CardDefinition {
 }
 
 /// Curse of Inertia — a player attacking the cursed player may tap or untap
-/// target permanent.
-/// Residual: the permanent and the direction are the engine's pick.
+/// target permanent of their choice: the attacker aims
+/// (`trigger_target_chooser`); the direction is the flip (`TapOrUntap`).
 pub fn curse_of_inertia() -> CardDefinition {
     curse(
         "Curse of Inertia",

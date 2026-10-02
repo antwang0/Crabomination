@@ -1477,7 +1477,7 @@ impl PendingDecision {
                 in_progress.answering_player().unwrap_or(*controller)
             }
             ResumeContext::Mulligan { player, .. } => *player,
-            ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
+            ResumeContext::TriggerTargetPick { pending, chooser, .. } => chooser.unwrap_or(pending.controller),
             // The ordering run is a single controller's triggers.
             ResumeContext::TriggerOrder { run, .. } => {
                 run.first().map(|c| c.controller).unwrap_or(0)
@@ -1797,6 +1797,10 @@ pub enum ResumeContext {
     TriggerTargetPick {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
+        /// The seat aiming the trigger, when not its controller ("that
+        /// player may … target …" — Curse of Inertia's attacker).
+        #[serde(default)]
+        chooser: Option<usize>,
     },
     /// CR 601.2b — a `wants_ui` caster is choosing how to pay one of a spell's
     /// additional cast costs: which permanent to sacrifice ("sacrifice a …" —

@@ -25379,7 +25379,8 @@ impl GameState {
                 _ => pending.actor,
             };
             let needs = pending.effect.targeting_view(pending.mode).requires_target();
-            let wants_ui = !force_auto && self.seat_prompts(pending.controller);
+            let chooser = self.trigger_target_chooser(&pending.effect, pending.controller);
+            let wants_ui = !force_auto && self.seat_prompts(chooser);
             if needs && wants_ui {
                 let legal = self.enumerate_legal_targets_xc(
                     pending.effect.targeting_view(pending.mode),
@@ -25522,6 +25523,7 @@ impl GameState {
                 self.pending_decision = Some(Box::new(PendingDecision {
                     decision,
                     resume: ResumeContext::TriggerTargetPick {
+                        chooser: (chooser != pending.controller).then_some(chooser),
                         pending,
                         remaining,
                     },
@@ -25557,13 +25559,25 @@ impl GameState {
             // prompt, so gating on it makes the two paths agree.
             let auto = needs
                 .then(|| {
-                    self.auto_target_for_effect_avoiding_set_xc(
-                        pending.effect.targeting_view(pending.mode),
-                        pending.controller,
-                        &avoid,
-                        pending.x_value,
-                        pending.converged_value,
-                    )
+                    let view = pending.effect.targeting_view(pending.mode);
+                    let pick = |seat| {
+                        self.auto_target_for_effect_avoiding_set_xc(
+                            view,
+                            seat,
+                            &avoid,
+                            pending.x_value,
+                            pending.converged_value,
+                        )
+                    };
+                    // CR 115.3 — legality stays the controller's (hexproof);
+                    // only the aim is the chooser's.
+                    if chooser != pending.controller
+                        && let Some(t) = pick(chooser)
+                        && self.check_target_legality(&t, pending.controller).is_ok()
+                    {
+                        return Some(t);
+                    }
+                    pick(pending.controller)
                 })
                 .flatten();
             if let Some(Target::Permanent(tid)) = &auto {
@@ -26744,7 +26758,7 @@ impl GameState {
                 }
                 vec![]
             }
-            ResumeContext::TriggerTargetPick { pending, remaining } => {
+            ResumeContext::TriggerTargetPick { pending, remaining, .. } => {
                 // Apply the answered target to the trigger that was
                 // waiting on it, then continue draining the queue
                 // (which may suspend again on the next targeted

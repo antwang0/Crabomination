@@ -6,6 +6,20 @@ use crate::effect::Effect;
 use crate::game::{GameState, Target};
 
 impl GameState {
+    /// The seat that aims a trigger: its controller, unless the body is "the
+    /// active player may … target …" (Curse of Inertia — the attacking
+    /// player picks the permanent of their choice).
+    pub(crate) fn trigger_target_chooser(&self, eff: &Effect, controller: usize) -> usize {
+        match eff {
+            Effect::MayDoBy { who: crate::effect::PlayerRef::ActivePlayer, body, .. }
+                if body.requires_target() && self.players.get(self.active_player_idx).is_some_and(|p| p.is_alive()) =>
+            {
+                self.active_player_idx
+            }
+            _ => controller,
+        }
+    }
+
     /// Pick a legal target for an effect that requires one, used when the
     /// engine fires a trigger without explicit user input (ETB, attack trigger,
     /// etc.). Returns `None` if the effect requires no target or no legal

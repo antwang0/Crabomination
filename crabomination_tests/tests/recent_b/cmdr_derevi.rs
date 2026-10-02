@@ -251,3 +251,27 @@ fn the_bot_curses_an_opponent() {
         assert!(matches!(t, Some(Target::Player(p)) if p != 0), "{}: {t:?}", f.name);
     }
 }
+
+/// Curse of Inertia — "that attacking player may tap or untap target
+/// permanent of their choice": the attacker (seat 0), not the curse's
+/// controller (seat 2), aims — it untaps its own attacker.
+#[test]
+fn curse_of_inertia_is_aimed_by_the_attacker() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    flood(&mut g, 2);
+    let curse = g.add_card_to_hand(2, catalog::curse_of_inertia());
+    g.perform_action(GameAction::CastSpell { card_id: curse, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("curse seat 1");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    let mine = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    attack(&mut g, bear, 1);
+    let tapped = |g: &GameState, id| g.battlefield_find(id).unwrap().tapped;
+    assert!(!tapped(&g, bear), "the attacker untaps its own attacker");
+    assert!(!tapped(&g, mine), "not aimed from the curse controller's side");
+}
