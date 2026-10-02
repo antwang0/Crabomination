@@ -292,8 +292,8 @@ pub fn savvy_trader() -> CardDefinition {
 
 /// Siphon Insight — {U}{B} instant. Look at the top two of target opponent's
 /// library, exile one face down (playable by you, any mana), the other to the
-/// bottom. Flashback {1}{U}{B}.
-/// Residual: the exiled card takes mana of any type.
+/// bottom. Flashback {1}{U}{B}. Mana spends as any color (`any_color`), so
+/// a {C} pip still wants colorless.
 pub fn siphon_insight() -> CardDefinition {
     CardDefinition {
         name: "Siphon Insight",
@@ -306,7 +306,7 @@ pub fn siphon_insight() -> CardDefinition {
                 who: PlayerRef::Target(0),
                 count: Value::Const(2),
                 rest_to_graveyard: false,
-                any_color: false,
+                any_color: true,
             },
         ]),
         ..Default::default()

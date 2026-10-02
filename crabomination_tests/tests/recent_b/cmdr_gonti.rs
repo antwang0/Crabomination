@@ -322,3 +322,22 @@ fn nashi_plays_one_of_the_exiled_cards() {
     assert_eq!(g.battlefield_find(forest).map(|c| c.controller), Some(0));
     assert!(!granted(&g, bears), "one of them only");
 }
+
+/// Siphon Insight — CR 609.4b: "as though it were mana of any color" turns
+/// colored pips generic but a {C} pip still wants colorless (Thought-Knot
+/// Seer's {3}{C}), unlike Thief of Sanity's any-type.
+#[test]
+fn siphon_insight_spends_as_any_color_not_any_type() {
+    use crabomination::mana::ManaSymbol;
+    let mut g = pod(2);
+    let tks = g.add_card_to_library(1, catalog::thought_knot_seer());
+    let si = g.add_card_to_hand(0, catalog::siphon_insight());
+    g.add_card_to_library(1, catalog::thought_knot_seer());
+    flood(&mut g, 0);
+    cast_by(&mut g, 0, si, &[Target::Player(1)], None);
+    let exiled = g.exile.iter().find(|c| c.may_play_until.is_some()).expect("one exiled");
+    assert!(exiled.id == tks || exiled.definition.name == "Thought-Knot Seer");
+    let alt = exiled.granted_alt_cast_cost_eot.as_ref().expect("an any-color cost");
+    assert!(alt.symbols.contains(&ManaSymbol::Colorless(1)), "{alt:?}");
+    assert_eq!(alt.cmc(), 4);
+}
