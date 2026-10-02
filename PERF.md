@@ -3015,6 +3015,31 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-02 (Commander session `015MggrL`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `delayed_triggers` scan per
+dispatched event batch (`fire_cast_watch_delayed`, empty-list early out), one
+`has_family(LIVE_PT)` word read per gather (`settle_live_pt` behind it), one
+`Option` read per activation (`spend_color_as_any`), and the end-of-combat
+retain now matches the new `ThroughPlayersNextCombat`. `Modification` keeps its
+size (the live P/T pair is boxed). Everything else is behind effect variants
+only Commander cards carry. 4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip 65b9e6977); games_per_s 368.5; determinism ok
+two-player pools cube / sos / sealed x 300, seeds 31201 and 31701: 15,000 games,
+                 all decided
+pod              2..8 seats x 1,000 (seeds 31102-31108, 31602-31608): 14,000, all
+                 decided; turns/game 19.81 / 32.40 / 45.37 / 57.67 / 68.87 /
+                 81.80 / 96.92 at the tip
+pod              every deck 1-183 in six-seat blocks x 200 (31 blocks, seeds
+                 31801+): 6,199 decided, 1 draw (decks 49-54, seed 31809), no
+                 caps; zero panics
+suite            23,768 / 0 / 5 at 65b9e6977; clippy 0 (one too_many_arguments,
+                 allowed)
+```
+
 ### 2026-10-02 (Commander session `01NqgJKc`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `face_down && face_up_def.is_none()`

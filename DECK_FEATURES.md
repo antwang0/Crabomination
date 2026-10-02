@@ -37,15 +37,13 @@ they call a deck 🟡, the table wins.
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
-| 12 | N'ghathrod (UB) | 2: aboleth_spawn, grell_philosopher |
+| 12 | N'ghathrod (UB) | 1: aboleth_spawn |
 | 20 | Ixhel (WBG) | 3: geths_summons, glissas_retriever, glistening_sphere |
 | 28 | Bello (RG) | 1: grothama_all_devouring |
-| 29 | Gisa and Geralf (UB) | 1: havengul_lich |
 | 50 | Temmet, Naktamun's Will (WUB) | 3: lost_monarch_of_ifnir, the_scarab_god, vizier_of_many_faces |
 | 51 | Yidris, Maelstrom Wielder (UBRG) | 1: aeon_chronicler |
-| 58 | The Mimeoplasm (BGU) | 1: svogthos_the_restless_tomb |
 | 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
-| 66 | Inalla, Archmage Ritualist (UBR) | 5: havengul_lich, magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
+| 66 | Inalla, Archmage Ritualist (UBR) | 4: magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 70 | Ranar the Ever-Watchful (WU) | 1: cosmic_intervention |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 4: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee |
@@ -64,7 +62,6 @@ they call a deck 🟡, the table wins.
 | 91 | Commodore Guff (URW) | 5: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation, sparkshaper_visionary, vronos_masked_inquisitor |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
 | 96 | Ellivere of the Wild Court (GW) | 3: loamcrafter_faun, mantle_of_the_ancients, unfinished_business |
-| 98 | Kitt Kanto, Mayhem Diva (RGW) | 2: indulge_excess, sizzling_soloist |
 | 100 | Ulalek, Fused Atrocity (WUBRG) | 3: bismuth_mindrender, suffer_the_past, twins_of_discord |
 | 103 | Kathril, Aspect Warper (WBG) | 4: archon_of_valors_reach, cairn_wanderer, tayam_luminous_enigma, yannik_scavenging_sentinel |
 | 104 | Vrondiss, Rage of Ancients (RG) | 4: berserkers_frenzy, dragonborn_champion, klauth_unrivaled_ancient, sword_of_hours |
@@ -81,10 +78,9 @@ they call a deck 🟡, the table wins.
 | 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
 | 123 | Yuma, Proud Protector (RGW) | 2: cataclysmic_prospecting, dune_chanter |
 | 125 | Henzie "Toolbox" Torre (BRG) | 7: first_responder, henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
-| 126 | Oloro, Ageless Ascetic (WUB) | 2: lim_duls_vault, springjack_pasture |
+| 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 3: ao_the_dawn_sky, conspiracy_theorist, quintorius_loremaster |
 | 128 | Gavi, Nest Warden (URW) | 3: akim_the_soaring_wind, crystalline_resonance, nimble_obstructionist |
-| 129 | Gonti, Canny Acquisitor (BGU) | 2: nashi_moon_sages_scion, siphon_insight |
 | 132 | Sefris of the Hidden Ways (WUB) | 5: clay_golem, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
 | 133 | Zimone, Mystery Unraveler (GU) | 5: deathmist_raptor, disorienting_choice, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
 | 134 | Morska, Undersea Sleuth (GWU) | 1: erdwal_illuminator |
@@ -126,6 +122,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+97 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 93 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
