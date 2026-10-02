@@ -1970,6 +1970,31 @@ fn mathas_bounty_pays_the_opponents_of_the_dead_creatures_controller() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
+/// Mathas's rulings (2017-08-25): the bounty creature keeps the dies trigger
+/// after Mathas leaves, and a bounty counter Mathas didn't place grants none.
+#[test]
+fn mathas_grant_outlives_mathas_and_needs_its_own_counter() {
+    let mut g = main_phase();
+    let mathas = g.add_card_to_battlefield(0, catalog::mathas_fiend_seeker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().add_counters(CounterType::Bounty, 1);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    pass_to_end_step(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Bounty), 1);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    for victim in [mathas, other] {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[Target::Permanent(victim)]);
+    }
+    assert_eq!(g.players[0].life, 20, "another source's bounty counter grants nothing");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(g.players[0].life, 22, "Mathas is gone; the grant stayed");
+}
+
 /// Outpost Siege — Khans impulse-draws each upkeep.
 #[test]
 fn outpost_siege_khans_exiles_the_top_card_each_upkeep() {

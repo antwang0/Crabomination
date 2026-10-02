@@ -15,7 +15,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{on_dies, target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, generic, r, w, x};
@@ -374,34 +374,40 @@ pub fn licia_sanguine_tribune() -> CardDefinition {
     }
 }
 
-/// Mathas, Fiend Seeker — a bounty counter each end step; a creature with one
-/// has "when this dies, each opponent draws a card and gains 2 life". ⚠ The
-/// grant lasts only while Mathas is on the battlefield.
+/// Mathas, Fiend Seeker — a bounty counter each end step; that creature has
+/// "when this dies, each opponent draws a card and gains 2 life" while the
+/// counter stays. The grant is the resolution's (it outlives Mathas; another
+/// source's bounty counter grants nothing; two resolutions, two instances —
+/// the 2017-08-25 rulings); "while it has the counter" is the dies trigger's
+/// last-known read of it.
 pub fn mathas_fiend_seeker() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
-            effect: Effect::AddCounter {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                kind: CounterType::Bounty,
-                amount: Value::ONE,
-            },
-        }],
-        static_abilities: vec![StaticAbility {
-            description: "A creature with a bounty counter has \"When this creature dies, each \
-                          opponent draws a card and gains 2 life.\"",
-            effect: StaticEffect::GrantTriggeredAbility {
-                filter: R::Creature.and(R::WithCounter(CounterType::Bounty)),
-                ability: Box::new(on_dies(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
-                    Effect::GainLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(2),
-                    },
-                ]))),
-            },
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    kind: CounterType::Bounty,
+                    amount: Value::ONE,
+                },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::Target(0),
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
+                            .with_filter(Predicate::TriggerSourceHadCounter(CounterType::Bounty)),
+                        effect: Effect::Seq(vec![
+                            Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                            Effect::GainLife {
+                                who: Selector::Player(PlayerRef::EachOpponent),
+                                amount: Value::Const(2),
+                            },
+                        ]),
+                    }),
+                    duration: Duration::Permanent,
+                },
+            ]),
         }],
         ..creature(
             "Mathas, Fiend Seeker",
