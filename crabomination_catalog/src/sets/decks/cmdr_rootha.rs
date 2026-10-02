@@ -2,12 +2,6 @@
 //! Mastering the Moment) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_rootha.rs`.
 //!
-//! Residuals (each also on its card):
-//! - **Abstract Performance** — the "face-down" pile is exiled face up (only
-//!   the chooser's prompt hides it); the chooser is the hostile opponent.
-//! - **Plargg and Nassari** — the vetoing opponent is the hostile opponent,
-//!   not one you choose.
-//!
 //! Surge to Victory and Redoubled Stormsinger are in this list too; they
 //! landed first with Prismari Performance (`cmdr_zaffai`) and Mardu Surge
 //! (`cmdr_zurgo`).
@@ -202,9 +196,8 @@ pub fn inspired_skypainter() -> CardDefinition {
     }
 }
 
-/// Abstract Performance — two piles of four, an opponent bins one; cast a
-/// spell from the other free, the rest to hand. Residual: the "face-down"
-/// pile is exiled face up; the chooser is the hostile opponent.
+/// Abstract Performance — a face-down and a face-up pile of four; an opponent
+/// you choose bins one; cast a spell from the other free, the rest to hand.
 pub fn abstract_performance() -> CardDefinition {
     let kept = || Selector::ExiledThisResolution { filter: R::Any };
     CardDefinition {

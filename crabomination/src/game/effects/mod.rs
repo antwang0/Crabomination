@@ -21260,7 +21260,34 @@ impl GameState {
                 // The chooser sees only the face-up pile. A headless one bins
                 // it when it's the rich one: two or more spells, or a big one.
                 let rich = up.iter().filter(|t| !t.1).count() >= 2 || up.iter().any(|t| t.2 >= 5);
-                let up_to_graveyard = match self.resolve_player(&PlayerRef::HostileOpponent, ctx) {
+                let mut cursor = 0usize;
+                // The caster chooses which opponent chooses (the card's
+                // ruling); headless, the most hostile one.
+                let hostile = self.resolve_player(&PlayerRef::HostileOpponent, ctx);
+                let opps: Vec<Target> = hostile
+                    .into_iter()
+                    .chain(self.opponents_of(p).into_iter().filter(|&q| Some(q) != hostile))
+                    .map(Target::Player)
+                    .collect();
+                let chooser = if opps.len() > 1
+                    && (self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto))
+                {
+                    match self.ask_seat_target_logged(
+                        &mut cursor,
+                        p,
+                        "Choose the opponent who chooses a pile".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        opps,
+                        effect,
+                    ) {
+                        None => return Ok(()),
+                        Some(Target::Player(q)) => Some(q),
+                        Some(_) => hostile,
+                    }
+                } else {
+                    hostile
+                };
+                let up_to_graveyard = match chooser {
                     None => false,
                     Some(_) if up.is_empty() => false,
                     Some(seat)
@@ -21271,7 +21298,6 @@ impl GameState {
                     }
                     Some(seat) => {
                         let names: Vec<&str> = up.iter().map(|t| t.3.as_str()).collect();
-                        let mut cursor = 0usize;
                         let Some(i) = self.ask_seat_option(
                             &mut cursor,
                             seat,
@@ -21282,13 +21308,17 @@ impl GameState {
                         ) else {
                             return Ok(());
                         };
-                        self.clear_answer_log();
                         i == 1
                     }
                 };
+                self.clear_answer_log();
                 let up: Vec<CardId> = up.iter().map(|t| t.0).collect();
                 for id in down.iter().chain(up.iter()) {
                     self.move_card_to(*id, &ZoneDest::Exile, ctx, events);
+                }
+                // CR 406.3 — the first pile is exiled face down.
+                for c in self.exile.iter_mut().filter(|c| down.contains(&c.id)) {
+                    c.face_down = true;
                 }
                 let binned = if up_to_graveyard { up } else { down };
                 for id in binned {

@@ -154,6 +154,29 @@ fn abstract_performance_splits_eight() {
     assert!(g.exile.is_empty());
 }
 
+/// Abstract Performance's ruling: the caster names which opponent chooses
+/// (here seat 2), and that player's pick — the face-down pile — is binned.
+#[test]
+fn abstract_performance_caster_names_the_choosing_opponent() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(crabomination::game::types::Target::Player(2)),
+        DecisionAnswer::Amount(0),
+    ]));
+    let ap = g.add_card_to_hand(0, catalog::abstract_performance());
+    cast(&mut g, 0, ap, None).expect("cast");
+    let islands_in_gy = g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count();
+    assert_eq!(islands_in_gy, 4, "the face-down pile was chosen");
+    assert!(g.exile.is_empty());
+}
+
 /// Abstract Performance casts a spell from the kept pile for free.
 #[test]
 fn abstract_performance_casts_one_free() {
