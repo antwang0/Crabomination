@@ -405,20 +405,22 @@ fn shortcut_on_attack_drain_uses_attacks_self_source_with_drain_body() {
         "body is Effect::Drain, not GainLife / LoseLife");
 }
 
+/// CR 706.1 — the headless decider takes the face rolled off the game's
+/// seeded stream (it used to answer the midpoint), and exactly one arm of the
+/// table fires for it.
 #[test]
-fn roll_die_auto_decider_lands_on_midpoint_branch() {
-    // AutoDecider returns the midpoint of an N-sided die. For a d6
-    // that's 3, which falls in the [3, 6] arm — opp loses 3 life.
+fn roll_die_auto_decider_fires_one_arm() {
     let mut g = two_player_game();
-    let opp_before = g.players[1].life;
-    let id = g.add_card_to_hand(0, test_card_die_roll_d6_midpoint());
+    let (me, opp) = (g.players[0].life, g.players[1].life);
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("die roll sorcery castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_before - 3,
-        "AutoDecider rolled d6 midpoint (3) → 3-6 arm fired");
+    let low = (g.players[0].life, g.players[1].life) == (me + 1, opp);
+    let high = (g.players[0].life, g.players[1].life) == (me, opp - 3);
+    assert!(low ^ high, "one arm, by the rolled face");
 }
 
 #[test]

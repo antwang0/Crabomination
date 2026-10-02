@@ -14,13 +14,13 @@ use crabomination::mana::Color;
 // ── batch 125 — CR 706 (Roll a Die) primitive tests ────────────────────────
 
 /// Test-only fixture: a Sorcery with a d6 results table. 1-2 → gain 1
-/// life; 3-6 → opp loses 3 life. Drives the AutoDecider midpoint test.
-fn test_card_die_roll_d6_midpoint() -> crabomination::card::CardDefinition {
+/// life; 3-6 → opp loses 3 life. Drives the AutoDecider roll test.
+fn test_card_die_roll_d6() -> crabomination::card::CardDefinition {
     use crabomination::card::{CardDefinition, CardType};
     use crabomination::effect::{Effect, Selector, Value};
     use crabomination::mana::{cost, generic};
     CardDefinition {
-        name: "Test Die Roll d6 Midpoint",
+        name: "Test Die Roll d6",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::RollDie {

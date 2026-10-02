@@ -1066,9 +1066,8 @@ pub fn evendo_brushrazer() -> CardDefinition {
 /// sequence is exactly `Cascade` with no mana-value cap.
 /// Approximation: "with a different name than that spell" is dropped, so a
 /// nonland card sharing the countered spell's name stops the exile too.
-/// Approximation: the random choice is a die roll. It asks the decider
-/// (AutoDecider always takes the midpoint, 2) and fires "whenever you roll a
-/// die" payoffs.
+/// Approximation: the random choice is a die roll, so it fires "whenever you
+/// roll a die" payoffs.
 /// Approximation: if the target spell can't be countered,
 /// `CounteredSpellController` stays unset and the mill/cascade half is
 /// skipped. The printed card still has that player mill and cascade.
