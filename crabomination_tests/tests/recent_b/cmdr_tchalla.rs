@@ -298,6 +298,24 @@ fn cr_110_2a_heart_shaped_herb_returns_a_stolen_creature_to_its_owner() {
     assert_eq!(g.monarch, Some(0));
 }
 
+/// CR 701.17a — "you may sacrifice a creature": the sacrificing player picks
+/// which (`Effect::MaySacrifice`), so the Herb can re-deploy the Angel over the
+/// weaker Bears.
+#[test]
+fn cr_701_17a_heart_shaped_herb_sacrifices_the_chosen_creature() {
+    let mut g = main_phase(2);
+    let herb = g.add_card_to_battlefield(0, catalog::heart_shaped_herb());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![angel])]));
+    activate(&mut g, herb, 0).expect("herb");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    let back = named(&g, 0, "Serra Angel");
+    assert_eq!(back.len(), 1);
+    assert_eq!(g.battlefield_find(back[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
 /// CR 506.2 — M'Baku pumps "a creature [that] attacks one of your opponents,
 /// if that player is the monarch": a creature attacking the monarch's
 /// planeswalker is not attacking the monarch.

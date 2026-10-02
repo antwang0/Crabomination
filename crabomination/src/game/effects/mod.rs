@@ -7737,8 +7737,9 @@ impl GameState {
                 else_,
             } => {
                 // Reflexive sacrifice cost: ask yes/no (only when the
-                // controller actually has a legal sacrifice), then sacrifice
-                // the weakest non-source matching permanent(s) and run `then`.
+                // controller actually has a legal sacrifice), then which ones
+                // (CR 701.17a — the sacrificing player chooses; a headless
+                // seat takes the weakest non-source matches) and run `then`.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source_id = ctx.source;
                 let candidates = self.sacrifice_candidates(ctx.controller, filter, source_id);
@@ -7760,9 +7761,32 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
+                let auto = if yes { self.auto_pick_sacrifices(&candidates, n, source_id, false, false) } else { Vec::new() };
+                // The source stays the last resort, as in the auto-pick (most
+                // printings say "another").
+                let offered: Vec<CardId> = candidates.iter().copied().filter(|id| Some(*id) != source_id).collect();
+                let ids = if yes && offered.len() > n {
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        ctx.controller,
+                        format!("Choose {n} to sacrifice"),
+                        source,
+                        self.card_id_names(&offered),
+                        n as u32,
+                        n as u32,
+                        PickValue::Cost,
+                        effect,
+                        auto.clone(),
+                    ) else {
+                        return Ok(());
+                    };
+                    // A short or stale answer keeps the default pick.
+                    if picked.len() == n { picked } else { auto }
+                } else {
+                    auto
+                };
                 self.clear_answer_log();
                 if yes {
-                    let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
                     for id in ids {
                         self.sacrifice_one(id, ctx.controller, events);
                     }
