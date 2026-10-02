@@ -419,16 +419,19 @@ pub enum Decision {
     },
 
     /// CR 706 — roll an N-sided die. The decider answers with
-    /// `DieRoll(n)` where `1 <= n <= sides`. `AutoDecider` returns the
-    /// die's middle value (deterministic, lets tests assert specific
-    /// branches); `ScriptedDecider` can script any face.
-    /// Used by `Effect::RollDie` (Goblin Goliath, Wand of the Elements,
-    /// future Krark / Aether Sphere Harvester-style cards).
+    /// `DieRoll(n)` where `1 <= n <= sides`. `AutoDecider` takes `rolled`;
+    /// `ScriptedDecider` can script any face. Used by `Effect::RollDie`
+    /// (Goblin Goliath, Wand of the Elements) and the planar die.
     DieRoll {
         /// Player rolling (typically `EffectContext.controller`).
         player: usize,
         /// Number of sides on the die (e.g. 6 for d6, 20 for d20).
         sides: u8,
+        /// CR 706.1 — the face the engine rolled off the game's seeded
+        /// stream, like `CoinFlip::heads`. 0 (an old save) reads as the
+        /// midpoint.
+        #[serde(default)]
+        rolled: u8,
     },
 
     /// CR 903.9a / 903.9b — the commander would land in (903.9b: hand,
@@ -836,14 +839,12 @@ impl Decider for AutoDecider {
             // differently in the next process — Mana Crypt's upkeep flip
             // made every cube measurement unreproducible.
             Decision::CoinFlip { heads, .. } => DecisionAnswer::Bool(*heads),
-            // CR 706 — AutoDecider returns the die's midpoint (rounded
-            // up) so the result is deterministic AND lands on a typical
-            // "middle" result-table band. For a d6 that's 3; for a d20
-            // that's 10. ScriptedDecider can script any specific face
-            // for testing branch coverage of result tables.
-            Decision::DieRoll { sides, .. } => {
-                let midpoint = (*sides as u32).max(1).div_ceil(2);
-                DecisionAnswer::DieRoll(midpoint as u8)
+            // CR 706.1 — the engine rolled off the game's seeded stream, as
+            // for a coin. Answering the midpoint here made every d20 a 10 and
+            // every planar die blank in self-play.
+            Decision::DieRoll { sides, rolled, .. } => {
+                let midpoint = (*sides as u32).max(1).div_ceil(2) as u8;
+                DecisionAnswer::DieRoll(if (1..=*sides).contains(rolled) { *rolled } else { midpoint })
             }
             // CR 510.1c — keep the engine's default order (empty answer is
             // treated as "all blockers in their original order").

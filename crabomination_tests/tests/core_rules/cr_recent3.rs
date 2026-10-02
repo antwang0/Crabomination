@@ -182,6 +182,38 @@ fn cr_116_2j_reveal_conspiracy_is_a_special_action() {
     assert!(!g.players[0].command[0].face_down);
 }
 
+/// CR 706.1 — a die roll is random. The headless decider used to answer every
+/// roll with the die's midpoint, so in self-play each d20 was a 10 and the
+/// planar die never left its blank face. The face now comes off the game's
+/// seeded stream: it varies with the seed and replays with it.
+#[test]
+fn cr_706_1_the_headless_decider_rolls_off_the_seeded_stream() {
+    let roll = Effect::RollDie {
+        sides: 20,
+        count: Value::ONE,
+        modifier: Value::ZERO,
+        reroll_at_most: 0,
+        results: vec![(
+            1,
+            20,
+            Effect::GainLife { who: Selector::You, amount: Value::LastDieRoll },
+        )],
+        ignore_lowest: 0,
+        on_doubles: None,
+    };
+    let face = |seed: u64| {
+        let mut g = two_player_game();
+        g.rng.reseed(seed);
+        let start = g.players[0].life;
+        g.resolve_effect(&roll, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+        g.players[0].life - start
+    };
+    let faces: Vec<i32> = (0..40).map(face).collect();
+    assert!(faces.iter().all(|f| (1..=20).contains(f)));
+    assert!(faces.iter().any(|&f| f != 10), "not the midpoint every time: {faces:?}");
+    assert_eq!(face(7), face(7), "the same seed rolls the same face");
+}
+
 /// A decider that hands out scripted die faces and defers every other ask to
 /// the `AutoDecider` — a scripted queue can't, since it answers in ask order
 /// and the engine's ask order is not the test's business.

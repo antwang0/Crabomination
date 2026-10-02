@@ -840,7 +840,7 @@ fn evendo_brushrazer_land_sac_exiles_a_playable_card() {
     assert!(g.battlefield_find(top).is_some(), "cast from exile for its own {{1}}{{G}}");
 }
 
-/// Tibalt's Trickery counters, mills the random count (AutoDecider's d3 = 2),
+/// Tibalt's Trickery counters, mills the random count (a scripted d3 = 2),
 /// then casts the next nonland card for free and bottoms the passed-over land.
 #[test]
 fn tibalts_trickery_counters_then_cascades_its_controller() {
@@ -854,12 +854,13 @@ fn tibalts_trickery_counters_then_cascades_its_controller() {
     let trick = g.add_card_to_hand(0, catalog::tibalts_trickery());
     b_cast_by(&mut g, 0, bolt, Some(Target::Player(1)));
     b_cast_by(&mut g, 0, trick, Some(Target::Permanent(bolt)));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(2), DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, 20, "the Bolt was countered");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
     let milled = g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count();
-    assert_eq!(milled, 2, "the die's midpoint milled two");
+    assert_eq!(milled, 2, "the die milled two");
     assert!(g.battlefield_find(bear).is_some(), "the next nonland card was cast for free");
     assert_eq!(g.players[0].library.len(), 1, "the exiled Island went to the bottom");
 }

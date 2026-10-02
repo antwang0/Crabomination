@@ -1380,11 +1380,14 @@ impl GameState {
             .sum()
     }
 
-    /// CR 706.1 — one die roll routed through the decider, clamped to the
-    /// die's face range. Shared by `Effect::RollDie` and the CR 706.8 stored-
-    /// result effects.
+    /// CR 706.1 — one die roll off the game's seeded stream, handed to the
+    /// decider (a script may override it) and clamped to the die's face
+    /// range. Shared by `Effect::RollDie`, the planar die and the CR 706.8
+    /// stored-result effects.
     pub(crate) fn roll_one_die(&mut self, player: usize, sides: u8) -> u8 {
-        match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides }) {
+        let sides = sides.max(1);
+        let rolled = rand::RngExt::random_range(&mut self.rng.draw(), 1..=sides);
+        match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides, rolled }) {
             crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
             _ => (sides as u32).div_ceil(2) as u8,
         }
@@ -6685,9 +6688,9 @@ impl GameState {
             // controller's decider for `Decision::DieRoll { sides }`
             // (which returns `DecisionAnswer::DieRoll(rolled)`), then
             // walk `results` and run the FIRST arm whose [low, high]
-            // range covers `rolled`. AutoDecider returns the midpoint;
-            // ScriptedDecider can script any face. Mirrors FlipCoin's
-            // resolver shape.
+            // range covers `rolled`. AutoDecider takes the face rolled off
+            // the game's stream; ScriptedDecider can script any face.
+            // Mirrors FlipCoin's resolver shape.
             Effect::RollDie {
                 sides,
                 count,
@@ -6702,18 +6705,7 @@ impl GameState {
                 // CR 706.2 — the flat result modifier applied to every die
                 // this resolution.
                 let modifier = self.evaluate_value(modifier, ctx);
-                let roll_one = |s: &mut Self| -> u8 {
-                    match s.decider.decide(&crate::decision::Decision::DieRoll {
-                        player: ctx.controller,
-                        sides,
-                    }) {
-                        crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
-                        // Decider returned the wrong shape — degrade to
-                        // midpoint rather than panicking. Real clients
-                        // should always return DieRoll(n).
-                        _ => (sides as u32).div_ceil(2) as u8,
-                    }
-                };
+                let roll_one = |s: &mut Self| -> u8 { s.roll_one_die(ctx.controller, sides) };
                 // CR 706.6 — Pixie Guide et al. roll extra dice and ignore
                 // that many lowest results. Ignored rolls never happened, so
                 // they're dropped before any arm, doubles check or trigger.

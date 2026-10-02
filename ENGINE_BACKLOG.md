@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 25 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 14 |
 | Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
@@ -110,6 +111,29 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
+
+- **FIXED:** CR 903.9a — the commander's return from a graveyard or exile was
+  answered by the game-wide decider inside the SBA sweep, so no client seat
+  was ever asked. A prompting seat is now posed a `CommanderRedirect` once the
+  action settles (`game/commander_return.rs::pose_commander_return`, from
+  `perform_action_inner` so bot dry runs see it). ⚠ Hooking `perform_action`
+  instead missed the bots' `dry_run`s: a settled state handed back to the pod
+  loop carried an unposed commander, which then sat in the graveyard.
+- **OPEN (human seats only):** CR 903.9b's hand/library replacement
+  (`resolve_zone_change`) and the legend rule (`ChooseLegendToKeep`) still
+  answer through the decider — both happen mid-event, where a pose-at-settle
+  would reorder triggers; they need the SBA sweep itself to suspend.
+- **FIXED:** `apply_draw_dig` asked each optional draw replacement through the
+  decider with no stack item to park on, so Auto's blanket "no" made Abundance
+  (four target decks), Archmage Ascension, Parallel Thoughts and Pursuit of
+  Knowledge dead in self-play (`audit_decision_plumbing`'s one DEAD row).
+- **FIXED:** CR 706.1 — `AutoDecider` answered every `DieRoll` with the die's
+  midpoint: each d20 was a 10, each d6 a 3, the planar die always blank, in
+  every self-play game. `roll_one_die` now rolls off the seeded stream and
+  hands the face to the decider (`Decision::DieRoll::rolled`, like
+  `CoinFlip::heads`); `Effect::RollDie` and the planar die share it.
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, `claude/modern_decks`) — face-down exile, and the implicit "target opponent"
 

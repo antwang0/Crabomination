@@ -30,9 +30,9 @@ impl GameState {
     }
 
     fn roll_one_planar_die(&mut self, seat: usize) -> PlanarFace {
-        match self.decider.decide(&crate::decision::Decision::DieRoll { player: seat, sides: 6 }) {
-            crate::decision::DecisionAnswer::DieRoll(1) => PlanarFace::Planeswalker,
-            crate::decision::DecisionAnswer::DieRoll(2) => PlanarFace::Chaos,
+        match self.roll_one_die(seat, 6) {
+            1 => PlanarFace::Planeswalker,
+            2 => PlanarFace::Chaos,
             _ => PlanarFace::Blank,
         }
     }
