@@ -207,6 +207,40 @@ fn rush_of_dread_target_chooses_what_to_sacrifice_and_discard() {
     assert_eq!(hand, vec![bolt], "the picked lands were discarded, the Bolt kept");
 }
 
+/// CR 700.2 / 702.172 — each chosen Spree mode keeps its own target. Rush of
+/// Dread's discard mode targets seat 2 (a prompting seat) while the
+/// sacrifice mode targets seat 1: the discard parks on seat 2's pick and
+/// resumes against its own slot, not slot 0's player.
+#[test]
+fn rush_of_dread_parked_mode_resumes_on_its_own_target() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let p1_card = g.add_card_to_hand(1, catalog::island());
+    let bolt = g.add_card_to_hand(2, catalog::lightning_bolt());
+    let island = g.add_card_to_hand(2, catalog::island());
+    let forest = g.add_card_to_hand(2, catalog::forest());
+    g.players[2].wants_ui = true;
+    let id = g.add_card_to_hand(0, catalog::rush_of_dread());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(spree(id, vec![0, 1], Some(Target::Player(1)), vec![Target::Player(2)]))
+        .expect("sacrifice seat 1, discard seat 2");
+    for _ in 0..4 {
+        if g.pending_decision.is_some() || g.stack.is_empty() {
+            break;
+        }
+        let _ = g.resolve_top_of_stack();
+    }
+    assert_eq!(g.pending_decision.as_ref().expect("seat 2 picks").acting_player(), 2);
+    g.submit_decision(crabomination::decision::DecisionAnswer::Cards(vec![island, forest]))
+        .expect("two lands");
+    drain_stack(&mut g);
+    let hand2: Vec<CardId> = g.players[2].hand.iter().map(|c| c.id).collect();
+    assert_eq!(hand2, vec![bolt], "seat 2 discarded its picks");
+    assert!(g.players[1].hand.iter().any(|c| c.id == p1_card), "seat 1 discarded nothing");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0, "seat 1 sacrificed");
+}
+
 #[test]
 fn phantom_interference_makes_a_spirit() {
     let mut g = two_player_game();

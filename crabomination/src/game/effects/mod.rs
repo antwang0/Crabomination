@@ -6801,8 +6801,15 @@ impl GameState {
                             let mut sub_ctx = ctx.clone();
                             sub_ctx.targets =
                                 ctx.targets.get(slot).cloned().into_iter().collect();
-                            slot += 1;
                             self.run_effect(m, &sub_ctx, events)?;
+                            // A parked mode resumes under the whole target
+                            // list: bind it to its own slot.
+                            rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                                slot: slot as u8,
+                                count: 1,
+                                body: Box::new(carried),
+                            });
+                            slot += 1;
                         } else {
                             self.run_effect(m, ctx, events)?;
                         }
@@ -6968,6 +6975,11 @@ impl GameState {
                         sub_ctx.targets =
                             ctx.targets.get(slot).cloned().into_iter().collect();
                         self.run_effect(m, &sub_ctx, events)?;
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                            slot: slot as u8,
+                            count: 1,
+                            body: Box::new(carried),
+                        });
                     } else {
                         self.run_effect(m, ctx, events)?;
                     }
@@ -7131,8 +7143,13 @@ impl GameState {
                         let mut sub_ctx = ctx.clone();
                         sub_ctx.targets =
                             ctx.targets.get(next_slot).cloned().into_iter().collect();
-                        next_slot += 1;
                         self.run_effect(m, &sub_ctx, events)?;
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                            slot: next_slot as u8,
+                            count: 1,
+                            body: Box::new(carried),
+                        });
+                        next_slot += 1;
                     } else {
                         self.run_effect(m, ctx, events)?;
                     }
@@ -7170,8 +7187,13 @@ impl GameState {
                         let mut sub_ctx = ctx.clone();
                         sub_ctx.targets =
                             ctx.targets.get(next_slot).cloned().into_iter().collect();
-                        next_slot += 1;
                         self.run_effect(&m.effect, &sub_ctx, events)?;
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                            slot: next_slot as u8,
+                            count: 1,
+                            body: Box::new(carried),
+                        });
+                        next_slot += 1;
                     } else {
                         self.run_effect(&m.effect, ctx, events)?;
                     }
