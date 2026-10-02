@@ -288,6 +288,8 @@ impl GameState {
                 &c,
                 events,
             )?;
+            // "You may play one of those cards."
+            self.run_effect(&Effect::OneCastAmongGranted { what: Selector::Target(slot) }, &c, events)?;
         }
         Ok(())
     }

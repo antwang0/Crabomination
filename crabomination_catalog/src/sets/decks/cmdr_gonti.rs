@@ -220,9 +220,8 @@ pub fn minds_dilation() -> CardDefinition {
 }
 
 /// Nashi, Moon Sage's Scion — {1}{B}{B} 3/2 Rat Ninja. Ninjutsu {3}{B};
-/// hitting a player, it exiles each player's top card, playable this turn
-/// for life equal to a spell's mana value.
-/// Residual: any of them may be played, not only one.
+/// hitting a player, it exiles each player's top card; one of them is
+/// playable this turn, a spell for life equal to its mana value.
 pub fn nashi_moon_sages_scion() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

@@ -304,3 +304,21 @@ fn bladegriff_prototype_lets_the_hit_player_choose() {
         assert!(g.battlefield_find(giant).is_some());
     }
 }
+
+/// Nashi, Moon Sage's Scion — "you may play ONE of those cards": playing the
+/// exiled land spends the grant on the other exiled card.
+#[test]
+fn nashi_plays_one_of_the_exiled_cards() {
+    let mut g = pod(2);
+    let nashi = g.add_card_to_battlefield(0, catalog::nashi_moon_sages_scion());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(nashi);
+    g.resolve_effect(&crabomination::effect::Effect::ExileTopOfEachLibraryMayPlayForLife, &ctx).unwrap();
+    let granted = |g: &GameState, id| g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some());
+    assert!(granted(&g, bears) && granted(&g, forest));
+    g.perform_action(GameAction::PlayLand(forest)).expect("play their Forest");
+    assert_eq!(g.battlefield_find(forest).map(|c| c.controller), Some(0));
+    assert!(!granted(&g, bears), "one of them only");
+}

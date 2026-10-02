@@ -11986,8 +11986,9 @@ pub enum Effect {
     /// `who` exiles their top card; if it's nonland, you may cast it free
     /// (Mind's Dilation).
     ExileTopMayCastFreeIfNonland { who: PlayerRef },
-    /// Each player exiles their top card; until end of turn you may play them,
-    /// paying life rather than mana for a spell (Nashi, Moon Sage's Scion).
+    /// Each player exiles their top card; until end of turn you may play one
+    /// of them (`OneCastAmongGranted`), paying life rather than mana for a
+    /// spell (Nashi, Moon Sage's Scion).
     ExileTopOfEachLibraryMayPlayForLife,
     /// CR 701.34 — manifest the top card of `who`'s library under your
     /// control (Thieving Amalgam, Orochi Soul-Reaver).
