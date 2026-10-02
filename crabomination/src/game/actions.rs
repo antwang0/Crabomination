@@ -4698,7 +4698,11 @@ impl GameState {
             // The permission is consumed by the play (CR 608.2 — a one-shot
             // permission doesn't survive the card changing zones anyway).
             // Applied only once the play is accepted, so a rejected play
-            // restores the card unmodified.
+            // restores the card unmodified. "Play one of them" (Nashi): the
+            // land spends its group's other grants.
+            if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
+                self.clear_one_cast_group(group);
+            }
             card.may_play_until = None;
             card.granted_alt_cast_cost_eot = None;
             // CR 305.1 / 110.2 — the player who plays a land controls it. An
