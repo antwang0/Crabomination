@@ -150,6 +150,7 @@ fn delina_wild_mage_high_roll_rolls_again() {
     g.clear_sickness(delina);
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::DieRoll(17),
+        DecisionAnswer::Bool(true),
         DecisionAnswer::DieRoll(4),
     ]));
     g.step = TurnStep::DeclareAttackers;
@@ -165,6 +166,20 @@ fn delina_wild_mage_high_roll_rolls_again() {
     }
     a_finish_combat(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.is_token), "exiled at end of combat");
+}
+
+/// Delina's re-roll is a "may": declining after a high roll stops at one copy.
+#[test]
+fn delina_wild_mage_may_decline_the_reroll() {
+    let mut g = a_main_phase();
+    let delina = g.add_card_to_battlefield(0, catalog::delina_wild_mage());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(delina);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(17), DecisionAnswer::Bool(false)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: delina, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
 }
 
 /// Flamerush Rider copies the other attacker, tapped and attacking, until end

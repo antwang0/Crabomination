@@ -14,8 +14,7 @@
 //! - Mirage Phalanx: the two granted begin-combat triggers are one trigger on
 //!   the Phalanx copying both halves of the pair; "loses soulbond" isn't
 //!   modeled.
-//! - Delina, Wild Mage: "you may roll again" always re-rolls, capped at five
-//!   extra rolls.
+//! - Delina, Wild Mage: "you may roll again" is capped at five extra rolls.
 //! - Kindle the Inner Flame / Chandra, Flameshaper +1: the token's "at the
 //!   beginning of the end step, sacrifice" is a next-end-step delayed
 //!   sacrifice; Kindle's "behold three Elementals" is a count gate (nothing is
@@ -173,10 +172,9 @@ fn a_temp_attacking_copy(source: Selector, non_legendary: bool) -> Effect {
     ])
 }
 
-/// Delina's d20: 1–14 makes one attacking copy; 15–20 makes one and rolls
-/// again. `depth` bounds the re-roll chain (a finite stand-in for "you may
-/// roll again" — each extra roll only ever adds a token, so rolling is
-/// always taken).
+/// Delina's d20: 1–14 makes one attacking copy; 15–20 makes one and you may
+/// roll again. `depth` bounds the re-roll chain (a finite stand-in for an
+/// unbounded "you may").
 fn a_delina_roll(depth: u8) -> Effect {
     let copy = || {
         a_temp_attacking_copy(target_filtered(R::Creature.and(R::ControlledByYou)), true)
@@ -184,7 +182,10 @@ fn a_delina_roll(depth: u8) -> Effect {
     let high = if depth == 0 {
         copy()
     } else {
-        Effect::Seq(vec![copy(), a_delina_roll(depth - 1)])
+        Effect::Seq(vec![
+            copy(),
+            Effect::MayDo { description: "Roll again?".into(), body: Box::new(a_delina_roll(depth - 1)) },
+        ])
     };
     Effect::RollDie {
         sides: 20,
