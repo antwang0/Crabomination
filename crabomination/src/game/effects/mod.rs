@@ -3522,6 +3522,7 @@ impl GameState {
         what: &Selector,
         duration: &crate::effect::Duration,
         to: Option<&Selector>,
+        spend_as_any: Option<crate::mana::Color>,
         ctx: &EffectContext,
     ) -> Result<(), GameError> {
         let eot = matches!(
@@ -3542,6 +3543,11 @@ impl GameState {
                 granted.extend(c.definition.activated_abilities.iter().cloned());
             }
             granted.extend(self.granted_abilities_for(id));
+        }
+        if spend_as_any.is_some() {
+            for a in &mut granted {
+                a.spend_color_as_any = spend_as_any;
+            }
         }
         for rid in recipients {
             if let Some(c) = self.battlefield_find_mut(rid) {
@@ -38898,8 +38904,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainAllActivatedAbilitiesOf { what, duration, to } => {
-                self.gain_all_activated_abilities_of(what, duration, to.as_ref(), ctx)
+            Effect::GainAllActivatedAbilitiesOf { what, duration, to, spend_as_any } => {
+                self.gain_all_activated_abilities_of(what, duration, to.as_ref(), *spend_as_any, ctx)
             }
 
             Effect::BottomThenRevealUntilCreature { what } => {

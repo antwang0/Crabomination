@@ -141,6 +141,7 @@ pub fn quicksilver_elemental() -> CardDefinition {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
                 to: None,
+                spend_as_any: None,
             },
             ..Default::default()
         }],

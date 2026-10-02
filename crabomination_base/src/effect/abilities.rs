@@ -3795,6 +3795,10 @@ pub struct ActivatedAbility {
     /// mana IS paying three of its pips. No chosen color leaves it unchanged.
     #[serde(default)]
     pub spend_only_chosen_color: bool,
+    /// CR 609.4b — "you may spend `color` mana as though it were mana of any
+    /// color to activate" this ability (Grell Philosopher's borrowed ones).
+    #[serde(default)]
+    pub spend_color_as_any: Option<crate::mana::Color>,
     /// True if this ability is activated from the controller's graveyard
     /// rather than the battlefield. The activation walker searches the
     /// graveyard for the source instead of the battlefield. Used by

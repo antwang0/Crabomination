@@ -21518,6 +21518,9 @@ impl GameState {
         {
             effective_mana_cost = effective_mana_cost.generic_as(color);
         }
+        if let Some(color) = ability.spend_color_as_any {
+            effective_mana_cost = effective_mana_cost.colored_payable_by(color);
+        }
 
         // CR 601.2g — float-spend confirmation. Before tapping anything, if the
         // activator has pre-existing floating mana the mana cost could either

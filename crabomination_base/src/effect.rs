@@ -11189,6 +11189,10 @@ pub enum Effect {
         duration: Duration,
         #[serde(default)]
         to: Option<Selector>,
+        /// "You may spend `color` mana as though it were mana of any color to
+        /// activate those abilities" (Grell Philosopher's blue).
+        #[serde(default)]
+        spend_as_any: Option<crate::mana::Color>,
     },
     /// CR 701.12 — "Its controller chooses target permanent another player
     /// controls that shares a card type with it. Exchange control of those

@@ -177,6 +177,7 @@ pub fn havengul_lich() -> CardDefinition {
                         what: Selector::TriggerSource,
                         duration: Duration::EndOfTurn,
                         to: None,
+                        spend_as_any: None,
                     }),
                 },
             ]),
