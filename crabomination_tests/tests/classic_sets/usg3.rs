@@ -864,6 +864,24 @@ fn abundance_digs_instead_of_drawing() {
     assert!(g.players[0].library.is_empty() || g.players[0].library.len() == 2);
 }
 
+/// CR 614.1 / 616.1e — a draw replacement has no stack item to park an ask
+/// on, and the headless decider used to answer it with OptionalTrigger's
+/// blanket "no": Abundance (and Archmage Ascension, Parallel Thoughts,
+/// Pursuit of Knowledge) never replaced a draw in self-play.
+#[test]
+fn abundance_digs_under_the_headless_decider() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::abundance());
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.is_land()), "dug past the Bears");
+}
+
 /// Academy Researchers drags an Aura out of hand onto itself.
 #[test]
 fn academy_researchers_deploys_an_aura_from_hand() {

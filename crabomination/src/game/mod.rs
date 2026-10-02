@@ -21450,11 +21450,16 @@ impl GameState {
 
     /// Apply one chosen draw replacement. `false` means the player declined an
     /// optional one, so the caller offers the rest (CR 616.1e).
+    ///
+    /// A draw has no stack item to park an ask on, so a headless decider takes
+    /// each one: every replacement here is a draw at least as good as the one
+    /// it replaces (Pursuit of Knowledge's stops at its `stop_at`). Its blanket
+    /// "no" left all four dead in self-play.
     fn apply_draw_dig(&mut self, kind: DrawDig, p: usize, events: &mut Vec<GameEvent>) -> bool {
         use crate::decision::{Decision, DecisionAnswer};
         let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), p, None);
         let ask = |state: &mut Self, prompt: &str| {
-            matches!(
+            matches!(state.decider.kind(), crate::decision::DeciderKind::Auto) || matches!(
                 state.decider.decide(&Decision::OptionalTrigger {
                     source: crate::card::CardId(0),
                     description: prompt.to_string(),
