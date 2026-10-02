@@ -298,7 +298,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let p = ctx.controller;
         let pl = &self.players[p];
-        if self.active_player_idx != p || pl.lands_played_this_turn >= 1 + pl.extra_land_plays {
+        if self.active_player_idx != p || pl.lands_played_this_turn > pl.extra_land_plays {
             return Ok(());
         }
         let lands: Vec<(CardId, String)> = self

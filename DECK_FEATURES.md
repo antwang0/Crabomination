@@ -36,18 +36,14 @@ they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
-| 6 | Edgar Markov (BRW) | 2: drana_and_linvala, new_blood |
+| 6 | Edgar Markov (BRW) | 1: drana_and_linvala |
 | 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
 | 12 | N'ghathrod (UB) | 2: aboleth_spawn, grell_philosopher |
-| 13 | Clavileño (WB) | 1: new_blood |
-| 15 | Zada (R) | 1: arena_of_glory |
 | 20 | Ixhel (WBG) | 3: geths_summons, glissas_retriever, glistening_sphere |
-| 25 | Edgar Markov C17 (BRW) | 1: new_blood |
 | 28 | Bello (RG) | 2: evercoat_ursine, grothama_all_devouring |
 | 29 | Gisa and Geralf (UB) | 2: havengul_lich, lazotep_plating |
 | 50 | Temmet, Naktamun's Will (WUB) | 3: lost_monarch_of_ifnir, the_scarab_god, vizier_of_many_faces |
 | 51 | Yidris, Maelstrom Wielder (UBRG) | 1: aeon_chronicler |
-| 56 | Ghired, Conclave Exile (RGW) | 1: flamerush_rider |
 | 58 | The Mimeoplasm (BGU) | 1: svogthos_the_restless_tomb |
 | 62 | Riku of Two Reflections (GUR) | 1: ray_of_command |
 | 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
@@ -56,7 +52,7 @@ they call a deck 🟡, the table wins.
 | 69 | Urza, Chief Artificer (WUB) | 2: sanwell_avenger_ace, scholar_of_new_horizons |
 | 70 | Ranar the Ever-Watchful (WU) | 2: cosmic_intervention, sage_of_the_beyond |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 4: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee |
-| 74 | Bright-Palm, Soul Awakener (RGW) | 2: flamerush_rider, strionic_resonator |
+| 74 | Bright-Palm, Soul Awakener (RGW) | 1: strionic_resonator |
 | 75 | Hazel of the Rootbloom (BG) | 4: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, sword_of_the_squeak |
 | 76 | Saheeli, the Gifted (UR) | 1: tawnos_urzas_apprentice |
 | 77 | Winter, Cynical Opportunist (BG) | 4: cemetery_tampering, into_the_pit, old_stickfingers, winter_cynical_opportunist |
@@ -91,7 +87,7 @@ they call a deck 🟡, the table wins.
 | 114 | Aminatou, the Fateshifter (WUB) | 3: aminatous_augury, portent, primordial_mist |
 | 117 | Kalamax, the Stormsire (GUR) | 3: deflecting_swat, haldan_avid_arcanist, lavabrink_floodgates |
 | 118 | Aminatou, Veil Piercer (WUB) | 9: aminatous_augury, athreos_shroud_veiled, fear_of_sleep_paralysis, mirrormade, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
-| 119 | Otrimi, the Ever-Playful (BGU) | 4: capricopian, manascape_refractor, mindleecher, vastwood_hydra |
+| 119 | Otrimi, the Ever-Playful (BGU) | 3: capricopian, mindleecher, vastwood_hydra |
 | 120 | Leinore, Autumn Sovereign (GW) | 5: celestial_judgment, moonsilver_key, odric_master_tactician, sigardas_vanguard, sigardian_zealot |
 | 121 | Sidar Jabari of Zhalfir (WUB) | 3: aryel_knight_of_windgrace, path_of_the_enigma, syr_elenora_the_discerning |
 | 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
@@ -118,7 +114,7 @@ they call a deck 🟡, the table wins.
 | 144 | Satya, Aetherflux Genius (URW) | 5: filigree_racer, hourglass_of_the_lost, overclocked_electromancer, razorfield_ripper, sphinx_of_the_revelation |
 | 145 | Hakbal of the Surging Soul (GU) | 4: bygone_marvels, quandrix_command, ripples_of_potential, xolatoyac_the_smiling_flood |
 | 146 | Perrie, the Pulverizer (GWU) | 5: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, skyship_plunderer |
-| 147 | Éowyn, Shieldmaiden (URW) | 2: combat_celebrant, flamerush_rider |
+| 147 | Éowyn, Shieldmaiden (URW) | 1: combat_celebrant |
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
 | 149 | Felothar the Steadfast (WBG) | 3: baldin_century_herdmaster, betor_ancestors_voice, tip_the_scales |
 | 150 | Galadriel, Elven-Queen (GU) | 3: elrond_of_the_white_council, gandalf_westward_voyager, sail_into_the_west |
@@ -150,6 +146,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+73 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 69 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

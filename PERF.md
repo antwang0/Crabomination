@@ -3015,6 +3015,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-02 (Commander session `01NqgJKc`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `face_down && face_up_def.is_none()`
+read per cast (`finalize_cast`) and per exile exit (`move_card_to`), a looker
+lookup per exiled card in the view. Everything else is behind new effect
+variants only Commander cards carry. 4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip ec663451f); games_per_s 312.2; determinism ok
+two-player pools cube / sos / sealed x 300, seeds 23001 and 24001: 15,000 games,
+                 all decided
+pod              2..8 seats x 1,000 (seeds 23102-23108, 24102-24108): 14,000, all
+                 decided; turns/game 19.60 / 32.28 / 45.49 / 56.65 / 67.08 /
+                 82.16 / 97.09 at the tip
+pod              every deck 1-183 in six-seat blocks (31 blocks): x 200 at seed
+                 22001+ (6,200: one board cap — seed 22028 decks 163-168 game
+                 191, a Flourishing Defenses + Black Sun's Zenith Elf Warrior
+                 flood past MAX_BATTLEFIELD, a real board, not a loop) and x 300
+                 at seed 25001+ (9,300, all decided); zero panics
+suite            23,703 / 0 / 5 strict
+```
+
 ### 2026-10-02 (Commander session `01HLca3f`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one bool per attacker in the
