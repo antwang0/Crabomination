@@ -515,6 +515,31 @@ fn stumpsquall_hydra_shares_x_counters_with_your_commander() {
     assert!(on(cmd) > 0, "the commander got a share");
 }
 
+/// "Distribute X +1/+1 counters among it and any number of commanders" — an
+/// opponent's commander is a legal recipient, and the counters are *put*
+/// (CR 122.6), not moved off the Hydra, so the split is the controller's
+/// (CR 608.2d) and each share is placed once.
+#[test]
+fn stumpsquall_hydra_may_feed_an_opponents_commander() {
+    let mut g = main_phase();
+    let opp_cmd = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[1].commanders.push(opp_cmd);
+    let hydra = g.add_card_to_hand(0, catalog::stumpsquall_hydra());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DamageDivision(vec![1, 3])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: hydra,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("X = 4");
+    drain_stack(&mut g);
+    let on = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((on(hydra), on(opp_cmd)), (1, 3));
+}
+
 /// Return a land: untap and hexproof. Landfall: an opposing creature must
 /// attack on its controller's next turn.
 #[test]

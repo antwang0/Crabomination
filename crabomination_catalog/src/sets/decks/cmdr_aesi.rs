@@ -197,24 +197,18 @@ pub fn spitting_image() -> CardDefinition {
     }
 }
 
-/// Stumpsquall Hydra — X counters, split between it and your commanders.
-/// Residual: Modelled as all X on the Hydra, then any number moved onto commanders
-/// you control (the headless seat spreads them evenly); an opponent's
-/// commander, which the printed "any number of commanders" allows, is never
-/// offered.
+/// Stumpsquall Hydra — X counters distributed among it and any number of
+/// commanders (anyone's), as the trigger resolves.
 pub fn stumpsquall_hydra() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
-            },
-            Effect::DistributeCountersFromSource {
-                kind: CounterType::PlusOnePlusOne,
-                filter: R::Creature.and(R::IsCommander).and(R::ControlledByYou),
-            },
-        ]))],
+        triggered_abilities: vec![etb(Effect::DistributeCountersAmong {
+            what: Selector::Both(
+                Box::new(Selector::This),
+                Box::new(Selector::EachPermanent(R::IsCommander)),
+            ),
+            total: Value::XFromCost,
+            counter: CounterType::PlusOnePlusOne,
+        })],
         ..creature(
             "Stumpsquall Hydra",
             cost(&[x(), g(), g(), g()]),
