@@ -4813,6 +4813,17 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// `ChooseOneAmong` for `count` picks — exactly `count` (as many as there
+    /// are), or with `up_to` any number to `count`. Haunting Voyage's "up to
+    /// two", Insatiable Frugivore's three.
+    ChooseSomeAmong {
+        what: Selector,
+        chooser: PlayerRef,
+        count: Value,
+        up_to: bool,
+        chosen: Box<Effect>,
+        other: Box<Effect>,
+    },
     /// "Return a [`filter`] you control to its owner's hand", chosen as the
     /// effect resolves — not a target (Whitemane Lion's ruling), so hexproof
     /// is no bar and nothing fizzles. `keep_best` names the most valuable one

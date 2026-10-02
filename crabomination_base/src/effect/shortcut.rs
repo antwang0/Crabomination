@@ -3503,5 +3503,11 @@ pub fn choose_one_then(what: Selector, chooser: PlayerRef, body: Effect) -> Effe
     Effect::ChooseOneAmong { what, chooser, chosen: Box::new(body), other: Box::new(Effect::Noop) }
 }
 
-/// The card or permanent [`choose_one_then`] picked.
+/// The card(s) or permanent(s) [`choose_one_then`] / [`choose_some_then`] picked.
 pub fn chosen_one() -> Selector { Selector::SeparatedPile { chosen: true } }
+
+/// [`choose_one_then`] for `count` picks (`up_to`: any number to `count`);
+/// `body` reads them as [`chosen_one`].
+pub fn choose_some_then(what: Selector, chooser: PlayerRef, count: Value, up_to: bool, body: Effect) -> Effect {
+    Effect::ChooseSomeAmong { what, chooser, count, up_to, chosen: Box::new(body), other: Box::new(Effect::Noop) }
+}

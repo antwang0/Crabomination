@@ -581,6 +581,7 @@ impl Effect {
             }
             Effect::SeparateIntoPiles { chosen, other, .. }
             | Effect::ChooseOneAmong { chosen, other, .. }
+            | Effect::ChooseSomeAmong { chosen, other, .. }
             | Effect::ChooseOneAtRandomAmong { chosen, other, .. } => {
                 f(chosen);
                 f(other);
@@ -1046,7 +1047,7 @@ impl Effect {
             Effect::RevealTopGreatestMayChangeTargets
             | Effect::RevealTopTakeNamedExileRest { .. }
             | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => false,
-            Effect::ChooseOneAmong { what, chooser, .. } => {
+            Effect::ChooseOneAmong { what, chooser, .. } | Effect::ChooseSomeAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
             }
             Effect::OpponentVetoesOne { what, .. }
@@ -5369,8 +5370,9 @@ impl Effect {
                 Effect::DoubleLife { who } => sel_find(who, slot),
                 Effect::GrantChosenTypeLandwalk { what }
                 | Effect::BidLifeToCounterTargetSpell { what } => sel_find(what, slot),
-                Effect::ChooseOneAmong { what, chooser, .. } => sel_find(what, slot)
-                    .or_else(|| pref_find(chooser, slot)),
+                Effect::ChooseOneAmong { what, chooser, .. } | Effect::ChooseSomeAmong { what, chooser, .. } => {
+                    sel_find(what, slot).or_else(|| pref_find(chooser, slot))
+                }
                 Effect::OpponentVetoesOne { what, .. } => sel_find(what, slot),
                 Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
                     .or_else(|| pref_find(splitter, slot))

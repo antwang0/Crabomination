@@ -1,6 +1,7 @@
-//! `Effect::ChooseOneAmong` — "choose a [card or permanent]" made on
-//! resolution (CR 608.2d), not targeted: the chosen one runs `chosen`, the
-//! rest run `other` (Deadly Vanity, Zimone's Hypothesis, Author of Shadows).
+//! `Effect::ChooseOneAmong` / `ChooseSomeAmong` — "choose a [card or
+//! permanent]" (or N of them) made on resolution (CR 608.2d), not targeted:
+//! the chosen run `chosen`, the rest run `other` (Deadly Vanity, Zimone's
+//! Hypothesis, Author of Shadows, Haunting Voyage).
 
 use crate::card::CardId;
 use crate::decision::PickValue;
@@ -35,11 +36,79 @@ fn pick_is_gain(e: &Effect) -> bool {
 }
 
 impl GameState {
+    /// `what`'s cards / permanents, best pick first for `seat`: for a gain the
+    /// biggest body then the priciest (`seat`'s own permanents before any
+    /// other's); for a harm an opponent's priciest permanent, then the least
+    /// valuable of the rest.
+    fn rank_picks(&self, ids: &[CardId], seat: usize, gain: bool) -> Vec<CardId> {
+        let body_and_mv = |id: CardId| -> (i32, u32) {
+            match (self.computed_permanent(id), self.battlefield_find(id)) {
+                (Some(cp), Some(c)) => (cp.power.saturating_add(cp.toughness), c.definition.cost.cmc()),
+                _ => self.find_card_anywhere(id).map_or((0, 0), |c| {
+                    let d = &c.definition;
+                    (d.power.max(0) + d.toughness.max(0), d.cost.cmc())
+                }),
+            }
+        };
+        let mut ranked = ids.to_vec();
+        if gain {
+            // Stable: equal picks keep resolution order.
+            ranked.sort_by_key(|&id| {
+                let foreign = self.battlefield_find(id).is_some_and(|c| c.controller != seat);
+                (foreign, std::cmp::Reverse(body_and_mv(id)))
+            });
+        } else {
+            ranked.sort_by_key(|&id| {
+                let theirs = self.battlefield_find(id).filter(|c| !self.same_team(c.controller, seat));
+                match theirs {
+                    Some(c) => (0, std::cmp::Reverse(c.definition.cost.cmc()), (0, 0)),
+                    None => {
+                        let (body, mv) = body_and_mv(id);
+                        (1, std::cmp::Reverse(0), (i64::from(mv), i64::from(body)))
+                    }
+                }
+            });
+        }
+        ranked
+    }
+
+    /// Which way the pick cuts for its chooser. "Choose up to one …, destroy
+    /// the rest" (Duneblast) keeps the pick, so it is a gain and none is legal;
+    /// an imprint of your own card (Prototype Portal's from hand, Idris's
+    /// artifact) banks the best one.
+    fn pick_cuts_as_gain(&self, ids: &[CardId], seat: usize, chosen: &Effect) -> (bool, bool) {
+        let keeps = matches!(chosen, Effect::Noop);
+        let imprint = matches!(chosen, Effect::ExileTaggedWithSource { .. } | Effect::ExileUntilSourceLeaves { .. })
+            && ids.iter().all(|id| match self.battlefield_find(*id) {
+                Some(c) => c.controller == seat,
+                None => true,
+            });
+        (keeps || imprint || pick_is_gain(chosen), keeps)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(super) fn choose_one_among(
         &mut self,
         what: &Selector,
         chooser: &PlayerRef,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        self.choose_some_among(what, chooser, 1, false, chosen, other, ctx, events, effect)
+    }
+
+    /// The shared body: `chooser` picks `n` of `what` (any number to `n` when
+    /// `up_to`, or when the pick is a survivor — `chosen` is `Noop`).
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn choose_some_among(
+        &mut self,
+        what: &Selector,
+        chooser: &PlayerRef,
+        n: usize,
+        up_to: bool,
         chosen: &Effect,
         other: &Effect,
         ctx: &EffectContext,
@@ -52,7 +121,7 @@ impl GameState {
             .filter_map(|e| e.as_card_id())
             .collect();
         let Some(seat) = self.resolve_player(chooser, ctx) else { return Ok(()) };
-        if ids.is_empty() {
+        if ids.is_empty() || n == 0 {
             return Ok(());
         }
         let source = ctx.source.unwrap_or(CardId(0));
@@ -60,79 +129,35 @@ impl GameState {
             .iter()
             .filter_map(|id| self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string())))
             .collect();
-        // "Choose up to one …, destroy the rest" (Duneblast): the pick is the
-        // survivor, so it is a gain — ours first, the biggest — and choosing
-        // none is legal.
-        let keeps = matches!(chosen, Effect::Noop);
-        // An imprint of your own card (Prototype Portal's from hand, Idris's
-        // artifact) banks the best one.
-        let imprint = matches!(chosen, Effect::ExileTaggedWithSource { .. } | Effect::ExileUntilSourceLeaves { .. })
-            && ids.iter().all(|id| match self.battlefield_find(*id) {
-                Some(c) => c.controller == seat,
-                None => true,
-            });
-        let gain = keeps || imprint || pick_is_gain(chosen);
-        let default = if gain {
-            ids.iter()
-                .copied()
-                .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.controller == seat))
-                // The biggest body; among bodiless ones (Equipment) the priciest.
-                .max_by_key(|id| {
-                    let body = self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness));
-                    (body, self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()))
-                })
-                // Cards off the battlefield: the biggest body, else the priciest.
-                .or_else(|| {
-                    ids.iter().copied().filter(|id| self.battlefield_find(*id).is_none()).max_by_key(|id| {
-                        self.find_card_anywhere(*id).map_or((0, 0), |c| {
-                            let d = &c.definition;
-                            (d.power.max(0) + d.toughness.max(0), d.cost.cmc())
-                        })
-                    })
-                })
-                .into_iter()
-                .collect()
+        let (gain, keeps) = self.pick_cuts_as_gain(&ids, seat, chosen);
+        let mut default = self.rank_picks(&ids, seat, gain);
+        default.truncate(n);
+        // A forced pick asks for at least one (as many as there are, to `n`),
+        // so a bot answering a harm gives up its least valuable, not nothing.
+        let min = if keeps || up_to { 0 } else { n.min(ids.len()) as u32 };
+        let value = if gain { PickValue::Gain } else { PickValue::Cost };
+        let prompt = if n == 1 { "Choose one.".to_string() } else { format!("Choose {n}.") };
+        let picked = if self.seat_prompts(seat) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            self.ask_seat_cards(seat, prompt, source, candidates, min, n as u32, value, effect)
         } else {
-            // A harm on the pick (a doom counter, an exile, a steal) lands on
-            // an opponent's priciest permanent when there is one (Eye of Doom);
-            // on your own things, the least of them (Kefnet's land, The War
-            // Games' exile).
-            ids.iter()
-                .copied()
-                .filter(|id| self.battlefield_find(*id).is_some_and(|c| !self.same_team(c.controller, seat)))
-                .max_by_key(|id| self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()))
-                .or_else(|| {
-                    ids.iter().copied().min_by_key(|id| match self.computed_permanent(*id) {
-                        Some(cp) => (self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()), cp.power.saturating_add(cp.toughness)),
-                        None => self.find_card_anywhere(*id).map_or((0, 0), |c| {
-                            (c.definition.cost.cmc(), c.definition.power.max(0) + c.definition.toughness.max(0))
-                        }),
-                    })
-                })
-                .into_iter()
-                .collect()
+            Some(default.clone())
         };
-        let Some(picked) = self.choose_up_to_cards(
-            seat,
-            "Choose one.".into(),
-            source,
-            candidates,
-            1,
-            if gain { PickValue::Gain } else { PickValue::Cost },
-            effect,
-            default,
-        ) else {
-            return Ok(());
-        };
-        let one = match picked.first() {
-            Some(id) => *id,
-            None if keeps => {
-                self.separated_piles = (Vec::new(), ids);
-                return self.run_piles_then_clear(chosen, other, ctx, events);
+        let Some(mut picked) = picked else { return Ok(()) };
+        picked.dedup();
+        // A short forced answer is topped up from the default pick.
+        for id in default {
+            if picked.len() >= min as usize {
+                break;
             }
-            None => ids[0],
-        };
-        self.separated_piles = (vec![one], ids.into_iter().filter(|id| *id != one).collect());
+            if !picked.contains(&id) {
+                picked.push(id);
+            }
+        }
+        let rest: Vec<CardId> = ids.into_iter().filter(|id| !picked.contains(id)).collect();
+        if picked.is_empty() && !keeps && !up_to {
+            return Ok(());
+        }
+        self.separated_piles = (picked, rest);
         self.run_piles_then_clear(chosen, other, ctx, events)
     }
 }
