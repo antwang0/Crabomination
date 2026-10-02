@@ -9153,6 +9153,18 @@ impl GameState {
     /// caster's graveyard + the spell must have `Keyword::Delve`; each one
     /// exiled reduces the generic cost by {1} (CR 702.66).
     #[allow(clippy::too_many_arguments)]
+    /// CR 601.2 — "if … as you cast this spell" is fixed as it is cast: stamp
+    /// the definition's `as_cast_condition` on the spell. Every cast body
+    /// (hand, command zone, alternative cost) calls this.
+    fn stamp_as_cast_condition(&self, card: &mut crate::card::CardInstance, p: usize) {
+        let held = card.definition.as_cast_condition.as_ref().is_some_and(|pred| {
+            self.evaluate_predicate(pred, &crate::game::effects::EffectContext::for_trigger(card.id, p, None, 0))
+        });
+        if held || card.cast_condition_held {
+            card.cast_condition_held = held;
+        }
+    }
+
     pub(crate) fn cast_spell_with_convoke(
         &mut self,
         card_id: CardId,
@@ -9518,13 +9530,7 @@ impl GameState {
             && (card.definition.has_entwine().is_some()
                 || card.definition.entwine_additional_cost.is_some());
         card.entwined = entwine;
-        // CR 601.2 — "if … as you cast this spell" is fixed now.
-        let held = card.definition.as_cast_condition.as_ref().is_some_and(|pred| {
-            self.evaluate_predicate(pred, &crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0))
-        });
-        if held || card.cast_condition_held {
-            card.cast_condition_held = held;
-        }
+        self.stamp_as_cast_condition(&mut card, p);
         // CR 702.165 — opt-in Gift; only sticks when the card has it. The
         // promised gift carries no mana cost, so nothing folds into the cost.
         card.gift_promised = gift && card.definition.gift.is_some();
@@ -13448,6 +13454,7 @@ impl GameState {
         let mut card = Self::take_card(&mut self.players[p].command, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = false;
+        self.stamp_as_cast_condition(&mut card, p);
 
         // Sorcery-speed gate (commanders are creatures by definition,
         // which are sorcery-speed unless flash). We rebuild the same
@@ -13931,6 +13938,7 @@ impl GameState {
             // cost was paid" ETB riders fire via `SpellWasKicked`.
             card.kicked = true;
         }
+        self.stamp_as_cast_condition(&mut card, p);
 
         // Timing: sorcery-speed unless instant-speed (or the alt cost grants
         // flash — Rout), plus Teferi-style opponent restriction.
