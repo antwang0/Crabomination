@@ -9146,13 +9146,6 @@ impl GameState {
         })
     }
 
-    /// Internal cast-spell helper with optional convoke creatures and delve
-    /// cards. Each convoke creature must be untapped + controlled by the
-    /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
-    /// generic mana to the player's pool. Each delve card must be in the
-    /// caster's graveyard + the spell must have `Keyword::Delve`; each one
-    /// exiled reduces the generic cost by {1} (CR 702.66).
-    #[allow(clippy::too_many_arguments)]
     /// CR 601.2 — "if … as you cast this spell" is fixed as it is cast: stamp
     /// the definition's `as_cast_condition` on the spell. Every cast body
     /// (hand, command zone, alternative cost) calls this.
@@ -9165,6 +9158,13 @@ impl GameState {
         }
     }
 
+    /// Internal cast-spell helper with optional convoke creatures and delve
+    /// cards. Each convoke creature must be untapped + controlled by the
+    /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
+    /// generic mana to the player's pool. Each delve card must be in the
+    /// caster's graveyard + the spell must have `Keyword::Delve`; each one
+    /// exiled reduces the generic cost by {1} (CR 702.66).
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_spell_with_convoke(
         &mut self,
         card_id: CardId,
