@@ -1525,6 +1525,22 @@ pub fn explore() -> Effect {
 
 /// CR 701.13 — "Investigate `n`": create `n` colorless Clue artifact
 /// tokens (`{2}, Sacrifice this artifact: Draw a card.`).
+/// "Will of the Planeswalkers — Starting with you, each player votes for
+/// planeswalk or chaos. If planeswalk gets more votes, planeswalk. If chaos
+/// gets more votes or the vote is tied, chaos ensues." (the MOC Path cycle).
+/// A CR 701.38 vote; a tie goes to chaos (`VoteTally::Majority` breaks ties
+/// to the later option). Outside Planechase both outcomes do nothing
+/// (CR 701.31a), but the vote is still held and fires vote triggers.
+pub fn will_of_the_planeswalkers() -> Effect {
+    Effect::Vote {
+        options: vec![
+            VoteOption::new("planeswalk", Effect::Planeswalk { who: PlayerRef::You }),
+            VoteOption::new("chaos", Effect::ChaosEnsues { who: PlayerRef::You }),
+        ],
+        tally: VoteTally::Majority,
+    }
+}
+
 pub fn investigate(n: u32) -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
