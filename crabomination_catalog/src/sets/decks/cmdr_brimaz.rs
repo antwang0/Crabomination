@@ -494,8 +494,9 @@ pub fn phyrexian_triniform() -> CardDefinition {
 /// return target artifact card from your graveyard if its mana value is at
 /// most their total power.
 ///
-/// ⚠ Residual: any artifact card may be targeted; the mana-value check runs
-/// as the trigger resolves.
+/// Any artifact card may be targeted and the mana value is checked as the
+/// trigger resolves (2023-04-14 ruling). ⚠ Residual: the total reads the
+/// Phyrexians still attacking then, not the ones that attacked (LKI).
 pub fn vulpine_harvester() -> CardDefinition {
     let attacking_phyrexians = || yours(R::Creature.and(phyrexian()).and(R::IsAttacking));
     CardDefinition {
