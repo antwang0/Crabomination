@@ -6643,7 +6643,7 @@ impl GameState {
                     )
                 })
         });
-        if grants && card.definition.is_creature() {
+        if grants && self.evaluate_requirement_on_card(&crate::card::SelectionRequirement::Creature, card, p) {
             self.players[p].pending_creature_etb_keywords.push(crate::card::Keyword::Haste);
         }
     }
