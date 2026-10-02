@@ -354,8 +354,9 @@ fn pendant_of_prosperity_feeds_both_players() {
     assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (h0 + 1, h1 + 1));
 }
 
-/// Inkshield makes an Inkling per point of unblocked power swinging at you and
-/// prevents that damage.
+/// CR 615 — Inkshield makes an Inkling per point of combat damage it actually
+/// prevents: counted as the damage is prevented, so a pump after it resolves
+/// counts too.
 #[test]
 fn inkshield_turns_the_swing_into_inklings() {
     let mut g = pod(2);
@@ -367,13 +368,17 @@ fn inkshield_turns_the_swing_into_inklings() {
     drain_stack(&mut g);
     let ink = g.add_card_to_hand(0, catalog::inkshield());
     cast(&mut g, 0, ink, None).expect("cast");
-    assert_eq!(named(&g, 0, "Inkling").len(), 3);
+    assert!(named(&g, 0, "Inkling").is_empty(), "nothing is prevented yet");
+    let growth = g.add_card_to_hand(1, catalog::giant_growth());
+    cast(&mut g, 1, growth, Some(Target::Permanent(giant))).expect("pump");
     let life = g.players[0].life;
     while g.step != TurnStep::PostCombatMain {
-        let _ = g.advance_step(Vec::new());
+        let evs = g.advance_step(Vec::new()).unwrap_or_default();
+        g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
     }
     assert_eq!(g.players[0].life, life);
+    assert_eq!(named(&g, 0, "Inkling").len(), 6, "3 + 3 from Giant Growth");
 }
 
 /// Bold Plagiarist copies the +1/+1 counters an opponent puts on their own

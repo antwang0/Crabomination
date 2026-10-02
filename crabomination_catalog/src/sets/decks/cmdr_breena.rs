@@ -338,20 +338,22 @@ pub fn guardian_archon() -> CardDefinition {
 }
 
 /// Inkshield — prevent all combat damage to you this turn and make a 2/1
-/// flying Inkling per point. Residual: the count is the power of the
-/// unblocked creatures attacking you as it resolves.
+/// flying Inkling for each point prevented this way, as it is prevented
+/// (`WheneverCombatDamageToYouPreventedThisTurn`).
 pub fn inkshield() -> CardDefinition {
     CardDefinition {
         name: "Inkshield",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::PowerOf(Box::new(Selector::EachPermanent(R::IsAttackingYou.and(R::IsUnblocked)))),
-                definition: Arc::new(inkling()),
-            },
             Effect::PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef::You },
+            Effect::WheneverCombatDamageToYouPreventedThisTurn {
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    definition: Arc::new(inkling()),
+                }),
+            },
         ]),
         ..Default::default()
     }
