@@ -8926,18 +8926,50 @@ impl GameState {
             }
 
             Effect::DiscardHalf { who, rounded_up } => {
-                // Per-player: each discards half of their *own* hand (pick-first,
-                // matching the random-discard bot harness in `Effect::Discard`).
+                // CR 701.9b — each player discards half of their *own* hand,
+                // and the discarding player chooses which. Every seat is asked
+                // before anyone discards (one logged ask per seat).
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
                     .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
                     .collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(seats.len());
                 for p in seats {
-                    let hand = self.players[p].hand.len();
-                    let n = if *rounded_up { hand.div_ceil(2) } else { hand / 2 };
-                    for _ in 0..n {
-                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
+                    let named: Vec<(CardId, String)> =
+                        self.players[p].hand.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+                    let hand: Vec<CardId> = named.iter().map(|(id, _)| *id).collect();
+                    let n = if *rounded_up { hand.len().div_ceil(2) } else { hand.len() / 2 };
+                    if n == 0 {
+                        continue;
+                    }
+                    let auto: Vec<CardId> = hand.iter().copied().take(n).collect();
+                    let ids = if n < hand.len() {
+                        let Some(picked) = self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            format!("Discard {n}"),
+                            source,
+                            named,
+                            n as u32,
+                            n as u32,
+                            PickValue::Cost,
+                            effect,
+                            auto.clone(),
+                        ) else {
+                            return Ok(());
+                        };
+                        if picked.len() == n { picked } else { auto }
+                    } else {
+                        auto
+                    };
+                    picks.push((p, ids));
+                }
+                self.clear_answer_log();
+                for (p, ids) in picks {
+                    for cid in ids {
                         self.discard_card(p, cid, events);
                     }
                 }
@@ -8981,14 +9013,19 @@ impl GameState {
             }
 
             Effect::SacrificeHalf { who, filter, rounded_up } => {
-                // Per-player: each sacrifices half of the permanents they
-                // control matching `filter` (weakest/cheapest first, like
-                // `Effect::Sacrifice`'s AutoDecider heuristic).
+                // CR 701.21a — each player sacrifices half of the permanents
+                // they control matching `filter`, and chooses which. The
+                // default (and a non-prompting seat's pick) is weakest and
+                // cheapest first, like `Effect::Sacrifice`'s heuristic. Every
+                // seat is asked before anything is sacrificed.
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
                     .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
                     .collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(seats.len());
                 for p in seats {
                     let mut candidates: Vec<&CardInstance> = self
                         .battlefield
@@ -9002,7 +9039,34 @@ impl GameState {
                     candidates.sort_by_key(|c| (!c.is_token, c.definition.cost.cmc(), c.power()));
                     let total = candidates.len();
                     let n = if *rounded_up { total.div_ceil(2) } else { total / 2 };
-                    let ids: Vec<CardId> = candidates.into_iter().take(n).map(|c| c.id).collect();
+                    let all: Vec<CardId> = candidates.into_iter().map(|c| c.id).collect();
+                    if n == 0 {
+                        continue;
+                    }
+                    let auto: Vec<CardId> = all.iter().copied().take(n).collect();
+                    let ids = if n < total {
+                        let Some(picked) = self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            format!("Sacrifice {n}"),
+                            source,
+                            self.card_id_names(&all),
+                            n as u32,
+                            n as u32,
+                            PickValue::Cost,
+                            effect,
+                            auto.clone(),
+                        ) else {
+                            return Ok(());
+                        };
+                        if picked.len() == n { picked } else { auto }
+                    } else {
+                        auto
+                    };
+                    picks.push((p, ids));
+                }
+                self.clear_answer_log();
+                for (p, ids) in picks {
                     for id in ids {
                         let is_creature = self
                             .battlefield_find(id)

@@ -178,6 +178,35 @@ fn rush_of_dread_loses_half_life() {
     assert_eq!(g.players[1].life, 10, "lost half of 20, rounded up");
 }
 
+/// CR 701.21a / 701.9b — Rush of Dread's sacrifice and discard modes: the
+/// target opponent chooses which half goes, not the first in line.
+#[test]
+fn rush_of_dread_target_chooses_what_to_sacrifice_and_discard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let _token_like = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let island = g.add_card_to_hand(1, catalog::island());
+    let forest = g.add_card_to_hand(1, catalog::forest());
+    // Two creatures → sacrifice one (rounded up); three cards → discard two.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![angel]),
+        DecisionAnswer::Cards(vec![island, forest]),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::rush_of_dread());
+    // Base {1}{B}{B} + mode 0 {1} + mode 1 {2}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(spree(id, vec![0, 1], Some(Target::Player(1)), vec![Target::Player(1)]))
+        .expect("sacrifice + discard modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "the picked Angel was sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 1);
+    let hand: Vec<CardId> = g.players[1].hand.iter().map(|c| c.id).collect();
+    assert_eq!(hand, vec![bolt], "the picked lands were discarded, the Bolt kept");
+}
+
 #[test]
 fn phantom_interference_makes_a_spirit() {
     let mut g = two_player_game();
