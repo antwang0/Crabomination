@@ -88,9 +88,7 @@ they call a deck 🟡, the table wins.
 | 110 | Jared Carthalion (WUBRG) | 2: knight_of_new_alara, unite_the_coalition |
 | 111 | Jirina Kudro (RWB) | 2: odric_master_tactician, sanctuary_blade |
 | 112 | Zaffai, Thunder Conductor (UR) | 4: apex_of_power, muse_vortex, radiant_performer, zaffai_thunder_conductor |
-| 113 | Zurgo Stormrender (RWB) | 1: gix_yawgmoth_praetor |
 | 114 | Aminatou, the Fateshifter (WUB) | 3: aminatous_augury, portent, primordial_mist |
-| 115 | Rootha, Mastering the Moment (UR) | 1: abstract_performance |
 | 117 | Kalamax, the Stormsire (GUR) | 3: deflecting_swat, haldan_avid_arcanist, lavabrink_floodgates |
 | 118 | Aminatou, Veil Piercer (WUB) | 9: aminatous_augury, athreos_shroud_veiled, fear_of_sleep_paralysis, mirrormade, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
 | 119 | Otrimi, the Ever-Playful (BGU) | 4: capricopian, manascape_refractor, mindleecher, vastwood_hydra |
@@ -112,7 +110,6 @@ they call a deck 🟡, the table wins.
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 136 | Nalia de'Arnise (WB) | 1: glorious_protector |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
-| 138 | Saheeli, Radiant Creator (GUR) | 1: aetherflux_conduit |
 | 139 | Inspirit, Flagship Vessel (URW) | 3: cloud_key, moxite_refinery, ripples_of_potential |
 | 140 | Anhelo, the Painter (UBR) | 4: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, xanders_pact, zndrsplts_judgment |
 | 141 | Prosper, Tome-Bound (BR) | 4: apex_of_power, danse_macabre, hellish_rebuke, share_the_spoils |
@@ -134,7 +131,6 @@ they call a deck 🟡, the table wins.
 | 160 | Terra, Herald of Hope (RWB) | 6: edgar_master_machinist, espers_to_magicite, gogo_mysterious_mime, legions_to_ashes, the_warring_triad, umaro_raging_yeti |
 | 161 | Jace, Multiverse Architect (WUBR) | 2: dack_fayden_helping_hand, tamiyo_upriser_crowned |
 | 162 | Frodo + Sam (WBG) | 3: field_tested_frying_pan, gollum_obsessed_stalker, motivated_pony |
-| 163 | Y'shtola, Night's Blessed (WUB) | 1: urianger_augurelt |
 | 164 | Auntie Ool, Cursewretch (BRG) | 1: pucas_covenant |
 | 165 | Tidus, Yuna's Guardian (GWU) | 4: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian, scholar_of_new_horizons |
 | 166 | The Wise Mothman (BGU) | 3: rampaging_yao_guai, struggle_for_project_purity, winding_constrictor |
@@ -154,6 +150,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+69 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 54 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
