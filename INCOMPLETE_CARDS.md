@@ -824,7 +824,6 @@ Two of the first eleven kept a documented residual rather than shipping whole:
 
 | Card | Residual | Why |
 |---|---|---|
-| Sage of the Beyond | "spells you cast **from anywhere other than your hand** cost {2} less" is spelled as its two reachable zones — `GraveyardCastCostReduction` + `ExileCastCostReduction`. A cast from the **command zone** is not discounted | there is no "any zone but hand" cost-reduction static; the two that exist cover flashback/retrace/escape/disturb/aftermath and foretell/plot/adventure/impulse, which is every zone the engine actually casts from outside a Commander game |
 | Tome of the Infinite | the activation's `Draw 1` stands in for "conjure a random card from its spellbook" | Alchemy conjure has no primitive (pre-existing row below). The invented ETB scry beside it is gone |
 
 ## The synthesised-name class (2026-09-19) — closed on the docs, and what it left

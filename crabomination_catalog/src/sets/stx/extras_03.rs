@@ -648,10 +648,8 @@ pub fn vortex_runner() -> CardDefinition {
 /// ⚠ It shipped with an invented "combat damage → that player discards"
 /// trigger and no cost reduction at all. Found by
 /// `scripts/audit_invented_trigger.py`.
-///
-/// 🟡 The reduction is spelled as its two reachable zones — the graveyard and
-/// exile (which is where foretell, plot and adventure casts come from). A cast
-/// from the **command zone** is the residual; see `INCOMPLETE_CARDS.md`.
+/// The reduction is `NonHandCastCostReduction`: graveyard, exile, library
+/// top and the command zone alike.
 pub fn sage_of_the_beyond() -> CardDefinition {
     CardDefinition {
         name: "Sage of the Beyond",
@@ -665,16 +663,10 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        static_abilities: vec![
-            StaticAbility {
-                description: "Spells you cast from your graveyard cost {2} less to cast.",
-                effect: StaticEffect::GraveyardCastCostReduction { amount: 2 },
-            },
-            StaticAbility {
-                description: "Spells you cast from exile cost {2} less to cast.",
-                effect: StaticEffect::ExileCastCostReduction { amount: 2 },
-            },
-        ],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast from anywhere other than your hand cost {2} less to cast.",
+            effect: StaticEffect::NonHandCastCostReduction { amount: 2 },
+        }],
         ..Default::default()
     }
 }

@@ -3418,20 +3418,14 @@ fn soothing_hush_counters_creature_spell() {
 /// Sage of the Beyond — "spells you cast from anywhere other than your hand
 /// cost {2} less to cast". It shipped with an invented "combat damage → that
 /// player discards" trigger and no cost reduction at all. Found by
-/// `scripts/audit_invented_trigger.py`. 🟡 The reduction is spelled as its
-/// two reachable zones (graveyard, exile); the command zone is the residual.
+/// `scripts/audit_invented_trigger.py`.
 #[test]
 fn sage_of_the_beyond_discounts_a_flashback_cast_and_has_no_damage_trigger() {
-    use crabomination::effect::StaticEffect;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::sage_of_the_beyond());
     g.clear_sickness(id);
     let def = catalog::sage_of_the_beyond();
     assert!(def.triggered_abilities.is_empty(), "the printed card has no trigger");
-    assert!(def.static_abilities.iter().any(|s| matches!(
-        s.effect, StaticEffect::GraveyardCastCostReduction { amount: 2 })));
-    assert!(def.static_abilities.iter().any(|s| matches!(
-        s.effect, StaticEffect::ExileCastCostReduction { amount: 2 })));
     // Deep Analysis has Flashback {1}{U} + 3 life; the Sage takes {2} off it,
     // leaving a single blue pip.
     let deep = g.add_card_to_graveyard(0, catalog::deep_analysis());
