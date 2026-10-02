@@ -15136,7 +15136,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileAnyNumberUntilSourceLeaves { filter } => {
+            Effect::ExileAnyNumberUntilSourceLeaves { filter, shelter } => {
                 // CR 603.6e — controller picks any subset of their matching
                 // permanents (other than the source); each is exiled linked to
                 // the source and returns when it leaves. Lumbering Battlement.
@@ -15162,8 +15162,14 @@ impl GameState {
                 }
                 let max = candidates.len() as u32;
                 // Auto default: exile everything (the source's payoff scales
-                // with the count and the bodies come back).
-                let auto: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                // with the count and the bodies come back) — or, for a
+                // shelter, only what an opposing stack item threatens.
+                let auto: Vec<CardId> = if *shelter {
+                    let ids: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                    self.stack_threatened_among(p, &ids)
+                } else {
+                    candidates.iter().map(|(id, _)| *id).collect()
+                };
                 let Some(chosen) = self.choose_up_to_cards(
                     p,
                     "Exile any number of creatures you control?".to_string(),

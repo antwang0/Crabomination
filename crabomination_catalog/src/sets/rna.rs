@@ -5394,6 +5394,7 @@ pub fn lumbering_battlement() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileAnyNumberUntilSourceLeaves {
             filter: R::Creature.and(R::NotToken),
+            shelter: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "This creature gets +2/+2 for each card exiled with it.",

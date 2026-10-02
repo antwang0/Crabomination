@@ -286,3 +286,33 @@ fn folk_hero_draws_once_a_turn() {
     }
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for two Rogue spells");
 }
+
+/// Glorious Protector, flashed in over an opposing Murder with no one to ask:
+/// it shelters the threatened creature and leaves the rest of the board.
+#[test]
+fn glorious_protector_shelters_what_the_stack_threatens() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    flood(&mut g, 1);
+    let murder = g.add_card_to_hand(1, catalog::murder());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("murder");
+    let gp = g.add_card_to_hand(0, catalog::glorious_protector());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: gp, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flash");
+    while g.stack.len() > 1 {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert!(g.exile.iter().any(|c| c.id == bear), "the Murder's target is sheltered");
+    assert!(g.battlefield_find(giant).is_some(), "the unthreatened Giant stays");
+}

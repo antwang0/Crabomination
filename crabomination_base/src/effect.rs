@@ -7351,7 +7351,14 @@ pub enum Effect {
     /// `filter` until this leaves the battlefield" (Lumbering Battlement). The
     /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
     /// is linked to the source exactly like `ExileUntilSourceLeaves`.
-    ExileAnyNumberUntilSourceLeaves { filter: SelectionRequirement },
+    /// `shelter`: the exile protects rather than pays off (Glorious
+    /// Protector), so a headless controller exiles only what the stack
+    /// threatens; otherwise it exiles everything (Battlement's +2/+2 each).
+    ExileAnyNumberUntilSourceLeaves {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        shelter: bool,
+    },
     /// CR 603.6e — "each player chooses [count] [filter] they control. Exile
     /// them until this leaves the battlefield" (Foreboding Steamboat). Each
     /// player (APNAP) picks from their own permanents — all of them when they

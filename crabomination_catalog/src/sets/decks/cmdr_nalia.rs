@@ -293,8 +293,8 @@ pub fn galepowder_mage() -> CardDefinition {
 
 /// Glorious Protector — {2}{W}{W} 3/4 Angel Cleric, flash, flying, foretell
 /// {2}{W}. Entering, you may exile any number of your non-Angel creatures
-/// until it leaves (CR 610.3).
-/// Residual: the bot's pick is the choose-cards default.
+/// until it leaves (CR 610.3) — with no one to ask, those an opposing spell or
+/// ability on the stack threatens.
 pub fn glorious_protector() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
@@ -304,6 +304,7 @@ pub fn glorious_protector() -> CardDefinition {
                 .and(R::HasCreatureType(CreatureType::Angel).negate())
                 .and(R::ControlledByYou)
                 .and(R::OtherThanSource),
+            shelter: true,
         })],
         ..creature(
             "Glorious Protector",

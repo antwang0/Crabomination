@@ -4184,6 +4184,38 @@ impl crate::game::GameState {
         })
     }
 
+    /// Which of `ids` (permanents `p` controls) an opposing spell or ability on
+    /// the stack threatens: those it targets, or all of them when it has no
+    /// target at all (a sweep may reach any). Shelter picks (Glorious
+    /// Protector) read it.
+    pub(crate) fn stack_threatened_among(&self, p: usize, ids: &[CardId]) -> Vec<CardId> {
+        use crate::game::types::{StackItem, Target};
+        let mut hit: Vec<CardId> = Vec::new();
+        for item in self.stack.iter() {
+            let (owner, target, more) = match item {
+                StackItem::Spell { caster, target, additional_targets, .. } => (*caster, target, additional_targets),
+                StackItem::Trigger { controller, target, additional_targets, .. } => {
+                    (*controller, target, additional_targets)
+                }
+            };
+            if self.same_team(owner, p) {
+                continue;
+            }
+            if target.is_none() && more.is_empty() {
+                return ids.to_vec();
+            }
+            for t in target.iter().chain(more.iter()) {
+                if let Target::Permanent(id) = t
+                    && ids.contains(id)
+                    && !hit.contains(id)
+                {
+                    hit.push(*id);
+                }
+            }
+        }
+        ids.iter().copied().filter(|id| hit.contains(id)).collect()
+    }
+
     /// Ask a real decider for a colour out of `legal`; answer a headless one
     /// with `want`. The bottom of the three — the sites whose own body already
     /// knows the answer it wants (the most-common basic type among the lands a
