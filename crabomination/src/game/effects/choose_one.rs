@@ -10,15 +10,24 @@ use crate::game::types::GameEvent;
 use crate::game::{GameError, GameState};
 
 /// The pick is something its chooser wants: a friendly body on it (a +1/+1
-/// counter, a keyword), a free turn-face-up, a play grant, becoming a copy
-/// of it, or returning it to your hand or battlefield.
+/// counter, a keyword), a free turn-face-up, a play grant, becoming or
+/// minting a copy of it, attaching it, casting it, or returning it to your
+/// hand or battlefield.
 fn pick_is_gain(e: &Effect) -> bool {
     match e {
-        Effect::TurnFaceUpFree { .. } | Effect::GrantMayPlay { .. } | Effect::BecomeCopyOf { .. } => true,
+        Effect::TurnFaceUpFree { .. }
+        | Effect::GrantMayPlay { .. }
+        | Effect::BecomeCopyOf { .. }
+        | Effect::CreateTokenCopyOf { who: PlayerRef::You, .. }
+        | Effect::Attach { .. }
+        | Effect::AttachAnyNumberTo { .. }
+        | Effect::CastWithoutPayingImmediate { .. } => true,
         Effect::Move { to, .. } => matches!(
             to,
             ZoneDest::Hand(PlayerRef::You | PlayerRef::OwnerOfMoved)
                 | ZoneDest::Battlefield { controller: PlayerRef::You, .. }
+                // Banked with the source to be played later (Esper Valigarmanda).
+                | ZoneDest::ExileWithSourceStamp
         ),
         Effect::Seq(v) => v.iter().any(pick_is_gain),
         other => other.prefers_friendly_target(),
@@ -55,12 +64,23 @@ impl GameState {
         // survivor, so it is a gain — ours first, the biggest — and choosing
         // none is legal.
         let keeps = matches!(chosen, Effect::Noop);
-        let gain = keeps || pick_is_gain(chosen);
+        // An imprint of your own card (Prototype Portal's from hand, Idris's
+        // artifact) banks the best one.
+        let imprint = matches!(chosen, Effect::ExileTaggedWithSource { .. } | Effect::ExileUntilSourceLeaves { .. })
+            && ids.iter().all(|id| match self.battlefield_find(*id) {
+                Some(c) => c.controller == seat,
+                None => true,
+            });
+        let gain = keeps || imprint || pick_is_gain(chosen);
         let default = if gain {
             ids.iter()
                 .copied()
                 .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.controller == seat))
-                .max_by_key(|id| self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness)))
+                // The biggest body; among bodiless ones (Equipment) the priciest.
+                .max_by_key(|id| {
+                    let body = self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness));
+                    (body, self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()))
+                })
                 // Cards off the battlefield: the biggest body, else the priciest.
                 .or_else(|| {
                     ids.iter().copied().filter(|id| self.battlefield_find(*id).is_none()).max_by_key(|id| {
@@ -74,12 +94,23 @@ impl GameState {
                 .collect()
         } else {
             // A harm on the pick (a doom counter, an exile, a steal) lands on
-            // an opponent's priciest permanent when there is one (Eye of Doom).
+            // an opponent's priciest permanent when there is one (Eye of Doom);
+            // on your own things, the least of them (Kefnet's land, The War
+            // Games' exile).
             ids.iter()
                 .copied()
                 .filter(|id| self.battlefield_find(*id).is_some_and(|c| !self.same_team(c.controller, seat)))
                 .max_by_key(|id| self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()))
-                .map_or_else(|| vec![ids[0]], |id| vec![id])
+                .or_else(|| {
+                    ids.iter().copied().min_by_key(|id| match self.computed_permanent(*id) {
+                        Some(cp) => (self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()), cp.power.saturating_add(cp.toughness)),
+                        None => self.find_card_anywhere(*id).map_or((0, 0), |c| {
+                            (c.definition.cost.cmc(), c.definition.power.max(0) + c.definition.toughness.max(0))
+                        }),
+                    })
+                })
+                .into_iter()
+                .collect()
         };
         let Some(picked) = self.choose_up_to_cards(
             seat,

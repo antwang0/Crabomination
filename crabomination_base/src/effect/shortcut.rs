@@ -3495,3 +3495,13 @@ pub fn dragon_as_cast() -> Predicate {
         }),
     ])
 }
+
+/// "`chooser` chooses one of `what`, then `body`" — a choice made on
+/// resolution (CR 608.2d), not a target; `body` reads the pick as
+/// [`chosen_one`] (God-Pharaoh's Gift, The Mending of Dominaria).
+pub fn choose_one_then(what: Selector, chooser: PlayerRef, body: Effect) -> Effect {
+    Effect::ChooseOneAmong { what, chooser, chosen: Box::new(body), other: Box::new(Effect::Noop) }
+}
+
+/// The card or permanent [`choose_one_then`] picked.
+pub fn chosen_one() -> Selector { Selector::SeparatedPile { chosen: true } }

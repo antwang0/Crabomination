@@ -41083,7 +41083,9 @@ impl GameState {
                         EntityRef::Permanent(id) => {
                             self.computed_permanent(*id).is_some_and(|c| c.power > than)
                         }
-                        _ => false,
+                        // A card off the battlefield reads its printed power.
+                        EntityRef::Card(id) => self.find_card_anywhere(*id).is_some_and(|c| c.definition.power > than),
+                        EntityRef::Player(_) => false,
                     })
                     .collect()
             }

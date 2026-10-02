@@ -623,7 +623,8 @@ pub enum Selector {
     ExactObjects(Vec<crate::card::CardId>),
     /// The permanents `inner` picks whose power is greater than `than`,
     /// evaluated once before any is affected — "destroy all creatures with
-    /// power greater than target creature's power" (Fell the Mighty).
+    /// power greater than target creature's power" (Fell the Mighty). Cards
+    /// elsewhere compare their printed power (Desecrator Hag's ties).
     PowerAbove { inner: Box<Selector>, than: Box<Value> },
 
     /// No entities (placeholder/default).
