@@ -730,11 +730,8 @@ pub fn sanctum_of_eternity() -> CardDefinition {
 /// Passionate Archaeologist — {1}{R} Legendary Enchantment — Background.
 /// Commander creatures you own have "Whenever you cast a spell from exile, this
 /// creature deals damage equal to that spell's mana value to target opponent."
-/// Approximation: the trigger is printed on the Background and gated on your
-/// controlling your own commander (`Predicate::ControlsOwnCommander`) — the
-/// damage's *source* is the Background rather than the commander (matters only
-/// for lifelink/deathtouch/infect-style riders on the commander), and two
-/// commanders on the battlefield trigger once rather than twice.
+/// A `GrantTriggeredAbility` to `Creature ∧ IsCommander ∧ OwnedByYou`: the
+/// commander deals the damage, and each such commander triggers.
 pub fn passionate_archaeologist() -> CardDefinition {
     CardDefinition {
         name: "Passionate Archaeologist",
@@ -745,16 +742,19 @@ pub fn passionate_archaeologist() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Background],
             ..Default::default()
         },
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::All(vec![
-                    Predicate::CastSpellFromExile,
-                    Predicate::ControlsOwnCommander { who: PlayerRef::You },
-                ]),
-            ),
-            effect: Effect::DealDamage {
-                to: target_filtered(R::OpponentPlayer),
-                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+        static_abilities: vec![StaticAbility {
+            description: "Commander creatures you own have \"Whenever you cast a spell from exile, this creature \
+                          deals damage equal to that spell's mana value to target opponent.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                        .with_filter(Predicate::CastSpellFromExile),
+                    effect: Effect::DealDamage {
+                        to: target_filtered(R::OpponentPlayer),
+                        amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    },
+                }),
             },
         }],
         ..Default::default()

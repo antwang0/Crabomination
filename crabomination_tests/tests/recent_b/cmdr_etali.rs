@@ -523,8 +523,16 @@ fn passionate_archaeologist_burns_for_exile_casts() {
         x_value: None,
     })
     .expect("cast from exile");
-    drain_stack(&mut g);
+    let evs = drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "Divination's mana value (3) to the opponent");
+    assert!(
+        evs.iter().any(|e| matches!(
+            e,
+            crabomination::game::types::GameEvent::DamageDealt { from_card: Some(src), to_player: Some(1), .. }
+                if *src == cmd
+        )),
+        "the commander is the damage's source (the ability is granted to it)"
+    );
 }
 
 fn b_main_phase() -> GameState {
