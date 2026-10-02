@@ -92,6 +92,7 @@ pub(crate) fn deferred(e: &Effect) -> bool {
             | Effect::WheneverCreatureEntersUntilYourNextTurn { .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. }
             | Effect::WheneverYouGainLifeThisTurn { .. }
+            | Effect::WheneverCombatDamageToYouPreventedThisTurn { .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { .. }
             | Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. }
             | Effect::OnEachSpellCastThisTurn { .. }

@@ -1408,6 +1408,11 @@ pub enum DelayedKind {
     /// the amount bound via `Value::TriggerEventAmount`. Expires at cleanup.
     /// Vizkopa Guildmage's second ability.
     YouGainLifeThisTurn,
+    /// "For each 1 damage prevented this way, [body]" (Inkshield, CR 603.4):
+    /// fires per combat damage event to `DelayedTrigger.controller` that was
+    /// prevented, the amount via `Value::TriggerEventAmount`. Expires at
+    /// cleanup.
+    CombatDamageToYouPreventedThisTurn,
     /// "Whenever a card is put into an opponent's graveyard from anywhere this
     /// turn, [body]" (CR 603.4). Fires per `CardPutIntoGraveyard` event whose
     /// owner is an opponent of `DelayedTrigger.controller`; that owner is bound

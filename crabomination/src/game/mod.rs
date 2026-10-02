@@ -22613,6 +22613,36 @@ impl GameState {
         }
     }
 
+    /// `DelayedKind::CombatDamageToYouPreventedThisTurn` (Inkshield): one
+    /// trigger per prevented damage event to the watcher in a combat damage
+    /// step, carrying the prevented amount.
+    fn fire_combat_prevention_watchers(&mut self, events: &[GameEvent]) {
+        use crate::game::types::DelayedKind;
+        if !self.delayed_triggers.iter().any(|dt| dt.kind == DelayedKind::CombatDamageToYouPreventedThisTurn)
+            || !matches!(self.step, TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
+        {
+            return;
+        }
+        let hits: Vec<(usize, u32)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::DamagePrevented { amount: n @ 1.., to_player: Some(p), .. } => Some((*p, *n)),
+                _ => None,
+            })
+            .collect();
+        for (p, n) in hits {
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| dt.kind == DelayedKind::CombatDamageToYouPreventedThisTurn && dt.controller == p)
+                .cloned()
+                .collect();
+            for dt in watchers {
+                self.stack.push(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).event_amount(n).build());
+            }
+        }
+    }
+
     fn fire_delayed_event_watchers(&mut self, events: &[GameEvent], batch_bits: u128) {
         // Every leg below fires a watcher off `delayed_triggers`; with none
         // registered there is nothing to fire, and the two ungated collects
@@ -22621,6 +22651,7 @@ impl GameState {
             return;
         }
         self.fire_opponent_permanent_damage_watchers(events);
+        self.fire_combat_prevention_watchers(events);
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a
         // `CreatureDied` event in this batch, with its captured target.

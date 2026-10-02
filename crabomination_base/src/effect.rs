@@ -10665,6 +10665,12 @@ pub enum Effect {
     /// Expires at cleanup. Vizkopa Guildmage's second activated ability
     /// ("each opponent loses that much life").
     WheneverYouGainLifeThisTurn { body: Box<Effect> },
+    /// "For each 1 damage prevented this way, [body]" after a this-turn
+    /// combat fog for you (Inkshield): a turn-scoped delayed trigger (CR
+    /// 603.4) firing per combat damage event to the controller that was
+    /// prevented, the prevented amount bound via `Value::TriggerEventAmount`.
+    /// Expires at cleanup.
+    WheneverCombatDamageToYouPreventedThisTurn { body: Box<Effect> },
 
     /// "Whenever a spell or ability an opponent controls causes you to discard
     /// cards this turn, [body]." Registers a turn-scoped delayed trigger

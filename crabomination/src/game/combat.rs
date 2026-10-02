@@ -5392,14 +5392,15 @@ impl GameState {
             AttackTarget::Player(p) => {
                 // CR 615 — Glacial-Chasm-style blanket prevention soaks the whole
                 // combat hit before any shield is consumed.
-                if self.all_damage_to_player_prevented(p) {
-                    return 0;
-                }
-                // CR 615 — turn-scoped "prevent all combat damage that would be
-                // dealt to you this turn" (Druid's Deliverance).
-                if !self.damage_cant_be_prevented_this_turn
-                    && self.combat_damage_prevented_to_players_this_turn.contains(&p)
+                // Both report the prevention (CR 615.5): "whenever damage is
+                // prevented" and "for each damage prevented this way" read it.
+                if self.all_damage_to_player_prevented(p)
+                    || !self.damage_cant_be_prevented_this_turn
+                        && self.combat_damage_prevented_to_players_this_turn.contains(&p)
                 {
+                    if amount > 0 {
+                        events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+                    }
                     return 0;
                 }
                 // CR 702.16j — protection from a card type (Serra's Emissary):

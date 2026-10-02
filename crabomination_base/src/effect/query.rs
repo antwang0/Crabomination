@@ -462,6 +462,7 @@ impl Effect {
             | Effect::WheneverCreatureEntersUntilYourNextTurn { body, .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
             | Effect::WheneverYouGainLifeThisTurn { body, .. }
+            | Effect::WheneverCombatDamageToYouPreventedThisTurn { body, .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
             | Effect::WheneverCardEntersOpponentGraveyardThisTurn { body, .. }
             | Effect::OnEachSpellCastThisTurn { body, .. }
@@ -2134,6 +2135,7 @@ impl Effect {
             | Effect::EachOpponentSacrificesSharingTypeWith { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
+            Effect::WheneverCombatDamageToYouPreventedThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,
             Effect::MayExileSelfReturnNextUpkeepHaste
             | Effect::ReturnSelfAtNextUpkeepTapped

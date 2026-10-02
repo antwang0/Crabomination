@@ -31845,6 +31845,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WheneverCombatDamageToYouPreventedThisTurn { body } => {
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    kind: crate::game::types::DelayedKind::CombatDamageToYouPreventedThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
