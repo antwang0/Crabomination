@@ -375,9 +375,7 @@ pub fn shiny_impetus() -> CardDefinition {
     }
 }
 
-/// Tempest Technique — storm, and +1/+1 per enchantment you control. ⚠ The
-/// storm copies keep the original's target (choosing the same creature again
-/// is one of the legal choices).
+/// Tempest Technique — storm, and +1/+1 per enchantment you control.
 pub fn tempest_technique() -> CardDefinition {
     let n = || Value::CountOf(Box::new(Selector::EachPermanent(R::Enchantment.and(R::ControlledByYou))));
     CardDefinition {

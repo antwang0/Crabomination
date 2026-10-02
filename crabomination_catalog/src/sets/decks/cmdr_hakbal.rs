@@ -111,7 +111,7 @@ pub fn hakbal_of_the_surging_soul() -> CardDefinition {
 
 /// Bygone Marvels — return target permanent card from your graveyard to hand;
 /// Descend 8: the cast copies it twice, new targets allowed. Exiles itself.
-/// ⚠ The auto-decider keeps a copy's original target.
+/// Residual: The auto-decider keeps a copy's original target.
 pub fn bygone_marvels() -> CardDefinition {
     CardDefinition {
         name: "Bygone Marvels",
@@ -512,7 +512,7 @@ pub fn wave_goodbye() -> CardDefinition {
 
 /// Xolatoyac, the Smiling Flood — entering or attacking puts a flood counter
 /// on target land (an Island while it has one); at your end step, untap each
-/// permanent you control with a counter. ⚠ The Island type ends with
+/// permanent you control with a counter. Residual: The Island type ends with
 /// Xolatoyac.
 pub fn xolatoyac_the_smiling_flood() -> CardDefinition {
     let flood = || Effect::AddCounter { what: target_filtered(R::Land), kind: CounterType::Flood, amount: Value::ONE };

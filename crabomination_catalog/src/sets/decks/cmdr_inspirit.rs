@@ -140,7 +140,7 @@ pub fn chrome_host_seedshark() -> CardDefinition {
 }
 
 /// Cloud Key — as it enters, choose a card type; your spells of it cost {1}
-/// less. ⚠ The choice also offers land and planeswalker.
+/// less. Residual: The choice also offers land and planeswalker.
 pub fn cloud_key() -> CardDefinition {
     CardDefinition {
         as_enters_effect: Some(Effect::ChooseCardTypeForSource),
@@ -336,7 +336,7 @@ pub fn lux_cannon() -> CardDefinition {
 
 /// Moxite Refinery — {2}, {T}, remove X counters from your artifacts and
 /// creatures: X charge counters on target artifact, or X +1/+1 counters on
-/// target creature (sorcery speed). ⚠ The X may come from several permanents.
+/// target creature (sorcery speed). Residual: The X may come from several permanents.
 pub fn moxite_refinery() -> CardDefinition {
     let mode = |filter: R, kind| ActivatedAbility {
         mana_cost: cost(&[generic(2)]),
@@ -374,7 +374,7 @@ pub fn patrolling_peacemaker() -> CardDefinition {
 
 /// Resourceful Defense — a permanent of yours leaving with counters puts them
 /// on target permanent you control; {4}{W}: move counters from one of your
-/// permanents onto another. ⚠ The move takes every counter.
+/// permanents onto another. Residual: The move takes every counter.
 pub fn resourceful_defense() -> CardDefinition {
     let yours_target = |slot| Selector::TargetFiltered { slot, filter: R::Permanent.and(R::ControlledByYou) };
     CardDefinition {
@@ -397,7 +397,7 @@ pub fn resourceful_defense() -> CardDefinition {
 }
 
 /// Ripples of Potential — proliferate, then you may phase out your permanents
-/// with counters. ⚠ All or none of them.
+/// with counters. Residual: All or none of them.
 pub fn ripples_of_potential() -> CardDefinition {
     CardDefinition {
         name: "Ripples of Potential",

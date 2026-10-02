@@ -239,7 +239,7 @@ pub fn brightcap_badger() -> CardDefinition {
 }
 
 /// Evercoat Ursine — hideaway 3 twice; connecting plays one of them free.
-/// ⚠ A land among them can't be played this way (the free path casts).
+/// Residual: A land among them can't be played this way (the free path casts).
 pub fn evercoat_ursine() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -274,7 +274,7 @@ pub fn evercoat_ursine() -> CardDefinition {
 
 /// Grothama, All-Devouring — any other attacker may fight it; when it
 /// leaves, each player draws the damage their sources dealt it this turn.
-/// ⚠ The fight offer is Grothama's trigger asking the attacker's controller
+/// Residual: The fight offer is Grothama's trigger asking the attacker's controller
 /// (`MayDoBy`), not an ability granted to each creature, so its controller
 /// is Grothama's for APNAP ordering.
 pub fn grothama_all_devouring() -> CardDefinition {

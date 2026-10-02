@@ -156,7 +156,7 @@ pub fn grimoire_of_the_dead() -> CardDefinition {
 }
 
 /// Havengul Lich — {1}: you may cast target creature card in a graveyard this
-/// turn. ⚠ It doesn't gain that card's activated abilities.
+/// turn. Residual: It doesn't gain that card's activated abilities.
 pub fn havengul_lich() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {

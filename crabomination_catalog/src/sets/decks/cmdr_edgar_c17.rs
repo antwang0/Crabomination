@@ -86,7 +86,7 @@ pub(super) fn curse(name: &'static str, mana: crate::mana::ManaCost, each: impl 
 }
 
 /// Bloodlord of Vaasgoth — bloodthirst 3, flying; your Vampire creature
-/// spells gain bloodthirst 3. ⚠ The granted bloodthirst is checked as the
+/// spells gain bloodthirst 3. Residual: The granted bloodthirst is checked as the
 /// cast trigger resolves, not as the creature enters.
 pub fn bloodlord_of_vaasgoth() -> CardDefinition {
     CardDefinition {
@@ -291,7 +291,7 @@ pub fn stone_quarry() -> CardDefinition {
 }
 
 /// Kheru Mind-Eater — the player it hits exiles a card from hand, which you
-/// may play. ⚠ The card is exiled face up.
+/// may play. Residual: The card is exiled face up.
 pub fn kheru_mind_eater() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],

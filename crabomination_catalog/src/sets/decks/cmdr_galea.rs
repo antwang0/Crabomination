@@ -189,7 +189,7 @@ pub fn catti_brie_of_mithral_hall() -> CardDefinition {
 }
 
 /// Clay Golem — {6}, roll a d8: monstrosity X; becoming monstrous destroys a
-/// permanent. ⚠ The roll happens as the ability resolves.
+/// permanent. Residual: The roll happens as the ability resolves.
 pub fn clay_golem() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -429,7 +429,7 @@ pub fn robe_of_stars() -> CardDefinition {
 
 /// Song of Inspiration — up to two permanent cards from your graveyard to
 /// hand; a d20 plus their total mana value at 15+ gains that much life.
-/// ⚠ The cards return before the roll.
+/// Residual: The cards return before the roll.
 pub fn song_of_inspiration() -> CardDefinition {
     let total = || Value::TotalManaValueOf(Box::new(Selector::LastMoved));
     spell(

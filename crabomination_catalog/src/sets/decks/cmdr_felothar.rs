@@ -105,9 +105,8 @@ pub fn felothar_the_steadfast() -> CardDefinition {
 }
 
 /// Arbor Adherent — any color; or X of one color, X the greatest toughness
-/// among your creatures.
-///
-/// Residual: X counts its own toughness too.
+/// among other creatures you control (`GreatestToughnessYouControl` skips the
+/// source).
 pub fn arbor_adherent() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![

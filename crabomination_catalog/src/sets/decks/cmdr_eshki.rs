@@ -139,7 +139,7 @@ pub fn broodcaller_scourge() -> CardDefinition {
 }
 
 /// Deceptive Frostkite — flying; enters as a copy of your creature with power
-/// 4 or greater, a flying Dragon too. ⚠ The copy isn't optional.
+/// 4 or greater, a flying Dragon too. Residual: The copy isn't optional.
 pub fn deceptive_frostkite() -> CardDefinition {
     CardDefinition {
         enters_as_copy: Some(EntersAsCopy {

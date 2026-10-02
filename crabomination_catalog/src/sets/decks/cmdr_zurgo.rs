@@ -222,7 +222,7 @@ pub fn eliminate_the_competition() -> CardDefinition {
 
 /// Gix, Yawgmoth Praetor — any creature connecting with one of your
 /// opponents lets its controller pay 1 life to draw; {4}{B}{B}{B}, discard X:
-/// exile an opponent's top X, free to play. ⚠ Playable for the rest of the
+/// exile an opponent's top X, free to play. Residual: Playable for the rest of the
 /// turn rather than only as the ability resolves.
 pub fn gix_yawgmoth_praetor() -> CardDefinition {
     CardDefinition {

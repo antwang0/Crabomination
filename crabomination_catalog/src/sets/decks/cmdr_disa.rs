@@ -81,7 +81,7 @@ fn lhurgoyf_creature() -> R {
 
 /// Disa the Restless — a Lhurgoyf card reaching your graveyard from anywhere
 /// but the battlefield comes back; connecting makes a Tarmogoyf.
-/// ⚠ "Not from the battlefield" is read as "not put there from the
+/// Residual: "Not from the battlefield" is read as "not put there from the
 /// battlefield this turn": a Lhurgoyf that died earlier this turn and then
 /// reached the graveyard another way doesn't return.
 pub fn disa_the_restless() -> CardDefinition {
@@ -512,7 +512,7 @@ pub fn tempt_with_mayhem() -> CardDefinition {
 
 /// Ziatora, the Incinerator — at your end step you may sacrifice another
 /// creature; when you do, its power in damage to any target and three
-/// Treasures. ⚠ The sacrifice picks your weakest other creature
+/// Treasures. Residual: The sacrifice picks your weakest other creature
 /// (`MaySacrifice`'s auto-pick), not the one you'd choose.
 pub fn ziatora_the_incinerator() -> CardDefinition {
     CardDefinition {

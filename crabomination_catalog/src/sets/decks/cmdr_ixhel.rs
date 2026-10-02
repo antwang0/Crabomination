@@ -65,7 +65,7 @@ pub fn carrion_call() -> CardDefinition {
 }
 
 /// Glistening Sphere — a tapped mana rock that proliferates, and makes three
-/// of one color while an opponent is corrupted. ⚠ The corrupted ability is a
+/// of one color while an opponent is corrupted. Residual: The corrupted ability is a
 /// conditional mana ability, which auto-payment does not tap; it is
 /// activated directly.
 pub fn glistening_sphere() -> CardDefinition {
@@ -259,7 +259,7 @@ pub fn contaminant_grafter() -> CardDefinition {
 }
 
 /// Geth's Summons — a creature back from your graveyard, and one from each
-/// corrupted opponent's. ⚠ Both picks are made at resolution rather than
+/// corrupted opponent's. Residual: Both picks are made at resolution rather than
 /// targeted, and "three or more poison as you cast" is read then too.
 pub fn geths_summons() -> CardDefinition {
     let to_you = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false };
@@ -292,7 +292,7 @@ pub fn geths_summons() -> CardDefinition {
 }
 
 /// Glissa's Retriever — haste, toxic 3, evasion, and a corrupted death that
-/// exiles it to rebuy a card per corrupted opponent. ⚠ The rebuy is picked
+/// exiles it to rebuy a card per corrupted opponent. Residual: The rebuy is picked
 /// at resolution of the one trigger, not targeted by a reflexive one.
 pub fn glissas_retriever() -> CardDefinition {
     CardDefinition {
@@ -360,7 +360,7 @@ pub fn wurmquake() -> CardDefinition {
 
 /// Ixhel, Scion of Atraxa — flying, vigilance, toxic 2; at your end step each
 /// corrupted opponent exiles their top card for you to play, spending mana as
-/// though it were any color. ⚠ The card is exiled face up (hidden
+/// though it were any color. Residual: The card is exiled face up (hidden
 /// information only — who may play it is unchanged).
 pub fn ixhel_scion_of_atraxa() -> CardDefinition {
     CardDefinition {

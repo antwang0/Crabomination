@@ -135,7 +135,7 @@ pub fn diabolic_vision() -> CardDefinition {
 }
 
 /// Fear of Sleep Paralysis — flying; eerie taps and stuns up to one creature;
-/// opponents' stun counters don't come off. ⚠ Only the untap step's removal
+/// opponents' stun counters don't come off. Residual: Only the untap step's removal
 /// is stopped.
 pub fn fear_of_sleep_paralysis() -> CardDefinition {
     CardDefinition {
@@ -161,7 +161,7 @@ pub fn fear_of_sleep_paralysis() -> CardDefinition {
     }
 }
 
-/// Mirrormade — enters as a copy of an artifact or enchantment. ⚠ The copy
+/// Mirrormade — enters as a copy of an artifact or enchantment. Residual: The copy
 /// isn't optional.
 pub fn mirrormade() -> CardDefinition {
     CardDefinition {
@@ -215,7 +215,7 @@ pub fn obscura_storefront() -> CardDefinition {
 }
 
 /// One with the Multiverse — look at and play from the top of your library;
-/// once during each of your turns, a free spell. ⚠ From hand only.
+/// once during each of your turns, a free spell. Residual: From hand only.
 pub fn one_with_the_multiverse() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
@@ -238,7 +238,7 @@ pub fn one_with_the_multiverse() -> CardDefinition {
 
 /// Phenomenon Investigators — Believe: your nontoken deaths make 2/2 Horror
 /// enchantment creatures; Doubt: your end step may bounce a nonland
-/// permanent of yours to draw. ⚠ Doubt's return targets.
+/// permanent of yours to draw. Residual: Doubt's return targets.
 pub fn phenomenon_investigators() -> CardDefinition {
     let horror = Arc::new(TokenDefinition {
         name: "Horror".into(),
@@ -306,7 +306,7 @@ pub fn redress_fate() -> CardDefinition {
 
 /// Secret Arcade // Dusty Parlor — your nonland permanents are enchantments;
 /// each enchantment spell you cast puts its mana value in counters on up to
-/// one creature. ⚠ Permanent spells aren't enchantments on the stack.
+/// one creature. Residual: Permanent spells aren't enchantments on the stack.
 pub fn secret_arcade_dusty_parlor() -> CardDefinition {
     room(
         "Secret Arcade // Dusty Parlor",
@@ -392,7 +392,7 @@ pub fn soaring_lightbringer() -> CardDefinition {
 
 /// Spirit-Sister's Call — your end step: for a permanent card in your
 /// graveyard, you may sacrifice a permanent sharing a card type to return it,
-/// exiled if it would leave. ⚠ The shared type is the card's first one.
+/// exiled if it would leave. Residual: The shared type is the card's first one.
 pub fn spirit_sisters_call() -> CardDefinition {
     let back = || {
         Effect::Seq(vec![

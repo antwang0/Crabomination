@@ -160,7 +160,7 @@ pub fn collision_of_realms() -> CardDefinition {
 
 /// Concord with the Kami — your end step: a counter on a creature with a
 /// counter, a card with an enchanted creature, a Spirit with an equipped one.
-/// ⚠ "Choose one or more" takes every mode that can do something.
+/// Residual: "Choose one or more" takes every mode that can do something.
 pub fn concord_with_the_kami() -> CardDefinition {
     let control = |filter: R| Predicate::SelectorCountAtLeast {
         sel: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(filter)),

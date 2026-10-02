@@ -88,7 +88,7 @@ fn mask_token() -> TokenDefinition {
 
 /// Estrid, the Masked — +2 untaps your enchanted permanents; −1 masks another
 /// permanent with an umbra-armored Aura token; −7 mills seven and returns your
-/// enchantments, then your Auras. ⚠ The −7's Auras go on engine-picked hosts.
+/// enchantments, then your Auras. Residual: The −7's Auras go on engine-picked hosts.
 pub fn estrid_the_masked() -> CardDefinition {
     CardDefinition {
         name: "Estrid, the Masked",
@@ -360,7 +360,7 @@ pub fn finest_hour() -> CardDefinition {
 
 /// Genesis Storm — reveal until a nonland permanent card and put it onto the
 /// battlefield, copied once per cast of your commander from the command zone.
-/// ⚠ The card always goes onto the battlefield.
+/// Residual: The card always goes onto the battlefield.
 pub fn genesis_storm() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![commander_storm()],

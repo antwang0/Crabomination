@@ -1021,7 +1021,7 @@ pub fn witchs_cottage() -> CardDefinition {
 ///
 /// The first ability is the pod half: an indestructible 1/1 that redirects
 /// every point it takes at **one** opponent, so its rate is per-fight rather
-/// than per-table. ⚠ The fight's printed clause is "**another** target
+/// than per-table. Residual: The fight's printed clause is "**another** target
 /// creature" and is narrowed here to a creature you don't control, for the
 /// reason `scripts/audit_another_target.py`'s allowlist records: a mandatory
 /// fight slot with nothing else legal hands the bot its own creature, and a

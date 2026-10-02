@@ -335,7 +335,7 @@ pub fn loreseekers_stone() -> CardDefinition {
 }
 
 /// Siege Behemoth — hexproof; while it attacks, your creatures may assign
-/// combat damage as though unblocked. ⚠ Always assigns that way.
+/// combat damage as though unblocked. Residual: Always assigns that way.
 pub fn siege_behemoth() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Hexproof],

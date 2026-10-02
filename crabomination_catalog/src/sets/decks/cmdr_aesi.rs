@@ -198,7 +198,7 @@ pub fn spitting_image() -> CardDefinition {
 }
 
 /// Stumpsquall Hydra — X counters, split between it and your commanders.
-/// ⚠ Modelled as all X on the Hydra, then any number moved onto commanders
+/// Residual: Modelled as all X on the Hydra, then any number moved onto commanders
 /// you control (the headless seat spreads them evenly); an opponent's
 /// commander, which the printed "any number of commanders" allows, is never
 /// offered.
