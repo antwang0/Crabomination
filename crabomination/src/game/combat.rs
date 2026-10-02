@@ -232,6 +232,8 @@ struct AttackerDeclFacts {
     vigilance: bool,
     /// CR 702.83 — Exert.
     exert: bool,
+    /// Exert only if not exerted this turn (`Keyword::ExertOncePerTurn`).
+    exert_once: bool,
     /// CR 702.121 — Melee.
     melee: bool,
     /// CR 702.85a — the first `Annihilator(n)`.
@@ -249,6 +251,10 @@ fn attacker_decl_facts(kws: &[Keyword]) -> AttackerDeclFacts {
             Keyword::Decayed => f.decayed = true,
             Keyword::Vigilance => f.vigilance = true,
             Keyword::Exert => f.exert = true,
+            Keyword::ExertOncePerTurn => {
+                f.exert = true;
+                f.exert_once = true;
+            }
             Keyword::Melee => f.melee = true,
             Keyword::Annihilator(n) if f.annihilator.is_none() => f.annihilator = Some(*n),
             Keyword::Firebending(n) if f.firebending.is_none() => {
@@ -2039,7 +2045,9 @@ impl GameState {
             debug_assert!(
                 dfacts.decayed == computed_kw(id).has_kw(&Keyword::Decayed)
                     && dfacts.vigilance == computed_kw(id).has_kw(&Keyword::Vigilance)
-                    && dfacts.exert == computed_kw(id).has_kw(&Keyword::Exert)
+                    && dfacts.exert
+                        == (computed_kw(id).has_kw(&Keyword::Exert)
+                            || computed_kw(id).has_kw(&Keyword::ExertOncePerTurn))
                     && dfacts.melee == computed_kw(id).has_kw(&Keyword::Melee)
                     && dfacts.annihilator
                         == computed_kw(id).iter().find_map(|kw| match kw {
@@ -2057,6 +2065,7 @@ impl GameState {
             // actually do something, which is what `exert_pays_off` states.
             // Read before the `&mut` below, which the policy walk cannot share.
             let exerted_now = dfacts.exert
+                && !(dfacts.exert_once && self.exerted_this_turn.contains(&id))
                 && match exert {
                     Some(chosen) => chosen.contains(&id),
                     None => self.exert_pays_off(id, p),
@@ -2072,6 +2081,9 @@ impl GameState {
                 self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { holder: p }, p);
             }
             self.note_attack_defender(atk.target);
+            if exerted_now && !self.exerted_this_turn.contains(&id) {
+                self.exerted_this_turn.push(id);
+            }
             let card = self
                 .battlefield
                 .iter_mut()

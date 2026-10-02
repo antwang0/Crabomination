@@ -1535,6 +1535,9 @@ pub enum Keyword {
     /// damage past an attacked planeswalker's loyalty hits its controller.
     TrampleOverPlaneswalkers,
     Exert,
+    /// Exert gated on "if this creature hasn't been exerted this turn"
+    /// (Combat Celebrant): offered only once a turn.
+    ExertOncePerTurn,
     Lifelink,
     Deathtouch,
     Infect,

@@ -205,22 +205,17 @@ pub fn calamity_of_cinders() -> CardDefinition {
     }
 }
 
-/// Combat Celebrant — exert as it attacks: untap your other creatures and
-/// take an additional combat phase.
-/// Residual: a second exert in the same turn is allowed but does nothing (the
-/// bonus is once a turn, which is what "if it hasn't been exerted this turn"
-/// buys).
+/// Combat Celebrant — if it hasn't been exerted this turn, exert as it
+/// attacks: untap your other creatures and take an additional combat phase.
 pub fn combat_celebrant() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Exert],
+        keywords: vec![Keyword::ExertOncePerTurn],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource),
-            effect: Effect::NthResolutionThisTurn {
-                branches: vec![Effect::Seq(vec![
-                    Effect::Untap { what: yours(R::Creature.and(R::OtherThanSource)), up_to: None },
-                    Effect::AdditionalCombatPhase { count: Value::ONE },
-                ])],
-            },
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: yours(R::Creature.and(R::OtherThanSource)), up_to: None },
+                Effect::AdditionalCombatPhase { count: Value::ONE },
+            ]),
         }],
         ..creature("Combat Celebrant", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Warrior], 4, 1)
     }

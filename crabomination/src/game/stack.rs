@@ -5098,6 +5098,7 @@ impl GameState {
         // Autumn Willow's "until end of turn" shroud waiver (CR 514.2).
         clear_cold!(self.shroud_waivers);
         clear_cold!(self.abilities_locked_this_turn);
+        clear_cold!(self.exerted_this_turn);
         clear_cold!(self.foretold_this_turn);
         clear_cold!(self.foretold_casts_this_turn);
         clear_cold!(self.plotted_this_turn);

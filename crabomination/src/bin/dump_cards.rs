@@ -111,7 +111,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::SpaceSculptor => "Space sculptor",
         Keyword::Fear => "Fear",
         Keyword::Rebound => "Rebound",
-        Keyword::Exert => "Exert",
+        Keyword::Exert | Keyword::ExertOncePerTurn => "Exert",
         Keyword::Dredge(_) => "Dredge",
         Keyword::Crew(_) => "Crew",
         Keyword::Saddle(_) => "Saddle",

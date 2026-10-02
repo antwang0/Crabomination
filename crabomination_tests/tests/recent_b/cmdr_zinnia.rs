@@ -221,6 +221,20 @@ fn combat_celebrant_buys_a_second_combat() {
         steps += 1;
     }
     assert_eq!(g.step, TurnStep::DeclareAttackers, "a second combat");
+    // "If Combat Celebrant hasn't been exerted this turn": untapped for the
+    // second combat, it can't be exerted again, so nothing untaps.
+    g.battlefield_find_mut(cc).unwrap().tapped = false;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackersExerting {
+        attacks: vec![
+            Attack { attacker: cc, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ],
+        exert: vec![cc],
+    })
+    .expect("second attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "no second exert, no untap");
 }
 
 /// Storm of Souls returns every creature card as a 1/1 flying Spirit in
