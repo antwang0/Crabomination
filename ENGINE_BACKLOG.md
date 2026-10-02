@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
-| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 14 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 16 |
 | Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
@@ -150,6 +150,16 @@ the handoff.
   permanent no view could name). `finalize_cast` and `move_card_to`'s exile
   exit now clear it (CR 406.3); a morph cast keeps its face. Found by
   `recent_b::cmdr_doom::extract_power_exiles_face_down_and_casts_face_up`.
+- **FIXED:** CR 701.16a — "investigate" was a bare Clue `CreateToken`, so a
+  "create a Clue token" counted as investigating and Erdwal Illuminator's
+  "first time each turn" ignored investigations made before it arrived.
+  `Effect::Investigate { body }` now emits `GameEvent::Investigated` per
+  investigation (by the body's `who`, so Fateful Absence's victim is the
+  investigator); every catalog investigate routes through it.
+- **OPEN:** ⚠ `EventKind::Investigated` took tag 127, the **last bit of the
+  `u128` kind mask** (`EventKind::bit` debug-asserts `< 128`). The next kind
+  needs a payload on an existing kind or a wider mask (the fold to `CardMemo`'s
+  one spare word already shares bits, so a second word there is the cost).
 - **OPEN:** `query.rs::IMPLICIT_OPPONENT_TARGET` makes every
   `GainControl { to: Target(n) }` recipient an *opponent* slot. Donate prints
   "target player", so it can't hand a permanent to a teammate or back to you.

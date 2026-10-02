@@ -2198,8 +2198,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
 | 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |
-| 🟡 Alandra, Sky Dreamer | Deep Clue Sea (MKC) | the fifth-card trigger is "five or more drawn, once a turn", so it fires on a later draw when Alandra arrived after the fifth. |
-| 🟡 Erdwal Illuminator | Deep Clue Sea (MKC) | "you investigate" reads a Clue token created under your control; "first time each turn" counts Clues made before it arrived. |
 | 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |

@@ -1,14 +1,6 @@
 //! Commander: the cards the **Deep Clue Sea** precon (MKC, Morska, Undersea
 //! Sleuth) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_morska.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Aerial Extortionist** — "up to one target" always takes one.
-//! - **Alandra, Sky Dreamer** — the fifth-card trigger reads "five or more,
-//!   once a turn", so it fires on a later draw if Alandra arrived after the
-//!   fifth.
-//! - **Erdwal Illuminator** — "you investigate" reads "a Clue token is created
-//!   under your control"; first-each-turn counts Clues made before it arrived.
 
 use std::sync::Arc;
 
@@ -137,11 +129,7 @@ pub fn serene_sleuth() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
                 effect: Effect::Seq(vec![
-                    Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::CountOf(Box::new(Selector::EachPermanent(mine().and(R::IsGoaded)))),
-                        definition: Arc::new(crabomination_base::tokens::clue_token()),
-                    },
+                    crate::effect::shortcut::investigate_by(PlayerRef::You, Value::CountOf(Box::new(Selector::EachPermanent(mine().and(R::IsGoaded))))),
                     Effect::Ungoad { what: Selector::EachPermanent(mine()) },
                 ]),
             },
@@ -229,11 +217,7 @@ pub fn innocuous_researcher() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             on_attack(Effect::Parley {
-                then: Box::new(Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::CardsRevealedThisEffect,
-                    definition: Arc::new(crabomination_base::tokens::clue_token()),
-                }),
+                then: Box::new(crate::effect::shortcut::investigate_by(PlayerRef::You, Value::CardsRevealedThisEffect)),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
@@ -381,14 +365,12 @@ pub fn confirm_suspicions() -> CardDefinition {
 }
 
 /// Erdwal Illuminator — flying; the first time you investigate each turn,
-/// investigate again. Residual: Reads a Clue token entering under your control.
+/// investigate again (CR 701.16a; an earlier investigation that turn counts).
 pub fn erdwal_illuminator() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: clue() })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::Investigated { first_only: true }, EventScope::YourControl),
             effect: investigate(1),
         }],
         ..creature("Erdwal Illuminator", cost(&[generic(1), u()]), vec![CreatureType::Spirit], 1, 3)

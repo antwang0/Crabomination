@@ -83,7 +83,6 @@ they call a deck 🟡, the table wins.
 | 128 | Gavi, Nest Warden (URW) | 3: akim_the_soaring_wind, crystalline_resonance, nimble_obstructionist |
 | 132 | Sefris of the Hidden Ways (WUB) | 5: clay_golem, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
 | 133 | Zimone, Mystery Unraveler (GU) | 5: deathmist_raptor, disorienting_choice, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
-| 134 | Morska, Undersea Sleuth (GWU) | 1: erdwal_illuminator |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
 | 139 | Inspirit, Flagship Vessel (URW) | 3: cloud_key, moxite_refinery, ripples_of_potential |
@@ -123,7 +122,7 @@ they call a deck 🟡, the table wins.
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
 
-97 / 183 pod decks carry no residual in their card docs; the rest are listed.
+98 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 93 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

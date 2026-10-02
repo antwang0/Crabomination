@@ -223,17 +223,44 @@ fn morska_investigates_and_grows() {
 }
 
 /// Erdwal Illuminator — the first investigation each turn investigates again;
-/// the second doesn't.
+/// the second doesn't. CR 701.16a: "investigate" is the action, not a Clue
+/// entering — a "create a Clue token" (Messenger Hawk) isn't one, and an
+/// investigation made before Erdwal arrived is still the turn's first.
 #[test]
 fn erdwal_illuminator_doubles_the_first_investigation() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::erdwal_illuminator());
-    let s = g.add_card_to_hand(0, catalog::serene_sleuth());
-    cast(&mut g, 0, s, None).expect("cast");
-    assert_eq!(clues(&g, 0).len(), 2);
+    let h = g.add_card_to_hand(0, catalog::messenger_hawk());
+    cast(&mut g, 0, h, None).expect("cast");
+    assert_eq!(clues(&g, 0).len(), 1, "a created Clue is not an investigation");
     let s = g.add_card_to_hand(0, catalog::serene_sleuth());
     cast(&mut g, 0, s, None).expect("cast");
     assert_eq!(clues(&g, 0).len(), 3);
+    let s = g.add_card_to_hand(0, catalog::serene_sleuth());
+    cast(&mut g, 0, s, None).expect("cast");
+    assert_eq!(clues(&g, 0).len(), 4);
+
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::serene_sleuth());
+    cast(&mut g, 0, s, None).expect("cast");
+    g.add_card_to_battlefield(0, catalog::erdwal_illuminator());
+    let s = g.add_card_to_hand(0, catalog::serene_sleuth());
+    cast(&mut g, 0, s, None).expect("cast");
+    assert_eq!(clues(&g, 0).len(), 2, "the turn's first investigation came before Erdwal");
+}
+
+/// CR 701.16a — "its controller investigates" (Fateful Absence) is that
+/// player's investigation: their Erdwal answers it, the caster's doesn't.
+#[test]
+fn cr_701_16a_the_named_player_is_the_investigator() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::erdwal_illuminator());
+    g.add_card_to_battlefield(1, catalog::erdwal_illuminator());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fa = g.add_card_to_hand(0, catalog::fateful_absence());
+    cast(&mut g, 0, fa, Some(Target::Permanent(bear))).expect("cast");
+    assert_eq!(clues(&g, 1).len(), 2);
+    assert!(clues(&g, 0).is_empty());
 }
 
 /// Graf Mole and Ulvenwald Mysteries — sacrificing a Clue gains 3 and makes a
