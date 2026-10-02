@@ -76,6 +76,7 @@ impl GameState {
     }
 
     /// `Effect::LookTopExileOneFaceDownMayPlay`.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn look_top_exile_one_face_down_may_play(
         &mut self,
         who: &PlayerRef,
