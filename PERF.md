@@ -3043,6 +3043,14 @@ later tip        4cb539193 (the aura / per-power / chooser batch, and the concur
                  9,300) all decided; suite 23,727 / 1 / 5 strict — the one red was
                  printed_type_line_reads_only_shrink (Thundermane's new printed
                  read, 70/69), fixed in 4cb539193; clippy 0
+later tip        9eda57129 (Punisher asks, JoinCombatAttackingChosen, dealer LKI,
+                 pod table re-blessed): --bench 196,176 byte-identical; cube / sos
+                 / sealed x 300 seed 28001 all decided; 3/4/6/8 seats x 1,000
+                 (seeds 28103-28108) all decided, turns/game 32.39 / 46.38 /
+                 68.56 / 96.63; every deck in six-seat blocks x 300 (29001+,
+                 9,300): 9,299 decided, 1 draw (block 181-183,1-3 seed 29031),
+                 no caps; zero panics; suite 24,083 / 0 / 5 strict;
+                 clippy 0
 ```
 
 ### 2026-10-02 (Commander session `01HLca3f`) — guardrail, no perf work

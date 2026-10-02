@@ -123,6 +123,14 @@ the handoff.
   "target player", so it can't hand a permanent to a teammate or back to you.
   Domineering Will sidesteps it with `TargetPlayerThen { filter: Player }`;
   Donate is in the cube, so changing the default moves the two-player pools.
+- **FIXED:** CR 608.2h — `EventSpec::dealt_by` was evaluated against the
+  live object, so a dealer no longer on the battlefield (a resolved Lightning
+  Bolt, a creature that died in the same combat) matched nothing: Archfiend of
+  Spite never triggered off a burn spell. `events.rs::event_matches_spec_rest`
+  now reads a departed dealer's LKI snapshot, else the card where it is.
+  ⚠ The **damage source's controller** reads (`PlayerRef::LastDamagerControllerOf`)
+  already fell back to the owner; other trigger riders that read the event's
+  object live (`caused_by`, `TriggerSource` filters) were not re-audited.
 - **FIXED:** CR 508.4 — every catalog `JoinCombatAttacking` whose card names
   no defender (18: Alesha, Olivia, Calamity, Yore-Tiller, Ghired, Strefan,
   Nacatl War-Pride, Loki, Shaun, …) is now `JoinCombatAttackingChosen`; the
