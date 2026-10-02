@@ -674,24 +674,28 @@ pub fn intrepid_adversary() -> CardDefinition {
 
 /// Bloodthirsty Adversary — {1}{R} 2/2 Vampire. Haste. ETB pay {2}{R} any
 /// number of times for that many +1/+1 counters (modeled as Multikicker), then
-/// exile up to that many instant and/or sorcery cards with mana value 3 or less
-/// from your graveyard, copy them, and cast the copies free. ⚠ The cards are
-/// the engine's pick (graveyard order), not targets.
+/// exile up to that many target instant and/or sorcery cards with mana value 3
+/// or less from your graveyard, copy them, and cast the copies free.
 pub fn bloodthirsty_adversary() -> CardDefinition {
     use crate::card::CounterType;
     let spells = SelectionRequirement::HasCardType(CardType::Instant)
         .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-        .and(SelectionRequirement::ManaValueAtMost(3));
+        .and(SelectionRequirement::ManaValueAtMost(3))
+        .and(SelectionRequirement::InYourGraveyard);
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ForEach {
-            selector: Selector::Take {
-                inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: spells }),
-                count: Box::new(Value::TimesKicked),
-            },
-            body: Box::new(Effect::Seq(vec![
-                Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
-                Effect::CopyCardAndCastFree { what: Selector::TriggerSource },
-            ])),
+        // CR 603.3d — the cards are targets, chosen as the trigger goes on
+        // the stack (Rot Hulk's shape); the cap is the payments.
+        triggered_abilities: vec![etb(Effect::CapTargetsAt {
+            amount: Value::TimesKicked,
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: spells,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                    Effect::CopyCardAndCastFree { what: Selector::Target(0) },
+                ])),
+            }),
         })],
         name: "Bloodthirsty Adversary",
         cost: cost(&[generic(1), r()]),

@@ -241,20 +241,25 @@ fn kari_zev_ragavan_attacks_and_leaves() {
     assert!(g.battlefield_find(rag).is_none(), "exiled at end of combat");
 }
 
-/// Bloodthirsty Adversary — kicked once, it exiles an instant with mana value
-/// 3 or less from your graveyard, copies it and casts the copy free.
+/// Bloodthirsty Adversary — kicked once, it exiles a targeted instant with
+/// mana value 3 or less from your graveyard, copies it and casts the copy
+/// free. CR 603.3d: the cards are targets, capped at the payments, so a
+/// second target past the one payment is left in the graveyard.
 #[test]
 fn bloodthirsty_adversary_recasts_a_graveyard_spell() {
     let mut g = main_phase();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let shock = g.add_card_to_graveyard(0, catalog::shock());
     let adv = g.add_card_to_battlefield(0, catalog::bloodthirsty_adversary());
     g.battlefield_find_mut(adv).unwrap().kick_count = 1;
     let etb = catalog::bloodthirsty_adversary().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(adv, 0, None, 0);
+    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(adv, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(shock), Target::Permanent(bolt)];
     g.resolve_effect(&etb, &ctx).expect("etb");
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == bolt), "the card is exiled");
-    assert_eq!(g.players[1].life, 17, "its copy was cast free at the opponent");
+    assert!(g.exile.iter().any(|c| c.id == shock), "the first target is exiled");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "one payment, one card");
+    assert_eq!(g.players[1].life, 18, "the Shock's copy was cast free at the opponent");
 }
 
 /// Aura of Silence — only *opponents'* artifact and enchantment spells cost
