@@ -196,6 +196,30 @@ fn cataclysmic_prospecting_sweeps() {
     assert!(g.battlefield_find(giant).is_some());
 }
 
+/// Cataclysmic Prospecting — a tapped Treasure per mana from a Desert spent
+/// to cast it: two Dunes of the Dead pay the {2}, two Mountains the {R}{R};
+/// a tapped Desert that paid nothing makes none.
+#[test]
+fn cataclysmic_prospecting_counts_desert_mana_spent() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::dunes_of_the_dead());
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let idle = g.add_card_to_battlefield(0, catalog::dunes_of_the_dead());
+    g.battlefield_find_mut(idle).unwrap().tapped = true;
+    let cp = g.add_card_to_hand(0, catalog::cataclysmic_prospecting());
+    use crabomination::mana::{cost, generic, r};
+    g.auto_tap_for_cost(0, &cost(&[generic(2), r(), r()]));
+    assert_eq!(g.players[0].mana_pool.desert_amount(), 2);
+    g.perform_action(GameAction::CastSpell { card_id: cp, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("cast off the lands");
+    drain_stack(&mut g);
+    let treasures = named(&g, 0, "Treasure");
+    assert_eq!(treasures.len(), 2);
+    assert!(treasures.iter().all(|&t| g.battlefield_find(t).unwrap().tapped));
+}
+
 /// Descend upon the Sinful exiles all creatures; delirium adds an Angel.
 #[test]
 fn descend_upon_the_sinful_exiles_and_delirium_angel() {

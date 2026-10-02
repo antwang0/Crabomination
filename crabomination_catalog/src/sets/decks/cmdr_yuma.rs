@@ -102,7 +102,8 @@ pub fn cactus_preserve() -> CardDefinition {
 }
 
 /// Cataclysmic Prospecting — X damage to each creature; a tapped Treasure per
-/// Desert mana spent. Residual: the Treasures count your tapped Deserts.
+/// mana from a Desert spent to cast it (`ManaPool`'s Desert provenance, read
+/// like Coin of Mastery's artifact mana).
 pub fn cataclysmic_prospecting() -> CardDefinition {
     CardDefinition {
         name: "Cataclysmic Prospecting",
@@ -112,9 +113,7 @@ pub fn cataclysmic_prospecting() -> CardDefinition {
             Effect::DealDamage { to: Selector::EachPermanent(R::Creature), amount: Value::XFromCost },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::CountOf(Box::new(Selector::EachPermanent(
-                    is_desert().and(R::ControlledByYou).and(R::Tapped),
-                ))),
+                count: Value::DesertManaSpentToCastSource,
                 definition: Arc::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::Tap { what: Selector::LastCreatedTokens },
