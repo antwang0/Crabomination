@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_anje.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Archfiend of Spite** — the damaging player always sacrifices when
-//!   they have that many permanents (the punisher's first affordable
-//!   option), never choosing the life loss.
 //! - **Boneyard Parley** — the up-to-five creature cards are an untargeted
 //!   pick (the first five in seat order).
 //! - **Chainer, Nightmare Adept** — the permission names one creature card
