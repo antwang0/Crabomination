@@ -2552,6 +2552,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-02 (`01NqgJKc`, two causes, each bisected):
+        // 0xC0FFEE 58→64 turns, 2585→3089 actions, same winner, at 2edb33140
+        // (a prompting seat may decline a clone's copy — its parent
+        // e51c60cf8 passes); 4242 4753→4757 actions, same winner and turns,
+        // at df2425130 (`Punisher` asks each chooser — its parent passes on
+        // that row). Seed 43 unmoved.
         // Re-blessed 2026-10-02 (Kozilek's Command's fourth mode exiles up to
         // X target cards from any graveyards instead of one target player's;
         // bisected: its parent passes, and the later commits to the tip read
@@ -2820,7 +2826,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 64, 3089),
             (43, Some(0), 60, 2902),
-            (4242, Some(3), 99, 4753),
+            (4242, Some(3), 99, 4757),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
