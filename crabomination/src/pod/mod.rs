@@ -2818,10 +2818,16 @@ mod tests {
         // Re-blessed 2026-09-29 (`server/land_ramp.rs`): pod seats now take
         // their land-fetch activations (Sakura-Tribe Elder, Burnished Hart).
         // Same winners; seed 43 66→71 turns, the other two unmoved.
+        // Re-blessed 2026-10-02 (`game/commander_return.rs`): a pod seat
+        // prompts, so its CR 903.9a return is a pending `CommanderRedirect`
+        // posed once the action settles rather than an answer inside the
+        // sweep. Seeds 43 (0 → 3) and 4242 (3 → 1) change winner; aggregate
+        // within noise (seed 9301, every deck in 4- and 6-seat blocks, 4,600
+        // / 3,100 games, all decided: 42.28 → 42.25 / 66.19 → 66.14 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 64, 3089),
-            (43, Some(0), 60, 2902),
-            (4242, Some(3), 99, 4757),
+            (0xC0FFEE, Some(1), 61, 2875),
+            (43, Some(3), 71, 3504),
+            (4242, Some(1), 91, 4481),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

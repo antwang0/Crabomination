@@ -1494,6 +1494,7 @@ impl PendingDecision {
             }
             ResumeContext::LandEntry { player, .. } => *player,
             ResumeContext::CleanupDiscard { player } => *player,
+            ResumeContext::CommanderReturn { owner, .. } => *owner,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
@@ -1891,6 +1892,10 @@ pub enum ResumeContext {
     /// discard) the decision is re-posed, otherwise the rest of cleanup and
     /// the step advance run.
     CleanupDiscard { player: usize },
+    /// CR 903.9a — a prompting owner chooses whether `commander`, in their
+    /// graveyard or in exile, goes to the command zone
+    /// (`GameState::pose_commander_return`).
+    CommanderReturn { owner: usize, commander: CardId },
     /// CR 510.1c-d — the active player (with `wants_ui`) is choosing combat
     /// damage ordering / assignment for `attacker` during the current damage
     /// step. On answer the choice is cached and the damage step is re-entered

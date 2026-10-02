@@ -161,6 +161,7 @@ mod unattach;
 mod empty_draw;
 // CR 702.63a — vanishing's last-counter sacrifice trigger.
 mod vanishing;
+mod commander_return;
 mod simultaneous_deaths;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
@@ -19542,11 +19543,23 @@ impl GameState {
     /// used by the affordance probes (`would_accept*`): a probe's state is
     /// thrown away either way, so restoring it on `Err` is pure waste.
     ///
+    /// An action that leaves a prompting seat's commander in a graveyard or
+    /// exile ends by posing that owner's CR 903.9a choice — here, so the
+    /// bots' dry runs see it too.
+    ///
     /// [`perform_action`]: Self::perform_action
     pub(crate) fn perform_action_inner(
         &mut self,
         action: GameAction,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let result = self.perform_action_dispatch(action);
+        if result.is_ok() && self.players.iter().any(|p| !p.commanders.is_empty()) {
+            self.pose_commander_return();
+        }
+        result
+    }
+
+    fn perform_action_dispatch(&mut self, action: GameAction) -> Result<Vec<GameEvent>, GameError> {
         if self.is_game_over() {
             return Err(GameError::GameAlreadyOver);
         }
@@ -26881,6 +26894,9 @@ impl GameState {
                 self.push_pending_trigger(pending, target);
                 self.drain_trigger_queue(remaining);
                 vec![]
+            }
+            ResumeContext::CommanderReturn { owner, commander } => {
+                return self.resume_commander_return(owner, commander, &answer);
             }
             ResumeContext::CleanupDiscard { player } => {
                 // CR 514.1 — apply the player's chosen discards, then resume

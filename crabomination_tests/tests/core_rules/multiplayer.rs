@@ -3377,6 +3377,76 @@ fn commander_redirect_can_be_declined() {
     );
 }
 
+/// Seat 0's commander on the battlefield, a Doom Blade aimed at it resolved.
+fn doom_bladed_commander(wants_ui: bool) -> (GameState, crabomination::card::CardId) {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.players[0].wants_ui = wants_ui;
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(cmd)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    (g, cmd)
+}
+
+/// CR 903.9a — the return is the OWNER's "may": a prompting seat is asked
+/// through a pending `CommanderRedirect` once the action settles, not
+/// answered by the game-wide decider inside the sweep. Until it answers the
+/// commander waits in the graveyard and no other action is taken.
+#[test]
+fn cr_903_9a_prompting_owner_is_asked_and_returns() {
+    let (mut g, cmd) = doom_bladed_commander(true);
+    let pd = g.pending_decision.as_ref().expect("the owner is asked");
+    assert!(matches!(
+        pd.decision,
+        crabomination::decision::Decision::CommanderRedirect { commander, would_be: crabomination::card::Zone::Graveyard }
+            if commander == cmd
+    ));
+    assert_eq!(pd.acting_player(), 0);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cmd), "waits in the graveyard");
+    assert!(matches!(g.perform_action(GameAction::PassPriority), Err(GameError::DecisionPending)));
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).unwrap();
+    assert!(g.pending_decision.is_none());
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd));
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
+}
+
+/// CR 903.9a — a prompting owner's "no" leaves the commander in the
+/// graveyard, and the same arrival is never asked about again.
+#[test]
+fn cr_903_9a_prompting_owner_may_decline_once() {
+    let (mut g, cmd) = doom_bladed_commander(true);
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false))).unwrap();
+    assert!(g.pending_decision.is_none(), "declined: not re-posed");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert!(g.pending_decision.is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cmd));
+    assert!(g.players[0].command.iter().all(|c| c.id != cmd));
+}
+
+/// CR 903.9a — a seat that doesn't prompt is answered inside the sweep, as
+/// before: nothing is posed and the commander is already home.
+#[test]
+fn cr_903_9a_headless_owner_returns_inside_the_sweep() {
+    let (g, cmd) = doom_bladed_commander(false);
+    assert!(g.pending_decision.is_none());
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd));
+}
+
 /// CR 903.9a — a commander that dies really is put into the graveyard: it
 /// counts as a permanent put into a graveyard this turn (Gravestorm's tally,
 /// which the pre-2020 replacement skipped because the card never got

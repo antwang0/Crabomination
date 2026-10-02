@@ -6318,16 +6318,6 @@ impl GameState {
         c.dealt_deathtouch_damage && c.damage > 0
     }
 
-    /// Owning wrapper for callers with no accumulator of their own (tests,
-    /// the server's read paths). Engine callers that already hold an events
-    /// buffer call [`Self::check_state_based_actions_into`] and skip the
-    /// per-sweep `Vec` — see PERF's `(-75)`.
-    /// CR 903.9a — "If a commander is in a graveyard or in exile and that
-    /// object was put into that zone since the last time state-based actions
-    /// were checked, its owner may put it into the command zone." The owner
-    /// is asked through `Decision::CommanderRedirect` (`would_be` is the zone
-    /// it stays in on a "no"); a declined commander is remembered in
-    /// `commander_return_declined` until it turns up in some other zone.
     /// CR 903.9 — queue `GameEvent::CommanderPutIntoCommandZone` for the next
     /// trigger dispatch. Both routes into the command zone (the 903.9a SBA and
     /// the 903.9b replacement) run where no event list is in hand, so the
@@ -6336,54 +6326,10 @@ impl GameState {
         self.scratch.pending_cost_events.push(GameEvent::CommanderPutIntoCommandZone { card_id, owner });
     }
 
-    fn commander_zone_return_sba(&mut self) {
-        use crate::card::Zone;
-        for owner in 0..self.players.len() {
-            for i in 0..self.players[owner].commanders.len() {
-                let id = self.players[owner].commanders[i];
-                let zone = if self.players[owner].graveyard.iter().any(|c| c.id == id) {
-                    Zone::Graveyard
-                } else if self.exile.iter().any(|c| c.id == id) {
-                    Zone::Exile
-                } else {
-                    if self.commander_return_declined.contains(&id) {
-                        self.commander_return_declined.retain(|d| *d != id);
-                    }
-                    continue;
-                };
-                if self.commander_return_declined.contains(&id) {
-                    continue;
-                }
-                let answer = self.decider.decide(&crate::decision::Decision::CommanderRedirect {
-                    commander: id,
-                    would_be: zone,
-                });
-                if !matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
-                    self.commander_return_declined.push(id);
-                    continue;
-                }
-                let card = if zone == Zone::Graveyard {
-                    Self::take_card(&mut self.players[owner].graveyard, id)
-                } else {
-                    Self::take_card(&mut self.exile, id)
-                };
-                if let Some(mut card) = card {
-                    if zone == Zone::Graveyard {
-                        let mut ev = Vec::new();
-                        self.note_left_graveyard(owner, id, &mut ev);
-                        self.scratch.pending_cost_events.extend(ev);
-                    }
-                    // CR 400.7 — a new object in the command zone.
-                    card.drop_counters_for_zone_change(Zone::Command);
-                    card.exiled_with = None;
-                    self.players[owner].command.push(card);
-                    self.offboard_keyword_grants = true;
-                    self.note_commander_to_command_zone(id, owner);
-                }
-            }
-        }
-    }
-
+    /// Owning wrapper for callers with no accumulator of their own (tests,
+    /// the server's read paths). Engine callers that already hold an events
+    /// buffer call [`Self::check_state_based_actions_into`] and skip the
+    /// per-sweep `Vec` — see PERF's `(-75)`.
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
         self.check_state_based_actions_into(&mut events);
