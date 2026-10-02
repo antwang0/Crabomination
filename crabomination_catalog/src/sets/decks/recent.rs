@@ -11349,19 +11349,18 @@ pub fn voldaren_estate() -> CardDefinition {
 }
 
 /// Sigarda's Vanguard — {4}{W} 3/3 Angel. Flash, flying. Whenever it enters or
-/// attacks, up to three target creatures gain double strike until end of turn.
-/// (The "any number of creatures with different powers" clause is approximated
-/// as up to three targets.)
+/// attacks, choose any number of creatures with different powers; they gain
+/// double strike until end of turn (`ChoosePerDistinctPower`, not targets).
 pub fn sigardas_vanguard() -> CardDefinition {
-    let grant = || Effect::ApplyToTargets {
-        max_targets: 3,
-        min_targets: 0,
+    let grant = || Effect::ChoosePerDistinctPower {
         filter: SelectionRequirement::Creature,
-        effect: Box::new(Effect::GrantKeyword {
-            what: Selector::Target(0),
+        up_to: true,
+        chosen: Box::new(Effect::GrantKeyword {
+            what: Selector::SeparatedPile { chosen: true },
             keyword: Keyword::DoubleStrike,
             duration: Duration::EndOfTurn,
         }),
+        other: Box::new(Effect::Noop),
     };
     CardDefinition {
         name: "Sigarda's Vanguard",

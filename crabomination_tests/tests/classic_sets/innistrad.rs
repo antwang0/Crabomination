@@ -2470,6 +2470,25 @@ fn moonsilver_key_fetches_land() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "fetched the Forest");
 }
 
+/// Moonsilver Key's artifact half wants "an artifact card with a mana
+/// ability": a Sol Ring qualifies, an Ornithopter does not.
+#[test]
+fn moonsilver_key_finds_only_mana_artifacts() {
+    let mut g = two_player_game();
+    let key = g.add_card_to_battlefield(0, catalog::moonsilver_key());
+    let thopter = g.add_card_to_library(0, catalog::ornithopter());
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(thopter)),
+    ]));
+    g.resolve_effect(
+        &catalog::moonsilver_key().activated_abilities[0].effect,
+        &EffectContext::for_ability(key, 0, None),
+    ).unwrap();
+    assert!(!g.players[0].hand.iter().any(|c| c.id == thopter), "no mana ability: not findable");
+    let _ = ring;
+}
+
 /// Unblinking Observer taps for restricted blue mana.
 #[test]
 fn unblinking_observer_makes_mana() {

@@ -5241,9 +5241,8 @@ pub fn turn_the_earth() -> CardDefinition {
 }
 
 /// Moonsilver Key — {2} Artifact. {1}, {T}, Sacrifice this: search your library
-/// for an artifact or basic land card, reveal it, put it into your hand, then
-/// shuffle. (The "artifact with a mana ability" sub-filter is approximated as
-/// any artifact.)
+/// for an artifact card with a mana ability or a basic land card, reveal it,
+/// put it into your hand, then shuffle.
 pub fn moonsilver_key() -> CardDefinition {
     CardDefinition {
         name: "Moonsilver Key",
@@ -5255,7 +5254,9 @@ pub fn moonsilver_key() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Search {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Artifact.or(SelectionRequirement::IsBasicLand),
+                filter: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::HasManaAbility)
+                    .or(SelectionRequirement::IsBasicLand),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()

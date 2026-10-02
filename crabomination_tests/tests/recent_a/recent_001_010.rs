@@ -5718,6 +5718,21 @@ mod recent {
         assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 
+    /// Sigarda's Vanguard chooses creatures with *different* powers: of two
+    /// 2-power Bears only one gains double strike (and the 3-power Vanguard).
+    #[test]
+    fn sigardas_vanguard_picks_one_per_power() {
+        let mut g = two_player_game();
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let sv = g.add_card_to_battlefield(0, catalog::sigardas_vanguard());
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(sv, 0, None, 0);
+        g.resolve_effect(&catalog::sigardas_vanguard().triggered_abilities[0].effect, &ctx).unwrap();
+        let ds = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::DoubleStrike);
+        assert_eq!([ds(a), ds(b)].iter().filter(|x| **x).count(), 1, "one per power");
+        assert!(ds(sv));
+    }
+
     /// Diregraf Colossus enters with +1/+1 per Zombie card in your graveyard.
     #[test]
     fn diregraf_colossus_counts_graveyard_zombies() {
