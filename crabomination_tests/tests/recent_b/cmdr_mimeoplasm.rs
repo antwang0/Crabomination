@@ -61,7 +61,13 @@ fn plus_ones(g: &GameState, id: CardId) -> u32 {
 #[test]
 fn the_mimeoplasm_enters_as_a_copy_with_the_other_cards_power() {
     let mut g = pod(2);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Yes, then the headless default for both picks: copy the biggest body,
+    // count the other.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![]),
+        DecisionAnswer::Cards(vec![]),
+    ]));
     let drifter = g.add_card_to_graveyard(1, catalog::mulldrifter());
     let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
     for _ in 0..3 {
@@ -75,6 +81,45 @@ fn the_mimeoplasm_enters_as_a_copy_with_the_other_cards_power() {
     assert_eq!(plus_ones(&g, m), 1, "Llanowar Elves' power");
     assert!(g.exile.iter().any(|c| c.id == drifter) && g.exile.iter().any(|c| c.id == elves));
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "the copy's ETB drew two");
+}
+
+/// The two cards are the controller's picks (CR 608.2d), not the greatest
+/// power first: copy the Elves, count the Mulldrifter's 2.
+#[test]
+fn the_mimeoplasm_copies_and_counts_the_chosen_cards() {
+    let mut g = pod(2);
+    let drifter = g.add_card_to_graveyard(1, catalog::mulldrifter());
+    let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![elves]),
+        DecisionAnswer::Cards(vec![drifter]),
+    ]));
+    let m = g.add_card_to_hand(0, catalog::the_mimeoplasm());
+    cast(&mut g, 0, m, None).expect("cast");
+    let perm = g.battlefield_find(m).expect("survives as the copy");
+    assert_eq!(perm.definition.name, "Llanowar Elves");
+    assert_eq!(plus_ones(&g, m), 2, "Mulldrifter's power");
+}
+
+/// A prompting seat (every pod seat) has its as-enters asks answered by the
+/// bot policy in the battlefield hop (CR 614.12a — there is no stack item to
+/// park them on): it copies the bigger body and counts the other.
+#[test]
+fn the_mimeoplasm_as_a_prompting_seat_takes_the_policy_picks() {
+    let mut g = pod(2);
+    let drifter = g.add_card_to_graveyard(1, catalog::mulldrifter());
+    let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].wants_ui = true;
+    let m = g.add_card_to_hand(0, catalog::the_mimeoplasm());
+    cast(&mut g, 0, m, None).expect("cast");
+    let perm = g.battlefield_find(m).expect("survives as the copy");
+    assert_eq!(perm.definition.name, "Mulldrifter");
+    assert_eq!(plus_ones(&g, m), 1, "Llanowar Elves' power");
+    assert!(g.exile.iter().any(|c| c.id == drifter) && g.exile.iter().any(|c| c.id == elves));
 }
 
 /// "You can't choose to exile just one creature card" — with one in the

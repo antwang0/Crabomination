@@ -34,19 +34,10 @@ fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, 
     CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
 }
 
-/// The greatest-power creature card across every graveyard; asked again after
-/// the first exile, it is the runner-up.
-fn greatest_power_in_graveyards() -> Selector {
-    Selector::TakeGreatestPower {
-        inner: Box::new(Selector::CardsInZone { who: PlayerRef::EachPlayer, zone: Zone::Graveyard, filter: R::Creature }),
-        count: Box::new(Value::ONE),
-    }
-}
-
 /// The Mimeoplasm — {2}{B}{G}{U} 0/0 legendary Ooze. As it enters you may
 /// exile two creature cards from graveyards; it enters as a copy of one with
-/// +1/+1 counters equal to the other's power. (Residual: the engine picks —
-/// copy the greatest power, count the runner-up.)
+/// +1/+1 counters equal to the other's power. Both cards are its controller's
+/// picks, one after the other.
 pub fn the_mimeoplasm() -> CardDefinition {
     let in_graveyards = Selector::CardsInZone { who: PlayerRef::EachPlayer, zone: Zone::Graveyard, filter: R::Creature };
     CardDefinition {
@@ -54,26 +45,39 @@ pub fn the_mimeoplasm() -> CardDefinition {
         // enters" abilities trigger (the 2011-09-22 ruling).
         as_enters_effect: Some(Effect::If {
             // "You can't choose to exile just one creature card."
-            cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(in_graveyards)), Value::Const(2)),
+            cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(in_graveyards.clone())), Value::Const(2)),
             then: Box::new(Effect::MayDo {
                 description: "Exile two creature cards from graveyards and enter as a copy of one?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: greatest_power_in_graveyards(), to: ZoneDest::Exile },
-                    Effect::BecomeCopyOf {
-                        what: Selector::This,
-                        source: Selector::LastMoved,
-                        extra_creature_types: vec![],
-                        keep_own_triggered: false,
-                        keep_own_activated: false,
-                        keep_name: false,
-                    },
-                    // Counted before it moves: `LastMoved` would sum both exiles.
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::PowerOf(Box::new(greatest_power_in_graveyards())),
-                    },
-                    Effect::Move { what: greatest_power_in_graveyards(), to: ZoneDest::Exile },
+                    // The card to copy, then the card whose power counts.
+                    choose_one_then(
+                        in_graveyards.clone(),
+                        PlayerRef::You,
+                        Effect::Seq(vec![
+                            Effect::Move { what: chosen_one(), to: ZoneDest::Exile },
+                            Effect::BecomeCopyOf {
+                                what: Selector::This,
+                                source: Selector::LastMoved,
+                                extra_creature_types: vec![],
+                                keep_own_triggered: false,
+                                keep_own_activated: false,
+                                keep_name: false,
+                            },
+                        ]),
+                    ),
+                    choose_one_then(
+                        in_graveyards.clone(),
+                        PlayerRef::You,
+                        Effect::Seq(vec![
+                            // Counted before it moves.
+                            Effect::AddCounter {
+                                what: Selector::This,
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::PowerOf(Box::new(chosen_one())),
+                            },
+                            Effect::Move { what: chosen_one(), to: ZoneDest::Exile },
+                        ]),
+                    ),
                 ])),
             }),
             else_: Box::new(Effect::Noop),
