@@ -22603,7 +22603,18 @@ impl GameState {
                     if let Some(item) = found {
                         let copy = item.clone();
                         for _ in 0..n {
-                            self.stack.push(copy.clone());
+                            let mut c = copy.clone();
+                            // CR 707.10 — the copy is the copier's; CR 707.10c
+                            // — it may choose new targets (the original first,
+                            // so the default keeps it).
+                            if let StackItem::Trigger { controller, effect, target, source, .. } = &mut c {
+                                *controller = ctx.controller;
+                                if target.is_some() {
+                                    let name = self.find_card_anywhere(*source).map_or("", |c| c.definition.name);
+                                    *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);
+                                }
+                            }
+                            self.stack.push(c);
                         }
                     }
                 }

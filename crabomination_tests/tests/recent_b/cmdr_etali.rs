@@ -1691,6 +1691,39 @@ fn strionic_resonator_copies_a_triggered_ability() {
     assert_eq!(g.players[0].hand.len(), before + 2, "original + copy");
 }
 
+/// CR 707.10c — the copy may choose new targets: Flametongue Kavu's ETB
+/// copied by Strionic Resonator burns the other Bear.
+#[test]
+fn strionic_resonator_copy_chooses_a_new_target() {
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase_d();
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kavu = g.add_card_to_battlefield(0, catalog::flametongue_kavu());
+    let resonator = g.add_card_to_battlefield(0, catalog::strionic_resonator());
+    flood_d(&mut g, 0);
+    g.fire_self_etb_triggers(kavu, 0);
+    let first = g.stack.iter().rev().find_map(|si| match si {
+        StackItem::Trigger { source, target: Some(Target::Permanent(t)), .. } if *source == kavu => Some(*t),
+        _ => None,
+    });
+    let first = first.expect("the ETB targets a Bear");
+    let other = if first == b1 { b2 } else { b1 };
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(other))]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: resonator,
+        ability_index: 0,
+        target: Some(Target::Permanent(kavu)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("copy the trigger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(), "one Bear each");
+}
+
 /// Hunting Velociraptor: Dinosaur spells you cast have prowl {2}{R} — offered
 /// once a Dinosaur dealt you combat damage this turn, and not to a non-Dinosaur.
 #[test]

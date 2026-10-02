@@ -2298,7 +2298,7 @@ pub fn invasion_of_ikoria() -> CardDefinition {
 /// you control. You may choose new targets for the copy.
 /// Approximation (Gogo's `CopyAbility`): the target is the ability's *source
 /// permanent*, so a trigger whose source has left the battlefield (a dies
-/// trigger) can't be targeted; the copy keeps the original's targets.
+/// trigger) can't be targeted. The copy is yours and may re-aim (CR 707.10c).
 pub fn strionic_resonator() -> CardDefinition {
     CardDefinition {
         name: "Strionic Resonator",

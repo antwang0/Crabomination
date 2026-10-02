@@ -9365,7 +9365,7 @@ pub fn summon_leviathan() -> CardDefinition {
 
 /// Gogo, Master of Mimicry — {2}{U} 2/4 Wizard. {X}{X}, {T}: copy target
 /// activated or triggered ability you control X times.
-/// (Copies keep the original's targets; the "can't be copied" rider on this
+/// (The copies may re-aim, CR 707.10c; the "can't be copied" rider on this
 /// ability itself is unmodeled.)
 pub fn gogo_master_of_mimicry() -> CardDefinition {
     CardDefinition {
