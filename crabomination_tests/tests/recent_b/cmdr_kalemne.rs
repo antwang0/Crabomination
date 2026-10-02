@@ -129,6 +129,36 @@ fn disaster_radius_reveals_for_its_damage() {
     assert_eq!(g.players[0].hand.len(), 2, "revealed cards stay in hand");
 }
 
+/// CR 601.2h — the revealed card's stats are this spell's: a Titan's Presence
+/// cast in response, revealing an Ornithopter, doesn't shrink Disaster
+/// Radius's X.
+#[test]
+fn disaster_radius_keeps_its_own_reveal_through_a_response() {
+    let mut g = main_phase(2);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let dr = g.add_card_to_hand(0, catalog::disaster_radius());
+    g.add_card_to_hand(0, catalog::hill_giant()); // mana value 4
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: dr, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Disaster Radius");
+    let tp = g.add_card_to_hand(1, catalog::titans_presence());
+    g.add_card_to_hand(1, catalog::ornithopter());
+    g.players[1].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tp,
+        target: Some(Target::Permanent(thopter)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Titan's Presence in response");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thopter).is_none(), "the response resolved");
+    assert!(g.battlefield_find(angel).is_none(), "X is the Hill Giant's 4, not the Ornithopter's 0");
+}
+
 /// Hamletback Goliath takes another creature's power as +1/+1 counters.
 #[test]
 fn hamletback_goliath_feeds_on_entrants() {

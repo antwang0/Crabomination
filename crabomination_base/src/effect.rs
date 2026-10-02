@@ -10413,6 +10413,13 @@ pub enum Effect {
     /// cast-time discard (Grab the Prize). Wrapped by the cast path.
     WithCastDiscards { nonland: u32, body: Box<Effect> },
 
+    /// Internal plumbing: re-stamp the (power, mana value) of the card
+    /// revealed to pay an `AdditionalCastCost::RevealFromHand` before running
+    /// `body`, so `Value::RevealedForCost*` reads THIS spell's reveal even
+    /// when another reveal-cost spell was cast in response. Wrapped by the
+    /// cast path.
+    WithRevealedForCost { power: i16, mana_value: i16, body: Box<Effect> },
+
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,
     /// Thoughtseize, etc. Currently the **caster** auto-picks the first

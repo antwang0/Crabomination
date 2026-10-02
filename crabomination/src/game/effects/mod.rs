@@ -30583,6 +30583,11 @@ impl GameState {
                 self.run_effect(body, ctx, events)
             }
 
+            Effect::WithRevealedForCost { power, mana_value, body } => {
+                self.revealed_for_cost = Some((*power, *mana_value));
+                self.run_effect(body, ctx, events)
+            }
+
             Effect::WithCastDiscards { nonland, body } => {
                 *self
                     .scratch

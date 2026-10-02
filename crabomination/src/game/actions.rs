@@ -10612,6 +10612,14 @@ impl GameState {
                 };
             }
             sac_x = power;
+            // The reveal's stats ride the spell (a reveal-cost spell cast in
+            // response would overwrite the shared stamp).
+            if additional_costs.iter().any(|c| matches!(c, crate::card::AdditionalCastCost::RevealFromHand { .. }))
+                && let Some((power, mana_value)) = self.revealed_for_cost
+            {
+                let def = card.definition_make_mut();
+                def.effect = Effect::WithRevealedForCost { power, mana_value, body: Box::new(def.effect.clone()) };
+            }
             // Carry the cost-sacrifice's stats into the spell's resolution
             // (resolve_effect resets the scratch) so `Value::Sacrificed*`
             // reads them — Nahiri's Sacrifice's "X = its mana value".
