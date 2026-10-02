@@ -3741,6 +3741,7 @@ impl Effect {
                     ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
                     ZoneDest::Ante => format!("ante {t}"),
                     ZoneDest::Command => format!("put {t} into the command zone"),
+                    ZoneDest::IfCard { .. } => format!("move {t}"),
                 }
             }
             Effect::Destroy { .. } | Effect::DestroyAndRemember { .. } => {

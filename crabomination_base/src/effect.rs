@@ -2929,6 +2929,11 @@ pub enum ZoneDest {
     /// command zone", Hellkite Courser). A direct move, not the optional CR
     /// 903.9 redirect.
     Command,
+    /// "If it's a [filter] card, put it [`then`]; otherwise [`else_`]" — the
+    /// branch is read off the moved card as it is placed (Nazahn's "if you
+    /// reveal a card named Hammer of Nazahn this way, put it onto the
+    /// battlefield. Otherwise, put that card into your hand").
+    IfCard { filter: Box<SelectionRequirement>, then: Box<ZoneDest>, else_: Box<ZoneDest> },
 }
 
 /// Where a countered spell goes after being lifted off the stack. The
@@ -12405,6 +12410,7 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
         | ZoneDest::ExileWithSourceStamp
         | ZoneDest::Ante
         | ZoneDest::Command => false,
+        ZoneDest::IfCard { then, else_, .. } => zonedest_has_target(then) || zonedest_has_target(else_),
     }
 }
 

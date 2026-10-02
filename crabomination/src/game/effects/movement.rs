@@ -2482,6 +2482,11 @@ impl GameState {
             | ZoneDest::ExileWithSourceStamp
             | ZoneDest::Ante
             | ZoneDest::Command => dest.clone(),
+            ZoneDest::IfCard { filter, then, else_ } => ZoneDest::IfCard {
+                filter: filter.clone(),
+                then: Box::new(self.resolve_zonedest_player(then, ctx)),
+                else_: Box::new(self.resolve_zonedest_player(else_, ctx)),
+            },
         }
     }
 
@@ -2492,6 +2497,11 @@ impl GameState {
         dest: &ZoneDest,
         events: &mut Vec<GameEvent>,
     ) {
+        if let ZoneDest::IfCard { filter, then, else_ } = dest {
+            let next = if self.evaluate_requirement_on_card(filter, &card, default_player) { then } else { else_ };
+            let next = (**next).clone();
+            return self.place_card_in_dest(card, default_player, &next, events);
+        }
         // Phase H — consult the replacement-effect registry. The
         // resolver only sees the *destination kind* (a `Zone`); the
         // origin is left unconstrained here (passed as
@@ -2512,6 +2522,8 @@ impl GameState {
             ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp => {
                 crate::card::Zone::Exile
             }
+            // Branched to a plain destination above.
+            ZoneDest::IfCard { .. } => return,
         };
         // CR 702.47e — a spell loses its splice changes once it leaves the
         // stack for any reason. Guarded: both live in the `CardCold` group,
@@ -2711,6 +2723,8 @@ impl GameState {
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
             }
+            // Branched to a plain destination at the top.
+            ZoneDest::IfCard { .. } => {}
             ZoneDest::ExilePlotted => {
                 // CR 702.170 — exile it face up and mark it plotted so its
                 // owner may cast it for free as a sorcery on a later turn.
