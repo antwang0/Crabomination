@@ -242,12 +242,30 @@ fn minds_dilation_casts_their_top() {
 fn extract_brain_casts_from_their_hand() {
     let mut g = pod(2);
     let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
-    g.add_card_to_hand(1, catalog::island());
+    let island = g.add_card_to_hand(1, catalog::island());
     let eb = g.add_card_to_hand(0, catalog::extract_brain());
     flood(&mut g, 0);
-    yes(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![wurm, island]),
+        DecisionAnswer::Cards(vec![wurm]),
+        DecisionAnswer::Bool(true),
+    ]));
     cast_by(&mut g, 0, eb, &[Target::Player(1)], Some(2));
     assert_eq!(g.battlefield_find(wurm).map(|c| c.controller), Some(0));
+}
+
+/// CR 608.2d — Extract Brain's X cards are the opponent's choice: naming only
+/// the land leaves nothing to cast, and the Wurm stays in their hand.
+#[test]
+fn extract_brain_opponent_chooses_the_cards() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    let island = g.add_card_to_hand(1, catalog::island());
+    let eb = g.add_card_to_hand(0, catalog::extract_brain());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![island])]));
+    cast_by(&mut g, 0, eb, &[Target::Player(1)], Some(1));
+    assert!(g.players[1].hand.iter().any(|c| c.id == wurm));
 }
 
 /// Tower Winder finds Command Tower in the graveyard first.

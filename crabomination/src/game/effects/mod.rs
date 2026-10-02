@@ -24107,7 +24107,7 @@ impl GameState {
                 Ok(())
             }
             Effect::EachPlayerTakesCreatureOfNext => {
-                self.each_player_takes_creature_of_next(ctx);
+                self.each_player_takes_creature_of_next(ctx, effect);
                 Ok(())
             }
             Effect::ReturnSourceWhenTargetLeaves { what } => self.return_source_when_target_leaves(what, ctx),
@@ -29913,8 +29913,8 @@ impl GameState {
                 self.exile_all_other_spells_counter_all_abilities(ctx, events)
             }
             Effect::EachPushesTrigger { what, body } => self.each_pushes_trigger(what, body, ctx, events),
-            Effect::EachPlayerKeepsPartySacrificesRest => self.each_player_keeps_party_sacrifices_rest(ctx, events),
-            Effect::LookTopTakeParty { who, count } => self.look_top_take_party(who, count, ctx, events),
+            Effect::EachPlayerKeepsPartySacrificesRest => self.each_player_keeps_party_sacrifices_rest(ctx, events, effect),
+            Effect::LookTopTakeParty { who, count } => self.look_top_take_party(who, count, ctx, effect),
             Effect::StampTokenCopyExceptions { artifact_subtypes, activated } => {
                 self.stamp_token_copy_exceptions(artifact_subtypes, activated, ctx, events)
             }
@@ -35025,7 +35025,7 @@ impl GameState {
             Effect::CastTopFreeIfElseDraw { filter } => self.cast_top_free_if_else_draw(filter, ctx, events),
             Effect::PlayTopFreeElseExile => self.play_top_free_else_exile(ctx, events),
             Effect::EachPlayerChoosesColorExileOthers => {
-                self.each_player_chooses_color_exile_others(ctx, events);
+                self.each_player_chooses_color_exile_others(ctx, events, effect);
                 Ok(())
             }
             Effect::CopyAllSpellsAndAbilitiesYouControl => {
@@ -37375,7 +37375,7 @@ impl GameState {
                 self.look_top_exile_one_face_down_may_play(who, count, *rest_to_graveyard, ctx, events, effect)
             }
             Effect::OpponentChoosesXFromHandCastOneFree { who } => {
-                self.opponent_chooses_x_from_hand_cast_one_free(who, ctx, events)
+                self.opponent_chooses_x_from_hand_cast_one_free(who, ctx, events, effect)
             }
             Effect::ExileTopMayCastFreeIfNonland { who } => self.exile_top_may_cast_free_if_nonland(who, ctx, events),
             Effect::ExileTopOfEachLibraryMayPlayForLife => {

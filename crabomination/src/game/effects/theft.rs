@@ -6,7 +6,7 @@
 //!   library, exile one face down (castable by you with mana of any type),
 //!   the rest to their graveyard or the bottom.
 //! - Extract Brain: the opponent chooses X cards from their hand; you may
-//!   cast one of them free.
+//!   cast one of them free (both picks asked).
 //! - Mind's Dilation: a player exiles their top card; if it's nonland, you
 //!   may cast it free.
 //! - Nashi, Moon Sage's Scion: every player exiles their top card; you may
@@ -162,24 +162,85 @@ impl GameState {
         )
     }
 
-    /// `Effect::OpponentChoosesXFromHandCastOneFree` — the opponent names X
-    /// cards (their pick: lands, then the cheapest); you may cast the best
-    /// nonland among them free.
+    /// `Effect::OpponentChoosesXFromHandCastOneFree` — the opponent chooses X
+    /// cards from their hand (headless: lands, then the cheapest); you look and
+    /// may cast a nonland one among them free (headless: the best). Both are
+    /// the named players' picks (CR 608.2d).
     pub(super) fn opponent_chooses_x_from_hand_cast_one_free(
         &mut self,
         who: &PlayerRef,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-        let x = ctx.x_value as usize;
+        let x = (ctx.x_value as usize).min(self.players[seat].hand.len());
+        if x == 0 {
+            return Ok(());
+        }
+        let source = ctx.source.unwrap_or(CardId(0));
         let mut hand: Vec<&crate::card::CardInstance> = self.players[seat].hand.iter().collect();
         hand.sort_by_key(|c| (!c.definition.is_land(), c.definition.cost.cmc()));
-        let pick = Self::best_card_to_take(hand.into_iter().take(x).filter(|c| !c.definition.is_land()));
-        match pick {
-            Some(id) => self.may_cast_free(id, Zone::Hand, ctx, events),
-            None => Ok(()),
+        let auto: Vec<CardId> = hand.iter().take(x).map(|c| c.id).collect();
+        let candidates: Vec<(CardId, String)> = hand.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+        let mut cursor = 0;
+        let Some(mut chosen) = self.ask_seat_cards_logged(
+            &mut cursor,
+            seat,
+            format!("Choose {x} cards from your hand"),
+            source,
+            candidates,
+            x as u32,
+            x as u32,
+            crate::decision::PickValue::Cost,
+            effect,
+            auto.clone(),
+        ) else {
+            return Ok(());
+        };
+        // Exactly X: a short answer is topped up from the headless order.
+        for id in auto {
+            if chosen.len() >= x {
+                break;
+            }
+            if !chosen.contains(&id) {
+                chosen.push(id);
+            }
         }
+        let spells: Vec<&crate::card::CardInstance> = self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| chosen.contains(&c.id) && !c.definition.is_land())
+            .collect();
+        if spells.is_empty() {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let best = Self::best_card_to_take(spells.iter().copied());
+        let candidates: Vec<(CardId, String)> = spells.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+        let Some(pick) = self.ask_seat_cards_logged(
+            &mut cursor,
+            ctx.controller,
+            "You may cast one of them without paying its mana cost".into(),
+            source,
+            candidates,
+            0,
+            1,
+            crate::decision::PickValue::Gain,
+            effect,
+            best.into_iter().collect(),
+        ) else {
+            return Ok(());
+        };
+        self.clear_answer_log();
+        let Some(id) = pick.first().copied() else { return Ok(()) };
+        let r = self.may_cast_free(id, Zone::Hand, ctx, events);
+        // A parked cast resumes under the spell's own targets: pin the card.
+        super::rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetObjects {
+            ids: vec![id],
+            body: Box::new(carried),
+        });
+        r
     }
 
     /// `Effect::ExileTopMayCastFreeIfNonland`.

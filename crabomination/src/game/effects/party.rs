@@ -7,7 +7,8 @@
 
 use super::EffectContext;
 use crate::card::{CardId, CardInstance, CreatureType as CT, Keyword};
-use crate::effect::PlayerRef;
+use crate::decision::PickValue;
+use crate::effect::{Effect, PlayerRef};
 use crate::game::{GameState, KeywordSlice};
 use crate::game::types::{GameError, GameEvent};
 
@@ -59,24 +60,72 @@ impl GameState {
             .collect()
     }
 
+    /// CR 700.8 — the party `seat` chooses from `cands` (id, roles; in the
+    /// headless preference order). A pick that is a party stands as made, up
+    /// to one per role; any other is completed to a largest party, picks first.
+    /// `None` is a suspend.
+    #[allow(clippy::too_many_arguments)]
+    fn ask_party(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        prompt: &str,
+        cands: &[(CardId, String, [bool; 4])],
+        effect: &Effect,
+        source: CardId,
+    ) -> Option<Vec<CardId>> {
+        let roles: Vec<[bool; 4]> = cands.iter().map(|c| c.2).collect();
+        let auto: Vec<CardId> = largest_party(&roles).into_iter().map(|i| cands[i].0).collect();
+        let picked = self.ask_seat_cards_logged(
+            cursor,
+            seat,
+            prompt.into(),
+            source,
+            cands.iter().map(|c| (c.0, c.1.clone())).collect(),
+            0,
+            4,
+            PickValue::Gain,
+            effect,
+            auto,
+        )?;
+        let picked_roles: Vec<[bool; 4]> =
+            picked.iter().filter_map(|id| cands.iter().find(|c| c.0 == *id)).map(|c| c.2).collect();
+        if largest_party(&picked_roles).len() == picked.len() {
+            return Some(picked);
+        }
+        let mut order: Vec<usize> = (0..cands.len()).collect();
+        order.sort_by_key(|&i| !picked.contains(&cands[i].0));
+        let ordered: Vec<[bool; 4]> = order.iter().map(|&i| cands[i].2).collect();
+        Some(largest_party(&ordered).into_iter().map(|k| cands[order[k]].0).collect())
+    }
+
     /// `Effect::EachPlayerKeepsPartySacrificesRest` (Stick Together): in
-    /// APNAP order each player keeps a largest party — the strongest
-    /// creatures that make one — and every other creature they control is
-    /// sacrificed at once.
+    /// APNAP order each player chooses a party (CR 101.4; headless, the
+    /// strongest creatures that make a largest one), then every other creature
+    /// they control is sacrificed at once (CR 608.2c).
     pub(super) fn each_player_keeps_party_sacrifices_rest(
         &mut self,
-        _ctx: &EffectContext,
+        ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         let seats = self.apnap_sort(self.living_seats().collect());
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
         let mut doomed: Vec<(CardId, usize)> = Vec::new();
         for p in seats {
             let mut mine = self.creature_roles(p);
             mine.sort_by_key(|&(id, power, _)| (std::cmp::Reverse(power), id));
-            let roles: Vec<[bool; 4]> = mine.iter().map(|m| m.2).collect();
-            let keep = largest_party(&roles);
-            doomed.extend(mine.iter().enumerate().filter(|(i, _)| !keep.contains(i)).map(|(_, m)| (m.0, p)));
+            let cands: Vec<(CardId, String, [bool; 4])> = mine
+                .iter()
+                .map(|&(id, _, r)| (id, self.battlefield_find(id).map_or(String::new(), |c| c.definition.name.to_string()), r))
+                .collect();
+            let Some(keep) = self.ask_party(&mut cursor, p, "Choose a party to keep", &cands, effect, source) else {
+                return Ok(());
+            };
+            doomed.extend(mine.iter().filter(|m| !keep.contains(&m.0)).map(|m| (m.0, p)));
         }
+        self.clear_answer_log();
         for (cid, who) in doomed {
             self.sacrifice_one(cid, who, events);
         }
@@ -84,14 +133,15 @@ impl GameState {
     }
 
     /// `Effect::LookTopTakeParty { who, count }` (Harper Recruiter): look at
-    /// the top `count`, put a largest party of Cleric / Rogue / Warrior /
-    /// Wizard cards into hand, the rest on the bottom in a random order.
+    /// the top `count`, the looker may reveal a party of Cleric / Rogue /
+    /// Warrior / Wizard cards among them and take it; the rest go on the
+    /// bottom in a random order.
     pub(super) fn look_top_take_party(
         &mut self,
         who: &PlayerRef,
         count: &crate::effect::Value,
         ctx: &EffectContext,
-        _events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         use rand::seq::SliceRandom;
         let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
@@ -99,12 +149,22 @@ impl GameState {
         if n == 0 {
             return Ok(());
         }
+        let cands: Vec<(CardId, String, [bool; 4])> = self.players[p].library[..n]
+            .iter()
+            .map(|c| (c.id, c.definition.name.to_string(), card_roles(c)))
+            .filter(|c| c.2.iter().any(|&r| r))
+            .collect();
+        let mut cursor = 0;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let Some(keep) = self.ask_party(&mut cursor, p, "Reveal a party to put into your hand", &cands, effect, source)
+        else {
+            return Ok(());
+        };
+        self.clear_answer_log();
         let top: Vec<CardInstance> = self.players[p].library.drain(..n).collect();
-        let roles: Vec<[bool; 4]> = top.iter().map(card_roles).collect();
-        let keep = largest_party(&roles);
         let mut rest = Vec::new();
-        for (i, card) in top.into_iter().enumerate() {
-            if keep.contains(&i) {
+        for card in top {
+            if keep.contains(&card.id) {
                 self.players[p].hand.push(card);
             } else {
                 rest.push(card);

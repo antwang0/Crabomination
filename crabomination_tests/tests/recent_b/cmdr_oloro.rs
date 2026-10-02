@@ -65,6 +65,23 @@ fn order_of_succession_passes_creatures_around_the_table() {
     assert_eq!(controller(&g, mine), 1);
 }
 
+/// CR 608.2d — Order of Succession's direction is the caster's choice: turning
+/// it left (option 1, after the headless right) hands each player the
+/// creature of the next seat in turn order.
+#[test]
+fn order_of_succession_direction_is_the_casters_choice() {
+    let mut g = main_phase(3);
+    let mine = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let left = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let right = g.add_card_to_battlefield(2, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let spell = g.add_card_to_hand(0, catalog::order_of_succession());
+    cast_at(&mut g, spell, &[]).expect("cast");
+    assert_eq!(controller(&g, left), 0);
+    assert_eq!(controller(&g, right), 1);
+    assert_eq!(controller(&g, mine), 2);
+}
+
 /// Serene Master (CR 701.10g): blocking a big attacker swaps the two powers
 /// until end of combat, so the attacker deals nothing.
 #[test]

@@ -10,8 +10,6 @@
 //!   and a noncreature copy has changeling too (harmless).
 //! - **Unsettled Mariner** — ward {1} on your permanents; you aren't
 //!   protected, and it doesn't stack with a printed ward.
-//! - **Stick Together, Harper Recruiter** — the party is the engine's pick
-//!   (a largest one, strongest creatures first).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -198,8 +196,8 @@ pub fn guardian_gladewalker() -> CardDefinition {
     }
 }
 
-/// Harper Recruiter — on attack, a party from the top four. Residual: the
-/// engine picks the party.
+/// Harper Recruiter — on attack, you may reveal a party from the top four and
+/// take it.
 pub fn harper_recruiter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -454,7 +452,7 @@ pub fn spoils_of_adventure() -> CardDefinition {
 }
 
 /// Stick Together — each player keeps a party and sacrifices the rest of
-/// their creatures. Residual: the party is the engine's pick.
+/// their creatures. Each player chooses their own party.
 pub fn stick_together() -> CardDefinition {
     spell(
         "Stick Together",

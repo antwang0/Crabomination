@@ -9,24 +9,42 @@ use crate::game::{GameError, GameState};
 use crate::mana::Color;
 
 impl GameState {
-    /// The color most common among `seat`'s permanents (WUBRG on ties), or
-    /// `None` when they control nothing colored.
-    fn most_common_color_among_permanents(&self, seat: usize) -> Option<Color> {
+    /// `seat`'s five colors, the one that saves most of their permanents (a
+    /// mono-colored one survives only its own color) first, WUBRG on ties.
+    fn colors_by_survivors(&self, seat: usize) -> Vec<Color> {
         let mut tally = [0u32; 5];
         for c in self.battlefield.iter().filter(|c| c.controller == seat) {
-            for col in self.source_colors(c.id) {
+            if let [col] = self.source_colors(c.id)[..] {
                 tally[col as usize] += 1;
             }
         }
-        let best = (0..5).max_by_key(|&i| (tally[i], std::cmp::Reverse(i)))?;
-        (tally[best] > 0).then(|| Color::ALL[best])
+        let mut order: Vec<usize> = (0..5).collect();
+        order.sort_by_key(|&i| (std::cmp::Reverse(tally[i]), i));
+        order.into_iter().map(|i| Color::ALL[i]).collect()
     }
 
-    /// Selective Obliteration: exile each permanent unless it's colorless or
+    /// Selective Obliteration: each player chooses a color in APNAP order
+    /// (CR 101.4), then each permanent is exiled unless it's colorless or
     /// exactly its controller's chosen color.
-    pub(crate) fn each_player_chooses_color_exile_others(&mut self, ctx: &EffectContext, events: &mut Vec<GameEvent>) {
-        let chosen: Vec<Option<Color>> =
-            (0..self.players.len()).map(|s| self.most_common_color_among_permanents(s)).collect();
+    pub(crate) fn each_player_chooses_color_exile_others(
+        &mut self,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut chosen: Vec<Option<Color>> = vec![None; self.players.len()];
+        let mut cursor = 0;
+        for seat in self.apnap_sort(self.living_seats().collect()) {
+            let order = self.colors_by_survivors(seat);
+            let options = order.iter().map(|c| format!("{c:?}")).collect();
+            let Some(i) = self.ask_seat_option(&mut cursor, seat, "Choose a color".into(), source, options, effect)
+            else {
+                return;
+            };
+            chosen[seat] = order.get(i).copied();
+        }
+        self.clear_answer_log();
         let doomed: Vec<CardId> = self
             .battlefield
             .iter()

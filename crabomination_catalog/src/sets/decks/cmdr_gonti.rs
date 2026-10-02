@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Bladegriff Prototype** — the choosing opponent is the engine's pick,
 //!   not necessarily the damaged player.
-//! - **Extract Brain** — both the opponent's X cards and your cast are the
-//!   engine's picks.
 //! - **Nashi, Moon Sage's Scion** — you may play any of the exiled cards, not
 //!   only one.
 //! - **Siphon Insight** — the exiled card may be cast with mana of any type
@@ -147,7 +145,6 @@ pub fn dream_thiefs_bandana() -> CardDefinition {
 
 /// Extract Brain — {X}{U}{B} sorcery. Target opponent chooses X cards from
 /// their hand; you may cast a spell from among them free.
-/// Residual: both picks are the engine's.
 pub fn extract_brain() -> CardDefinition {
     CardDefinition {
         name: "Extract Brain",

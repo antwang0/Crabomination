@@ -2024,8 +2024,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
 | 🟡 Moritte of the Frost | Everyone's Invited! (SLD) | the two +1/+1 counters come from an entry trigger, not "enters with"; a noncreature copy has changeling too. |
 | 🟡 Unsettled Mariner | Everyone's Invited! (SLD) | modelled as ward {1} on your permanents: you aren't protected, and it doesn't stack with a printed ward. |
-| 🟡 Stick Together | Everyone's Invited! (SLD) | each player keeps the engine's pick: a largest party, strongest creatures first. |
-| 🟡 Harper Recruiter | Everyone's Invited! (SLD) | the engine picks the party revealed from the top four (a largest one). |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
@@ -2124,7 +2122,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Bladegriff Prototype | Grand Larceny (OTC) | the choosing opponent is the engine's pick, not necessarily the damaged player. |
-| 🟡 Extract Brain | Grand Larceny (OTC) | the opponent's X cards and your free cast are the engine's picks. |
 | 🟡 Nashi, Moon Sage's Scion | Grand Larceny (OTC) | any of the exiled cards may be played this turn, not only one. |
 | 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card may be cast with mana of any type. |
 | 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
@@ -2136,7 +2133,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Path of the Enigma | Cavalry Charge (MOC) | the Will of the Planeswalkers vote isn't held (no planar deck, so planeswalk and chaos do nothing). |
 | 🟡 Syr Elenora, the Discerning | Cavalry Charge (MOC) | her hand-size power is a battlefield static, not a CDA read in every zone. |
 | 🟡 Aryel, Knight of Windgrace | Cavalry Charge (MOC) | X for "tap X untapped Knights" is the target's power (the least that works), not a free choice. |
-| 🟡 Order of Succession | Eternal Bargain (C13) | the direction and every player's pick are the engine's (the next player's most valuable creature), not prompts. |
 | 🟡 Lim-Dûl's Vault | Eternal Bargain (C13) | how far to dig is the engine's pick, and the last five keep their order. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
@@ -2201,7 +2197,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Abstruse Archaic | Eldrazi Unbound (CMM) | the target is the ability's source permanent (a colorless permanent you control with an ability on the stack), as Strionic Resonator. |
 | 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |
 | 🟡 Bismuth Mindrender | Eldrazi Incursion (M3C) | the exiled card may be cast for life until end of turn, not only as the trigger resolves. |
-| 🟡 Selective Obliteration | Eldrazi Incursion (M3C) | each player's color is the one most common among their permanents. |
 | 🟡 Twins of Discord | Eldrazi Incursion (M3C) | the granted bloodthirst rides colorless creature spells you cast, not every entry. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
 | 🟡 Guff Rewrites History | Planeswalker Party (CMM) | the exiled lands go to the bottom in exile order. |

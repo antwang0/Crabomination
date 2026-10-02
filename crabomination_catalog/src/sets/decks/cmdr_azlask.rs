@@ -7,8 +7,6 @@
 //!   and the copy is of the one with the greatest mana value.
 //! - **Bismuth Mindrender** — the exiled card may be cast for life until end
 //!   of turn, not only as the trigger resolves.
-//! - **Selective Obliteration** — each player's color is the one most common
-//!   among their permanents.
 //! - **Twins of Discord** — the granted bloodthirst rides colorless creature
 //!   spells you cast (as Bloodlord of Vaasgoth), not every entry.
 
@@ -293,8 +291,7 @@ pub fn morophon_the_boundless() -> CardDefinition {
     }
 }
 
-/// Selective Obliteration — each player keeps only one color. Residual: the
-/// colors are the engine's.
+/// Selective Obliteration — each player chooses a color and keeps only it.
 pub fn selective_obliteration() -> CardDefinition {
     CardDefinition {
         name: "Selective Obliteration",

@@ -86,6 +86,20 @@ fn cr_700_8_stick_together_keeps_a_party() {
     assert!(g.battlefield_find(theirs).is_none());
 }
 
+/// CR 700.8 / 608.2d — Stick Together's party is each player's own choice: a
+/// scripted seat keeping the smaller party loses the other creatures.
+#[test]
+fn stick_together_party_is_the_players_choice() {
+    let mut g = main_phase(2);
+    let warrior = g.add_card_to_battlefield(0, catalog::harper_recruiter());
+    let changeling = g.add_card_to_battlefield(0, catalog::skeletal_changeling());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![changeling]), DecisionAnswer::Cards(vec![])]));
+    let st = g.add_card_to_hand(0, catalog::stick_together());
+    cast_at(&mut g, st, &[]).expect("cast");
+    assert!(g.battlefield_find(changeling).is_some());
+    assert!(g.battlefield_find(warrior).is_none(), "not chosen: sacrificed");
+}
+
 /// Harper Recruiter: on attack, a party from the top four comes to hand —
 /// one per role, the rest to the bottom.
 #[test]

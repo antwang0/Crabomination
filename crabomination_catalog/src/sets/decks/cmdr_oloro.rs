@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_oloro.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Order of Succession** — the direction and every player's pick are the
-//!   engine's (the next player's most valuable creature), not prompts.
 //! - **Lim-Dûl's Vault** — how far to dig is the engine's pick, and the final
 //!   five keep their order.
 //! - **Springjack Pasture** — no bot path picks an X for its Goat sacrifice.
@@ -285,7 +283,7 @@ pub fn obelisk_of_esper() -> CardDefinition {
 }
 
 /// Order of Succession — choose left or right; each player takes a creature
-/// of the next player in that direction. Residual: the engine picks.
+/// of the next player in that direction, each their own pick.
 pub fn order_of_succession() -> CardDefinition {
     spell("Order of Succession", cost(&[generic(3), u()]), CardType::Sorcery, Effect::EachPlayerTakesCreatureOfNext)
 }

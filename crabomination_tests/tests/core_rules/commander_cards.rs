@@ -1684,8 +1684,8 @@ fn cr_106_7_reflecting_pool_reads_your_lands_abilities() {
 // ── Primitives for Eldrazi Incursion (M3C, Ulalek) ─────────────────────────
 
 /// CR 105.2 — Selective Obliteration: a permanent survives only if it's
-/// colorless or exactly its controller's chosen color (each seat's most
-/// common one); a multicolored permanent never survives.
+/// colorless or exactly its controller's chosen color (headless: the one
+/// saving the most); a multicolored permanent never survives.
 #[test]
 fn each_player_keeps_one_color() {
     use crabomination::effect::Effect;
@@ -1700,6 +1700,25 @@ fn each_player_keeps_one_color() {
     assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(bear2).is_some(), "green, the chosen color");
     assert!(g.battlefield_find(bolt_guy).is_none(), "red isn't");
     assert!(g.battlefield_find(ring).is_some(), "colorless");
+}
+
+/// CR 608.2d — Selective Obliteration's color is each player's own choice:
+/// seat 1 naming red (option 1 of its green-first list) keeps the Goblin.
+#[test]
+fn each_player_chooses_their_color() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = game_with_format(Format::Commander, 2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let goblin = g.add_card_to_battlefield(1, catalog::goblin_guide());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0), DecisionAnswer::Amount(1)]));
+    g.active_player_idx = 0;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::EachPlayerChoosesColorExileOthers, &ctx).expect("resolve");
+    assert!(g.battlefield_find(goblin).is_some(), "red, seat 1's choice");
+    assert!(g.battlefield_find(bear).is_none());
 }
 
 /// CR 707.10 — "copy all spells you control, then copy all other activated
