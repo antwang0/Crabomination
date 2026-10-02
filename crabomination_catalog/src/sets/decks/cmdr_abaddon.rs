@@ -876,7 +876,7 @@ pub fn the_horus_heresy() -> CardDefinition {
                     yours(R::Creature).and(R::Not(Box::new(R::OwnedByYou))),
                 )))),
             ),
-            (3, Effect::EachPlayerChoosesToDestroy { filter: R::Creature, starting_with_you: true }),
+            (3, Effect::EachPlayerChoosesToDestroy { filter: R::Creature, starting_with_you: true, may: false }),
         ],
     )
 }

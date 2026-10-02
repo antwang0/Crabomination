@@ -28269,11 +28269,14 @@ impl GameState {
                 Ok(Vec::new())
             }
             PendingEffectState::SeatTargetAnswerPending { .. } => {
-                let DecisionAnswer::Target(t) = answer else {
-                    return Err(GameError::DecisionAnswerMismatch);
-                };
-                // Raw append — the re-run checks it against its own legal set.
-                self.scratch.resolution_answer_log.push(DecisionAnswer::Target(t.clone()));
+                // Raw append — the re-run checks it against its own legal set
+                // (a decline only reads as one where the ask was optional).
+                match answer {
+                    DecisionAnswer::Target(_) | DecisionAnswer::DeclineTarget => {
+                        self.scratch.resolution_answer_log.push(answer.clone());
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
                 Ok(Vec::new())
             }
             PendingEffectState::DivisionAnswerPending => {

@@ -19,6 +19,7 @@ impl GameState {
         &mut self,
         filter: &SelectionRequirement,
         starting_with_you: bool,
+        may: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -42,17 +43,18 @@ impl GameState {
         let mut cursor = 0;
         let mut chosen: Vec<CardId> = Vec::new();
         for seat in order {
-            let Some(picked) = self.ask_seat_target_logged(
+            let Some(picked) = self.ask_seat_target_maybe_logged(
                 &mut cursor,
                 seat,
-                format!("P{seat}: choose a creature to destroy"),
+                format!("P{seat}: choose a permanent to destroy"),
                 source,
                 legal.clone(),
                 effect,
+                may,
             ) else {
                 return Ok(());
             };
-            if let Target::Permanent(id) = picked
+            if let Some(Target::Permanent(id)) = picked
                 && !chosen.contains(&id)
             {
                 chosen.push(id);

@@ -7296,6 +7296,10 @@ pub enum Effect {
         filter: SelectionRequirement,
         #[serde(default)]
         starting_with_you: bool,
+        /// "Each player **may** choose" (Druid of Purification): a seat may
+        /// decline.
+        #[serde(default)]
+        may: bool,
     },
     /// "Destroy target [filter] that player controls of their choice" (The
     /// Abyss, Magus of the Abyss): `who` picks one permanent they control

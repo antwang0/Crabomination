@@ -2203,7 +2203,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
 | 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |
 | 🟡 Dragonborn Champion | Draconic Rage (AFC) | damage a source you control deals to you doesn't draw. |
-| 🟡 Druid of Purification | Draconic Rage (AFC) | every player chooses (no "may"). |
+
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |

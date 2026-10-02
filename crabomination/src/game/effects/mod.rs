@@ -1126,22 +1126,52 @@ impl GameState {
         legal: Vec<Target>,
         effect: &Effect,
     ) -> Option<Target> {
+        let fallback = legal.first().cloned()?;
+        self.ask_seat_target_maybe_logged(cursor, seat, description, source, legal, effect, false)
+            .map(|t| t.unwrap_or(fallback))
+    }
+
+    /// [`ask_seat_target_logged`](Self::ask_seat_target_logged) for a pick the
+    /// seat "may" make: `Some(None)` is a decline (`DecisionAnswer::
+    /// DeclineTarget`, logged like an answer). Outer `None` is a suspend.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn ask_seat_target_maybe_logged(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        description: String,
+        source: CardId,
+        legal: Vec<Target>,
+        effect: &Effect,
+        optional: bool,
+    ) -> Option<Option<Target>> {
         use crate::decision::{Decision, DecisionAnswer};
         let fallback = legal.first().cloned()?;
         let sane = |t: &Target| -> Target {
             if legal.contains(t) { t.clone() } else { fallback.clone() }
         };
-        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Target(_)));
-        if let Some(DecisionAnswer::Target(t)) = self.scratch.resolution_answer_log.get(*cursor) {
-            let t = sane(t);
-            *cursor += 1;
-            return Some(t);
+        // A decline is a `Target`-family answer either way: a non-optional
+        // re-run reads it as the fallback below.
+        self.drop_stale_answer_log(*cursor, |a| {
+            matches!(a, DecisionAnswer::Target(_) | DecisionAnswer::DeclineTarget)
+        });
+        match self.scratch.resolution_answer_log.get(*cursor) {
+            Some(DecisionAnswer::Target(t)) => {
+                let t = sane(t);
+                *cursor += 1;
+                return Some(Some(t));
+            }
+            Some(DecisionAnswer::DeclineTarget) => {
+                *cursor += 1;
+                return Some((!optional).then(|| fallback.clone()));
+            }
+            _ => {}
         }
         // CR 800.4g — a pick owed by a seat that has left is re-seated on
         // another player (never a cost, so 800.4f cannot apply here).
         let seat = self.route_ask_choice(seat, source);
         let decision = Decision::ChooseTarget {
-            optional: false,
+            optional,
             extra_cast_slot: false,
             source,
             legal: legal.clone(),
@@ -1157,11 +1187,15 @@ impl GameState {
             return None;
         }
         let picked = match self.decider.decide(&decision) {
-            DecisionAnswer::Target(t) => sane(&t),
-            _ => fallback,
+            DecisionAnswer::Target(t) => Some(sane(&t)),
+            DecisionAnswer::DeclineTarget if optional => None,
+            _ => Some(fallback),
         };
         // Log synchronous answers too, so a later suspend's re-run replays them.
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Target(picked.clone()));
+        self.scratch.resolution_answer_log.push(match &picked {
+            Some(t) => DecisionAnswer::Target(t.clone()),
+            None => DecisionAnswer::DeclineTarget,
+        });
         *cursor += 1;
         Some(picked)
     }
@@ -14735,8 +14769,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerChoosesToDestroy { filter, starting_with_you } => {
-                self.each_player_chooses_to_destroy(filter, *starting_with_you, effect, ctx, events)
+            Effect::EachPlayerChoosesToDestroy { filter, starting_with_you, may } => {
+                self.each_player_chooses_to_destroy(filter, *starting_with_you, *may, effect, ctx, events)
             }
 
             Effect::PlayerChoosesToDestroy { who, filter, no_regen } => {

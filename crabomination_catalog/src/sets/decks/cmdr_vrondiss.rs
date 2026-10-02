@@ -6,8 +6,6 @@
 //! - **Berserker's Frenzy** — the 1–14 result's "any number of creatures" is
 //!   every creature your opponents control.
 //! - **Dragonborn Champion** — damage to its controller doesn't draw.
-//! - **Druid of Purification** — the choosing starts with the next player, and
-//!   every player chooses (no "may").
 //! - **Klauth** — "spend this mana only to cast spells" isn't enforced.
 //! - **Sword of Hours** — "the damage dealt" is the damage to each recipient,
 //!   one roll per recipient.
@@ -199,13 +197,14 @@ pub fn dragonborn_champion() -> CardDefinition {
 }
 
 /// Druid of Purification — enters: each player chooses an artifact or
-/// enchantment you don't control, starting with you; destroy each chosen.
-/// Residual: nobody may decline.
+/// enchantment you don't control, starting with you (each may decline);
+/// destroy each chosen.
 pub fn druid_of_purification() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerChoosesToDestroy {
             filter: R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
             starting_with_you: true,
+            may: true,
         })],
         ..creature(
             "Druid of Purification",

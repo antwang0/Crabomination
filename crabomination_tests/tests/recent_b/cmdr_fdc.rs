@@ -6471,3 +6471,24 @@ fn cr_506_2_demonic_covenant_draws_per_player_attacked() {
         assert_eq!(g.players[0].hand.len(), hand + cards, "split: {split}");
     }
 }
+
+/// Druid of Purification — "each player **may** choose": the caster picks
+/// one artifact, the other two seats decline, so only it is destroyed.
+#[test]
+fn druid_of_purification_choices_may_be_declined() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let picked = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let spared = g.add_card_to_battlefield(2, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(picked)),
+        DecisionAnswer::DeclineTarget,
+        DecisionAnswer::DeclineTarget,
+    ]));
+    etb(&mut g, catalog::druid_of_purification());
+    assert!(g.battlefield_find(picked).is_none());
+    assert!(g.battlefield_find(spared).is_some(), "both other seats declined");
+}

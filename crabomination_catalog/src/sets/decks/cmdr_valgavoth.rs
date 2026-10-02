@@ -248,7 +248,7 @@ pub fn sadistic_shell_game() -> CardDefinition {
         name: "Sadistic Shell Game",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::EachPlayerChoosesToDestroy { filter: R::Creature.and(R::ControlledByOpponent), starting_with_you: false },
+        effect: Effect::EachPlayerChoosesToDestroy { filter: R::Creature.and(R::ControlledByOpponent), starting_with_you: false, may: false },
         ..Default::default()
     }
 }
