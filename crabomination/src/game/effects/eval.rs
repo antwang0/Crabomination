@@ -2797,10 +2797,10 @@ impl GameState {
                         .or_else(|| self.leaves_bf_lki.get(&id))
                 });
                 match (chosen, obj) {
-                    (Some(ct), Some(card)) => {
-                        card.has_keyword(&crate::card::Keyword::Changeling)
-                            || card.definition.subtypes.creature_types.contains(&ct)
+                    (Some(ct), Some(card)) if self.battlefield.find_by_id(card.id).is_some() => {
+                        self.permanent_has_creature_type(card.id, ct)
                     }
+                    (Some(ct), Some(card)) => self.card_off_battlefield_has_creature_type(card, ct),
                     _ => false,
                 }
             }
@@ -4535,6 +4535,9 @@ impl GameState {
                 if on_bf && (gates.creature(self) || self.changeling_grant_in_scope()) {
                     return None;
                 }
+                if OFF {
+                    return Some(self.card_off_battlefield_has_creature_type(card, *ct));
+                }
                 Some(
                     card.definition.subtypes.creature_types.contains(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
@@ -6153,10 +6156,7 @@ impl GameState {
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|s| s.chosen_creature_type)
                         .or(self.chosen_creature_type_scratch)
-                        .is_some_and(|ct| {
-                            card.definition.subtypes.creature_types.contains(&ct)
-                                || card.has_keyword(&crate::card::Keyword::Changeling)
-                        }),
+                        .is_some_and(|ct| has_ctype(&ct) || self.permanent_is_changeling(card)),
                     // Extraplanar Lens — "a land with the same name as the
                     // exiled card".
                     // Either link is "exiled with": `exiled_with` (imprint,
@@ -6496,9 +6496,7 @@ impl GameState {
                     && card.power().saturating_add(card.toughness()) <= *n
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
-            R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
-                        || card.has_keyword(&crate::card::Keyword::Changeling)
-                        || self.graveyard_type_grants(card).contains(ct),
+            R::HasCreatureType(ct) => self.card_off_battlefield_has_creature_type(card, *ct),
             R::IsOutlaw => card_is_outlaw(card),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::ControllerControlsLandType(lt) => {
@@ -6560,7 +6558,7 @@ impl GameState {
             // creature". Changeling matches everything (CR 702.73a).
             R::SharesCreatureTypeWithSacrificed => {
                 let mine = &card.definition.subtypes.creature_types;
-                let wild = card.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
+                let wild = self.card_off_battlefield_is_every_creature_type(card);
                 self.sacrificed_card
                     .and_then(|id| {
                         self.died_card_snapshots.get(&id).or_else(|| self.find_card_anywhere(id))
@@ -6593,7 +6591,7 @@ impl GameState {
             // tapped this way". Changeling matches everything (CR 702.73a).
             R::SharesCreatureTypeWithTapped => {
                 let mine = &card.definition.subtypes.creature_types;
-                let wild = card.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
+                let wild = self.card_off_battlefield_is_every_creature_type(card);
                 !self.tapped_for_cost.is_empty()
                     && self.tapped_for_cost.iter().all(|id| {
                         self.battlefield_find(*id).is_some_and(|t| {
@@ -6615,7 +6613,7 @@ impl GameState {
             | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;
-                let wild = card.has_keyword(&crate::card::Keyword::Changeling);
+                let wild = self.card_off_battlefield_is_every_creature_type(card);
                 (wild || !mine.is_empty())
                     && self.battlefield.iter().any(|c| {
                         c.controller == controller
@@ -6848,10 +6846,9 @@ impl GameState {
             | R::HasDraftNotedCreatureTypeOfSource => false,
             // Source-less: the type a resolving `ChooseCreatureTypeThen` just
             // published (Kindred Summons reveals library cards against it).
-            R::IsSourceChosenCreatureType => self.chosen_creature_type_scratch.is_some_and(|ct| {
-                card.definition.subtypes.creature_types.contains(&ct)
-                    || card.has_keyword(&crate::card::Keyword::Changeling)
-            }),
+            R::IsSourceChosenCreatureType => self
+                .chosen_creature_type_scratch
+                .is_some_and(|ct| self.card_off_battlefield_has_creature_type(card, ct)),
             R::SameNameAsTarget | R::TargetsALandYouControl | R::TargetsAPermanentYouControlMatching(_) => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.

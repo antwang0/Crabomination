@@ -1936,6 +1936,10 @@ pub enum StaticEffect {
     /// of Transformation). Pairs with `MatchingAreChosenTypeToo` for the
     /// battlefield half, which layers handle.
     OwnedCardsOffBattlefieldAreChosenTypeToo { filter: SelectionRequirement },
+    /// Maskwood Nexus's off-battlefield half: matching creature spells you
+    /// control and cards you own that aren't on the battlefield are every
+    /// creature type (CR 205.3). The battlefield half is a changeling grant.
+    OwnedCardsOffBattlefieldAreEveryCreatureType { filter: SelectionRequirement },
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,

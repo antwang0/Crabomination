@@ -9992,39 +9992,6 @@ impl GameState {
         })
     }
 
-    /// The creature types a card picks up while it is *not* on the
-    /// battlefield: Ashes of the Fallen's graveyard-only
-    /// `YourGraveyardCreaturesHaveChosenType`, plus Leyline of
-    /// Transformation's `OwnedCardsOffBattlefieldAreChosenTypeToo`, which
-    /// covers every other zone (hand, library, exile, the stack). Layer
-    /// effects only reach permanents, so this is the off-battlefield
-    /// equivalent of `StaticEffect::MatchingAreChosenTypeToo`.
-    pub(crate) fn graveyard_type_grants(
-        &self,
-        card: &crate::card::CardInstance,
-    ) -> Vec<crate::card::CreatureType> {
-        use crate::effect::StaticEffect;
-        if self.battlefield.find_by_id(card.id).is_some() {
-            return Vec::new();
-        }
-        let Some(owner) = self.players.get(card.owner) else { return Vec::new() };
-        let in_graveyard = owner.graveyard.iter().any(|c| c.id == card.id);
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == card.owner)
-            .filter(|c| {
-                c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::YourGraveyardCreaturesHaveChosenType => in_graveyard,
-                    StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, card.owner)
-                    }
-                    _ => false,
-                })
-            })
-            .filter_map(|c| c.chosen_creature_type)
-            .collect()
-    }
-
     /// True when `card` can be retraced from `p`'s graveyard: printed
     /// Retrace, else Six's "during your turn, nonland permanent cards in
     /// your graveyard have retrace" grant.
@@ -31899,9 +31866,10 @@ fn static_effect_to_effects(
             | StaticEffect::AttackerCapAgainstController { .. }
             | StaticEffect::AttackerCapAgainstControllerWhileTapped { .. }
             // YourGraveyardCreaturesHaveChosenType — read by the hidden-zone
-            // card evaluator (`graveyard_type_grants`); no layer effect.
+            // card evaluator (`off_battlefield_type_grants`); no layer effect.
             | StaticEffect::YourGraveyardCreaturesHaveChosenType
             | StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
+            | StaticEffect::OwnedCardsOffBattlefieldAreEveryCreatureType { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::GraveyardCardsHaveRetrace { .. }
             | StaticEffect::CollectsLeaverCounters

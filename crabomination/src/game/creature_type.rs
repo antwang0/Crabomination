@@ -7,6 +7,15 @@
 use super::GameState;
 use crate::card::{CardId, CardInstance, CreatureType, Keyword, KeywordSlice, LandType};
 
+/// What [`GameState::off_battlefield_type_grants`] adds to a card's types.
+#[derive(Default)]
+pub(crate) struct OffBattlefieldTypes {
+    /// Every creature type (Maskwood Nexus).
+    pub every: bool,
+    /// Chosen types added (Ashes of the Fallen, Leyline of Transformation).
+    pub chosen: smallvec::SmallVec<[CreatureType; 2]>,
+}
+
 impl GameState {
     /// Whether the permanent `cid` currently has creature type `ct`. Not for
     /// use inside the layer gather (it may compute the layer view).
@@ -51,6 +60,59 @@ impl GameState {
         }
         self.computed_permanent_on(c)
             .map_or_else(|| c.definition.has_land_type(lt), |cp| cp.subtypes().land_types.contains(&lt))
+    }
+
+    /// CR 205.3 — does `card`, off the battlefield, have creature type `ct`?
+    /// Printed line or changeling, plus the grants layers can't reach
+    /// ([`Self::off_battlefield_type_grants`]).
+    pub(crate) fn card_off_battlefield_has_creature_type(&self, card: &CardInstance, ct: CreatureType) -> bool {
+        card.definition.subtypes.creature_types.contains(&ct)
+            || card.has_keyword(&Keyword::Changeling)
+            || self.off_battlefield_type_grants(card).is_some_and(|g| g.every || g.chosen.contains(&ct))
+    }
+
+    /// CR 702.73a / 205.3 — is `card`, off the battlefield, every creature
+    /// type (changeling, or Maskwood Nexus's "cards you own")?
+    pub(crate) fn card_off_battlefield_is_every_creature_type(&self, card: &CardInstance) -> bool {
+        card.has_keyword(&Keyword::Changeling) || self.off_battlefield_type_grants(card).is_some_and(|g| g.every)
+    }
+
+    /// The creature types an off-battlefield `card` gains from its owner's
+    /// statics (its caster's, on the stack): Ashes of the Fallen in the
+    /// graveyard, Leyline of Transformation's chosen type and Maskwood
+    /// Nexus's every type elsewhere. `None` (no walk) unless the lane says a
+    /// creature-type changer is on the battlefield, or for a permanent.
+    pub(crate) fn off_battlefield_type_grants(&self, card: &CardInstance) -> Option<OffBattlefieldTypes> {
+        use crate::effect::StaticEffect as SE;
+        if !self.battlefield.has_creature_type_changer(super::card_can_change_creature_types)
+            || self.battlefield.find_by_id(card.id).is_some()
+        {
+            return None;
+        }
+        let who = self.stack_caster_for_card(card.id).unwrap_or(card.owner);
+        let in_graveyard = self.players.get(card.owner).is_some_and(|p| p.graveyard.iter().any(|c| c.id == card.id));
+        let mut out = OffBattlefieldTypes::default();
+        for c in self.battlefield.iter().filter(|c| c.controller == who) {
+            for sa in &c.definition.static_abilities {
+                match &sa.effect {
+                    SE::YourGraveyardCreaturesHaveChosenType if in_graveyard => {
+                        out.chosen.extend(c.chosen_creature_type);
+                    }
+                    SE::OwnedCardsOffBattlefieldAreChosenTypeToo { filter }
+                        if self.evaluate_requirement_on_card(filter, card, who) =>
+                    {
+                        out.chosen.extend(c.chosen_creature_type);
+                    }
+                    SE::OwnedCardsOffBattlefieldAreEveryCreatureType { filter }
+                        if self.evaluate_requirement_on_card(filter, card, who) =>
+                    {
+                        out.every = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        (out.every || !out.chosen.is_empty()).then_some(out)
     }
 
     /// Could a layer-6 effect be granting changeling (Maskwood Nexus, an

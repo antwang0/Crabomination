@@ -327,3 +327,28 @@ fn the_changeling_squad() {
     activate(&mut g, am, 0, &[Target::Permanent(bear)]).expect("gain types");
     assert!(kw(&g, bear, Keyword::Changeling));
 }
+
+/// CR 205.3 — Maskwood Nexus: creature spells you control and creature cards
+/// you own off the battlefield are every creature type, so Morophon (naming
+/// Bear) discounts a Cat spell, and an Elf filter sees a hand card you own
+/// but not an opponent's.
+#[test]
+fn maskwood_nexus_types_cards_off_the_battlefield() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = main_phase(3);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureType(CreatureType::Bear)]));
+    let m = g.add_card_to_hand(0, catalog::morophon_the_boundless());
+    cast_at(&mut g, m, &[]).expect("Morophon");
+    let lions = g.add_card_to_hand(0, catalog::savannah_lions());
+    let theirs = g.add_card_to_hand(1, catalog::savannah_lions());
+    let elf = R::HasCreatureType(CreatureType::Elf);
+    let card = |g: &GameState, p: usize, id| g.players[p].hand.iter().find(|c| c.id == id).unwrap().clone();
+    assert!(!g.evaluate_requirement_on_card(&elf, &card(&g, 0, lions), 0));
+    g.add_card_to_battlefield(0, catalog::maskwood_nexus());
+    assert!(g.evaluate_requirement_on_card(&elf, &card(&g, 0, lions), 0));
+    assert!(!g.evaluate_requirement_on_card(&elf, &card(&g, 1, theirs), 0), "not a card you own");
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: lions, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{W} less {W}: the Cat spell is a Bear too");
+}

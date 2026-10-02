@@ -12579,7 +12579,12 @@ pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
         | SE::MatchingLandsAreCreatures { .. }
         | SE::AddCreatureTypeToMatching { .. }
         | SE::MatchingLoseAllCreatureTypes { .. }
-        | SE::SelfIsCreatureIf { .. } => true,
+        | SE::SelfIsCreatureIf { .. }
+        // Off-battlefield grants: no layer effect, but the lane is what tells
+        // the hidden-zone evaluator to look (`off_battlefield_type_grants`).
+        | SE::YourGraveyardCreaturesHaveChosenType
+        | SE::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
+        | SE::OwnedCardsOffBattlefieldAreEveryCreatureType { .. } => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }
