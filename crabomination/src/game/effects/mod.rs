@@ -4377,17 +4377,41 @@ impl GameState {
 
             Effect::ReturnOnePerPermanentType { life_per_card } => {
                 use crate::card::CardType as T;
+                // "Up to one card of that type", per type, chosen as it
+                // resolves; a headless seat takes the priciest of each.
                 let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
                 let mut picked: Vec<CardId> = Vec::new();
                 for t in [T::Artifact, T::Battle, T::Creature, T::Enchantment, T::Land, T::Planeswalker] {
-                    let best = self.players[p]
+                    let mut cands: Vec<(u32, std::cmp::Reverse<CardId>, String)> = self.players[p]
                         .graveyard
                         .iter()
                         .filter(|c| c.definition.card_types.contains(&t) && !picked.contains(&c.id))
-                        .max_by_key(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
-                        .map(|c| c.id);
-                    picked.extend(best);
+                        .map(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id), c.definition.name.to_string()))
+                        .collect();
+                    if cands.is_empty() {
+                        continue;
+                    }
+                    cands.sort_by(|a, b| (b.0, b.1).cmp(&(a.0, a.1)));
+                    let best = cands[0].1.0;
+                    let Some(pick) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        format!("Return up to one {t:?} card?"),
+                        source,
+                        cands.into_iter().map(|(_, id, name)| (id.0, name)).collect(),
+                        0,
+                        1,
+                        PickValue::Gain,
+                        effect,
+                        vec![best],
+                    ) else {
+                        return Ok(());
+                    };
+                    picked.extend(pick.into_iter().take(1));
                 }
+                self.clear_answer_log();
                 let dest = ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(p), tapped: false };
                 for &cid in &picked {
                     self.move_card_to(cid, &dest, ctx, events);

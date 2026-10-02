@@ -359,8 +359,8 @@ pub fn paradise_plume() -> CardDefinition {
 }
 
 /// Revival Experiment — for each permanent type, return up to one card of
-/// that type from your graveyard; lose 3 life per card; exile it. Residual:
-/// the engine picks the highest mana value per type.
+/// that type from your graveyard (each the caster's pick); lose 3 life per
+/// card; exile it.
 pub fn revival_experiment() -> CardDefinition {
     CardDefinition {
         exile_on_resolve: true,

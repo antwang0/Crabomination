@@ -277,6 +277,21 @@ fn revival_experiment_returns_one_per_permanent_type() {
     assert!(g.exile.iter().any(|c| c.id == re));
 }
 
+/// Revival Experiment's "up to one" per type is the caster's: declining the
+/// creature and taking the land returns one card for 3 life.
+#[test]
+fn revival_experiment_picks_are_the_casters() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![]), DecisionAnswer::Cards(vec![forest])]));
+    let re = g.add_card_to_hand(0, catalog::revival_experiment());
+    cast(&mut g, 0, re, None).expect("cast");
+    assert!(g.battlefield_find(forest).is_some() && g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life - 3);
+}
+
 /// Sapling of Colfenor's attack reveals a creature: gain its toughness, lose
 /// its power, take it.
 #[test]
