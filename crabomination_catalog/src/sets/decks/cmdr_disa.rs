@@ -511,8 +511,7 @@ pub fn tempt_with_mayhem() -> CardDefinition {
 
 /// Ziatora, the Incinerator — at your end step you may sacrifice another
 /// creature; when you do, its power in damage to any target and three
-/// Treasures. Residual: The sacrifice picks your weakest other creature
-/// (`MaySacrifice`'s auto-pick), not the one you'd choose.
+/// Treasures. `MaySacrifice` asks which creature (CR 701.17a).
 pub fn ziatora_the_incinerator() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
