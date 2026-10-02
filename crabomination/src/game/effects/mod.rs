@@ -4398,7 +4398,7 @@ impl GameState {
                     if cands.is_empty() {
                         continue;
                     }
-                    cands.sort_by(|a, b| (b.0, b.1).cmp(&(a.0, a.1)));
+                    cands.sort_by_key(|c| std::cmp::Reverse((c.0, c.1)));
                     let best = cands[0].1.0;
                     let Some(pick) = self.ask_seat_cards_logged(
                         &mut cursor,
