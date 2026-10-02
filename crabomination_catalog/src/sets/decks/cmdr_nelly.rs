@@ -99,8 +99,8 @@ pub fn nelly_borca_impulsive_accuser() -> CardDefinition {
 }
 
 /// Agitator Ant — at your end step each player may put two +1/+1 counters on
-/// a creature they control; each such creature is goaded. ⚠ The counters go
-/// on the taker's greatest-power creature (`EachPlayerMayCounterThenGoad`).
+/// a creature they choose and control; each such creature is goaded
+/// (`EachPlayerMayCounterThenGoad`).
 pub fn agitator_ant() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -162,7 +162,7 @@ pub fn darien_king_of_kjeldor() -> CardDefinition {
 
 /// Feather, Radiant Arbiter — flying, lifelink; a noncreature spell you cast
 /// aimed only at Feather may be copied onto other creatures at {2} apiece.
-/// ⚠ A headless caster copies onto its own creatures only.
+/// Residual: A headless caster copies onto its own creatures only.
 pub fn feather_radiant_arbiter() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

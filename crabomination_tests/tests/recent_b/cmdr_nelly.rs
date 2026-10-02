@@ -286,6 +286,27 @@ fn cr_701_15_agitator_ant_goads_each_takers_creature() {
     assert!(!goaded(&g, declined));
 }
 
+/// CR 608.2d — the taker chooses which of its creatures gets the counters
+/// (and the goad), not the engine's greatest-power pick.
+#[test]
+fn agitator_ant_taker_chooses_its_creature() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::agitator_ant());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![bear]),
+    ]));
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert!(goaded_by(&g, bear, 0) && !goaded(&g, giant));
+}
+
 /// Darien: damage to you makes that many Soldiers.
 #[test]
 fn darien_turns_damage_into_soldiers() {

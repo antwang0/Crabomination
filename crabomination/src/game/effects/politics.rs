@@ -52,7 +52,8 @@ impl GameState {
 
     /// `Effect::EachPlayerMayCounterForPeace` — APNAP, each player with a
     /// creature is asked (log-replayed, so a prompting seat can suspend);
-    /// each taker's greatest-power creature gets `counters`, and every
+    /// each taker then chooses a creature it controls (CR 608.2d; headless:
+    /// its greatest-power one), which gets `counters`, and every
     /// creature a taker other than the offerer controls can't attack the
     /// offerer until the offerer's next turn (CR 508.1a).
     /// With `goad` (Agitator Ant, `Effect::EachPlayerMayCounterThenGoad`) the
@@ -102,9 +103,33 @@ impl GameState {
                 takers.push(q);
             }
         }
-        self.clear_answer_log();
+        let mut picks: Vec<(usize, CardId)> = Vec::with_capacity(takers.len());
         for q in takers {
-            let Some(id) = best(self, q) else { continue };
+            let Some(default) = best(self, q) else { continue };
+            let candidates: Vec<(CardId, String)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == q && self.computed_is_creature(c))
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            let Some(picked) = self.ask_seat_cards_logged(
+                &mut cursor,
+                q,
+                format!("Put {counters} +1/+1 counters on a creature you control."),
+                source,
+                candidates,
+                1,
+                1,
+                crate::decision::PickValue::Gain,
+                effect,
+                vec![default],
+            ) else {
+                return Ok(());
+            };
+            picks.push((q, picked.first().copied().unwrap_or(default)));
+        }
+        self.clear_answer_log();
+        for (q, id) in picks {
             self.run_effect(
                 &Effect::AddCounter {
                     what: Selector::ExactObjects(vec![id]),
