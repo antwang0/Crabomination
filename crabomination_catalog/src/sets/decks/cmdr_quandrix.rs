@@ -132,8 +132,8 @@ pub fn deekah_fractal_theorist() -> CardDefinition {
 }
 
 /// Esix, Fractal Bloom — flying; the first token batch on each of your turns
-/// becomes copies of another creature (the engine picks the greatest mana
-/// value; the "may" is always taken).
+/// may instead be copies of another creature its controller chooses (asked
+/// before anything is minted).
 pub fn esix_fractal_bloom() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

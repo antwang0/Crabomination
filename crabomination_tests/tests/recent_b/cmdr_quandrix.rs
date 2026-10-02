@@ -287,6 +287,28 @@ fn esix_turns_the_first_tokens_into_copies() {
     assert_eq!(named(&g, 0, "Serra Angel").len(), 2);
 }
 
+/// Esix's "you may instead choose a creature" is the controller's: a chosen
+/// Bears is copied; a decline mints the Soldier, and the turn's first batch is
+/// spent either way.
+#[test]
+fn esix_copies_the_chosen_creature_or_declines() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::esix_fractal_bloom());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    run(&mut g, 0, &soldiers(1));
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1, "an opponent's creature may be copied");
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::esix_fractal_bloom());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DeclineTarget]));
+    run(&mut g, 0, &soldiers(1));
+    run(&mut g, 0, &soldiers(1));
+    assert_eq!(named(&g, 0, "Serra Angel").len(), 1, "declined, and the second batch is plain");
+}
+
 /// X counters on an equipped Fractal; attacking doubles them.
 #[test]
 fn fractal_harness_suits_up_a_fractal_and_doubles_it() {

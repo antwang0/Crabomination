@@ -7266,8 +7266,7 @@ impl GameState {
         if self.players[seat].token_copy_replacement_used_this_turn {
             return None;
         }
-        let aura = self
-            .battlefield
+        self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
             .find(|c| {
@@ -7275,12 +7274,18 @@ impl GameState {
                     matches!(sa.effect, StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached)
                 })
             })
-            .and_then(|c| c.attached_to);
-        if aura.is_some() || self.active_player_idx != seat {
-            return aura;
+            .and_then(|c| c.attached_to)
+    }
+
+    /// Esix, Fractal Bloom — on its controller's turn, while the turn's first
+    /// token batch is still to come, the creatures other than Esix it may copy
+    /// instead (anyone's), greatest mana value first. `None` when it doesn't
+    /// apply.
+    pub fn esix_copy_candidates(&self, seat: usize) -> Option<Vec<CardId>> {
+        use crate::effect::StaticEffect;
+        if self.players[seat].token_copy_replacement_used_this_turn || self.active_player_idx != seat {
+            return None;
         }
-        // Esix — on its controller's turn, a creature other than Esix: the
-        // engine picks the greatest mana value, on anyone's side.
         let esix = self.battlefield.iter().find(|c| {
             c.controller == seat
                 && c.definition.static_abilities.iter().any(|sa| {
@@ -7290,14 +7295,18 @@ impl GameState {
                     )
                 })
         })?;
-        self.battlefield
+        let mut picks: Vec<(u32, CardId)> = self
+            .battlefield
             .iter()
             .filter(|c| c.id != esix.id && self.computed_is_creature(c))
-            .fold(None::<&crate::card::CardInstance>, |best, c| match best {
-                Some(b) if b.definition.cost.cmc() >= c.definition.cost.cmc() => Some(b),
-                _ => Some(c),
-            })
-            .map(|c| c.id)
+            .map(|c| (c.definition.cost.cmc(), c.id))
+            .collect();
+        if picks.is_empty() {
+            return None;
+        }
+        // Stable: ties keep battlefield order.
+        picks.sort_by_key(|&(mv, _)| std::cmp::Reverse(mv));
+        Some(picks.into_iter().map(|(_, id)| id).collect())
     }
 
     /// Number of `StaticEffect::DoubleCounters` permanents `seat` controls

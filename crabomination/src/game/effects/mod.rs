@@ -21351,6 +21351,36 @@ impl GameState {
                     .enters_with_counters
                     .as_ref()
                     .map(|(kind, v)| (*kind, v, ctx));
+                // Esix — "you may instead choose a creature other than Esix":
+                // asked before anything is minted (the replay-log contract),
+                // of the one seat whose first batch this turn it is.
+                let mut esix: Option<(usize, Option<CardId>)> = None;
+                if base > 0 {
+                    let creature = definition.card_types.contains(&crate::card::CardType::Creature);
+                    for &p in &players {
+                        if self.first_token_copy_host_for(p).is_some()
+                            || self.scaled_token_count(p, base, creature) == 0
+                        {
+                            continue;
+                        }
+                        let Some(legal) = self.esix_copy_candidates(p) else { continue };
+                        let mut cursor = 0;
+                        let Some(pick) = self.ask_seat_target_maybe_logged(
+                            &mut cursor,
+                            p,
+                            "Create copies of a creature instead?".into(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            legal.into_iter().map(Target::Permanent).collect(),
+                            effect,
+                            true,
+                        ) else {
+                            return Ok(());
+                        };
+                        self.clear_answer_log();
+                        esix = Some((p, pick.and_then(|t| match t { Target::Permanent(id) => Some(id), _ => None })));
+                        break;
+                    }
+                }
                 for p in players {
                     // CR 614.13 token-doubling replacement: each
                     // `StaticEffect::DoubleTokens` permanent that player has on
@@ -21365,8 +21395,13 @@ impl GameState {
                     );
                     // Moonlit Meditation — the turn's first token batch may
                     // instead be that many copies of the Aura's host.
-                    if n > 0
-                        && let Some(host) = self.first_token_copy_host_for(p)
+                    let esix_here = esix.filter(|(q, _)| *q == p && n > 0);
+                    if esix_here.is_some() {
+                        self.players[p].token_copy_replacement_used_this_turn = true;
+                    }
+                    if let Some(host) = esix_here
+                        .and_then(|(_, pick)| pick)
+                        .or_else(|| (n > 0).then(|| self.first_token_copy_host_for(p)).flatten())
                     {
                         self.players[p].token_copy_replacement_used_this_turn = true;
                         self.run_effect(
