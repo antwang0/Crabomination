@@ -1565,6 +1565,9 @@ fn valakut_awakening_cycles_hand_and_back_enters_tapped() {
     cast(&mut g, spell);
     assert_eq!(g.players[0].hand.len(), 3, "two put back, three drawn");
     assert_eq!(g.players[0].library.len(), 4, "5 + 2 - 3");
+    // On the bottom, not shuffled in: the last two cards are the Forests.
+    let tail: Vec<CardId> = g.players[0].library.iter().rev().take(2).map(|c| c.id).collect();
+    assert!(tail.contains(&f1) && tail.contains(&f2), "bottomed");
 
     let mut g = main_phase_d();
     let id = g.add_card_to_hand(0, catalog::valakut_awakening());

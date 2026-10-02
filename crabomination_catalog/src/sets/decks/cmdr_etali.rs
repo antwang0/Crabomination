@@ -2033,16 +2033,14 @@ fn valakut_stoneforge() -> CardDefinition {
 /// Valakut Awakening // Valakut Stoneforge — {2}{R} Instant // Land (modal
 /// DFC). Put any number of cards from your hand on the bottom of your library,
 /// then draw that many cards plus one. Back: enters tapped, {T}: Add {R}.
-/// Approximation: the chosen cards are *shuffled into* the library rather than
-/// put on the bottom (`ShuffleAnyNumberFromHandThenDraw`, Credit Voucher's
-/// primitive), and the pick is asked through the synchronous decider.
+/// Credit Voucher's primitive with `bottom` (no shuffle).
 pub fn valakut_awakening() -> CardDefinition {
     CardDefinition {
         name: "Valakut Awakening",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
+            Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You, bottom: true },
             Effect::Draw { who: Selector::You, amount: Value::ONE },
         ]),
         back_face: Some(Box::new(valakut_stoneforge())),

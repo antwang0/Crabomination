@@ -155,7 +155,7 @@ fn shuffle_any_number_from_hand_ships_the_uncastable_half() {
     let ctx = EffectContext::for_ability(voucher, 0, None);
     let events = g
         .resolve_effect(
-            &Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
+            &Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You, bottom: false },
             &ctx,
         )
         .unwrap();

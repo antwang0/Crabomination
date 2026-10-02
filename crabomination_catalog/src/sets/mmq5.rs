@@ -676,7 +676,7 @@ pub fn credit_voucher() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
+            effect: Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You, bottom: false },
             ..Default::default()
         }],
         ..artifact("Credit Voucher", cost(&[generic(2)]))

@@ -11591,8 +11591,14 @@ pub enum Effect {
 
     /// "Shuffle any number of cards from your hand into your library, then
     /// draw that many cards" (Credit Voucher). The controller picks the subset
-    /// via `Decision::ChooseCards`; AutoDecider shuffles none.
-    ShuffleAnyNumberFromHandThenDraw { who: PlayerRef },
+    /// via `Decision::ChooseCards`; AutoDecider shuffles none. With `bottom`
+    /// the cards go on the bottom of the library instead of being shuffled in
+    /// (Valakut Awakening).
+    ShuffleAnyNumberFromHandThenDraw {
+        who: PlayerRef,
+        #[serde(default)]
+        bottom: bool,
+    },
 
     /// "Each player reveals the top card of their library. If all cards
     /// revealed this way are creature cards, put those cards onto the

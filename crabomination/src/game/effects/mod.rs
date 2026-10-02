@@ -35413,7 +35413,7 @@ impl GameState {
                 self.run_pay_or_sacrifice_source(id, p, &cost, ctx, events, effect)
             }
 
-            Effect::ShuffleAnyNumberFromHandThenDraw { who } => {
+            Effect::ShuffleAnyNumberFromHandThenDraw { who, bottom } => {
                 // Credit Voucher — the controller picks the subset; the redraw
                 // happens after the shuffle so a shuffled card can come back.
                 use crate::decision::{Decision, DecisionAnswer};
@@ -35451,7 +35451,11 @@ impl GameState {
                 } else {
                     match self.decider.decide(&Decision::ChooseCards {
                         source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: "Shuffle which cards into your library?".to_string(),
+                        prompt: if *bottom {
+                            "Put which cards on the bottom of your library?".to_string()
+                        } else {
+                            "Shuffle which cards into your library?".to_string()
+                        },
                         candidates: candidates.clone(),
                         min: 0,
                         max,
@@ -35472,7 +35476,9 @@ impl GameState {
                     }
                 }
                 if n > 0 {
-                    self.shuffle_library(p, events);
+                    if !*bottom {
+                        self.shuffle_library(p, events);
+                    }
                     self.run_effect(
                         &Effect::Draw { who: Selector::Player(PlayerRef::Seat(p)), amount: crate::effect::Value::Const(n) },
                         ctx,
