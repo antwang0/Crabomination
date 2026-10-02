@@ -457,6 +457,29 @@ fn drana_and_linvala_locks_and_borrows_abilities() {
     assert_eq!(g.players[1].life, 19);
 }
 
+/// CR 605.3 / 602.5 — the lock covers mana abilities too, auto-paid ones
+/// included: an opponent's Llanowar Elves can't help pay for their spell.
+#[test]
+fn drana_and_linvala_locks_an_opponents_mana_creature_in_payment() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::drana_and_linvala());
+    let elves = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.clear_sickness(elves);
+    g.add_card_to_battlefield(1, catalog::forest());
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let cast = g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(cast.is_err(), "one Forest can't pay {{1}}{{G}} without the Elves");
+    assert!(!g.battlefield_find(elves).unwrap().tapped, "the Elves weren't tapped");
+}
+
 /// CR 609.4b — "You may spend mana as though it were mana of any color to
 /// activate those abilities": white mana pays a borrowed {R} pump.
 #[test]
