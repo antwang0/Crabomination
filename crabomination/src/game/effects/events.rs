@@ -725,12 +725,19 @@ fn event_matches_spec_rest(
     // damaged object to `TriggerSource`, so the dealer is gated here.
     if let Some(dealer) = &spec.dealer_filter {
         let GameEvent::DamageDealt { from_card: Some(from), .. } = event else { return false };
-        if !state.evaluate_requirement_static(
-            dealer,
-            &crate::game::types::Target::Permanent(*from),
-            source.controller,
-            Some(source.id),
-        ) {
+        // CR 608.2h — a dealer that has left by now (a resolved burn spell, a
+        // creature that died in the same combat) is read as it last existed.
+        let gone = state.battlefield_find(*from).is_none();
+        let matched = match gone.then(|| state.leaves_bf_lki.get(from).or_else(|| state.find_card_anywhere(*from))) {
+            Some(Some(last)) => state.evaluate_requirement_on_card(dealer, last, source.controller),
+            _ => state.evaluate_requirement_static(
+                dealer,
+                &crate::game::types::Target::Permanent(*from),
+                source.controller,
+                Some(source.id),
+            ),
+        };
+        if !matched {
             return false;
         }
     }

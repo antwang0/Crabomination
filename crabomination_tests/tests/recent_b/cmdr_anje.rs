@@ -260,3 +260,66 @@ fn asylum_visitor_punishes_an_empty_hand() {
     assert_eq!(g.players[0].life, life - 1);
 }
 
+
+/// Archfiend of Spite: "unless they sacrifice that many permanents" is the
+/// damaging player's choice — headless they sacrifice when they can; a seat
+/// that declines loses the life instead.
+#[test]
+fn archfiend_of_spite_damager_chooses_life_or_permanents() {
+    for decline in [false, true] {
+        let mut g = main_phase(2);
+        let fiend = g.add_card_to_battlefield(0, catalog::archfiend_of_spite());
+        let pinger = g.add_card_to_battlefield(1, catalog::prodigal_pyromancer());
+        g.clear_sickness(pinger);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(1, catalog::island());
+        }
+        if decline {
+            g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+        }
+        let life = g.players[1].life;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pinger,
+            ability_index: 0,
+            target: Some(Target::Permanent(fiend)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("ping");
+        drain_stack(&mut g);
+        let mine = g.battlefield.iter().filter(|c| c.controller == 1).count();
+        if decline {
+            assert_eq!((g.players[1].life, mine), (life - 1, 4), "declined: 1 life");
+        } else {
+            assert_eq!((g.players[1].life, mine), (life, 3), "one permanent sacrificed");
+        }
+    }
+}
+
+/// CR 608.2h — Archfiend of Spite's "a source an opponent controls" is read
+/// as the source last existed: a Lightning Bolt already in its owner's
+/// graveyard still triggers it (it never did).
+#[test]
+fn archfiend_of_spite_sees_a_resolved_burn_spell() {
+    let mut g = main_phase(2);
+    let fiend = g.add_card_to_battlefield(0, catalog::archfiend_of_spite());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::island());
+    }
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(fiend)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    let lands = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(lands, 0, "three permanents sacrificed for 3 damage");
+}
