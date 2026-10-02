@@ -21,7 +21,7 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, u};
 use crate::sets::ascend;
@@ -102,9 +102,8 @@ fn pirate_token(name: &str, types: Vec<CreatureType>) -> Arc<TokenDefinition> {
 }
 
 /// Admiral Beckett Brass — other Pirates +1/+1; at your end step, steal a
-/// nonland permanent of a player three or more Pirates damaged this turn.
-///
-/// ⚠ Residual: any damage from the Pirates counts, not only combat damage.
+/// nonland permanent of a player three or more Pirates dealt combat damage to
+/// this turn.
 pub fn admiral_beckett_brass() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -731,9 +730,8 @@ pub fn the_indomitable() -> CardDefinition {
 }
 
 /// Timestream Navigator — ascend; with the city's blessing, {2}{U}{U}, {T},
-/// put it on the bottom of its library: take an extra turn.
-///
-/// ⚠ Residual: it goes to the bottom as part of the effect, not as a cost.
+/// put it on the bottom of its library: take an extra turn (CR 602.5b: the
+/// bottoming is part of the cost).
 pub fn timestream_navigator() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![ascend()],
@@ -741,13 +739,8 @@ pub fn timestream_navigator() -> CardDefinition {
             mana_cost: cost(&[generic(2), u(), u()]),
             tap_cost: true,
             condition: Some(Predicate::HasCityBlessing { who: PlayerRef::You }),
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
-                },
-                Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
-            ]),
+            bottom_self_cost: true,
+            effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
             ..Default::default()
         }],
         ..creature(

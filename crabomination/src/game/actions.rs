@@ -22092,6 +22092,23 @@ impl GameState {
             );
         }
 
+        // "Put this on the bottom of its owner's library:" (Timestream
+        // Navigator) — the same timing as the bounce above.
+        if ability.bottom_self_cost
+            && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
+        {
+            let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
+            self.move_card_to(
+                card_id,
+                &crate::effect::ZoneDest::Library {
+                    who: crate::effect::PlayerRef::Seat(owner),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+                &ctx,
+                events,
+            );
+        }
+
         // "Exile a [filter] you control:" as a cost (Food Chain). Stamps the
         // last exiled permanent's mana value for `Value::ExiledForCostManaValue`.
         self.exiled_for_cost_mana_value = None;

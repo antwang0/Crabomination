@@ -420,6 +420,25 @@ fn timestream_navigator_needs_the_blessing() {
     assert!(activate(&mut g, t, 0, &[]).is_err(), "no blessing yet");
 }
 
+/// CR 602.5b — Timestream Navigator goes to the bottom of its library as a
+/// cost: it is gone before the extra-turn ability resolves.
+#[test]
+fn cr_602_5b_timestream_navigator_bottoms_itself_as_a_cost() {
+    let mut g = main_phase(2);
+    let t = g.add_card_to_battlefield(0, catalog::timestream_navigator());
+    g.clear_sickness(t);
+    g.players[0].city_blessing = true;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: t, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(t), "bottomed while the ability waits");
+    assert_eq!(g.stack.len(), 1);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1);
+}
+
 /// Warkite Marauder shrinks a defender to a 0/1 with no abilities.
 #[test]
 fn warkite_marauder_strips_a_defender() {

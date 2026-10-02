@@ -4174,6 +4174,10 @@ pub struct ActivatedAbility {
     /// Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub return_self_cost: bool,
+    /// "Put this on the bottom of its owner's library:" as a cost (CR 602.5b —
+    /// Timestream Navigator). Paid with `return_self_cost`'s timing.
+    #[serde(default)]
+    pub bottom_self_cost: bool,
     /// CR 602.5 — "Only your opponents may activate this ability." When true,
     /// the source permanent's controller is barred from activating it; only an
     /// opponent (a player not on the controller's team) may. Powers Detention

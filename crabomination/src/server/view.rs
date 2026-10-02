@@ -2586,6 +2586,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.return_self_cost {
         parts.push("Return this to hand".into());
     }
+    if ability.bottom_self_cost {
+        parts.push("Put this on the bottom of its library".into());
+    }
     // Discard-this-as-cost (Elemental Masterpiece) — the from-hand
     // "Discard this card:" cost line.
     if ability.discard_self_cost {
