@@ -321,10 +321,8 @@ pub fn nucklavee() -> CardDefinition {
 
 /// Ray of Command — {3}{U} Instant. Untap target creature an opponent controls
 /// and gain control of it until end of turn; it gains haste. When you lose
-/// control of it, tap it. The control ends in the cleanup step (CR 514.2),
-/// so the tap rides the next cleanup step — cast in an end step, it still
-/// lands this turn. (Residual: a control loss before cleanup — a second
-/// steal — doesn't tap it then.)
+/// control of it, tap it — as the control ends in the cleanup step (CR 514.2),
+/// or earlier to a second steal.
 pub fn ray_of_command() -> CardDefinition {
     spell(
         "Ray of Command",
@@ -339,7 +337,7 @@ pub fn ray_of_command() -> CardDefinition {
             Effect::Untap { what: Selector::Target(0), up_to: None },
             Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
             Effect::DelayUntil {
-                kind: crate::effect::DelayedTriggerKind::NextCleanupStep,
+                kind: crate::effect::DelayedTriggerKind::WhenYouLoseControlOfTarget,
                 body: Box::new(Effect::Tap { what: Selector::Target(0) }),
             },
         ]),

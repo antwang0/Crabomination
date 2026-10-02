@@ -209,6 +209,34 @@ fn ray_of_command_in_the_end_step_taps_it_this_turn() {
     assert!(b.tapped, "tapped as control ends");
 }
 
+/// Ray of Command's "when you lose control of it" (rulings 2008-10-01): a
+/// second steal before cleanup taps it then, under its new controller, and
+/// the end of the first Ray's duration later doesn't hand it back or tap it.
+#[test]
+fn ray_of_command_taps_it_when_a_second_steal_takes_it() {
+    let mut g = pod(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    flood(&mut g, 2);
+    let ray = g.add_card_to_hand(0, catalog::ray_of_command());
+    cast_with(&mut g, ray, Some(Target::Permanent(bear)), vec![]).expect("cast");
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+    let second = g.add_card_to_hand(2, catalog::ray_of_command());
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::CastSpell {
+        card_id: second,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("second ray");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 2);
+    assert!(b.tapped, "seat 0 lost control of it, so its Ray tapped it");
+}
+
 /// Deadwood Treefolk's leave trigger returns *another* creature card, not
 /// itself.
 #[test]
