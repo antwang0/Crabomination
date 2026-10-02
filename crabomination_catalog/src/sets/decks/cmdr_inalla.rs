@@ -446,7 +446,7 @@ pub fn shifting_shadow() -> CardDefinition {
             effect: Effect::ForEach {
                 selector: host(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false },
+                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false, may: false },
                     Effect::Attach { what: Selector::This, to: Selector::LastMoved },
                     Effect::Destroy { what: Selector::TriggerSource },
                 ])),

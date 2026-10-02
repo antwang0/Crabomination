@@ -31281,8 +31281,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealUntilOneToBattlefieldRestBottom { filter, damage_controller } => {
-                self.reveal_until_one_to_battlefield_rest_bottom(filter, *damage_controller, ctx, events)
+            Effect::RevealUntilOneToBattlefieldRestBottom { filter, damage_controller, may } => {
+                self.reveal_until_one_to_battlefield_rest_bottom(filter, *damage_controller, *may, ctx, events, effect)
             }
 
             Effect::RevealUntilSharesCardTypeToBattlefield { with } => {

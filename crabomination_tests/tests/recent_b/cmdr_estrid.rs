@@ -360,3 +360,21 @@ fn bot_spreads_removal_rather_than_doubling_up() {
     let only = [Target::Permanent(big)];
     assert_eq!(decide_choose_target(&g, 0, &only, &w), DecisionAnswer::Target(Target::Permanent(big)));
 }
+
+/// Genesis Storm reveals to a nonland permanent card that you "may" put onto
+/// the battlefield; declined, it goes to the bottom with the rest.
+#[test]
+fn genesis_storm_put_is_optional() {
+    for put in [true, false] {
+        let mut g = main_phase(2);
+        g.add_card_to_library(0, catalog::island());
+        let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(put)]));
+        let gs = g.add_card_to_hand(0, catalog::genesis_storm());
+        cast_as(&mut g, 0, gs, &[]).expect("cast");
+        assert_eq!(g.battlefield_find(bear).is_some(), put);
+        if !put {
+            assert!(g.players[0].library.iter().any(|c| c.id == bear), "to the bottom");
+        }
+    }
+}

@@ -81,7 +81,7 @@ fn reveal_until_an_artifact_bottoms_the_rest_and_hurts_you() {
     let life = g.players[0].life;
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     g.resolve_effect(
-        &Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Artifact, damage_controller: true },
+        &Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Artifact, damage_controller: true, may: false },
         &ctx,
     )
     .expect("resolve");

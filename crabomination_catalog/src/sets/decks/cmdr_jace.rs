@@ -309,6 +309,7 @@ pub fn jace_multiverse_architect() -> CardDefinition {
                     Effect::RevealUntilOneToBattlefieldRestBottom {
                         filter: R::Creature.or(R::Planeswalker),
                         damage_controller: false,
+                        may: false,
                     },
                 ]),
                 ..Default::default()
@@ -396,6 +397,7 @@ pub fn nissa_leyline_tamer() -> CardDefinition {
                 branches: vec![Effect::RevealUntilOneToBattlefieldRestBottom {
                     filter: R::Creature,
                     damage_controller: false,
+                    may: false,
                 }],
             },
         ]))],

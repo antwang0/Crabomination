@@ -72,13 +72,38 @@ impl GameState {
         &mut self,
         filter: &SelectionRequirement,
         damage_controller: bool,
+        may: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &crate::effect::Effect,
     ) -> Result<(), GameError> {
         use rand::seq::SliceRandom;
         let p = ctx.controller;
+        // "You may put it": asked before anything moves (the hit is read by
+        // position), so a re-run replays the answer.
+        let put = if may
+            && let Some(hit) = self.players[p].library.iter().find(|c| self.evaluate_requirement_on_card(filter, c, p))
+        {
+            let name = hit.definition.name.to_string();
+            let mut cursor = 0;
+            let Some(yes) = self.ask_seat_bool(
+                &mut cursor,
+                p,
+                format!("Put {name} onto the battlefield?"),
+                ctx.source.unwrap_or(crate::card::CardId(0)),
+                effect,
+                crate::decision::OptionalKind::FreeUpside,
+            ) else {
+                return Ok(());
+            };
+            self.clear_answer_log();
+            yes
+        } else {
+            true
+        };
         let (hits, mut rest) =
             self.reveal_until_n(p, 1, |g, c| g.evaluate_requirement_on_card(filter, c, p));
+        let (hits, mut rest) = if put { (hits, rest) } else { (Vec::new(), { rest.extend(hits); rest }) };
         let revealed = (hits.len() + rest.len()) as u32;
         rest.shuffle(&mut self.rng.draw());
         self.players[p].library.extend(rest);

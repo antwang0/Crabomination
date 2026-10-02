@@ -335,7 +335,7 @@ pub fn chaos_mutation() -> CardDefinition {
                     who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                     body: Box::new(Effect::Seq(vec![
                         Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
-                        Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false },
+                        Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false, may: false },
                     ])),
                 }),
             }),

@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_estrid.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Genesis Storm** — the revealed permanent always goes onto the
-//!   battlefield ("you may" isn't offered).
 //! - **Myth Unbound** — the discount counts both partners' casts together.
 
 use crate::card::{
@@ -357,9 +355,9 @@ pub fn finest_hour() -> CardDefinition {
     }
 }
 
-/// Genesis Storm — reveal until a nonland permanent card and put it onto the
-/// battlefield, copied once per cast of your commander from the command zone.
-/// Residual: The card always goes onto the battlefield.
+/// Genesis Storm — reveal until a nonland permanent card; you may put it onto
+/// the battlefield. Copied once per cast of your commander from the command
+/// zone.
 pub fn genesis_storm() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![commander_storm()],
@@ -370,6 +368,7 @@ pub fn genesis_storm() -> CardDefinition {
             Effect::RevealUntilOneToBattlefieldRestBottom {
                 filter: R::PermanentCard.and(R::Nonland),
                 damage_controller: false,
+                may: true,
             },
         )
     }

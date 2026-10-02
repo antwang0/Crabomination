@@ -9844,7 +9844,14 @@ pub enum Effect {
     /// bottom of your library in a random order" — and, with
     /// `damage_controller`, "this deals damage to you equal to the number of
     /// cards revealed this way" (Audacious Reshapers).
-    RevealUntilOneToBattlefieldRestBottom { filter: SelectionRequirement, damage_controller: bool },
+    /// `may`: "you may put that card onto the battlefield" (Genesis Storm) —
+    /// declined, it goes to the bottom with the rest.
+    RevealUntilOneToBattlefieldRestBottom {
+        filter: SelectionRequirement,
+        damage_controller: bool,
+        #[serde(default)]
+        may: bool,
+    },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

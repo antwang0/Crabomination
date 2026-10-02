@@ -147,7 +147,7 @@ pub fn collision_of_realms() -> CardDefinition {
                         what: owned(R::Any),
                         to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
                     },
-                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false },
+                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false, may: false },
                 ])),
                 else_: Box::new(Effect::Move {
                     what: owned(R::Any),

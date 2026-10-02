@@ -200,7 +200,7 @@ pub fn audacious_reshapers() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Artifact, 1)),
-            effect: Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Artifact, damage_controller: true },
+            effect: Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Artifact, damage_controller: true, may: false },
             ..Default::default()
         }],
         ..creature(

@@ -2000,7 +2000,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Agitator Ant | Blame Game (MKC) | each taker's two counters go on their greatest-power creature, not one they choose. |
 | 🟡 Feather, Radiant Arbiter | Blame Game (MKC) | a headless caster only copies onto its own creatures (a person is offered every legal one). |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
-| 🟡 Genesis Storm | Adaptive Enchantment (C18) | the revealed permanent always goes onto the battlefield ("you may" isn't offered). |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
 | 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |
 | 🟡 Sanctuary Blade | Ruthless Regiment (C20) | the colour is chosen by a trigger as it becomes attached (not a replacement), so protection starts once that trigger resolves. |

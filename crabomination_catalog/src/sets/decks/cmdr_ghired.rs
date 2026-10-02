@@ -136,6 +136,7 @@ pub fn atla_palani_nest_tender() -> CardDefinition {
             effect: Effect::RevealUntilOneToBattlefieldRestBottom {
                 filter: R::Creature,
                 damage_controller: false,
+                may: false,
             },
         }],
         ..legendary(creature(

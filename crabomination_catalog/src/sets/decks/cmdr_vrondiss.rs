@@ -83,6 +83,7 @@ pub fn bag_of_tricks() -> CardDefinition {
                 Effect::RevealUntilOneToBattlefieldRestBottom {
                     filter: R::Creature.and(R::ManaValueExactly(n as u32)),
                     damage_controller: false,
+                    may: false,
                 },
             )
         })

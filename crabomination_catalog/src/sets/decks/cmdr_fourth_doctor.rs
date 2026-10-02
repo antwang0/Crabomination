@@ -1147,6 +1147,7 @@ pub fn time_lord_regeneration() -> CardDefinition {
                 effect: Effect::RevealUntilOneToBattlefieldRestBottom {
                     filter: R::Creature.and(time_lord()),
                     damage_controller: false,
+                    may: false,
                 },
             }),
             duration: Duration::EndOfTurn,
