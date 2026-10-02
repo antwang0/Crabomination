@@ -275,6 +275,33 @@ fn neyam_trades_only_with_the_damaged_player() {
     assert!(g.players[2].graveyard.iter().any(|c| c.id == theirs), "seat 2's card stays put");
 }
 
+/// Neyam Shai Murad — the damaged player chooses which permanent card of
+/// yours you reanimate (CR 608.2d): with a Wurm and a Bear in your graveyard,
+/// a headless opponent hands you the Bear.
+#[test]
+fn neyam_the_damaged_player_picks_your_reanimation() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(2);
+    let neyam = g.add_card_to_battlefield(0, catalog::neyam_shai_murad());
+    g.clear_sickness(neyam);
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Yes to the trade; an empty pick is topped up from the chooser's default.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![])]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: neyam, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    while g.step != TurnStep::EndCombat && !g.is_game_over() {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    let back = [wurm, bear].into_iter().filter(|id| g.battlefield_find(*id).is_some()).collect::<Vec<_>>();
+    assert_eq!(back, vec![bear], "the chooser hands over the weaker card");
+}
+
 /// Redemptor Dreadnought — Fallen Warrior exiles at most one creature card
 /// from your graveyard as it's cast (no discount), and Plasma Incinerator's
 /// attack pump is that card's power; without one it is a plain 4/4.

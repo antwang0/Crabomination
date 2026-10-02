@@ -526,9 +526,8 @@ pub fn marneus_calgar() -> CardDefinition {
 }
 
 /// Neyam Shai Murad — connecting may trade graveyard cards: that player gets
-/// a permanent card back to hand, you reanimate one of yours.
-///
-/// ⚠ Residual: the engine picks your card.
+/// a permanent card back to hand, and they choose a permanent card in your
+/// graveyard for you to reanimate.
 pub fn neyam_shai_murad() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -540,13 +539,15 @@ pub fn neyam_shai_murad() -> CardDefinition {
                         what: target_filtered(R::PermanentCard.and(R::InGraveyard).and(R::ControlledByTriggerPlayer)),
                         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                     },
-                    Effect::Move {
-                        what: Selector::TakeGreatestManaValue {
-                            inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::PermanentCard }),
-                            count: Box::new(Value::ONE),
+                    // CR 608.2d — "that player chooses" the card, as it resolves.
+                    crate::effect::shortcut::choose_one_then(
+                        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::PermanentCard },
+                        PlayerRef::TriggerEventPlayer,
+                        Effect::Move {
+                            what: crate::effect::shortcut::chosen_one(),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                         },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    },
+                    ),
                 ])),
             },
         }],
