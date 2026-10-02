@@ -129,7 +129,13 @@ impl GameState {
             .iter()
             .filter_map(|id| self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string())))
             .collect();
-        let (gain, keeps) = self.pick_cuts_as_gain(&ids, seat, chosen);
+        let (mut gain, keeps) = self.pick_cuts_as_gain(&ids, seat, chosen);
+        // A gain body pays the resolving controller; an opponent choosing it
+        // for them (Neyam Shai Murad's "that player chooses") is choosing
+        // what to give away, so it hands over the least.
+        if gain && !keeps && !self.same_team(seat, ctx.controller) {
+            gain = false;
+        }
         let mut default = self.rank_picks(&ids, seat, gain);
         // A survivor pick never spares an opponent's permanent by default.
         if keeps {
