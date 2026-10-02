@@ -293,6 +293,31 @@ fn rose_room_treasurer_banks_two_treasures() {
     assert_eq!(named(&g, 0, "Treasure").len(), 2);
 }
 
+/// Rose Room Treasurer's third alliance: pay {X} — lands tap for it — and,
+/// when you do, it deals X damage (a reflexive trigger, CR 603.12).
+#[test]
+fn rose_room_treasurer_pays_x_off_its_lands() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::rose_room_treasurer());
+    for _ in 0..2 {
+        let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        cast(&mut g, b, &[]);
+    }
+    g.players[0].mana_pool = Default::default();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let life = g.players[1].life;
+    // A bot seat aims a hostile "any target" at an opponent.
+    g.players[0].hostile_player_targets = true;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Amount(2)]));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _ = bear;
+    g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "X = 2 from two Mountains");
+}
+
 /// Jacked Rabbit with X = 5: five counters and a card (ravenous, CR 702.156);
 /// attacking, a Rabbit per point of power.
 #[test]

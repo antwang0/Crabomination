@@ -438,8 +438,8 @@ pub fn rapid_augmenter() -> CardDefinition {
 }
 
 /// Rose Room Treasurer — alliance: a Treasure the first two times a turn,
-/// then "you may pay {X}: X damage to any target".
-/// Residual: the {X} is paid from floating mana.
+/// then "you may pay {X}; when you do, X damage to any target" (a reflexive
+/// trigger, CR 603.12; the {X} may be tapped for).
 pub fn rose_room_treasurer() -> CardDefinition {
     let treasure = || Effect::CreateToken {
         who: PlayerRef::You,
@@ -453,7 +453,9 @@ pub fn rose_room_treasurer() -> CardDefinition {
                 treasure(),
                 Effect::MayPayX {
                     description: "Pay {X} to have Rose Room Treasurer deal X damage to any target?".into(),
-                    body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::XFromCost }),
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::XFromCost }),
+                    }),
                 },
             ],
         })],
