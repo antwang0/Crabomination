@@ -455,3 +455,24 @@ fn sizzling_soloist_binds_the_controllers_next_combat() {
         assert_eq!(has(&g, bear, &Keyword::MustAttack), bound, "after seat {seat}'s combat");
     }
 }
+
+/// Excess — "each creature you controlled that dealt combat damage to a
+/// player this turn": a hitter that has since died still counts, a blocked
+/// one doesn't.
+#[test]
+fn excess_counts_creatures_that_connected_even_if_gone() {
+    let mut g = main_phase(3);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocked = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+    attack_with(&mut g, &[a, b, blocked], 1);
+    block_and_finish_combat(&mut g, 1, vec![(wall, blocked)]);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![b]) }, &ctx)
+        .unwrap();
+    assert!(g.battlefield_find(b).is_none());
+    let excess = catalog::indulge_excess().split.unwrap().right.effect;
+    g.resolve_effect(&excess, &ctx).unwrap();
+    assert_eq!(named(&g, 0, "Treasure").len(), 2);
+}

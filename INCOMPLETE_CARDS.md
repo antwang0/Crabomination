@@ -2156,7 +2156,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
-| 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
 | 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
 | 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |

@@ -252,9 +252,8 @@ pub fn false_floor() -> CardDefinition {
 
 /// Indulge // Excess — Indulge: this turn, each attack by a creature of
 /// yours makes a tapped attacking Citizen. Excess (aftermath): a Treasure per
-/// creature of yours that dealt combat damage to a player this turn.
-///
-/// Approximation: Excess counts your creatures that damaged a player.
+/// creature you controlled that dealt combat damage to a player this turn,
+/// the ones since gone included.
 pub fn indulge_excess() -> CardDefinition {
     CardDefinition {
         name: "Indulge // Excess",
@@ -276,7 +275,7 @@ pub fn indulge_excess() -> CardDefinition {
                 card_types: vec![CardType::Sorcery],
                 effect: make(
                     PlayerRef::You,
-                    Value::CountOf(Box::new(yours(R::Creature.and(R::DamagedAPlayerThisTurn)))),
+                    Value::CreaturesThatCombatDamagedAPlayerThisTurn(PlayerRef::You),
                     Arc::new(crabomination_base::tokens::treasure_token()),
                 ),
             },
