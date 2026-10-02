@@ -1021,8 +1021,8 @@ pub fn brainstealer_dragon() -> CardDefinition {
 /// Tinkering — When this creature enters and at the beginning of your upkeep,
 /// each Horror you control gains all activated abilities of target artifact
 /// an opponent controls until end of turn. You may spend blue mana as though
-/// it were mana of any color to activate those abilities."
-/// Residual: the blue-mana rider is omitted.
+/// it were mana of any color to activate those abilities." The rider turns
+/// each borrowed colored pip into a hybrid with blue (CR 609.4b).
 pub fn grell_philosopher() -> CardDefinition {
     let tinker = || Effect::GainAllActivatedAbilitiesOf {
         what: target_filtered(R::Artifact.and(R::ControlledByOpponent)),
@@ -1031,6 +1031,7 @@ pub fn grell_philosopher() -> CardDefinition {
             who: PlayerRef::You,
             filter: R::HasCreatureType(CreatureType::Horror),
         }),
+        spend_as_any: Some(Color::Blue),
     };
     CardDefinition {
         triggered_abilities: vec![

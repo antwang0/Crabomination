@@ -569,6 +569,32 @@ fn cmdr_umbris_grell_philosopher_borrows_abilities() {
     }
 }
 
+/// CR 609.4b — Grell Philosopher: blue mana pays a borrowed ability's {R} as
+/// though it were red; without the rider's blue, green can't.
+#[test]
+fn cmdr_umbris_grell_philosopher_spends_blue_as_any_color() {
+    let mut g = game(2);
+    g.add_card_to_battlefield(1, catalog::pyrite_spellbomb());
+    let grell = enter(&mut g, catalog::grell_philosopher());
+    let activate = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: grell,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(activate(&mut g).is_err(), "green is not blue");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    activate(&mut g).expect("{R} paid with {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
 /// Intellect Devourer holds a card from each opponent that you may cast.
 #[test]
 fn cmdr_umbris_intellect_devourer_steals_a_hand_card() {
