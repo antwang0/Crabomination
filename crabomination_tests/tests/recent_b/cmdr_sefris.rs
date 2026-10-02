@@ -450,3 +450,42 @@ fn wand_of_orcus_makes_zombies() {
     combat_damage(&mut g);
     assert_eq!(named(&g, 0, "Zombie").len(), 3);
 }
+
+/// CR 701.49a-b — a PROMPTING player venturing chooses the dungeon and, at a
+/// fork, the room, in the mode picker (they were the game-wide decider's
+/// first options): Tomb of Annihilation, then Oubliette over Veils of Fear.
+#[test]
+fn a_prompting_player_chooses_the_dungeon_and_the_room() {
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let venture = || crabomination::game::types::StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(Effect::Venture),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        trigger_player: None,
+        intervening_if: None,
+        additional_targets: Vec::new(),
+        mana_spent_by_color: Vec::new(),
+        activated: false,
+        source_transformed_since_push: false,
+    };
+    g.stack.push(venture());
+    let _ = g.resolve_top_of_stack();
+    assert!(g.pending_decision.is_some(), "the dungeon is asked");
+    g.submit_decision(DecisionAnswer::Mode(2)).expect("Tomb of Annihilation");
+    assert_eq!(g.players[0].dungeon, Some(("Tomb of Annihilation".to_string(), 0)));
+    drain_stack(&mut g);
+    g.stack.push(venture());
+    let _ = g.resolve_top_of_stack();
+    assert!(g.pending_decision.is_some(), "the fork is asked");
+    g.submit_decision(DecisionAnswer::Mode(1)).expect("Oubliette");
+    assert_eq!(g.players[0].dungeon, Some(("Tomb of Annihilation".to_string(), 3)));
+}

@@ -12591,7 +12591,6 @@ impl GameState {
             }
 
             Effect::Venture | Effect::VentureInto { .. } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let forced = match effect {
                     Effect::VentureInto { dungeon } => Some(dungeon.clone()),
@@ -12606,17 +12605,16 @@ impl GameState {
                     None if forced.is_some() => (forced.clone().expect("forced"), 0u8),
                     Some((name, _)) if forced.is_some_and(|f| f != name) => return Ok(()),
                     None => {
+                        // CR 701.49a — the venturing player chooses the dungeon
+                        // (a prompting seat answers in the mode picker).
                         let names = crabomination_base::dungeons::dungeon_names();
-                        let answer = self.decider.decide(&Decision::ChooseMode {
-                            source: ctx.source.unwrap_or(CardId(0)),
-                            num_modes: names.len(),
-                            mode_texts: names.iter().map(|n| n.to_string()).collect(),
-                        });
-                        let pick = match answer {
-                            DecisionAnswer::Mode(m) if m < names.len() => m,
-                            _ => 0,
+                        let texts = names.iter().map(|n| n.to_string()).collect();
+                        let Some(pick) =
+                            self.ask_controller_mode(p, ctx.source.unwrap_or(CardId(0)), texts, effect)
+                        else {
+                            return Ok(());
                         };
-                        (names[pick].to_string(), 0u8)
+                        (names[pick.min(names.len() - 1)].to_string(), 0u8)
                     }
                     Some((name, at)) => {
                         let Some(def) = crabomination_base::dungeons::dungeon_by_name(&name) else {
@@ -12627,18 +12625,18 @@ impl GameState {
                             [] => return Ok(()), // final room already resolved
                             [only] => *only,
                             options => {
-                                let answer = self.decider.decide(&Decision::ChooseMode {
-                                    source: ctx.source.unwrap_or(CardId(0)),
-                                    num_modes: options.len(),
-                                    mode_texts: options
-                                        .iter()
-                                        .map(|i| def.rooms[*i as usize].name.to_string())
-                                        .collect(),
-                                });
-                                match answer {
-                                    DecisionAnswer::Mode(m) if m < options.len() => options[m],
-                                    _ => options[0],
-                                }
+                                // CR 701.49b — the player picks the next room
+                                // along an arrow.
+                                let texts = options
+                                    .iter()
+                                    .map(|i| def.rooms[*i as usize].name.to_string())
+                                    .collect();
+                                let Some(m) =
+                                    self.ask_controller_mode(p, ctx.source.unwrap_or(CardId(0)), texts, effect)
+                                else {
+                                    return Ok(());
+                                };
+                                options[m.min(options.len() - 1)]
                             }
                         };
                         (name, next_idx)
