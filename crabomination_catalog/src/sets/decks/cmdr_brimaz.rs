@@ -214,10 +214,8 @@ pub fn blight_titan() -> CardDefinition {
 
 /// Cataclysmic Gearhulk — vigilance; on entry each player keeps an artifact,
 /// a creature, an enchantment, and a planeswalker among their nonland
-/// permanents and sacrifices the rest.
-///
-/// ⚠ Residual: each player keeps their highest-mana-value permanent of each
-/// type.
+/// permanents — each player choosing its own, in turn order — and sacrifices
+/// the rest at once.
 pub fn cataclysmic_gearhulk() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],

@@ -927,16 +927,10 @@ pub fn welcome_the_dead() -> CardDefinition {
 /// Necromantic Selection — {4}{B}{B}{B} Sorcery. Destroy all creatures, then
 /// return a creature card put into a graveyard this way to the battlefield under
 /// your control. It's a black Zombie in addition to its other colors and types.
-/// Exile Necromantic Selection.
-///
-/// Approximation: the black Zombie rider lands on every creature you control
-/// that entered from a graveyard this turn (normally just the one returned).
+/// Exile Necromantic Selection. The returned card is the caster's choice
+/// (CR 608.2d, `ChooseOneAmong`; headless: the biggest body).
 pub fn necromantic_selection() -> CardDefinition {
-    let returned = || {
-        Selector::EachPermanent(
-            R::Creature.and(R::ControlledByYou).and(R::EnteredFromGraveyardThisTurn),
-        )
-    };
+    let chosen = || Selector::SeparatedPile { chosen: true };
     CardDefinition {
         exile_on_resolve: true,
         ..spell(
@@ -945,28 +939,24 @@ pub fn necromantic_selection() -> CardDefinition {
             CardType::Sorcery,
             Effect::Seq(vec![
                 Effect::Destroy { what: Selector::EachPermanent(R::Creature) },
-                Effect::MoveChosen {
-                    from: Selector::DestroyedThisResolution {
-                        filter: R::Creature.and(R::InGraveyard),
-                    },
-                    filter: None,
-                    count: Value::ONE,
-                    up_to: false,
-                    to: to_battlefield(false),
-                },
-                // The creature just returned: `MoveChosen` stashes no
-                // `LastMoved`, so it is read as the creature you control that
-                // entered from a graveyard this turn.
-                Effect::AddCreatureTypes {
-                    what: returned(),
-                    creature_types: vec![CreatureType::Zombie],
-                    duration: Duration::Permanent,
-                },
-                Effect::BecomeColor {
-                    what: returned(),
-                    colors: vec![Color::Black],
-                    duration: Duration::Permanent,
-                    additive: true,
+                Effect::ChooseOneAmong {
+                    what: Selector::DestroyedThisResolution { filter: R::Creature.and(R::InGraveyard) },
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: chosen(), to: to_battlefield(false) },
+                        Effect::AddCreatureTypes {
+                            what: chosen(),
+                            creature_types: vec![CreatureType::Zombie],
+                            duration: Duration::Permanent,
+                        },
+                        Effect::BecomeColor {
+                            what: chosen(),
+                            colors: vec![Color::Black],
+                            duration: Duration::Permanent,
+                            additive: true,
+                        },
+                    ])),
+                    other: Box::new(Effect::Noop),
                 },
             ]),
         )

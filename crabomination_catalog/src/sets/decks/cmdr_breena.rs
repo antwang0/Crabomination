@@ -532,9 +532,9 @@ pub fn tempting_contract() -> CardDefinition {
 }
 
 /// Tragic Arrogance — for each player an artifact, a creature, an enchantment
-/// and a planeswalker are kept; everything else nonland is sacrificed.
-/// Residual: the engine picks — the caster's own best of each type, each
-/// opponent's weakest.
+/// and a planeswalker are kept — the caster chooses them all (headless: its
+/// own best of each type, each opponent's weakest) — and everything else
+/// nonland is sacrificed.
 pub fn tragic_arrogance() -> CardDefinition {
     CardDefinition {
         name: "Tragic Arrogance",

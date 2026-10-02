@@ -682,6 +682,22 @@ fn necromantic_selection_wipes_and_reanimates_one() {
     let _ = theirs;
 }
 
+/// CR 608.2d — the caster chooses which dead creature comes back, and only
+/// that one becomes a black Zombie.
+#[test]
+fn necromantic_selection_returns_the_chosen_creature() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::necromantic_selection());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Cards(vec![theirs])]));
+    cast_with(&mut g, spell, None, None);
+    let back = g.battlefield_find(theirs).expect("the chosen one is back");
+    assert_eq!(back.controller, 0);
+    assert!(g.computed_permanent(theirs).unwrap().subtypes().creature_types.contains(&CreatureType::Zombie));
+    assert!(g.battlefield_find(mine).is_none(), "the other stays dead");
+}
+
 /// Rise of the Witch-king: everyone sacrifices; you get another permanent back.
 #[test]
 fn rise_of_the_witch_king_returns_another_permanent() {

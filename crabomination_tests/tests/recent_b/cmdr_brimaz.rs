@@ -175,6 +175,30 @@ fn cataclysmic_gearhulk_keeps_one_of_each() {
     assert!(g.battlefield_find(gh).is_some());
 }
 
+/// Cataclysmic Gearhulk's rulings: each player chooses its own keepers in
+/// turn order (here seat 1 keeps the Bear over the Angel), an artifact
+/// creature may be both the artifact and the creature, and everything else
+/// goes at once.
+#[test]
+fn cataclysmic_gearhulk_each_player_chooses_its_own() {
+    let mut g = main_phase(2);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gh = g.add_card_to_hand(0, catalog::cataclysmic_gearhulk());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seat 0: the Gearhulk as artifact AND creature (the Bear goes); seat 1:
+    // the Bear.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![gh]),
+        DecisionAnswer::Cards(vec![gh]),
+        DecisionAnswer::Cards(vec![bear]),
+    ]));
+    cast(&mut g, gh);
+    assert!(g.battlefield_find(gh).is_some(), "chosen as both");
+    assert!(g.battlefield_find(mine).is_none());
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(angel).is_none(), "seat 1's own choice");
+}
+
 /// Darksteel Splicer makes a Golem per opponent for itself and each later
 /// nontoken Phyrexian, and its Golems are indestructible.
 #[test]
