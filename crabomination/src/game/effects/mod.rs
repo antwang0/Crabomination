@@ -3441,32 +3441,37 @@ impl GameState {
     }
 
     /// CR 500.8 — Fatespinner: the affected player picks which of draw step /
-    /// main phase / combat phase they skip for the rest of the turn. The
-    /// auto-decider takes the first mode (draw step).
+    /// main phase / combat phase they skip for the rest of the turn — asked of
+    /// that player (CR 608.2d); a headless seat takes the first (draw step).
     #[inline(never)]
     fn choose_step_to_skip(
         &mut self,
         who: &PlayerRef,
         ctx: &EffectContext,
+        effect: &Effect,
     ) -> Result<(), GameError> {
-        use crate::decision::{Decision, DecisionAnswer};
         let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut picks: Vec<(usize, usize)> = Vec::new();
         for p in self.resolve_players(who, ctx) {
-            let answer = self.decider.decide(&Decision::ChooseModes {
+            let Some(pick) = self.ask_seat_option(
+                &mut cursor,
+                p,
+                "Choose a step or phase to skip this turn".into(),
                 source,
-                num_modes: 3,
-                count: 1,
-                default: vec![0],
-                mode_texts: vec![
+                vec![
                     "Skip your draw step".into(),
                     "Skip your main phases".into(),
                     "Skip your combat phase".into(),
                 ],
-            });
-            let pick = match answer {
-                DecisionAnswer::Modes(m) => m.first().copied().unwrap_or(0),
-                _ => 0,
+                effect,
+            ) else {
+                return Ok(());
             };
+            picks.push((p, pick));
+        }
+        self.clear_answer_log();
+        for (p, pick) in picks {
             let steps: &[TurnStep] = match pick {
                 1 => &[TurnStep::PreCombatMain, TurnStep::PostCombatMain],
                 2 => &[
@@ -11118,7 +11123,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseStepToSkipThisTurn { who } => self.choose_step_to_skip(who, ctx),
+            Effect::ChooseStepToSkipThisTurn { who } => self.choose_step_to_skip(who, ctx, effect),
 
             Effect::ExchangeControlWithSharedType { what } => {
                 self.exchange_control_with_shared_type(what, ctx, events)
