@@ -287,7 +287,8 @@ pub fn dead_before_sunrise() -> CardDefinition {
 }
 
 /// Dire Fleet Ravager — each player loses a third of their life, rounded up.
-/// Residual: the players lose it one after another.
+/// Each amount reads that player's own life, and the losses' triggers and
+/// state-based actions all wait for the resolution, so seat order is unseen.
 pub fn dire_fleet_ravager() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace, Keyword::Deathtouch],

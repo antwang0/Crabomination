@@ -7026,17 +7026,9 @@ pub fn elegant_parlor() -> CardDefinition {
 }
 
 /// Ghost Vacuum — {1} Artifact. {T}: Exile target card from a graveyard.
-///
-/// Targeted graveyard hate. The card filter is `Any` since the effect
-/// names "a card" — any zone match, but `Effect::Move` from graveyards
-/// already routes through `move_card_to(.., ZoneDest::Exile, ..)` thanks
-/// to the modern_decks-1 plumbing.
-///
-/// 🟡 The second ability — `{6}, {T}, Sacrifice this artifact:` put each
-/// creature card **exiled with this artifact** onto the battlefield under
-/// your control — is not modelled: nothing tracks exile linked to a source.
-/// A Ghost Vacuum that also charged {2} to activate the first ability was
-/// the shipped card until now, which is a strictly worse one.
+/// {6}, {T}, Sacrifice it: each creature card exiled with it returns under
+/// your control as a 1/1 Spirit with a flying counter (the CR 607 link is
+/// `ExileWithSourceStamp` / `CardExiledWithSource`).
 pub fn ghost_vacuum() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
