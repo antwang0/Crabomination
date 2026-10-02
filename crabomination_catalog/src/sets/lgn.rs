@@ -56,12 +56,16 @@ fn on_turn_up(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// "When you cycle this card, [effect]." — the Gempalm cycle's may-trigger.
+/// CR 702.29c — "When you cycle this card, [effect]."
 fn on_cycle(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
-        effect: Effect::MayDo { description: "Use the cycling trigger?".into(), body: Box::new(effect) },
-    }
+    TriggeredAbility { event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource), effect }
+}
+
+/// "When you cycle this card, you may [effect]." Only where the card prints
+/// the "may": Decree of Pain's sweep wore one too, and the headless "no" meant
+/// no bot ever got its −2/−2.
+fn on_cycle_may(effect: Effect) -> TriggeredAbility {
+    on_cycle(Effect::MayDo { description: "Use the cycling trigger?".into(), body: Box::new(effect) })
 }
 
 /// CR 702.39 — Provoke: "whenever this creature attacks, you may have target
@@ -830,7 +834,7 @@ pub fn embalmed_brawler() -> CardDefinition {
 pub fn gempalm_polluter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[b(), b()]))],
-        triggered_abilities: vec![on_cycle(Effect::LoseLife {
+        triggered_abilities: vec![on_cycle_may(Effect::LoseLife {
             who: Selector::Player(PlayerRef::Target(0)),
             amount: count_on_battlefield(R::HasCreatureType(CreatureType::Zombie)),
         })],

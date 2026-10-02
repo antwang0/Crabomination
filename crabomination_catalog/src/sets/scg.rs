@@ -92,15 +92,16 @@ fn on_any_turn_up(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// "When you cycle this card, [effect]." — the Decree cycle's may-trigger.
+/// CR 702.29c — "When you cycle this card, [effect]."
 fn on_cycle(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
-        effect: Effect::MayDo {
-            description: "Use the cycling trigger?".into(),
-            body: Box::new(effect),
-        },
-    }
+    TriggeredAbility { event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource), effect }
+}
+
+/// "When you cycle this card, you may [effect]." Only where the card prints
+/// the "may": Decree of Pain's sweep wore one too, and the headless "no" meant
+/// no bot ever got its −2/−2.
+fn on_cycle_may(effect: Effect) -> TriggeredAbility {
+    on_cycle(Effect::MayDo { description: "Use the cycling trigger?".into(), body: Box::new(effect) })
 }
 
 /// The four Dragon Auras share "When a creature with mana value 6 or greater
@@ -1373,7 +1374,7 @@ fn draw_per_creature() -> Effect {
 pub fn decree_of_savagery() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[generic(4), g(), g()]))],
-        triggered_abilities: vec![on_cycle(Effect::AddCounter {
+        triggered_abilities: vec![on_cycle_may(Effect::AddCounter {
             what: target_filtered(R::Creature),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(4),
@@ -1414,7 +1415,7 @@ pub fn decree_of_silence() -> CardDefinition {
                     },
                 ]),
             },
-            on_cycle(Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) }),
+            on_cycle_may(Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) }),
         ],
         ..enchantment("Decree of Silence", cost(&[generic(6), u(), u()]))
     }

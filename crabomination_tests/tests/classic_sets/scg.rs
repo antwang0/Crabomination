@@ -282,6 +282,19 @@ fn decree_of_pain_cycles_into_a_minus_two_sweep() {
     assert!(g.battlefield_find(knight).is_none(), "-2/-2 killed the 2/2");
 }
 
+/// CR 702.29c — Decree of Pain's cycling trigger prints no "may". It wore an
+/// invented one (the Decree helper wrapped every rider), so the headless
+/// decider declined it: no bot ever got the −2/−2.
+#[test]
+fn decree_of_pain_cycle_trigger_is_not_optional() {
+    let mut g = main_phase();
+    let knight = g.add_card_to_battlefield(1, catalog::silver_knight());
+    g.add_card_to_library(0, catalog::silver_knight());
+    let decree = g.add_card_to_hand(0, catalog::decree_of_pain());
+    cycle(&mut g, 0, decree);
+    assert!(g.battlefield_find(knight).is_none(), "-2/-2 killed the 2/2");
+}
+
 /// Decree of Savagery's cycling rider puts four counters on one creature.
 #[test]
 fn decree_of_savagery_cycles_into_four_counters() {
