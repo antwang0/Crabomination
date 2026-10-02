@@ -5742,11 +5742,18 @@ pub enum Effect {
     /// exiled this way onto the battlefield." (Scrap Mastery.) Each step
     /// runs for every player, in APNAP order, before the next.
     EachPlayerRecyclesArtifacts,
-    /// "[Target] of an opponent's choice": you name an opponent, who picks a
-    /// permanent matching `filter` — read with **you** as the controller, so
-    /// "you don't control" means the caster — and `body` runs with it bound
-    /// as `Target(0)` (Volcanic Offering). Nothing happens without a match.
-    OpponentChoosesPermanentThen { filter: SelectionRequirement, body: Box<Effect> },
+    /// "[Target] of an opponent's choice": you name an opponent (headless,
+    /// the most hostile), who picks a permanent matching `filter` — read with
+    /// **you** as the controller, so "you don't control" means the caster —
+    /// and `body` runs with it bound as `Target(0)` (Volcanic Offering).
+    /// `chooser` names the picking player instead (Bladegriff Prototype's
+    /// "of that player's choice"). Nothing happens without a match.
+    OpponentChoosesPermanentThen {
+        filter: SelectionRequirement,
+        body: Box<Effect>,
+        #[serde(default)]
+        chooser: Option<PlayerRef>,
+    },
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
     /// next room; room abilities resolve inline (`base::dungeons`).

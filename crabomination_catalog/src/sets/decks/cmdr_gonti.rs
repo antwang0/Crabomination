@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_gonti.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Bladegriff Prototype** — the choosing opponent is the engine's pick,
-//!   not necessarily the damaged player.
 //! - **Nashi, Moon Sage's Scion** — you may play any of the exiled cards, not
 //!   only one.
 //! - **Siphon Insight** — the exiled card may be cast with mana of any type
@@ -106,9 +104,8 @@ pub fn arcane_heist() -> CardDefinition {
 }
 
 /// Bladegriff Prototype — {5} 3/2 artifact Griffin, flying. Hitting a player,
-/// it destroys a nonland permanent one of your opponents controls, of an
-/// opponent's choice.
-/// Residual: the choosing opponent is the engine's pick.
+/// it destroys a nonland permanent one of your opponents controls, of the
+/// damaged player's choice.
 pub fn bladegriff_prototype() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -116,6 +113,7 @@ pub fn bladegriff_prototype() -> CardDefinition {
         triggered_abilities: vec![hits_player(Effect::OpponentChoosesPermanentThen {
             filter: R::Nonland.and(R::ControlledByOpponent),
             body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            chooser: Some(PlayerRef::TriggerEventPlayer),
         })],
         ..creature("Bladegriff Prototype", cost(&[generic(5)]), vec![CreatureType::Griffin], 3, 2)
     }

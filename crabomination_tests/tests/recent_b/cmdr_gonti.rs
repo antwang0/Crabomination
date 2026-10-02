@@ -278,3 +278,29 @@ fn tower_winder_finds_the_tower() {
     cast_by(&mut g, 0, tw, &[], None);
     assert!(g.players[0].hand.iter().any(|c| c.id == ct));
 }
+
+/// Bladegriff Prototype: the permanent is "of that player's choice" — the
+/// player it hit picks (headless: another opponent's priciest), so the hit
+/// seat decides which of the others loses one.
+#[test]
+fn bladegriff_prototype_lets_the_hit_player_choose() {
+    for (hit, other) in [(1usize, 2usize), (2, 1)] {
+        let mut g = pod(3);
+        let griff = g.add_card_to_battlefield(0, catalog::bladegriff_prototype());
+        g.clear_sickness(griff);
+        let wurm = g.add_card_to_battlefield(other, catalog::craw_wurm());
+        let giant = g.add_card_to_battlefield(hit, catalog::hill_giant());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: griff, target: AttackTarget::Player(hit) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        assert!(g.battlefield_find(wurm).is_none(), "hit seat {hit} spends seat {other}'s Wurm");
+        assert!(g.battlefield_find(giant).is_some());
+    }
+}

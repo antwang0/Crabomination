@@ -13,52 +13,80 @@ impl GameState {
     /// over the costliest match it doesn't control itself, else its own
     /// cheapest. A prompting opponent picks (CR 800.4g routes a departed
     /// seat's pick).
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn opponent_chooses_permanent_then(
         &mut self,
         filter: &SelectionRequirement,
         body: &Effect,
+        chooser: Option<&crate::effect::PlayerRef>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        use crate::game::types::Target;
         let me = ctx.controller;
-        let Some(chooser) = self.default_hostile_opponent(me) else { return Ok(()) };
+        let asks = |g: &GameState, seat: usize| {
+            g.seat_prompts(seat) || !matches!(g.decider.kind(), crate::decision::DeciderKind::Auto)
+        };
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let chooser = match chooser {
+            Some(who) => match self.resolve_player(who, ctx) {
+                Some(p) => p,
+                None => return Ok(()),
+            },
+            None => {
+                let Some(hostile) = self.default_hostile_opponent(me) else { return Ok(()) };
+                let opps: Vec<Target> = std::iter::once(hostile)
+                    .chain(self.opponents_of(me).into_iter().filter(|&q| q != hostile))
+                    .map(Target::Player)
+                    .collect();
+                if opps.len() > 1 && asks(self, me) {
+                    match self.ask_seat_target_logged(&mut cursor, me, "Choose an opponent to choose".into(), source, opps, effect) {
+                        None => return Ok(()),
+                        Some(Target::Player(q)) => q,
+                        Some(_) => hostile,
+                    }
+                } else {
+                    hostile
+                }
+            }
+        };
         let candidates: Vec<&CardInstance> = self
             .battlefield
             .iter()
             .filter(|c| self.evaluate_requirement_on_card(filter, c, me))
             .collect();
         if candidates.is_empty() {
+            self.clear_answer_log();
             return Ok(());
         }
-        let pick = if self.seat_prompts(chooser)
-            || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
-        {
-            let named: Vec<(CardId, String)> =
-                candidates.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
-            let Some(ids) = self.ask_seat_cards(
-                chooser,
-                "Choose a permanent for your opponent's spell".into(),
-                ctx.source.unwrap_or(CardId(0)),
-                named,
-                1,
-                1,
-                PickValue::Cost,
-                effect,
-            ) else {
-                return Ok(());
-            };
-            ids.first().copied()
-        } else {
-            candidates
-                .iter()
-                .max_by_key(|c| {
-                    let mv = c.definition.cost.cmc() as i64;
-                    if c.controller != chooser { (1, mv, c.id.0) } else { (0, -mv, c.id.0) }
-                })
-                .map(|c| c.id)
+        // Headless: the chooser gives up someone else's priciest, else its
+        // own cheapest.
+        let auto = candidates
+            .iter()
+            .max_by_key(|c| {
+                let mv = c.definition.cost.cmc() as i64;
+                if c.controller != chooser { (1, mv, c.id.0) } else { (0, -mv, c.id.0) }
+            })
+            .map(|c| c.id);
+        let named: Vec<(CardId, String)> = candidates.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+        let Some(ids) = self.ask_seat_cards_logged(
+            &mut cursor,
+            chooser,
+            "Choose a permanent for your opponent's spell".into(),
+            source,
+            named,
+            1,
+            1,
+            PickValue::Cost,
+            effect,
+            auto.into_iter().collect(),
+        ) else {
+            return Ok(());
         };
-        let Some(pick) = pick else { return Ok(()) };
+        self.clear_answer_log();
+        let Some(pick) = ids.first().copied().or(auto) else { return Ok(()) };
         self.run_effect(&Effect::BindTargetObjects { ids: vec![pick], body: Box::new(body.clone()) }, ctx, events)
     }
 

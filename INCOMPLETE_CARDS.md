@@ -2109,7 +2109,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
 | 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
-| 🟡 Bladegriff Prototype | Grand Larceny (OTC) | the choosing opponent is the engine's pick, not necessarily the damaged player. |
 | 🟡 Nashi, Moon Sage's Scion | Grand Larceny (OTC) | any of the exiled cards may be played this turn, not only one. |
 | 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card may be cast with mana of any type. |
 | 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
