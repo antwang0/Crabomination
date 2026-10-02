@@ -750,6 +750,13 @@ fn event_matches_spec_rest(
         }
     }
 
+    // "…causes its controller to shuffle" (Widespread Panic).
+    if spec.self_caused
+        && !matches!(event, GameEvent::LibraryShuffled { player, cause } if *cause == Some(*player))
+    {
+        return false;
+    }
+
     // "…activates an ability without {T} in its activation cost" (Haunting
     // Wind) — a tap-cost activation is left to the companion tap trigger.
     if spec.exclude_tap_cost_abilities
@@ -1344,7 +1351,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
-        | GameEvent::LibraryShuffled { player }
+        | GameEvent::LibraryShuffled { player, .. }
         | GameEvent::DungeonRoomEntered { player, .. }
         | GameEvent::DungeonCompleted { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
@@ -1501,7 +1508,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::RolledNaturalMax { player }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
-        | GameEvent::LibraryShuffled { player }
+        | GameEvent::LibraryShuffled { player, .. }
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::DungeonCompleted { player }
         | GameEvent::MonarchChanged { player }
@@ -1815,7 +1822,7 @@ mod tests {
             E::EnergyGained { player: 0, amount: 1 },
             E::CommittedCrime { player: 0 },
             E::PlayerSearchedLibrary { player: 0 },
-            E::LibraryShuffled { player: 0 },
+            E::LibraryShuffled { player: 0, cause: None },
             E::TappedForMana { card_id: c, player: 0 },
             E::Voted { player: 0, choice: "x".into() },
             E::VotingFinished,

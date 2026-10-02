@@ -491,13 +491,12 @@ pub fn walker_of_the_grove() -> CardDefinition {
     }
 }
 
-/// Widespread Panic — whenever a spell or ability makes a player shuffle,
-/// they put a card from their hand on top of their library. Residual: any
-/// such shuffle counts.
+/// Widespread Panic — whenever a spell or ability causes its controller to
+/// shuffle, they put a card from their hand on top of their library.
 pub fn widespread_panic() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LibraryShuffled, EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::LibraryShuffled, EventScope::AnyPlayer).self_caused(),
             effect: Effect::PutCardFromHandOnTopOfLibrary {
                 who: Selector::Player(PlayerRef::TriggerEventPlayer),
             },

@@ -3110,7 +3110,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PlayerSearchedLibrary { player } => {
                 GameEventWire::PlayerSearchedLibrary { player: *player }
             }
-            GameEvent::LibraryShuffled { player } => {
+            GameEvent::LibraryShuffled { player, .. } => {
                 GameEventWire::LibraryShuffled { player: *player }
             }
             GameEvent::TappedForMana { card_id, player } => {
@@ -3488,7 +3488,7 @@ impl GameEventWire {
             E::DiscardedBatch { .. } => String::new(),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::PlayerSearchedLibrary { player } => format!("{} searched their library", pn(*player)),
-            E::LibraryShuffled { player } => format!("{} shuffled their library", pn(*player)),
+            E::LibraryShuffled { player, .. } => format!("{} shuffled their library", pn(*player)),
             E::TappedForMana { player, .. } => format!("{} tapped a source for mana", pn(*player)),
             E::Voted { player, choice } => format!("{} voted for {choice}", pn(*player)),
             E::VotingFinished => "voting ends".to_string(),

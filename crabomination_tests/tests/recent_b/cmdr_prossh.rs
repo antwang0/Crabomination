@@ -205,6 +205,34 @@ fn widespread_panic_taxes_a_shuffle() {
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(keep));
 }
 
+/// Widespread Panic reads "causes **its controller** to shuffle": an
+/// opponent's Path to Exile makes seat 0 search and shuffle, and seat 0 keeps
+/// its hand.
+#[test]
+fn widespread_panic_ignores_a_shuffle_someone_else_caused() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(1, catalog::widespread_panic());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let keep = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let path = g.add_card_to_hand(1, catalog::path_to_exile());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: path,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("path");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 3, "seat 0 searched (and shuffled)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "not its own spell: no card on top");
+}
+
 /// Walker of the Grove, evoked, still leaves a 4/4 behind.
 #[test]
 fn walker_of_the_grove_leaves_an_elemental() {

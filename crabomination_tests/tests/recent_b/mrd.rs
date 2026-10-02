@@ -1613,7 +1613,7 @@ fn psychogenic_probe_burns_on_a_shuffle() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::psychogenic_probe());
     g.add_card_to_library(1, catalog::grizzly_bears());
-    let evs = vec![crabomination::game::types::GameEvent::LibraryShuffled { player: 1 }];
+    let evs = vec![crabomination::game::types::GameEvent::LibraryShuffled { player: 1, cause: None }];
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18);

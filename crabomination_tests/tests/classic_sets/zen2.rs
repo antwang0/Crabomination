@@ -635,7 +635,7 @@ fn cosis_trickster_watches_shuffles() {
     let mut g = two_player_game();
     always_yes(&mut g);
     let trick = g.add_card_to_battlefield(0, catalog::cosis_trickster());
-    g.dispatch_triggers_for_events(&[GameEvent::LibraryShuffled { player: 1 }]);
+    g.dispatch_triggers_for_events(&[GameEvent::LibraryShuffled { player: 1, cause: None }]);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(trick).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }

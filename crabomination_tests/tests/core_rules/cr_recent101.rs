@@ -160,7 +160,7 @@ fn shuffle_any_number_from_hand_ships_the_uncastable_half() {
         )
         .unwrap();
     assert!(
-        events.iter().any(|e| matches!(e, GameEvent::LibraryShuffled { player: 0 })),
+        events.iter().any(|e| matches!(e, GameEvent::LibraryShuffled { player: 0, .. })),
         "the 8-drop went back and the library was shuffled: {events:?}"
     );
     assert!(

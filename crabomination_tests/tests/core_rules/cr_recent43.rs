@@ -187,7 +187,7 @@ fn cr_103_2c_a_search_shuffle_is_an_event() {
             &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0),
         )
         .expect("search");
-    assert!(evs.iter().any(|e| matches!(e, GameEvent::LibraryShuffled { player: 1 })));
+    assert!(evs.iter().any(|e| matches!(e, GameEvent::LibraryShuffled { player: 1, .. })));
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "Psychogenic Probe saw the shuffle");

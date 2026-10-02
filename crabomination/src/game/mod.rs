@@ -26476,7 +26476,7 @@ impl GameState {
         // A one-shot top reveal (Aven Windreader) only covers the card that was
         // on top; a shuffle moves it.
         retain_cold!(self.library_tops_revealed, |s| *s != seat);
-        events.push(GameEvent::LibraryShuffled { player: seat });
+        events.push(GameEvent::LibraryShuffled { player: seat, cause: self.resolution_causer });
     }
 
     fn shuffle_hand_to_library(&mut self, seat: usize) {

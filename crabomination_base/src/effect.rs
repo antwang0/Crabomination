@@ -3947,6 +3947,11 @@ pub struct EventSpec {
     /// (`fire_spell_cast_triggers`' copy-only mode).
     #[serde(default)]
     pub or_copy: bool,
+    /// "Whenever a spell or ability causes **its controller** to shuffle"
+    /// (Widespread Panic): only a `LibraryShuffled` whose cause is the
+    /// shuffling player's own spell or ability matches.
+    #[serde(default)]
+    pub self_caused: bool,
 }
 
 /// CR 113.6b — "an ability that states which zones it functions in functions
@@ -4007,7 +4012,13 @@ impl EventSpec {
             dealer_filter: None,
             causer_filter: None,
             or_copy: false,
+            self_caused: false,
         }
+    }
+    /// "…causes its controller to shuffle" (Widespread Panic) — see `self_caused`.
+    pub fn self_caused(mut self) -> Self {
+        self.self_caused = true;
+        self
     }
     /// "Whenever you cast or copy …" (Magecraft) — see `or_copy`.
     pub fn or_copy(mut self) -> Self {
