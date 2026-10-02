@@ -5877,3 +5877,85 @@ a pod.
   bots trade on it.
 - `encode_state`'s face-down leak (step-1 note): fix when the v5 champion
   retires, not before.
+
+## Round 80 — the pod evaluation as a share of the table: the heuristic's ADOPTED at T = 60 (1.070x / 1.035x); the search's leaf read pending (2026-10-02)
+
+Pre-registration: `.ladder/run_r80_pod_share.sh` (every stage's rule is in
+its header, each written before that stage's first cell).
+
+**The defect, from a code reading.** `eval_material` scores a seat as its
+material less the **sum** of every hostile seat's, and the search's leaf
+squashes that as `sigmoid(m/30)` (`0.5 + 0.5·tanh(m/60)`). A duel starts at
+m = 0. A four-seat pod starts at m = −136 (40 life and 7 cards a seat),
+leaf 0.011, the squash's slope 1/24 of a duel's; six seats −272, leaf
+0.0001, slope ~1/2000. UCB1's exploration term (1.0) then dwarfs every gap
+between arms, and a rollout that knocks out *any* seat removes a whole
+seat from the sum (~9x the leaf, whoever it was). The heuristic's own
+comparisons don't saturate (they compare raw integers), but they price
+hurting any one opponent as much as developing oneself, and a knockout of
+the weakest seat as a whole seat's material.
+
+**The change.** `pod_soft_material` (bot.rs): with two or more living
+hostile seats, `T·logit(share)`, `share = exp(m_me/T) / Σ exp(m_s/T)` over
+the seat and the living hostile seats, `m` each seat's own material
+(`seat_material`'s terms, one battlefield walk) — the seat's material less
+a soft maximum of the opponents'. `None` otherwise, so a duel (or a pod's
+last two) runs the old difference exactly. Three opt-ins:
+`EvalWeights::pod_share_leaf` (the search's leaf only, as the share itself),
+`EvalWeights::pod_share_eval` (the heuristic's evaluation, rounded to the
+unit grid, so also the leaf through `eval_material_for_mcts`), and
+`MctsConfig::pod_lap_horizon` (horizon `max(horizon_turns, living seats)`,
+fuel in proportion). Tests: duel exactness to the bit for both, an even
+three-seat table at `−T·ln 2`, a leader's Giant worth more than a
+trailer's where the sum prices both the same, and the four-seat turn-0
+leaf at 0.25 (share) vs < 0.02 (sum).
+
+**The flatness, measured** (`CRAB_MCTS_TIMING`, new lines: leaf mean, best
+− worst arm mean a decision, how rollouts ended), a 48-game probe on a
+field outside the pre-registered list: best − worst arm mean **0.021**
+(sum) vs **0.051** (share) a decision; leaf mean 0.091 vs 0.251; no
+rollout ended on fuel (95 % on the horizon, 5 % game over). Cost 14.3 vs
+16.9 CPU-s a four-seat game with the search in one seat.
+
+**Stage scored: one seat among `dflt`** (12 four-deck fields, precons
+1+4j / 47+4j / 93+4j / 139+4j, 2,000 games each, seeds 11000+; 12 six-deck
+fields, 1,800 games, seeds 12000+):
+
+| hero | 4 seats (24,000) | 6 seats (21,600) |
+|---|---|---|
+| `podshare15` | 1.057x [1.040, 1.073] | 1.028x [1.004, 1.052] |
+| `podshare30` | 1.063x [1.047, 1.080] | 1.031x [1.007, 1.054] |
+| `podshare60` | 1.070x [1.054, 1.087] | 1.035x [1.011, 1.059] |
+
+The temperatures do not separate (paired differences within ±0.4
+points); the point estimates rise with T. Every one a candidate.
+
+**Stage census: every seat on it** (same fields and seeds), against every
+seat on `dflt`: `podshare60` turns −1.4 % / +0.0 % at four / six seats,
+undecided +0.00 / +0.01 points; `podshare30` +0.6 % / +2.1 %. The rule
+(adopt at the first of 60 / 30 / 15 within +15 % turns and +0.5 points
+undecided) **ADOPTED `pod_share_eval: 60` on the default**, control
+`podshare-off`. Unlike `leader0` (1.17x as one seat, 40-57 % longer pods
+with every seat on it), the share does not slow the table. `--bench`
+counters byte-identical; the seeded pod table re-blessed (the adoption
+alone moves it; same winners).
+
+**What the adoption also changes.** `mcts-dflt-256`'s pod leaf now squashes
+the soft material: an even four-seat table reads `sigmoid(−60·ln 3 / 30)` =
+0.10, not 0.011 — ~8.6x the old slope there, still not the share itself
+(`pod_share_leaf`). The search stage below ran on the pre-adoption binary,
+so its control is the old sum.
+
+**Stage search — RUNNING** (`mcts-dflt-256` / `mcts-share-256` /
+`mcts-sharelap-256` as the hero in a pre-adoption `dflt` field, the four-seat
+fields, 384 games each). Its rule: share − control ≥ +2.0 points, 95 % CI
+above 0 → adopt `pod_share_leaf: 30`; sharelap − share ≥ +1.5 points →
+adopt the lap horizon too. At ~23 min a field it is ~14 h of wall clock.
+
+**Not yet read.** The heuristic's cost per decision with the share on
+(one battlefield walk plus an `exp` per hostile seat per evaluation; the
+census ran beside the search stage, so its wall clock is not a reading).
+Found on the way: the core_rules ratchet
+`printed_type_line_reads_only_shrink` fails at the branch tip 830b9aabc
+(70 `definition.is_creature()` reads under game/ against a cap of 69, from
+06f58064c) — not this round's.
