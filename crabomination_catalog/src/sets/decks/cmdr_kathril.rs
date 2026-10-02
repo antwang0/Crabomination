@@ -584,11 +584,17 @@ pub fn yannik_scavenging_sentinel() -> CardDefinition {
                     return_to: ExileReturnZone::Battlefield,
                 },
             ),
-            Effect::DistributeCounters {
-                total: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
-                counter: CounterType::PlusOnePlusOne,
-                filter: R::Creature,
-                max_targets: 5,
+            // X is read once, before the division can park: an exiled token
+            // ceases to exist meanwhile and "still lets the ability
+            // distribute counters" (2020-04-17 ruling).
+            Effect::WithX {
+                x: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
+                body: Box::new(Effect::DistributeCounters {
+                    total: Value::XFromCost,
+                    counter: CounterType::PlusOnePlusOne,
+                    filter: R::Creature,
+                    max_targets: 5,
+                }),
             },
         ]))],
         ..creature(

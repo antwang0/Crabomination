@@ -306,3 +306,48 @@ fn yannik_exiles_the_chosen_creature() {
     assert!(g.exile.iter().any(|c| c.id == bear), "the chosen one is exiled");
     assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// CR 608.2d / 111.7 — the same with Yannik's controller PROMPTING and the
+/// exiled creature a token: it ceases to exist while the division is asked,
+/// and "it will still let the ability distribute counters" (2020-04-17
+/// ruling) — its power over the targets still on the battlefield.
+#[test]
+fn yannik_prompting_controller_picks_and_divides() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = pod(2);
+    let yannik = g.add_card_to_battlefield(0, catalog::yannik_scavenging_sentinel());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(bear).unwrap().is_token = true;
+    g.players[0].wants_ui = true;
+    let etb = catalog::yannik_scavenging_sentinel().triggered_abilities[0].effect.clone();
+    // The bear is both a target and the creature exiled.
+    g.stack.push(crabomination::game::types::StackItem::Trigger {
+        source: yannik,
+        controller: 0,
+        effect: Box::new(etb),
+        target: Some(Target::Permanent(wurm)),
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        trigger_player: None,
+        intervening_if: None,
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(elf)],
+        mana_spent_by_color: Vec::new(),
+        activated: false,
+        source_transformed_since_push: false,
+    });
+    let _ = g.resolve_top_of_stack();
+    assert_eq!(g.pending_decision.as_ref().expect("the exile pick").acting_player(), 0);
+    g.submit_decision(DecisionAnswer::Cards(vec![bear])).expect("exile the bear");
+    assert!(g.pending_decision.is_some(), "the division");
+    g.submit_decision(DecisionAnswer::DamageDivision(vec![2, 0])).expect("all on the wurm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the token was exiled");
+    assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
