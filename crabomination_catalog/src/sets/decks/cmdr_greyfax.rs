@@ -22,7 +22,6 @@ use crate::effect::shortcut::{battle_cry, etb, on_attack, on_dies, on_other_dies
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, u, w, x};
-use crabomination_base::tokens::clue_token;
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -77,7 +76,7 @@ fn yours(filter: R) -> Selector {
 }
 
 fn investigate(n: Value) -> Effect {
-    make(n, Arc::new(clue_token()))
+    crate::effect::shortcut::investigate_by(PlayerRef::You, n)
 }
 
 /// Assault Intercessor — first strike, menace; an opponent's creature dying

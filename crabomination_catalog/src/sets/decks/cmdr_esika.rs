@@ -20,7 +20,7 @@ use crate::effect::{
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 use crate::sets::{enters_tapped, tap_add, tap_add_any_color};
-use crabomination_base::tokens::{clue_token, treasure_token};
+use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -415,7 +415,7 @@ pub fn dennick_pious_apprentice() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).once_per_turn(),
-            effect: make(PlayerRef::You, 1, Arc::new(clue_token())),
+            effect: crate::effect::shortcut::investigate(1),
         }],
         ..legendary(creature(
             "Dennick, Pious Apparition",

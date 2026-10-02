@@ -454,6 +454,7 @@ impl Effect {
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::ExileFaceDown { body }
+            | Effect::Investigate { body }
             | Effect::DelayUntil { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
@@ -1509,7 +1510,8 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. }
-            | Effect::ExileFaceDown { body } => {
+            | Effect::ExileFaceDown { body }
+            | Effect::Investigate { body } => {
                 body.requires_target()
             }
             Effect::OnYourNextSpellCastThisTurn { body }
@@ -3045,6 +3047,7 @@ impl Effect {
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::ExileFaceDown { body }
+            | Effect::Investigate { body }
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
@@ -4005,6 +4008,7 @@ impl Effect {
             Effect::SacrificeSource => "sacrifice this".into(),
             Effect::ExileSource => "exile this".into(),
             Effect::Explore { .. } => "explore".into(),
+            Effect::Investigate { .. } => "investigate".into(),
             Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => {
                 "goad target creature".into()
             }
@@ -5434,6 +5438,7 @@ impl Effect {
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
             | Effect::ExileFaceDown { body }
+            | Effect::Investigate { body }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextAttackThisTurn { body }

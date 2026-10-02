@@ -33,7 +33,6 @@ use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, Zon
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, r, u, x, Color, ManaCost};
 use crate::sets::tap_add_any_color;
-use crabomination_base::tokens::clue_token;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -242,11 +241,7 @@ pub fn blink() -> CardDefinition {
     let shuffle = || {
         Effect::Seq(vec![
             shuffle_into_owners_library(target_filtered(R::Creature)),
-            Effect::CreateToken {
-                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                count: Value::ONE,
-                definition: Arc::new(clue_token()),
-            },
+            crate::effect::shortcut::investigate_by(PlayerRef::OwnerOf(Box::new(Selector::Target(0))), Value::ONE),
         ])
     };
     let angel_token = || Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(angel.clone()) };

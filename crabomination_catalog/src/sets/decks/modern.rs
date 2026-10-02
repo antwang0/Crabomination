@@ -16125,7 +16125,6 @@ pub fn spell_queller() -> CardDefinition {
 pub fn lonis_genetics_expert() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::Predicate;
-    use crate::game::effects::clue_token;
     CardDefinition {
         name: "Lonis, Genetics Expert",
         cost: cost(&[
@@ -16174,11 +16173,7 @@ pub fn lonis_genetics_expert() -> CardDefinition {
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::TriggerEventAmount,
-                    definition: std::sync::Arc::new(clue_token()),
-                },
+                effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::TriggerEventAmount),
             },
         ],
         ..Default::default()
@@ -18493,7 +18488,6 @@ pub fn carnage_interpreter() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
     use crate::effect::shortcut::etb;
-    use crate::game::effects::clue_token;
     CardDefinition {
         name: "Carnage Interpreter",
         cost: cost(&[
@@ -18514,11 +18508,7 @@ pub fn carnage_interpreter() -> CardDefinition {
                 amount: Value::HandSizeOf(PlayerRef::You),
                 random: false,
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(4),
-                definition: std::sync::Arc::new(clue_token()),
-            },
+            crate::effect::shortcut::investigate(4),
         ]))],
         static_abilities: vec![StaticAbility {
             description: "As long as you have one or fewer cards in hand, this creature gets +2/+2 and has menace.",

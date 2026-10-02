@@ -1523,13 +1523,21 @@ pub fn explore() -> Effect {
     Effect::Explore { who: Selector::This }
 }
 
-/// CR 701.13 — "Investigate `n`": create `n` colorless Clue artifact
-/// tokens (`{2}, Sacrifice this artifact: Draw a card.`).
+/// CR 701.16a — "investigate `n` times": `n` Clue tokens, each one an
+/// investigation (`{2}, Sacrifice this artifact: Draw a card.`).
 pub fn investigate(n: u32) -> Effect {
-    Effect::CreateToken {
-        who: PlayerRef::You,
-        count: Value::Const(n as i32),
-        definition: std::sync::Arc::new(crate::tokens::clue_token()),
+    investigate_by(PlayerRef::You, Value::Const(n as i32))
+}
+
+/// CR 701.16a — `who` investigates `count` times ("its controller
+/// investigates", "investigate X times").
+pub fn investigate_by(who: PlayerRef, count: Value) -> Effect {
+    Effect::Investigate {
+        body: Box::new(Effect::CreateToken {
+            who,
+            count,
+            definition: std::sync::Arc::new(crate::tokens::clue_token()),
+        }),
     }
 }
 

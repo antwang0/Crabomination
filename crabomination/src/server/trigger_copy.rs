@@ -21,7 +21,7 @@ fn worth_copying(e: &Effect) -> bool {
         | Effect::AddCounter { what: Selector::This | Selector::EachPermanent(_), .. } => true,
         Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), .. } => true,
         Effect::Seq(v) => v.iter().any(worth_copying),
-        Effect::MayDo { body, .. } => worth_copying(body),
+        Effect::MayDo { body, .. } | Effect::Investigate { body } => worth_copying(body),
         _ => false,
     }
 }

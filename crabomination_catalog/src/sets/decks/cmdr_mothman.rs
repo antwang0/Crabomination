@@ -522,11 +522,7 @@ pub fn nightkin_ambusher() -> CardDefinition {
 pub fn piper_wright_publick_reporter() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            on_combat_damage(Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::TriggerEventAmount,
-                definition: Arc::new(crabomination_base::tokens::clue_token()),
-            }),
+            on_combat_damage(crate::effect::shortcut::investigate_by(PlayerRef::You, Value::TriggerEventAmount)),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
                     .with_filter(trigger_is(R::HasArtifactSubtype(ArtifactSubtype::Clue))),

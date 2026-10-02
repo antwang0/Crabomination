@@ -403,11 +403,7 @@ pub fn james_wandering_dad() -> CardDefinition {
             name: "Follow Him",
             cost: cost(&[x(), u(), u()]),
             card_types: vec![CardType::Instant],
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::XFromCost,
-                definition: Arc::new(crabomination_base::tokens::clue_token()),
-            },
+            effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::XFromCost),
         })),
         ..legendary(creature(
             "James, Wandering Dad",

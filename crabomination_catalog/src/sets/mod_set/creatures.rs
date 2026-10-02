@@ -765,7 +765,6 @@ pub fn goldspan_dragon() -> CardDefinition {
 pub fn tireless_tracker() -> CardDefinition {
     use crate::card::{ArtifactSubtype, CounterType};
     use crate::effect::Predicate;
-    use crate::game::effects::clue_token;
     CardDefinition {
         name: "Tireless Tracker",
         cost: cost(&[generic(2), g()]),
@@ -783,11 +782,7 @@ pub fn tireless_tracker() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Land,
                     }),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(clue_token()),
-                },
+                effect: crate::effect::shortcut::investigate(1),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)

@@ -302,6 +302,7 @@ impl GameState {
                 i64::from(self.evaluate_value(count, ctx).max(0))
             }
             Effect::Populate { .. } => 1,
+            Effect::Investigate { body } => self.effect_token_estimate(body, ctx),
             Effect::Seq(es) => es.iter().map(|e| self.effect_token_estimate(e, ctx)).sum(),
             // A branch the estimate can't settle is priced at its larger arm.
             Effect::If { then, else_, .. } => {
@@ -345,7 +346,9 @@ impl GameState {
             Some(card)
                 if matches!(
                     card.definition.effect,
-                    crate::effect::Effect::CreateToken { .. } | crate::effect::Effect::Seq(_)
+                    crate::effect::Effect::CreateToken { .. }
+                        | crate::effect::Effect::Investigate { .. }
+                        | crate::effect::Effect::Seq(_)
                 ) =>
             {
                 ctx.source = Some(id);

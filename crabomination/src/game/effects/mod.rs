@@ -31077,6 +31077,34 @@ impl GameState {
                 r
             }
 
+            Effect::Investigate { body } => {
+                // CR 701.16a — counted off the body's own `who`/`count`, so a
+                // replacement that makes more (or no) Clues changes nothing here.
+                let (seats, n) = match &**body {
+                    Effect::CreateToken { who, count, .. } => {
+                        (self.resolve_players(who, ctx), self.evaluate_value(count, ctx).max(0) as u32)
+                    }
+                    _ => (vec![ctx.controller], 1),
+                };
+                let r = self.run_effect(body, ctx, events);
+                // A parked body (Esix's ask) resumes still wrapped and investigates then.
+                if rewrap_parked(&mut self.suspend_signal, |carried| Effect::Investigate {
+                    body: Box::new(carried),
+                }) {
+                    return r;
+                }
+                for p in seats {
+                    for _ in 0..n {
+                        let first = !self.players[p].investigated_this_turn;
+                        if first {
+                            self.players[p].investigated_this_turn = true;
+                        }
+                        events.push(GameEvent::Investigated { player: p, first_this_turn: first });
+                    }
+                }
+                r
+            }
+
             Effect::WithCastDiscards { nonland, body } => {
                 *self
                     .scratch

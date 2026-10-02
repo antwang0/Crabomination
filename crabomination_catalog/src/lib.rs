@@ -33,7 +33,7 @@ mod game {
     }
     pub mod effects {
         pub use crabomination_base::tokens::{
-            blood_token, clue_token, detective_token, eldrazi_spawn_token, food_token,
+            blood_token, detective_token, eldrazi_spawn_token, food_token,
             map_token, powerstone_token, treasure_token,
         };
     }

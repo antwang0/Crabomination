@@ -97,6 +97,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
         E::Proliferated { .. } => bits!(K::Proliferated),
         E::Foraged { .. } => bits!(K::Foraged),
+        E::Investigated { .. } => bits!(K::Investigated { first_only: false }),
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
         E::GiftGiven { .. } => bits!(K::GiftGiven),
         E::ClassLevelReached { .. } => bits!(K::ClassLevelReached),
@@ -252,6 +253,9 @@ fn event_payload_matches(
         }
         // One mask bit for every origin set: the zone is the payload.
         (EventKind::CardExiledFrom(mask), GameEvent::CardExiledFrom { from, .. }) => mask & from != 0,
+        (EventKind::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
+            !first_only || *first_this_turn
+        }
         _ => true,
     }
 }
@@ -347,6 +351,9 @@ fn reference_event_kind_matches(
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
         (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
+        (EventKind::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
+            !first_only || *first_this_turn
+        }
         (EventKind::EvidenceCollected, GameEvent::EvidenceCollected { .. }) => true,
         (EventKind::GiftGiven, GameEvent::GiftGiven { .. }) => true,
         (EventKind::ClassLevelReached, GameEvent::ClassLevelReached { .. }) => true,
@@ -1341,6 +1348,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::OpponentCausedYouToDiscard { player, .. }
         | GameEvent::Proliferated { player }
         | GameEvent::Foraged { player }
+        | GameEvent::Investigated { player, .. }
         | GameEvent::EvidenceCollected { player }
         | GameEvent::GiftGiven { player }
         | GameEvent::ClassLevelReached { player, .. }
@@ -1833,6 +1841,7 @@ mod tests {
             E::ScriedOrSurveiled { player: 0, surveil: true, looked_at: 1 },
             E::Proliferated { player: 0 },
             E::Foraged { player: 0 },
+            E::Investigated { player: 0, first_this_turn: true },
             E::EvidenceCollected { player: 0 },
             E::GiftGiven { player: 0 },
             E::ClassLevelReached { source: c, player: 0, level: 2 },
@@ -1991,6 +2000,7 @@ mod tests {
             K::DungeonCompleted,
             K::Proliferated,
             K::Foraged,
+            K::Investigated { first_only: true },
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

@@ -3691,6 +3691,13 @@ pub enum EventKind {
     /// subject and its controller the scope's actor. Matched to
     /// `GameEvent::CreatureFought`.
     Fights,
+    /// CR 701.16a — a player investigated (`Effect::Investigate`; one event
+    /// per investigation, the investigator the actor). `first_only` matches
+    /// only that player's first investigation of the turn (Erdwal
+    /// Illuminator), counted whether or not the listener was there for it.
+    /// ⚠ The last free bit of the `u128` kind mask (tag 127): the next kind
+    /// needs a wider mask or a payload on an existing kind.
+    Investigated { first_only: bool },
 }
 
 impl EventKind {
@@ -10556,6 +10563,12 @@ pub enum Effect {
     /// put into exile face down. Only a may-play holder (else the controller)
     /// may look at one (Intet, Kheru Mind-Eater, Predators' Hour).
     ExileFaceDown { body: Box<Effect> },
+
+    /// CR 701.16a — "investigate": `body` is the Clue `CreateToken`, and each
+    /// Clue its `count` asks for is one investigation by each player its
+    /// `who` names (`GameEvent::Investigated`), however many tokens a
+    /// replacement actually makes. Built by `shortcut::investigate*`.
+    Investigate { body: Box<Effect> },
 
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,

@@ -525,11 +525,7 @@ pub fn hard_evidence() -> CardDefinition {
                     ..Default::default()
                 }),
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-            },
+            crate::effect::shortcut::investigate(1),
         ]),
         ..Default::default()
     }
@@ -1342,11 +1338,7 @@ pub fn funnel_web_recluse() -> CardDefinition {
             cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
                 at_least: Value::ONE,
             },
-            then: Box::new(Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-            }),
+            then: Box::new(crate::effect::shortcut::investigate(1)),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
@@ -1602,11 +1594,7 @@ pub fn floodhound() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-            },
+            effect: crate::effect::shortcut::investigate(1),
             ..Default::default()
         }],
         ..Default::default()

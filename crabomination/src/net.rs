@@ -2842,6 +2842,8 @@ pub enum GameEventWire {
     Proliferated { player: usize },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
+    /// Wire mirror of `GameEvent::Investigated` (CR 701.16a).
+    Investigated { player: usize },
     /// Wire mirror of `GameEvent::EvidenceCollected` (CR 701.59).
     EvidenceCollected { player: usize },
     /// Wire mirror of `GameEvent::GiftGiven` (CR 702.165).
@@ -3095,6 +3097,7 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::Proliferated { player: *player }
             }
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
+            GameEvent::Investigated { player, .. } => GameEventWire::Investigated { player: *player },
             GameEvent::EvidenceCollected { player } => {
                 GameEventWire::EvidenceCollected { player: *player }
             }
@@ -3481,6 +3484,7 @@ impl GameEventWire {
             E::NthCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),
+            E::Investigated { player } => format!("{} investigates", pn(*player)),
             E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),
             E::GiftGiven { player } => format!("{} gives a gift", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),

@@ -16,7 +16,6 @@ use crate::effect::shortcut::{choose_one_then, chosen_one, etb, partner_with_sea
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, cost, generic, u, w, x};
-use crabomination_base::tokens::clue_token;
 use std::sync::Arc;
 
 fn creature(
@@ -93,11 +92,7 @@ fn make_spirits(count: Value) -> Effect {
 }
 
 fn clues(count: Value) -> Effect {
-    Effect::CreateToken {
-        who: PlayerRef::You,
-        count,
-        definition: Arc::new(clue_token()),
-    }
+    crate::effect::shortcut::investigate_by(PlayerRef::You, count)
 }
 
 /// "Tap up to one target creature."

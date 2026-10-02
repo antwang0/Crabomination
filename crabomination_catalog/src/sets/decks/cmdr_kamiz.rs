@@ -545,7 +545,7 @@ pub fn tivit_seller_of_secrets() -> CardDefinition {
         options: vec![
             VoteOption::new(
                 "evidence",
-                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(clue_token()) },
+                crate::effect::shortcut::investigate(1),
             ),
             VoteOption::new(
                 "bribery",

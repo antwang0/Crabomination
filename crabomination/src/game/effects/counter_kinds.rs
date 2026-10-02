@@ -244,11 +244,10 @@ impl GameState {
         }
         if nontoken > 0 {
             let _ = self.run_effect(
-                &Effect::CreateToken {
-                    who: PlayerRef::Seat(owner_seat),
-                    count: Value::Const(nontoken),
-                    definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-                },
+                &crabomination_base::effect::shortcut::investigate_by(
+                    PlayerRef::Seat(owner_seat),
+                    Value::Const(nontoken),
+                ),
                 ctx,
                 events,
             );

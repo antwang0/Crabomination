@@ -2909,11 +2909,7 @@ pub fn fateful_absence() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-            },
+            crate::effect::shortcut::investigate_by(PlayerRef::ControllerOf(Box::new(Selector::Target(0))), Value::Const(1)),
             Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
@@ -3282,15 +3278,11 @@ pub fn secrets_of_the_key() -> CardDefinition {
         name: "Secrets of the Key",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::IfPred {
+        effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::IfPred {
                 pred: Box::new(Predicate::CastFromGraveyard),
                 then: Box::new(Value::Const(2)),
                 else_: Box::new(Value::ONE),
-            },
-            definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-        },
+            }),
         keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
         ..Default::default()
     }

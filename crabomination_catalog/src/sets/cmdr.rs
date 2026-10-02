@@ -511,13 +511,9 @@ pub fn sophina_spearsage_deserter() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Menace, Keyword::PartnerLabel("Friends forever".into())],
-        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::count(Selector::EachPermanent(
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(crate::effect::shortcut::investigate_by(PlayerRef::You, Value::count(Selector::EachPermanent(
                 R::Creature.and(R::IsAttacking).and(R::IsToken.negate()),
-            )),
-            definition: std::sync::Arc::new(crate::game::effects::clue_token()),
-        })],
+            ))))],
         ..Default::default()
     }
 }

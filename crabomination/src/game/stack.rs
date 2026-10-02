@@ -308,7 +308,8 @@ impl GameState {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
-            | Effect::ExileFaceDown { body } => Self::governing_modal(body),
+            | Effect::ExileFaceDown { body }
+            | Effect::Investigate { body } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
             }
@@ -4768,6 +4769,7 @@ impl GameState {
             }
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
+            pl.investigated_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.
             pl.face_down_activity_this_turn = false;
             // Warped Space's once-per-turn free cast from exile.

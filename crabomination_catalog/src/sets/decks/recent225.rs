@@ -527,11 +527,7 @@ pub fn wojek_investigator() -> CardDefinition {
             .with_filter(Predicate::AnOpponentHasMoreCardsInHand),
             // "once for each opponent who has more cards in hand than you",
             // counted as it resolves.
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::PlayersWithGreaterTally(crate::card::PlayerTally::CardsInHand),
-                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
-            },
+            effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::PlayersWithGreaterTally(crate::card::PlayerTally::CardsInHand)),
         }],
         ..Default::default()
     }

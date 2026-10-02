@@ -8,7 +8,6 @@ use crate::card::{
 };
 use crate::effect::shortcut::{draw, etb, lose_life, on_attack, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate};
-use crate::game::effects::clue_token;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Repeat Offender — {1}{B} 2/1 Human Assassin. "{2}{B}: If this creature is
@@ -150,11 +149,7 @@ pub fn deduce() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             draw(1),
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(clue_token()),
-            },
+            crate::effect::shortcut::investigate(1),
         ]),
         ..Default::default()
     }
@@ -172,11 +167,7 @@ pub fn novice_inspector() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: std::sync::Arc::new(clue_token()),
-        })],
+        triggered_abilities: vec![etb(crate::effect::shortcut::investigate(1))],
         ..Default::default()
     }
 }
@@ -269,11 +260,7 @@ pub fn cold_case_cracker() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![on_dies(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: std::sync::Arc::new(clue_token()),
-        })],
+        triggered_abilities: vec![on_dies(crate::effect::shortcut::investigate(1))],
         ..Default::default()
     }
 }
@@ -483,11 +470,7 @@ pub fn teysa_opulent_oligarch() -> CardDefinition {
                     EventKind::StepBegins(crate::game::TurnStep::End),
                     EventScope::YourControl,
                 ),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::OpponentsWhoLostLifeThisTurn,
-                    definition: std::sync::Arc::new(clue_token()),
-                },
+                effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::OpponentsWhoLostLifeThisTurn),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
@@ -976,17 +959,13 @@ pub fn officious_interrogation() -> CardDefinition {
         name: "Officious Interrogation",
         cost: cost(&[w(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::CountMatching {
+        effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::CountMatching {
                 sel: Box::new(Selector::ControlledBy {
                     who: PlayerRef::Target(0),
                     filter: SelectionRequirement::Creature,
                 }),
                 filter: SelectionRequirement::Any,
-            },
-            definition: std::sync::Arc::new(clue_token()),
-        },
+            }),
         ..Default::default()
     }
 }

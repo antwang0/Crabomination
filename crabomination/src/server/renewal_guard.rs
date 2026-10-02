@@ -11,6 +11,7 @@ fn created_token_names(e: &Effect, out: &mut Vec<String>) {
             out.push(definition.name.clone())
         }
         Effect::Seq(steps) => steps.iter().for_each(|s| created_token_names(s, out)),
+        Effect::Investigate { body } => created_token_names(body, out),
         _ => {}
     }
 }

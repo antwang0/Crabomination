@@ -2786,6 +2786,9 @@ pub enum GameEvent {
     /// CR 701.61 — `player` foraged (exiled three graveyard cards or sacrificed
     /// a Food). Powers "whenever you forage" payoffs.
     Foraged { player: usize },
+    /// CR 701.16a — `player` investigated once (`Effect::Investigate`);
+    /// `first_this_turn` marks their first investigation of the turn.
+    Investigated { player: usize, first_this_turn: bool },
     /// CR 701.59 — `player` collected evidence (as a cost or via
     /// `Effect::CollectEvidence`). Powers "whenever you collect evidence"
     /// payoffs (Surveillance Monitor, Evidence Examiner).
