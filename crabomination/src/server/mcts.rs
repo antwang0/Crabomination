@@ -110,6 +110,38 @@ pub mod timing {
     pub static ROLLOUTS: AtomicU64 = AtomicU64::new(0);
     pub static SIM_ACTIONS: AtomicU64 = AtomicU64::new(0);
     pub static DECISIONS: AtomicU64 = AtomicU64::new(0);
+    /// Leaf rewards: count, sum and sum of squares, in billionths — how
+    /// flat the reward the bandit sees is.
+    pub static LEAF_N: AtomicU64 = AtomicU64::new(0);
+    pub static LEAF_SUM: AtomicU64 = AtomicU64::new(0);
+    pub static LEAF_SQ: AtomicU64 = AtomicU64::new(0);
+    /// Per UCB1 decision, the best arm's mean less the worst's, summed in
+    /// billionths — what separation the search actually found.
+    pub static SPREAD_SUM: AtomicU64 = AtomicU64::new(0);
+    pub static SPREAD_N: AtomicU64 = AtomicU64::new(0);
+    /// How rollouts stopped: game over, turn horizon, action fuel, stale.
+    pub static ENDS: [AtomicU64; 4] = [const { AtomicU64::new(0) }; 4];
+
+    pub fn leaf_value(r: f64) {
+        if enabled() {
+            LEAF_N.fetch_add(1, Relaxed);
+            LEAF_SUM.fetch_add((r * 1e9) as u64, Relaxed);
+            LEAF_SQ.fetch_add((r * r * 1e9) as u64, Relaxed);
+        }
+    }
+
+    pub fn spread(s: f64) {
+        if enabled() {
+            SPREAD_N.fetch_add(1, Relaxed);
+            SPREAD_SUM.fetch_add((s * 1e9) as u64, Relaxed);
+        }
+    }
+
+    pub fn rollout_end(kind: usize) {
+        if enabled() {
+            ENDS[kind].fetch_add(1, Relaxed);
+        }
+    }
 
     pub fn enabled() -> bool {
         static ON: OnceLock<bool> = OnceLock::new();
@@ -173,7 +205,21 @@ pub mod timing {
                 ns as f64 / 1e3 / rollouts as f64,
             ));
         }
-        out.push_str(&format!("  {:<12} {:>9.2} ms", "total", total as f64 / 1e6));
+        out.push_str(&format!("  {:<12} {:>9.2} ms\n", "total", total as f64 / 1e6));
+        let n = LEAF_N.load(Relaxed).max(1) as f64;
+        let mean = LEAF_SUM.load(Relaxed) as f64 / 1e9 / n;
+        let sd = (LEAF_SQ.load(Relaxed) as f64 / 1e9 / n - mean * mean).max(0.0).sqrt();
+        let k = SPREAD_N.load(Relaxed);
+        out.push_str(&format!(
+            "  leaf reward mean {mean:.4} sd {sd:.4} over {}; best - worst arm mean {:.4} over {k} decisions\n",
+            LEAF_N.load(Relaxed),
+            SPREAD_SUM.load(Relaxed) as f64 / 1e9 / k.max(1) as f64,
+        ));
+        let ends: Vec<u64> = ENDS.iter().map(|e| e.load(Relaxed)).collect();
+        out.push_str(&format!(
+            "  rollouts ended: game over {} / horizon {} / fuel {} / stale {}",
+            ends[0], ends[1], ends[2], ends[3],
+        ));
         Some(out)
     }
 }
@@ -241,6 +287,12 @@ pub struct MctsConfig {
     /// Rollouts are depth-limited rather than run to a result because a
     /// full game is far too expensive to repeat here.
     pub horizon_turns: u32,
+    /// At least one lap of the table: the horizon is
+    /// `max(horizon_turns, living seats)`, so a pod rollout reaches every
+    /// opponent's turn before scoring (three turns stop short of the third
+    /// opponent at four seats, of three at six). The rollout's action fuel
+    /// grows in proportion. A duel's horizon of 3 is unchanged.
+    pub pod_lap_horizon: bool,
     /// UCB1 exploration constant, scaled against the normalised reward.
     pub exploration: f64,
     /// Weights for the leaf evaluation and for the rollout policy.
@@ -352,6 +404,7 @@ impl Default for MctsConfig {
         Self {
             iterations: 24,
             horizon_turns: 2,
+            pod_lap_horizon: false,
             exploration: 1.0,
             weights: EvalWeights::default(),
             heuristic_rollouts: false,
@@ -592,6 +645,12 @@ impl MctsBot {
     /// would make the exploration constant meaningless.
     fn reward(&self, g: &GameState, seat: usize) -> f64 {
         let _t = timing::lap(&timing::LEAF_NS);
+        let r = self.reward_inner(g, seat);
+        timing::leaf_value(r);
+        r
+    }
+
+    fn reward_inner(&self, g: &GameState, seat: usize) -> f64 {
         if let Some(over) = g.game_over {
             return match over {
                 Some(w) if w == seat => 1.0,
@@ -611,6 +670,21 @@ impl MctsBot {
             && let Some(p) = super::net_eval::win_prob(g, seat, self.cfg.weights.net_slot)
         {
             return p as f64;
+        }
+        // A pod leaf as `seat`'s share of the table (see
+        // `EvalWeights::pod_share_leaf`); `None` below two living hostile
+        // seats, where the squash below is that share already.
+        let w = &self.cfg.weights;
+        if w.pod_share_leaf != 0 {
+            if !g.players[seat].is_alive() {
+                return 0.0;
+            }
+            if let Some(soft) =
+                g.with_frozen_layers(|g| super::bot::pod_soft_material(g, seat, w, w.pod_share_leaf, false))
+            {
+                let t = f64::from(w.pod_share_leaf) * f64::from(w.unit.max(1));
+                return 1.0 / (1.0 + (-soft / t).exp());
+            }
         }
         let material = super::bot::eval_material_for_mcts(g, seat, &self.cfg.weights) as f64;
         // Logistic squash. The scale is set so a swing of roughly one
@@ -653,7 +727,13 @@ impl MctsBot {
         }
         let _t = timing::lap(&timing::SIM_NS);
         let mut actions = 0u64;
-        let stop_turn = g.turn_number + self.cfg.horizon_turns;
+        let horizon = if self.cfg.pod_lap_horizon {
+            let living = g.players.iter().filter(|p| p.is_alive()).count() as u32;
+            self.cfg.horizon_turns.max(living)
+        } else {
+            self.cfg.horizon_turns
+        };
+        let stop_turn = g.turn_number + horizon;
         let mut policy: Vec<HeuristicBot> = (0..g.players.len())
             .map(|_| {
                 if self.cfg.heuristic_rollouts {
@@ -663,7 +743,13 @@ impl MctsBot {
                 }
             })
             .collect();
-        let mut fuel = 400u32;
+        // 400 at the profile's own horizon; a lap horizon buys fuel in
+        // proportion, so the longer rollout is not cut short by it.
+        let mut fuel = if horizon > self.cfg.horizon_turns {
+            400 * horizon / self.cfg.horizon_turns.max(1)
+        } else {
+            400u32
+        };
         let mut stale = 0u32;
         while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 && (stale as usize) < STALE_ROUNDS {
             fuel -= 1;
@@ -714,6 +800,15 @@ impl MctsBot {
             if acted { stale = 0 } else { stale += 1 }
         }
         timing::count(&timing::SIM_ACTIONS, actions);
+        timing::rollout_end(if g.is_game_over() {
+            0
+        } else if g.turn_number >= stop_turn {
+            1
+        } else if fuel == 0 {
+            2
+        } else {
+            3
+        });
         drop(_t);
         self.reward(&g, seat)
     }
@@ -920,6 +1015,13 @@ impl MctsBot {
         self.ucb1_spend(
             state, seat, &candidates, &priors, &mut visits, &mut total, done, base, hard_max,
         );
+        if timing::enabled() {
+            let means = (0..n).filter(|&i| visits[i] != u32::MAX && visits[i] > 0).map(|i| total[i] / visits[i] as f64);
+            let (lo, hi) = means.fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), m| (lo.min(m), hi.max(m)));
+            if hi >= lo {
+                timing::spread(hi - lo);
+            }
+        }
         // Highest mean reward wins. (Robust-child — most visits — is the
         // usual MCTS choice, but with this few iterations the visit counts
         // are dominated by the seeding pass and carry little signal.)
@@ -1327,6 +1429,43 @@ mod tests {
             toughness: t,
             ..Default::default()
         }
+    }
+
+    /// The pod share leaf runs only past two living hostile seats, so a duel
+    /// scores exactly as before; at an even four-seat table it reads the
+    /// fair 1/4, where the sum-of-opponents squash reads ~0.011 (the
+    /// saturation `EvalWeights::pod_share_leaf` documents).
+    #[test]
+    fn pod_share_leaf_is_the_old_squash_in_a_duel_and_a_fair_share_in_a_pod() {
+        let (old, share) = (
+            MctsBot::new(MctsConfig::default()),
+            MctsBot::new(MctsConfig { weights: EvalWeights::pod_share_leaf_on(30), ..MctsConfig::default() }),
+        );
+        let mut duel = crate::game::two_player_game();
+        duel.add_card_to_battlefield(0, creature("Ox", 3, 3));
+        assert_eq!(old.reward(&duel, 0).to_bits(), share.reward(&duel, 0).to_bits());
+        assert!(old.reward(&duel, 0) > 0.5);
+
+        // Turn 0 of a four-seat pod: 40 life and seven cards a seat.
+        let mut pod = crate::game::multi_player_game(4);
+        for seat in 0..4 {
+            pod.players[seat].life = 40;
+            for _ in 0..7 {
+                pod.add_card_to_hand(seat, crate::catalog::forest());
+            }
+        }
+        assert!((share.reward(&pod, 0) - 0.25).abs() < 1e-12);
+        assert!(old.reward(&pod, 0) < 0.02, "the sum squash saturates: {}", old.reward(&pod, 0));
+        // One more creature moves the share; the old reward barely notices.
+        let mut ahead = pod.clone();
+        ahead.add_card_to_battlefield(0, creature("Ox", 3, 3));
+        let lift = |b: &MctsBot| b.reward(&ahead, 0) - b.reward(&pod, 0);
+        assert!(lift(&share) > 4.0 * lift(&old), "share {} vs old {}", lift(&share), lift(&old));
+        // A seat that has left the game holds no share of it.
+        let mut out = pod.clone();
+        out.players[0].life = 0;
+        out.players[0].eliminated = true;
+        assert_eq!(share.reward(&out, 0), 0.0);
     }
 
     /// Pinned to one seed, a bot's randomness replays: the tie-break jitter,

@@ -280,6 +280,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "podkw25" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(25))),
         "podkw50" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(50))),
         "podkw100" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(100))),
+        // Pod positions evaluated as a share of the table (a soft maximum
+        // of the opponents' material, not their sum) at temperature 15 / 30
+        // / 60. A pod question: `--commander --a podshare30 --b dflt`.
+        "podshare15" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(15))),
+        "podshare30" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(30))),
+        "podshare60" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(60))),
         // The attack chain (round 55): grow the declaration one creature
         // at a time from "nobody", each step priced by the attack sim,
         // and offer the finished set beside the holdback menu. Gate as A
@@ -554,6 +560,30 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             iterations: 256,
             horizon_turns: 3,
             weights: EvalWeights::default(),
+            ..MctsConfig::default()
+        })),
+        // The pod search's leaf as a share of the table
+        // (`EvalWeights::pod_share_leaf`), at least one lap of the table
+        // deep (`MctsConfig::pod_lap_horizon`), and both — each against
+        // `mcts-dflt-256` as a hero in a `dflt` field. Duels are untouched.
+        "mcts-share-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::pod_share_leaf_on(30),
+            ..MctsConfig::default()
+        })),
+        "mcts-lap-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            pod_lap_horizon: true,
+            weights: EvalWeights::default(),
+            ..MctsConfig::default()
+        })),
+        "mcts-sharelap-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            pod_lap_horizon: true,
+            weights: EvalWeights::pod_share_leaf_on(30),
             ..MctsConfig::default()
         })),
         // The client's search with its rollouts spread over workers
@@ -1434,6 +1464,16 @@ fn run_pod_ab(
         (share + 1.96 * se) / null,
     );
     println!("  turns/game {:.2}   actions/game {:.1}", t.mean_turns(), t.total_actions as f64 / f64::from(t.games.max(1)));
+    // `CRAB_POD_GROUPS=1`: every deal group's hero wins, so two arms run on
+    // the same field and seed can be paired group by group.
+    if std::env::var_os("CRAB_POD_GROUPS").is_some() {
+        for (g, (w, n)) in &total.groups {
+            println!("  group {g} {w}/{n}");
+        }
+    }
+    if let Some(t) = crabomination::server::mcts::timing::report() {
+        println!("{t}");
+    }
     i32::from(t.games == 0)
 }
 

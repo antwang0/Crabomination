@@ -1165,6 +1165,30 @@ pub struct EvalWeights {
     /// is a 6/6 to it — so the keyword term adds little that moves a
     /// decision. Profiles `podkw25` / `podkw50` / `podkw100`.
     pub pod_keyword_pct: i32,
+    /// The search's leaf at a table of three or more competing seats, as
+    /// `seat`'s *share* of the table: `exp(m_seat/T) / Σ exp(m_s/T)` over
+    /// itself and every living hostile seat, `m` each seat's own material
+    /// ([`pod_soft_material`]), `T` this many `unit`s. 0 = off.
+    ///
+    /// The default leaf squashes [`eval_material`] — `seat`'s material
+    /// minus the **sum** of every hostile seat's — and that sum is what a
+    /// pod breaks: at four seats an even turn-0 table reads −136 and the
+    /// reward 0.011 (six: 0.0001), where the squash's slope is 1/24 (six:
+    /// ~1/2000) of a duel's, and a rollout that knocks out *any* seat
+    /// lifts it ~9x whoever that seat was. With two seats left the share
+    /// is exactly the old squash at `T` = 30 (`sigmoid(m/30)` is
+    /// `0.5 + 0.5·tanh(m/60)`), and the old path runs, so duels are
+    /// untouched by construction. Read only by `MctsBot::reward`.
+    pub pod_share_leaf: u16,
+    /// [`pod_share_leaf`](Self::pod_share_leaf)'s share as the heuristic's
+    /// own evaluation: at three or more competing seats [`eval_material`]
+    /// returns `T·logit(share)` — `seat`'s material less a soft maximum
+    /// of the hostile seats' (`T·ln Σ exp(m_s/T)`) instead of their sum —
+    /// rounded to the `unit` grid. Hurting one of three equal opponents is
+    /// then worth a third of developing oneself, not as much; hurting the
+    /// leader is worth the most. Moves every scored pick in a pod and,
+    /// through `eval_material_for_mcts`, the search's leaf. 0 = off.
+    pub pod_share_eval: u16,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -1352,6 +1376,8 @@ impl EvalWeights {
             pod_horizon: false,
             leader_target: 0,
             pod_keyword_pct: 0,
+            pod_share_leaf: 0,
+            pod_share_eval: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1466,6 +1492,8 @@ impl EvalWeights {
             pod_horizon: false,
             leader_target: 0,
             pod_keyword_pct: 0,
+            pod_share_leaf: 0,
+            pod_share_eval: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1563,6 +1591,8 @@ impl EvalWeights {
             pod_horizon: false,
             leader_target: 0,
             pod_keyword_pct: 0,
+            pod_share_leaf: 0,
+            pod_share_eval: 0,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -2732,6 +2762,21 @@ impl EvalWeights {
     /// `podkw25` / `podkw50` / `podkw100`).
     pub const fn pod_keywords_on(pct: i32) -> Self {
         Self { pod_keyword_pct: pct, ..Self::default_const() }
+    }
+
+    /// The default with the search's pod leaf scored as a share of the
+    /// table at temperature `t` — the opt-in for
+    /// [`pod_share_leaf`](Self::pod_share_leaf) (profile `mcts-share-256`).
+    pub const fn pod_share_leaf_on(t: u16) -> Self {
+        Self { pod_share_leaf: t, ..Self::default_const() }
+    }
+
+    /// The default evaluating every pod position as a share of the table at
+    /// temperature `t` — the opt-in for
+    /// [`pod_share_eval`](Self::pod_share_eval) (profiles `podshare15` /
+    /// `podshare30` / `podshare60`).
+    pub const fn pod_share_eval_on(t: u16) -> Self {
+        Self { pod_share_eval: t, ..Self::default_const() }
     }
 
     /// The default aiming pod attacks at the table leader once it leads the
@@ -11952,20 +11997,86 @@ fn table_leader(state: &GameState, seat: usize, margin_pct: u32) -> Option<usize
 fn seat_material(state: &GameState, q: usize, w: &EvalWeights) -> i32 {
     let mut m = 0i32;
     for c in state.battlefield.iter().filter(|c| c.controller == q) {
-        m += if c.definition.is_land() {
-            2 * w.unit
-        } else {
-            let mut pv = permanent_value_with(state, c.id, Some(c), w);
-            if c.definition.is_planeswalker() {
-                pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32 * w.unit;
-            }
-            3 * pv
-        };
+        m += permanent_material(state, c, w);
     }
+    m + player_material(state, q, w)
+}
+
+/// One permanent's term in [`seat_material`].
+fn permanent_material(state: &GameState, c: &crate::card::CardInstance, w: &EvalWeights) -> i32 {
+    if c.definition.is_land() {
+        2 * w.unit
+    } else {
+        let mut pv = permanent_value_with(state, c.id, Some(c), w);
+        if c.definition.is_planeswalker() {
+            pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32 * w.unit;
+        }
+        3 * pv
+    }
+}
+
+/// The player terms of [`seat_material`]: hand, emblems, crown, initiative,
+/// life.
+fn player_material(state: &GameState, q: usize, w: &EvalWeights) -> i32 {
     let p = &state.players[q];
     let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, q, e)).sum();
     let crown = i32::from(state.monarch == Some(q)) * 7 + i32::from(state.initiative == Some(q)) * 9;
-    m + (4 * p.hand.len() as i32 + emblems + crown) * w.unit + life_value(state.effective_life(q), w)
+    (4 * p.hand.len() as i32 + emblems + crown) * w.unit + life_value(state.effective_life(q), w)
+}
+
+/// `seat`'s material against a table of two or more living hostile seats,
+/// scored as its share of the table rather than against the table's sum:
+/// `T·logit(share)`, where `share = exp(m_seat/T) / Σ exp(m_s/T)` over
+/// `seat` and every living hostile seat, `m` each one's own material
+/// ([`seat_material`]'s terms, one battlefield walk), and `T` = `t` units.
+/// Equivalently `seat`'s material less a soft maximum of the opponents'
+/// (`T·ln Σ_hostile exp(m_s/T)`). `None` with fewer than two living
+/// hostile seats — a duel, or a pod down to its last two — where the
+/// callers keep the plain difference, exactly.
+///
+/// Counted as [`eval_material`] counts: a dead `seat` keeps its battlefield
+/// term (none, once CR 800.4a has run) and loses its player term; a
+/// teammate is neither for nor against. `blind_to_sick` zeroes `seat`'s own
+/// summoning-sick creatures, as `eval_material_summon_sick_blind` does. See
+/// [`EvalWeights::pod_share_leaf`] for why the sum is the wrong shape.
+pub(crate) fn pod_soft_material(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    t: u16,
+    blind_to_sick: bool,
+) -> Option<f64> {
+    let n = state.players.len();
+    let hostile = |s: usize| s != seat && state.players[s].is_alive() && !state.same_team(s, seat);
+    if (0..n).filter(|&s| hostile(s)).count() < 2 {
+        return None;
+    }
+    let mut m: smallvec::SmallVec<[i32; 8]> = smallvec::smallvec![0; n];
+    for c in &state.battlefield {
+        let q = c.controller;
+        if q >= n || (q != seat && !hostile(q)) {
+            continue;
+        }
+        let sick = blind_to_sick
+            && q == seat
+            && c.definition.is_creature()
+            && c.summoning_sick
+            && !c.has_keyword(&crate::card::Keyword::Haste);
+        if !sick {
+            m[q] += permanent_material(state, c, w);
+        }
+    }
+    for (q, mq) in m.iter_mut().enumerate() {
+        if (q == seat && state.players[q].is_alive()) || hostile(q) {
+            *mq += player_material(state, q, w);
+        }
+    }
+    let t = f64::from(t) * f64::from(w.unit.max(1));
+    let d: smallvec::SmallVec<[f64; 8]> =
+        (0..n).filter(|&s| hostile(s)).map(|s| f64::from(m[s] - m[seat]) / t).collect();
+    let top = d.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let lse = top + d.iter().map(|x| (x - top).exp()).sum::<f64>().ln();
+    Some(-t * lse)
 }
 
 fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target: u8) -> Vec<Attack> {
@@ -18448,6 +18559,11 @@ fn eval_material_inner(
             None => 0,
         };
     }
+    if w.pod_share_eval != 0
+        && let Some(soft) = pod_soft_material(state, seat, w, w.pod_share_eval, blind_to_sick)
+    {
+        return soft.round() as i32;
+    }
     let mut v = 0i32;
     // `same_team` is a function of the *seat*, not of the permanent, and both
     // loops below asked it once per element — 55,664 calls a six-game `cube`
@@ -22447,6 +22563,38 @@ mod tests {
         let (near, far) = (EvalWeights::pod_horizon_off(), EvalWeights::default());
         assert!(score(&near, &swing) > score(&near, &[]), "one turn out, the swing is free damage");
         assert!(score(&far, &swing) < score(&far, &[]), "through seat 2's turn, the swing loses the game");
+    }
+
+    /// `pod_share_eval` is the duel's plain difference, exactly, and at three
+    /// seats weighs the leader: one Hill Giant off a leader with two is worth
+    /// more than one off a trailer with one, where the sum prices both the
+    /// same (each leaves two Giants across the table).
+    #[test]
+    fn pod_share_eval_is_the_duel_difference_and_weighs_the_leader() {
+        let (share, sum) = (EvalWeights::pod_share_eval_on(30), EvalWeights::default());
+        let mut duel = two_player_game();
+        duel.add_card_to_battlefield(0, catalog::grizzly_bears());
+        duel.add_card_to_battlefield(1, catalog::hill_giant());
+        assert!(pod_soft_material(&duel, 0, &share, 30, false).is_none(), "one hostile seat: no share");
+        assert_eq!(eval_material(&duel, 0, &share), eval_material(&duel, 0, &sum));
+
+        // An even three-seat table is a third of it: T·logit(1/3) = −T·ln 2.
+        let even = crate::game::multi_player_game(3);
+        let soft = pod_soft_material(&even, 0, &share, 30, false).expect("two hostile seats");
+        assert!((soft + 30.0 * 2f64.ln()).abs() < 1e-9, "{soft}");
+
+        let table = |giants: [usize; 2]| {
+            let mut g = crate::game::multi_player_game(3);
+            for (i, n) in giants.into_iter().enumerate() {
+                for _ in 0..n {
+                    g.add_card_to_battlefield(i + 1, catalog::hill_giant());
+                }
+            }
+            g
+        };
+        let (hit_leader, hit_trailer) = (table([1, 1]), table([2, 0]));
+        assert_eq!(eval_material(&hit_leader, 0, &sum), eval_material(&hit_trailer, 0, &sum));
+        assert!(eval_material(&hit_leader, 0, &share) > eval_material(&hit_trailer, 0, &share));
     }
 
     /// Helper: a 1/1 creature with one extra keyword for attack-filter tests.
