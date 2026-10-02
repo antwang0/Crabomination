@@ -2981,7 +2981,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::SetSaddled { .. } => "Saddle",
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
-        Effect::SetBasePT { .. } => "Set base P/T",
+        Effect::SetBasePT { .. } | Effect::SetBasePtLive { .. } => "Set base P/T",
         Effect::SwitchPT { .. } => "Switch P/T",
         Effect::Process { then, .. } => {
             // Surface the rider's label — the "process from exile" step

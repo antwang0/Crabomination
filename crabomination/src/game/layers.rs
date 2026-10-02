@@ -156,6 +156,10 @@ pub enum Modification {
     /// Mirror of `SetPower`; later wins by timestamp; `SetPowerToughness` (both
     /// halves) overrides it when its timestamp is later.
     SetToughness(i32),             // 7b
+    /// 7b — base power / toughness each a `Value`, read with the affected
+    /// permanent's controller as "you" on every gather (Svogthos). The gather
+    /// rewrites it to `SetPowerToughness` before any layer applies it.
+    SetPowerToughnessLive(Box<(crate::effect::Value, crate::effect::Value)>),
     ModifyPower(i32),              // 7c
     ModifyToughness(i32),          // 7c
     ModifyPowerToughness(i32, i32),// 7c
@@ -207,6 +211,8 @@ pub mod mod_families {
     /// [`KEYWORD`] — see [`ContinuousEffects::any_in_family`], which is the
     /// guard that now makes that mistake a test failure.
     pub const KEYWORD_EDIT: u32 = 1 << 8;
+    /// `SetPowerToughnessLive` — the gather's rewrite pass asks for it.
+    pub const LIVE_PT: u32 = 1 << 9;
     /// The fold is computed; bit 31, so a zero word is "unknown".
     pub(super) const VALID: u32 = 1 << 31;
 }
@@ -236,6 +242,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::AddKeyword(_) => F::KEYWORD,
         M::RemoveKeyword(_) | M::CantHaveKeyword(_) | M::ReplaceColorWord(..) => F::KEYWORD_EDIT,
         M::RemoveAllAbilities => F::STRIP,
+        M::SetPowerToughnessLive(_) => F::LIVE_PT,
         // Family-less, each for the same reason: **nothing gates on it**. The
         // requirement walker's `has_stype` and `has_atype` closures read the
         // computed view unconditionally, and controller changes are asked
@@ -1373,6 +1380,8 @@ fn compute_permanent_pass(
                 set_pt = Some((mv, mv));
                 set_power_only = None;
             }
+            // Rewritten by the gather; one that reaches here sets nothing.
+            Modification::SetPowerToughnessLive(_) => {}
             Modification::SetPower(p) => set_power_only = Some(*p),
             Modification::SetToughness(t) => set_toughness_only = Some(*t),
             Modification::ModifyPower(n) => mod_power += n,

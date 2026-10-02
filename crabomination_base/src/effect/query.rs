@@ -1891,7 +1891,8 @@ impl Effect {
             Effect::DoublePower { what, times, .. } => {
                 sel_has_target(what) || value_has_target(times)
             }
-            Effect::SetBasePT { what, power, toughness, .. } => {
+            Effect::SetBasePT { what, power, toughness, .. }
+            | Effect::SetBasePtLive { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::SwitchPT { what, .. } => sel_has_target(what),
@@ -2765,6 +2766,7 @@ impl Effect {
             | Effect::ReturnDyingSubjectAttachmentsTo { host: target } => sel_filter(target),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
+            | Effect::SetBasePtLive { what, .. }
             | Effect::SwitchPT { what, .. }
             | Effect::DoublePower { what, .. } => {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
@@ -3359,7 +3361,7 @@ impl Effect {
             // adjacent effect to neutralize attackers. The bot prefers
             // an opp creature unless the toughness bump is the bigger
             // tell.
-            Effect::SetBasePT { .. } => false,
+            Effect::SetBasePT { .. } | Effect::SetBasePtLive { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
             Effect::BecomeCreature { .. } | Effect::BecomeCreatureLosingTypes { .. } => true,
             Effect::AnimateAsCreature { .. } => true,
@@ -4059,6 +4061,9 @@ impl Effect {
             }
             Effect::SetBasePT {
                 power, toughness, ..
+            }
+            | Effect::SetBasePtLive {
+                power, toughness, ..
             } => {
                 let t = self.target_phrase();
                 match (power, toughness) {
@@ -4373,6 +4378,7 @@ impl Effect {
             | Effect::AddRandomMissingCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
+            | Effect::SetBasePtLive { .. }
             | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
             | Effect::BecomeCreatureLosingTypes { .. }
@@ -4803,7 +4809,8 @@ impl Effect {
                 }
                 // Halfdane / Sentinel: the only mention of the slot is inside
                 // the `Value::PowerOf` / `ToughnessOf` the base P/T is set from.
-                Effect::SetBasePT { what, power, toughness, .. } => sel_find(what, slot)
+                Effect::SetBasePT { what, power, toughness, .. }
+                | Effect::SetBasePtLive { what, power, toughness, .. } => sel_find(what, slot)
                     .or_else(|| implicit_creature_for_slot(what, slot))
                     .or_else(|| val_find(power, slot))
                     .or_else(|| val_find(toughness, slot)),

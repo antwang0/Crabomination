@@ -7711,6 +7711,12 @@ pub enum Effect {
     /// `duration` (layer-7d, applied after all other P/T changes). Twisted
     /// Image, Wandering Fumarole's animated `{0}` ability.
     SwitchPT { what: Selector, duration: Duration },
+    /// CR 613.4b — each resolved permanent's base power and toughness are
+    /// `power` / `toughness` for `duration`, re-read on every layer pass
+    /// rather than locked in as it resolves (Svogthos: "power and toughness
+    /// each equal to the number of creature cards in your graveyard"). The
+    /// values are read with the permanent's controller as "you".
+    SetBasePtLive { what: Selector, power: Value, toughness: Value, duration: Duration },
     /// Animate each permanent picked by `what` into a creature for
     /// `duration` (the canonical "manland" effect — Celestial Colonnade,
     /// Creeping Tar Pit, Mutavault, …). Installs a stack of continuous

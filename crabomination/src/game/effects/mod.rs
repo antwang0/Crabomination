@@ -17186,6 +17186,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetBasePtLive { what, power, toughness, duration } => {
+                use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer};
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for cid in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    let timestamp = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::just(cid),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetPowerToughnessLive(Box::new((power.clone(), toughness.clone()))),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::BecomeCreatureLosingTypes {
                 what,
                 power,

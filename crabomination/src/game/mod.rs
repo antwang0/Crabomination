@@ -166,6 +166,7 @@ mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
 mod cast_watch;
+mod live_pt;
 // "As this becomes attached, choose …" (Sanctuary Blade).
 mod as_attached;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
@@ -13006,6 +13007,9 @@ impl GameState {
         let mut all_effects: Vec<ContinuousEffect> = buf;
         all_effects.reserve(base.len() + sa_cards.len());
         all_effects.extend_from_slice(base);
+        if self.continuous_effects.has_family(crate::game::layers::mod_families::LIVE_PT) {
+            self.settle_live_pt(&mut all_effects);
+        }
         // Bludgeon Brawl's pass calls `granted_equipment` per battlefield card,
         // and that helper re-scans the whole board's static abilities looking
         // for `ArtifactsAreEquipment` — O(cards²) on every gather for a card
@@ -30498,6 +30502,7 @@ pub(crate) fn modification_reduces_toughness(m: &Modification) -> bool {
     match m {
         Modification::SetPowerToughness(..)
         | Modification::SetPowerToughnessToManaValue
+        | Modification::SetPowerToughnessLive(_)
         | Modification::SetToughness(_)
         | Modification::SwitchPowerToughness => true,
         Modification::ModifyToughness(t) | Modification::ModifyPowerToughness(_, t) => *t < 0,
