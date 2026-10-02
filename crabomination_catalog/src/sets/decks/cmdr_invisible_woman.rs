@@ -441,9 +441,7 @@ pub fn medusa_inhuman_queen() -> CardDefinition {
 
 /// Mister Fantastic — reach, vigilance; draws each combat after a
 /// noncreature spell; {R}{G}{W}{U}, {T}: copy one of your triggered
-/// abilities twice.
-/// Residual: an activated ability of yours is a legal target too (the copy
-/// targets the ability's source permanent).
+/// abilities twice (addressed by source, as Strionic Resonator).
 pub fn mister_fantastic() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Reach, Keyword::Vigilance],
@@ -452,7 +450,7 @@ pub fn mister_fantastic() -> CardDefinition {
             tap_cost: true,
             mana_cost: rgwu(),
             effect: Effect::CopyAbility {
-                what: target_filtered(R::HasAbilityOnStack.and(R::ControlledByYou)),
+                what: target_filtered(R::HasTriggeredAbilityOnStack.and(R::ControlledByYou)),
                 times: Value::Const(2),
             },
             ..Default::default()

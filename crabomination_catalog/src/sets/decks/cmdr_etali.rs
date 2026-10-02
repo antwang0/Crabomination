@@ -2308,7 +2308,7 @@ pub fn strionic_resonator() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::CopyAbility {
-                what: target_filtered(R::HasAbilityOnStack.and(R::ControlledByYou)),
+                what: target_filtered(R::HasTriggeredAbilityOnStack.and(R::ControlledByYou)),
                 times: Value::ONE,
             },
             ..Default::default()

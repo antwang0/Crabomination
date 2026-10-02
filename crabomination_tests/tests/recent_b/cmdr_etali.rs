@@ -1782,3 +1782,33 @@ fn strionic_resonator_copies_a_dies_trigger() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name.contains("Spirit")).count(), 2);
 }
+
+/// CR 113.3c — Strionic Resonator copies a *triggered* ability: a source
+/// with only an activated ability on the stack isn't a legal target.
+#[test]
+fn strionic_resonator_ignores_activated_abilities() {
+    let mut g = main_phase_d();
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let resonator = g.add_card_to_battlefield(0, catalog::strionic_resonator());
+    flood_d(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    assert_eq!(g.stack.len(), 1);
+    let copy = g.perform_action(GameAction::ActivateAbility {
+        card_id: resonator,
+        ability_index: 0,
+        target: Some(Target::Permanent(pinger)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(copy.is_err(), "an activated ability is not a triggered one");
+}

@@ -3057,6 +3057,9 @@ pub enum SelectionRequirement {
     /// triggered ability currently on the stack. Targeting filter for
     /// `Effect::CounterAbility` (Stifle — CR 113.9).
     HasAbilityOnStack,
+    /// [`Self::HasAbilityOnStack`] for a *triggered* ability only (Strionic
+    /// Resonator, Mister Fantastic — CR 113.3c).
+    HasTriggeredAbilityOnStack,
     /// CR 603.4 — true when the candidate permanent entered the battlefield
     /// this turn (its `CardInstance.entered_turn` equals the current
     /// `GameState.turn_number`). Battlefield-only; powers "each creature that
@@ -3974,6 +3977,7 @@ impl SelectionRequirement {
         match self {
             Self::IsSpellOnStack
             | Self::HasAbilityOnStack
+            | Self::HasTriggeredAbilityOnStack
             | Self::HasSpellSubtype(_)
             | Self::SpellTargetsControllerOrControlled
             | Self::SpellTargetsCreature

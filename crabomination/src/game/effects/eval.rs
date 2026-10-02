@@ -5730,6 +5730,10 @@ impl GameState {
                         si,
                         StackItem::Trigger { source, .. } if *source == card.id
                     )),
+                    R::HasTriggeredAbilityOnStack => self.stack.iter().any(|si| matches!(
+                        si,
+                        StackItem::Trigger { source, activated: false, .. } if *source == card.id
+                    )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     R::ManaValueAtMostOpponentsAttackedThisCombat => {
                         card.definition.cost.cmc() <= self.opponents_attacked_this_combat()
@@ -6980,7 +6984,7 @@ impl GameState {
             R::Tapped | R::Untapped | R::Unattached
             | R::IsUnblocked | R::IsBlocked | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::FaceDown | R::HasAbilityOnStack
+            | R::FaceDown | R::HasAbilityOnStack | R::HasTriggeredAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::SpellTargetsCreature
