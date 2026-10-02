@@ -1373,6 +1373,10 @@ pub enum DelayedKind {
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.
     WhenCardLeavesBattlefield(crate::card::CardId),
+    /// "When you lose control of [card]" (Ray of Command): fires once on the
+    /// first `ControlChanged` moving `card` away from `player`; dropped
+    /// unfired when `card` leaves the battlefield.
+    WhenPlayerLosesControlOf { card: crate::card::CardId, player: usize },
     /// "When [that permanent] leaves the battlefield **this turn**, …"
     /// (Runesword). Same firing site as `WhenCardLeavesBattlefield` but
     /// expires at cleanup.

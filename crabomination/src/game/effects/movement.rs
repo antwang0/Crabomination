@@ -3116,7 +3116,9 @@ impl GameState {
                 fire.push(dt.clone());
                 false
             } else {
-                true
+                // A "when you lose control of it" watcher has nothing left
+                // to watch once the permanent is gone.
+                !matches!(dt.kind, DelayedKind::WhenPlayerLosesControlOf { card, .. } if card == id)
             }
         });
         for dt in fire {

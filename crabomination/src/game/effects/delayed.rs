@@ -6,15 +6,21 @@ use crate::game::DelayedKind;
 /// Translate an `Effect`-side `DelayedTriggerKind` to its game-state mirror
 /// `DelayedKind`. Centralized so adding a new delayed-trigger kind requires
 /// only this one pattern match update. `target_player` / `turn` feed the
-/// player-scoped kinds; a `TargetsNextEndStep` with no resolved player falls
-/// back to the next end step on any turn.
+/// player-scoped kinds and `target_card` the permanent-scoped one; a
+/// `TargetsNextEndStep` with no resolved player falls back to the next end
+/// step on any turn.
 pub(crate) fn delayed_kind_from_effect(
     k: DelayedTriggerKind,
     target_player: Option<usize>,
+    target_card: Option<crate::card::CardId>,
     controller: usize,
     turn: u32,
 ) -> DelayedKind {
     match k {
+        // No permanent to watch: nothing can be lost, so it never fires.
+        DelayedTriggerKind::WhenYouLoseControlOfTarget => {
+            DelayedKind::WhenPlayerLosesControlOf { card: target_card.unwrap_or(crate::card::CardId(0)), player: controller }
+        }
         // `after_turn` one back lets this turn's end step count when it is
         // the controller's and hasn't begun yet.
         DelayedTriggerKind::YourNextEndStep => {

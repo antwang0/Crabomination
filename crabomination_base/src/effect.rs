@@ -12281,6 +12281,9 @@ pub enum DelayedTriggerKind {
     /// cleanup step of the turn it was registered in, so the objects it
     /// touches survive the end step.
     NextCleanupStep,
+    /// "When you lose control of [target permanent], …" (Ray of Command): fires
+    /// once, on the first control change away from the registering player.
+    WhenYouLoseControlOfTarget,
 }
 
 /// Opening-hand ("if this is in your opening hand, you may ...") effect.

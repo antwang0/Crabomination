@@ -31849,6 +31849,7 @@ impl GameState {
                             Some(Target::Player(p)) => Some(p),
                             _ => None,
                         },
+                        match &target { Some(Target::Permanent(c)) => Some(*c), _ => None },
                         ctx.controller,
                         self.turn_number,
                     ),
@@ -31908,7 +31909,13 @@ impl GameState {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                    kind: delayed_kind_from_effect(*kind, captured_player, ctx.controller, self.turn_number),
+                    kind: delayed_kind_from_effect(
+                        *kind,
+                        captured_player,
+                        match &target { Some(Target::Permanent(c)) => Some(*c), _ => None },
+                        ctx.controller,
+                        self.turn_number,
+                    ),
                     effect,
                     target,
                     bound_token: self.last_created_token,

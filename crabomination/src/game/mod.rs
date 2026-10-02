@@ -163,6 +163,8 @@ mod empty_draw;
 mod vanishing;
 mod simultaneous_deaths;
 mod vow;
+// "When you lose control of it" delayed triggers (Ray of Command).
+mod lose_control;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -23221,6 +23223,7 @@ impl GameState {
         if events.is_empty() {
             return;
         }
+        self.fire_lose_control_delayed(events);
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
         // Most (permanent, trigger) pairs are ones no event in the batch can
         // match — `ems_census` read **72.6 % on sealed / 50.6 % on cube** at
@@ -27261,7 +27264,7 @@ impl GameState {
                         // Card stays in hand; register a delayed trigger that
                         // fires later (next upkeep / first main / end step).
                         use crate::game::types::DelayedTrigger;
-                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, p, self.turn_number);
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, None, p, self.turn_number);
                         self.delayed_triggers.push(DelayedTrigger {
                             controller: p,
                             source: cid,

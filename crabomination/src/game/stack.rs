@@ -4992,6 +4992,10 @@ impl GameState {
     /// CR 514.3 priority check, then (if nothing is pending) the turn end.
     pub(crate) fn finish_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
         self.cleanup_wear_off();
+        // CR 514.3a — a control change the wear-off made (an "until end of
+        // turn" steal ending) triggers now, in this cleanup step (Ray of
+        // Command's tap), not at whatever action comes next.
+        self.dispatch_triggers_for_events(&[]);
         // CR 514.3a — check state-based actions and triggered abilities. If
         // anything is waiting, players receive priority in the cleanup step;
         // once they all pass with an empty stack, another cleanup happens.
