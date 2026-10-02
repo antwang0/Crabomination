@@ -5,9 +5,10 @@
 //! Residuals (each also on its card):
 //! - **Agility Bobblehead** — the X creatures are your greatest-power ones,
 //!   chosen on resolution rather than targeted.
-//! - **Brotherhood Outcast**, **Vault 101: Birthday Party** — the Aura or
-//!   Equipment card is picked (greatest mana value first) rather than
-//!   targeted, and its host is the engine's pick.
+//! - **Brotherhood Outcast** — the Aura or Equipment card is picked rather
+//!   than targeted.
+//! - **Vault 101: Birthday Party** — an Aura only goes on a creature, and an
+//!   Equipment is always attached (to any creature, not only yours).
 //! - **Inventory Management** — every Aura and Equipment you choose moves to
 //!   one creature, your greatest-power one.
 //! - **Perception Bobblehead** — the rest go to the bottom in the cascade
@@ -914,8 +915,10 @@ pub fn three_dog_galaxy_news_dj() -> CardDefinition {
 }
 
 /// Vault 101: Birthday Party — I: a 1/1 Human Soldier and a Food; II, III: an
-/// Aura or Equipment card from your hand or graveyard onto the battlefield.
-/// Residual: the card and its host are the engine's pick.
+/// Aura or Equipment card of your choice from your hand or graveyard onto the
+/// battlefield, on a host you choose. Residual: an Aura only goes on a
+/// creature, and an Equipment is always attached (the host may be any
+/// creature, not only yours).
 pub fn vault_101_birthday_party() -> CardDefinition {
     let soldier = TokenDefinition {
         name: "Human Soldier".into(),

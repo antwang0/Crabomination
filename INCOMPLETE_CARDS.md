@@ -2234,7 +2234,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted, and its host is the engine's pick. |
 | 🟡 Inventory Management | Scrappy Survivors (PIP) | every Aura and Equipment you choose moves to one creature, your greatest-power one. |
 | 🟡 Perception Bobblehead | Scrappy Survivors (PIP) | the rest go to the bottom in the cascade order, not a random one. |
-| 🟡 Vault 101: Birthday Party | Scrappy Survivors (PIP) | chapters II and III pick the Aura or Equipment card and its host rather than letting you choose. |
+| 🟡 Vault 101: Birthday Party | Scrappy Survivors (PIP) | an Aura only goes on a creature, and an Equipment is always attached (to any creature, not only yours). |
 | 🟡 Ghyrson Starn, Kelermorph | Tyranid Swarm (40K) | only a permanent source's 1 damage is seen (not an instant's or sorcery's). |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 Magus Lucea Kane | Tyranid Swarm (40K) | only the next spell with {X} is copied, not an ability with {X}. |
