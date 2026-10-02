@@ -72,8 +72,8 @@ they call a deck 🟡, the table wins.
 | 78 | Willowdusk, Essence Seer (BG) | 2: revival_experiment, suffer_the_past |
 | 79 | Hearthhull, the Worldseed (BRG) | 5: eumidian_wastewaker, evendo_brushrazer, loamcrafter_faun, moraug_fury_of_akoum, planetary_annihilation |
 | 80 | Lord Windgrace (BRG) | 1: emissary_of_grudges |
-| 83 | Mishra, Eminent One (UBR) | 6: ashnod_the_uncaring, lithoform_engine, mishra_eminent_one, smelting_vat, strionic_resonator, workshop_elders |
-| 84 | Gimbal, Gremlin Prodigy (GUR) | 2: dance_with_calamity, workshop_elders |
+| 83 | Mishra, Eminent One (UBR) | 5: ashnod_the_uncaring, lithoform_engine, mishra_eminent_one, smelting_vat, strionic_resonator |
+| 84 | Gimbal, Gremlin Prodigy (GUR) | 1: dance_with_calamity |
 | 85 | Dihada, Binder of Wills (RWB) | 3: bell_borca_spectral_sergeant, the_peregrine_dynamo, verrak_warped_sengir |
 | 86 | Dina, Essence Brewer (BG) | 4: deadly_brew, gorma_the_gullet, stensian_sanguinist, witherbloom_command |
 | 88 | Marath, Will of the Wild (RGW) | 3: fiery_justice, magus_of_the_arena, naya_soulbeast |
@@ -90,7 +90,7 @@ they call a deck 🟡, the table wins.
 | 101 | Kasla, the Broken Halo (URW) | 1: path_of_the_ghosthunter |
 | 102 | Estrid, the Masked (GWU) | 2: estrid_the_masked, genesis_storm |
 | 103 | Kathril, Aspect Warper (WBG) | 6: archon_of_valors_reach, cairn_wanderer, slippery_bogbonder, tayam_luminous_enigma, vitality_hunter, yannik_scavenging_sentinel |
-| 104 | Vrondiss, Rage of Ancients (RG) | 7: berserkers_frenzy, component_pouch, dragonborn_champion, druid_of_purification, indomitable_might, klauth_unrivaled_ancient, sword_of_hours |
+| 104 | Vrondiss, Rage of Ancients (RG) | 5: berserkers_frenzy, dragonborn_champion, indomitable_might, klauth_unrivaled_ancient, sword_of_hours |
 | 105 | Killian, Decisive Mentor (WB) | 4: armored_skyhunter, herald_of_amity, nils_discipline_enforcer, songbirds_blessing |
 | 106 | Galea, Kindler of Hope (GWU) | 4: clay_golem, mantle_of_the_ancients, song_of_inspiration, sword_of_hours |
 | 107 | Firkraag, Cunning Instigator (UR) | 4: baeloth_barrityl_entertainer, domineering_will, firkraag_cunning_instigator, rowan_kenrith |
@@ -117,13 +117,13 @@ they call a deck 🟡, the table wins.
 | 129 | Gonti, Canny Acquisitor (BGU) | 6: bladegriff_prototype, extract_brain, nashi_moon_sages_scion, sage_of_the_beyond, siphon_insight, the_mimeoplasm |
 | 130 | Prossh, Skyraider of Kher (BRG) | 3: night_soil, sudden_demise, widespread_panic |
 | 131 | Morophon, the Boundless (WUBRG) | 4: harper_recruiter, moritte_of_the_frost, stick_together, unsettled_mariner |
-| 132 | Sefris of the Hidden Ways (WUB) | 7: clay_golem, component_pouch, extract_brain, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
+| 132 | Sefris of the Hidden Ways (WUB) | 6: clay_golem, extract_brain, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
 | 133 | Zimone, Mystery Unraveler (GU) | 5: deathmist_raptor, disorienting_choice, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
 | 134 | Morska, Undersea Sleuth (GWU) | 2: erdwal_illuminator, esix_fractal_bloom |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 136 | Nalia de'Arnise (WB) | 3: glorious_protector, harper_recruiter, stick_together |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
-| 138 | Saheeli, Radiant Creator (GUR) | 2: aetherflux_conduit, druid_of_purification |
+| 138 | Saheeli, Radiant Creator (GUR) | 1: aetherflux_conduit |
 | 139 | Inspirit, Flagship Vessel (URW) | 4: cloud_key, moxite_refinery, resourceful_defense, ripples_of_potential |
 | 140 | Anhelo, the Painter (UBR) | 4: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, xanders_pact, zndrsplts_judgment |
 | 141 | Prosper, Tome-Bound (BR) | 4: apex_of_power, danse_macabre, hellish_rebuke, share_the_spoils |
@@ -165,6 +165,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+54 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 54 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
