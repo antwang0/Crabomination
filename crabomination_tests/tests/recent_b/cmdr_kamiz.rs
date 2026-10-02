@@ -360,6 +360,39 @@ fn obscura_confluence_target_player_returns_their_pick() {
     assert_eq!(g.players[1].graveyard.len(), 1);
 }
 
+/// CR 700.2 / 608.2d — the same, with the target player a PROMPTING seat:
+/// the "returns" mode parks on that player's pick, and resumes against its
+/// own slot (the player, slot 2), not slot 0 (a creature) — which used to
+/// return nothing and leave the answer stashed.
+#[test]
+fn obscura_confluence_resumes_a_later_mode_on_its_own_slot() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::serra_angel());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[1].wants_ui = true;
+    let c = g.add_card_to_hand(0, catalog::obscura_confluence());
+    act(&mut g, GameAction::CastSpellSpree {
+        card_id: c, spree_modes: vec![0, 0, 2], target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(mine), Target::Player(1)], x_value: None,
+    })
+    .expect("three modes");
+    for _ in 0..8 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        let _ = g.resolve_top_of_stack();
+    }
+    assert_eq!(g.pending_decision.as_ref().expect("seat 1 picks").acting_player(), 1);
+    g.submit_decision(DecisionAnswer::Cards(vec![bear])).expect("the Bears");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|h| h.id == bear), "returned to its owner's hand");
+}
+
 /// Skyway Robber escapes, exiling five other cards with it.
 #[test]
 fn skyway_robber_escapes() {

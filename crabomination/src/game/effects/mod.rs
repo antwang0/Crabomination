@@ -7222,6 +7222,16 @@ impl GameState {
                         sub_ctx.targets = ctx.targets[from..to].to_vec();
                         next_slot += n;
                         self.run_effect(m, &sub_ctx, events)?;
+                        // A mode that parked resumes under the spell's WHOLE
+                        // target list: bind it to its own slots, or a later
+                        // instance reads slot 0 (Obscura Confluence's second
+                        // "target player returns", whose player became the
+                        // first mode's creature).
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                            slot: from as u8,
+                            count: n as u8,
+                            body: Box::new(carried),
+                        });
                     } else {
                         self.run_effect(m, ctx, events)?;
                     }
