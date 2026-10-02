@@ -141,6 +141,37 @@ fn deceptive_frostkite_copies_a_big_creature() {
     assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
+/// "You may have it enter as a copy": a player who picks no creature gets
+/// Deceptive Frostkite itself, a 1/1 flying Dragon.
+#[test]
+fn deceptive_frostkite_may_enter_as_itself() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::gadrak_the_crown_scourge());
+    let df = g.add_card_to_hand(0, catalog::deceptive_frostkite());
+    g.players[0].wants_ui = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![])]));
+    cast_at(&mut g, df, &[]).expect("cast");
+    let c = g.battlefield_find(df).expect("entered");
+    assert_eq!(c.definition.name, "Deceptive Frostkite");
+    assert_eq!(power(&g, df), 1);
+}
+
+/// Sarkhan, Soul Aflame copying a legendary Dragon keeps its own name and is
+/// legendary (CR 707.9b): no legend-rule clash with the Dragon it copied.
+#[test]
+fn sarkhan_soul_aflame_copies_a_dragon_as_sarkhan() {
+    let mut g = main_phase(2);
+    let s = g.add_card_to_battlefield(0, catalog::sarkhan_soul_aflame());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let gadrak = g.add_card_to_hand(0, catalog::gadrak_the_crown_scourge());
+    cast_at(&mut g, gadrak, &[]).expect("cast");
+    g.check_state_based_actions();
+    let c = g.battlefield_find(s).expect("Sarkhan stays");
+    assert_eq!(c.definition.name, "Sarkhan, Soul Aflame");
+    assert_eq!(power(&g, s), 5, "Gadrak's body");
+    assert!(g.battlefield_find(gadrak).is_some(), "both legends stay");
+}
+
 /// Draconic Lore costs {2} less with a Dragon out.
 #[test]
 fn draconic_lore_is_cheaper_with_a_dragon() {

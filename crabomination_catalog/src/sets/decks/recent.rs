@@ -6986,8 +6986,8 @@ pub fn karakyk_guardian() -> CardDefinition {
 
 /// Sarkhan, Soul Aflame — {1}{U}{R} 2/4 Human Shaman. Dragon spells you cast
 /// cost {1} less. Whenever a Dragon you control enters, you may have Sarkhan
-/// become a copy of it until end of turn. (The copy keeps the Dragon's name —
-/// the printed "name stays Sarkhan" override is approximated.)
+/// become a copy of it until end of turn, except its name is Sarkhan, Soul
+/// Aflame and it's legendary (CR 707.9b — `AmendCopy`).
 pub fn sarkhan_soul_aflame() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -7016,12 +7016,24 @@ pub fn sarkhan_soul_aflame() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "have Sarkhan become a copy of that Dragon until end of turn".into(),
-                body: Box::new(Effect::BecomeCopyOfFor {
-                    what: Selector::This,
-                    source: Selector::TriggerSource,
-                    duration: Duration::EndOfTurn,
-                    non_legendary: false,
-                }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: Selector::TriggerSource,
+                        duration: Duration::EndOfTurn,
+                        non_legendary: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![],
+                        keep_triggered: vec![],
+                        pt: None,
+                        keep_name: true,
+                        legendary: true,
+                        keywords: vec![],
+                        card_types: vec![],
+                    },
+                ])),
             },
         }],
         ..Default::default()

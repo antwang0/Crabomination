@@ -2326,15 +2326,22 @@ impl GameState {
         // would otherwise die to SBA).
         candidates.sort_by_key(|(_, _, p)| std::cmp::Reverse(*p));
         let fallback = candidates[0].0;
+        // "You **may** have it enter as a copy": a prompting seat may pick
+        // none, and the card enters as itself (Deceptive Frostkite's own 1/1
+        // flier). A headless seat always copies its best candidate.
+        let optional = self.seat_prompts(controller);
         let answer = self.decider.decide(&crate::decision::Decision::ChooseCards {
             source: card_id,
-            prompt: "Enter as a copy of which permanent?".to_string(),
+            prompt: "Enter as a copy of which permanent? (none: enter as itself)".to_string(),
             candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
-            min: 1,
+            min: u32::from(!optional),
             max: 1,
             eligible: None,
             value: PickValue::Gain,
         });
+        if optional && matches!(&answer, crate::decision::DecisionAnswer::Cards(picked) if picked.is_empty()) {
+            return false;
+        }
         let source = match &answer {
             crate::decision::DecisionAnswer::Cards(picked) => picked
                 .first()
