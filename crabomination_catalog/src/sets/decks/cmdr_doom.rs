@@ -656,6 +656,7 @@ pub fn klaw_master_of_sound() -> CardDefinition {
                     who: PlayerRef::TriggerEventPlayer,
                     count: Value::ONE,
                     rest_to_graveyard: false,
+                    any_color: false,
                 },
             },
         ],

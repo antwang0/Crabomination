@@ -498,6 +498,27 @@ impl ManaCost {
         }
     }
 
+    /// CR 609.4b — any mana may be spent as though it were mana of any color:
+    /// every pip a color would pay takes one mana of any kind. {C}, {S} and
+    /// {X} keep their own demands (a color is not colorless or snow).
+    pub fn colored_as_generic(&self) -> ManaCost {
+        ManaCost {
+            symbols: self
+                .symbols
+                .iter()
+                .map(|s| match *s {
+                    ManaSymbol::Colored(_)
+                    | ManaSymbol::Hybrid(..)
+                    | ManaSymbol::Phyrexian(_)
+                    | ManaSymbol::PhyrexianHybrid(..)
+                    | ManaSymbol::MonoHybrid(..)
+                    | ManaSymbol::ColorlessHybrid(_) => ManaSymbol::Generic(1),
+                    other => other,
+                })
+                .collect(),
+        }
+    }
+
     /// CR 609.4b — `color` mana may be spent as though it were mana of any
     /// color: each colored pip of another color also takes `color` (a hybrid
     /// pip with it), Phyrexian ones too. Generic pips already take it.

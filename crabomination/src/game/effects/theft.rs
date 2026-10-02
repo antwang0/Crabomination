@@ -81,6 +81,7 @@ impl GameState {
         who: &PlayerRef,
         count: &crate::effect::Value,
         rest_to_graveyard: bool,
+        any_color: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
         effect: &Effect,
@@ -123,6 +124,9 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id: pick });
             self.note_exiled_from_library(seat, pick, events);
             self.grant_any_type_play(pick, ctx.controller);
+            if any_color && let Some(c) = self.exile.iter_mut().find(|c| c.id == pick) {
+                c.granted_alt_cast_cost_eot = Some(c.definition.cost.colored_as_generic());
+            }
         }
         let dest = if rest_to_graveyard {
             crate::effect::ZoneDest::Graveyard

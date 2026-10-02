@@ -11978,8 +11978,16 @@ pub enum Effect {
     /// Look at the top `count` of `who`'s library, exile one face down that
     /// you may play with mana of any type while it stays exiled, the rest to
     /// that player's graveyard (`rest_to_graveyard`, Thief of Sanity) or the
-    /// bottom (Siphon Insight). The engine picks the card.
-    LookTopExileOneFaceDownMayPlay { who: PlayerRef, count: Value, rest_to_graveyard: bool },
+    /// bottom (Siphon Insight). The engine picks the card. `any_color`: mana
+    /// spends as any *color* only, so a {C} pip still wants colorless
+    /// (Siphon Insight).
+    LookTopExileOneFaceDownMayPlay {
+        who: PlayerRef,
+        count: Value,
+        rest_to_graveyard: bool,
+        #[serde(default)]
+        any_color: bool,
+    },
     /// `who` chooses X cards from their hand; you may cast one of them free
     /// (Extract Brain). Both picks are the engine's.
     OpponentChoosesXFromHandCastOneFree { who: PlayerRef },
