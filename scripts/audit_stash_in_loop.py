@@ -140,8 +140,27 @@ def stops_on_none(lines, i):
     end = window.find(";")
     stmt = window if end < 0 else window[: end + 1]
     return bool(re.search(r"else\s*\{\s*(return|break|continue)", window[: end + 60] if end >= 0 else window)
+                or else_block_ends_in_exit(window)
                 or re.search(r"\)\?", stmt)
                 or re.search(r"None\s*=>\s*(\{\s*)?return", window))
+
+
+def else_block_ends_in_exit(window):
+    """`let Some(..) = ask(..) else { <rewrap the park>; return .. };` — the
+    `else` block does some work first (re-binding the parked continuation)
+    and then leaves: its last statement is a `return` / `break` / `continue`."""
+    m = re.search(r"\belse\s*\{", window)
+    if not m:
+        return False
+    depth, j = 1, m.end()
+    while j < len(window) and depth:
+        depth += {"{": 1, "}": -1}.get(window[j], 0)
+        j += 1
+    if depth:
+        return False
+    body = window[m.end(): j - 1].strip().rstrip(";").strip()
+    last = body.rsplit(";", 1)[-1].strip()
+    return bool(re.match(r"(return|break|continue)\b", last))
 
 
 def main() -> int:
