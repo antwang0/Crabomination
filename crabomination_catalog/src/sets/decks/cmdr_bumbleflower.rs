@@ -419,9 +419,8 @@ pub fn octomancer() -> CardDefinition {
 }
 
 /// Perch Protection — four 2/2 flying Birds; gift an extra turn: your
-/// permanents phase out and you're protected until your next turn. Exile it.
-///
-/// ⚠ Residual: the life lock lasts this turn only.
+/// permanents phase out, and until your next turn your life total can't
+/// change and you have protection from everything. Exile it.
 pub fn perch_protection() -> CardDefinition {
     let birds = || Effect::CreateToken {
         who: PlayerRef::You,

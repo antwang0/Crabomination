@@ -8,7 +8,7 @@
 //! the live power via `ManaValueAtMostSourcePower`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, SelectionRequirement,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement,
     Selector, Subtypes, Supertype,
 };
 use crate::mana::{b, cost, g, generic, r, u, w};
@@ -145,14 +145,12 @@ pub fn beledros_witherbloom() -> CardDefinition {
 /// Velomachus Lorehold's power from among them without paying its mana
 /// cost. Put the rest on the bottom of your library in a random order."
 ///
-/// Wired as `RevealUntilFind` capped at 7 (the printed "top seven"
-/// window) + `GrantMayPlay` free cast. Residual approximation: the
-/// engine takes the FIRST qualifying instant/sorcery in the window
-/// rather than offering a choice among several, and the cast is
-/// may-cast this turn rather than resolved inside the trigger.
+/// `RevealTopMayCastOneFree`: the controller picks among the qualifying
+/// cards and casts it as the trigger resolves. The seven are revealed rather
+/// than looked at, and the rest keep their order on the bottom.
 pub fn velomachus_lorehold() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
+    use crate::effect::Selector;
     CardDefinition {
         name: "Velomachus Lorehold",
         cost: cost(&[generic(5), r(), w()]),
@@ -165,37 +163,19 @@ pub fn velomachus_lorehold() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
-        // "look at the top seven cards of your library" — RevealUntilFind
-        // capped at 7 walks that window, sending misses to the
-        // bottom-random pile; the MV gate reads the LIVE power
-        // (`ManaValueAtMostSourcePower`, concretized against the source's
-        // LKI power): a pumped Velomachus widens the cap, a debuffed one
-        // narrows it. The matching IS card lands in exile and
-        // `GrantMayPlay` stamps a may-cast-this-turn free-cast permission
-        // on it (consumed via `CastFromZoneWithoutPaying`).
+        // CR 601.2 — the spell is cast from among the top seven as the
+        // trigger resolves (the controller's pick, MV at most the live power);
+        // the rest go to the bottom.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::RevealUntilFind {
-                    who: PlayerRef::You,
-                    find: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-                        .and(SelectionRequirement::ManaValueAtMostSourcePower),
-                    to: ZoneDest::Exile,
-                    // The printed "top seven cards" window.
-                    cap: crate::card::Value::Const(7),
-                    life_per_revealed: 0,
-                    miss_dest: RevealMissDest::BottomRandom,
-                },
-                Effect::GrantMayPlay {
-                    what: Selector::LastMoved,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    to_owner: false,
-                    exile_after: false,
-                    pay_own_cost: false,
-                    any_color: false,
-                },
-            ]),
+            effect: Effect::RevealTopMayCastOneFree {
+                count: crate::card::Value::Const(7),
+                max_mv: crate::card::Value::PowerOf(Box::new(Selector::This)),
+                filter: Some(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            },
         }],
         ..Default::default()
     }

@@ -189,7 +189,8 @@ pub fn crash_of_rhino_beetles() -> CardDefinition {
 
 /// Emissary of Grudges — {5}{R} 6/5 flying haste Efreet. Choose an opponent
 /// as it enters; once, redirect a spell that targets you or a permanent you
-/// control. (Residual: the choice is open, and any such spell qualifies.)
+/// control, if the chosen opponent controls it. (Residual: an ability on the
+/// stack can't be redirected, and the choice isn't secret.)
 pub fn emissary_of_grudges() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],

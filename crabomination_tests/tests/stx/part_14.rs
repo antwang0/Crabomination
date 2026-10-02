@@ -617,46 +617,28 @@ fn quandrix_sumstride_mints_fractal_scaling_with_creatures() {
     assert_eq!(view.toughness(), 4);
 }
 
+/// CR 601.2 — Velomachus casts the qualifying spell from among the top seven
+/// as its trigger resolves; the misses go to the bottom.
 #[test]
-fn velomachus_attack_exiles_is_card_from_top_of_library_and_grants_may_play() {
+fn velomachus_attack_casts_a_spell_from_the_top_seven() {
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
-    // Seed library: 2 Forests (MV 0) + 1 Lightning Bolt (MV 1) on top.
-    // RevealUntilFind walks until it hits the Bolt; misses go to
-    // bottom of library randomized.
-    use crabomination::card::CardInstance;
-    let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
-    bolt.controller = 0;
-    let bolt_id = bolt.id;
-    let mut top: Vec<CardInstance> = vec![
-        CardInstance::new(g.next_id(), catalog::forest(), 0),
-        CardInstance::new(g.next_id(), catalog::forest(), 0),
-        bolt,
-    ];
-    for c in top.iter_mut() { c.controller = 0; }
-    for c in top.into_iter().rev() {
-        g.players[0].library.insert(0, c);
-    }
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    // Library order is top-first: Bolt, Forest, Forest.
     let velo = g.add_card_to_battlefield(0, catalog::velomachus_lorehold());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == velo) {
-        c.summoning_sick = false; c.tapped = false;
-    }
-
-    // Move to combat + declare attack.
+    g.clear_sickness(velo);
+    let life = g.players[1].life;
     g.step = crabomination::game::TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: velo,
         target: AttackTarget::Player(1),
     }])).expect("Velomachus can attack");
     drain_stack(&mut g);
-
-    // Bolt should now be in exile with may_play permission to P0.
-    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
-        .expect("Bolt exiled by Velomachus's attack trigger");
-    assert!(
-        exiled.may_play_until.is_some(),
-        "Bolt has may_play permission stamped",
-    );
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt was cast and resolved");
+    assert_eq!(g.players[1].life, life - 3);
+    assert_eq!(g.players[0].library.len(), 2, "the two Forests stay in the library");
 }
 
 #[test]
@@ -1702,20 +1684,16 @@ fn prismari_sparkmage_b122_magecraft_pings_creature() {
         "Lions died from 1 damage on 1-toughness");
 }
 
-/// Velomachus's reveal cap reads its LIVE power: with a +2/+2 pump
-/// (power 7), a 6-MV sorcery is now inside the "MV ≤ power" gate.
+/// Velomachus's cap reads its LIVE power: shrunk to 3, a 4-mana-value
+/// sorcery on top is not cast.
 #[test]
 fn velomachus_cap_follows_live_power() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let velo = g.add_card_to_battlefield(0, catalog::velomachus_lorehold());
     g.clear_sickness(velo);
-    // +2/+2 in counters → power 7.
-    g.battlefield_find_mut(velo).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
-    // Top of library: a 7-MV sorcery — inside the live power-7 cap,
-    // outside the printed-power-5 cap the old wiring used.
-    let big = g.add_card_to_library(0, catalog::moment_of_reckoning()); // {3}{W}{W}{B}{B} = MV 7
-    let _ = big;
+    g.battlefield_find_mut(velo).unwrap().add_counters(CounterType::MinusOneMinusOne, 2);
+    let wrath = g.add_card_to_library(0, catalog::day_of_judgment()); // MV 4
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: velo,
@@ -1723,10 +1701,8 @@ fn velomachus_cap_follows_live_power() {
     }]))
     .expect("attack");
     drain_stack(&mut g);
-    assert!(
-        g.exile.iter().any(|c| c.id == big && c.may_play_until.is_some()),
-        "7-MV sorcery within the live-power cap was exiled with may-play"
-    );
+    assert!(g.players[0].library.iter().any(|c| c.id == wrath), "power 3 can't cast a 4");
+    assert!(g.battlefield_find(velo).is_some());
 }
 
 /// Mavinda's surcharge: the granted cast costs {8} more unless it
