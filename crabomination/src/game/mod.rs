@@ -23056,6 +23056,21 @@ impl GameState {
     }
 
     fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
+        // CR 400.7 — a card that left a graveyard is a new object: if it
+        // isn't back in one, it no longer counts as "put there from the
+        // battlefield this turn" when it next arrives (Syr Konrad, Disa). The
+        // leave sites are many and push the event directly, so the batch is
+        // the one funnel. Read before the write: `deaths` is a CoW group.
+        if !self.deaths.graveyard_from_battlefield_this_turn.is_empty() {
+            for e in events {
+                if let GameEvent::CardLeftGraveyard { card_id, .. } = e
+                    && self.deaths.graveyard_from_battlefield_this_turn.contains(card_id)
+                    && !self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == *card_id))
+                {
+                    self.deaths.graveyard_from_battlefield_this_turn.remove(card_id);
+                }
+            }
+        }
         // Nuka-Nuke Launcher — a marked player's spells cost them radiation.
         for e in events {
             if let GameEvent::SpellCast { player, .. } = e
