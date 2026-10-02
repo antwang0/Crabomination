@@ -2087,6 +2087,8 @@ impl GameAction {
 pub enum CombatDecisionKind {
     Order,
     Assign,
+    /// Yes/no: assign this attacker's damage as though it weren't blocked.
+    AsThoughUnblocked,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

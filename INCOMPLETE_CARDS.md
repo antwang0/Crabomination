@@ -1974,7 +1974,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | the engine exiles your highest mana value other creature; X reads its printed power. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
 | 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
-| 🟡 Indomitable Might | Virtue and Valor (WOC) | the damage always goes as though unblocked; the controller doesn't choose. |
 | 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |
 | 🟡 Unfinished Business | Virtue and Valor (WOC) | the two Aura / Equipment cards are picked, not targeted. |
 | 🟡 Retether | Virtue and Valor (WOC) | each Aura's host is the engine's pick (your greatest-power creature first). |
@@ -2182,7 +2181,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
 | 🟡 Kheru Mind-Eater | Vampiric Bloodlust (C17) | the exiled card is exiled face up. |
-| 🟡 Siege Behemoth | Guided by Nature (C14) | the per-creature "you may assign as though unblocked" is always yes. |
 | 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |

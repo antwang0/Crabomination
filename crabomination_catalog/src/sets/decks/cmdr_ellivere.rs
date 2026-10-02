@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_ellivere.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Indomitable Might** — the damage always goes as though unblocked (the
-//!   controller doesn't choose).
 //! - **Mantle of the Ancients**, **Unfinished Business** — the returned Aura
 //!   and Equipment cards are picked (greatest mana value first), not
 //!   targeted.
@@ -242,7 +240,6 @@ pub fn gylwain_casting_director() -> CardDefinition {
 
 /// Indomitable Might — flash; +3/+3; it may assign its combat damage as
 /// though it weren't blocked.
-/// Residual: the damage always goes as though unblocked.
 pub fn indomitable_might() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],

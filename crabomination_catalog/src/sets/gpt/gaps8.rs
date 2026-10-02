@@ -344,16 +344,20 @@ pub fn sword_of_the_paruns() -> CardDefinition {
 }
 
 /// Predatory Focus — {3}{G}{G} Sorcery. Your creatures may assign their combat
-/// damage this turn as though they weren't blocked.
+/// damage this turn as though they weren't blocked. The choice is made once,
+/// as it resolves (the card's ruling), and then binds every creature.
 pub fn predatory_focus() -> CardDefinition {
     CardDefinition {
         name: "Predatory Focus",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::GrantKeyword {
-            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-            keyword: Keyword::AssignsDamageAsThoughUnblocked,
-            duration: Duration::EndOfTurn,
+        effect: Effect::MayDo {
+            description: "Have your creatures assign combat damage as though unblocked this turn?".into(),
+            body: Box::new(Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::MustAssignDamageAsThoughUnblocked,
+                duration: Duration::EndOfTurn,
+            }),
         },
         ..Default::default()
     }

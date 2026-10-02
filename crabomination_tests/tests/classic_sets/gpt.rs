@@ -1610,11 +1610,14 @@ fn sword_of_the_paruns_anthems_follow_the_host() {
     assert_eq!((cp.power, cp.toughness), (4, 2));
 }
 
-/// Predatory Focus lets a blocked attacker hit the player anyway.
+/// Predatory Focus lets a blocked attacker hit the player anyway — its "may"
+/// is answered once, as it resolves (the card's ruling).
 #[test]
 fn predatory_focus_assigns_damage_past_blockers() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());

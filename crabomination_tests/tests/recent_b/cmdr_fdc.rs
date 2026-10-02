@@ -2214,8 +2214,8 @@ fn loreseekers_stone_is_taxed_by_hand_size() {
     assert_eq!(g.players[0].hand.len(), 5);
 }
 
-/// Siege Behemoth — while it attacks, a blocked creature of yours hits the
-/// player anyway.
+/// Siege Behemoth — while it attacks, a blocked creature of yours may hit the
+/// player anyway (its controller says yes).
 #[test]
 fn siege_behemoth_lets_blocked_creatures_hit_the_player() {
     let mut g = main_phase();
@@ -2234,11 +2234,51 @@ fn siege_behemoth_lets_blocked_creatures_hit_the_player() {
     g.priority.player_with_priority = 1;
     g.step = TurnStep::DeclareBlockers;
     g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("block the Bears");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     while g.step != TurnStep::EndCombat {
         let _ = g.advance_step(Vec::new());
         drain_stack(&mut g);
     }
     assert_eq!(g.players[1].life, 20 - 7 - 2);
+}
+
+/// Siege Behemoth — the "may" is asked per blocked creature (CR 510.1c: the
+/// choice is made as damage is assigned); declining sends the Bears' damage
+/// to its blocker.
+#[test]
+fn siege_behemoth_asks_and_a_decline_hits_the_blocker() {
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::siege_behemoth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(s);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: s, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block the Bears");
+    g.players[0].wants_ui = true;
+    let mut asked = 0;
+    while g.step != TurnStep::EndCombat {
+        if let Some(pd) = &g.pending_decision {
+            assert!(matches!(pd.decision, crabomination::decision::Decision::OptionalTrigger { source, .. } if source == bear));
+            asked += 1;
+            g.perform_action(GameAction::SubmitDecision(crabomination::decision::DecisionAnswer::Bool(false)))
+                .expect("decline");
+            continue;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(asked, 1, "asked once, for the blocked Bears only");
+    assert_eq!(g.players[1].life, 20 - 7);
+    assert!(g.battlefield_find(blocker).is_none(), "the Bears dealt their 2 to the blocker");
 }
 
 /// Sylvan Offering — you and an opponent each get an X/X Treefolk and X Elf

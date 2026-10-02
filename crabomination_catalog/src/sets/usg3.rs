@@ -291,7 +291,7 @@ pub fn outmaneuver() -> CardDefinition {
                 filter: R::IsBlocked,
                 effect: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),
-                    keyword: Keyword::AssignsDamageAsThoughUnblocked,
+                    keyword: Keyword::MustAssignDamageAsThoughUnblocked,
                     duration: Duration::EndOfTurn,
                 }),
             }),

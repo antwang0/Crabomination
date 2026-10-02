@@ -2214,11 +2214,15 @@ pub enum Keyword {
     /// attacker must be assigned to block one of them. Enforced in
     /// `declare_blockers` (blocker side; mirror of `MustAttack`).
     MustBlock,
-    /// CR 510.1a — "This creature assigns its combat damage as though it
-    /// weren't blocked." A blocked attacker with this keyword assigns its
-    /// damage to the defending player instead of its blockers (the blockers
-    /// still deal theirs). Predatory Focus grants it for the turn.
+    /// CR 510.1c — "You may have this creature assign its combat damage as
+    /// though it weren't blocked" (Thorn Elemental): asked per blocked
+    /// attacker as damage is assigned; yes sends all of it to the player or
+    /// planeswalker it attacks (its blockers still deal theirs).
     AssignsDamageAsThoughUnblocked,
+    /// The unconditional form — "assign their combat damage this turn as
+    /// though they weren't blocked" (Outmaneuver; Predatory Focus once its
+    /// controller chose to use it).
+    MustAssignDamageAsThoughUnblocked,
     /// CR 508.1d — "This creature attacks each combat if able." Enforced in
     /// `declare_attackers`: an untapped, non-sick creature carrying this
     /// keyword whose controller declares attackers must be among them when

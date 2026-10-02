@@ -1652,6 +1652,11 @@ pub struct ColdState {
     #[serde(skip)]
     pub(crate) combat_trigger_fired_this_step:
         Vec<(CardId, usize, crate::game::combat::BatchSubject)>,
+    /// Transient: the "may assign its combat damage as though it weren't
+    /// blocked" answer per blocked attacker (Thorn Elemental, Siege Behemoth),
+    /// gathered with `combat_damage_order` and cleared with it.
+    #[serde(skip)]
+    pub(crate) combat_assigns_unblocked: Vec<(CardId, bool)>,
     /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
     /// currently running its two bodies. Read by
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.

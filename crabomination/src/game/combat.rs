@@ -3959,17 +3959,23 @@ impl GameState {
         if self.combat_damage_plan_step != Some(self.step) {
             self.combat_damage_order.clear();
             self.combat_damage_assignment.clear();
+            clear_cold!(self.combat_assigns_unblocked);
             self.combat_damage_plan_step = Some(self.step);
         }
         let active = self.active_player_idx;
         for atk in attacker_infos.iter().filter(|a| a.should_deal) {
             let blocker_ids = self.blockers_of(atk.id);
+            // Outmaneuver: nothing to order or divide over.
+            if atk.must_assign_as_unblocked && !blocker_ids.is_empty() {
+                continue;
+            }
+            let asks_unblocked = atk.may_assign_as_unblocked && !blocker_ids.is_empty();
             // A free divider (Butcher Orgg) always gets an assignment choice —
             // it divides over the defending player's creatures, not its
             // blockers, so the multi-blocker gate doesn't apply.
             let free_divider =
                 !self.free_division_targets(atk.id, atk.free_divider, computed).is_empty();
-            if blocker_ids.len() <= 1 && !free_divider {
+            if blocker_ids.len() <= 1 && !free_divider && !asks_unblocked {
                 continue;
             }
 
@@ -4012,6 +4018,45 @@ impl GameState {
             };
             let assigner = banding_assigner.or(defender_assigner).unwrap_or(active);
             let assigner_ui = self.seat_prompts(assigner);
+
+            // Thorn Elemental's "may assign its combat damage as though it
+            // weren't blocked" (CR 510.1c) is chosen as damage is assigned, by
+            // whoever assigns it (the defending player against banding — the
+            // card's ruling); yes leaves no blockers to order or divide over.
+            if asks_unblocked {
+                let answered =
+                    self.combat_assigns_unblocked.iter().find(|(id, _)| *id == atk.id).map(|(_, b)| *b);
+                let yes = match answered {
+                    Some(b) => b,
+                    None => {
+                        let decision = crate::decision::Decision::OptionalTrigger {
+                            source: atk.id,
+                            description: "Assign its combat damage as though it weren't blocked?".into(),
+                            kind: crate::decision::OptionalKind::Neutral,
+                        };
+                        if assigner_ui {
+                            self.pending_decision = Some(Box::new(PendingDecision {
+                                decision,
+                                resume: ResumeContext::CombatDamage {
+                                    player: assigner,
+                                    attacker: atk.id,
+                                    kind: CombatDecisionKind::AsThoughUnblocked,
+                                },
+                            }));
+                            return true;
+                        }
+                        let b = matches!(
+                            self.decider.decide(&decision),
+                            crate::decision::DecisionAnswer::Bool(true)
+                        );
+                        self.combat_assigns_unblocked.push((atk.id, b));
+                        b
+                    }
+                };
+                if yes || (blocker_ids.len() <= 1 && !free_divider) {
+                    continue;
+                }
+            }
 
             // 1) Blocker order (CR 510.1c) — a free divider has no order to
             // announce, so it goes straight to the assignment.
@@ -4285,6 +4330,10 @@ impl GameState {
     ) {
         use crate::game::types::CombatDecisionKind;
         match kind {
+            CombatDecisionKind::AsThoughUnblocked => {
+                let yes = matches!(answer, crate::decision::DecisionAnswer::Bool(true));
+                self.combat_assigns_unblocked.push((attacker, yes));
+            }
             CombatDecisionKind::Order => {
                 // `attacker` is the damage source: an attacker ordering its
                 // blockers, or (CR 509.2) a multi-block blocker ordering the
@@ -4344,6 +4393,7 @@ impl GameState {
     pub(crate) fn clear_combat_damage_plan(&mut self) {
         self.combat_damage_order.clear();
         self.combat_damage_assignment.clear();
+        clear_cold!(self.combat_assigns_unblocked);
         self.combat_damage_plan_step = None;
     }
 
@@ -4397,8 +4447,10 @@ impl GameState {
                     has_infect: kws.has_kw(&Keyword::Infect),
                     has_wither: all_wither || kws.has_kw(&Keyword::Wither),
                     toxic: toxic_poison_value(kws),
-                    assigns_as_unblocked: kws
+                    may_assign_as_unblocked: kws
                         .has_kw(&Keyword::AssignsDamageAsThoughUnblocked),
+                    must_assign_as_unblocked: kws
+                        .has_kw(&Keyword::MustAssignDamageAsThoughUnblocked),
                     free_divider: kws
                         .has_kw(&Keyword::DividesCombatDamageAmongDefenders),
                     // CR 510.1 — a creature with "deals no combat damage this
@@ -4497,7 +4549,10 @@ impl GameState {
             // here was a whole gather per attacker (13,601,323 Ir / 0.60 %
             // over 4,474 calls) *and* the only attacker keyword read at a
             // different game state from its siblings.
-            if atk.assigns_as_unblocked {
+            if atk.must_assign_as_unblocked
+                || (atk.may_assign_as_unblocked
+                    && self.combat_assigns_unblocked.contains(&(atk.id, true)))
+            {
                 blocker_ids.clear();
                 self.blocked_attackers.retain(|id| *id != atk.id);
             }
@@ -7471,7 +7526,8 @@ struct AttackerInfo {
     /// (Thorn Elemental, Rhox). Read from the same snapshot as the keywords
     /// above because CR 510.1 assignment is one turn-based action taken
     /// before any damage is dealt.
-    assigns_as_unblocked: bool,
+    may_assign_as_unblocked: bool,
+    must_assign_as_unblocked: bool,
     /// Butcher Orgg (CR 510.1a variant) — read here so the three consumers
     /// don't each linear-scan `computed` for this attacker. See
     /// [`GameState::free_division_targets`].
