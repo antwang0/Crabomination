@@ -1855,7 +1855,7 @@ pub fn guild_globe() -> CardDefinition {
             sac_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyColors(Value::Const(2)),
+                pool: ManaPayload::DifferentColors(Value::Const(2)),
             },
             ..Default::default()
         }],

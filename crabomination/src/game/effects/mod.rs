@@ -13525,19 +13525,27 @@ impl GameState {
                             }
                         }
                     }
-                    ManaPayload::AnyColors(v) => {
+                    ManaPayload::AnyColors(v) | ManaPayload::DifferentColors(v) => {
                         // N independent color choices (one per pip). Currently
                         // resolves synchronously via the installed decider — a
                         // UI prompt per pip would require a multi-step pending
                         // state and isn't needed by any catalog card today.
+                        // "Different colors" drops each pick from the palette.
+                        let distinct = matches!(pool, ManaPayload::DifferentColors(_));
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        let legal = vec![
+                        let mut legal = vec![
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
                         for _ in 0..n {
+                            if legal.is_empty() {
+                                break;
+                            }
                             let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                            if distinct {
+                                legal.retain(|c| *c != color);
+                            }
                         }
                     }
                     ManaPayload::Restricted(..)

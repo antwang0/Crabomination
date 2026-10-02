@@ -94,7 +94,8 @@ fn implicit_player_in_payload(p: &ManaPayload) -> Option<&'static SelectionRequi
         ManaPayload::Colorless(v)
         | ManaPayload::OfColor(_, v)
         | ManaPayload::AnyOneColor(v)
-        | ManaPayload::AnyColors(v) => implicit_player_in_value(v),
+        | ManaPayload::AnyColors(v)
+        | ManaPayload::DifferentColors(v) => implicit_player_in_value(v),
         _ => None,
     }
 }
@@ -1748,6 +1749,7 @@ impl Effect {
                     ManaPayload::Colorless(v)
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v)
+                    | ManaPayload::DifferentColors(v)
                     | ManaPayload::AnyTypeALandYouControlCouldProduce(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::AnyTypeTriggerSourceProduces
@@ -1765,6 +1767,7 @@ impl Effect {
                         ManaPayload::Colorless(v)
                         | ManaPayload::AnyOneColor(v)
                         | ManaPayload::AnyColors(v)
+                        | ManaPayload::DifferentColors(v)
                         | ManaPayload::OfColor(_, v)
                         | ManaPayload::OfColors(_, v) => value_has_target(v),
                         _ => false,

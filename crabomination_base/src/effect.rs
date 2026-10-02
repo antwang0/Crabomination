@@ -2980,6 +2980,9 @@ pub enum ManaPayload {
     AnyOneColor(Value),
     /// Add `amount` mana of any colors (player chooses each).
     AnyColors(Value),
+    /// `n` mana of different colors (CR 106.1 — Component Pouch, Guild Globe):
+    /// [`Self::AnyColors`] with no color picked twice.
+    DifferentColors(Value),
     /// Add `amount` mana, each pip chosen from the given color subset
     /// (player chooses per pip). The restricted-palette sibling of
     /// `AnyColors`. Used by Culling Ritual's "Add {B} or {G} for each

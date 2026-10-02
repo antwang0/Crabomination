@@ -29,9 +29,8 @@ fn copy_cast_spell(count: Value) -> Effect {
     }
 }
 
-/// Firemind Vessel — {4} Artifact. Enters tapped. {T}: add two mana of any
-/// colors. (Printed "two mana of different colors" — the different-colors
-/// constraint is not enforced.)
+/// Firemind Vessel — {4} Artifact. Enters tapped. {T}: add two mana of
+/// different colors.
 pub fn firemind_vessel() -> CardDefinition {
     CardDefinition {
         name: "Firemind Vessel",
@@ -47,7 +46,7 @@ pub fn firemind_vessel() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyColors(Value::Const(2)),
+                pool: ManaPayload::DifferentColors(Value::Const(2)),
             },
             ..Default::default()
         }],

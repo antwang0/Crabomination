@@ -50,6 +50,7 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColorInCommanderIdentity
         | ManaPayload::AnyColors(_)
+        | ManaPayload::DifferentColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
@@ -121,7 +122,8 @@ pub(crate) fn mana_amount_is_dynamic(eff: &Effect) -> bool {
         | ManaPayload::OfColor(_, v)
         | ManaPayload::OfColors(_, v)
         | ManaPayload::AnyOneColor(v)
-        | ManaPayload::AnyColors(v) => dynamic(v),
+        | ManaPayload::AnyColors(v)
+        | ManaPayload::DifferentColors(v) => dynamic(v),
         ManaPayload::Colors(_) => false,
         // The rest are board-dependent palettes `mana_ability_output` answers
         // with a flat one — never a bound.
@@ -148,7 +150,7 @@ pub(crate) fn mana_ability_output(eff: &Effect) -> (u32, crate::mana::ColorSet, 
         ManaPayload::Colors(cs) => (cs.len() as u32, false),
         ManaPayload::Colorless(v) => (amount_of(v), true),
         ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => (amount_of(v), false),
-        ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) => {
+        ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) | ManaPayload::DifferentColors(v) => {
             for c in Color::ALL {
                 colors.insert(c);
             }

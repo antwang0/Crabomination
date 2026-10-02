@@ -5566,6 +5566,9 @@ fn cr_706_vrondiss_rolls_into_a_dragon_spirit() {
     .expect("mana");
     drain_stack(&mut g2);
     assert_eq!(g2.players[0].mana_pool.total(), 2);
+    // "Two mana of different colors" — never one color twice.
+    let pool = &g2.players[0].mana_pool;
+    assert!(Color::ALL.iter().all(|c| pool.amount(*c) <= 1), "two different colors");
     assert_eq!(g2.battlefield_find(pouch).unwrap().counter_count(CounterType::Component), 0);
 }
 

@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Berserker's Frenzy** — the 1–14 result's "any number of creatures" is
 //!   every creature your opponents control.
-//! - **Component Pouch** — "two mana of different colors" may be one color
-//!   twice.
 //! - **Dragonborn Champion** — damage to its controller doesn't draw.
 //! - **Druid of Purification** — the choosing starts with the next player, and
 //!   every player chooses (no "may").
@@ -153,7 +151,6 @@ pub fn chaos_dragon() -> CardDefinition {
 
 /// Component Pouch — {T}, remove a component counter: two mana of different
 /// colors; {T}: roll a d20, 1–9 one component counter, 10–20 two.
-/// Residual: the two colors may match.
 pub fn component_pouch() -> CardDefinition {
     let counters = |n: i32| Effect::AddCounter {
         what: Selector::This,
@@ -167,7 +164,7 @@ pub fn component_pouch() -> CardDefinition {
                 remove_counter_cost: Some((CounterType::Component, 1)),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyColors(Value::Const(2)),
+                    pool: ManaPayload::DifferentColors(Value::Const(2)),
                 },
                 ..Default::default()
             },
