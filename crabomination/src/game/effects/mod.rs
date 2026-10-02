@@ -5892,7 +5892,6 @@ impl GameState {
             }
 
             Effect::GarthOneEye { names } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
                 let used = self
                     .battlefield_find(source)
@@ -5906,14 +5905,11 @@ impl GameState {
                 if available.is_empty() {
                     return Ok(());
                 }
-                let pick = match self.decider.decide(&Decision::ChooseMode {
-                    source,
-                    num_modes: available.len(),
-                    mode_texts: available.iter().map(|(_, n)| n.to_string()).collect(),
-                }) {
-                    DecisionAnswer::Mode(m) => m.min(available.len() - 1),
-                    _ => 0,
+                let texts = available.iter().map(|(_, n)| n.to_string()).collect();
+                let Some(pick) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
+                    return Ok(());
                 };
+                let pick = pick.min(available.len() - 1);
                 let (idx, name) = (available[pick].0, available[pick].1.clone());
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.name_choices_used |= 1 << idx;
@@ -6267,7 +6263,6 @@ impl GameState {
 
             Effect::ChooseCardTypeForSource => {
                 use crate::card::CardType;
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
                 let options = [
                     CardType::Creature,
@@ -6278,16 +6273,12 @@ impl GameState {
                     CardType::Planeswalker,
                     CardType::Land,
                 ];
-                let n = match self.decider.decide(&Decision::ChooseMode {
-                    source,
-                    num_modes: options.len(),
-                    mode_texts: options.iter().map(|t| format!("{t:?}")).collect(),
-                }) {
-                    DecisionAnswer::Mode(m) => m.min(options.len() - 1),
-                    _ => 0,
+                let texts = options.iter().map(|t| format!("{t:?}")).collect();
+                let Some(n) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
+                    return Ok(());
                 };
                 if let Some(c) = self.battlefield_find_mut(source) {
-                    c.chosen_card_type = Some(options[n].clone());
+                    c.chosen_card_type = Some(options[n.min(options.len() - 1)].clone());
                 }
                 Ok(())
             }
@@ -7298,7 +7289,6 @@ impl GameState {
                 // CR 700.2 — the controller picks at resolution, restricted to
                 // modes this permanent hasn't chosen before; the pick is
                 // recorded on the source so it can't repeat (Captive Audience).
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
                 // "… that hasn't been chosen this turn" (Teval's Judgment): the
                 // record is `[turn as 4 LE bytes] ++ picks`, and a header from
@@ -7344,20 +7334,17 @@ impl GameState {
                 if available.is_empty() {
                     return Ok(());
                 }
-                let answer = self.decider.decide(&Decision::ChooseMode {
-                    source,
-                    num_modes: available.len(),
-                    mode_texts: if crate::game::prompt_text() {
-                        available.iter().map(|(i, _)| modes[*i].effect_short_text()).collect()
-                    } else {
-                        Vec::new()
-                    },
-                });
-                let idx = match answer {
-                    DecisionAnswer::Mode(i) => i.min(available.len() - 1),
-                    _ => 0,
+                // CR 700.2 — the controller picks; recorded before the mode
+                // runs, so a mode that parks can't be re-picked on resume.
+                let texts = if crate::game::prompt_text() {
+                    available.iter().map(|(i, _)| modes[*i].effect_short_text()).collect()
+                } else {
+                    vec![String::new(); available.len()]
                 };
-                let (pick, targets) = available.swap_remove(idx);
+                let Some(idx) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
+                    return Ok(());
+                };
+                let (pick, targets) = available.swap_remove(idx.min(available.len() - 1));
                 if let Some(c) = self.battlefield_find_mut(source) {
                     if per_turn && (c.modes_chosen.len() < 4 || c.modes_chosen[..4] != stamp) {
                         c.modes_chosen.clear();
@@ -37672,21 +37659,16 @@ impl GameState {
                 self.exchange_spell_and_creature_control(a, b, ctx, events)
             }
             Effect::ChooseCardTypeAmongForSource(options) => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
                 if options.is_empty() {
                     return Ok(());
                 }
-                let n = match self.decider.decide(&Decision::ChooseMode {
-                    source,
-                    num_modes: options.len(),
-                    mode_texts: options.iter().map(|t| format!("{t:?}")).collect(),
-                }) {
-                    DecisionAnswer::Mode(m) => m.min(options.len() - 1),
-                    _ => 0,
+                let texts = options.iter().map(|t| format!("{t:?}")).collect();
+                let Some(n) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
+                    return Ok(());
                 };
                 if let Some(c) = self.battlefield_find_mut(source) {
-                    c.chosen_card_type = Some(options[n].clone());
+                    c.chosen_card_type = Some(options[n.min(options.len() - 1)].clone());
                 }
                 Ok(())
             }
