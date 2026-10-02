@@ -54,6 +54,7 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
+        | ManaPayload::AnyTypeAGateYouControlCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::DevotionOfChosenColor => *set = crate::mana::ColorSet::all(),

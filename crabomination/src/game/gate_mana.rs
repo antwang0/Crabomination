@@ -9,7 +9,9 @@ use crate::mana::ColorSet;
 /// while computing that set, so two Reflecting Pools add nothing (CR 106.7).
 fn reads_your_lands(pool: &ManaPayload) -> bool {
     match pool {
-        ManaPayload::AnyColorAGateYouControlCouldProduce | ManaPayload::AnyTypeALandYouControlCouldProduce(_) => true,
+        ManaPayload::AnyColorAGateYouControlCouldProduce
+        | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
+        | ManaPayload::AnyTypeAGateYouControlCouldProduce => true,
         ManaPayload::Restricted(inner, _) => reads_your_lands(inner),
         _ => false,
     }

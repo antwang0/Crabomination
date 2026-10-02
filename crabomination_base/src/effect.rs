@@ -3022,6 +3022,9 @@ pub enum ManaPayload {
     /// board as it resolves. One type, `n` of it; nothing when no land could
     /// produce any (two Reflecting Pools alone).
     AnyTypeALandYouControlCouldProduce(Value),
+    /// "One mana of any type that a Gate you control could produce" (Plaza
+    /// of Harmony): [`Self::AnyTypeALandYouControlCouldProduce`] over Gates.
+    AnyTypeAGateYouControlCouldProduce,
     /// Add one mana of any type the *trigger's subject* land produced
     /// (Extraplanar Lens). Falls back to colorless if it produces nothing.
     AnyTypeTriggerSourceProduces,

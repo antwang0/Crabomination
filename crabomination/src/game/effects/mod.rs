@@ -13383,9 +13383,15 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    ManaPayload::AnyTypeALandYouControlCouldProduce(v) => {
-                        let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        let (colors, colorless) = self.types_lands_could_produce(p, false);
+                    ManaPayload::AnyTypeALandYouControlCouldProduce(_)
+                    | ManaPayload::AnyTypeAGateYouControlCouldProduce => {
+                        let (n, gates) = match pool {
+                            ManaPayload::AnyTypeALandYouControlCouldProduce(v) => {
+                                (self.evaluate_value(v, ctx).max(0) as u32, false)
+                            }
+                            _ => (1, true),
+                        };
+                        let (colors, colorless) = self.types_lands_could_produce(p, gates);
                         let legal: Vec<Color> = colors.iter().collect();
                         if !legal.is_empty() {
                             let color = self.chosen_mana_color(p, &legal, ctx.source);

@@ -2356,6 +2356,25 @@ fn plaza_of_harmony_gate_gain() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "added 1 colorless");
 }
 
+/// CR 106.7 — Plaza of Harmony's second ability makes only a type one of
+/// your Gates could produce: an Azorius Guildgate's white or blue.
+#[test]
+fn plaza_of_harmony_makes_what_a_gate_could() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let plaza = g.add_card_to_battlefield(0, catalog::plaza_of_harmony());
+    let tap = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility { card_id: plaza, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None });
+    let _ = tap(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no Gate, no mana");
+    g.battlefield_find_mut(plaza).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    tap(&mut g).expect("tap for a Gate's color");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::White) + pool.amount(Color::Blue), 1);
+}
+
 /// Emergency Powers wheels every player up to seven cards and exiles itself.
 #[test]
 fn emergency_powers_wheels_and_exiles() {

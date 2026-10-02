@@ -2976,6 +2976,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
+        | ManaPayload::AnyTypeAGateYouControlCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
@@ -4469,7 +4470,8 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
-        | ManaPayload::AnyTypeALandYouControlCouldProduce(_) => ColorSet::all(),
+        | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
+        | ManaPayload::AnyTypeAGateYouControlCouldProduce => ColorSet::all(),
         // Color set depends on live board state — not auto-tapped.
         ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongExiledWithSource

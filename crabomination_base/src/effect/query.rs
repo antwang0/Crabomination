@@ -1751,6 +1751,7 @@ impl Effect {
                     | ManaPayload::AnyTypeALandYouControlCouldProduce(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::AnyTypeTriggerSourceProduces
+                    | ManaPayload::AnyTypeAGateYouControlCouldProduce
                     | ManaPayload::AnyTypeSacrificedLandProduces
                     | ManaPayload::AnyColorAmongExiledWithSource
                     | ManaPayload::AnyColorAmongYourPermanents
@@ -5391,7 +5392,6 @@ impl Effect {
                 | Effect::WithTappedPower { body, .. }
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
-            | Effect::WithRevealedForCost { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextAttackThisTurn { body }

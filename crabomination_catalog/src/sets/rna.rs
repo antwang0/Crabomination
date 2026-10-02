@@ -4738,8 +4738,8 @@ pub fn revival_revenge() -> CardDefinition {
 }
 
 /// Plaza of Harmony — Gate land. ETB: gain 3 life if you control two or more
-/// Gates. {T}: add {C}. {T}: add one mana of any color a Gate you control could
-/// produce (approximated to any color).
+/// Gates. {T}: add {C}. {T}: add one mana of any type a Gate you control could
+/// produce (CR 106.7).
 pub fn plaza_of_harmony() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -4774,15 +4774,9 @@ pub fn plaza_of_harmony() -> CardDefinition {
             },
             ActivatedAbility {
                 tap_cost: true,
-                condition: Some(Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        R::HasLandType(LandType::Gate).and(R::ControlledByYou),
-                    ),
-                    n: Value::ONE,
-                }),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                    pool: ManaPayload::AnyTypeAGateYouControlCouldProduce,
                 },
                 ..Default::default()
             },
