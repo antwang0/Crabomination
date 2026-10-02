@@ -2698,12 +2698,14 @@ fn lilianas_devotee_buys_a_zombie_after_a_death() {
     assert_eq!(count_named(&g, 0, "Zombie"), 1);
 }
 
-/// Havengul Lich — {1}: a creature card in any graveyard is castable this turn.
+/// Havengul Lich — {1}: a creature card in any graveyard is castable this
+/// turn; casting it hands the Lich that card's activated abilities until end
+/// of turn (the delayed trigger resolves above the spell).
 #[test]
 fn havengul_lich_opens_a_creature_card_in_any_graveyard() {
     let mut g = main_phase();
     let lich = g.add_card_to_battlefield(0, catalog::havengul_lich());
-    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bear = g.add_card_to_graveyard(1, catalog::prodigal_sorcerer());
     flood(&mut g, 0);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lich,
@@ -2725,6 +2727,36 @@ fn havengul_lich_opens_a_creature_card_in_any_graveyard() {
     .expect("cast it");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+    let lent = &g.battlefield_find(lich).unwrap().granted_activated_eot;
+    assert_eq!(lent.len(), 1, "the Sorcerer's ping");
+    // CR 514.2 — "until end of turn" ends in cleanup.
+    g.do_cleanup(&mut vec![]);
+    assert!(g.battlefield_find(lich).unwrap().granted_activated_eot.is_empty());
+}
+
+/// Havengul Lich — a card that leaves the graveyard uncast is a new object
+/// (CR 400.7): casting it later this turn lends nothing.
+#[test]
+fn havengul_lich_forgets_a_card_that_left_uncast() {
+    let mut g = main_phase();
+    let lich = g.add_card_to_battlefield(0, catalog::havengul_lich());
+    let sorc = g.add_card_to_graveyard(1, catalog::prodigal_sorcerer());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lich,
+        ability_index: 0,
+        target: Some(Target::Permanent(sorc)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}");
+    drain_stack(&mut g);
+    let card = g.players[1].graveyard.iter().position(|c| c.id == sorc).unwrap();
+    let card = g.players[1].graveyard.remove(card);
+    g.players[1].hand.push(card);
+    g.dispatch_triggers_for_events(&[GameEvent::CardLeftGraveyard { player: 1, card_id: sorc }]);
+    assert!(g.delayed_triggers.is_empty());
 }
 
 /// Lotleth Giant — undergrowth damage to a target opponent.

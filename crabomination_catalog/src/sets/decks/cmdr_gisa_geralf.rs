@@ -156,19 +156,30 @@ pub fn grimoire_of_the_dead() -> CardDefinition {
 }
 
 /// Havengul Lich — {1}: you may cast target creature card in a graveyard this
-/// turn. Residual: It doesn't gain that card's activated abilities.
+/// turn. When you cast that card this turn, this gains all its activated
+/// abilities until end of turn (`WhenYouCastTargetThisTurn`).
 pub fn havengul_lich() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::GrantMayPlay {
-                what: target_filtered(R::Creature.and(R::InGraveyard)),
-                duration: MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: true,
-                any_color: false,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::DelayUntil {
+                    kind: crate::effect::DelayedTriggerKind::WhenYouCastTargetThisTurn,
+                    body: Box::new(Effect::GainAllActivatedAbilitiesOf {
+                        what: Selector::TriggerSource,
+                        duration: Duration::EndOfTurn,
+                        to: None,
+                    }),
+                },
+            ]),
             ..Default::default()
         }],
         ..creature(

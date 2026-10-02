@@ -2145,7 +2145,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Saheeli, Radiant Creator | Living Energy (DRC) | the copied permanent is chosen as the trigger goes on the stack, not in a reflexive trigger after paying. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
-| 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
