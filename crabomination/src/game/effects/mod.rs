@@ -37521,11 +37521,12 @@ impl GameState {
                     *creatures_only,
                     ctx,
                     events,
+                    effect,
                 );
                 Ok(())
             }
             Effect::RevealTopPutAttached { count, filter } => {
-                self.reveal_top_put_attached(count, filter, ctx, events);
+                self.reveal_top_put_attached(count, filter, ctx, events, effect);
                 Ok(())
             }
             Effect::KeywordCountersFromGraveyard { keywords } => {
@@ -37608,7 +37609,7 @@ impl GameState {
                 Ok(())
             }
             Effect::RevealUntilPutAttachedElseHand { filter } => {
-                self.reveal_until_put_attached_else_hand(filter, ctx, events);
+                self.reveal_until_put_attached_else_hand(filter, ctx, events, effect);
                 Ok(())
             }
             Effect::SearchAuraAttachToSource => {

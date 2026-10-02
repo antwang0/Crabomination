@@ -116,6 +116,22 @@ fn unfinished_business_and_retether() {
     assert_eq!(g.battlefield_find(rancor).and_then(|c| c.attached_to), Some(wurm));
 }
 
+/// CR 303.4f — an Aura put onto the battlefield without being cast enchants
+/// what the player putting it there chooses: Retether's Rancor goes on the
+/// Bears, not the bigger Wurm the headless pick would take.
+#[test]
+fn retether_host_is_the_players_choice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let rancor = g.add_card_to_graveyard(0, catalog::rancor());
+    g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    let r = g.add_card_to_hand(0, catalog::retether());
+    cast(&mut g, r, &[]);
+    assert_eq!(g.battlefield_find(rancor).and_then(|c| c.attached_to), Some(bear));
+}
+
 /// Timber Paladin's base P/T tracks the Auras on it.
 #[test]
 fn timber_paladin_grows_with_auras() {
@@ -172,6 +188,57 @@ fn liberated_livestock_dresses_its_tokens() {
     assert_eq!(tokens, 3);
     assert!(g.battlefield_find(rancor).is_some_and(|c| c.attached_to.is_some()));
     assert!(g.battlefield_find(steel).is_some_and(|c| c.attached_to.is_some()));
+}
+
+/// Liberated Livestock's "may": each token's Aura is the player's pick, and
+/// one may go bare (here the second).
+#[test]
+fn liberated_livestock_auras_are_the_players_picks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let ll = g.add_card_to_battlefield(0, catalog::liberated_livestock());
+    let rancor = g.add_card_to_graveyard(0, catalog::rancor());
+    let steel = g.add_card_to_hand(0, catalog::spectral_steel());
+    let m = g.add_card_to_hand(0, catalog::murder());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![steel]),
+        DecisionAnswer::Cards(vec![]),
+        DecisionAnswer::Cards(vec![rancor]),
+    ]));
+    cast(&mut g, m, &[Target::Permanent(ll)]);
+    let tokens: Vec<CardId> =
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token && c.definition.is_creature()).map(|c| c.id).collect();
+    assert_eq!(tokens.len(), 3);
+    let worn = tokens.iter().filter(|t| !attached_to(&g, **t).is_empty()).count();
+    assert_eq!(worn, 2, "one token declined");
+    assert!(g.battlefield_find(rancor).is_some() && g.battlefield_find(steel).is_some());
+}
+
+/// Songbirds' Blessing: an attack reveals to an Aura that "may" go onto the
+/// battlefield — on a host you choose — else into your hand.
+#[test]
+fn songbirds_blessing_puts_or_keeps_the_aura() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for decline in [false, true] {
+        let mut g = pod(2);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.add_card_to_library(0, catalog::island());
+        let rancor = g.add_card_to_library(0, catalog::rancor());
+        let sb = g.add_card_to_hand(0, catalog::songbirds_blessing());
+        cast(&mut g, sb, &[Target::Permanent(bear)]);
+        if decline {
+            g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DeclineTarget]));
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]).expect("attack");
+        drain_stack(&mut g);
+        if decline {
+            assert!(g.players[0].hand.iter().any(|c| c.id == rancor), "declined: to hand");
+        } else {
+            assert_eq!(g.battlefield_find(rancor).and_then(|c| c.attached_to), Some(bear));
+        }
+    }
 }
 
 /// Gylwain puts a Role on each nontoken creature entering under you.

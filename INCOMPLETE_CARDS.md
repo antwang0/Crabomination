@@ -1967,10 +1967,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
 | 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |
 | 🟡 Unfinished Business | Virtue and Valor (WOC) | the two Aura / Equipment cards are picked, not targeted. |
-| 🟡 Retether | Virtue and Valor (WOC) | each Aura's host is the engine's pick (your greatest-power creature first). |
-| 🟡 Knickknack Ouphe | Virtue and Valor (WOC) | every eligible Aura goes onto the battlefield; each host is the engine's pick. |
-| 🟡 Songbirds' Blessing | Virtue and Valor (WOC) | the Aura always goes onto the battlefield when it has a host; the host is the engine's pick. |
-| 🟡 Liberated Livestock | Virtue and Valor (WOC) | each token's Aura is the engine's pick (graveyard first). |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 | 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
@@ -2004,7 +2000,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Agitator Ant | Blame Game (MKC) | each taker's two counters go on their greatest-power creature, not one they choose. |
 | 🟡 Feather, Radiant Arbiter | Blame Game (MKC) | a headless caster only copies onto its own creatures (a person is offered every legal one). |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
-| 🟡 Estrid, the Masked | Adaptive Enchantment (C18) | the −7's Auras go on hosts the engine picks. |
 | 🟡 Genesis Storm | Adaptive Enchantment (C18) | the revealed permanent always goes onto the battlefield ("you may" isn't offered). |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
 | 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |

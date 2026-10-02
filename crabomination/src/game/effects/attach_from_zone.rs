@@ -3,25 +3,48 @@
 //! Retether, Liberated Livestock, Knickknack Ouphe, Songbirds' Blessing.
 
 use crate::card::{CardId, SelectionRequirement, Zone};
-use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::EffectContext;
 use crate::game::types::{GameEvent, Target};
 use crate::game::GameState;
 
 impl GameState {
-    /// The permanent `card` (an Aura or Equipment card not yet on the
-    /// battlefield) would attach to: `host` when it is legal, else — with no
-    /// host named — the best legal permanent (yours first, then the greatest
-    /// power). `None` when an Aura has nothing to enchant (CR 303.4i: it stays
-    /// where it is). An Equipment only ever attaches to a creature.
-    fn attach_host_for(
-        &self,
+    /// CR 303.4f — the permanent `card` (an Aura or Equipment card not yet on
+    /// the battlefield) attaches to: `host` when the effect names one and it
+    /// is legal, else the legal permanent `p` — the player putting it there —
+    /// chooses (headless: yours first, then the greatest power). Inner `None`
+    /// when an Aura has nothing to enchant (CR 303.4i: it stays where it is);
+    /// outer `None` is a suspend. An Equipment only ever attaches to a
+    /// creature.
+    #[allow(clippy::too_many_arguments)]
+    fn choose_attach_host(
+        &mut self,
+        cursor: &mut usize,
         card: CardId,
         host: Option<CardId>,
         creatures_only: bool,
         p: usize,
-    ) -> Option<CardId> {
-        let def = self.find_card_anywhere(card)?.definition.clone();
+        effect: &Effect,
+        may: bool,
+    ) -> Option<Option<CardId>> {
+        let hosts = self.attach_hosts_for(card, host, creatures_only, p);
+        let asks = self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        if hosts.is_empty() || !asks || (hosts.len() == 1 && !may) {
+            return Some(hosts.first().copied());
+        }
+        let name = self.find_card_anywhere(card).map_or(String::new(), |c| c.definition.name.to_string());
+        let legal: Vec<Target> = hosts.into_iter().map(Target::Permanent).collect();
+        // `may`: declining keeps the card where it is ("you may put …").
+        match self.ask_seat_target_maybe_logged(cursor, p, format!("Attach {name} to"), card, legal, effect, may)? {
+            Some(Target::Permanent(h)) => Some(Some(h)),
+            _ => Some(None),
+        }
+    }
+
+    /// The legal hosts for [`choose_attach_host`](Self::choose_attach_host),
+    /// the headless pick first.
+    fn attach_hosts_for(&self, card: CardId, host: Option<CardId>, creatures_only: bool, p: usize) -> Vec<CardId> {
+        let Some(def) = self.find_card_anywhere(card).map(|c| c.definition.clone()) else { return Vec::new() };
         let fits = |id: CardId| -> bool {
             let Some(h) = self.battlefield_find(id) else { return false };
             if def.is_aura() {
@@ -37,13 +60,13 @@ impl GameState {
             }
         };
         if let Some(h) = host {
-            return fits(h).then_some(h);
+            return if fits(h) { vec![h] } else { Vec::new() };
         }
-        self.battlefield
-            .iter()
-            .filter(|c| fits(c.id))
-            .max_by_key(|c| (c.controller == p, self.computed_is_creature(c), c.power()))
-            .map(|c| c.id)
+        let mut hosts: Vec<&crate::card::CardInstance> = self.battlefield.iter().filter(|c| fits(c.id)).collect();
+        // Stable over battlefield order, so ties keep the old pick (the last).
+        hosts.reverse();
+        hosts.sort_by_key(|c| std::cmp::Reverse((c.controller == p, self.computed_is_creature(c), c.power())));
+        hosts.into_iter().map(|c| c.id).collect()
     }
 
     /// Move `card` onto the battlefield under `p` attached to `host`.
@@ -69,6 +92,7 @@ impl GameState {
         creatures_only: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) {
         let p = ctx.controller;
         let host_id = match host {
@@ -79,7 +103,10 @@ impl GameState {
             None => None,
         };
         let filter = &filter.resolve_x(ctx.x_value);
-        let mut cap = max.map(|v| self.evaluate_value(v, ctx).max(0) as usize).unwrap_or(usize::MAX);
+        let cap = max.map(|v| self.evaluate_value(v, ctx).max(0) as usize).unwrap_or(usize::MAX);
+        // The candidates in the headless order: zone by zone, greatest mana
+        // value first.
+        let mut cands: Vec<CardId> = Vec::new();
         for zone in zones {
             let pick = |c: &crate::card::CardInstance| {
                 self.evaluate_requirement_on_card(filter, c, p).then(|| (c.id, c.definition.cost.cmc()))
@@ -90,16 +117,59 @@ impl GameState {
                 _ => continue,
             };
             ids.sort_by_key(|(_, mv)| std::cmp::Reverse(*mv));
-            for (id, _) in ids {
-                if cap == 0 {
-                    return;
-                }
-                if let Some(h) = self.attach_host_for(id, host_id, creatures_only, p) {
-                    self.put_attached(id, h, ctx, events);
-                    self.scratch.last_moved_cards.push(id);
-                    cap -= 1;
-                }
+            cands.extend(ids.into_iter().map(|(id, _)| id));
+        }
+        // Every choice is made first, then the cards move (a re-run replays):
+        // which cards when the cap binds (Liberated Livestock's "an Aura
+        // card"), then each one's host (CR 303.4f).
+        let mut cursor = 0;
+        if cap < cands.len()
+            && (self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto))
+        {
+            let hosted: Vec<CardId> = cands
+                .iter()
+                .copied()
+                .filter(|&id| !self.attach_hosts_for(id, host_id, creatures_only, p).is_empty())
+                .collect();
+            let named: Vec<(CardId, String)> = hosted
+                .iter()
+                .filter_map(|&id| self.find_card_anywhere(id).map(|c| (id, c.definition.name.to_string())))
+                .collect();
+            let auto: Vec<CardId> = hosted.iter().copied().take(cap).collect();
+            let Some(chosen) = self.ask_seat_cards_logged(
+                &mut cursor,
+                p,
+                format!("Choose up to {cap} to put onto the battlefield attached"),
+                ctx.source.unwrap_or(CardId(0)),
+                named,
+                0,
+                cap as u32,
+                crate::decision::PickValue::Gain,
+                effect,
+                auto,
+            ) else {
+                return;
+            };
+            cands = chosen;
+        }
+        let mut cap = cap;
+        let mut picks: Vec<(CardId, CardId)> = Vec::new();
+        for id in cands {
+            if cap == 0 {
+                break;
             }
+            let Some(h) = self.choose_attach_host(&mut cursor, id, host_id, creatures_only, p, effect, false) else {
+                return;
+            };
+            if let Some(h) = h {
+                picks.push((id, h));
+                cap -= 1;
+            }
+        }
+        self.clear_answer_log();
+        for (id, h) in picks {
+            self.put_attached(id, h, ctx, events);
+            self.scratch.last_moved_cards.push(id);
         }
     }
 
@@ -113,20 +183,52 @@ impl GameState {
         filter: &SelectionRequirement,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) {
         let p = ctx.controller;
         let n = self.evaluate_value(count, ctx).max(0) as usize;
         let filter = &filter.resolve_x(ctx.x_value);
         let revealed: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
-        for &id in &revealed {
-            let fits = self.players[p]
-                .library
-                .iter()
-                .find(|c| c.id == id)
-                .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p));
-            if fits && let Some(h) = self.attach_host_for(id, None, false, p) {
-                self.put_attached(id, h, ctx, events);
+        let mut cursor = 0;
+        // "You may put any number of" them: which ones first (headless: all
+        // that have a host), then each one's host.
+        let eligible: Vec<(CardId, String)> = revealed
+            .iter()
+            .filter_map(|&id| self.players[p].library.iter().find(|c| c.id == id))
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+            .filter(|c| !self.attach_hosts_for(c.id, None, false, p).is_empty())
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        let auto: Vec<CardId> = eligible.iter().map(|e| e.0).collect();
+        let max = eligible.len() as u32;
+        let chosen = if eligible.is_empty() {
+            Vec::new()
+        } else if let Some(chosen) = self.ask_seat_cards_logged(
+            &mut cursor,
+            p,
+            "Put any number of these onto the battlefield".into(),
+            ctx.source.unwrap_or(CardId(0)),
+            eligible,
+            0,
+            max,
+            crate::decision::PickValue::Gain,
+            effect,
+            auto,
+        ) {
+            chosen
+        } else {
+            return;
+        };
+        let mut picks: Vec<(CardId, CardId)> = Vec::new();
+        for id in chosen {
+            let Some(h) = self.choose_attach_host(&mut cursor, id, None, false, p, effect, false) else { return };
+            if let Some(h) = h {
+                picks.push((id, h));
             }
+        }
+        self.clear_answer_log();
+        for (id, h) in picks {
+            self.put_attached(id, h, ctx, events);
         }
         self.bottom_in_random_order(p, &revealed);
     }
@@ -140,6 +242,7 @@ impl GameState {
         filter: &SelectionRequirement,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) {
         let p = ctx.controller;
         let Some(pos) = self.players[p]
@@ -153,7 +256,10 @@ impl GameState {
         };
         let rest: Vec<CardId> = self.players[p].library.iter().take(pos).map(|c| c.id).collect();
         let hit = self.players[p].library[pos].id;
-        match self.attach_host_for(hit, None, false, p) {
+        let mut cursor = 0;
+        let Some(host) = self.choose_attach_host(&mut cursor, hit, None, false, p, effect, true) else { return };
+        self.clear_answer_log();
+        match host {
             Some(h) => self.put_attached(hit, h, ctx, events),
             None => {
                 self.move_card_to(hit, &ZoneDest::Hand(PlayerRef::You), ctx, events);

@@ -6,9 +6,6 @@
 //! - **Mantle of the Ancients**, **Unfinished Business** — the returned Aura
 //!   and Equipment cards are picked (greatest mana value first), not
 //!   targeted.
-//! - **Retether**, **Knickknack Ouphe**, **Songbirds' Blessing**,
-//!   **Liberated Livestock** — each Aura's host is the engine's pick (your
-//!   greatest-power legal permanent first).
 
 use super::woe_roles::{monster_role, royal_role, sorcerer_role, virtuous_role};
 use crate::card::{
@@ -258,8 +255,7 @@ pub fn indomitable_might() -> CardDefinition {
 }
 
 /// Knickknack Ouphe — enters with X +1/+1 counters; Auras of mana value X or
-/// less from the top X go onto the battlefield.
-/// Residual: each Aura's host is the engine's pick.
+/// less from the top X go onto the battlefield, each on a host you choose.
 pub fn knickknack_ouphe() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
@@ -272,8 +268,7 @@ pub fn knickknack_ouphe() -> CardDefinition {
 }
 
 /// Liberated Livestock — dying, a Cat, a Bird and an Ox, each of which may
-/// wear an Aura from your hand or graveyard.
-/// Residual: the Aura is the engine's pick (graveyard first).
+/// wear an Aura of your choice from your hand or graveyard.
 pub fn liberated_livestock() -> CardDefinition {
     let mint = |t: TokenDefinition| Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(t) };
     CardDefinition {
@@ -355,8 +350,7 @@ pub fn ox_drover() -> CardDefinition {
 }
 
 /// Retether — every Aura card in your graveyard returns attached to a
-/// creature.
-/// Residual: each Aura's host is the engine's pick.
+/// creature you choose.
 pub fn retether() -> CardDefinition {
     CardDefinition {
         name: "Retether",
@@ -392,8 +386,7 @@ pub fn sages_reverie() -> CardDefinition {
 }
 
 /// Songbirds' Blessing — attacking, reveal until an Aura: onto the
-/// battlefield, else to hand.
-/// Residual: the Aura's host is the engine's pick.
+/// battlefield attached to the creature you choose, else to hand.
 pub fn songbirds_blessing() -> CardDefinition {
     aura(
         "Songbirds' Blessing",

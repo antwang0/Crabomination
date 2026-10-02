@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_estrid.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Estrid, the Masked** — the −7's Auras land on hosts the engine picks.
 //! - **Genesis Storm** — the revealed permanent always goes onto the
 //!   battlefield ("you may" isn't offered).
 //! - **Myth Unbound** — the discount counts both partners' casts together.
@@ -88,7 +87,7 @@ fn mask_token() -> TokenDefinition {
 
 /// Estrid, the Masked — +2 untaps your enchanted permanents; −1 masks another
 /// permanent with an umbra-armored Aura token; −7 mills seven and returns your
-/// enchantments, then your Auras. Residual: The −7's Auras go on engine-picked hosts.
+/// enchantments, then your Auras, each on a host you choose.
 pub fn estrid_the_masked() -> CardDefinition {
     CardDefinition {
         name: "Estrid, the Masked",
