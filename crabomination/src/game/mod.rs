@@ -16001,6 +16001,9 @@ impl GameState {
                     let n = self.players[card.controller].hand.len() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::ControllerHandSizePower { base_t } => {
+                    (self.players[card.controller].hand.len() as i32, base_t)
+                }
                 crate::card::DynamicPt::ControllerHandSizeTimes { factor } => {
                     let n = self.players[card.controller].hand.len() as i32 * factor;
                     (n, n)

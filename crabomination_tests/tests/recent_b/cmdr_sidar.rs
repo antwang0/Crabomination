@@ -163,6 +163,48 @@ fn aryel_taps_knights_to_destroy() {
     assert_eq!(tapped, 2, "X = 2 Knights tapped");
 }
 
+/// CR 601.2b-c — Aryel's X is chosen before its target, and the target must
+/// have power X or less: X = 1 can't aim at the 2-power Bears.
+#[test]
+fn cr_601_2c_aryel_targets_by_the_chosen_x() {
+    let mut g = main_phase(2);
+    let aryel = g.add_card_to_battlefield(0, catalog::aryel_knight_of_windgrace());
+    let a = g.add_card_to_battlefield(0, catalog::worthy_knight());
+    let b = g.add_card_to_battlefield(0, catalog::worthy_knight());
+    for id in [aryel, a, b] {
+        g.clear_sickness(id);
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let act = |x| GameAction::ActivateAbility {
+        card_id: aryel,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: Some(x),
+        mode: None,
+    };
+    assert!(g.perform_action(act(1)).is_err(), "power 2 is more than X = 1");
+    g.perform_action(act(2)).expect("X = 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// CR 604.3 — Syr Elenora's power is her controller's hand size, live.
+#[test]
+fn cr_604_3_syr_elenora_power_is_hand_size() {
+    let mut g = main_phase(2);
+    let se = g.add_card_to_battlefield(0, catalog::syr_elenora_the_discerning());
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    let cp = g.computed_permanent(se).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+    g.add_card_to_hand(0, catalog::island());
+    assert_eq!(g.computed_permanent(se).unwrap().power, 4);
+}
+
 /// "This turn" is one shared turn: a non-active player's draw tally resets at
 /// every untap, not only at their own (Elenda and Azor counts it at each end
 /// step).

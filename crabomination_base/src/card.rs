@@ -6206,6 +6206,9 @@ pub enum DynamicPt {
     /// Power = toughness = `factor` × the cards in the controller's hand.
     /// Masumaro, First to Live (twice your hand size).
     ControllerHandSizeTimes { factor: i32 },
+    /// `*`/`base_t`: power is the controller's hand size, toughness printed
+    /// (Syr Elenora, the Discerning).
+    ControllerHandSizePower { base_t: i32 },
     /// Base `base_p`/`base_t`, then −`per`/−`per` for each card in the
     /// controller's hand. Dread Slag (9/9, −4/−4 per card in your hand).
     BaseMinusPerCardInHand { base_p: i32, base_t: i32, per: i32 },

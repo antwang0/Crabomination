@@ -1,15 +1,10 @@
 //! Commander: the cards the **Cavalry Charge** precon (MOC, Sidar Jabari of
 //! Zhalfir) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_sidar.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Syr Elenora** — her hand-size power is a battlefield static, not a CDA
-//!   read in every zone.
-//! - **Aryel** — X is the target's power (the least that makes it legal), not
-//!   a free choice.
 
 use crate::card::{
-    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus,
+    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
+    EquipBonus,
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
@@ -145,7 +140,7 @@ pub fn acclaimed_contender() -> CardDefinition {
 
 /// Aryel, Knight of Windgrace — vigilance; {2}{W}, {T}: a 2/2 Knight with
 /// vigilance; {B}, {T}, tap X untapped Knights: destroy target creature with
-/// power X or less. Residual: X is the target's power.
+/// power X or less (an unnamed X defaults to the target's power).
 pub fn aryel_knight_of_windgrace() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
@@ -169,11 +164,7 @@ pub fn aryel_knight_of_windgrace() -> CardDefinition {
                         Value::PowerOf(Box::new(Selector::Target(0))),
                     ),
                     then: Box::new(Effect::Destroy {
-                        what: target_filtered(
-                            R::Creature.and(R::PowerAtMostYourCount(Box::new(
-                                R::Creature.and(knight()).and(R::OtherThanSource),
-                            ))),
-                        ),
+                        what: target_filtered(R::Creature.and(R::PowerAtMostXFromCost)),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -472,19 +463,13 @@ pub fn smitten_swordmaster() -> CardDefinition {
 }
 
 /// Syr Elenora, the Discerning — power equal to your hand size; enters: draw;
-/// opponents' spells targeting her cost {2} more. Residual: the power is a
-/// battlefield static.
+/// opponents' spells targeting her cost {2} more. Her power is a CR 604.3
+/// CDA (`DynamicPt`).
 pub fn syr_elenora_the_discerning() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        dynamic_pt: Some(DynamicPt::ControllerHandSizePower { base_t: 4 }),
         static_abilities: vec![
-            StaticAbility {
-                description: "Syr Elenora's power is equal to the number of cards in your hand.",
-                effect: StaticEffect::SelfBasePtFromValue {
-                    power: Value::HandSizeOf(PlayerRef::You),
-                    toughness: Value::Const(4),
-                },
-            },
             StaticAbility {
                 description: "Spells your opponents cast that target Syr Elenora cost {2} more to cast.",
                 effect: StaticEffect::TaxOpponentSpellsTargetingThis { amount: 2 },
