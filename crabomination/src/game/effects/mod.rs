@@ -19433,8 +19433,12 @@ impl GameState {
             }
 
             Effect::DistributeControlAmongOpponents { what } => {
+                // "For each of those permanents, choose a different opponent"
+                // (Dack Fayden, Helping Hand): the controller assigns them one
+                // at a time; headless, in turn order. A suspended ask re-runs
+                // over the same objects, pinned, replaying the earlier picks.
                 let me = ctx.controller;
-                let opponents: Vec<usize> = self
+                let mut opponents: Vec<usize> = self
                     .seats_in_turn_order_from(me)
                     .into_iter()
                     .filter(|&q| q != me && !self.same_team(me, q))
@@ -19444,9 +19448,28 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
-                for (cid, q) in permanents.into_iter().zip(opponents) {
+                let pinned = Effect::DistributeControlAmongOpponents { what: Selector::ExactObjects(permanents.clone()) };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                for cid in permanents {
+                    if opponents.is_empty() {
+                        break;
+                    }
+                    let pick = if opponents.len() == 1 {
+                        0
+                    } else {
+                        let name = self.find_card_anywhere(cid).map_or("it", |c| c.definition.name);
+                        let ballot = opponents.iter().map(|q| format!("Player {}", q + 1)).collect();
+                        let prompt = format!("Which opponent gains control of {name}?");
+                        match self.ask_seat_option(&mut cursor, me, prompt, source, ballot, &pinned) {
+                            Some(n) => n,
+                            None => return Ok(()),
+                        }
+                    };
+                    let q = opponents.remove(pick);
                     self.change_control(cid, q);
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 

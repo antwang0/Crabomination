@@ -116,8 +116,7 @@ pub fn avacyn_angel_of_horror() -> CardDefinition {
 
 /// Dack Fayden, Helping Hand — ETB: reveal until X creature cards (X your
 /// opponents), put them onto the battlefield goaded for the rest of the
-/// game, and give one to each opponent. Residual: the opponents get them in
-/// turn order, not by your choice.
+/// game, and give each to a different opponent of your choice.
 pub fn dack_fayden_helping_hand() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -532,8 +531,8 @@ pub fn plan_for_all_outcomes() -> CardDefinition {
 
 /// Tamiyo, Upriser Crowned — flying, double strike, haste; ETB you become the
 /// monarch; a creature dealing combat damage to you while you're the monarch
-/// is tapped and stunned. Residual: fires once per creature rather than once
-/// per batch (same outcome).
+/// is tapped and stunned (one trigger per creature: the same taps and stun
+/// counters as the printed "one or more" batch).
 pub fn tamiyo_upriser_crowned() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike, Keyword::Haste],

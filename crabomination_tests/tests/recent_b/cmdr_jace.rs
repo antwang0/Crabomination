@@ -130,6 +130,21 @@ fn dack_fayden_hands_out_goaded_creatures() {
     assert!(bears.iter().all(|b| g.is_goaded(g.battlefield_find(*b).unwrap())));
 }
 
+/// Dack Fayden's "choose a different opponent" for each creature is the
+/// controller's: the first Bear goes to seat 3, the second to seat 1 (of the
+/// two left), the last to seat 2.
+#[test]
+fn dack_fayden_assigns_each_creature_by_choice() {
+    let mut g = main_phase(4);
+    g.players[0].library.clear();
+    let bears: Vec<CardId> = (0..3).map(|_| g.add_card_to_library(0, catalog::grizzly_bears())).collect();
+    let dack = g.add_card_to_hand(0, catalog::dack_fayden_helping_hand());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2), DecisionAnswer::Amount(0)]));
+    cast(&mut g, dack, &[], None).expect("cast");
+    let owners: Vec<usize> = bears.iter().map(|b| g.battlefield_find(*b).expect("in play").controller).collect();
+    assert_eq!(owners, vec![3, 1, 2]);
+}
+
 /// Omnath, Locus of the Void grows with unspent mana; its landfall adds
 /// {C}{C}.
 #[test]
