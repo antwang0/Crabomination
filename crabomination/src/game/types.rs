@@ -2327,7 +2327,12 @@ pub enum PendingEffectState {
     /// CR 612.1 — suspended on a `ChooseCreatureTypePair` for
     /// `Effect::ReplaceCreatureTypeText`; the answer rewrites `target_id`'s
     /// definition in place (Artificial Evolution).
-    ReplaceCreatureTypeTextPending { target_id: CardId },
+    ReplaceCreatureTypeTextPending {
+        target_id: CardId,
+        /// The fixed replacement type, when the card names one (New Blood).
+        #[serde(default)]
+        to: Option<crate::card::CreatureType>,
+    },
     /// Suspended on a `NameCard` decision for `Effect::NameCard` (Pithing
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.

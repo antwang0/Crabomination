@@ -28081,10 +28081,13 @@ impl GameState {
                 self.chosen_creature_type_scratch = Some(*ct);
                 Ok(Vec::new())
             }
-            PendingEffectState::ReplaceCreatureTypeTextPending { target_id } => {
+            PendingEffectState::ReplaceCreatureTypeTextPending { target_id, to: fixed } => {
                 let DecisionAnswer::CreatureTypePair(from, to) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // A card that names the new type (New Blood) only lets the
+                // answer pick the replaced one.
+                let to = fixed.as_ref().unwrap_or(to);
                 // CR 205.3m — Wall is never a legal replacement, however the
                 // answer arrived.
                 if *to != crate::card::CreatureType::Wall && from != to {

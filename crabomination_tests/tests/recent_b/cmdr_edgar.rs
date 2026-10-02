@@ -758,7 +758,24 @@ fn new_blood_steals_and_converts() {
     cast_spell(&mut g, blood, Some(Target::Permanent(bears))).unwrap();
     assert!(g.battlefield_find(seeker).unwrap().tapped, "the additional cost");
     assert_eq!(g.battlefield_find(bears).unwrap().controller, 0);
-    assert!(g.computed_permanent(bears).unwrap().subtypes().creature_types.contains(&CreatureType::Vampire));
+    let types = g.computed_permanent(bears).unwrap().subtypes().creature_types.clone();
+    assert!(types.contains(&CreatureType::Vampire));
+    assert!(!types.contains(&CreatureType::Bear), "CR 612.1: Bear's words became Vampire");
+}
+
+/// CR 612.1 — New Blood's text change reaches rules text: a stolen Goblin
+/// King's "other Goblins get +1/+1" pumps your Vampires instead.
+#[test]
+fn new_blood_rewrites_the_stolen_lord() {
+    let mut g = main_phase();
+    let seeker = g.add_card_to_battlefield(0, catalog::sanctum_seeker());
+    let king = g.add_card_to_battlefield(1, catalog::goblin_king());
+    let blood = g.add_card_to_hand(0, catalog::new_blood());
+    let base = g.computed_permanent(seeker).unwrap().power;
+    flood(&mut g, 0);
+    cast_spell(&mut g, blood, Some(Target::Permanent(king))).unwrap();
+    assert_eq!(g.battlefield_find(king).unwrap().controller, 0);
+    assert_eq!(g.computed_permanent(seeker).unwrap().power, base + 1);
 }
 
 // ── Artifacts ────────────────────────────────────────────────────────────────

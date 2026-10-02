@@ -7933,8 +7933,13 @@ pub enum Effect {
     /// type can't be Wall (CR 205.3m). Unlike its color/land-type siblings
     /// this rewrites the object's *definition* rather than emitting a layer-3
     /// effect, so it survives a zone change into the battlefield and reaches
-    /// creature-type words inside ability text. Artificial Evolution.
-    ReplaceCreatureTypeText { what: Selector },
+    /// creature-type words inside ability text. Artificial Evolution. With
+    /// `to` set only the replaced type is chosen (New Blood's "with Vampire").
+    ReplaceCreatureTypeText {
+        what: Selector,
+        #[serde(default)]
+        to: Option<crate::card::CreatureType>,
+    },
     /// The controller chooses a color as the source enters; stamp it onto the
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.

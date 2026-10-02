@@ -22,6 +22,7 @@ pub fn artificial_evolution() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ReplaceCreatureTypeText {
             what: target_filtered(R::Any.or(R::IsSpellOnStack)),
+            to: None,
         },
         ..Default::default()
     }

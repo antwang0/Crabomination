@@ -19,9 +19,6 @@
 //!   "played this turn"; a land among them can't be played.
 //! - **Charismatic Conqueror** — the tap choice is asked of the permanent's
 //!   controller as a yes/no.
-//! - **New Blood** — the text change is modelled as the stolen creature
-//!   becoming a Vampire *in addition to* its types (it keeps the replaced type,
-//!   and creature-type words inside its rules text are not rewritten).
 //! - **Edgar, Charmed Groom** — returns under the control of its controller at
 //!   death (its owner in every ordinary game).
 //! - **Westvale Abbey** — the transform ability's five sacrifices are "other
@@ -1164,7 +1161,7 @@ pub fn and_they_shall_know_no_fear() -> CardDefinition {
 /// New Blood — {2}{B}{B} Sorcery. "As an additional cost to cast this spell,
 /// tap an untapped Vampire you control. Gain control of target creature.
 /// Change the text of that creature by replacing all instances of one creature
-/// type with Vampire." (The text change is approximated — see the residuals.)
+/// type with Vampire."
 pub fn new_blood() -> CardDefinition {
     CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::TapPermanents {
@@ -1181,11 +1178,9 @@ pub fn new_blood() -> CardDefinition {
                     to: None,
                     duration: Duration::Permanent,
                 },
-                Effect::AddCreatureTypes {
-                    what: Selector::Target(0),
-                    creature_types: vec![CreatureType::Vampire],
-                    duration: Duration::Permanent,
-                },
+                // CR 612.1 — a text change: the chosen type's words become
+                // Vampire, type line and abilities alike.
+                Effect::ReplaceCreatureTypeText { what: Selector::Target(0), to: Some(CreatureType::Vampire) },
             ]),
         )
     }

@@ -17824,7 +17824,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReplaceCreatureTypeText { what } => {
+            Effect::ReplaceCreatureTypeText { what, to } => {
                 // CR 612.1 — the rewrite is indefinite and reaches the card's
                 // ability text, so it edits the object's definition rather
                 // than stacking a layer-3 effect. The `from` suggestions lead
@@ -17844,9 +17844,16 @@ impl GameState {
                     .find_card_anywhere(target_id)
                     .map(|c| c.definition.subtypes.creature_types.clone())
                     .unwrap_or_default();
-                for ct in self.creature_type_suggestions(ctx.controller) {
-                    if !suggestions.contains(&ct) {
-                        suggestions.push(ct);
+                if let Some(to) = to {
+                    // Its own types first, then the fixed one: the headless
+                    // pair is (first printed type, `to`).
+                    suggestions.retain(|ct| ct != to);
+                    suggestions.push(*to);
+                } else {
+                    for ct in self.creature_type_suggestions(ctx.controller) {
+                        if !suggestions.contains(&ct) {
+                            suggestions.push(ct);
+                        }
                     }
                 }
                 let decision = Decision::ChooseCreatureTypePair {
@@ -17855,7 +17862,7 @@ impl GameState {
                     // CR 205.3m — "the new creature type can't be Wall."
                     excluded: vec![crate::card::CreatureType::Wall],
                 };
-                let pending = PendingEffectState::ReplaceCreatureTypeTextPending { target_id };
+                let pending = PendingEffectState::ReplaceCreatureTypeTextPending { target_id, to: *to };
                 if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());

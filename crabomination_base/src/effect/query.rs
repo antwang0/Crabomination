@@ -1693,7 +1693,7 @@ impl Effect {
             | Effect::ReturnSelfAttachedTo { host: what }
             | Effect::GrantCantAttackYou { what, .. } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
-            Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
+            Effect::ReplaceCreatureTypeText { what, .. } => sel_has_target(what),
             Effect::Detain { what } => sel_has_target(what),
             Effect::Fateseal { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
@@ -2643,7 +2643,7 @@ impl Effect {
             | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::Suspect { what }
             | Effect::ClearSuspected { what }
-            | Effect::ReplaceCreatureTypeText { what }
+            | Effect::ReplaceCreatureTypeText { what, .. }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CopySpellForEachOtherLegalTarget { what }
@@ -5109,7 +5109,7 @@ impl Effect {
                 | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
                 | Effect::ClearSuspected { what }
-                | Effect::ReplaceCreatureTypeText { what } => sel_find(what, slot),
+                | Effect::ReplaceCreatureTypeText { what, .. } => sel_find(what, slot),
                 // `to: Target(n)` declares slot `n` as a player target — the
                 // recipient's only mention (Risky Move's "that opponent gains
                 // control of that creature").
