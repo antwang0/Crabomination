@@ -201,9 +201,25 @@ fn evercoat_ursine_hides_two_and_plays_one() {
     drain_stack(&mut g);
     let hidden = g.exile.iter().filter(|c| c.exiled_with == Some(bear)).count();
     assert_eq!(hidden, 2);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
     connect(&mut g, vec![(bear, 1)]);
     assert_eq!(g.players[1].life, 20 - 6 - 3, "trample 6, then a free Bolt");
+}
+
+/// Evercoat Ursine's "play one of them" plays a hidden land (a land play
+/// left, on your own turn) rather than skipping it.
+#[test]
+fn evercoat_ursine_plays_a_hidden_land() {
+    let mut g = main_phase();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bear = g.add_card_to_battlefield_entering(0, catalog::evercoat_ursine());
+    g.fire_self_etb_triggers(bear, 0);
+    drain_stack(&mut g);
+    let lands = g.battlefield.iter().filter(|c| c.definition.name == "Forest").count();
+    connect(&mut g, vec![(bear, 1)]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Forest").count(), lands + 1, "a Forest played");
 }
 
 /// Another creature attacking may fight Grothama; when it leaves, each

@@ -8,7 +8,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, mint_treasures, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, mint_treasures, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, r};
@@ -238,8 +238,8 @@ pub fn brightcap_badger() -> CardDefinition {
     }
 }
 
-/// Evercoat Ursine — hideaway 3 twice; connecting plays one of them free.
-/// Residual: A land among them can't be played this way (the free path casts).
+/// Evercoat Ursine — hideaway 3 twice; connecting plays one of them free (a
+/// land is played with a land play left, on your turn).
 pub fn evercoat_ursine() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -252,14 +252,24 @@ pub fn evercoat_ursine() -> CardDefinition {
                 // CR 603.4 — "if there are cards exiled with it".
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
                     .with_filter(Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::ONE)),
-                effect: Effect::CastWithoutPayingImmediate {
-                    what: Selector::best_of(Selector::CardExiledWithSource),
-                    source_zone: Zone::Exile,
-                    exile_after: false,
-                    copy: false,
-                    reduce_generic: 0,
-                    pay_own_cost: false,
-                },
+                // "Play one of them": a land is played (a land play left, on
+                // your turn), anything else cast free.
+                effect: choose_one_then(
+                    Selector::CardExiledWithSource,
+                    PlayerRef::You,
+                    Effect::If {
+                        cond: Predicate::EntityMatches { what: chosen_one(), filter: R::Land },
+                        then: Box::new(Effect::PlayLandAmongNow { what: chosen_one() }),
+                        else_: Box::new(Effect::CastWithoutPayingImmediate {
+                            what: chosen_one(),
+                            source_zone: Zone::Exile,
+                            exile_after: false,
+                            copy: false,
+                            reduce_generic: 0,
+                            pay_own_cost: false,
+                        }),
+                    },
+                ),
             },
         ],
         ..creature(
