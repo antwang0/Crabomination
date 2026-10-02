@@ -6960,28 +6960,16 @@ impl GameState {
         let legend_victims: Vec<CardId> = {
             let mut victims = Vec::new();
             for (player, name, duplicates) in legend_groups {
-                // Ask the controller which to keep; default keeps newest.
-                // Auto default: keep the copy carrying the most accumulated
-                // board state (counters + attachments), tiebreak newest —
-                // "keep newest" alone sacrificed the aura'd/countered copy
-                // to a freshly cast vanilla one. Scripted deciders steer.
+                // The controller chooses which to keep. A prompting controller
+                // answers once the action settles (`legend_rule.rs`; the group
+                // stays until then); headless, keep the copy with the most
+                // board state (`legend_keep_default`). Scripted deciders steer.
+                if self.seat_suspends(player) {
+                    self.defer_legend_choice(player, name, duplicates);
+                    continue;
+                }
                 let kept = match self.decider.kind() {
-                    crate::decision::DeciderKind::Auto => duplicates
-                        .iter()
-                        .map(|(id, _)| {
-                            let inst = self.battlefield.iter().find(|c| c.id == *id);
-                            let counters: u32 =
-                                inst.map(|c| c.counters.values().sum()).unwrap_or(0);
-                            let attached = self
-                                .battlefield
-                                .iter()
-                                .filter(|c| c.attached_to == Some(*id))
-                                .count() as u32;
-                            (counters + attached, id.0, *id)
-                        })
-                        .max()
-                        .map(|(_, _, id)| id)
-                        .unwrap_or(CardId(0)),
+                    crate::decision::DeciderKind::Auto => self.legend_keep_default(&duplicates),
                     _ => match self.decider.decide(&crate::decision::Decision::ChooseLegendToKeep {
                         player,
                         name,
@@ -7004,20 +6992,7 @@ impl GameState {
             }
             victims
         };
-        for id in legend_victims {
-            // Cache snapshot before zone change so AnotherOfYours-scope
-            // triggers off legend-rule deaths see the right player AND
-            // can introspect the dying card's printed types. Only a *creature*
-            // dies (CR 700.4) — a legend-ruled planeswalker/artifact/enchant
-            // leaves the battlefield without a CreatureDied event.
-            if let Some(c) = self.battlefield.find_by_id(id) {
-                if self.computed_is_creature(c) {
-                    events.push(GameEvent::CreatureDied { card_id: id });
-                }
-                self.died_card_snapshots.insert(id, self.lki_clone(c));
-            }
-            self.remove_from_battlefield_to_graveyard_raw(id);
-        }
+        self.put_legend_rule_victims(legend_victims, events);
 
         // World rule (CR 704.5k): if two or more permanents have the World
         // supertype, all except the one with the newest timestamp go to their

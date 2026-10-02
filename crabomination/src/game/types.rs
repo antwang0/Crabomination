@@ -1495,6 +1495,7 @@ impl PendingDecision {
             ResumeContext::LandEntry { player, .. } => *player,
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CommanderReturn { owner, .. } => *owner,
+            ResumeContext::LegendRule { player, .. } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
@@ -1896,6 +1897,9 @@ pub enum ResumeContext {
     /// graveyard or in exile, goes to the command zone
     /// (`GameState::pose_commander_return`).
     CommanderReturn { owner: usize, commander: CardId },
+    /// CR 704.5j — a prompting `player` chooses which of their same-name
+    /// legends to keep (`GameState::pose_legend_choice`).
+    LegendRule { player: usize, name: String, duplicates: Vec<(CardId, String)> },
     /// CR 510.1c-d — the active player (with `wants_ui`) is choosing combat
     /// damage ordering / assignment for `attacker` during the current damage
     /// step. On answer the choice is cached and the damage step is re-entered

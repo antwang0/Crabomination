@@ -3482,6 +3482,32 @@ fn cr_903_9a_commander_dies_then_returns_as_an_sba() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
 }
 
+/// CR 704.5j — a PROMPTING controller of two same-name legends chooses which
+/// to keep (the sweep used to keep the newest for them): the older stays,
+/// the newer goes to the graveyard.
+#[test]
+fn cr_704_5j_a_prompting_controller_keeps_the_legend_they_choose() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let old = g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    let new = g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(old).is_some() && g.battlefield_find(new).is_some(), "the group waits");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|p| &p.decision),
+        Some(crabomination::decision::Decision::ChooseLegendToKeep { .. })
+    ));
+    assert_eq!(g.pending_decision.as_ref().unwrap().acting_player(), 0);
+    g.submit_decision(DecisionAnswer::KeptLegend(old)).unwrap();
+    assert!(g.battlefield_find(old).is_some(), "the chosen one stays");
+    assert!(g.battlefield_find(new).is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == new));
+}
+
 /// CR 704.3 / 903.9a — state-based actions wait for the spell to finish, so a
 /// commander sacrificed by the first step of a resolution is still in the
 /// graveyard when a later step reads it. Danse Macabre makes each opponent

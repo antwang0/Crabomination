@@ -3846,6 +3846,11 @@ fn decide_pending_policy_inner(
                 mine.iter().map(|m| if *m { split.next().unwrap_or(0) } else { 0 }).collect(),
             )
         }
+        // CR 704.5j — keep the copy with the most board state, the same pick
+        // the sweep makes for a headless seat (`legend_keep_default`).
+        crate::decision::Decision::ChooseLegendToKeep { duplicates, .. } => {
+            crate::decision::DecisionAnswer::KeptLegend(state.legend_keep_default(duplicates))
+        }
         other => AutoDecider.decide(other),
     }
 }

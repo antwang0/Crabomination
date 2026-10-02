@@ -162,6 +162,7 @@ mod empty_draw;
 // CR 702.63a — vanishing's last-counter sacrifice trigger.
 mod vanishing;
 mod commander_return;
+mod legend_rule;
 mod simultaneous_deaths;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
@@ -1503,6 +1504,9 @@ pub struct TurnRegistries {
     pub(crate) block_chooser_this_combat: Option<usize>,
 }
 
+/// A queued CR 704.5j group: the controller, the name, the duplicates.
+pub(crate) type DeferredLegendChoice = (usize, String, Vec<(CardId, String)>);
+
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
     /// CR 508.5 — each attacked planeswalker / battle with its defending
@@ -1668,6 +1672,11 @@ pub struct ColdState {
     /// gathered with `combat_damage_order` and cleared with it.
     #[serde(skip)]
     pub(crate) combat_assigns_unblocked: Vec<(CardId, bool)>,
+    /// CR 704.5j — same-name legend groups a prompting controller owes a
+    /// choice on, queued by the sweep and posed once the action settles
+    /// (`legend_rule.rs`). Cold: a headless seat never queues one.
+    #[serde(default)]
+    pub(crate) deferred_legend_choices: Vec<DeferredLegendChoice>,
     /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
     /// currently running its two bodies. Read by
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.
@@ -19589,6 +19598,10 @@ impl GameState {
         if result.is_ok() && self.players.iter().any(|p| !p.commanders.is_empty()) {
             self.pose_commander_return();
         }
+        // CR 704.5j — likewise a prompting controller's legend-rule choice.
+        if result.is_ok() {
+            self.pose_legend_choice();
+        }
         result
     }
 
@@ -26932,6 +26945,9 @@ impl GameState {
                 self.push_pending_trigger(pending, target);
                 self.drain_trigger_queue(remaining);
                 vec![]
+            }
+            ResumeContext::LegendRule { player, duplicates, .. } => {
+                return self.resume_legend_choice(player, duplicates, &answer);
             }
             ResumeContext::CommanderReturn { owner, commander } => {
                 return self.resume_commander_return(owner, commander, &answer);
