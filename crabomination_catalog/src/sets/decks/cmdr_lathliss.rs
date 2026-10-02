@@ -397,19 +397,25 @@ pub fn the_elder_dragon_war() -> CardDefinition {
     }
 }
 
-/// Thundermane Dragon — flying; you may cast creature spells with power 4 or
-/// greater from the top of your library.
+/// Thundermane Dragon — flying; you may look at the top card of your library
+/// any time; you may cast creature spells with power 4 or greater from the
+/// top of your library.
 ///
-/// ⚠ Residual: the top card isn't shown to you, and any creature spell cast
-/// from your library gets the haste rider, not only one this permission let
-/// you cast.
+/// ⚠ Residual: any power-4-or-greater creature spell cast from your library
+/// gets the haste rider, even one another permission let you cast.
 pub fn thundermane_dragon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        static_abilities: vec![StaticAbility {
-            description: "You may cast creature spells with power 4 or greater from the top of your library.",
-            effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature.and(R::PowerAtLeast(4)) },
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may cast creature spells with power 4 or greater from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature.and(R::PowerAtLeast(4)) },
+            },
+        ],
         // "If you cast a creature spell this way, it gains haste until end of
         // turn": the cast trigger resolves first, so the rider lands on that
         // creature as it enters.

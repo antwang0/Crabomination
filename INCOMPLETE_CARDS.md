@@ -1942,7 +1942,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, not secretly. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
-| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | the top card isn't shown to you; any creature cast from your library gets the haste, not only one this permission cast. |
+| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | any power-4-or-greater creature cast from your library gets the haste, even one another permission cast. |
 | 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
