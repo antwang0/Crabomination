@@ -239,10 +239,18 @@ pub fn kongming_sleeping_dragon() -> CardDefinition {
 }
 
 /// Lim-Dûl's Vault — dig five at a time for 1 life each, then shuffle under
-/// the last five, digging as often as you choose. Residual: the final five
-/// keep their order.
+/// the last five, digging as often as you choose; those five go back in any
+/// order (`RearrangeTop`).
 pub fn lim_duls_vault() -> CardDefinition {
-    spell("Lim-Dûl's Vault", cost(&[u(), b()]), CardType::Instant, Effect::LookTopFiveDigForLife)
+    spell(
+        "Lim-Dûl's Vault",
+        cost(&[u(), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::LookTopFiveDigForLife,
+            Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(5) },
+        ]),
+    )
 }
 
 /// Marrow Bats — flying; pay 4 life: regenerate.

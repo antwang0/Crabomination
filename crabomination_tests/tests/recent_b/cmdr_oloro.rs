@@ -154,6 +154,30 @@ fn lim_duls_vault_digs_as_often_as_you_choose() {
     assert!(g.players[0].library.iter().take(5).all(|c| c.id != bear));
 }
 
+/// Lim-Dûl's Vault — "put the last cards you looked at this way on top of
+/// it in any order": the final window goes back in the order asked for.
+#[test]
+fn lim_duls_vault_orders_the_last_five() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut window = vec![bear];
+    for _ in 0..4 {
+        window.push(g.add_card_to_library(0, catalog::plains()));
+    }
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let order: Vec<_> = window.iter().rev().copied().collect();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::ScryOrder { kept_top: order.clone(), bottom: vec![] },
+    ]));
+    let vault = g.add_card_to_hand(0, catalog::lim_duls_vault());
+    cast_at(&mut g, vault, &[]).expect("cast");
+    let top: Vec<_> = g.players[0].library.iter().take(5).map(|c| c.id).collect();
+    assert_eq!(top, order, "the Bears sits fifth");
+}
+
 /// Act of Authority's upkeep exile hands the enchantment to the exiled
 /// permanent's controller.
 #[test]
