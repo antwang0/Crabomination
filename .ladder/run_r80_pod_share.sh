@@ -57,6 +57,23 @@
 #   The pod search as the lobby's pod pilot (the client's choice, not this
 #   round's) needs >= 1.05x due with the 95 % interval above 1.00x AND a
 #   latency read; this round reports the first.
+#
+# STAGE scored READ (2026-10-02, 19:57): every temperature is a CANDIDATE —
+#   podshare15 1.057x [1.040, 1.073] / 1.028x [1.004, 1.052], podshare30
+#   1.063x / 1.031x, podshare60 1.070x [1.054, 1.087] / 1.035x [1.011,
+#   1.059] (four / six seats); the temperatures do not separate (paired
+#   differences within ±0.4 points).
+#
+# STAGE census (written after that read, before any census cell): every
+#   seat on `dflt`, `podshare15`, `podshare30`, `podshare60` (no --b), the
+#   same fields and seeds, 2,000 / 1,800 games a four- / six-seat field.
+#   PRE-REGISTERED: ADOPT `pod_share_eval` at the first of T = 60, 30, 15
+#   (the scored read's order) whose every-seat pods run <= 15 % more turns
+#   than `dflt`'s at both seat counts AND whose undecided share (draw +
+#   action cap + board cap + no legal move) is no more than `dflt`'s + 0.5
+#   points at both; none passing -> left off, recorded. (`pod_horizon` was
+#   adopted at ~10 % longer pods; `leader0` / `leader25` left off at
+#   40-57 % / 20-22 %.)
 set -u
 cd "$(dirname "$0")/.."
 LADDER=${LADDER:-.ladder/r80/bot_ladder_r80}
@@ -67,6 +84,20 @@ GAMES4=${GAMES4:-384}
 
 fields4() { for j in $(seq 0 11); do echo "$j $((1+4*j)),$((47+4*j)),$((93+4*j)),$((139+4*j)) $((11000+j))"; done; }
 fields6() { for j in $(seq 0 11); do echo "$j $((1+j)),$((31+j)),$((61+j)),$((91+j)),$((121+j)),$((151+j)) $((12000+j))"; done; }
+
+# census PILOT SEATS GAMES_PER_FIELD: every seat on PILOT.
+census() {
+  local a=$1 seats=$2 games=$3 d="$R/census_$1_s$2"
+  mkdir -p "$d"
+  "fields$seats" | while read -r j decks seed; do
+    local f="$d/f$j.txt"
+    if [ -s "$f" ] && grep -q "^exit: 0" "$f"; then continue; fi
+    echo "== $f $(date -Is)"
+    "$LADDER" --commander --a "$a" --pod-decks "$decks" --games "$games" --seed "$seed" \
+      --threads "$THREADS" > "$f" 2>&1
+    echo "exit: $?" >> "$f"
+  done
+}
 
 # cell HERO FIELD_PILOT SEATS GAMES_PER_FIELD
 cell() {
@@ -94,7 +125,36 @@ case ${STAGE:-scored} in
       cell "$a" dflt 4 "$GAMES4"
     done
     ;;
-  *) echo "STAGE is scored or search"; exit 2 ;;
+  census)
+    for a in dflt podshare60 podshare30 podshare15; do
+      census "$a" 4 2000
+      census "$a" 6 1800
+    done
+    python3 - "$R" <<'EOF2'
+import glob, os, re, sys
+root = sys.argv[1]
+rows = {}
+for d in sorted(glob.glob(os.path.join(root, "census_*_s*"))):
+    name = os.path.basename(d)[len("census_"):]
+    games = turns = undecided = 0
+    for f in glob.glob(os.path.join(d, "f*.txt")):
+        txt = open(f).read()
+        if "exit: 0" not in txt:
+            continue
+        g = re.search(r"games (\d+) in .* undecided (\d+)", txt)
+        t = re.search(r"turns/game ([\d.]+)", txt)
+        games += int(g.group(1)); undecided += int(g.group(2)); turns += float(t.group(1)) * int(g.group(1))
+    if games:
+        rows[name] = (games, turns / games, 100 * undecided / games)
+for name, (games, t, u) in rows.items():
+    seats = name.rsplit("_s", 1)[1]
+    base = rows.get(f"dflt_s{seats}")
+    rel = f"{100 * (t / base[1] - 1):+5.1f} % turns, undecided {u - base[2]:+.2f} pts vs dflt" if base else ""
+    print(f"census {name:<16} {games:>6} games  turns/game {t:6.2f}  undecided {u:5.2f} %  {rel}")
+EOF2
+    exit 0
+    ;;
+  *) echo "STAGE is scored, search or census"; exit 2 ;;
 esac
 
 # Summary: per cell, the hero's share pooled over every (field, group) and
