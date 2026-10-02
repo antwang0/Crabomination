@@ -386,3 +386,17 @@ fn scute_swarm_stops_copying_at_the_board_gate() {
     assert_eq!(named(&g, 0, "Scute Swarm").len(), 1, "no copy past the gate");
     assert_eq!(g.battlefield.len(), crabomination::recommend::BOARD_GATE);
 }
+
+/// The auto-tapper pays {2}{R}{R} off two Painted Bluffs and two Mountains:
+/// each Bluffs taps for its {C}, not for the {1}-filter that eats the other's.
+#[test]
+fn auto_tapper_taps_painted_bluffs_for_colorless() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::painted_bluffs());
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    use crabomination::mana::{cost, generic, r};
+    g.auto_tap_for_cost(0, &cost(&[generic(2), r(), r()]));
+    assert_eq!(g.players[0].mana_pool.total(), 4, "{:?}", g.players[0].mana_pool);
+}

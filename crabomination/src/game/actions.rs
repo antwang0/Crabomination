@@ -17498,16 +17498,24 @@ impl GameState {
             // `manual_tap_is_a_real_choice`. Cheapest first, then
             // narrowest; `min_by_key` keeps the first of equal keys, so
             // battlefield order still breaks remaining ties as before.
+            // A colour claimed by a filter ability ("{1}, {T}: Add one mana of
+            // any color", Painted Bluffs) eats mana already in the pool, so a
+            // free source of the colour goes first: two Bluffs beside two
+            // Mountains tapped all four for {R}{R} against {2}{R}{R}.
             let source = sources
                 .iter()
                 .filter(|s| !self.source_card(s).is_some_and(|c| c.tapped))
                 .filter_map(|s| {
                     let idx = s.colors.contains(color).then(|| s.color_idx[color_index(color)])?;
                     let breadth = if smart { s.colors.len() } else { 0 };
-                    Some((s.rank, breadth, s.id, idx))
+                    let costly = self
+                        .source_card(s)
+                        .and_then(|c| c.definition.activated_abilities.get(idx))
+                        .is_some_and(|a| !a.mana_cost.symbols.is_empty());
+                    Some((costly, s.rank, breadth, s.id, idx))
                 })
-                .min_by_key(|&(rank, breadth, ..)| (rank, breadth))
-                .map(|(_, _, id, idx)| (id, idx));
+                .min_by_key(|&(costly, rank, breadth, ..)| (costly, rank, breadth))
+                .map(|(_, _, _, id, idx)| (id, idx));
             if let Some((id, idx)) = source {
                 let mut b = scripted_slot
                     .take()
