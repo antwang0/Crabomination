@@ -13,6 +13,7 @@ DECK_FEATURES' deck table honest; read the flagged doc before believing it
   scripts/pod_residuals.py             # per-deck counts, complete decks too
   scripts/pod_residuals.py --cards     # every flagged card with its doc line
   scripts/pod_residuals.py --summary   # one line: decks complete / partial
+  scripts/pod_residuals.py --table     # the markdown table DECK_FEATURES carries
 """
 import re
 import sys
@@ -65,10 +66,18 @@ def main():
     docs = factory_docs()
     decks = deck_lists()
     show_cards = "--cards" in sys.argv
+    table = "--table" in sys.argv
+    if table:
+        print("| # | Deck | Cards with a residual |")
+        print("|---|---|---|")
     complete = 0
     for i, (name, cards) in enumerate(decks, 1):
         flagged = sorted({c for c in cards if MARKERS.search(docs.get(c, ""))})
         complete += not flagged
+        if table:
+            if flagged:
+                print(f"| {i} | {name} | {len(flagged)}: {', '.join(flagged)} |")
+            continue
         if "--summary" in sys.argv:
             continue
         print(f"{i:3} {name}: {len(cards)} cards, {len(flagged)} with residuals")
@@ -77,7 +86,8 @@ def main():
                 hit = MARKERS.search(docs[c])
                 lo = max(0, hit.start() - 60)
                 print(f"      {c}: …{docs[c][lo:hit.end() + 100]}…")
-    print(f"{complete} / {len(decks)} pod decks carry no residual in their card docs")
+    tail = f"{complete} / {len(decks)} pod decks carry no residual in their card docs"
+    print(f"\n{tail}; the rest are listed." if table else tail)
 
 
 if __name__ == "__main__":

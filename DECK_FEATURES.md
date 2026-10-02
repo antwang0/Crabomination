@@ -28,190 +28,152 @@ commander, singleton outside basics, CR 903.4 identity subset, ban list).
 Every card was also checked against Scryfall's `legalities.commander` when the
 lists were picked.
 
-| Deck | Commander | Identity | Cards | State |
-|---|---|---|---|---|
-| Sigarda GW | Sigarda, Host of Herons | GW | 100 | ✅ complete |
-| Judith BR | Judith, the Scourge Diva | BR | 100 | ✅ complete |
-| Hanna UW | Hanna, Ship's Navigator | UW | 100 | ✅ complete |
-| Tatyova GU | Tatyova, Benthic Druid | GU | 100 | ✅ complete |
-| Krark/Rograkh R | Krark, the Thumbless **+** Rograkh, Son of Rohgahh (Partner) | R | 98 + 2 | ✅ complete |
-| Edgar Markov BRW | Edgar Markov (Eminence) | BRW | 100 | ✅ complete |
-| Freyalise G | Freyalise, Llanowar's Fury (**planeswalker**, CR 903.3a) | G | 100 | ✅ complete |
-| Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
-| Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
-| Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
-| **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
-| **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | ✅ complete |
-| **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
-| **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | ✅ complete |
-| **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | ✅ complete |
-| **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | ✅ complete |
-| **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
-| **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Animated Army** (BLC precon) RG | Bello, Bard of the Brambles | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Grave Danger** (SCD precon) UB | Gisa and Geralf | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Forged in Stone** (C14 precon) W | Nahiri, the Lithomancer (**planeswalker**) | W | 100 | ✅ complete (2026-10-02: Nahiri's picks; Arcane Lighthouse and Benevolent Offering's residual notes were stale) |
-| **Swell the Host** (C15 precon) GU | Ezuri, Claw of Progress | GU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Vampiric Bloodline** (VOC precon) BR | Strefan, Maurer Progenitor | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | ✅ complete |
-| **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 1 carries a residual (Profane Command; Infernal Offering's closed 2026-10-02) |
-| **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | ✅ complete |
-| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | ✅ complete |
-| **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | ✅ all 100 implemented |
-| **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
-| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 1 carries a residual (Rot Hulk; the Gift's closed 2026-10-02) |
-| **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below; the Mending's closed 2026-10-02) |
-| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 1 carries a residual (Orzhov Advokist) |
-| **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
-| **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 3 carry residuals (below; Path of the Schemer's closed 2026-10-02) |
-| **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below; Soul of Windgrace's closed 2026-10-02) |
-| **Nature's Vengeance** (C18 precon) BRG | Lord Windgrace | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | ✅ complete |
-| **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (Kamiz, Obscura Oculus, Oskar, Rubbish Reclaimer) |
-| **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (Celeborn the Wise, Elrond of the White Council, Gandalf, Westward Voyager, Mirkwood Trapper, Sail into the West) |
-| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below; Zara's closed 2026-10-02) |
-| **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (Blue Mage's Cane, Urianger Augurelt) |
-| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 9 carry residuals (below; Cosima's voyage ships 2026-09-26) |
-| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 2 carry residuals (Ghoulish Impetus, Ondu Spiritdancer) |
-| **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 1 carries a residual (The Mimeoplasm; Desecrator Hag's closed 2026-10-02) |
-| **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
-| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (Shadow Kin, Rooftop Storm) |
-| **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | ✅ complete |
-| **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 3 carry residuals (below; Insatiable Frugivore's closed 2026-10-02) |
-| **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (Path of the Ghosthunter) |
-| **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
-| **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Draconic Domination** (C17 precon) WUBRG | The Ur-Dragon | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Silverquill Influence** (SOC precon) WB | Killian, Decisive Mentor | WB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
-| **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
-| **Timeless Wisdom** (C20 precon) URW | Gavi, Nest Warden | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (Akim, the Soaring Wind, Crystalline Resonance, Ethereal Forager, Nimble Obstructionist) |
-| **Miracle Worker** (DSC precon) WUB | Aminatou, Veil Piercer | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (INCOMPLETE_CARDS) |
-| **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
-| **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Dire Fleet Ravager, Vihaan, Goldwaker) |
-| **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
-| **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 6 carry residuals (Amoeboid Changeling, Nameless Inversion, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
-| **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (Karazikar, Hellish Rebuke, Share the Spoils, Danse Macabre) |
-| **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
-| **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
-| **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster) |
-| **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
-| **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
-| **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
-| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Parnesse, Syrix, Xander's Pact, Zndrsplt's Judgment) |
-| **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
-| **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Call for Aid, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
-| **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
-| **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 2 carry residuals (Alandra, Sky Dreamer, Erdwal Illuminator) |
-| **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (Cloud Key, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
-| **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
-| **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 2 carry residuals (Katsumasa, the Animator, Dance of the Manse) |
-| **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
-| **Blight Curse** (ECC precon) BRG | Auntie Ool, Cursewretch | BRG | 100 | 🟡 all 100 implemented, 2 carry residuals (Eventide's Shadow, Puca's Covenant) |
-| **Mutant Menace** (PIP precon) BGU | The Wise Mothman | BGU | 100 | 🟡 all 100 implemented, 3 carry residuals (The Wise Mothman, Rampaging Yao Guai, Struggle for Project Purity) |
-| **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 112) |
-| **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
-| **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
-| **Scrappy Survivors** (PIP precon) RGW | Dogmeat, Ever Loyal | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (Agility Bobblehead, Brotherhood Outcast, Inventory Management, Perception Bobblehead, Vault 101) |
-| **Tyranid Swarm** (40K precon) GUR | The Swarmlord | GUR | 100 | 🟡 all 100 implemented, 5 carry residuals (Ghyrson Starn, Hierophant Bio-Titan, Magus Lucea Kane, The First Tyrannic War, The Red Terror) |
-| **Paradox Power** (WHO precon) GUR | The Thirteenth Doctor + Yasmin Khan | GUR | 100 | 🟡 all 100 implemented, 13 carry residuals (Become the Pilot, Bigger on the Inside, Bill Potts, Clara Oswald, Last Night Together, Lunar Hatchling, Me the Immortal, Psychic Paper, River Song's Diary, Ryan Sinclair, Strax, The Fugitive Doctor, Truth or Consequences) |
-| **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
-| **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (Heroes in a Half Shell, Coin of Mastery, Vigor) |
-| **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
-| **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Extract Power, Kang Dynasty, Lady Loki) |
-| **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Khârn the Betrayer, The Lost and the Damned, The Ruinous Powers) |
-| **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, the War President, The Master, Multiplied, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
-| **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
-| **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
-| **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Horde of Notions) |
-| **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | ✅ all 100 implemented, no residuals (2026-09-27) |
-| **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
-| **Hail, Caesar** (PIP precon) RWB | Caesar, Legion's Emperor | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (Aradesh, Colonel Autumn, Mr. House, Mysterious Stranger) |
-| **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
-| **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
-| **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 1 carries a residual (Roots of Wisdom) |
-| **Food and Fellowship** (LTC precon) WBG | Frodo, Adventurous Hobbit **+** Sam, Loyal Attendant (Partner with) | WBG | 98 + 2 | 🟡 all 100 implemented, 3 carry residuals (Gollum, Motivated Pony, Field-Tested Frying Pan) |
-| **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
-| **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
-| **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
-| **Riveteers Rampage** (NCC precon) BRG | Henzie "Toolbox" Torre | BRG | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Grand Larceny** (OTC precon) BGU | Gonti, Canny Acquisitor | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Party Time** (CLB precon) WB | Nalia de'Arnise | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (Glorious Protector) |
-| **Faceless Menace** (C19 precon) BGU | Kadena, Slinking Sorcerer | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (Gift of Doom, Rayami, Road of Return, Vesuvan Shapeshifter, Volrath) |
-| **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
-| **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
-| **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
-| **Wakanda Forever** (MSC precon) GW | T'Challa, the Black Panther | GW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ancestral Communion, Panther Habit, Wakanda Forever!) |
-| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 6 carry residuals (Edgar, Espers to Magicite, Gogo, Legions to Ashes, The Warring Triad, Umaro) |
-| **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Professor Hojo, Helitrooper, Yuffie) |
-| **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
-| **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
-| **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
-| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below; Prototype Portal's closed 2026-10-02) |
-| **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Eldrazi Unbound** (CMM precon) C | Zhulodok, Void Gorger | C | 100 | 🟡 all 100 implemented, 1 carries a residual (Abstruse Archaic; Ugin's Mastery's closed 2026-10-02) |
-| **Subjective Reality** (C18 precon) WUB | Aminatou, the Fateshifter (**planeswalker**) | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Draconic Rage** (AFC precon) RG | Vrondiss, Rage of Ancients | RG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
-| **Draconic Dissent** (CLB precon) UR | Firkraag, Cunning Instigator | UR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Prismari Performance** (C21 precon) UR | Zaffai, Thunder Conductor | UR | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
+(re-run it after a card fix and paste) lists each deck whose cards' docs still
+name a gap, with the cards; a deck absent from the table carries none.
+Snapshot 2026-10-02. The per-deck narratives below predate the script — where
+they call a deck 🟡, the table wins.
+
+| # | Deck | Cards with a residual |
+|---|---|---|
+| 3 | Hanna (UW) | 2: kozileks_command, phelia_exuberant_shepherd |
+| 6 | Edgar Markov (BRW) | 3: drana_and_linvala, necropotence, new_blood |
+| 8 | Zellix + Background (UR) | 1: passionate_archaeologist |
+| 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
+| 12 | N'ghathrod (UB) | 2: aboleth_spawn, grell_philosopher |
+| 13 | Clavileño (WB) | 1: new_blood |
+| 15 | Zada (R) | 1: arena_of_glory |
+| 19 | Aesi (GU) | 1: stumpsquall_hydra |
+| 20 | Ixhel (WBG) | 4: geths_summons, glissas_retriever, glistening_sphere, ixhel_scion_of_atraxa |
+| 24 | Stella Lee (UR) | 1: bloodthirsty_adversary |
+| 25 | Edgar Markov C17 (BRW) | 3: bloodlord_of_vaasgoth, kheru_mind_eater, new_blood |
+| 27 | Freyalise C14 (G) | 1: siege_behemoth |
+| 28 | Bello (RG) | 2: evercoat_ursine, grothama_all_devouring |
+| 29 | Gisa and Geralf (UB) | 2: havengul_lich, lazotep_plating |
+| 31 | Disa (BRG) | 2: maskwood_nexus, ziatora_the_incinerator |
+| 36 | Strefan, Maurer Progenitor (BR) | 1: bloodlord_of_vaasgoth |
+| 39 | Adrix and Nev (GU) | 2: esix_fractal_bloom, primal_empathy |
+| 42 | Teferi, Temporal Archmage (U) | 1: domineering_will |
+| 50 | Temmet, Naktamun's Will (WUB) | 4: lost_monarch_of_ifnir, maskwood_nexus, the_scarab_god, vizier_of_many_faces |
+| 51 | Yidris, Maelstrom Wielder (UBRG) | 1: aeon_chronicler |
+| 52 | Arahbo, Roar of the World (GW) | 1: nazahn_revered_bladesmith |
+| 56 | Ghired, Conclave Exile (RGW) | 1: flamerush_rider |
+| 58 | The Mimeoplasm (BGU) | 2: svogthos_the_restless_tomb, the_mimeoplasm |
+| 62 | Riku of Two Reflections (GUR) | 2: intet_the_dreamer, ray_of_command |
+| 63 | Rin and Seri, Inseparable (RGW) | 5: highcliff_felidar, jinnie_fay_jetmirs_second, maskwood_nexus, pack_leader, showdown_of_the_skalds |
+| 66 | Inalla, Archmage Ritualist (UBR) | 5: havengul_lich, magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
+| 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
+| 69 | Urza, Chief Artificer (WUB) | 2: sanwell_avenger_ace, scholar_of_new_horizons |
+| 70 | Ranar the Ever-Watchful (WU) | 2: cosmic_intervention, sage_of_the_beyond |
+| 72 | Faldorn, Dread Wolf Herald (RG) | 5: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee, passionate_archaeologist |
+| 73 | Wilhelt, the Rotcleaver (UB) | 1: rooftop_storm |
+| 74 | Bright-Palm, Soul Awakener (RGW) | 2: flamerush_rider, strionic_resonator |
+| 75 | Hazel of the Rootbloom (BG) | 5: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, maskwood_nexus, sword_of_the_squeak |
+| 76 | Saheeli, the Gifted (UR) | 1: tawnos_urzas_apprentice |
+| 77 | Winter, Cynical Opportunist (BG) | 4: cemetery_tampering, into_the_pit, old_stickfingers, winter_cynical_opportunist |
+| 78 | Willowdusk, Essence Seer (BG) | 2: revival_experiment, suffer_the_past |
+| 79 | Hearthhull, the Worldseed (BRG) | 5: eumidian_wastewaker, evendo_brushrazer, loamcrafter_faun, moraug_fury_of_akoum, planetary_annihilation |
+| 80 | Lord Windgrace (BRG) | 1: emissary_of_grudges |
+| 81 | Derevi, Empyrial Tactician (GWU) | 1: curse_of_inertia |
+| 83 | Mishra, Eminent One (UBR) | 6: ashnod_the_uncaring, lithoform_engine, mishra_eminent_one, smelting_vat, strionic_resonator, workshop_elders |
+| 84 | Gimbal, Gremlin Prodigy (GUR) | 2: dance_with_calamity, workshop_elders |
+| 85 | Dihada, Binder of Wills (RWB) | 3: bell_borca_spectral_sergeant, the_peregrine_dynamo, verrak_warped_sengir |
+| 86 | Dina, Essence Brewer (BG) | 4: deadly_brew, gorma_the_gullet, stensian_sanguinist, witherbloom_command |
+| 88 | Marath, Will of the Wild (RGW) | 3: fiery_justice, magus_of_the_arena, naya_soulbeast |
+| 89 | Jeleva, Nephalia's Scourge (UBR) | 1: curse_of_inertia |
+| 90 | Breena, the Demagogue (WB) | 4: bold_plagiarist, guardian_archon, nils_discipline_enforcer, victory_chimes |
+| 91 | Commodore Guff (URW) | 5: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation, sparkshaper_visionary, vronos_masked_inquisitor |
+| 92 | Go-Shintai of Life's Origin (WUBRG) | 2: maskwood_nexus, plaza_of_harmony |
+| 93 | Nelly Borca, Impulsive Accuser (RW) | 1: feather_radiant_arbiter |
+| 94 | Zinnia, Valley's Voice (URW) | 3: combat_celebrant, rose_room_treasurer, zinnia_valleys_voice |
+| 95 | Lathliss, Dragon Queen (R) | 1: thundermane_dragon |
+| 96 | Ellivere of the Wild Court (GW) | 8: indomitable_might, knickknack_ouphe, liberated_livestock, loamcrafter_faun, mantle_of_the_ancients, retether, songbirds_blessing, unfinished_business |
+| 97 | Eshki, Temur's Roar (GUR) | 3: deceptive_frostkite, sarkhan_soul_aflame, thundermane_dragon |
+| 98 | Kitt Kanto, Mayhem Diva (RGW) | 3: indulge_excess, rose_room_treasurer, sizzling_soloist |
+| 99 | The Ur-Dragon (WUBRG) | 1: intet_the_dreamer |
+| 100 | Ulalek, Fused Atrocity (WUBRG) | 5: benthic_anomaly, bismuth_mindrender, selective_obliteration, suffer_the_past, twins_of_discord |
+| 101 | Kasla, the Broken Halo (URW) | 1: path_of_the_ghosthunter |
+| 102 | Estrid, the Masked (GWU) | 2: estrid_the_masked, genesis_storm |
+| 103 | Kathril, Aspect Warper (WBG) | 6: archon_of_valors_reach, cairn_wanderer, slippery_bogbonder, tayam_luminous_enigma, vitality_hunter, yannik_scavenging_sentinel |
+| 104 | Vrondiss, Rage of Ancients (RG) | 7: berserkers_frenzy, component_pouch, dragonborn_champion, druid_of_purification, indomitable_might, klauth_unrivaled_ancient, sword_of_hours |
+| 105 | Killian, Decisive Mentor (WB) | 4: armored_skyhunter, herald_of_amity, nils_discipline_enforcer, songbirds_blessing |
+| 106 | Galea, Kindler of Hope (GWU) | 4: clay_golem, mantle_of_the_ancients, song_of_inspiration, sword_of_hours |
+| 107 | Firkraag, Cunning Instigator (UR) | 4: baeloth_barrityl_entertainer, domineering_will, firkraag_cunning_instigator, rowan_kenrith |
+| 108 | Zhulodok, Void Gorger (C) | 1: abstruse_archaic |
+| 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
+| 110 | Jared Carthalion (WUBRG) | 2: knight_of_new_alara, unite_the_coalition |
+| 111 | Jirina Kudro (RWB) | 2: odric_master_tactician, sanctuary_blade |
+| 112 | Zaffai, Thunder Conductor (UR) | 5: apex_of_power, dazzling_sphinx, muse_vortex, radiant_performer, zaffai_thunder_conductor |
+| 113 | Zurgo Stormrender (RWB) | 1: gix_yawgmoth_praetor |
+| 114 | Aminatou, the Fateshifter (WUB) | 3: aminatous_augury, portent, primordial_mist |
+| 115 | Rootha, Mastering the Moment (UR) | 2: abstract_performance, dance_with_calamity |
+| 116 | Olivia, Opulent Outlaw (RWB) | 1: vihaan_goldwaker |
+| 117 | Kalamax, the Stormsire (GUR) | 4: deflecting_swat, haldan_avid_arcanist, lavabrink_floodgates, primal_empathy |
+| 118 | Aminatou, Veil Piercer (WUB) | 10: aminatous_augury, arvinox_the_mind_flail, athreos_shroud_veiled, fear_of_sleep_paralysis, mirrormade, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
+| 119 | Otrimi, the Ever-Playful (BGU) | 4: capricopian, manascape_refractor, mindleecher, vastwood_hydra |
+| 120 | Leinore, Autumn Sovereign (GW) | 6: celestial_judgment, curse_of_conformity, moonsilver_key, odric_master_tactician, sigardas_vanguard, sigardian_zealot |
+| 121 | Sidar Jabari of Zhalfir (WUB) | 3: aryel_knight_of_windgrace, path_of_the_enigma, syr_elenora_the_discerning |
+| 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
+| 123 | Yuma, Proud Protector (RGW) | 2: cataclysmic_prospecting, dune_chanter |
+| 124 | Millicent, Restless Revenant (WU) | 2: haunting_imitation, spectral_arcanist |
+| 125 | Henzie "Toolbox" Torre (BRG) | 7: first_responder, henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
+| 126 | Oloro, Ageless Ascetic (WUB) | 4: curse_of_inertia, lim_duls_vault, order_of_succession, springjack_pasture |
+| 127 | Quintorius, History Chaser (RW) | 3: ao_the_dawn_sky, conspiracy_theorist, quintorius_loremaster |
+| 128 | Gavi, Nest Warden (URW) | 3: akim_the_soaring_wind, crystalline_resonance, nimble_obstructionist |
+| 129 | Gonti, Canny Acquisitor (BGU) | 7: bladegriff_prototype, dazzling_sphinx, extract_brain, nashi_moon_sages_scion, sage_of_the_beyond, siphon_insight, the_mimeoplasm |
+| 130 | Prossh, Skyraider of Kher (BRG) | 3: night_soil, sudden_demise, widespread_panic |
+| 131 | Morophon, the Boundless (WUBRG) | 5: harper_recruiter, maskwood_nexus, moritte_of_the_frost, stick_together, unsettled_mariner |
+| 132 | Sefris of the Hidden Ways (WUB) | 7: clay_golem, component_pouch, extract_brain, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
+| 133 | Zimone, Mystery Unraveler (GU) | 5: deathmist_raptor, disorienting_choice, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
+| 134 | Morska, Undersea Sleuth (GWU) | 2: erdwal_illuminator, esix_fractal_bloom |
+| 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
+| 136 | Nalia de'Arnise (WB) | 4: glorious_protector, harper_recruiter, maskwood_nexus, stick_together |
+| 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
+| 138 | Saheeli, Radiant Creator (GUR) | 2: aetherflux_conduit, druid_of_purification |
+| 139 | Inspirit, Flagship Vessel (URW) | 4: cloud_key, moxite_refinery, resourceful_defense, ripples_of_potential |
+| 140 | Anhelo, the Painter (UBR) | 4: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, xanders_pact, zndrsplts_judgment |
+| 141 | Prosper, Tome-Bound (BR) | 4: apex_of_power, danse_macabre, hellish_rebuke, share_the_spoils |
+| 142 | Kadena, Slinking Sorcerer (BGU) | 6: deathmist_raptor, gift_of_doom, rayami_first_of_the_fallen, road_of_return, strionic_resonator, vesuvan_shapeshifter |
+| 143 | Kamiz, Obscura Oculus (WUB) | 2: oskar_rubbish_reclaimer, strionic_resonator |
+| 144 | Satya, Aetherflux Genius (URW) | 5: filigree_racer, hourglass_of_the_lost, overclocked_electromancer, razorfield_ripper, sphinx_of_the_revelation |
+| 145 | Hakbal of the Surging Soul (GU) | 4: bygone_marvels, quandrix_command, ripples_of_potential, xolatoyac_the_smiling_flood |
+| 146 | Perrie, the Pulverizer (GWU) | 8: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, primal_empathy, resourceful_defense, skyship_plunderer, slippery_bogbonder |
+| 147 | Éowyn, Shieldmaiden (URW) | 2: combat_celebrant, flamerush_rider |
+| 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
+| 149 | Felothar the Steadfast (WBG) | 3: baldin_century_herdmaster, betor_ancestors_voice, tip_the_scales |
+| 150 | Galadriel, Elven-Queen (GU) | 3: elrond_of_the_white_council, gandalf_westward_voyager, sail_into_the_west |
+| 152 | Anje Falkenrath (BR) | 5: archfiend_of_spite, boneyard_parley, chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
+| 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
+| 154 | Sauron, Lord of the Rings (UBR) | 3: moria_scavenger, shelob_dread_weaver, summons_of_saruman |
+| 157 | Cloud, Ex-SOLDIER (RGW) | 2: professor_hojo, unfinished_business |
+| 158 | Admiral Brass, Unsinkable (UBR) | 2: admiral_beckett_brass, timestream_navigator |
+| 159 | Mirko, Obsessive Theorist (UB) | 4: marvo_deep_operative, vizier_of_many_faces, watcher_of_hours, whispering_snitch |
+| 160 | Terra, Herald of Hope (RWB) | 6: edgar_master_machinist, espers_to_magicite, gogo_mysterious_mime, legions_to_ashes, the_warring_triad, umaro_raging_yeti |
+| 161 | Jace, Multiverse Architect (WUBR) | 2: dack_fayden_helping_hand, tamiyo_upriser_crowned |
+| 162 | Frodo + Sam (WBG) | 3: field_tested_frying_pan, gollum_obsessed_stalker, motivated_pony |
+| 163 | Y'shtola, Night's Blessed (WUB) | 1: urianger_augurelt |
+| 164 | Auntie Ool, Cursewretch (BRG) | 2: eventides_shadow, pucas_covenant |
+| 165 | Tidus, Yuna's Guardian (GWU) | 5: endless_detour, lulu_stern_guardian, resourceful_defense, rikku_resourceful_guardian, scholar_of_new_horizons |
+| 166 | The Wise Mothman (BGU) | 4: rampaging_yao_guai, struggle_for_project_purity, the_wise_mothman, winding_constrictor |
+| 167 | T'Challa, the Black Panther (GW) | 4: ancestral_communion, conduit_of_worlds, panther_habit, wakanda_forever |
+| 168 | Esika, God of the Tree (WUBRG) | 2: ludevic_necrogenius, valakut_awakening |
+| 169 | Dr. Madison Li (URW) | 5: c_a_m_p, endurance_bobblehead, expert_level_safe, plasma_caster, vault_112_sadistic_simulation |
+| 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
+| 171 | Invisible Woman (WURG) | 1: mister_fantastic |
+| 172 | Inquisitor Greyfax (WUB) | 4: callidus_assassin, cybernetica_datasmith, inquisitor_eisenhorn, neyam_shai_murad |
+| 173 | Dogmeat, Ever Loyal (RGW) | 6: agility_bobblehead, brotherhood_outcast, inventory_management, mantle_of_the_ancients, perception_bobblehead, vault_101_birthday_party |
+| 174 | Captain America, Team Leader (URW) | 5: captain_marvel_apex_avenger, heroic_return, heroic_sacrifice, scarlet_witch_chaotic_avenger, winter_soldier_reborn_avenger |
+| 175 | The Swarmlord (GUR) | 5: ghyrson_starn_kelermorph, hierophant_bio_titan, magus_lucea_kane, the_first_tyrannic_war, the_red_terror |
+| 176 | Doctor Doom, King of Latveria (UBR) | 3: extract_power, kang_dynasty, lady_loki_agent_of_chaos |
+| 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
+| 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 13: become_the_pilot, bigger_on_the_inside, bill_potts, clara_oswald, last_night_together, lunar_hatchling, me_the_immortal, psychic_paper, river_songs_diary, ryan_sinclair, strax_sontaran_nurse, the_fugitive_doctor, truth_or_consequences |
+| 179 | Abaddon the Despoiler (UBR) | 3: kharn_the_betrayer, the_lost_and_the_damned, the_ruinous_powers |
+| 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
+| 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
+| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
+| 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+47 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
