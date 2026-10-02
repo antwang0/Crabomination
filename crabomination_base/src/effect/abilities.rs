@@ -961,6 +961,11 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// CR 702.21a — "you have ward [cost]" (Unsettled Mariner's "whenever you
+    /// … become the target of a spell or ability an opponent controls, counter
+    /// it unless its controller pays"): the source's controller is warded as a
+    /// permanent is. Read by `push_ward_triggers_for_targets`.
+    ControllerHasWard(crate::card::WardCost),
     /// CR 702.18 — "you have shroud" (Ivory Mask): *no* player, the source's
     /// controller included, may target them. Checked alongside
     /// `ControllerHasHexproof` in `check_target_legality`, and unlike hexproof

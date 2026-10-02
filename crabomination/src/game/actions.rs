@@ -12054,10 +12054,13 @@ impl GameState {
         for tgt in targets {
             let perm_id = match tgt {
                 Target::Permanent(id) => *id,
-                _ => continue,
+                Target::Player(pl) => {
+                    self.push_player_ward_triggers(actor, *pl, target_for_trigger);
+                    continue;
+                }
             };
             self.push_first_targeting_counter(perm_id, target_for_trigger);
-            let (ward_cost, ward_controller) = match self
+            let (ward_costs, ward_controller) = match self
                 .battlefield
                 .find_by_id(perm_id)
             {
@@ -12072,30 +12075,61 @@ impl GameState {
                     if !self.card_keyword_possible(perm_id, |k| matches!(k, Keyword::Ward(_))) {
                         continue;
                     }
+                    // CR 113.2c — every instance triggers on its own.
                     let computed = self.computed_permanent(perm_id);
-                    let cost: Option<WardCost> = computed
+                    let costs: Vec<WardCost> = computed
                         .as_ref()
                         .map(|cp| cp.keywords())
                         .unwrap_or(&c.definition.keywords)
                         .iter()
-                        .find_map(|k| match k {
-                            Keyword::Ward(cost) => Some(cost.clone()),
+                        .filter_map(|k| match k {
+                            Keyword::Ward(cost) if !ward_cost_is_trivial(cost) => Some(cost.clone()),
                             _ => None,
-                        });
-                    match cost {
-                        Some(cc) if !ward_cost_is_trivial(&cc) => (cc, c.controller),
-                        _ => continue,
+                        })
+                        .collect();
+                    if costs.is_empty() {
+                        continue;
                     }
+                    (costs, c.controller)
                 }
                 _ => continue,
             };
 
-            let effect = Effect::CounterUnless {
-                what: Selector::Target(0),
-                cost: ward_cost,
-            };
+            for ward_cost in ward_costs {
+                let effect = Effect::CounterUnless {
+                    what: Selector::Target(0),
+                    cost: ward_cost,
+                };
+                self.stack.push(
+                    TriggerPush::new(perm_id, ward_controller, effect)
+                        .target(Some(Target::Permanent(target_for_trigger)))
+                        .build(),
+                );
+            }
+        }
+    }
+
+    /// CR 702.21a for a *player*: each `ControllerHasWard` static `pl`'s
+    /// permanents carry triggers when an opponent's spell or ability targets
+    /// `pl` (Unsettled Mariner), its source the warding permanent.
+    fn push_player_ward_triggers(&mut self, actor: usize, pl: usize, target_for_trigger: CardId) {
+        use crate::effect::{Selector, StaticEffect};
+        if pl == actor || self.same_team(pl, actor) {
+            return;
+        }
+        let mut wards: Vec<(CardId, crate::card::WardCost)> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| c.controller == pl) {
+            for sa in &c.definition.static_abilities {
+                if let Some(StaticEffect::ControllerHasWard(cost)) = self.active_static(&sa.effect, c)
+                    && !ward_cost_is_trivial(cost)
+                {
+                    wards.push((c.id, cost.clone()));
+                }
+            }
+        }
+        for (source, cost) in wards {
             self.stack.push(
-                TriggerPush::new(perm_id, ward_controller, effect)
+                TriggerPush::new(source, pl, Effect::CounterUnless { what: Selector::Target(0), cost })
                     .target(Some(Target::Permanent(target_for_trigger)))
                     .build(),
             );

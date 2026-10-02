@@ -333,6 +333,43 @@ fn unsettled_mariner_taxes_targeting() {
     assert!(g.battlefield_find(bear).is_some(), "countered: no {{1}} left to pay");
 }
 
+/// CR 702.21a — Unsettled Mariner wards *you* too: a Bolt at your face is
+/// countered unless its caster pays {1}.
+#[test]
+fn cr_702_21a_unsettled_mariner_wards_its_controller() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::unsettled_mariner());
+    let b = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: b, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "countered: no {{1}} left to pay");
+}
+
+/// CR 113.2c — Mariner's granted ward {1} beside a printed ward {1} is a second
+/// trigger: a caster with exactly {1} spare pays one and is countered by the
+/// other.
+#[test]
+fn cr_113_2c_unsettled_mariner_stacks_with_a_printed_ward() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::unsettled_mariner());
+    let dillo = g.add_card_to_battlefield(0, catalog::armored_armadillo());
+    let b = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: b, target: Some(Target::Permanent(dillo)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    let wards = g.stack.iter().filter(|s| matches!(s, crabomination::game::types::StackItem::Trigger { .. })).count();
+    assert_eq!(wards, 2, "one trigger per ward instance");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == b), "countered by the second");
+    assert_eq!(g.battlefield_find(dillo).unwrap().damage, 0);
+}
+
 /// The 1/1 changelings: Fire-Belly pumps at most twice a turn, Mothdust
 /// flies by tapping a creature, Skeletal regenerates, Gladewalker counters,
 /// Amoeboid grants every type.

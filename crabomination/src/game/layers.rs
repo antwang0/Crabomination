@@ -1340,7 +1340,9 @@ fn compute_permanent_pass(
             // 702.70b — "total toxic value" sums every instance; Plague
             // Nurse's granted toxic 1 stacks with a printed toxic 1).
             Modification::AddKeyword(kw) => {
-                let cumulative = matches!(kw, Keyword::Toxic(_) | Keyword::Poisonous(_));
+                // Ward too: each instance is its own trigger (CR 113.2c), so
+                // a granted ward {1} beside a printed one charges twice.
+                let cumulative = matches!(kw, Keyword::Toxic(_) | Keyword::Poisonous(_) | Keyword::Ward(_));
                 if cumulative || !keywords.contains(kw) {
                     keywords.push(kw.clone());
                 }

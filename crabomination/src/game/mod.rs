@@ -31510,6 +31510,7 @@ fn static_effect_to_effects(
             // `effective_ability_mana_cost`; no continuous-layer effect.
             | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }
             | StaticEffect::ControllerHasHexproof
+            | StaticEffect::ControllerHasWard(_)
             | StaticEffect::ControllerHasShroud
             // Mistform Warchief / Grip of Chaos / Parallel Thoughts — read at
             // the cast-cost, target-selection and draw-replacement sites.

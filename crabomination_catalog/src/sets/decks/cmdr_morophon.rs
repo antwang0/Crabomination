@@ -544,17 +544,21 @@ pub fn the_bears_of_littjara() -> CardDefinition {
     }
 }
 
-/// Unsettled Mariner — your permanents have ward {1}. Residual: you aren't
-/// protected, and it doesn't stack with a printed ward.
+/// Unsettled Mariner — you and your permanents have ward {1}: the same
+/// trigger (CR 702.21a), one more instance beside a printed ward.
 pub fn unsettled_mariner() -> CardDefinition {
+    let ward = || WardCost::Mana(cost(&[generic(1)]));
     CardDefinition {
-        static_abilities: vec![static_ab(
-            "Whenever you or a permanent you control becomes the target of a spell or ability an opponent controls, counter that spell or ability unless its controller pays {1}.",
-            StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::ControlledByYou),
-                keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
-            },
-        )],
+        static_abilities: vec![
+            static_ab(
+                "Whenever you or a permanent you control becomes the target of a spell or ability an opponent controls, counter that spell or ability unless its controller pays {1}.",
+                StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::ControlledByYou),
+                    keyword: Keyword::Ward(ward()),
+                },
+            ),
+            static_ab("You have ward {1}.", StaticEffect::ControllerHasWard(ward())),
+        ],
         ..CardDefinition {
             subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
             power: 2,
