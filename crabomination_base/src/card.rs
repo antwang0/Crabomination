@@ -5344,6 +5344,11 @@ pub struct EntersAsCopy {
     /// Stolen Identity).
     #[serde(default)]
     pub lock_copied: bool,
+    /// "As this enters, you may have it become a copy of … **until end of
+    /// turn**" (Cursed Mirror): the copy, and every rider above, ends at the
+    /// cleanup step (`BecomeCopyOfFor`) and the printed card returns.
+    #[serde(default)]
+    pub until_end_of_turn: bool,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

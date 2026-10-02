@@ -2314,17 +2314,24 @@ impl GameState {
             Some(Target::Permanent(source)),
             0,
         );
-        if let Ok(evs) = self.resolve_effect_driven(
-            &Effect::BecomeCopyOf {
+        let copy = if spec.until_end_of_turn {
+            Effect::BecomeCopyOfFor {
+                what: crate::effect::Selector::This,
+                source: crate::effect::Selector::Target(0),
+                duration: crate::effect::Duration::EndOfTurn,
+                non_legendary: false,
+            }
+        } else {
+            Effect::BecomeCopyOf {
                 what: crate::effect::Selector::This,
                 source: crate::effect::Selector::Target(0),
                 extra_creature_types: spec.extra_creature_types.clone(),
                 keep_own_triggered: false,
                 keep_own_activated: false,
                 keep_name: false,
-            },
-            &ctx,
-        ) {
+            }
+        };
+        if let Ok(evs) = self.resolve_effect_driven(&copy, &ctx) {
             events.extend(evs);
         }
         if spec.lock_copied
