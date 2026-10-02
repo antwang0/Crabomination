@@ -344,6 +344,13 @@ fn odric_and_fireflux_squad_on_the_attack() {
     all.extend(&bears);
     attack(&mut g, &all);
     assert_eq!(g.block_chooser(), Some(0));
+    // "…block **this combat**": an additional combat's blocks are the
+    // defenders' own again.
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.block_chooser(), None, "the choice ends with the combat");
 
     let mut g = main_phase(2);
     let giant = g.add_card_to_library(0, catalog::hill_giant());
@@ -368,7 +375,10 @@ fn sanctuary_blade_equips_with_a_chosen_color() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     flood(&mut g, 0);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
-    act_as(&mut g, 0, GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    g.resolve_top_of_stack().expect("attach");
+    assert!(g.stack.is_empty(), "the colour is chosen as it attaches, not by a trigger");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4);
     assert!(

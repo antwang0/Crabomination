@@ -11455,6 +11455,11 @@ pub enum Effect {
     /// block" (Berserker's Frenzy) — `ChooseCombatThisTurn`'s block half: the
     /// resolving controller submits every block declaration this turn.
     ChooseBlocksThisTurn,
+    /// "You choose which creatures block **this combat** and how those
+    /// creatures block" (Odric, Master Tactician): `ChooseBlocksThisTurn`
+    /// ended at the end of this combat, so an additional combat is the
+    /// defenders' own again.
+    ChooseBlocksThisCombat,
     /// CR 500.8 — "After this main phase, there is an additional combat
     /// phase followed by an additional main phase." Banks a combat phase
     /// that begins when the active player leaves their current main phase;

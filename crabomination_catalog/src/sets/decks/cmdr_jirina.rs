@@ -270,14 +270,14 @@ pub fn magus_of_the_disk() -> CardDefinition {
 }
 
 /// Odric, Master Tactician — when it and at least three others attack, you
-/// choose the blocks. Residual: the choice holds for the rest of the turn.
+/// choose the blocks this combat.
 pub fn odric_master_tactician() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                 .with_filter(Predicate::AttackingWithAtLeast(4)),
-            effect: Effect::ChooseBlocksThisTurn,
+            effect: Effect::ChooseBlocksThisCombat,
         }],
         ..legend(
             "Odric, Master Tactician",
@@ -306,7 +306,7 @@ pub fn riders_of_gavony() -> CardDefinition {
 }
 
 /// Sanctuary Blade — +2/+0 and protection from the colour last chosen as it
-/// became attached. Residual: the choice is a trigger, not a replacement.
+/// became attached (the choice is made as it attaches, not by a trigger).
 pub fn sanctuary_blade() -> CardDefinition {
     CardDefinition {
         name: "Sanctuary Blade",
@@ -318,16 +318,15 @@ pub fn sanctuary_blade() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus { power: 2, ..Default::default() }),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameAttached, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
-        static_abilities: vec![static_ab(
-            "Equipped creature has protection from the last chosen color.",
-            StaticEffect::GrantProtectionFromChosenColor {
-                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
-            },
-        )],
+        static_abilities: vec![
+            static_ab("As Sanctuary Blade becomes attached to a creature, choose a color.", StaticEffect::ChooseColorAsAttached),
+            static_ab(
+                "Equipped creature has protection from the last chosen color.",
+                StaticEffect::GrantProtectionFromChosenColor {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+            ),
+        ],
         ..Default::default()
     }
 }

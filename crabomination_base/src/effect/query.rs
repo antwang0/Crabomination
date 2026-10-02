@@ -1944,6 +1944,7 @@ impl Effect {
             Effect::WishToLibrary { .. }
             | Effect::ChooseCombatThisTurn
             | Effect::ChooseBlocksThisTurn
+            | Effect::ChooseBlocksThisCombat
             | Effect::SearchAndCastFree { .. }
             | Effect::FlickerHostWithAuras
             | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }
@@ -5151,6 +5152,7 @@ impl Effect {
                 Effect::WishToLibrary { .. }
                 | Effect::ChooseCombatThisTurn
                 | Effect::ChooseBlocksThisTurn
+                | Effect::ChooseBlocksThisCombat
                 | Effect::SearchAndCastFree { .. }
                 | Effect::FlickerHostWithAuras
                 | Effect::SacrificeEnchantedForExtraCombat

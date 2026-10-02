@@ -40058,6 +40058,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseBlocksThisCombat => {
+                self.turn.block_chooser_this_combat = Some(ctx.controller);
+                Ok(())
+            }
+
             Effect::AdditionalCombatPhaseAfterMain { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.additional_post_main_combats =

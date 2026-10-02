@@ -318,6 +318,10 @@ pub enum StaticEffect {
     /// the top of your library], it gains 'When this Equipment enters, attach
     /// it to target creature you control.'" Read by the library-top cast path.
     LibraryTopEquipmentAttachesOnEntry,
+    /// "As this becomes attached to a creature, choose a color" (Sanctuary
+    /// Blade): the choice is part of the attachment, made before any player
+    /// gets priority, not a trigger. Read by `apply_as_attached_choices`.
+    ChooseColorAsAttached,
     /// Thundermane Dragon — "if you cast a creature spell this way [off the
     /// top of your library, matching `filter`], it gains haste until end of
     /// turn." Read by the library-top cast path, not a trigger.

@@ -165,6 +165,8 @@ mod simultaneous_deaths;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
+// "As this becomes attached, choose …" (Sanctuary Blade).
+mod as_attached;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -1492,6 +1494,10 @@ pub struct TurnRegistries {
     /// the active player. Read by `block_chooser`; cleared at cleanup.
     #[serde(default)]
     pub(crate) block_chooser_this_turn: Option<usize>,
+    /// `block_chooser_this_turn` for one combat (Odric, Master Tactician):
+    /// cleared as that combat ends.
+    #[serde(default)]
+    pub(crate) block_chooser_this_combat: Option<usize>,
 }
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -23228,6 +23234,7 @@ impl GameState {
             return;
         }
         self.fire_lose_control_delayed(events);
+        self.apply_as_attached_choices(events);
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
         // Most (permanent, trigger) pairs are ones no event in the batch can
         // match — `ems_census` read **72.6 % on sealed / 50.6 % on cube** at
@@ -31814,6 +31821,7 @@ fn static_effect_to_effects(
             | StaticEffect::AttachedIsGoaded
             // Read by the library-top cast path; no layer.
             | StaticEffect::LibraryTopEquipmentAttachesOnEntry
+            | StaticEffect::ChooseColorAsAttached
             | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.

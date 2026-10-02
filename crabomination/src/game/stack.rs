@@ -1000,6 +1000,10 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::EndCombat => {
+                // Odric's "this combat" block choice is over.
+                if self.turn.block_chooser_this_combat.is_some() {
+                    self.turn.block_chooser_this_combat = None;
+                }
                 // CR 511.1 — "at end of combat" triggers, including the
                 // `DelayedKind::EndOfCombat` queue (Triton Tactics, Fortune).
                 self.fire_step_triggers(TurnStep::EndCombat);
@@ -5251,6 +5255,9 @@ impl GameState {
         clear_turn!(self.graveyard_unearth_eot);
         if self.turn.block_chooser_this_turn.is_some() {
             self.turn.block_chooser_this_turn = None;
+        }
+        if self.turn.block_chooser_this_combat.is_some() {
+            self.turn.block_chooser_this_combat = None;
         }
         clear_turn!(self.artifact_damage_to_players_this_turn);
         clear_cold!(self.combat_damage_redirect_this_turn);

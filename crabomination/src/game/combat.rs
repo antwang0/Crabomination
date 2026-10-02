@@ -587,7 +587,7 @@ impl GameState {
         if let Some(chooser) = self.combat_chooser {
             return Some(chooser);
         }
-        if let Some(chooser) = self.turn.block_chooser_this_turn {
+        if let Some(chooser) = self.turn.block_chooser_this_combat.or(self.turn.block_chooser_this_turn) {
             return Some(chooser);
         }
         self.battlefield
