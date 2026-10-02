@@ -83,6 +83,24 @@ fn hazezon_makes_warriors_and_replays_deserts() {
     assert!(g.computed_permanent(h).unwrap().keywords().contains(&Keyword::Landwalk(LandType::Desert)));
 }
 
+/// Dune Chanter — CR 205.3: land cards its controller owns off the
+/// battlefield are Deserts, so Hazezon replays a Forest from the graveyard;
+/// an opponent's Forest stays a Forest.
+#[test]
+fn dune_chanter_makes_graveyard_lands_deserts() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::hazezon_shaper_of_sand());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(forest)).is_err(), "not a Desert yet");
+    g.add_card_to_battlefield(0, catalog::dune_chanter());
+    let theirs = g.add_card_to_graveyard(1, catalog::forest());
+    let desert = crabomination::card::SelectionRequirement::HasLandType(LandType::Desert);
+    assert!(!g.evaluate_requirement_on_card(&desert, g.players[1].graveyard.iter().find(|c| c.id == theirs).unwrap(), 0));
+    g.perform_action(GameAction::PlayLandFromGraveyard(forest)).expect("a Desert now");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some());
+}
+
 /// Yuma — a Desert card reaching your graveyard from anywhere (here, milled)
 /// makes a 4/2 Plant Warrior; Dunes of the Dead dying makes a Zombie.
 #[test]

@@ -152,9 +152,9 @@ pub fn descend_upon_the_sinful() -> CardDefinition {
     }
 }
 
-/// Dune Chanter — reach; your lands are Deserts and tap for any color; {T}:
-/// mill two, a life per land milled. Residual: land cards off the battlefield
-/// aren't Deserts.
+/// Dune Chanter — reach; your lands, and land cards you own off the
+/// battlefield, are Deserts; your lands tap for any color; {T}: mill two, a
+/// life per land milled.
 pub fn dune_chanter() -> CardDefinition {
     let your_lands = || Selector::EachPermanent(R::Land.and(R::ControlledByYou));
     CardDefinition {
@@ -163,6 +163,10 @@ pub fn dune_chanter() -> CardDefinition {
             StaticAbility {
                 description: "Lands you control are Deserts in addition to their other types.",
                 effect: StaticEffect::LandTypeChanger { applies_to: your_lands(), land_type: LandType::Desert, replace: false },
+            },
+            StaticAbility {
+                description: "Land cards you own that aren't on the battlefield are Deserts in addition to their other types.",
+                effect: StaticEffect::OwnedLandCardsOffBattlefieldHaveLandType(LandType::Desert),
             },
             StaticAbility {
                 description: "Lands you control have \"{T}: Add one mana of any color.\"",
