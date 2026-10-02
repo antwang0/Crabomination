@@ -25282,7 +25282,6 @@ impl GameState {
             }
 
             Effect::AddCountersOfChosenKind { onto, kinds, amount } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(amount, ctx).max(0);
                 if n == 0 || kinds.is_empty() {
                     return Ok(());
@@ -25311,42 +25310,59 @@ impl GameState {
                         self.battlefield_find(*id).map(|c| c.definition.cost.cmc()).unwrap_or(0),
                     )
                 });
+                // CR 608.2d — the controller picks the kind, then the
+                // permanent (logged asks: both are asked before anything is
+                // placed, so a prompting controller answers in the client).
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
                 let kind = if kinds.len() == 1 {
                     kinds[0]
                 } else {
-                    let answer = self.decider.decide(&Decision::ChooseModes {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        num_modes: kinds.len(),
-                        count: 1,
-                        default: vec![0],
-                        mode_texts: kinds.iter().map(|k| format!("{k:?} counters")).collect(),
-                    });
-                    match answer {
-                        DecisionAnswer::Modes(picks) => picks
-                            .first()
-                            .and_then(|i| kinds.get(*i as usize))
-                            .copied()
-                            .unwrap_or(kinds[0]),
-                        _ => kinds[0],
-                    }
+                    let Some(i) = self.ask_seat_option(
+                        &mut cursor,
+                        ctx.controller,
+                        "Choose the kind of counter".into(),
+                        source,
+                        kinds.iter().map(|k| format!("{k:?} counters")).collect(),
+                        effect,
+                    ) else {
+                        // The amount is the resolution's (the destroyed
+                        // artifact's counters): pin it, or the re-run reads 0.
+                        rewrap_parked(&mut self.suspend_signal, |_| Effect::AddCountersOfChosenKind {
+                            onto: onto.clone(),
+                            kinds: kinds.clone(),
+                            amount: crate::effect::Value::Const(n),
+                        });
+                        return Ok(());
+                    };
+                    kinds.get(i).copied().unwrap_or(kinds[0])
                 };
                 let target = if candidates.len() == 1 {
                     candidates[0]
                 } else {
-                    let answer = self.decider.decide(&Decision::ChooseTarget {
-                        optional: false,
-                        extra_cast_slot: false,
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
-                        source_name: ctx.source_name.unwrap_or("").to_string(),
-                        description: format!("choose a permanent for {n} counters"),
-                    });
-                    match answer {
-                        DecisionAnswer::Target(Target::Permanent(id))
-                            if candidates.contains(&id) => id,
+                    let Some(t) = self.ask_seat_target_logged(
+                        &mut cursor,
+                        ctx.controller,
+                        format!("choose a permanent for {n} counters"),
+                        source,
+                        candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        effect,
+                    ) else {
+                        // The amount is the resolution's (the destroyed
+                        // artifact's counters): pin it, or the re-run reads 0.
+                        rewrap_parked(&mut self.suspend_signal, |_| Effect::AddCountersOfChosenKind {
+                            onto: onto.clone(),
+                            kinds: kinds.clone(),
+                            amount: crate::effect::Value::Const(n),
+                        });
+                        return Ok(());
+                    };
+                    match t {
+                        Target::Permanent(id) if candidates.contains(&id) => id,
                         _ => candidates[0],
                     }
                 };
+                self.clear_answer_log();
                 let mut sub = ctx.clone();
                 sub.targets = vec![Target::Permanent(target)];
                 self.run_effect(

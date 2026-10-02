@@ -1140,6 +1140,35 @@ fn dismantle_moves_the_counter_tally_to_your_artifact() {
     );
 }
 
+/// CR 608.2d — a PROMPTING caster chooses Dismantle's counter kind and the
+/// artifact that gets them (the game-wide decider used to pick the first
+/// kind and the priciest artifact for them).
+#[test]
+fn dismantle_a_prompting_caster_picks_the_kind_and_the_artifact() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::coretapper());
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::Charge, 3);
+    let feather = g.add_card_to_battlefield(0, catalog::angels_feather());
+    let tapper = g.add_card_to_battlefield(0, catalog::coretapper());
+    g.players[0].wants_ui = true;
+    let spell = g.add_card_to_hand(0, catalog::dismantle());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(theirs)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.submit_decision(DecisionAnswer::Amount(1)).expect("charge counters");
+    drain_stack(&mut g);
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(feather))).expect("the Feather");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "destroyed");
+    assert_eq!(g.battlefield_find(feather).unwrap().counter_count(CounterType::Charge), 3);
+    assert_eq!(g.battlefield_find(tapper).unwrap().counter_count(CounterType::Charge), 0);
+}
+
 /// Pulse of the Dross discards a revealed card and recurs while they're ahead.
 #[test]
 fn pulse_of_the_dross_discards_and_returns_itself() {
