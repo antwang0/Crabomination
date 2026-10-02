@@ -56,7 +56,7 @@ impl GameState {
                 legal.extend(
                     self.battlefield
                         .iter()
-                        .filter(|c| c.controller == p && c.definition.is_planeswalker())
+                        .filter(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                         .map(|c| Target::Permanent(c.id)),
                 );
             }
