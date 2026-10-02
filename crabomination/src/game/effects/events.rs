@@ -750,6 +750,17 @@ fn event_matches_spec_rest(
         }
     }
 
+    // "…the target of an activated ability" (Professor Hojo): the targeting
+    // source has an activated ability on the stack.
+    if spec.by_activated_ability {
+        let GameEvent::BecameTarget { by: Some(by), .. } = event else { return false };
+        if !state.stack.iter().any(|si| {
+            matches!(si, crate::game::types::StackItem::Trigger { source, activated: true, .. } if source == by)
+        }) {
+            return false;
+        }
+    }
+
     // "…causes its controller to shuffle" (Widespread Panic).
     if spec.self_caused
         && !matches!(event, GameEvent::LibraryShuffled { player, cause } if *cause == Some(*player))

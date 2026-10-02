@@ -353,6 +353,36 @@ fn hojo_discounts_a_targeted_activation() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
+/// Hojo draws when an *activated* ability targets your creature — a
+/// triggered ability doing the same (Merfolk Skydiver's entry) draws nothing.
+#[test]
+fn hojo_draws_only_for_an_activated_ability() {
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_battlefield(0, catalog::professor_hojo());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let diver = g.add_card_to_hand(0, catalog::merfolk_skydiver());
+    flood(&mut g, 0);
+    act(&mut g, GameAction::CastSpell { card_id: diver, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand, "a trigger's target draws nothing");
+    let passage = g.add_card_to_battlefield(0, catalog::rogues_passage());
+    flood(&mut g, 0);
+    act(&mut g, GameAction::ActivateAbility {
+        card_id: passage,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the activation draws");
+}
+
 /// SOLDIER Military Program — "If you control a commander, you may choose
 /// both instead." It read the cast-time stamp the Will cycle uses, which a
 /// triggered ability never carries, so the both-modes branch was dead.

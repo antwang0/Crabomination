@@ -3276,8 +3276,8 @@ pub fn living_twister() -> CardDefinition {
 }
 
 /// Lazotep Plating — {1}{U} Instant. Amass Zombies 1, then you and permanents
-/// you control gain hexproof until end of turn. (Modeled as hexproof from all
-/// five colors; colorless sources are an approximation.)
+/// you control gain hexproof until end of turn (the permanents fixed as it
+/// resolves, CR 611.2c).
 pub fn lazotep_plating() -> CardDefinition {
     CardDefinition {
         name: "Lazotep Plating",
@@ -3289,15 +3289,11 @@ pub fn lazotep_plating() -> CardDefinition {
                 count: Value::ONE,
                 extra_type: Some(CreatureType::Zombie),
             },
-            Effect::GrantHexproofFromColorThisTurn {
-                who: Selector::You,
-                colors: vec![
-                    Color::White,
-                    Color::Blue,
-                    Color::Black,
-                    Color::Red,
-                    Color::Green,
-                ],
+            Effect::PlayerHexproofThisTurn { who: Selector::You },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(crate::card::SelectionRequirement::ControlledByYou),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()

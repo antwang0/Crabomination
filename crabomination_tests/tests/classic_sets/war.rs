@@ -1460,7 +1460,12 @@ fn lazotep_plating_amass_and_hexproof() {
     }).expect("cast");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.counter_count(CounterType::PlusOnePlusOne) == 1), "Army token amassed");
-    assert!(g.players[0].hexproof_from_colors_this_turn.len() >= 5, "gained hexproof from all colors");
+    assert!(g.players[0].hexproof_this_turn, "you gain hexproof");
+    let army = g.battlefield.iter().find(|c| c.controller == 0).map(|c| c.id).unwrap();
+    assert!(
+        g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Hexproof),
+        "full hexproof, colorless sources included"
+    );
 }
 
 // ── Batch 8 (2026-07-23): search / discard commons ────────────────────────────

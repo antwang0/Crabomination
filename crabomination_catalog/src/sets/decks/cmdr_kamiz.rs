@@ -8,7 +8,7 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement as R, Selector, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes,
     Supertype, TriggeredAbility, Value, WardCost, Zone,
 };
@@ -485,9 +485,8 @@ pub fn obscura_confluence() -> CardDefinition {
 }
 
 /// Oskar, Rubbish Reclaimer — costs {1} less per distinct mana value in your
-/// graveyard; discarding a nonland card, you may cast it from there.
-///
-/// ⚠ Residual: the card may be cast until end of turn, not right away.
+/// graveyard; discarding a nonland card, you may cast it from there as the
+/// trigger resolves, paying its cost.
 pub fn oskar_rubbish_reclaimer() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -499,13 +498,13 @@ pub fn oskar_rubbish_reclaimer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Nonland }),
-            effect: Effect::GrantMayPlay {
+            effect: Effect::CastWithoutPayingImmediate {
                 what: Selector::TriggerSource,
-                duration: MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
+                source_zone: Zone::Graveyard,
                 exile_after: false,
+                copy: false,
+                reduce_generic: 0,
                 pay_own_cost: true,
-                any_color: false,
             },
         }],
         ..creature(

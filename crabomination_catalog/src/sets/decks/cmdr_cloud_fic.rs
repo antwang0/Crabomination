@@ -365,8 +365,8 @@ pub fn lifestreams_blessing() -> CardDefinition {
 }
 
 /// Professor Hojo — your first own-creature-targeting activation each turn
-/// costs {2} less; draws once a turn when an ability targets your creature.
-/// Residual: any permanent's ability counts for the draw.
+/// costs {2} less; draws once a turn when an activated ability targets your
+/// creature.
 pub fn professor_hojo() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -375,7 +375,7 @@ pub fn professor_hojo() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
-                .caused_by(R::OnBattlefield)
+                .by_activated_ability()
                 .once_per_turn(),
             effect: draw(Value::ONE),
         }],

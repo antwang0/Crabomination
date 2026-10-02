@@ -3952,6 +3952,11 @@ pub struct EventSpec {
     /// shuffling player's own spell or ability matches.
     #[serde(default)]
     pub self_caused: bool,
+    /// "…become the target of an **activated** ability" (Professor Hojo): the
+    /// targeting object is an activated ability on the stack, from any zone
+    /// (a spell or a triggered ability doesn't count).
+    #[serde(default)]
+    pub by_activated_ability: bool,
 }
 
 /// CR 113.6b — "an ability that states which zones it functions in functions
@@ -4013,7 +4018,13 @@ impl EventSpec {
             causer_filter: None,
             or_copy: false,
             self_caused: false,
+            by_activated_ability: false,
         }
+    }
+    /// "…the target of an activated ability" — see `by_activated_ability`.
+    pub fn by_activated_ability(mut self) -> Self {
+        self.by_activated_ability = true;
+        self
     }
     /// "…causes its controller to shuffle" (Widespread Panic) — see `self_caused`.
     pub fn self_caused(mut self) -> Self {

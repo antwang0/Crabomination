@@ -294,6 +294,23 @@ fn oskar_reclaims_the_rubbish() {
     assert!(g.battlefield_find(o).is_some());
 }
 
+/// Oskar: a discarded nonland card is cast from the graveyard as the trigger
+/// resolves ("you may cast it"), its cost paid — not left castable all turn.
+#[test]
+fn oskar_casts_the_discard_right_away() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::oskar_rubbish_reclaimer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    assert!(g.discard_card(0, bolt, &mut evs));
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "Bolted from the graveyard");
+}
+
 /// Tivit's council's dilemma pays out a Clue or a Treasure per vote.
 #[test]
 fn tivit_sells_secrets() {
