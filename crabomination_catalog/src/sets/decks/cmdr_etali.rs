@@ -651,38 +651,21 @@ pub fn mirror_box() -> CardDefinition {
 /// Cursed Mirror — {2}{R} Artifact. {T}: Add {R}. As it enters, you may have
 /// it become a copy of any creature on the battlefield until end of turn,
 /// except it has haste.
-/// Approximation: "as this enters" is an ETB trigger (it can be responded to,
-/// and the copy lands after other ETB triggers have been put on the stack).
-/// The creature is chosen, not targeted (`ChooseOneAmong`), so hexproof /
-/// shroud creatures are legal picks, as printed.
+/// An `enters_as_copy` replacement (CR 614.1c / 707.2) that lasts until end
+/// of turn. The creature is chosen, not targeted, so hexproof / shroud
+/// creatures are legal picks, as printed; the "you may" is always taken.
 pub fn cursed_mirror() -> CardDefinition {
     CardDefinition {
         name: "Cursed Mirror",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![crate::sets::tap_add(Color::Red)],
-        triggered_abilities: vec![etb(Effect::MayDo {
-            description: "Have Cursed Mirror become a copy of a creature until end of turn?"
-                .into(),
-            body: Box::new(Effect::ChooseOneAmong {
-                what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
-                chooser: PlayerRef::You,
-                chosen: Box::new(Effect::Seq(vec![
-                    Effect::BecomeCopyOfFor {
-                        what: Selector::This,
-                        source: Selector::SeparatedPile { chosen: true },
-                        duration: Duration::EndOfTurn,
-                        non_legendary: false,
-                    },
-                    Effect::GrantKeyword {
-                        what: Selector::This,
-                        keyword: Keyword::Haste,
-                        duration: Duration::EndOfTurn,
-                    },
-                ])),
-                other: Box::new(Effect::Noop),
-            }),
-        })],
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature,
+            extra_keywords: vec![Keyword::Haste],
+            until_end_of_turn: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -1782,8 +1765,8 @@ pub fn rockfall_vale() -> CardDefinition {
 
 /// Game Trail — Land. As this land enters, you may reveal a Mountain or
 /// Forest card from your hand. If you don't, this land enters tapped.
-/// `{T}: Add {R} or {G}.` (`EntersTappedUnless`, the Snarl shape.)
-/// Approximation: the reveal is implicit — holding a match always untaps it.
+/// `{T}: Add {R} or {G}.` (`EntersTappedUnless`, the Snarl shape.) The free
+/// reveal is always made when a match is in hand.
 pub fn game_trail() -> CardDefinition {
     crate::sets::land_type_reveal_land(
         "Game Trail",

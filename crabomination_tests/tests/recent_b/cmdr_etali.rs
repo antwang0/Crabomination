@@ -375,21 +375,29 @@ fn mirror_box_exempts_your_legends_and_scales_by_same_name() {
     assert_eq!(pt(opp_bear2), Some((2, 2)));
 }
 
-/// Cursed Mirror becomes a hasty copy of a creature until end of turn.
+/// CR 614.1c / 707.2 — Cursed Mirror enters as a hasty copy of a creature
+/// (a replacement, not a trigger: nothing can respond before it is a copy),
+/// and is the Mirror again after the cleanup step.
 #[test]
-fn cursed_mirror_becomes_a_hasty_copy() {
+fn cursed_mirror_enters_as_a_hasty_copy_until_end_of_turn() {
     let mut g = a_main_phase();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let mirror = g.add_card_to_battlefield(0, catalog::cursed_mirror());
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Bool(true),
-        DecisionAnswer::Cards(vec![bear]),
-    ]));
-    g.fire_self_etb_triggers(mirror, 0);
+    let mirror = g.add_card_to_hand(0, catalog::cursed_mirror());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    a_flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: mirror, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Mirror");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(mirror).unwrap().definition.name, "Grizzly Bears");
     assert_eq!(g.computed_permanent(mirror).map(|c| (c.power, c.toughness)), Some((2, 2)));
     assert!(a_has_haste(&g, mirror), "except it has haste");
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    while g.active_player_idx == 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    assert_eq!(g.battlefield_find(mirror).unwrap().definition.name, "Cursed Mirror", "the copy ended");
 }
 
 /// Hellkite Courser: its ETB puts the chosen one of two commanders onto the
