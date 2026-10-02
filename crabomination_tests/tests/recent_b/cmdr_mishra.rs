@@ -361,8 +361,8 @@ fn wondrous_crucible_grants_ward() {
 }
 
 /// CR 613.1d — Workshop Elders animates a noncreature artifact into a 4/4
-/// with four +1/+1 counters. (Its flying grant reads printed types, so the
-/// animated artifact doesn't fly yet — ENGINE_BACKLOG, CR 613.8.)
+/// with four +1/+1 counters, and (CR 613.8) its "artifact creatures you
+/// control have flying" reads the layered types, so the animated one flies.
 #[test]
 fn workshop_elders_animates_an_artifact() {
     let mut g = pod(2);
@@ -371,6 +371,7 @@ fn workshop_elders_animates_an_artifact() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     step(&mut g, TurnStep::BeginCombat);
     assert_eq!(pt(&g, stone), (4, 4));
+    assert!(g.permanent_has_keyword(stone, &Keyword::Flying), "an artifact creature now");
     let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(g.permanent_has_keyword(thopter, &Keyword::Flying));

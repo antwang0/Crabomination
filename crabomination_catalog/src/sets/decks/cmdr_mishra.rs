@@ -593,8 +593,7 @@ pub fn wondrous_crucible() -> CardDefinition {
 
 /// Workshop Elders — your artifact creatures fly; each combat on your turn a
 /// noncreature artifact of yours may become a 0/0 artifact creature with four
-/// +1/+1 counters. Residual: the flying grant reads printed types, so an
-/// animated artifact doesn't get it.
+/// +1/+1 counters (the flying grant reads the layered types, CR 613.8).
 pub fn workshop_elders() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

@@ -2236,7 +2236,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
 | 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
-| 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Cosmic Intervention | Phantom Premonition (KHC) | the exile-instead replacement covers the permanents you control as it resolves (not ones that arrive later that turn); the end-step return takes the cards you own that a this-turn "exile it instead" moved. |
