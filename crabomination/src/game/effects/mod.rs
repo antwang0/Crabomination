@@ -30088,6 +30088,9 @@ impl GameState {
             }
 
             Effect::AttachAnyNumberTo { what, to } => self.attach_any_number_to(what, to, effect, ctx, events),
+            Effect::AttachEachToCreatureYouControl { what } => {
+                self.attach_each_to_creature_you_control(what, effect, ctx, events)
+            }
             Effect::ExileAllOtherSpellsCounterAllAbilities => {
                 self.exile_all_other_spells_counter_all_abilities(ctx, events)
             }

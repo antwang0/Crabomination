@@ -2257,6 +2257,7 @@ impl Effect {
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::AttachAnyNumberTo { .. }
+            | Effect::AttachEachToCreatureYouControl { .. }
             | Effect::ExileAllOtherSpellsCounterAllAbilities
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }

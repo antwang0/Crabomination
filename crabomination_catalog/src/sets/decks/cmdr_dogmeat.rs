@@ -9,8 +9,6 @@
 //!   than targeted.
 //! - **Vault 101: Birthday Party** — an Aura only goes on a creature, and an
 //!   Equipment is always attached (to any creature, not only yours).
-//! - **Inventory Management** — every Aura and Equipment you choose moves to
-//!   one creature, your greatest-power one.
 //! - **Perception Bobblehead** — the rest go to the bottom in the cascade
 //!   order, not a random one.
 
@@ -597,17 +595,15 @@ pub fn idolized() -> CardDefinition {
 }
 
 /// Inventory Management — split second; attach your Auras and Equipment to
-/// a creature you control.
-/// Residual: everything chosen moves to your greatest-power creature.
+/// a creature you control, each to the one you choose.
 pub fn inventory_management() -> CardDefinition {
     CardDefinition {
         name: "Inventory Management",
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::SplitSecond],
-        effect: Effect::AttachAnyNumberTo {
+        effect: Effect::AttachEachToCreatureYouControl {
             what: yours(equipment_card().or(aura_card().and(R::AttachedToCreature))),
-            to: Selector::GreatestPowerYouControl,
         },
         ..Default::default()
     }

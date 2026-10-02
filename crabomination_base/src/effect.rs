@@ -5413,6 +5413,10 @@ pub enum Effect {
     /// which of the permanents `what` resolves to become attached to `to`
     /// (Bruna, Light of Alabaster; Heavenly Blademaster).
     AttachAnyNumberTo { what: Selector, to: Selector },
+    /// "For each [what], you may attach it to a creature you control"
+    /// (Inventory Management): each one's host is its own optional pick,
+    /// asked in turn before any moves (headless: your greatest-power one).
+    AttachEachToCreatureYouControl { what: Selector },
     /// "Exile all other spells and counter all abilities" (Summary
     /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
     ExileAllOtherSpellsCounterAllAbilities,

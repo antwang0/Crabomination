@@ -354,3 +354,33 @@ fn agility_bobblehead_targets_up_to_x() {
     assert!(haste(bear) && haste(elf), "the two chosen");
     assert!(!haste(wurm), "X = 2: the third target is dropped");
 }
+
+/// Inventory Management: each Aura and Equipment may move to a creature you
+/// choose — headless, the greatest-power one; a scripted seat sends the first
+/// to the Bears and leaves the second where it is.
+#[test]
+fn inventory_management_moves_each_to_its_own_host() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for scripted in [false, true] {
+        let mut g = pod(2);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+        let sword = g.add_card_to_battlefield(0, catalog::short_sword());
+        let splitter = g.add_card_to_battlefield(0, catalog::bonesplitter());
+        if scripted {
+            g.decider = Box::new(ScriptedDecider::new([
+                DecisionAnswer::Target(Target::Permanent(bear)),
+                DecisionAnswer::DeclineTarget,
+            ]));
+        }
+        let im = g.add_card_to_hand(0, catalog::inventory_management());
+        flood(&mut g, 0);
+        cast(&mut g, 0, im, None).expect("cast");
+        let host = |id| g.battlefield_find(id).and_then(|c| c.attached_to);
+        if scripted {
+            assert_eq!((host(sword), host(splitter)), (Some(bear), None));
+        } else {
+            assert_eq!((host(sword), host(splitter)), (Some(wurm), Some(wurm)));
+        }
+    }
+}
