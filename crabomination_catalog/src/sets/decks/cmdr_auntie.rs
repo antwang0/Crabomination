@@ -755,9 +755,7 @@ pub fn burning_curiosity() -> CardDefinition {
 
 /// Eventide's Shadow — {4}{B} Sorcery. Remove any number of counters from among
 /// permanents on the battlefield. You draw cards and lose life equal to the
-/// number of counters removed this way.
-///
-/// ⚠ Residual: each chosen permanent loses all its counters.
+/// number of counters removed this way (permanents, then a number per kind).
 pub fn eventides_shadow() -> CardDefinition {
     spell(
         "Eventide's Shadow",

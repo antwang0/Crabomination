@@ -215,6 +215,24 @@ fn eventides_shadow_draws_per_counter() {
     assert_eq!(minus(&g, mine), 0);
 }
 
+/// Eventide's Shadow — "any number of counters": the caster picks the
+/// permanent, then how many of each kind (one of the two +1/+1 here), and
+/// draws and loses exactly that many.
+#[test]
+fn eventides_shadow_removes_a_chosen_number() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    flood(&mut g, 0);
+    let es = g.add_card_to_hand(0, catalog::eventides_shadow());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![theirs]), DecisionAnswer::Amount(1)]));
+    cast(&mut g, 0, es, None).expect("Eventide's Shadow");
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
 /// Lasting Tarfire — each end step, 2 to each opponent, but only on a turn a
 /// counter went on a creature.
 #[test]

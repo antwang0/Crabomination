@@ -2253,7 +2253,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
 | 🟡 Watcher of Hours | Revenant Recon (MKC) | removing the last time counter casts it at once, so that removal doesn't surveil. |
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
-| 🟡 Eventide's Shadow | Blight Curse (ECC) | each chosen permanent loses all its counters (no partial removal). |
 | 🟡 Puca's Covenant | Blight Curse (ECC) | the returned card is chosen on resolution, not targeted, and the dying creature's own card is among the choices. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |

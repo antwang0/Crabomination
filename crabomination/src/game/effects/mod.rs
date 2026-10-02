@@ -32417,30 +32417,73 @@ impl GameState {
                     }
                 }
                 let max = candidates.len() as u32;
-                let Some(picked) = self.choose_up_to_cards(
-                    me,
-                    "Remove the counters from which permanents?".into(),
-                    source,
-                    candidates,
-                    max,
-                    PickValue::Gain,
-                    effect,
-                    auto,
-                ) else {
+                // CR 122 — "any number of counters": a permanent picked, then
+                // how many of each kind. A headless `AutoDecider` seat keeps
+                // its whole-permanent default (its blanket amount is 0).
+                let asks = self.seat_prompts(me)
+                    || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+                let mut cursor = 0;
+                let Some(picked) = (if asks {
+                    self.ask_seat_cards_logged(
+                        &mut cursor,
+                        me,
+                        "Remove counters from which permanents?".into(),
+                        source,
+                        candidates,
+                        0,
+                        max,
+                        PickValue::Gain,
+                        effect,
+                        auto.clone(),
+                    )
+                } else {
+                    Some(auto)
+                }) else {
                     return Ok(());
                 };
-                let mut removed = 0u32;
+                let mut plan: Vec<(CardId, CT, u32)> = Vec::new();
                 for id in picked {
-                    let Some(c) = self.battlefield.find_by_id_mut(id) else { continue };
-                    let kinds: Vec<(CT, u32)> = c.counters.iter().map(|(k, n)| (*k, *n)).collect();
-                    for (k, n) in kinds {
-                        if n == 0 {
-                            continue;
+                    let kinds: Vec<(CT, u32, String)> = match self.battlefield_find(id) {
+                        Some(c) => c
+                            .counters
+                            .iter()
+                            .filter(|(_, n)| **n > 0)
+                            .map(|(k, n)| (*k, *n, c.definition.name.to_string()))
+                            .collect(),
+                        None => continue,
+                    };
+                    for (k, n, name) in kinds {
+                        let take = if asks {
+                            let Some(t) = self.ask_seat_amount(
+                                &mut cursor,
+                                me,
+                                format!("Remove how many {k:?} counters from {name}?"),
+                                source,
+                                n,
+                                AmountKind::Upside,
+                                effect,
+                            ) else {
+                                return Ok(());
+                            };
+                            t
+                        } else {
+                            n
+                        };
+                        if take > 0 {
+                            plan.push((id, k, take));
                         }
-                        c.remove_counters(k, n);
-                        removed += n;
-                        events.push(GameEvent::CounterRemoved { card_id: id, counter_type: k, count: n });
                     }
+                }
+                self.clear_answer_log();
+                let mut removed = 0u32;
+                for (id, k, n) in plan {
+                    let Some(c) = self.battlefield.find_by_id_mut(id) else { continue };
+                    let n = c.remove_counters(k, n);
+                    if n == 0 {
+                        continue;
+                    }
+                    removed += n;
+                    events.push(GameEvent::CounterRemoved { card_id: id, counter_type: k, count: n });
                 }
                 if removed > 0 {
                     let n = crate::effect::Value::Const(removed as i32);
