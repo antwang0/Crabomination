@@ -131,6 +131,10 @@ impl GameState {
             .collect();
         let (gain, keeps) = self.pick_cuts_as_gain(&ids, seat, chosen);
         let mut default = self.rank_picks(&ids, seat, gain);
+        // A survivor pick never spares an opponent's permanent by default.
+        if keeps {
+            default.retain(|id| self.battlefield_find(*id).is_none_or(|c| c.controller == seat));
+        }
         default.truncate(n);
         // A forced pick asks for at least one (as many as there are, to `n`),
         // so a bot answering a harm gives up its least valuable, not nothing.
