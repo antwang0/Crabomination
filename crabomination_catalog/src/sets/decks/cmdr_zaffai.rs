@@ -103,7 +103,6 @@ pub fn apex_of_power() -> CardDefinition {
 
 /// Dazzling Sphinx — flying; hitting a player, they exile until an instant
 /// or sorcery, which you may cast free; the rest go to the bottom.
-/// Residual: a found card you don't cast stays in exile.
 pub fn dazzling_sphinx() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -119,6 +118,11 @@ pub fn dazzling_sphinx() -> CardDefinition {
                     miss_dest: RevealMissDest::BottomRandom,
                 },
                 cast_free(Selector::ExiledThisResolution { filter: instant_or_sorcery() }, false),
+                // A found card that wasn't cast joins the misses on the bottom.
+                Effect::Move {
+                    what: Selector::ExiledThisResolution { filter: instant_or_sorcery().and(R::InExile) },
+                    to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+                },
             ]),
         }],
         ..creature("Dazzling Sphinx", cost(&[generic(3), u(), u()]), vec![CreatureType::Sphinx], 4, 5)

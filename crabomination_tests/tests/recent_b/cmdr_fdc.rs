@@ -2751,6 +2751,26 @@ fn arcane_lighthouse_holds_against_a_later_grant() {
     assert!(g.computed_permanent(drove).unwrap().keywords().has_kw(&Keyword::Hexproof), "entered later");
 }
 
+/// Dazzling Sphinx: the found instant the attacker declines to cast goes to
+/// the bottom with the misses, not stays in exile.
+#[test]
+fn dazzling_sphinx_bottoms_a_declined_find() {
+    let mut g = main_phase();
+    let sphinx = g.add_card_to_battlefield(0, catalog::dazzling_sphinx());
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(sphinx, 0, None);
+    ctx.event_player = Some(1);
+    let effect = catalog::dazzling_sphinx().triggered_abilities[0].effect.clone();
+    let _ = forest;
+    let evs = g.resolve_effect(&effect, &ctx).expect("trigger body");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().all(|c| c.id != bolt), "not left in exile");
+    assert!(g.players[1].library.iter().any(|c| c.id == bolt), "on the bottom");
+}
+
 /// Benevolent Offering — three Spirits each, then life by creature count.
 #[test]
 fn benevolent_offering_shares_spirits_and_life() {
