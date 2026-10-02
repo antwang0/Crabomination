@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_saheeli_radiant.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Aetherflux Conduit** — the free casts last the turn, not only the
-//!   resolution.
 //! - **Territorial Aetherkite** / **Rampaging Aetherhood** — "one or more
 //!   {E}" is paid in full by the headless seat.
 //! - **Saheeli, Radiant Creator** — the copy's target is picked as the
@@ -132,8 +130,8 @@ pub fn saheeli_radiant_creator() -> CardDefinition {
 }
 
 /// Aetherflux Conduit — every spell you cast gets {E} per mana spent; {T},
-/// pay fifty {E}: draw seven, then cast spells from your hand for free.
-/// Residual: the free casts last the turn.
+/// pay fifty {E}: draw seven, then cast any number of spells from your hand
+/// for free as it resolves.
 pub fn aetherflux_conduit() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -145,7 +143,14 @@ pub fn aetherflux_conduit() -> CardDefinition {
             energy_cost: 50,
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(7) },
-                Effect::FreeSpellsFromHandThisTurn,
+                // CR 608.2g — cast during the resolution, not later this turn.
+                Effect::CastAnyOrderWithoutPaying {
+                    what: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Hand, filter: R::Nonland },
+                    source_zone: crate::card::Zone::Hand,
+                    filter: None,
+                    cap: None,
+                    total_mana_value: None,
+                },
             ]),
             ..Default::default()
         }],

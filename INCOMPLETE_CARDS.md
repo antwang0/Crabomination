@@ -2154,7 +2154,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Agent's Toolkit | Bedecked Brokers (NCC) | its four counters arrive by an entry trigger, and the counter it moves is the engine's pick (+1/+1 first). |
 | 🟡 Littjara Mirrorlake | Bedecked Brokers (NCC) | the extra +1/+1 counter is put on the copy after it enters. |
 | 🟡 Skyship Plunderer | Bedecked Brokers (NCC) | a player target gets one more energy, experience or poison counter each; other player counters aren't read. |
-| 🟡 Aetherflux Conduit | Living Energy (DRC) | the free casts after drawing seven last the turn, not only the ability's resolution. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Saheeli, Radiant Creator | Living Energy (DRC) | the copied permanent is chosen as the trigger goes on the stack, not in a reflexive trigger after paying. |

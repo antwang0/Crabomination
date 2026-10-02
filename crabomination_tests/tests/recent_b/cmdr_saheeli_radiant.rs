@@ -177,6 +177,29 @@ fn pia_nalaar_builds_an_aetherjet() {
     assert_eq!((c.definition.power, c.definition.toughness), (4, 4));
 }
 
+/// Aetherflux Conduit's fifty-energy ability draws seven and casts from hand
+/// for free as it resolves — the window does not last the turn (CR 608.2g).
+#[test]
+fn aetherflux_conduit_casts_during_the_resolution() {
+    let mut g = main_phase(2);
+    let conduit = g.add_card_to_battlefield(0, catalog::aetherflux_conduit());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.players[0].energy = 50;
+    g.perform_action(GameAction::ActivateAbility { card_id: conduit, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some(), "cast free");
+    let late = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: late, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "no free window afterwards"
+    );
+}
+
 /// Aetherflux Conduit: energy equal to the mana spent on each spell.
 #[test]
 fn aetherflux_conduit_counts_mana_spent() {
