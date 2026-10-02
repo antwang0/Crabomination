@@ -1020,7 +1020,7 @@ fn palantir_of_orthanc_ticks_and_punishes_or_feeds() {
 fn midnight_clock_strikes_twelve() {
     let mut g = main_phase();
     let clock = g.add_card_to_battlefield(0, catalog::midnight_clock());
-    g.battlefield_find_mut(clock).unwrap().add_counters(CounterType::Charge, 11);
+    g.battlefield_find_mut(clock).unwrap().add_counters(CounterType::Hour, 11);
     stock_libraries(&mut g, 10);
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.add_card_to_hand(0, catalog::grizzly_bears());
@@ -1028,6 +1028,20 @@ fn midnight_clock_strikes_twelve() {
     assert!(in_exile(&g, clock), "exiled");
     assert_eq!(g.players[0].hand.len(), 7);
     assert!(g.players[0].graveyard.is_empty());
+}
+
+/// Only the counter that makes twelve wheels: a Clock already past twelve
+/// (one that stayed — say it was flickered back with counters) doesn't.
+#[test]
+fn midnight_clock_fires_on_the_twelfth_only() {
+    let mut g = main_phase();
+    let clock = g.add_card_to_battlefield(0, catalog::midnight_clock());
+    g.battlefield_find_mut(clock).unwrap().add_counters(CounterType::Hour, 12);
+    stock_libraries(&mut g, 10);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, clock, 1, None);
+    assert!(on_battlefield(&g, clock), "the thirteenth isn't the twelfth");
+    assert_eq!(g.players[0].hand.len(), hand);
 }
 
 /// The Soul Stone, once harnessed, reanimates each upkeep.

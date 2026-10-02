@@ -1410,13 +1410,12 @@ pub fn palantir_of_orthanc() -> CardDefinition {
 /// on this artifact. At the beginning of each upkeep, put an hour counter on this
 /// artifact. When the twelfth hour counter is put on this artifact, shuffle your
 /// hand and graveyard into your library, then draw seven cards. Exile this
-/// artifact.
-///
-/// Approximation: hour counters are charge counters.
+/// artifact. "The twelfth" fires once: the batch that carried the count from
+/// below twelve to twelve or more.
 pub fn midnight_clock() -> CardDefinition {
     let tick = || Effect::AddCounter {
         what: Selector::This,
-        kind: CounterType::Charge,
+        kind: CounterType::Hour,
         amount: Value::ONE,
     };
     CardDefinition {
@@ -1430,11 +1429,17 @@ pub fn midnight_clock() -> CardDefinition {
                 effect: tick(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CounterAdded(CounterType::Charge), EventScope::SelfSource)
-                    .with_filter(Predicate::SourceHasCountersAtLeast {
-                        counter: CounterType::Charge,
-                        n: 12,
-                    }),
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::Hour), EventScope::SelfSource)
+                    .with_filter(Predicate::All(vec![
+                        Predicate::SourceHasCountersAtLeast { counter: CounterType::Hour, n: 12 },
+                        Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                            Value::Diff(
+                                Box::new(Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Hour }),
+                                Box::new(Value::TriggerEventAmount),
+                            ),
+                            Value::Const(12),
+                        ))),
+                    ])),
                 effect: Effect::Seq(vec![
                     Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::You },
                     Effect::Draw { who: Selector::You, amount: Value::Const(7) },
