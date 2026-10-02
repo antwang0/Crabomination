@@ -177,15 +177,36 @@ fn ray_of_command_steals_and_taps_on_return() {
     let b = g.battlefield_find(bear).unwrap();
     assert_eq!(b.controller, 0);
     assert!(!b.tapped, "untapped");
-    for _ in 0..8 {
-        if g.step == TurnStep::End {
-            break;
-        }
-        let _ = g.advance_step(Vec::new());
+    while g.step != TurnStep::End {
+        g.advance_step(vec![]).expect("advance");
         drain_stack(&mut g);
     }
-    assert_eq!(g.step, TurnStep::End);
-    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped as it goes back");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "still yours and untapped in the end step");
+    // CR 514.2 — the control ends in the cleanup step, and the tap with it.
+    g.advance_step(vec![]).expect("to cleanup");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 1, "back to its owner");
+    assert!(b.tapped, "tapped as it goes back");
+}
+
+/// CR 514.2 / 603.7 — Ray of Command cast in the END STEP: the control still
+/// ends this turn's cleanup, so the creature goes back tapped now, not at the
+/// next turn's end step.
+#[test]
+fn ray_of_command_in_the_end_step_taps_it_this_turn() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.step = TurnStep::End;
+    let ray = g.add_card_to_hand(0, catalog::ray_of_command());
+    cast_with(&mut g, ray, Some(Target::Permanent(bear)), vec![]).expect("cast");
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    g.advance_step(vec![]).expect("to cleanup");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 1, "back to its owner");
+    assert!(b.tapped, "tapped as control ends");
 }
 
 /// Deadwood Treefolk's leave trigger returns *another* creature card, not
