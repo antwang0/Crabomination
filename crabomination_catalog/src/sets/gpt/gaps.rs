@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_filtered};
+use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -280,7 +280,6 @@ pub fn burning_tree_bloodscale() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Bloodthirst(1)],
-        triggered_abilities: vec![bloodthirst(1)],
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), r()]),

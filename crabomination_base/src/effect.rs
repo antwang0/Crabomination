@@ -7076,6 +7076,10 @@ pub enum Effect {
     /// still on the stack — stamps the spell's `pending_etb_counters`
     /// (Bloodlord of Vaasgoth's granted bloodthirst).
     SpellEntersWithCounters { what: Selector, kind: crate::card::CounterType, amount: Value },
+    /// "It gains [keyword]" on a spell still on the stack — stamps the
+    /// keyword onto the spell's card, so it holds as the permanent enters
+    /// (Bloodlord of Vaasgoth's and Twins of Discord's granted bloodthirst).
+    SpellGainsKeyword { what: Selector, keyword: crate::card::Keyword },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to

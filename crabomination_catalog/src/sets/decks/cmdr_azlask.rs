@@ -13,7 +13,7 @@
 //!   spells you cast (as Bloodlord of Vaasgoth), not every entry.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     WardCost,
@@ -376,7 +376,8 @@ pub fn tomb_of_the_spirit_dragon() -> CardDefinition {
 
 /// Twins of Discord — attacking shuts down blockers of one mana-value
 /// parity; other colorless creatures of yours have bloodthirst 2. Residual:
-/// the bloodthirst rides the cast.
+/// the bloodthirst is granted to colorless creature SPELLS you cast (read as
+/// each enters, CR 702.54a), so one put onto the battlefield doesn't have it.
 pub fn twins_of_discord() -> CardDefinition {
     let cant_block = |odd: bool| Effect::MatchingCantBlockThisTurn { filter: R::Creature.and(R::ManaValueParity { odd }) };
     CardDefinition {
@@ -389,15 +390,7 @@ pub fn twins_of_discord() -> CardDefinition {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(colorless_obj()) },
                 ),
-                effect: Effect::If {
-                    cond: Predicate::PlayerDamagedThisTurn { who: PlayerRef::EachOpponent },
-                    then: Box::new(Effect::SpellEntersWithCounters {
-                        what: Selector::TriggerSource,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(2),
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
+                effect: Effect::SpellGainsKeyword { what: Selector::TriggerSource, keyword: Keyword::Bloodthirst(2) },
             },
         ],
         ..eldrazi("Twins of Discord", cost(&[generic(7)]), 8, 6)

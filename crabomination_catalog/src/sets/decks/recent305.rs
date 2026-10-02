@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{bloodthirst, target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect};
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, u, w};
@@ -23,8 +23,7 @@ pub fn battering_wurm() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![Keyword::CantBeBlockedByPowerLess],
-        triggered_abilities: vec![bloodthirst(1)],
+        keywords: vec![Keyword::Bloodthirst(1), Keyword::CantBeBlockedByPowerLess],
         ..Default::default()
     }
 }
@@ -116,7 +115,7 @@ pub fn gristleback() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![bloodthirst(1)],
+        keywords: vec![Keyword::Bloodthirst(1)],
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::GainLife {

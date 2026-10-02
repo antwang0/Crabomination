@@ -2,7 +2,7 @@
 //! (`Keyword::Firebending(n)`, CR 702.189): an attack-triggered mana ability
 //! adding N {R} that survives until end of combat. TMNT Sneak
 //! (`shortcut::sneak`, CR 702.190): a declare-blockers alt cast that returns an
-//! unblocked attacker. Bloodthirst (`shortcut::bloodthirst`, CR 702.54):
+//! unblocked attacker. Bloodthirst (`Keyword::Bloodthirst`, CR 702.54):
 //! enters with N +1/+1 counters if an opponent took damage this turn. Tests in
 //! `crabomination/src/tests/recent22.rs`.
 
@@ -10,7 +10,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate,
     SelectionRequirement, Selector, SpellSubtype, Subtypes, Supertype, Value,
 };
-use crate::effect::shortcut::{bloodthirst, sneak};
+use crate::effect::shortcut::sneak;
 use crate::effect::{Duration, Effect};
 use crate::mana::{b, cost, generic, r, u};
 
@@ -189,7 +189,6 @@ pub fn bloodrage_vampire() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Bloodthirst(1)],
-        triggered_abilities: vec![bloodthirst(1)],
         ..Default::default()
     }
 }
@@ -207,7 +206,6 @@ pub fn furyborn_hellkite() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Bloodthirst(6)],
-        triggered_abilities: vec![bloodthirst(6)],
         ..Default::default()
     }
 }

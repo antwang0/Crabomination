@@ -7965,11 +7965,21 @@ impl GameState {
     ) {
         use crate::card::{CounterType, Keyword};
         let Some(card) = self.battlefield_find(cid) else { return };
-        let spec = card.definition.keywords.iter().find_map(|k| match k {
-            Keyword::Fading(n) => Some((CounterType::Fade, *n)),
-            Keyword::Vanishing(n) => Some((CounterType::Time, *n)),
-            _ => None,
-        });
+        let mut spec = None;
+        // CR 702.54a/c — each Bloodthirst N: "if an opponent was dealt damage
+        // this turn, this permanent enters with N +1/+1 counters on it."
+        let mut bloodthirst = 0u32;
+        for k in card.definition.keywords.iter() {
+            match k {
+                Keyword::Fading(n) if spec.is_none() => spec = Some((CounterType::Fade, *n)),
+                Keyword::Vanishing(n) if spec.is_none() => spec = Some((CounterType::Time, *n)),
+                Keyword::Bloodthirst(n) => bloodthirst += *n,
+                _ => {}
+            }
+        }
+        if bloodthirst > 0 {
+            self.apply_bloodthirst_etb(cid, bloodthirst, events);
+        }
         let Some((kind, n)) = spec else { return };
         if n == 0 {
             return;
@@ -7981,6 +7991,38 @@ impl GameState {
             card_id: cid,
             counter_type: kind,
             count: n, placer: self.resolution_causer,
+        });
+    }
+
+    /// CR 702.54a — the bloodthirst half of [`apply_fading_vanishing_etb`]:
+    /// `n` +1/+1 counters as `cid` enters if an opponent of its controller was
+    /// dealt damage this turn, through the CR 614.16 counter replacements.
+    #[cold]
+    fn apply_bloodthirst_etb(&mut self, cid: CardId, n: u32, events: &mut Vec<crate::game::GameEvent>) {
+        use crate::card::CounterType;
+        let Some(card) = self.battlefield_find(cid) else { return };
+        let (controller, is_creature) = (card.controller, self.computed_is_creature(card));
+        if self.counters_locked() {
+            return;
+        }
+        let ctx = crate::game::effects::EffectContext::for_ability(cid, controller, None);
+        let bled = self.evaluate_predicate(
+            &crate::effect::Predicate::PlayerDamagedThisTurn { who: crate::effect::PlayerRef::EachOpponent },
+            &ctx,
+        );
+        if !bled {
+            return;
+        }
+        let n = self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, n, is_creature);
+        if let Some(card_mut) = self.battlefield_find_mut(cid) {
+            card_mut.add_counters(CounterType::PlusOnePlusOne, n);
+        }
+        self.turn.permanents_gained_counter_this_turn.insert(cid);
+        events.push(crate::game::GameEvent::CounterAdded {
+            card_id: cid,
+            counter_type: CounterType::PlusOnePlusOne,
+            count: n,
+            placer: self.resolution_causer,
         });
     }
 

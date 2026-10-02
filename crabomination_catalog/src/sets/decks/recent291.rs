@@ -464,7 +464,6 @@ pub fn ghor_clan_savage() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Bloodthirst(3)],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(3)],
         ..Default::default()
     }
 }

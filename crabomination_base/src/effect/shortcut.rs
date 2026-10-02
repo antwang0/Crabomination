@@ -2497,24 +2497,6 @@ pub fn adapt(n: i32) -> Effect {
     }
 }
 
-/// Bloodthirst N (CR 702.54) — an ETB trigger standing in for the
-/// printed static "this creature enters with N +1/+1 counters on it if
-/// an opponent was dealt damage this turn." Modeled as `etb(If(an
-/// opponent was dealt damage this turn → AddCounter This N))` — the
-/// counters add to the printed (positive) base P/T.
-pub fn bloodthirst(n: i32) -> TriggeredAbility {
-    use crate::card::CounterType;
-    etb(Effect::If {
-        cond: Predicate::PlayerDamagedThisTurn { who: PlayerRef::EachOpponent },
-        then: Box::new(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(n),
-        }),
-        else_: Box::new(Effect::Noop),
-    })
-}
-
 /// Renown N (CR 702.111) — a combat trigger: "Whenever this creature
 /// deals combat damage to a player, if it isn't renowned, put N +1/+1
 /// counters on it and it becomes renowned." Gated on the real `renowned`

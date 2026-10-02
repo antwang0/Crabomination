@@ -1769,6 +1769,32 @@ fn bloodlord_grants_bloodthirst_to_vampire_spells() {
     assert_eq!(pt(&g, bear), (2, 2));
 }
 
+/// CR 702.54a — Bloodlord's granted bloodthirst is read as the Vampire
+/// ENTERS: damage dealt after the cast trigger resolved, with the spell still
+/// on the stack, still counts.
+#[test]
+fn cr_702_54a_bloodlords_granted_bloodthirst_is_read_as_it_enters() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::bloodlord_of_vaasgoth());
+    let vamp = g.add_card_to_hand(0, catalog::vein_drinker());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: vamp, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Vampire");
+    g.resolve_top_of_stack().expect("Bloodlord's cast trigger");
+    assert!(g.stack.len() == 1, "only the Vampire spell is left");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt in response");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, vamp), (7, 7), "4/4 + bloodthirst 3, checked as it entered");
+}
+
 /// Consuming Vapors — the victim picks; you gain its toughness; rebound
 /// exiles the card.
 #[test]

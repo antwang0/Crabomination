@@ -6373,7 +6373,6 @@ pub fn scab_clan_mauler() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Bloodthirst(2)],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
         ..Default::default()
     }
 }
@@ -6391,7 +6390,6 @@ pub fn gorehorn_minotaurs() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Bloodthirst(2)],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
         ..Default::default()
     }
 }

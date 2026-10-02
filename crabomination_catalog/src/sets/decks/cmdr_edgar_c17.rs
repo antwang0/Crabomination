@@ -86,13 +86,11 @@ pub(super) fn curse(name: &'static str, mana: crate::mana::ManaCost, each: impl 
 }
 
 /// Bloodlord of Vaasgoth — bloodthirst 3, flying; your Vampire creature
-/// spells gain bloodthirst 3. Residual: The granted bloodthirst is checked as the
-/// cast trigger resolves, not as the creature enters.
+/// spells gain bloodthirst 3 (read as each enters, CR 702.54a).
 pub fn bloodlord_of_vaasgoth() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Bloodthirst(3), Keyword::Flying],
         triggered_abilities: vec![
-            crate::effect::shortcut::bloodthirst(3),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches {
@@ -100,15 +98,8 @@ pub fn bloodlord_of_vaasgoth() -> CardDefinition {
                         filter: R::Creature.and(R::HasCreatureType(CreatureType::Vampire)),
                     },
                 ),
-                effect: Effect::If {
-                    cond: Predicate::PlayerDamagedThisTurn { who: PlayerRef::EachOpponent },
-                    then: Box::new(Effect::SpellEntersWithCounters {
-                        what: Selector::TriggerSource,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(3),
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
+                // CR 702.54a — the spell gains bloodthirst 3, read as it enters.
+                effect: Effect::SpellGainsKeyword { what: Selector::TriggerSource, keyword: Keyword::Bloodthirst(3) },
             },
         ],
         ..creature(

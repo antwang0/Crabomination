@@ -14041,7 +14041,6 @@ pub fn stormblood_berserker() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Menace, Keyword::Bloodthirst(2)],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
         ..Default::default()
     }
 }

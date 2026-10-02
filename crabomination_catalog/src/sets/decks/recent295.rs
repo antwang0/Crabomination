@@ -7,7 +7,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{bloodthirst, on_attack, target_filtered};
+use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -26,7 +26,6 @@ pub fn bloodscale_prowler() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Bloodthirst(1)],
-        triggered_abilities: vec![bloodthirst(1)],
         ..Default::default()
     }
 }

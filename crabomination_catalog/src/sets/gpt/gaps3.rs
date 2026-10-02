@@ -6,7 +6,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_any, target_filtered};
+use crate::effect::shortcut::{etb, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, OpeningHandEffect, PlayerRef, Selector};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -132,7 +132,7 @@ pub fn rabble_rouser() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![bloodthirst(1)],
+        keywords: vec![Keyword::Bloodthirst(1)],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[r()]),
@@ -189,7 +189,7 @@ pub fn skarrgan_skybreaker() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![bloodthirst(3)],
+        keywords: vec![Keyword::Bloodthirst(3)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,

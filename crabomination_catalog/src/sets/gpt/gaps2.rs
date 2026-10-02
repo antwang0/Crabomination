@@ -7,7 +7,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
     StaticAbility, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{bloodthirst, on_dies, target_any, target_filtered};
+use crate::effect::shortcut::{on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -326,8 +326,7 @@ pub fn skarrgan_firebird() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![bloodthirst(3)],
+        keywords: vec![Keyword::Bloodthirst(3), Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r(), r(), r()]),
             from_graveyard: true,

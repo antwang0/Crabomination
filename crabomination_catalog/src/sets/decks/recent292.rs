@@ -240,7 +240,6 @@ pub fn skarrgan_pit_skulk() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Bloodthirst(1), Keyword::CantBeBlockedByPowerLess],
-        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(1)],
         ..Default::default()
     }
 }

@@ -17709,6 +17709,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellGainsKeyword { what, keyword } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    for it in self.stack.iter_mut() {
+                        if let StackItem::Spell { card, .. } = it
+                            && card.id == cid
+                        {
+                            card.definition_make_mut().keywords.push(keyword.clone());
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SpellEntersWithCounters { what, kind, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n == 0 {
