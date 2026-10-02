@@ -17911,7 +17911,22 @@ impl GameState {
                         .collect(),
                     excluded: excluded.clone(),
                 };
-                let DecisionAnswer::CreatureType(ct) = self.decider.decide(&decision) else {
+                // CR 700.6 — the controller names it: a prompting controller in
+                // the client's type picker (stash-and-rerun, this arm's only
+                // ask), everyone else through the decider as before.
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
+                    Some(a) => a,
+                    None if self.seat_suspends(chooser) => {
+                        self.suspend_signal = Some(Box::new((
+                            decision,
+                            PendingEffectState::CreatureTypeAnswerPending,
+                            effect.clone(),
+                        )));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let DecisionAnswer::CreatureType(ct) = answer else {
                     return Ok(());
                 };
                 // CR 205.3m — a decider that names a forbidden type doesn't

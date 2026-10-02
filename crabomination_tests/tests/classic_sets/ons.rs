@@ -2108,6 +2108,23 @@ fn cr_205_3m_imagecrafter_cant_name_wall() {
     );
 }
 
+/// CR 700.6 — a PROMPTING controller names the type in the type picker (the
+/// game-wide decider used to answer for them): Mistform Wall becomes a Bird
+/// and loses its Wall-gated defender.
+#[test]
+fn a_prompting_controller_names_the_mistform_type() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(0, catalog::mistform_wall());
+    g.players[0].wants_ui = true;
+    activate(&mut g, 0, wall, 0, None);
+    assert!(g.pending_decision.is_some(), "the type is asked");
+    g.submit_decision(DecisionAnswer::CreatureType(CreatureType::Bird)).expect("Bird");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wall).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Bird));
+    assert!(!cp.keywords().contains(&Keyword::Defender));
+}
+
 /// CR 613.8 — a keyword grant gated on a creature type sees the layer-4 retype
 /// even though it is evaluated inside the layer gather.
 #[test]
