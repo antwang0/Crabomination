@@ -43419,11 +43419,10 @@ pub fn phlage_titan_of_fires_fury() -> CardDefinition {
     }
 }
 
-/// Phelia, Exuberant Shepherd — {1}{W} Legendary 2/2 Dog. Flash, Vigilance.
-/// Whenever Phelia attacks, exile up to one other target nonland permanent;
-/// return it at the next end step. The printed "if it entered under your
-/// control this way, put a +1/+1 counter on Phelia" is approximated as an
-/// unconditional +1/+1 counter on the blink.
+/// Phelia, Exuberant Shepherd — {1}{W} Legendary 2/2 Dog. Flash. Whenever
+/// Phelia attacks, exile up to one other target nonland permanent; at the next
+/// end step it returns under its owner's control, and if it entered under
+/// your control, Phelia gets a +1/+1 counter.
 pub fn phelia_exuberant_shepherd() -> CardDefinition {
     CardDefinition {
         name: "Phelia, Exuberant Shepherd",

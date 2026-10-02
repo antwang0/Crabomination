@@ -1427,23 +1427,35 @@ fn ribbons_of_night_draws_when_blue_was_spent() {
     assert_eq!(g.players[0].hand.len(), 1, "{{U}} was spent, so it drew");
 }
 
-/// Phelia's attack trigger blinks a nonland permanent (returns at end step) and
-/// grows Phelia with a +1/+1 counter.
+/// Phelia's attack trigger exiles a nonland permanent, which returns under its
+/// OWNER's control at the next end step with no counter of its own; Phelia
+/// grows only if the card entered under Phelia's controller's control.
 #[test]
-fn phelia_attack_blinks_and_grows() {
-    let mut g = two_player_game();
-    let phelia = g.add_card_to_battlefield(0, catalog::phelia_exuberant_shepherd());
-    g.clear_sickness(phelia);
-    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    g.declare_attackers(vec![Attack { attacker: phelia, target: AttackTarget::Player(1) }])
-        .expect("attack");
-    drain_stack(&mut g);
-    // The blinked creature is exiled (returns next end step).
-    assert!(g.battlefield_find(other).is_none(), "blinked permanent left the battlefield");
-    let p = g.battlefield_find(phelia).expect("phelia still here");
-    assert_eq!(p.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1, "Phelia grew");
+fn phelia_attack_blinks_and_grows_only_on_a_return_to_you() {
+    for (owner, grows) in [(0usize, true), (1, false)] {
+        let mut g = two_player_game();
+        let phelia = g.add_card_to_battlefield(0, catalog::phelia_exuberant_shepherd());
+        g.clear_sickness(phelia);
+        let other = g.add_card_to_battlefield(owner, catalog::grizzly_bears());
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![Attack { attacker: phelia, target: AttackTarget::Player(1) }])
+            .expect("attack");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(other).is_none(), "blinked permanent left the battlefield");
+        let counters = |g: &GameState| {
+            g.battlefield_find(phelia).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne)
+        };
+        assert_eq!(counters(&g), 0, "nothing until the card comes back");
+        while g.step != TurnStep::End {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+        let back = g.battlefield_find(other).expect("returned at end step");
+        assert_eq!(back.controller, owner, "under its owner's control");
+        assert_eq!(back.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
+        assert_eq!(counters(&g), grows as u32);
+    }
 }
 
 /// Kessig Wolf Run pumps a target creature +X/+0 and grants trample.
