@@ -210,8 +210,8 @@ pub fn curse_of_clinging_webs() -> CardDefinition {
 }
 
 /// Curse of Conformity — enchant player; their nonlegendary creatures have
-/// base P/T 3/3 and lose all creature types. Residual: a changeling keeps its
-/// types.
+/// base P/T 3/3 and lose all creature types — a changeling's included (the
+/// layer-4 set overrides its CDA, `ComputedPermanent::creature_types_set`).
 pub fn curse_of_conformity() -> CardDefinition {
     let theirs = || Selector::ControlledBy {
         who: PlayerRef::EnchantedPlayer,

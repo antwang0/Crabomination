@@ -135,6 +135,23 @@ fn curse_of_conformity_resets_the_cursed_players_creatures() {
     assert_eq!(power(&g, legend), 2, "legendary creatures are exempt");
 }
 
+/// CR 702.73a / 613.1d — changeling is a layer-4 CDA, so Curse of
+/// Conformity's later "lose all creature types" strips it too: a Lord of
+/// Atlantis no longer pumps a cursed Changeling Outcast as a Merfolk.
+#[test]
+fn curse_of_conformity_strips_a_changelings_types() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(2, catalog::lord_of_atlantis());
+    let outcast = g.add_card_to_battlefield(1, catalog::changeling_outcast());
+    let free = g.add_card_to_battlefield(2, catalog::changeling_outcast());
+    // Lord of Atlantis pumps every Merfolk, not just its controller's.
+    assert_eq!(power(&g, outcast), 2, "1/1 changeling, a Merfolk to the Lord");
+    let curse = g.add_card_to_hand(0, catalog::curse_of_conformity());
+    cast_at(&mut g, curse, &[Target::Player(1)]).expect("cast");
+    assert_eq!(power(&g, outcast), 3, "base 3/3 and no longer a Merfolk");
+    assert_eq!(power(&g, free), 2, "an uncursed changeling is still one");
+}
+
 /// Curse of Clinging Webs: a nontoken creature of the enchanted player dying
 /// is exiled and the curse's controller gets a Spider; a token gives nothing.
 #[test]
