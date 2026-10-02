@@ -2,6 +2,7 @@
 
 use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -116,6 +117,20 @@ fn celestial_judgment_keeps_one_per_power() {
     assert!(g.battlefield_find(theirs_two).is_none(), "the other 2-power creature is destroyed");
     let giants = [giant_a, giant_b].iter().filter(|id| g.battlefield_find(**id).is_some()).count();
     assert_eq!(giants, 1, "exactly one 3-power creature survives");
+}
+
+/// Celestial Judgment's per-power picks are the caster's: keeping the
+/// opponent's Bears costs the caster its own.
+#[test]
+fn celestial_judgment_caster_chooses_per_power() {
+    let mut g = main_phase(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(theirs))]));
+    let judgment = g.add_card_to_hand(0, catalog::celestial_judgment());
+    cast_at(&mut g, judgment, &[]).expect("cast");
+    assert!(g.battlefield_find(theirs).is_some());
+    assert!(g.battlefield_find(mine).is_none());
 }
 
 /// Curse of Conformity: the enchanted player's nonlegendary creatures are 3/3
@@ -247,6 +262,25 @@ fn sigardian_zealot_pumps_one_per_power() {
         .filter(|id| g.computed_permanent(**id).unwrap().keywords().contains(&Keyword::Vigilance))
         .count();
     assert_eq!(vigilant, 1);
+}
+
+/// Sigardian Zealot chooses "any number of creatures with different powers":
+/// an opponent's creature may be one, and a power may be passed.
+#[test]
+fn sigardian_zealot_choice_is_any_number_of_any_creatures() {
+    let mut g = main_phase(2);
+    let zealot = g.add_card_to_battlefield(0, catalog::sigardian_zealot());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Powers 1 (Elf), 2 (Bears), 3 (Zealot): pass on 1, take their Bears,
+    // pass on 3.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DeclineTarget,
+        DecisionAnswer::Target(Target::Permanent(bear)),
+        DecisionAnswer::DeclineTarget,
+    ]));
+    fire(&mut g, TurnStep::BeginCombat);
+    assert_eq!((power(&g, elf), power(&g, bear), power(&g, zealot)), (1, 5, 3));
 }
 
 /// Wall of Mourning exiles one card per opponent (CR 102.2 at four seats) and

@@ -356,11 +356,6 @@ pub enum Selector {
     /// The controller's `count` greatest-power permanents matching `filter`
     /// — the engine's pick for "up to X target creatures" (Vitality Hunter).
     GreatestPowerTopN { filter: SelectionRequirement, count: Value },
-    /// "For each different power among [filter], choose one with that power"
-    /// (Celestial Judgment, Sigardian Zealot). The controller's pick per power:
-    /// their own best (mana value, then toughness), else an opponent's weakest.
-    /// `rest: true` resolves to every match *not* chosen.
-    OnePerDistinctPower { filter: SelectionRequirement, rest: bool },
     /// "Any number of [filter] you control with different names" — one
     /// permanent per name, the first in battlefield order (Battle for
     /// Bretagard's chapter III).
@@ -4821,6 +4816,18 @@ pub enum Effect {
     ChooseOneAmong {
         what: Selector,
         chooser: PlayerRef,
+        chosen: Box<Effect>,
+        other: Box<Effect>,
+    },
+    /// "For each different power among [filter] permanents, choose one with
+    /// that power" (Celestial Judgment), or with `up_to` "choose any number
+    /// with different powers" (Sigardian Zealot): the controller picks per
+    /// power, then `chosen` / `other` run over the two piles as for
+    /// `ChooseSomeAmong`. Headless: own first, own best (mana value, then
+    /// toughness), theirs weakest; with `up_to` only own.
+    ChoosePerDistinctPower {
+        filter: SelectionRequirement,
+        up_to: bool,
         chosen: Box<Effect>,
         other: Box<Effect>,
     },

@@ -21280,6 +21280,9 @@ impl GameState {
                 self.choose_one_among(what, chooser, chosen, other, ctx, events, effect)
             }
 
+            Effect::ChoosePerDistinctPower { filter, up_to, chosen, other } => {
+                self.choose_per_distinct_power(filter, *up_to, chosen, other, ctx, events, effect)
+            }
             Effect::ChooseSomeAmong { what, chooser, count, up_to, chosen, other } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 self.choose_some_among(what, chooser, n, *up_to, chosen, other, ctx, events, effect)
@@ -40729,38 +40732,6 @@ impl GameState {
                     .collect();
                 ids.sort_by_key(|(_, pw)| std::cmp::Reverse(*pw));
                 ids.into_iter().take(n).map(|(id, _)| EntityRef::Permanent(id)).collect()
-            }
-            Selector::OnePerDistinctPower { filter, rest } => {
-                let p = ctx.controller;
-                let mut cands: Vec<(CardId, i32, bool, u32, i32)> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                    .map(|c| {
-                        let (pw, tg) = self
-                            .computed_permanent(c.id)
-                            .map(|cp| (cp.power, cp.toughness))
-                            .unwrap_or((c.power(), c.toughness()));
-                        (c.id, pw, c.controller == p, c.definition.cost.cmc(), tg)
-                    })
-                    .collect();
-                // Per power, the first after sorting is the pick: own before
-                // theirs, own highest value first, theirs lowest first.
-                cands.sort_by(|a, b| {
-                    a.1.cmp(&b.1).then(b.2.cmp(&a.2)).then_with(|| {
-                        if a.2 { (b.3, b.4).cmp(&(a.3, a.4)) } else { (a.3, a.4).cmp(&(b.3, b.4)) }
-                    })
-                });
-                let mut out = Vec::with_capacity(cands.len());
-                let mut last = None;
-                for (id, pw, ..) in cands {
-                    let chosen = last != Some(pw);
-                    last = Some(pw);
-                    if chosen != *rest {
-                        out.push(EntityRef::Permanent(id));
-                    }
-                }
-                out
             }
             Selector::OnePerDistinctName(filter) => {
                 let p = ctx.controller;

@@ -170,4 +170,75 @@ impl GameState {
         self.separated_piles = (picked, rest);
         self.run_piles_then_clear(chosen, other, ctx, events)
     }
+
+    /// `Effect::ChoosePerDistinctPower` — the controller picks, power by power
+    /// (lowest first), one permanent of each power, or with `up_to` may pass
+    /// on a power. Every pick is asked before the piles run; a power with one
+    /// candidate is no choice unless it may be passed.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn choose_per_distinct_power(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        up_to: bool,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        use crate::game::types::Target;
+        let p = ctx.controller;
+        let mut cands: Vec<(CardId, i32, bool, u32, i32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+            .map(|c| {
+                let (pw, tg) =
+                    self.computed_permanent(c.id).map(|cp| (cp.power, cp.toughness)).unwrap_or((c.power(), c.toughness()));
+                (c.id, pw, c.controller == p, c.definition.cost.cmc(), tg)
+            })
+            .collect();
+        // Per power, the headless pick first: own before theirs, own highest
+        // value first, theirs lowest first.
+        cands.sort_by(|a, b| {
+            a.1.cmp(&b.1).then(b.2.cmp(&a.2)).then_with(|| {
+                if a.2 { (b.3, b.4).cmp(&(a.3, a.4)) } else { (a.3, a.4).cmp(&(b.3, b.4)) }
+            })
+        });
+        let asks = self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut picked: Vec<CardId> = Vec::new();
+        let mut i = 0;
+        while i < cands.len() {
+            let power = cands[i].1;
+            let group: Vec<(CardId, bool)> =
+                cands[i..].iter().take_while(|c| c.1 == power).map(|c| (c.0, c.2)).collect();
+            i += group.len();
+            let headless = if up_to { group.first().filter(|g| g.1).map(|g| g.0) } else { group.first().map(|g| g.0) };
+            if !asks || (group.len() == 1 && !up_to) {
+                picked.extend(headless);
+                continue;
+            }
+            let legal: Vec<Target> = group.iter().map(|g| Target::Permanent(g.0)).collect();
+            let Some(pick) = self.ask_seat_target_maybe_logged(
+                &mut cursor,
+                p,
+                format!("Choose a creature with power {power}"),
+                source,
+                legal,
+                effect,
+                up_to,
+            ) else {
+                return Ok(());
+            };
+            if let Some(Target::Permanent(id)) = pick {
+                picked.push(id);
+            }
+        }
+        self.clear_answer_log();
+        let rest: Vec<CardId> = cands.iter().map(|c| c.0).filter(|id| !picked.contains(id)).collect();
+        self.separated_piles = (picked, rest);
+        self.run_piles_then_clear(chosen, other, ctx, events)
+    }
 }

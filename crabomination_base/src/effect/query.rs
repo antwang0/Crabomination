@@ -586,6 +586,7 @@ impl Effect {
             Effect::SeparateIntoPiles { chosen, other, .. }
             | Effect::ChooseOneAmong { chosen, other, .. }
             | Effect::ChooseSomeAmong { chosen, other, .. }
+            | Effect::ChoosePerDistinctPower { chosen, other, .. }
             | Effect::ChooseOneAtRandomAmong { chosen, other, .. } => {
                 f(chosen);
                 f(other);
@@ -1052,7 +1053,8 @@ impl Effect {
             Effect::BidLifeToCounterTargetSpell { what } => sel_has_target(what),
             Effect::RevealTopGreatestMayChangeTargets
             | Effect::RevealTopTakeNamedExileRest { .. }
-            | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => false,
+            | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest
+            | Effect::ChoosePerDistinctPower { .. } => false,
             Effect::ChooseOneAmong { what, chooser, .. } | Effect::ChooseSomeAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
             }

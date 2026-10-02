@@ -2095,8 +2095,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Spirit-Sister's Call | Miracle Worker (DSC) | the sacrifice must share the chosen card's first card type (creature, artifact, enchantment, land, planeswalker, battle). |
 | 🟡 Curse of Conformity | Coven Counters (MIC) | a changeling keeps every creature type (Changeling is read as a type wildcard, not a layer-4 CDA the curse can override). |
-| 🟡 Celestial Judgment | Coven Counters (MIC) | the creature kept per power is the engine's pick (the caster's best, else an opponent's weakest), not a prompt. |
-| 🟡 Sigardian Zealot | Coven Counters (MIC) | the chosen set is one of your creatures per power (the engine's pick); no opponent's creature is ever chosen. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later); creature cards are playable too. |
 | 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |

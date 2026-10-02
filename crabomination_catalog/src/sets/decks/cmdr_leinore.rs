@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Curse of Conformity** — a changeling keeps every creature type (the
 //!   engine reads Changeling as a type wildcard, not a layer-4 CDA).
-//! - **Celestial Judgment / Sigardian Zealot** — the per-power pick is the
-//!   engine's (`Selector::OnePerDistinctPower`), not a prompt.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind,
@@ -172,15 +170,19 @@ pub fn celebrate_the_harvest() -> CardDefinition {
     )
 }
 
-/// Celestial Judgment — for each different power among creatures, one with
-/// that power is chosen; every other creature is destroyed at once. Residual:
-/// the engine picks (the caster's best, else an opponent's weakest).
+/// Celestial Judgment — for each different power among creatures, the caster
+/// chooses one with that power; every other creature is destroyed at once.
 pub fn celestial_judgment() -> CardDefinition {
     spell(
         "Celestial Judgment",
         cost(&[generic(4), w(), w()]),
         CardType::Sorcery,
-        Effect::Destroy { what: Selector::OnePerDistinctPower { filter: R::Creature, rest: true } },
+        Effect::ChoosePerDistinctPower {
+            filter: R::Creature,
+            up_to: false,
+            chosen: Box::new(Effect::Noop),
+            other: Box::new(Effect::Destroy { what: Selector::SeparatedPile { chosen: false } }),
+        },
     )
 }
 
@@ -422,20 +424,25 @@ pub fn sigarda_herons_grace() -> CardDefinition {
     }
 }
 
-/// Sigardian Zealot — at the beginning of combat on your turn, creatures with
-/// different powers (one per power among yours — the engine's pick) get +X/+X
-/// and vigilance until end of turn, X its power.
+/// Sigardian Zealot — at the beginning of combat on your turn, any number of
+/// creatures with different powers, your choice, get +X/+X and vigilance
+/// until end of turn, X its power.
 pub fn sigardian_zealot() -> CardDefinition {
-    // Vigilance first: the pump moves powers, and the pick is re-read.
-    let chosen = || Selector::OnePerDistinctPower { filter: R::Creature.and(R::ControlledByYou), rest: false };
+    // The picks are made once, before the pump moves any power.
+    let chosen = || Selector::SeparatedPile { chosen: true };
     let x = || Value::PowerOf(Box::new(Selector::This));
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: Effect::Seq(vec![
-                Effect::GrantKeyword { what: chosen(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
-                Effect::PumpPT { what: chosen(), power: x(), toughness: x(), duration: Duration::EndOfTurn },
-            ]),
+            effect: Effect::ChoosePerDistinctPower {
+                filter: R::Creature,
+                up_to: true,
+                chosen: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword { what: chosen(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                    Effect::PumpPT { what: chosen(), power: x(), toughness: x(), duration: Duration::EndOfTurn },
+                ])),
+                other: Box::new(Effect::Noop),
+            },
         }],
         ..creature(
             "Sigardian Zealot",
