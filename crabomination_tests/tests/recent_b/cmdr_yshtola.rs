@@ -440,6 +440,28 @@ fn urianger_discounts_what_he_exiled() {
     assert_eq!(g.players[0].life, life + 2, "cast from exile gains 2");
 }
 
+/// Urianger: Draw Arcanum exiles face down (CR 406.3), and a land played
+/// from exile gains 2 life too, entering face up.
+#[test]
+fn urianger_land_from_exile_gains_life() {
+    let mut g = main_phase(2);
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let u = g.add_card_to_battlefield(0, catalog::urianger_augurelt());
+    g.clear_sickness(u);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    act(&mut g, GameAction::ActivateAbility { card_id: u, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("draw arcanum");
+    assert!(g.exile.iter().any(|c| c.id == forest && c.face_down));
+    g.battlefield_find_mut(u).unwrap().tapped = false;
+    act(&mut g, GameAction::ActivateAbility { card_id: u, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("play arcanum");
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(forest)).expect("land from exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some_and(|c| !c.face_down));
+    assert_eq!(g.players[0].life, life + 2);
+}
+
 /// Tataru draws you a card and offers the opponent one.
 #[test]
 fn tataru_keeps_the_books() {

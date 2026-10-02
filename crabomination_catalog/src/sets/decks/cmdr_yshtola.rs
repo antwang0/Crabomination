@@ -7,7 +7,6 @@
 //!   {3}, and the graveyard card isn't exiled.
 //! - **Estinien Varlineau** — counts opponents dealt combat damage by any
 //!   creature, not only by it or a Dragon.
-//! - **Urianger Augurelt** — a land played from exile gains no life.
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -820,18 +819,25 @@ pub fn transpose() -> CardDefinition {
 /// Urianger Augurelt — casting from exile gains 2 life; {T}: you may exile
 /// your top card; {T}: this turn you may play the cards exiled with it, and
 /// those spells cost {2} less.
-///
-/// ⚠ Residual: a land played from exile gains no life.
 pub fn urianger_augurelt() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Spells you cast this way cost {2} less to cast.",
             effect: StaticEffect::LinkedExileCastCostReduction { amount: 2, per_opponent: false },
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellFromExile),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellFromExile),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::EnteredFromExileThisTurn },
+                ),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            },
+        ],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
