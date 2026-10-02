@@ -1,9 +1,5 @@
 //! Commander: the cards the **Mardu Surge** precon (TDC, Zurgo Stormrender)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_zurgo.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Gix, Yawgmoth Praetor** — the exiled cards stay playable for free for
-//!   the rest of the turn, not only as the ability resolves.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -12,7 +8,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, mobilize, mobilize_value, myriad, on_attack, on_you_attack, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
 use std::sync::Arc;
@@ -222,8 +218,8 @@ pub fn eliminate_the_competition() -> CardDefinition {
 
 /// Gix, Yawgmoth Praetor — any creature connecting with one of your
 /// opponents lets its controller pay 1 life to draw; {4}{B}{B}{B}, discard X:
-/// exile an opponent's top X, free to play. Residual: Playable for the rest of the
-/// turn rather than only as the ability resolves.
+/// exile an opponent's top X; play a land and cast spells among them free as
+/// it resolves.
 pub fn gix_yawgmoth_praetor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -246,15 +242,21 @@ pub fn gix_yawgmoth_praetor() -> CardDefinition {
             discard_cost_x: true,
             effect: Effect::TargetPlayerThen {
                 filter: R::OpponentPlayer,
-                then: Box::new(Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::Target(0),
-                    count: Value::XFromCost,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                }),
+                // The ruling: played as the ability resolves, not later.
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TopOfLibrary { who: PlayerRef::Target(0), count: Value::XFromCost },
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::PlayLandAmongNow { what: Selector::ExiledThisResolution { filter: R::Any } },
+                    Effect::CastAnyOrderWithoutPaying {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        source_zone: crate::card::Zone::Exile,
+                        filter: None,
+                        cap: None,
+                        total_mana_value: None,
+                    },
+                ])),
             },
             ..Default::default()
         }],

@@ -258,28 +258,21 @@ fn gix_rewards_any_attacker_and_steals_the_top() {
     run_combat_out(&mut g);
     assert_eq!((g.players[1].hand.len(), g.players[1].life), (hand + 1, life - 1));
 
+    // Gix's ruling: the exiled cards are played as the ability resolves — the
+    // Bears cast free, the Forest played as the turn's land.
     let mut g = main_phase(2);
     let gix = g.add_card_to_battlefield(0, catalog::gix_yawgmoth_praetor());
     let bear = g.add_card_to_library(1, catalog::grizzly_bears());
-    g.add_card_to_library(1, catalog::hill_giant());
+    let forest = g.add_card_to_library(1, catalog::forest());
     for _ in 0..2 {
         g.add_card_to_hand(0, catalog::plains());
     }
     activate(&mut g, gix, 0, &[Target::Player(1)], Some(2)).expect("discard two");
-    assert!(g.players[0].hand.is_empty());
-    let c = g.exile.iter().find(|c| c.id == bear).expect("exiled");
-    assert_eq!(c.may_play_until.map(|p| p.player), Some(0));
-    g.players[0].mana_pool = Default::default();
-    g.perform_action(GameAction::CastFromZoneWithoutPaying {
-        card_id: bear,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("free");
     drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty());
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(forest).unwrap().controller, 0);
+    assert_eq!(g.players[0].lands_played_this_turn, 1);
 }
 
 /// Infantry Shield: menace, and mobilize equal to the equipped power.

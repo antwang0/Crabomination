@@ -285,6 +285,52 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::PlayLandAmongNow` — "you may play lands from among [what]" as
+    /// the effect resolves (Gix's ruling): on the controller's own turn with
+    /// a land play left, they may play one of the exiled lands now. Headless,
+    /// the first. Counts the land play and reports it as played.
+    pub(crate) fn play_land_among_now(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        let pl = &self.players[p];
+        if self.active_player_idx != p || pl.lands_played_this_turn >= 1 + pl.extra_land_plays {
+            return Ok(());
+        }
+        let lands: Vec<(CardId, String)> = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .filter_map(|e| e.as_card_id())
+            .filter_map(|id| self.exile.iter().find(|c| c.id == id))
+            .filter(|c| c.definition.is_land())
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        let Some(first) = lands.first().map(|l| l.0) else { return Ok(()) };
+        let Some(picked) = self.choose_up_to_cards(
+            p,
+            "Play a land from among them?".into(),
+            ctx.source.unwrap_or(CardId(0)),
+            lands,
+            1,
+            crate::decision::PickValue::Gain,
+            effect,
+            vec![first],
+        ) else {
+            return Ok(());
+        };
+        if let Some(&id) = picked.first() {
+            self.players[p].lands_played_this_turn += 1;
+            let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
+            self.move_card_to(id, &dest, ctx, events);
+            events.push(GameEvent::LandPlayed { player: p, card_id: id, played: true });
+        }
+        Ok(())
+    }
+
     pub(crate) fn play_top_free_else_exile(
         &mut self,
         ctx: &EffectContext,

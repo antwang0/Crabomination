@@ -35092,6 +35092,7 @@ impl GameState {
             }
             Effect::CastTopFreeIfElseDraw { filter } => self.cast_top_free_if_else_draw(filter, ctx, events),
             Effect::PlayTopFreeElseExile => self.play_top_free_else_exile(ctx, events),
+            Effect::PlayLandAmongNow { what } => self.play_land_among_now(what, ctx, events, effect),
             Effect::EachPlayerChoosesColorExileOthers => {
                 self.each_player_chooses_color_exile_others(ctx, events, effect);
                 Ok(())

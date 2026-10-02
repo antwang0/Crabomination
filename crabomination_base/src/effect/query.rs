@@ -717,6 +717,7 @@ impl Effect {
             | Effect::ReturnOneYouControl { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
+            | Effect::PlayLandAmongNow { .. }
             | Effect::OwnersGainControlOfNontokens
             | Effect::OwnersGainControlOf { .. }
             | Effect::PumpOtherAttackersOnSamePlayer { .. }
