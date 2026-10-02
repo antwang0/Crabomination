@@ -199,24 +199,35 @@ pub fn acquired_mutation() -> CardDefinition {
     }
 }
 
-/// Agility Bobblehead — mana of any color; {3}, {T}: up to X of your
-/// creatures gain haste and can't be blocked except by haste creatures.
-/// Residual: the X creatures are your greatest-power ones.
+/// Agility Bobblehead — mana of any color; {3}, {T}: up to X target creatures
+/// you control gain haste and can't be blocked except by haste creatures, X
+/// the Bobbleheads you control (counted as the ability resolves).
 pub fn agility_bobblehead() -> CardDefinition {
-    let chosen = || Selector::GreatestPowerTopN { filter: R::Creature.and(R::ControlledByYou), count: bobbleheads() };
     bobblehead(
         "Agility Bobblehead",
         ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::GrantKeyword { what: chosen(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
-                Effect::GrantKeyword {
-                    what: chosen(),
-                    keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Haste))),
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::CapTargetsAt {
+                amount: bobbleheads(),
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Haste,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Haste))),
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                }),
+            },
             ..Default::default()
         },
     )

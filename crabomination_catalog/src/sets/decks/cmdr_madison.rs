@@ -867,22 +867,36 @@ pub fn c_a_m_p() -> CardDefinition {
 
 /// Endurance Bobblehead — {3} Artifact — Bobblehead. {T}: Add one mana of any
 /// color. {3}, {T}: Up to X target creatures you control get +1/+0 and gain
-/// indestructible until end of turn, X the Bobbleheads you control. Sorcery.
-///
-/// ⚠ Residual: the creatures are your greatest-power ones, chosen on
-/// resolution.
+/// indestructible until end of turn, X the Bobbleheads you control (counted as
+/// the ability resolves). Sorcery speed.
 pub fn endurance_bobblehead() -> CardDefinition {
-    let chosen = || Selector::TakeGreatestPower { inner: Box::new(yours(R::Creature)), count: Box::new(bobbleheads()) };
     bobblehead(
         "Endurance Bobblehead",
         ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
             sorcery_speed: true,
-            effect: Effect::Seq(vec![
-                Effect::PumpPT { what: chosen(), power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
-                Effect::GrantKeyword { what: chosen(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
-            ]),
+            effect: Effect::CapTargetsAt {
+                amount: bobbleheads(),
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: Selector::Target(0),
+                            power: Value::ONE,
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Indestructible,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                }),
+            },
             ..Default::default()
         },
     )

@@ -328,3 +328,30 @@ fn plasma_caster_targets_only_the_equipped_creatures_blocker() {
     assert!(legal(x), "blocking the equipped creature");
     assert!(!legal(y), "blocking another attacker");
 }
+
+/// Endurance Bobblehead — up to X target creatures you control (X = one
+/// Bobblehead here) get +1/+0 and indestructible: the chosen one, not the
+/// biggest (CR 601.2c).
+#[test]
+fn endurance_bobblehead_targets_up_to_x() {
+    let mut g = pod(2);
+    let eb = g.add_card_to_battlefield(0, catalog::endurance_bobblehead());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eb,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(wurm)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let cp = |id| g.computed_permanent(id).unwrap();
+    assert_eq!(cp(bear).power, 3);
+    assert!(cp(bear).keywords().contains(&Keyword::Indestructible));
+    assert_eq!(cp(wurm).power, 6, "X = 1: the second target is dropped");
+}

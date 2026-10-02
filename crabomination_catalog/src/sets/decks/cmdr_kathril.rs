@@ -534,8 +534,7 @@ pub fn tayam_luminous_enigma() -> CardDefinition {
 }
 
 /// Vitality Hunter — lifelink; {X}{W}{W}: monstrosity X; becoming monstrous,
-/// lifelink counters on up to X creatures.
-/// Residual: the counters go on your X greatest-power creatures.
+/// a lifelink counter on each of up to X target creatures.
 pub fn vitality_hunter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Lifelink],
@@ -546,10 +545,20 @@ pub fn vitality_hunter() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameMonstrous, EventScope::SelfSource),
-            effect: Effect::AddKeywordCounter {
-                what: Selector::GreatestPowerTopN { filter: R::Creature, count: Value::TriggerEventAmount },
-                keyword: Keyword::Lifelink,
-                amount: Value::ONE,
+            // CR 603.3d — X is the monstrosity's, bound as the trigger is
+            // put on the stack.
+            effect: Effect::CapTargetsAt {
+                amount: Value::TriggerEventAmount,
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::AddKeywordCounter {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Lifelink,
+                        amount: Value::ONE,
+                    }),
+                }),
             },
         }],
         ..creature("Vitality Hunter", cost(&[generic(3), w()]), vec![CreatureType::Nightmare], 3, 4)

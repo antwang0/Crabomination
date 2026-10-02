@@ -166,7 +166,8 @@ fn mariposa_discount_per_rad_counter() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
-/// The Wise Mothman — two nonland cards milled: two creatures get a counter.
+/// The Wise Mothman — two nonland cards milled: two target creatures get a
+/// counter.
 #[test]
 fn wise_mothman_counts_nonland_mills() {
     let mut g = pod(2);
@@ -177,8 +178,9 @@ fn wise_mothman_counts_nonland_mills() {
     on_top(&mut g, 1, catalog::grizzly_bears());
     on_top(&mut g, 1, catalog::grizzly_bears());
     resolve(&mut g, 0, Effect::Mill { who: Selector::Player(PlayerRef::Seat(1)), amount: crabomination::card::Value::Const(3) });
+    // CR 603.3d — X is bound as the trigger goes on the stack, so two
+    // targets are picked; a +1/+1 counter goes on the controller's own.
     assert_eq!(plus(&g, wurm) + plus(&g, moth) + plus(&g, bear), 2, "X = 2 nonland cards");
-    assert_eq!(plus(&g, wurm), 1, "the biggest creature first");
 }
 
 /// Screeching Scorchbeast — a Zombie Mutant per nonland card milled, once a

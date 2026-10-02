@@ -255,3 +255,34 @@ fn ever_after_names_distinct_cards() {
     assert_eq!(t, Some(Target::Permanent(wurm)));
     assert!(extra.is_empty(), "{extra:?}");
 }
+
+/// Vitality Hunter — becoming monstrous with X = 2 puts a lifelink counter on
+/// each of up to two target creatures: X is bound as the trigger goes on the
+/// stack (CR 603.3d), so both targets are picked, any creatures, not the two
+/// biggest of yours.
+#[test]
+fn vitality_hunter_targets_up_to_x() {
+    let mut g = pod(2);
+    let vh = g.add_card_to_battlefield(0, catalog::vitality_hunter());
+    g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vh,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("monstrosity 2");
+    drain_stack(&mut g);
+    let lifelinked = g
+        .battlefield
+        .iter()
+        .filter(|c| c.keyword_counters.get(&Keyword::Lifelink).is_some_and(|n| *n > 0))
+        .count();
+    assert_eq!(lifelinked, 2, "two targets for X = 2");
+}

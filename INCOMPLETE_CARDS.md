@@ -1968,7 +1968,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
-| 🟡 Vitality Hunter | Symbiotic Swarm (C20) | the lifelink counters go on your X greatest-power creatures, not X chosen targets. |
 | 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | the engine exiles your highest mana value other creature; X reads its printed power. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
 | 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
@@ -2256,14 +2255,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
 | 🟡 Eventide's Shadow | Blight Curse (ECC) | each chosen permanent loses all its counters (no partial removal). |
 | 🟡 Puca's Covenant | Blight Curse (ECC) | the returned card is chosen on resolution, not targeted, and the dying creature's own card is among the choices. |
-| 🟡 The Wise Mothman | Mutant Menace (PIP) | the "up to X target creatures" are your greatest-power creatures, chosen on resolution rather than targeted. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
-| 🟡 Endurance Bobblehead | Science! (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
-| 🟡 Agility Bobblehead | Scrappy Survivors (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted, and its host is the engine's pick. |
 | 🟡 Inventory Management | Scrappy Survivors (PIP) | every Aura and Equipment you choose moves to one creature, your greatest-power one. |
 | 🟡 Perception Bobblehead | Scrappy Survivors (PIP) | the rest go to the bottom in the cascade order, not a random one. |

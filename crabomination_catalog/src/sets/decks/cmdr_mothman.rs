@@ -140,10 +140,7 @@ fn milled_this_turn(filter: R) -> R {
 /// Flying. Whenever it enters or attacks, each player gets a rad counter.
 /// Whenever one or more nonland cards are milled, put a +1/+1 counter on each
 /// of up to X target creatures, where X is the number of nonland cards milled
-/// this way.
-///
-/// ⚠ Residual: the X creatures are your greatest-power ones, chosen on
-/// resolution rather than targeted.
+/// this way (bound as the trigger is put on the stack, CR 603.3d).
 pub fn the_wise_mothman() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -152,13 +149,15 @@ pub fn the_wise_mothman() -> CardDefinition {
             on_attack(rad(PlayerRef::EachPlayer, 1)),
             TriggeredAbility {
                 event: nonland_milled(),
-                effect: plus(
-                    Selector::TakeGreatestPower {
-                        inner: Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
-                        count: Box::new(Value::TriggerEventAmount),
-                    },
-                    Value::ONE,
-                ),
+                effect: Effect::CapTargetsAt {
+                    amount: Value::TriggerEventAmount,
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Creature,
+                        effect: Box::new(plus(Selector::Target(0), Value::ONE)),
+                    }),
+                },
             },
         ],
         ..legend(

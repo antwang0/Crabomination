@@ -335,3 +335,22 @@ fn animal_friend_squirrel_counts_other_gear() {
     assert_eq!(g.battlefield_find(sq[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "Pip-Boy, not Animal Friend");
     let _ = Value::ONE;
 }
+
+/// Agility Bobblehead — "up to X target creatures you control", X the
+/// Bobbleheads you control: the targets are the activator's (CR 601.2c), not
+/// the greatest-power ones, and a third target past two Bobbleheads is dropped.
+#[test]
+fn agility_bobblehead_targets_up_to_x() {
+    let mut g = pod(2);
+    let ab = g.add_card_to_battlefield(0, catalog::agility_bobblehead());
+    g.add_card_to_battlefield(0, catalog::agility_bobblehead());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    flood(&mut g, 0);
+    activate(&mut g, 0, ab, 1, Some(Target::Permanent(bear)), vec![Target::Permanent(elf), Target::Permanent(wurm)])
+        .expect("activate");
+    let haste = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste);
+    assert!(haste(bear) && haste(elf), "the two chosen");
+    assert!(!haste(wurm), "X = 2: the third target is dropped");
+}
