@@ -5347,6 +5347,11 @@ pub struct EntersAsCopy {
     /// addition to its other types" — Moritte of the Frost's snow half).
     #[serde(default)]
     pub extra_supertypes: Vec<Supertype>,
+    /// CR 707.9 + 614.1c — "except it enters with N additional [kind]
+    /// counters if it's a [filter]" (Moritte of the Frost): placed as the copy
+    /// enters, not by a trigger. Each entry applies when the copy matches.
+    #[serde(default)]
+    pub extra_counters: Vec<(SelectionRequirement, CounterType, u32)>,
     /// "except it's a Vehicle artifact with crew N and it loses all other
     /// card types" (Imposter Mech): the copy is an artifact only, with the
     /// Vehicle subtype and crew N; subtypes of the lost types go with them.

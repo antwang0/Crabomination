@@ -2450,6 +2450,21 @@ impl GameState {
                 def.keywords.push(crate::card::Keyword::Crew(n));
             }
         }
+        // "Enters with N additional counters if it's a [type]" — part of the
+        // copy replacement, so the counters are there as it enters.
+        for (filter, kind, n) in &spec.extra_counters {
+            if self.evaluate_requirement_static(filter, &Target::Permanent(card_id), controller, Some(card_id))
+                && let Some(c) = self.battlefield_find_mut(card_id)
+            {
+                c.add_counters(*kind, *n);
+                events.push(GameEvent::CounterAdded {
+                    card_id,
+                    counter_type: *kind,
+                    count: *n,
+                    placer: Some(controller),
+                });
+            }
+        }
         // "Enter TAPPED as a copy" (Vesuva): the tapping is part of this
         // replacement, so it survives the copy overwriting the printed text.
         if spec.tapped

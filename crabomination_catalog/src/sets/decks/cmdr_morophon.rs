@@ -208,7 +208,7 @@ pub fn harper_recruiter() -> CardDefinition {
 
 /// Moritte of the Frost — may enter as a copy of a permanent you control,
 /// legendary and snow, a creature one with two more +1/+1 counters and
-/// changeling. Residual: the counters come from an entry trigger.
+/// changeling (CR 707.9: the counters are part of the copy as it enters).
 pub fn moritte_of_the_frost() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary, Supertype::Snow],
@@ -218,18 +218,7 @@ pub fn moritte_of_the_frost() -> CardDefinition {
             legendary: true,
             extra_supertypes: vec![Supertype::Snow],
             extra_keywords: vec![Keyword::Changeling],
-            extra_triggered: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::This, filter: R::Creature },
-                    then: Box::new(Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(2),
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            }],
+            extra_counters: vec![(R::Creature, CounterType::PlusOnePlusOne, 2)],
             ..Default::default()
         }),
         ..creature(

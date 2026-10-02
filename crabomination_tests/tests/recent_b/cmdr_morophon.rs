@@ -141,6 +141,31 @@ fn cr_707_2_moritte_copies_as_a_snow_legend() {
     assert!(kw(&g, m, Keyword::Changeling));
 }
 
+/// CR 707.9 / 614.1c — Moritte's two +1/+1 counters are part of the copy
+/// replacement: on it as it enters (no trigger on the stack), and only when
+/// what it copied is a creature.
+#[test]
+fn cr_707_9_moritte_enters_with_its_counters() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::moritte_of_the_frost());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.stack.is_empty(), "no entry trigger");
+    assert_eq!(g.battlefield_find(m).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    let m = g.add_card_to_hand(0, catalog::moritte_of_the_frost());
+    cast_at(&mut g, m, &[]).expect("cast");
+    let c = g.battlefield_find(m).expect("a Sol Ring copy");
+    assert_eq!(c.definition.name, "Sol Ring");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0, "not a creature: no counters");
+}
+
 /// CR 611.2b — Shapesharer's copy lasts until your next turn: through the
 /// opponent's turn, gone as yours begins.
 #[test]
