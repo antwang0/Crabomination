@@ -24079,7 +24079,7 @@ impl GameState {
                 Ok(())
             }
             Effect::DamageEachCreatureOfChosenColor { amount } => {
-                self.damage_each_creature_of_chosen_color(amount, ctx, events)
+                self.damage_each_creature_of_chosen_color(amount, ctx, effect, events)
             }
             Effect::LookTopFiveDigForLife => {
                 self.look_top_five_dig_for_life(ctx, events);

@@ -464,7 +464,6 @@ pub fn sprouting_thrinax() -> CardDefinition {
 }
 
 /// Sudden Demise — choose a color; X damage to each creature of that color.
-/// Residual: the engine picks the color.
 pub fn sudden_demise() -> CardDefinition {
     CardDefinition {
         name: "Sudden Demise",

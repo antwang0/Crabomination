@@ -9,13 +9,15 @@ use crate::game::types::{GameError, GameEvent};
 use crate::mana::Color;
 
 impl GameState {
-    /// `Effect::DamageEachCreatureOfChosenColor`. The color is the engine's
-    /// pick: the most opposing mana value that `amount` would kill, net of the
-    /// caster's own; ties go in WUBRG order.
+    /// `Effect::DamageEachCreatureOfChosenColor`. The caster chooses the
+    /// color as it resolves; the colors are offered best first — the most
+    /// opposing mana value `amount` would kill, net of the caster's own, ties
+    /// in WUBRG order — so a headless seat's option 0 is that pick.
     pub(super) fn damage_each_creature_of_chosen_color(
         &mut self,
         amount: &Value,
         ctx: &EffectContext,
+        effect: &crate::effect::Effect,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let n = self.evaluate_value(amount, ctx).max(0);
@@ -42,7 +44,21 @@ impl GameState {
                 })
                 .sum()
         };
-        let color = Color::ALL.iter().copied().max_by_key(|&c| (score(c), std::cmp::Reverse(c as u8))).unwrap_or(Color::White);
+        let mut order: Vec<Color> = Color::ALL.to_vec();
+        order.sort_by_key(|&c| (std::cmp::Reverse(score(c)), c as u8));
+        let mut cursor = 0;
+        let Some(i) = self.ask_seat_option(
+            &mut cursor,
+            me,
+            "Choose a color".into(),
+            ctx.source.unwrap_or(CardId(0)),
+            order.iter().map(|c| format!("{c:?}")).collect(),
+            effect,
+        ) else {
+            return Ok(());
+        };
+        self.clear_answer_log();
+        let color = order.get(i).copied().unwrap_or(Color::White);
         let victims = of_color(self, color);
         self.run_effect(
             &crate::effect::Effect::DealDamage { to: Selector::ExactObjects(victims), amount: Value::Const(n) },

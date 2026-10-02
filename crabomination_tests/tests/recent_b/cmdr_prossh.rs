@@ -133,7 +133,7 @@ fn endrek_sahr_breeds_thrulls_then_goes() {
     assert!(g.battlefield_find(endrek).is_none(), "ten Thrulls: sacrificed");
 }
 
-/// Sudden Demise picks the color that hurts the opponents most.
+/// Sudden Demise's headless default is the color that hurts the opponents most.
 #[test]
 fn sudden_demise_hits_the_best_color() {
     let mut g = main_phase(2);
@@ -146,6 +146,21 @@ fn sudden_demise_hits_the_best_color() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "green chosen");
     assert!(g.battlefield_find(mine).is_none(), "the caster's green Elf too");
     assert!(g.battlefield_find(white).is_some());
+}
+
+/// Sudden Demise — the color is the caster's choice as it resolves: options
+/// are offered best first (green here), and picking the second (white) burns
+/// the Lions instead.
+#[test]
+fn sudden_demise_color_is_the_casters_choice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let white = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let spell = g.add_card_to_hand(0, catalog::sudden_demise());
+    cast_x(&mut g, spell, &[], Some(2)).expect("cast");
+    assert!(g.battlefield_find(white).is_none() && g.battlefield_find(bear).is_some());
 }
 
 /// Shattergang Brothers: every other player sacrifices a creature.
