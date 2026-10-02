@@ -17,7 +17,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::catalog::sets::sos::fractal_token;
-use crate::effect::shortcut::{etb, magecraft, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, magecraft, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, SpendRestriction, cost, g, generic, u, x};
@@ -315,8 +315,8 @@ pub fn paradox_zone() -> CardDefinition {
 }
 
 /// Primal Empathy — at your upkeep, draw if you control a creature of the
-/// greatest power on the battlefield; otherwise a +1/+1 counter on your
-/// creature of greatest power (the engine's pick).
+/// greatest power on the battlefield; otherwise a +1/+1 counter on a creature
+/// you control (chosen on resolution).
 pub fn primal_empathy() -> CardDefinition {
     CardDefinition {
         name: "Primal Empathy",
@@ -327,11 +327,11 @@ pub fn primal_empathy() -> CardDefinition {
             effect: Effect::If {
                 cond: Predicate::ControlsGreatestPowerCreature { who: PlayerRef::You },
                 then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
-                else_: Box::new(Effect::AddCounter {
-                    what: Selector::GreatestPowerYouControl,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                }),
+                else_: Box::new(choose_one_then(
+                    Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    PlayerRef::You,
+                    Effect::AddCounter { what: chosen_one(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                )),
             },
         }],
         ..Default::default()

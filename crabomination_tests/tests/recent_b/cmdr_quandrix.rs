@@ -394,19 +394,24 @@ fn paradox_zone_doubles_each_end_step() {
     assert_eq!(sizes, vec![2, 4]);
 }
 
-/// Draw with the biggest creature on the battlefield; otherwise grow one.
+/// Draw with the biggest creature on the battlefield; otherwise grow a
+/// creature you control — any one, the controller's pick (CR 608.2d).
 #[test]
 fn primal_empathy_draws_or_grows() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::primal_empathy());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let small = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![small])]));
     g.add_card_to_battlefield(1, catalog::serra_angel());
     library(&mut g, 0, 2);
     let hand = g.players[0].hand.len();
     g.step = TurnStep::Upkeep;
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 1, "not the biggest: grow");
+    assert_eq!(counters(&g, small, CounterType::PlusOnePlusOne), 1, "not the biggest: grow the pick");
+    assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 0);
     assert_eq!(g.players[0].hand.len(), hand);
     g.add_card_to_battlefield(0, catalog::serra_angel());
     g.fire_step_triggers(TurnStep::Upkeep);
