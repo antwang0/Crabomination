@@ -2189,7 +2189,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
-| 🟡 Cosmic Intervention | Phantom Premonition (KHC) | the exile-instead replacement covers the permanents you control as it resolves (not ones that arrive later that turn); the end-step return takes the cards you own that a this-turn "exile it instead" moved. |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | the cage takes the highest-mana-value artifact or creature card. |
 | 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |

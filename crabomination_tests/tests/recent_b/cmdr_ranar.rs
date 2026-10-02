@@ -185,6 +185,32 @@ fn cosmic_intervention_returns_the_fallen() {
     assert_eq!(named(&g, 0, "Grizzly Bears"), 1);
 }
 
+/// Cosmic Intervention — CR 614: "a permanent you control" is read as each
+/// would die, so a creature that arrived after it resolved is covered, and a
+/// stolen one returns under its owner's control (CR 610.3c); a Wilt-style
+/// exile of an opponent's card is not Cosmic's to return.
+#[test]
+fn cosmic_intervention_covers_later_and_stolen_permanents() {
+    let mut g = pod(2);
+    let ci = g.add_card_to_hand(0, catalog::cosmic_intervention());
+    cast(&mut g, ci, &[]);
+    let late = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stolen = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.battlefield_find_mut(stolen).unwrap().controller = 0;
+    for id in [late, stolen] {
+        let murder = g.add_card_to_hand(0, catalog::murder());
+        cast(&mut g, murder, &[Target::Permanent(id)]);
+        assert!(g.exile.iter().any(|c| c.id == id), "exiled instead of dying");
+    }
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(late).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(stolen).map(|c| c.controller), Some(1));
+}
+
 /// Arcane Artisan: the player exiles a creature card from hand for a token
 /// copy; when Artisan leaves, its tokens go at the next end step.
 #[test]

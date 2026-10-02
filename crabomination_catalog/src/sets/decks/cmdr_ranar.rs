@@ -17,7 +17,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest, ZoneRef,
+    DelayedTriggerKind, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest,
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, SpendRestriction, cost, generic, u, w};
@@ -91,10 +91,10 @@ pub fn arcane_artisan() -> CardDefinition {
     }
 }
 
-/// Cosmic Intervention — this turn, your permanents that would die are exiled
-/// instead and return at the next end step. Foretell {1}{W}.
-/// Residual: covers the permanents you control as it resolves; the return
-/// takes the cards you own a this-turn "exile it instead" moved.
+/// Cosmic Intervention — this turn, any permanent you control that would die
+/// is exiled instead (`ExileYourDyingPermanentsThisTurn`, ones entering later
+/// too) and those cards return under their owners' control at the next end
+/// step. Foretell {1}{W}.
 pub fn cosmic_intervention() -> CardDefinition {
     CardDefinition {
         foretell_cost: Some(cost(&[generic(1), w()])),
@@ -103,16 +103,10 @@ pub fn cosmic_intervention() -> CardDefinition {
             cost(&[generic(3), w()]),
             CardType::Instant,
             Effect::Seq(vec![
-                Effect::ExileIfWouldDieThisTurn { what: yours(R::Permanent) },
+                Effect::ExileYourDyingPermanentsThisTurn,
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Move {
-                        what: Selector::EachMatching {
-                            zone: ZoneRef::Exile,
-                            filter: R::ExiledInsteadOfDyingThisTurn.and(R::OwnedByYou),
-                        },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
-                    }),
+                    body: Box::new(Effect::ReturnCardsExiledInsteadBySource),
                 },
             ]),
         )
