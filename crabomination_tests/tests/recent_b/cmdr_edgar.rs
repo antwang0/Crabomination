@@ -457,6 +457,29 @@ fn drana_and_linvala_locks_and_borrows_abilities() {
     assert_eq!(g.players[1].life, 19);
 }
 
+/// CR 609.4b — "You may spend mana as though it were mana of any color to
+/// activate those abilities": white mana pays a borrowed {R} pump.
+#[test]
+fn drana_and_linvala_pays_borrowed_abilities_with_any_color() {
+    let mut g = main_phase();
+    let drana = g.add_card_to_battlefield(0, catalog::drana_and_linvala());
+    g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    g.clear_sickness(drana);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drana,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{W} pays the borrowed {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(drana).unwrap().power, 4);
+}
+
 /// Oathsworn Vampire comes back from the graveyard only on a lifegain turn,
 /// and enters tapped.
 #[test]

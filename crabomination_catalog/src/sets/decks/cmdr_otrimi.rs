@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Capricopian** — the attacked player's "{2}: put a +1/+1 counter on it,
 //!   then reselect which player it's attacking" isn't offered.
-//! - **Manascape Refractor** — mana of any color isn't spendable on the
-//!   borrowed abilities' activation costs.
 //! - **Mindleecher** — the exiled cards may be cast with mana of any type
 //!   (the face-down exile primitive's Gonti spend).
 //! - **Vastwood Hydra** — the counters are distributed among up to three
@@ -218,8 +216,8 @@ pub fn hungering_hydra() -> CardDefinition {
 }
 
 /// Manascape Refractor — {3} artifact; enters tapped; has all activated
-/// abilities of all lands on the battlefield.
-/// Residual: mana of any color isn't spendable on those abilities' costs.
+/// abilities of all lands on the battlefield, payable with mana of any color
+/// (`SpellKind::any_color`).
 pub fn manascape_refractor() -> CardDefinition {
     CardDefinition {
         name: "Manascape Refractor",

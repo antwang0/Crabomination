@@ -10849,7 +10849,7 @@ impl GameState {
         kind: &crate::mana::SpellKind,
     ) -> bool {
         use crate::effect::StaticEffect;
-        if seat.is_some_and(|s| self.players[s].may_spend_any_color_this_turn) {
+        if kind.any_color || seat.is_some_and(|s| self.players[s].may_spend_any_color_this_turn) {
             return true;
         }
         // False Dawn folds every colour into white and then lets white pay for

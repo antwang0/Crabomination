@@ -10,10 +10,9 @@
 //!   order (the engine's gift model has no recipient choice).
 //! - **Gleaming Splendor** — "two target players" are two player slots; the
 //!   engine does not require them to be distinct.
-//! - **Drana and Linvala** — the "spend mana as though it were mana of any
-//!   color" rider on the borrowed abilities is dropped; the lock gates the
-//!   activation path, so a creature's mana ability tapped by the auto-payer
-//!   while paying a cost is not stopped.
+//! - **Drana and Linvala** — the lock gates the activation path, so a
+//!   creature's mana ability tapped by the auto-payer while paying a cost is
+//!   not stopped.
 //! - **Florian, Voldaren Scion** — the exiled card may be cast while it stays
 //!   exiled (the engine's look-and-exile-with-permission primitive), not
 //!   "played this turn"; a land among them can't be played.
@@ -805,8 +804,8 @@ pub fn olivia_voldaren() -> CardDefinition {
 /// flying, vigilance. "Activated abilities of creatures your opponents control
 /// can't be activated. Drana and Linvala has all activated abilities of all
 /// creatures your opponents control. You may spend mana as though it were
-/// mana of any color to activate those abilities." (The any-color spend rider
-/// is dropped — see the module residuals.)
+/// mana of any color to activate those abilities." (`SpellKind::any_color`;
+/// the mana-ability lock residual is in the module notes.)
 pub fn drana_and_linvala() -> CardDefinition {
     legend(CardDefinition {
         static_abilities: vec![

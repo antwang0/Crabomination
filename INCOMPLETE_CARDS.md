@@ -2107,7 +2107,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |
 | 🟡 Lavabrink Floodgates | Arcane Maelstrom (C20) | each upkeep's player may only add a doom counter (removing one isn't offered). |
 | 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |
-| 🟡 Manascape Refractor | Enhanced Evolution (C20) | mana of any color isn't spendable on the borrowed land abilities' activation costs. |
 | 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
 | 🟡 Vastwood Hydra | Enhanced Evolution (C20) | the counters go among up to three target creatures you control, not "any number" chosen on resolution. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |

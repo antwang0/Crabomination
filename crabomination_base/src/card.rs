@@ -7241,6 +7241,7 @@ impl CardDefinition {
             creature_ability: false,
             casting_nonartifact_spell: !artifact,
             activating_ability: false,
+            any_color: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             devoid: self.keywords.has_kw(&Keyword::Devoid),
             foretell: self.foretell_cost.is_some(),
@@ -7285,6 +7286,13 @@ impl CardDefinition {
             changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
             activating_ability: true,
             equipment: self.is_equipment(),
+            any_color: self.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
+                        | crate::effect::StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
+                )
+            }),
             ..Default::default()
         }
     }

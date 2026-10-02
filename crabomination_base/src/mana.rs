@@ -1028,6 +1028,10 @@ pub struct SpellKind {
     pub casting_nonartifact_spell: bool,
     /// Activating an ability of any source (Omen Hawker's abilities-only mana).
     pub activating_ability: bool,
+    /// CR 609.4b — the source lets its abilities be paid "as though it were
+    /// mana of any color" (Drana and Linvala's and Manascape Refractor's
+    /// borrowed abilities — neither has printed ones of its own).
+    pub any_color: bool,
     /// Casting a Lesson spell (Hermitic Herbalist's Lesson-only mana).
     pub lesson: bool,
     /// Casting a spell with devoid (Corrupted Crossroads).
