@@ -1857,6 +1857,15 @@ pub struct ColdState {
     /// exerted this turn" (`Keyword::ExertOncePerTurn`). Cleared at cleanup.
     #[serde(default)]
     pub exerted_this_turn: Vec<CardId>,
+    /// "If a permanent you control would be put into a graveyard from the
+    /// battlefield this turn, exile it instead" (Cosmic Intervention):
+    /// `(controller, source)`. Cleared at cleanup.
+    #[serde(default)]
+    pub exile_instead_for_controllers_this_turn: Vec<(usize, CardId)>,
+    /// The cards those replacements exiled, `(source, card)`, until the
+    /// source's "return it" takes them (outlives the turn's cleanup).
+    #[serde(default)]
+    pub exiled_instead_by: Vec<(CardId, CardId)>,
     /// CR 500.8 — steps/phases a player skips for the rest of this turn
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]

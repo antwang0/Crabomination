@@ -6953,6 +6953,16 @@ pub enum Effect {
     /// later combat / removal too, not just the spell's own damage. Used by
     /// Wilt in the Heat (paired with a `DealDamage`).
     ExileIfWouldDieThisTurn { what: Selector },
+    /// CR 614 — "If a permanent you control would be put into a graveyard
+    /// from the battlefield this turn, exile it instead" (Cosmic
+    /// Intervention): every permanent the controller controls when it would
+    /// die, entering later included. The cards are recorded against the
+    /// source for [`Effect::ReturnCardsExiledInsteadBySource`].
+    ExileYourDyingPermanentsThisTurn,
+    /// "Return it to the battlefield under its owner's control": each card
+    /// `ExileYourDyingPermanentsThisTurn` exiled for this source and still
+    /// in exile.
+    ReturnCardsExiledInsteadBySource,
     /// CR 614 — "If [it] would leave the battlefield, exile it instead of
     /// putting it anywhere else." Registers a replacement bound to each
     /// resolved permanent (battlefield → graveyard / hand / library becomes

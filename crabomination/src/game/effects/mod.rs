@@ -14080,6 +14080,37 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::ExileYourDyingPermanentsThisTurn => {
+                let entry = (ctx.controller, ctx.source.unwrap_or(CardId(0)));
+                if !self.exile_instead_for_controllers_this_turn.contains(&entry) {
+                    self.exile_instead_for_controllers_this_turn.push(entry);
+                }
+                Ok(())
+            }
+            Effect::ReturnCardsExiledInsteadBySource => {
+                let src = ctx.source.unwrap_or(CardId(0));
+                if !self.exiled_instead_by.iter().any(|&(s, _)| s == src) {
+                    return Ok(());
+                }
+                let ids: Vec<CardId> =
+                    self.exiled_instead_by.iter().filter(|&&(s, _)| s == src).map(|&(_, c)| c).collect();
+                self.exiled_instead_by.retain(|&(s, _)| s != src);
+                let back: Vec<CardId> = ids.into_iter().filter(|id| self.exile.iter().any(|c| c.id == *id)).collect();
+                if back.is_empty() {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::Move {
+                        what: Selector::ExactObjects(back),
+                        to: crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::OwnerOfMoved,
+                            tapped: false,
+                        },
+                    },
+                    ctx,
+                    events,
+                )
+            }
             Effect::ExileIfWouldDieThisTurn { what } => {
                 // Install an until-end-of-turn death replacement on each
                 // resolved permanent. `remove_from_battlefield_to_graveyard_raw`

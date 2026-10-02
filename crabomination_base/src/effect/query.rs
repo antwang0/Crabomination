@@ -1919,6 +1919,7 @@ impl Effect {
             | Effect::CreaturesDontUntapNextUntapStep { who } => sel_has_target(who),
             Effect::SacrificeAllMatching { who, .. } => sel_has_target(who),
             Effect::LivingDeath => false,
+            Effect::ExileYourDyingPermanentsThisTurn | Effect::ReturnCardsExiledInsteadBySource => false,
             Effect::SacrificeOthersThenReanimate => false,
             Effect::EscalatingThisTurn { modes } => modes.iter().any(|e| e.requires_target()),
             Effect::EachPlayerMayPutPermanentFromHand { .. } => false,

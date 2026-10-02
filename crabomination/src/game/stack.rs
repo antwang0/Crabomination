@@ -5107,6 +5107,7 @@ impl GameState {
         clear_cold!(self.shroud_waivers);
         clear_cold!(self.abilities_locked_this_turn);
         clear_cold!(self.exerted_this_turn);
+        clear_cold!(self.exile_instead_for_controllers_this_turn);
         clear_cold!(self.foretold_this_turn);
         clear_cold!(self.foretold_casts_this_turn);
         clear_cold!(self.plotted_this_turn);
@@ -8162,7 +8163,14 @@ impl GameState {
                 // filter is typically `IsEnchanted`, which has to scan the
                 // battlefield for the Aura still attached to the dying card.
                 .any(|(filter, ctrl)| self.evaluate_requirement_on_card(filter, &card, *ctrl));
+            // Cosmic Intervention — every permanent its controller controls.
+            let exile_instead_by = self
+                .exile_instead_for_controllers_this_turn
+                .iter()
+                .find(|&&(p, _)| p == card.controller)
+                .map(|&(_, src)| src);
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
+                || exile_instead_by.is_some()
                 || self.turn.dies_to_exile_eot.contains(&id)
                 || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
@@ -8183,6 +8191,11 @@ impl GameState {
                 crate::card::Zone::Battlefield,
                 initial_to,
             );
+            if let Some(src) = exile_instead_by
+                && resolved == crate::card::Zone::Exile
+            {
+                self.exiled_instead_by.push((src, id));
+            }
             // CR 702.69 — bump the turn's "permanents put into a graveyard
             // from the battlefield" tally for Gravestorm. Only when the
             // card actually landed in a graveyard (Finality / dies-to-exile
