@@ -2448,6 +2448,21 @@ fn gisa_and_geralf_casts_one_zombie_from_the_graveyard_a_turn() {
     assert!(cast_from_gy(&mut g, b).is_err(), "once each turn");
 }
 
+/// Rooftop Storm's {0} reaches a Zombie cast from the graveyard through Gisa
+/// and Geralf ("Zombie creature spells you cast", any zone): no mana spent.
+#[test]
+fn rooftop_storm_zeroes_a_graveyard_zombie_cast() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gisa_and_geralf());
+    g.add_card_to_battlefield(0, catalog::rooftop_storm());
+    let z = g.add_card_to_graveyard(0, catalog::loyal_subordinate());
+    g.players[0].mana_pool.empty();
+    g.perform_action(GameAction::CastSpell { card_id: z, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("a free graveyard cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(z).is_some());
+}
+
 /// The bot casts from its graveyard through a board permission (Gisa and
 /// Geralf) — it had no block for Muldrotha-style grants at all.
 #[test]

@@ -447,8 +447,7 @@ pub fn ravenous_rotbelly() -> CardDefinition {
 }
 
 /// Rooftop Storm — {5}{U} Enchantment. You may pay {0} rather than the mana
-/// cost for Zombie creature spells you cast. (Residual: from hand or the
-/// command zone.)
+/// cost for Zombie creature spells you cast, from any zone.
 pub fn rooftop_storm() -> CardDefinition {
     CardDefinition {
         name: "Rooftop Storm",

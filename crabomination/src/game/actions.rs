@@ -2894,6 +2894,20 @@ impl crate::game::GameState {
             || self.players[player].emblems.iter().any(|em| em.statics.iter().any(grants))
     }
 
+    /// `StaticEffect::CastFilteredSpellsFree` alone (Rooftop Storm), for a cast
+    /// that isn't from hand — Omniscience's hand-only grant doesn't reach it.
+    pub(crate) fn player_casts_filtered_free(&self, player: usize, card: &crate::card::CardInstance) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::CastFilteredSpellsFree { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, player)
+                    }
+                    _ => false,
+                })
+        })
+    }
+
     /// Conspiracy Unraveler — the smallest collect-evidence amount `player`
     /// can substitute for a spell's mana cost, if they control such a static
     /// and their graveyard can actually pay it.
@@ -10194,6 +10208,14 @@ impl GameState {
         let base_cost = if let (Some(d), Some(room)) = (room_door, card.definition.room.as_deref()) {
             // CR 709.5 — each door is cast for its own cost.
             if d == 1 { room.right.cost.clone() } else { room.left.cost.clone() }
+        } else if self.casting_hop.is_some_and(|(id, _)| id == card.id)
+            && self.player_casts_filtered_free(p, &card)
+        {
+            // Rooftop Storm — "you may pay {0} rather than pay the mana cost
+            // for Zombie creature spells you cast", from anywhere: a graveyard
+            // or library cast (Gisa and Geralf) hops through this path. {0}
+            // is never worse, so it is taken (CR 118.9).
+            crate::mana::ManaCost::default()
         } else {
             match (bestow, card.definition.has_bestow()) {
                 (true, Some(bc)) => bc.clone(),
