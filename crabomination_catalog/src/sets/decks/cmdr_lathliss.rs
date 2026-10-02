@@ -211,7 +211,7 @@ pub fn minion_of_the_mighty() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
-                then: Some(Box::new(Effect::JoinCombatAttacking { what: Selector::LastMoved })),
+                then: Some(Box::new(Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastMoved })),
             },
         }],
         ..creature("Minion of the Mighty", cost(&[r()]), vec![CreatureType::Kobold], 0, 1)

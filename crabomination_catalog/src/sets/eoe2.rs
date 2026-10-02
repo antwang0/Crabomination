@@ -48,7 +48,7 @@ pub fn chorale_of_the_void() -> CardDefinition {
                     ),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 },
-                Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastMoved },
             ]))],
             ..Default::default()
         }),

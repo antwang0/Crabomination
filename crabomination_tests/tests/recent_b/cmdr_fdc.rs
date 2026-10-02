@@ -3906,6 +3906,31 @@ fn cr_701_36_ghired_populates_an_attacking_rhino() {
     assert!(g.attacking.iter().any(|a| a.attacker == copy), "the populated Rhino attacks");
 }
 
+/// CR 508.4 — Ghired's populated Rhino names no defender: in a pod its
+/// controller chooses among the defending players (here the Bears' one).
+#[test]
+fn cr_508_4_ghired_rhino_attacks_the_chosen_defender() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let gh = g.add_card_to_hand(0, catalog::ghired_conclave_exile());
+    cast(&mut g, gh, &[]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gh);
+    g.clear_sickness(bear);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(2))]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: gh, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().rfind(|c| c.definition.name == "Rhino").unwrap().id;
+    assert!(g.attacking.iter().any(|a| a.attacker == copy && a.target == AttackTarget::Player(2)));
+}
+
 /// CR 506.1 — Marisi stops opponents (only) from casting during combat.
 #[test]
 fn cr_506_1_marisi_silences_opponents_in_combat() {

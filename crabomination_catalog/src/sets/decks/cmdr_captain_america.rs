@@ -415,7 +415,7 @@ pub fn jocasta_automaton_avenger() -> CardDefinition {
                             what: Selector::This,
                             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                         },
-                        Effect::JoinCombatAttacking { what: Selector::This },
+                        Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::This },
                     ]),
                 ),
             },

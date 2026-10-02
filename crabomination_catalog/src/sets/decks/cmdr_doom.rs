@@ -731,7 +731,7 @@ pub fn living_laser() -> CardDefinition {
                 legendary: false,
                 extra_keywords: vec![],
             },
-            Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
+            Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
             Effect::ExileLastCreatedTokensAtNextEndStep,
         ]))],
         ..legend("Living Laser", cost(&[generic(4), r()]), vec![CreatureType::Elemental, CreatureType::Villain], 4, 4)
@@ -781,7 +781,7 @@ pub fn loki_the_deceiver() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                 },
-                Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ])),
             TriggeredAbility {

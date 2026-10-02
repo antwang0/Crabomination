@@ -400,7 +400,7 @@ pub fn mirror_style_master() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                 },
-                Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::EndOfCombat,
                     body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),

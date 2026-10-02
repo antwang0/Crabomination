@@ -411,7 +411,7 @@ pub fn interceptor_shadows_hound() -> CardDefinition {
                 mana_cost: cost(&[generic(2), b()]),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Move { what: Selector::This, to: to_battlefield(true) },
-                    Effect::JoinCombatAttacking { what: Selector::This },
+                    Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::This },
                 ])),
                 else_: None,
             },

@@ -672,7 +672,7 @@ pub fn shaun_father_of_synths() -> CardDefinition {
                             legendary: false,
                             extra_keywords: vec![],
                         },
-                        Effect::JoinCombatAttacking { what: Selector::LastCreatedToken },
+                        Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedToken },
                     ]),
                 ),
             },

@@ -123,12 +123,13 @@ the handoff.
   "target player", so it can't hand a permanent to a teammate or back to you.
   Domineering Will sidesteps it with `TargetPlayerThen { filter: Player }`;
   Donate is in the cube, so changing the default moves the two-player pools.
-- **OPEN:** CR 508.4 — only `Effect::JoinCombatAttackingChosen` (Flamerush
-  Rider, Delina) asks which defending player an unnamed "tapped and attacking"
-  creature attacks. Plain `JoinCombatAttacking` still takes the source's
-  defender for every card, including the ones that name none (Hero of
-  Bladehold's Soldiers, Mobilize); moving them is a per-card read of whether
-  the text says "attacking that player", and the cube cards are in it.
+- **FIXED:** CR 508.4 — every catalog `JoinCombatAttacking` whose card names
+  no defender (18: Alesha, Olivia, Calamity, Yore-Tiller, Ghired, Strefan,
+  Nacatl War-Pride, Loki, Shaun, …) is now `JoinCombatAttackingChosen`; the
+  five left on `JoinCombatAttacking` say "attacking that player" (Zara, Echoing
+  Assault, Midnight Crusader Shuttle, Tahngarth, Mardu Siegebreaker). Token
+  mints with their own attack target (`CreateTokenAttacking`, Mobilize,
+  Myriad) are a separate path and were not re-read.
 
 ## FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour
 

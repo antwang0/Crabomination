@@ -34,7 +34,7 @@ pub fn yore_tiller_nephilim() -> CardDefinition {
                     tapped: true,
                 },
             },
-            Effect::JoinCombatAttacking {
+            Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None,
                 what: Selector::LastMoved,
             },
         ]))],

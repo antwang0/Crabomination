@@ -2225,7 +2225,7 @@ pub fn olivia_crimson_bride() -> CardDefinition {
                     tapped: true,
                 },
             },
-            Effect::JoinCombatAttacking {
+            Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None,
                 what: Selector::LastMoved,
             },
         ]))],
@@ -3433,7 +3433,7 @@ pub fn persistent_marshstalker() -> CardDefinition {
                         what: Selector::This,
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                     },
-                    Effect::JoinCombatAttacking { what: Selector::This },
+                    Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::This },
                 ])),
                 else_: None,
             },

@@ -210,7 +210,7 @@ pub fn alesha_who_smiles_at_death() -> CardDefinition {
                         tapped: true,
                     },
                 },
-                Effect::JoinCombatAttacking {
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None,
                     what: Selector::LastMoved,
                 },
             ])),

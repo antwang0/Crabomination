@@ -87,7 +87,7 @@ pub fn ghired_conclave_exile() -> CardDefinition {
             }),
             on_attack(Effect::Seq(vec![
                 populate(),
-                Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
             ])),
         ],
         ..legendary(creature(

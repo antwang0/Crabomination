@@ -184,7 +184,7 @@ pub fn fireflux_squad() -> CardDefinition {
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::BottomRandom,
                 },
-                Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastMoved },
             ])),
         })],
         ..creature("Fireflux Squad", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Soldier], 4, 3)

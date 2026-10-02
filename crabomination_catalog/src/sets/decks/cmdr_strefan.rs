@@ -416,7 +416,7 @@ pub fn strefan_maurer_progenitor() -> CardDefinition {
                     sacrifice_eot: false,
                     return_eot: false,
                     then: Some(Box::new(Effect::Seq(vec![
-                        Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                        Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastMoved },
                         Effect::GrantKeyword {
                             what: Selector::LastMoved,
                             keyword: Keyword::Indestructible,
