@@ -3861,6 +3861,11 @@ pub struct ActivatedAbility {
     /// so there's no pick to make and no chooser is offered.
     #[serde(default)]
     pub exile_other_top: bool,
+    /// When true, `exile_other_filter`'s cards come from **a single
+    /// graveyard** — any player's, not only the activator's ("Exile two
+    /// creature cards from a single graveyard:" — Night Soil).
+    #[serde(default)]
+    pub exile_other_any_graveyard: bool,
     /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
     /// activation's generic mana cost is reduced by one for each counter
     /// of `kind` on the source permanent (clamped at the printed generic

@@ -235,3 +235,21 @@ fn deepfire_elemental_reads_x() {
     activate(&mut g, d, 0, &[Target::Permanent(bear)], Some(2)).expect("X = 2");
     assert!(g.battlefield_find(bear).is_none());
 }
+
+/// Night Soil exiles two creature cards from a *single* graveyard — an
+/// opponent's will do, but not one card from each.
+#[test]
+fn night_soil_exiles_from_any_single_graveyard() {
+    let mut g = main_phase(3);
+    let ns = g.add_card_to_battlefield(0, catalog::night_soil());
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(1, catalog::hill_giant());
+    activate(&mut g, ns, 0, &[], None).expect("activate");
+    assert_eq!(named(&g, 0, "Saproling"), 1);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b), "both from seat 1's");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "its own is untouched");
+    // One creature card in each of two graveyards can't pay.
+    g.add_card_to_graveyard(2, catalog::hill_giant());
+    assert!(activate(&mut g, ns, 0, &[], None).is_err(), "no single graveyard holds two");
+}

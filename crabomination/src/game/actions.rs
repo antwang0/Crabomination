@@ -20318,17 +20318,34 @@ impl GameState {
             } else {
                 filter
             };
-            let candidates: Vec<CardId> = self.players[p]
-                .graveyard
-                .iter()
-                .filter(|c| c.id != card_id)
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| c.id)
-                .collect();
+            let matches_in = |seat: usize| -> Vec<CardId> {
+                self.players[seat]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.id != card_id)
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| c.id)
+                    .collect()
+            };
+            // "From a single graveyard": every live graveyard that can pay is
+            // offered; the picks must share one (checked below), and the
+            // auto-pick takes an opponent's first, in turn order, then yours.
+            let (candidates, auto_seat): (Vec<CardId>, usize) = if ability.exile_other_any_graveyard {
+                let payable: Vec<(usize, Vec<CardId>)> = self
+                    .seats_in_turn_order_from(p)
+                    .into_iter()
+                    .map(|s| (s, matches_in(s)))
+                    .filter(|(_, m)| m.len() >= count)
+                    .collect();
+                let auto_seat = payable.iter().find(|(s, _)| *s != p).or(payable.first()).map_or(p, |(s, _)| *s);
+                (payable.into_iter().flat_map(|(_, m)| m).collect(), auto_seat)
+            } else {
+                (matches_in(p), p)
+            };
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            if ability.exile_other_top {
+            let picks: Vec<CardId> = if ability.exile_other_top {
                 // "Exile the top [filter] card of your graveyard" — the
                 // graveyard is ordered, so the last matches are forced.
                 candidates.iter().rev().copied().take(count).collect()
@@ -20349,11 +20366,18 @@ impl GameState {
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
-                let named = self.graveyard_card_names(p, &candidates);
+                let (named, from) = if ability.exile_other_any_graveyard {
+                    let named = (0..self.players.len())
+                        .flat_map(|s| self.graveyard_card_names(s, &candidates))
+                        .collect();
+                    (named, "a single graveyard")
+                } else {
+                    (self.graveyard_card_names(p, &candidates), "your graveyard")
+                };
                 self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseCards {
                         source: card_id,
-                        prompt: format!("{source_name}: exile {count} cards from your graveyard"),
+                        prompt: format!("{source_name}: exile {count} cards from {from}"),
                         candidates: named,
                         min: count as u32,
                         max: count as u32,
@@ -20371,9 +20395,17 @@ impl GameState {
                     },
                 }));
                 return Ok(());
+            } else if ability.exile_other_any_graveyard {
+                let own: Vec<CardId> = matches_in(auto_seat);
+                self.auto_pick_lowest_cmc_gy(auto_seat, &own, count)
             } else {
                 self.auto_pick_lowest_cmc_gy(p, &candidates, count)
+            };
+            let home = |id: &CardId| self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == *id));
+            if ability.exile_other_any_graveyard && picks.iter().any(|id| home(id) != picks.first().and_then(home)) {
+                return Err(GameError::SelectionRequirementViolated);
             }
+            picks
         } else {
             Vec::new()
         };
@@ -22466,17 +22498,26 @@ impl GameState {
         // from your graveyard` (count 2).
         clear_cold!(self.cost_exiled_cards);
         for other_cid in exile_other_picks {
-            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
+            // Your own graveyard, or — for "a single graveyard" — its owner's.
+            let owner = if self.players[p].graveyard.iter().any(|c| c.id == other_cid) {
+                p
+            } else {
+                match self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == other_cid)) {
+                    Some(o) => o,
+                    None => continue,
+                }
+            };
+            if let Some(card) = Self::take_card(&mut self.players[owner].graveyard, other_cid) {
                 self.exile.push(card);
                 self.cost_exiled_cards.push(other_cid);
                 self.players[p].cards_exiled_this_turn = self.players[p]
                     .cards_exiled_this_turn
                     .saturating_add(1);
                 events.push(GameEvent::CardLeftGraveyard {
-                    player: p,
+                    player: owner,
                     card_id: other_cid,
                 });
-                self.players[p].cards_left_graveyard_this_turn = self.players[p]
+                self.players[owner].cards_left_graveyard_this_turn = self.players[owner]
                     .cards_left_graveyard_this_turn
                     .saturating_add(1);
             }

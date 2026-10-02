@@ -315,13 +315,14 @@ pub fn jar_of_eyeballs() -> CardDefinition {
     }
 }
 
-/// Night Soil — {1}, exile two creature cards from a graveyard: a Saproling.
-/// Residual: your own graveyard.
+/// Night Soil — {1}, exile two creature cards from a single graveyard: a
+/// Saproling.
 pub fn night_soil() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             exile_other_filter: Some((R::Creature, 2)),
+            exile_other_any_graveyard: true,
             effect: make(Value::ONE, saproling()),
             ..Default::default()
         }],
