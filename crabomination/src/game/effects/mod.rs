@@ -15,6 +15,7 @@ mod combat_damage_watch;
 // CR 701.50 — connive on a selected permanent (Kamiz, Change of Plans).
 mod connive;
 mod distribute;
+mod seat_mode;
 mod commander;
 mod attach_choice;
 mod party;
