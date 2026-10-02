@@ -5290,9 +5290,9 @@ pub enum Effect {
     },
     /// "As many times as you choose, you may exile the top card of your
     /// library. If the total mana value of the cards exiled this way is
-    /// `limit` or less, [`then`]" (Dance with Calamity). The controller keeps
-    /// exiling while the running total is below `stop_at` (the engine's stop
-    /// point, not a choice); the cards are recorded for
+    /// `limit` or less, [`then`]" (Dance with Calamity). The controller is
+    /// asked before each card; a headless seat keeps exiling while the total
+    /// is below `stop_at`. The cards are recorded for
     /// `Selector::ExiledThisResolution`.
     ExileTopPushingLuck { stop_at: u32, limit: u32, then: Box<Effect> },
     /// "If a source you control would deal noncombat damage to a permanent or

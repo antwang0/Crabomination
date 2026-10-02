@@ -2208,7 +2208,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
 | 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Verrak, Warped Sengir | Legends' Legacy (DMC) | only a fixed life cost counts as life paid (not X or half your life); the copy keeps its targets. |
-| 🟡 Dance with Calamity | Tinker Time (MOC) | the exiling stops once the total mana value reaches nine (the engine's stop point), not as many times as the controller chooses. |
 | 🟡 Path of the Animist | Tinker Time (MOC) | Will of the Planeswalkers is not voted: outside Planechase planeswalking and chaos do nothing, but "whenever players vote" triggers don't see it. |
 | 🟡 Gimbal, Gremlin Prodigy | Tinker Time (MOC) | the trample grant matches printed card types, so an animated artifact doesn't get it (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |

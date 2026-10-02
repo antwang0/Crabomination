@@ -145,9 +145,27 @@ fn dance_with_calamity_casts_the_exiled_spells() {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
     let dance = g.add_card_to_hand(0, catalog::dance_with_calamity());
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 4]));
+    // Four "exile another?" yeses, then the four free casts.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 8]));
     cast(&mut g, dance, None).expect("cast");
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 4, "eight mana value, all cast");
+}
+
+/// Dance with Calamity exiles "as many times as you choose": stopping after
+/// two leaves the rest in the library.
+#[test]
+fn dance_with_calamity_stops_when_you_choose() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let dance = g.add_card_to_hand(0, catalog::dance_with_calamity());
+    let mut answers = vec![DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)];
+    answers.extend([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]);
+    g.decider = Box::new(ScriptedDecider::new(answers));
+    cast(&mut g, dance, None).expect("cast");
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2);
+    assert_eq!(g.players[0].library.len(), 2);
 }
 
 /// CR 602.2 — Ghirapur Aether Grid taps two artifacts to ping.

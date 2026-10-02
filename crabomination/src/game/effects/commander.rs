@@ -40,24 +40,52 @@ impl GameState {
     /// affinity for artifacts. Keyed, like `pending_spell_discounts`, on the
     /// spells-cast tally so it lapses with the next spell; the count itself is
     /// taken at cast time by `cost_reduction_for_spell`.
-    /// Dance with Calamity — exile `seat`'s top card while the exiled total
-    /// mana value is below `stop_at`; true when that total is `limit` or
-    /// less. `place_card_in_dest` records each card for
+    /// Dance with Calamity — "as many times as you choose, you may exile the
+    /// top card": `seat` is asked before each card (headless: while the total
+    /// is below `stop_at`). True when the exiled total is `limit` or less;
+    /// `None` is a suspend. The asks walk the library by index and the cards
+    /// move after the last, so a re-run replays the answers (Ad Nauseam's
+    /// shape). `place_card_in_dest` records each for
     /// `Selector::ExiledThisResolution`.
     pub(crate) fn exile_top_pushing_luck(
         &mut self,
         seat: usize,
         stop_at: u32,
         limit: u32,
+        source: CardId,
+        effect: &Effect,
         events: &mut Vec<crate::game::types::GameEvent>,
-    ) -> bool {
+    ) -> Option<bool> {
+        let ask = self.seat_prompts(seat) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
         let mut total = 0u32;
-        while total < stop_at && !self.players[seat].library.is_empty() {
+        let mut n = 0usize;
+        let mut cursor = 0;
+        while let Some(card) = self.players[seat].library.get(n) {
+            let mv = card.definition.cost.cmc();
+            let more = if ask {
+                self.ask_seat_bool(
+                    &mut cursor,
+                    seat,
+                    format!("Exile the top card of your library? (exiled so far: mana value {total})"),
+                    source,
+                    effect,
+                    crate::decision::OptionalKind::PushYourLuck { total, limit },
+                )?
+            } else {
+                total < stop_at
+            };
+            if !more {
+                break;
+            }
+            total += mv;
+            n += 1;
+        }
+        self.clear_answer_log();
+        for _ in 0..n {
             let card = self.players[seat].library.remove(0);
-            total += card.definition.cost.cmc();
             self.place_card_in_dest(card, seat, &crate::effect::ZoneDest::Exile, events);
         }
-        total <= limit
+        Some(total <= limit)
     }
 
     /// Bell Borca's note: raise the turn's greatest exiled mana value.

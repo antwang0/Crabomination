@@ -12931,7 +12931,8 @@ impl GameState {
                 Ok(())
             }
             Effect::ExileTopPushingLuck { stop_at, limit, then } => {
-                if self.exile_top_pushing_luck(ctx.controller, *stop_at, *limit, events) {
+                let source = ctx.source.unwrap_or(CardId(0));
+                if self.exile_top_pushing_luck(ctx.controller, *stop_at, *limit, source, effect, events) == Some(true) {
                     self.run_effect(then, ctx, events)?;
                 }
                 Ok(())

@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_gimbal.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Dance with Calamity** — the controller exiles until the total mana
-//!   value reaches nine (the engine's stop point), not as many times as they
-//!   choose.
 //! - **Path of the Animist** — Will of the Planeswalkers is a vote with no
 //!   effect: outside Planechase, planeswalking and chaos do nothing (CR 901).
 //! - **Gimbal** — its trample grant, like every static type filter, reads
@@ -150,9 +147,8 @@ pub fn cutthroat_negotiator() -> CardDefinition {
     }
 }
 
-/// Dance with Calamity — shuffle, exile from the top, and if the total mana
-/// value is 13 or less cast the spells free. Residual: the exiling stops at a
-/// total of nine rather than by choice.
+/// Dance with Calamity — shuffle, exile from the top as many times as you
+/// choose, and if the total mana value is 13 or less cast the spells free.
 pub fn dance_with_calamity() -> CardDefinition {
     CardDefinition {
         name: "Dance with Calamity",

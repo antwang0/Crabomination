@@ -5249,6 +5249,8 @@ pub fn decide_optional_trigger(
             (!last, false)
         }
         K::FreeUpside | K::Neutral => (true, false),
+        // Another card averages ~3 mana value: stop with five to spare.
+        K::PushYourLuck { total, limit } => (total + 5 <= *limit, false),
         // The one stateful family: answered on the bot struct in
         // `next_action`, which tracks the reveals committed so far. A sim
         // reaching it has no series to track, so it declines.
@@ -21448,6 +21450,9 @@ mod tests {
         assert!(!ask(&g, &K::TemptingOffer), "the caster is paid more than the accepter");
         assert!(ask(&g, &K::FreeUpside));
         assert!(ask(&g, &K::Neutral));
+        // Dance with Calamity: another card while it leaves room under 13.
+        assert!(ask(&g, &K::PushYourLuck { total: 8, limit: 13 }));
+        assert!(!ask(&g, &K::PushYourLuck { total: 9, limit: 13 }));
         // Life: the Rhystic-tax buffer, and a thinner one when declining
         // loses the permanent outright.
         let deny = K::PayLife { life: 10, purpose: PayFor::DenyEffect };

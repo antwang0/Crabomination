@@ -200,6 +200,10 @@ pub enum OptionalKind {
     /// Ad Nauseam's per-reveal ask — the one stateful policy, answered on the
     /// bot struct across the series.
     RevealTopLoseLife,
+    /// "As many times as you choose, exile the top card; if the total is
+    /// `limit` or less, …" (Dance with Calamity): `total` is what is already
+    /// exiled. Yes risks going over.
+    PushYourLuck { total: u32, limit: u32 },
 }
 
 impl OptionalKind {
@@ -228,7 +232,8 @@ impl OptionalKind {
             | OptionalKind::FreeUpside
             | OptionalKind::Neutral
             | OptionalKind::TemptingOffer
-            | OptionalKind::PeaceOffer { .. } => false,
+            | OptionalKind::PeaceOffer { .. }
+            | OptionalKind::PushYourLuck { .. } => false,
         }
     }
 }
