@@ -979,6 +979,8 @@ pub enum CounterType {
     Voyage,
     /// Heirloom Mirror's tally toward transforming.
     Ritual,
+    /// Midnight Clock's hour counters — its twelfth wheels your hand.
+    Hour,
 }
 
 /// Every zone a card can occupy.
