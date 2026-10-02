@@ -10167,13 +10167,12 @@ pub enum Effect {
     /// (Elspeth Conquers Death chapter II). Cleared at the controller's
     /// untap step.
     SpellTaxUntilYourNextTurn { amount: u32, filter: SelectionRequirement },
-    /// Cataclysm-family: each resolved player keeps one artifact, one
+    /// Cataclysm-family: each resolved player chooses one artifact, one
     /// creature, one enchantment, and one planeswalker from among the
-    /// nonland permanents they control (auto-pick keeps the highest mana
-    /// value of each) and sacrifices the rest (Ajani, Nacatl Avenger's -4).
+    /// nonland permanents they control and sacrifices the rest (Ajani,
+    /// Nacatl Avenger's -4; `effects/keep_one.rs`).
     /// Tragic Arrogance — as `SacrificeAllButOnePerType` (nonland), but the
-    /// resolving controller chooses for every player: their own best of each
-    /// type is kept, an opponent's weakest (lowest mana value).
+    /// resolving controller chooses for every player.
     SacrificeAllButOnePerTypeYouChoose { who: Selector },
     SacrificeAllButOnePerType {
         who: Selector,

@@ -24056,10 +24056,10 @@ impl GameState {
                 Ok(())
             }
             Effect::SacrificeAllButOnePerType { who, include_land } => {
-                self.resolve_sacrifice_all_but_one_per_type(who, *include_land, false, ctx, events)
+                self.each_player_keeps_one_per_type(who, *include_land, false, ctx, events, effect)
             }
             Effect::SacrificeAllButOnePerTypeYouChoose { who } => {
-                self.resolve_sacrifice_all_but_one_per_type(who, false, true, ctx, events)
+                self.each_player_keeps_one_per_type(who, false, true, ctx, events, effect)
             }
 
             Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
@@ -42336,66 +42336,6 @@ impl GameState {
         Ok(())
     }
 
-    #[inline(never)]
-    fn resolve_sacrifice_all_but_one_per_type(
-        &mut self,
-        who: &crate::effect::Selector,
-        include_land: bool,
-        you_choose: bool,
-        ctx: &EffectContext,
-        events: &mut Vec<GameEvent>,
-    ) -> Result<(), GameError> {
-                use crate::card::CardType;
-                let types: &[CardType] = if include_land {
-                    &[CardType::Artifact, CardType::Creature, CardType::Enchantment, CardType::Land]
-                } else {
-                    &[
-                        CardType::Artifact,
-                        CardType::Creature,
-                        CardType::Enchantment,
-                        CardType::Planeswalker,
-                    ]
-                };
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    let mut keep: Vec<CardId> = Vec::new();
-                    for ty in types {
-                        let pick = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == p
-                                    && (include_land || !c.definition.is_land())
-                                    && c.definition.card_types.contains(ty)
-                                    && !keep.contains(&c.id)
-                            })
-                            // Tragic Arrogance — the resolving controller
-                            // leaves an opponent its weakest of each type.
-                            .max_by_key(|c| {
-                                let mv = c.definition.cost.cmc() as i64;
-                                if you_choose && p != ctx.controller { -mv } else { mv }
-                            })
-                            .map(|c| c.id);
-                        if let Some(id) = pick {
-                            keep.push(id);
-                        }
-                    }
-                    let to_sac: Vec<CardId> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == p
-                                && (include_land || !c.definition.is_land())
-                                && !keep.contains(&c.id)
-                        })
-                        .map(|c| c.id)
-                        .collect();
-                    for id in to_sac {
-                        self.sacrifice_one(id, p, events);
-                    }
-                }
-                Ok(())
-            }
 
 
     #[inline(never)]
