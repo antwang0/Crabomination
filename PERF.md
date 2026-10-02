@@ -3036,6 +3036,13 @@ pod              every deck 1-183 in six-seat blocks (31 blocks): x 200 at seed
                  flood past MAX_BATTLEFIELD, a real board, not a loop) and x 300
                  at seed 25001+ (9,300, all decided); zero panics
 suite            23,703 / 0 / 5 strict
+later tip        4cb539193 (the aura / per-power / chooser batch, and the concurrent
+                 01HLca3f commits): --bench 196,176 byte-identical; cube / sos /
+                 sealed x 300 seed 26001 all decided; 3/4/6/8 seats x 1,000 (seeds
+                 26103-26108) and every deck in six-seat blocks x 300 (27001+,
+                 9,300) all decided; suite 23,727 / 1 / 5 strict — the one red was
+                 printed_type_line_reads_only_shrink (Thundermane's new printed
+                 read, 70/69), fixed in 4cb539193; clippy 0
 ```
 
 ### 2026-10-02 (Commander session `01HLca3f`) — guardrail, no perf work
