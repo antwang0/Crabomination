@@ -17437,6 +17437,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantKeywordThroughControllersNextCombat { what, keyword } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                for cid in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    self.grant_keyword_through_controllers_next_combat(cid, keyword.clone(), source);
+                }
+                Ok(())
+            }
+
             Effect::GrantKeywords { what, keywords, duration } => {
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)

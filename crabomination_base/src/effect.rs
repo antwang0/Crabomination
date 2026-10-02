@@ -7772,6 +7772,10 @@ pub enum Effect {
     /// equal to the entering Dinosaur's power until end of turn).
     SetBasePower { what: Selector, power: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// `what` has `keyword` through its controller's next combat phase —
+    /// "that creature attacks during its controller's next combat phase if
+    /// able" with `MustAttack` (Sizzling Soloist).
+    GrantKeywordThroughControllersNextCombat { what: Selector, keyword: Keyword },
     /// Grant several keywords at once to a single `what` (one target slot).
     /// "Target creature gains flying, double strike, and vigilance until end of
     /// turn" (Case of the Shattered Pact) — cleaner than a `Seq` of separate

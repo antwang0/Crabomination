@@ -17962,6 +17962,33 @@ impl GameState {
         }
     }
 
+    /// Grant `kw` to `cid` through its controller's next combat phase (CR
+    /// 508.1d requirements that name "its controller's next combat"). Begun
+    /// on that player's own turn outside combat, a later combat this turn
+    /// still counts.
+    pub(crate) fn grant_keyword_through_controllers_next_combat(
+        &mut self,
+        cid: CardId,
+        kw: crate::card::Keyword,
+        source: CardId,
+    ) {
+        use crate::game::layers::{AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification};
+        let Some(player) = self.battlefield_find(cid).map(|c| c.controller) else { return };
+        let in_combat = (TurnStep::DeclareAttackers..=TurnStep::EndCombat).contains(&self.step);
+        let this_turn = self.active_player_idx == player && !in_combat;
+        let installed_turn = if this_turn { self.turn_number.saturating_sub(1) } else { self.turn_number };
+        let timestamp = self.next_timestamp();
+        self.add_continuous_effect(ContinuousEffect {
+            timestamp,
+            source,
+            affected: AffectedPermanents::just(cid),
+            layer: Layer::L6Ability,
+            sublayer: None,
+            duration: EffectDuration::ThroughPlayersNextCombat { player, installed_turn },
+            modification: Modification::AddKeyword(kw),
+        });
+    }
+
     /// Allocate a new monotonically-increasing timestamp.
     pub fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
@@ -18216,8 +18243,14 @@ impl GameState {
     /// combat phase"). Invoked from `do_combat_end` once the end-of-
     /// combat step finishes.
     pub fn expire_end_of_combat_effects(&mut self) {
-        self.continuous_effects
-            .retain(|e| e.duration != EffectDuration::UntilEndOfCombat);
+        let (active, turn) = (self.active_player_idx, self.turn_number);
+        self.continuous_effects.retain(|e| match e.duration {
+            EffectDuration::UntilEndOfCombat => false,
+            EffectDuration::ThroughPlayersNextCombat { player, installed_turn } => {
+                !(player == active && turn > installed_turn)
+            }
+            _ => true,
+        });
         self.expire_granted_triggers(|g| g.expiry == EffectDuration::UntilEndOfCombat);
     }
 

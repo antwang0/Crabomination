@@ -46,6 +46,11 @@ pub enum EffectDuration {
     /// CR 611.2b — "until the end of your next turn": expires in the cleanup
     /// step of the recorded player's first turn after `installed_turn`.
     UntilEndOfYourNextTurn { player: usize, installed_turn: u32 },
+    /// "During its controller's next combat phase" (Sizzling Soloist): expires
+    /// as the first combat phase of `player`'s that starts after it began
+    /// ends. `installed_turn` is one back when that combat can still come
+    /// this turn.
+    ThroughPlayersNextCombat { player: usize, installed_turn: u32 },
     /// Expires when the current combat phase ends (CR 511.2 — "Effects
     /// that last 'until end of combat' expire at the end of the combat
     /// phase"). Cleared as the end-of-combat step ends. If the effect

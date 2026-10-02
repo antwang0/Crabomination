@@ -1901,7 +1901,8 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::SetCardTypesTo { what, .. } => sel_has_target(what),
-            Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::GrantKeyword { what, .. }
+            | Effect::GrantKeywordThroughControllersNextCombat { what, .. } => sel_has_target(what),
             Effect::GrantKeywords { what, .. } => sel_has_target(what),
             Effect::AnimateAsCreature { what, .. } => sel_has_target(what),
             Effect::SetBasePower { what, power, .. } => {
@@ -2782,6 +2783,7 @@ impl Effect {
                 _ => None,
             }),
             Effect::GrantKeyword { what, .. }
+            | Effect::GrantKeywordThroughControllersNextCombat { what, .. }
             | Effect::GrantKeywords { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
@@ -3375,7 +3377,8 @@ impl Effect {
             Effect::GainProtectionFromPlayer { .. } | Effect::CantBeBlockedByPlayer { .. } => true,
             // Copying "target token you control" is friendly (Esika's Chariot).
             Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. } => true,
-            Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
+            Effect::GrantKeyword { keyword, .. }
+            | Effect::GrantKeywordThroughControllersNextCombat { keyword, .. } => Self::keyword_is_friendly(keyword),
             Effect::GrantKeywords { keywords, .. } => {
                 keywords.iter().any(Self::keyword_is_friendly)
             }
@@ -3927,7 +3930,8 @@ impl Effect {
                 };
                 format!("create {count_word}{pt} {pluralised}{kw}")
             }
-            Effect::GrantKeyword { keyword, .. } => {
+            Effect::GrantKeyword { keyword, .. }
+            | Effect::GrantKeywordThroughControllersNextCombat { keyword, .. } => {
                 format!("grant {}", format!("{keyword:?}").to_lowercase())
             }
             Effect::GrantKeywords { keywords, .. } => {
@@ -4387,6 +4391,7 @@ impl Effect {
             | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
             | Effect::GrantKeyword { .. }
+            | Effect::GrantKeywordThroughControllersNextCombat { .. }
             | Effect::GrantKeywords { .. }
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
@@ -5249,6 +5254,7 @@ impl Effect {
                     })
                 }
                 Effect::GrantKeyword { what, .. }
+                | Effect::GrantKeywordThroughControllersNextCombat { what, .. }
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
