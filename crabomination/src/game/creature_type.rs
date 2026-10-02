@@ -12,16 +12,16 @@ impl GameState {
     /// use inside the layer gather (it may compute the layer view).
     pub(crate) fn permanent_has_creature_type(&self, cid: CardId, ct: CreatureType) -> bool {
         let Some(c) = self.battlefield_find(cid) else { return false };
-        if self.permanent_is_changeling(c) {
-            return true;
-        }
         if !self.creature_type_change_in_scope() {
-            return c.definition.subtypes.creature_types.contains(&ct);
+            return self.permanent_is_changeling(c) || c.definition.subtypes.creature_types.contains(&ct);
         }
-        self.computed_permanent_on(c).map_or_else(
-            || c.definition.subtypes.creature_types.contains(&ct),
-            |cp| cp.subtypes().creature_types.contains(&ct),
-        )
+        // CR 613.1d — a later layer-4 "set" (Curse of Conformity) overrides
+        // changeling's every-type CDA.
+        match self.computed_permanent_on(c) {
+            Some(cp) if cp.creature_types_set => cp.subtypes().creature_types.contains(&ct),
+            Some(cp) => self.permanent_is_changeling(c) || cp.subtypes().creature_types.contains(&ct),
+            None => self.permanent_is_changeling(c) || c.definition.subtypes.creature_types.contains(&ct),
+        }
     }
 
     /// CR 702.73a — changeling, printed or granted by a layer-6 effect (an

@@ -882,6 +882,10 @@ pub struct ComputedPermanent {
     /// abilities, not just keywords. Defaults to false so pre-push snapshots
     /// keep their existing behavior.
     pub lost_all_abilities: bool,
+    /// CR 702.73a / 613.1d — a layer-4 effect set this permanent's creature
+    /// types (Curse of Conformity's "lose all creature types"), which
+    /// overrides changeling's characteristic-defining "every type".
+    pub creature_types_set: bool,
 }
 
 impl ComputedPermanent {
@@ -925,6 +929,7 @@ impl std::fmt::Debug for ComputedPermanent {
             .field("power", &self.power)
             .field("toughness", &self.toughness)
             .field("lost_all_abilities", &self.lost_all_abilities)
+            .field("creature_types_set", &self.creature_types_set)
             .finish()
     }
 }
@@ -1045,7 +1050,7 @@ fn compute_permanent_gated(
     if gates.power || has_type_gated || has_card_type_gated {
         return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated);
     }
-    compute_permanent_pass(card, effects, None, None, None)
+    compute_permanent_pass(card, effects, None, None, None, true)
 }
 
 /// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
@@ -1061,10 +1066,19 @@ fn compute_permanent_second_pass(
     has_type_gated: bool,
     has_card_type_gated: bool,
 ) -> ComputedPermanent {
-    let pass1 = compute_permanent_pass(card, effects, None, None, None);
+    let pass1 = compute_permanent_pass(card, effects, None, None, None, true);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     let gate_card_types = has_card_type_gated.then(|| pass1.card_types().clone());
-    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref(), gate_card_types.as_deref())
+    // CR 613.1d — a layer-4 "set creature types" overrides changeling's CDA,
+    // so the type-gated re-run stops reading the keyword as every type.
+    compute_permanent_pass(
+        card,
+        effects,
+        Some(pass1.power),
+        gate_types.as_deref(),
+        gate_card_types.as_deref(),
+        !pass1.creature_types_set,
+    )
 }
 
 fn compute_permanent_pass(
@@ -1073,6 +1087,7 @@ fn compute_permanent_pass(
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
+    changeling_types: bool,
 ) -> ComputedPermanent {
     // Start from the base card definition — borrowed, not cloned: each of
     // these materializes only if a layer below actually writes to it.
@@ -1198,6 +1213,7 @@ fn compute_permanent_pass(
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
     let mut lost_all_abilities = false;
+    let mut creature_types_set = false;
     let mut cant_have_keywords: Vec<Keyword> = Vec::new();
 
     // Sort effects by layer, then sublayer, then timestamp — but only build
@@ -1238,7 +1254,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, effects, card, gate_power, gate_types, gate_card_types) {
+            if affects(e, effects, card, gate_power, gate_types, gate_card_types, changeling_types) {
                 sorted.push(e);
             }
         }
@@ -1296,7 +1312,10 @@ fn compute_permanent_pass(
                     subtypes.creature_types.push(*ct);
                 }
             }
-            Modification::SetCreatureTypes(cts) => subtypes.creature_types = cts.clone(),
+            Modification::SetCreatureTypes(cts) => {
+                subtypes.creature_types = cts.clone();
+                creature_types_set = true;
+            }
             Modification::AddLandType(lt) => {
                 if !subtypes.land_types.contains(lt) {
                     subtypes.land_types.push(*lt);
@@ -1461,6 +1480,7 @@ fn compute_permanent_pass(
         power,
         toughness,
         lost_all_abilities,
+        creature_types_set,
     }
 }
 
@@ -1484,6 +1504,7 @@ fn affects(
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
+    changeling_types: bool,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
     // had there in every later layer, and that set was fixed before layer 4
@@ -1507,7 +1528,7 @@ fn affects(
         }
         _ => gate_card_types,
     };
-    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types, gate_card_types)
+    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types, gate_card_types, changeling_types)
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -1524,7 +1545,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power), None, None)
+    affected_includes_gated(affected, source, card, Some(printed_power), None, None, true)
 }
 
 fn affected_includes_gated(
@@ -1538,6 +1559,9 @@ fn affected_includes_gated(
     // CR 613.8 — the computed card types (pass 2 when a layer-4 type change
     // meets a type-filtered set). `None` falls back to printed types.
     gate_card_types: Option<&[CardType]>,
+    // Changeling still reads as every creature type (false once a layer-4
+    // effect set the types, CR 613.1d).
+    changeling_types: bool,
 ) -> bool {
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
     match affected {
@@ -1601,7 +1625,7 @@ fn affected_includes_gated(
                         Some(types) => types.contains(ct),
                         None => card.definition.subtypes.creature_types.contains(ct),
                     };
-                    typed || card.has_keyword(&Keyword::Changeling)
+                    typed || changeling_types && card.has_keyword(&Keyword::Changeling)
                 })
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
@@ -1617,7 +1641,7 @@ fn affected_includes_gated(
                     None => {
                         card.definition.subtypes.creature_types.contains(creature_type)
                     }
-                } || card.has_keyword(&Keyword::Changeling))
+                } || changeling_types && card.has_keyword(&Keyword::Changeling))
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
             controller.is_none_or(|c| c == card.controller)
