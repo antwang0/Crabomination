@@ -1437,9 +1437,10 @@ mod tests {
     /// saturation `EvalWeights::pod_share_leaf` documents).
     #[test]
     fn pod_share_leaf_is_the_old_squash_in_a_duel_and_a_fair_share_in_a_pod() {
+        let sum = EvalWeights::pod_share_eval_off();
         let (old, share) = (
-            MctsBot::new(MctsConfig::default()),
-            MctsBot::new(MctsConfig { weights: EvalWeights::pod_share_leaf_on(30), ..MctsConfig::default() }),
+            MctsBot::new(MctsConfig { weights: sum, ..MctsConfig::default() }),
+            MctsBot::new(MctsConfig { weights: EvalWeights { pod_share_leaf: 30, ..sum }, ..MctsConfig::default() }),
         );
         let mut duel = crate::game::two_player_game();
         duel.add_card_to_battlefield(0, creature("Ox", 3, 3));

@@ -282,10 +282,14 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "podkw100" => Some(Pilot::Scored(EvalWeights::pod_keywords_on(100))),
         // Pod positions evaluated as a share of the table (a soft maximum
         // of the opponents' material, not their sum) at temperature 15 / 30
-        // / 60. A pod question: `--commander --a podshare30 --b dflt`.
+        // / 60 — round 80's arms, read against the pre-adoption default.
         "podshare15" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(15))),
         "podshare30" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(30))),
         "podshare60" => Some(Pilot::Scored(EvalWeights::pod_share_eval_on(60))),
+        // The default with pod positions back on material less the table's
+        // sum (`pod_share_eval` adopted at T = 60 in round 80):
+        // `--commander --a dflt --b podshare-off`.
+        "podshare-off" => Some(Pilot::Scored(EvalWeights::pod_share_eval_off())),
         // The attack chain (round 55): grow the declaration one creature
         // at a time from "nobody", each step priced by the attack sim,
         // and offer the finished set beside the holdback menu. Gate as A

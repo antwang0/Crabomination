@@ -74,6 +74,12 @@
 #   points at both; none passing -> left off, recorded. (`pod_horizon` was
 #   adopted at ~10 % longer pods; `leader0` / `leader25` left off at
 #   40-57 % / 20-22 %.)
+#
+# STAGE census READ (2026-10-02, 21:48): every seat on podshare60 vs every
+#   seat on dflt — turns -1.4 % (four seats) / +0.0 % (six), undecided
+#   +0.00 / +0.01 points -> passes; `pod_share_eval: 60` ADOPTED on the
+#   default. (podshare30 +0.6 % / +2.1 %; the podshare15 cells were not
+#   needed by the rule.)
 set -u
 cd "$(dirname "$0")/.."
 LADDER=${LADDER:-.ladder/r80/bot_ladder_r80}

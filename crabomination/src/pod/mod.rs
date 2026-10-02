@@ -2824,10 +2824,21 @@ mod tests {
         // sweep. Seeds 43 (0 → 3) and 4242 (3 → 1) change winner; aggregate
         // within noise (seed 9301, every deck in 4- and 6-seat blocks, 4,600
         // / 3,100 games, all decided: 42.28 → 42.25 / 66.19 → 66.14 turns).
+        // Re-blessed 2026-10-02 (`EvalWeights::pod_share_eval` adopted at
+        // T = 60, round 80: a pod position is the seat's share of the table,
+        // not its material less the table's sum; reverting the default to 0
+        // alone restores the rows above): 0xC0FFEE seat 1 → seat 2, 61→54
+        // turns; 43 71→65, same winner; 4242 seat 1 → seat 0, 91→187 turns
+        // (a tail game — `podshare-off`'s own four-seat block below runs to
+        // 144). Aggregate, `bot_ladder --commander`, 2,000 games at seed
+        // 9991, `podshare-off` / `dflt`: 40.63/40.52, 60.44/61.91,
+        // 82.80/81.82 turns at 3/4/6 seats, every block 2,000/2,000 decided,
+        // longest 87/91, 144/154, 173/164 turns; `--bench` counters
+        // byte-identical (duels run the old difference).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 61, 2875),
-            (43, Some(3), 71, 3504),
-            (4242, Some(1), 91, 4481),
+            (0xC0FFEE, Some(2), 54, 2491),
+            (43, Some(3), 65, 3087),
+            (4242, Some(0), 187, 9938),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

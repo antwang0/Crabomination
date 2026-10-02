@@ -1188,6 +1188,11 @@ pub struct EvalWeights {
     /// then worth a third of developing oneself, not as much; hurting the
     /// leader is worth the most. Moves every scored pick in a pod and,
     /// through `eval_material_for_mcts`, the search's leaf. 0 = off.
+    ///
+    /// On by default at T = 60 since 2026-10-02 (round 80): one seat on it
+    /// among the old default read 1.070x its due share at four seats and
+    /// 1.035x at six, and every seat on it left pod length and stalls
+    /// unchanged. Control [`pod_share_eval_off`](Self::pod_share_eval_off).
     pub pod_share_eval: u16,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
@@ -2738,8 +2743,28 @@ impl EvalWeights {
             // [`pod_horizon_off`](Self::pod_horizon_off), profile
             // `podhorizon-off`.
             pod_horizon: true,
+            // 2026-10-02 (round 80): a pod position is the seat's share of
+            // the table at T = 60, not its material less the table's sum.
+            // Pod A/B (`--commander --a podshare60 --b dflt`, 12 fields x
+            // 2,000 / 1,800 games, seeds 11000+ / 12000+): four seats
+            // 1.070x [1.054, 1.087], six 1.035x [1.011, 1.059]; T = 15 / 30
+            // read the same within ±0.4 points. Every seat on it (the
+            // pre-registered census): pods -1.4 % / +0.0 % turns at four /
+            // six seats, undecided +0.00 / +0.01 points. Duels untouched
+            // (one hostile seat runs the old difference). Control:
+            // [`pod_share_eval_off`](Self::pod_share_eval_off), profile
+            // `podshare-off`.
+            pod_share_eval: 60,
             ..Self::round56_default()
         }
+    }
+
+    /// The default with pod positions back on material less the table's
+    /// sum — the control for [`pod_share_eval`](Self::pod_share_eval)
+    /// (profile `podshare-off`; a pod question: `--commander --a dflt --b
+    /// podshare-off`).
+    pub const fn pod_share_eval_off() -> Self {
+        Self { pod_share_eval: 0, ..Self::default_const() }
     }
 
 
@@ -22571,7 +22596,7 @@ mod tests {
     /// same (each leaves two Giants across the table).
     #[test]
     fn pod_share_eval_is_the_duel_difference_and_weighs_the_leader() {
-        let (share, sum) = (EvalWeights::pod_share_eval_on(30), EvalWeights::default());
+        let (share, sum) = (EvalWeights::pod_share_eval_on(30), EvalWeights::pod_share_eval_off());
         let mut duel = two_player_game();
         duel.add_card_to_battlefield(0, catalog::grizzly_bears());
         duel.add_card_to_battlefield(1, catalog::hill_giant());
