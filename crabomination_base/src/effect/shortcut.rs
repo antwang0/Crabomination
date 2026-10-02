@@ -231,7 +231,10 @@ pub fn animate_land_until_eot(
 /// "nonblack creature" removal and color-counting.
 pub fn colored_animation(animate: Effect, colors: &[crate::mana::Color]) -> Effect {
     let Effect::BecomeCreature { what, duration, .. } = &animate else {
-        panic!("colored_animation wraps an Effect::BecomeCreature");
+        // A catalog mistake, not a game state: keep the animation unpainted
+        // (a release build) rather than abort the catalog load.
+        debug_assert!(false, "colored_animation wraps an Effect::BecomeCreature");
+        return animate;
     };
     let paint = Effect::BecomeColor {
         what: what.clone(),
