@@ -38,7 +38,6 @@ they call a deck 🟡, the table wins.
 |---|---|---|
 | 3 | Hanna (UW) | 2: kozileks_command, phelia_exuberant_shepherd |
 | 6 | Edgar Markov (BRW) | 3: drana_and_linvala, necropotence, new_blood |
-| 8 | Zellix + Background (UR) | 1: passionate_archaeologist |
 | 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
 | 12 | N'ghathrod (UB) | 2: aboleth_spawn, grell_philosopher |
 | 13 | Clavileño (WB) | 1: new_blood |
@@ -50,40 +49,36 @@ they call a deck 🟡, the table wins.
 | 27 | Freyalise C14 (G) | 1: siege_behemoth |
 | 28 | Bello (RG) | 2: evercoat_ursine, grothama_all_devouring |
 | 29 | Gisa and Geralf (UB) | 2: havengul_lich, lazotep_plating |
-| 31 | Disa (BRG) | 2: maskwood_nexus, ziatora_the_incinerator |
 | 36 | Strefan, Maurer Progenitor (BR) | 1: bloodlord_of_vaasgoth |
-| 39 | Adrix and Nev (GU) | 2: esix_fractal_bloom, primal_empathy |
+| 39 | Adrix and Nev (GU) | 1: esix_fractal_bloom |
 | 42 | Teferi, Temporal Archmage (U) | 1: domineering_will |
-| 50 | Temmet, Naktamun's Will (WUB) | 4: lost_monarch_of_ifnir, maskwood_nexus, the_scarab_god, vizier_of_many_faces |
+| 50 | Temmet, Naktamun's Will (WUB) | 3: lost_monarch_of_ifnir, the_scarab_god, vizier_of_many_faces |
 | 51 | Yidris, Maelstrom Wielder (UBRG) | 1: aeon_chronicler |
 | 52 | Arahbo, Roar of the World (GW) | 1: nazahn_revered_bladesmith |
 | 56 | Ghired, Conclave Exile (RGW) | 1: flamerush_rider |
 | 58 | The Mimeoplasm (BGU) | 2: svogthos_the_restless_tomb, the_mimeoplasm |
 | 62 | Riku of Two Reflections (GUR) | 2: intet_the_dreamer, ray_of_command |
-| 63 | Rin and Seri, Inseparable (RGW) | 5: highcliff_felidar, jinnie_fay_jetmirs_second, maskwood_nexus, pack_leader, showdown_of_the_skalds |
+| 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
 | 66 | Inalla, Archmage Ritualist (UBR) | 5: havengul_lich, magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 69 | Urza, Chief Artificer (WUB) | 2: sanwell_avenger_ace, scholar_of_new_horizons |
 | 70 | Ranar the Ever-Watchful (WU) | 2: cosmic_intervention, sage_of_the_beyond |
-| 72 | Faldorn, Dread Wolf Herald (RG) | 5: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee, passionate_archaeologist |
+| 72 | Faldorn, Dread Wolf Herald (RG) | 4: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee |
 | 73 | Wilhelt, the Rotcleaver (UB) | 1: rooftop_storm |
 | 74 | Bright-Palm, Soul Awakener (RGW) | 2: flamerush_rider, strionic_resonator |
-| 75 | Hazel of the Rootbloom (BG) | 5: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, maskwood_nexus, sword_of_the_squeak |
+| 75 | Hazel of the Rootbloom (BG) | 4: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, sword_of_the_squeak |
 | 76 | Saheeli, the Gifted (UR) | 1: tawnos_urzas_apprentice |
 | 77 | Winter, Cynical Opportunist (BG) | 4: cemetery_tampering, into_the_pit, old_stickfingers, winter_cynical_opportunist |
 | 78 | Willowdusk, Essence Seer (BG) | 2: revival_experiment, suffer_the_past |
 | 79 | Hearthhull, the Worldseed (BRG) | 5: eumidian_wastewaker, evendo_brushrazer, loamcrafter_faun, moraug_fury_of_akoum, planetary_annihilation |
 | 80 | Lord Windgrace (BRG) | 1: emissary_of_grudges |
-| 81 | Derevi, Empyrial Tactician (GWU) | 1: curse_of_inertia |
 | 83 | Mishra, Eminent One (UBR) | 6: ashnod_the_uncaring, lithoform_engine, mishra_eminent_one, smelting_vat, strionic_resonator, workshop_elders |
 | 84 | Gimbal, Gremlin Prodigy (GUR) | 2: dance_with_calamity, workshop_elders |
 | 85 | Dihada, Binder of Wills (RWB) | 3: bell_borca_spectral_sergeant, the_peregrine_dynamo, verrak_warped_sengir |
 | 86 | Dina, Essence Brewer (BG) | 4: deadly_brew, gorma_the_gullet, stensian_sanguinist, witherbloom_command |
 | 88 | Marath, Will of the Wild (RGW) | 3: fiery_justice, magus_of_the_arena, naya_soulbeast |
-| 89 | Jeleva, Nephalia's Scourge (UBR) | 1: curse_of_inertia |
 | 90 | Breena, the Demagogue (WB) | 4: bold_plagiarist, guardian_archon, nils_discipline_enforcer, victory_chimes |
 | 91 | Commodore Guff (URW) | 5: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation, sparkshaper_visionary, vronos_masked_inquisitor |
-| 92 | Go-Shintai of Life's Origin (WUBRG) | 2: maskwood_nexus, plaza_of_harmony |
 | 93 | Nelly Borca, Impulsive Accuser (RW) | 1: feather_radiant_arbiter |
 | 94 | Zinnia, Valley's Voice (URW) | 3: combat_celebrant, rose_room_treasurer, zinnia_valleys_voice |
 | 95 | Lathliss, Dragon Queen (R) | 1: thundermane_dragon |
@@ -103,31 +98,30 @@ they call a deck 🟡, the table wins.
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 110 | Jared Carthalion (WUBRG) | 2: knight_of_new_alara, unite_the_coalition |
 | 111 | Jirina Kudro (RWB) | 2: odric_master_tactician, sanctuary_blade |
-| 112 | Zaffai, Thunder Conductor (UR) | 5: apex_of_power, dazzling_sphinx, muse_vortex, radiant_performer, zaffai_thunder_conductor |
+| 112 | Zaffai, Thunder Conductor (UR) | 4: apex_of_power, muse_vortex, radiant_performer, zaffai_thunder_conductor |
 | 113 | Zurgo Stormrender (RWB) | 1: gix_yawgmoth_praetor |
 | 114 | Aminatou, the Fateshifter (WUB) | 3: aminatous_augury, portent, primordial_mist |
 | 115 | Rootha, Mastering the Moment (UR) | 2: abstract_performance, dance_with_calamity |
-| 116 | Olivia, Opulent Outlaw (RWB) | 1: vihaan_goldwaker |
-| 117 | Kalamax, the Stormsire (GUR) | 4: deflecting_swat, haldan_avid_arcanist, lavabrink_floodgates, primal_empathy |
+| 117 | Kalamax, the Stormsire (GUR) | 3: deflecting_swat, haldan_avid_arcanist, lavabrink_floodgates |
 | 118 | Aminatou, Veil Piercer (WUB) | 10: aminatous_augury, arvinox_the_mind_flail, athreos_shroud_veiled, fear_of_sleep_paralysis, mirrormade, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
 | 119 | Otrimi, the Ever-Playful (BGU) | 4: capricopian, manascape_refractor, mindleecher, vastwood_hydra |
-| 120 | Leinore, Autumn Sovereign (GW) | 6: celestial_judgment, curse_of_conformity, moonsilver_key, odric_master_tactician, sigardas_vanguard, sigardian_zealot |
+| 120 | Leinore, Autumn Sovereign (GW) | 5: celestial_judgment, moonsilver_key, odric_master_tactician, sigardas_vanguard, sigardian_zealot |
 | 121 | Sidar Jabari of Zhalfir (WUB) | 3: aryel_knight_of_windgrace, path_of_the_enigma, syr_elenora_the_discerning |
 | 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
 | 123 | Yuma, Proud Protector (RGW) | 2: cataclysmic_prospecting, dune_chanter |
 | 124 | Millicent, Restless Revenant (WU) | 2: haunting_imitation, spectral_arcanist |
 | 125 | Henzie "Toolbox" Torre (BRG) | 7: first_responder, henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
-| 126 | Oloro, Ageless Ascetic (WUB) | 4: curse_of_inertia, lim_duls_vault, order_of_succession, springjack_pasture |
+| 126 | Oloro, Ageless Ascetic (WUB) | 3: lim_duls_vault, order_of_succession, springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 3: ao_the_dawn_sky, conspiracy_theorist, quintorius_loremaster |
 | 128 | Gavi, Nest Warden (URW) | 3: akim_the_soaring_wind, crystalline_resonance, nimble_obstructionist |
-| 129 | Gonti, Canny Acquisitor (BGU) | 7: bladegriff_prototype, dazzling_sphinx, extract_brain, nashi_moon_sages_scion, sage_of_the_beyond, siphon_insight, the_mimeoplasm |
+| 129 | Gonti, Canny Acquisitor (BGU) | 6: bladegriff_prototype, extract_brain, nashi_moon_sages_scion, sage_of_the_beyond, siphon_insight, the_mimeoplasm |
 | 130 | Prossh, Skyraider of Kher (BRG) | 3: night_soil, sudden_demise, widespread_panic |
-| 131 | Morophon, the Boundless (WUBRG) | 5: harper_recruiter, maskwood_nexus, moritte_of_the_frost, stick_together, unsettled_mariner |
+| 131 | Morophon, the Boundless (WUBRG) | 4: harper_recruiter, moritte_of_the_frost, stick_together, unsettled_mariner |
 | 132 | Sefris of the Hidden Ways (WUB) | 7: clay_golem, component_pouch, extract_brain, grave_endeavor, nihiloor, phantom_steed, rod_of_absorption |
 | 133 | Zimone, Mystery Unraveler (GU) | 5: deathmist_raptor, disorienting_choice, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
 | 134 | Morska, Undersea Sleuth (GWU) | 2: erdwal_illuminator, esix_fractal_bloom |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
-| 136 | Nalia de'Arnise (WB) | 4: glorious_protector, harper_recruiter, maskwood_nexus, stick_together |
+| 136 | Nalia de'Arnise (WB) | 3: glorious_protector, harper_recruiter, stick_together |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
 | 138 | Saheeli, Radiant Creator (GUR) | 2: aetherflux_conduit, druid_of_purification |
 | 139 | Inspirit, Flagship Vessel (URW) | 4: cloud_key, moxite_refinery, resourceful_defense, ripples_of_potential |
@@ -137,7 +131,7 @@ they call a deck 🟡, the table wins.
 | 143 | Kamiz, Obscura Oculus (WUB) | 2: oskar_rubbish_reclaimer, strionic_resonator |
 | 144 | Satya, Aetherflux Genius (URW) | 5: filigree_racer, hourglass_of_the_lost, overclocked_electromancer, razorfield_ripper, sphinx_of_the_revelation |
 | 145 | Hakbal of the Surging Soul (GU) | 4: bygone_marvels, quandrix_command, ripples_of_potential, xolatoyac_the_smiling_flood |
-| 146 | Perrie, the Pulverizer (GWU) | 8: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, primal_empathy, resourceful_defense, skyship_plunderer, slippery_bogbonder |
+| 146 | Perrie, the Pulverizer (GWU) | 7: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, resourceful_defense, skyship_plunderer, slippery_bogbonder |
 | 147 | Éowyn, Shieldmaiden (URW) | 2: combat_celebrant, flamerush_rider |
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
 | 149 | Felothar the Steadfast (WBG) | 3: baldin_century_herdmaster, betor_ancestors_voice, tip_the_scales |
@@ -159,7 +153,6 @@ they call a deck 🟡, the table wins.
 | 168 | Esika, God of the Tree (WUBRG) | 2: ludevic_necrogenius, valakut_awakening |
 | 169 | Dr. Madison Li (URW) | 5: c_a_m_p, endurance_bobblehead, expert_level_safe, plasma_caster, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
-| 171 | Invisible Woman (WURG) | 1: mister_fantastic |
 | 172 | Inquisitor Greyfax (WUB) | 4: callidus_assassin, cybernetica_datasmith, inquisitor_eisenhorn, neyam_shai_murad |
 | 173 | Dogmeat, Ever Loyal (RGW) | 6: agility_bobblehead, brotherhood_outcast, inventory_management, mantle_of_the_ancients, perception_bobblehead, vault_101_birthday_party |
 | 174 | Captain America, Team Leader (URW) | 5: captain_marvel_apex_avenger, heroic_return, heroic_sacrifice, scarlet_witch_chaotic_avenger, winter_soldier_reborn_avenger |
@@ -172,6 +165,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+54 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 47 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

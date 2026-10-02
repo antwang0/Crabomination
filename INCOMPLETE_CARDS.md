@@ -1964,7 +1964,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
-| 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
+| 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacker aims (`trigger_target_chooser`), but the direction is always the flip (untap a tapped permanent, tap an untapped one). |
 | 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
@@ -2023,7 +2023,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sanctuary Blade | Ruthless Regiment (C20) | the colour is chosen by a trigger as it becomes attached (not a replacement), so protection starts once that trigger resolves. |
 | 🟡 Odric, Master Tactician | Ruthless Regiment (C20) | you choose blocks for the rest of the turn, not only this combat (differs only with an extra combat). |
 | 🟡 Dire Fleet Ravager | Most Wanted (OTC) | the players lose their thirds one after another (each reads only its own life, so the totals match). |
-| 🟡 Vihaan, Goldwaker | Most Wanted (OTC) | the vigilance/haste grant's outlaw filter reads printed types, so animated Treasure Assassins don't get them (they are outlaws for every other reader). |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
 | 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
@@ -2192,7 +2191,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
-| 🟡 Tawnos, Urza's Apprentice | Exquisite Invention (C18) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
+| 🟡 Tawnos, Urza's Apprentice | Exquisite Invention (C18) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
 | 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
@@ -2228,7 +2227,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sparkshaper Visionary | Planeswalker Party (CMM) | all or none of your planeswalkers become Birds; they keep their colours and lack the scry trigger. |
 | 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
-| 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
+| 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Verrak, Warped Sengir | Legends' Legacy (DMC) | only a fixed life cost counts as life paid (not X or half your life); the copy keeps its targets. |
 | 🟡 Dance with Calamity | Tinker Time (MOC) | the exiling stops once the total mana value reaches nine (the engine's stop point), not as many times as the controller chooses. |
 | 🟡 Path of the Animist | Tinker Time (MOC) | Will of the Planeswalkers is not voted: outside Planechase planeswalking and chaos do nothing, but "whenever players vote" triggers don't see it. |
@@ -2236,7 +2235,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
 | 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
-| 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the ability copy is Strionic Resonator's: the target is the ability's source permanent, and the copy keeps its targets. |
+| 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
@@ -2311,7 +2310,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
 | 🟡 Scarlet Witch, Chaotic Avenger | Avengers Assemble (MSC) | the two cards are exiled face up. |
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
-| 🟡 Mister Fantastic | The Fantastic Four (MSC) | the copies keep the original's targets, and an activated ability of yours is a legal target too. |
+| 🟡 Mister Fantastic | The Fantastic Four (MSC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
