@@ -10,11 +10,9 @@ use crate::mana::{Color, b, cost, g, generic, hybrid};
 /// Svogthos, the Restless Tomb — Land. {T}: Add {C}. {3}{B}{G}: Until end of
 /// turn, this land becomes a black and green Plant Zombie creature whose power
 /// and toughness each equal the number of creature cards in your graveyard.
-/// It's still a land. Approximation: the printed P/T is a characteristic-
-/// defining ability; here the count is read once, as the ability resolves
-/// (`BecomeCreature` sets a fixed P/T), so a creature card hitting your
-/// graveyard later that turn doesn't grow it.
+/// It's still a land. The P/T is `SetBasePtLive`: it keeps counting.
 pub fn svogthos_the_restless_tomb() -> CardDefinition {
+    let gy = || Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature };
     CardDefinition {
         name: "Svogthos, the Restless Tomb",
         card_types: vec![CardType::Land],
@@ -29,20 +27,22 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), b(), g()]),
-                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::CardsInGraveyardMatching {
-                        who: PlayerRef::You,
-                        filter: R::Creature,
+                effect: Effect::Seq(vec![
+                    crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(0),
+                        toughness: Value::Const(0),
+                        creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    }, &[crate::mana::Color::Black, crate::mana::Color::Green]),
+                    Effect::SetBasePtLive {
+                        what: Selector::This,
+                        power: gy(),
+                        toughness: gy(),
+                        duration: Duration::EndOfTurn,
                     },
-                    toughness: Value::CardsInGraveyardMatching {
-                        who: PlayerRef::You,
-                        filter: R::Creature,
-                    },
-                    creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
-                    keywords: vec![],
-                    duration: Duration::EndOfTurn,
-                }, &[crate::mana::Color::Black, crate::mana::Color::Green]),
+                ]),
                 ..Default::default()
             },
         ],

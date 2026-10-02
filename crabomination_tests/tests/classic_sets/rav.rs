@@ -1812,6 +1812,26 @@ fn svogthos_animates_to_graveyard_creatures() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
     assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (2, 2), "two creature cards in gy");
+    // CR 613.4b — the set keeps counting: a third creature card grows it, an
+    // opponent's doesn't.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let cp = g.computed_permanent(tomb).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    // A later 7b set wins by timestamp (CR 613.7).
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &crabomination::effect::Effect::SetBasePT {
+            what: crabomination::effect::Selector::ExactObjects(vec![tomb]),
+            power: crabomination::effect::Value::Const(1),
+            toughness: crabomination::effect::Value::Const(1),
+            duration: crabomination::effect::Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    let cp = g.computed_permanent(tomb).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
 }
 
 /// Shadow of Doubt stops searches this turn (a fetch finds nothing) and draws.
