@@ -6262,6 +6262,7 @@ impl GameState {
                     self.players[p].cast_from_library_top_this_turn = true;
                 }
                 self.stamp_library_top_equipment_attach(p, card_id);
+                self.stamp_library_top_haste(p, card_id);
             }
             // Into the Pit's additional cost, paid as the cast completes.
             if let (Ok(evs), Some((src, filter))) = (&r, sac) {
@@ -6619,6 +6620,31 @@ impl GameState {
             {
                 card.attach_on_entry = true;
             }
+        }
+    }
+
+    /// Thundermane Dragon — a creature spell just cast off the library top
+    /// gains haste as it enters while `p` controls a `LibraryTopCastGainsHaste`
+    /// whose filter covers it (the permission it was cast "this way" by).
+    fn stamp_library_top_haste(&mut self, p: usize, card_id: CardId) {
+        let Some(card) = self.stack.iter().rev().find_map(|item| match item {
+            crate::game::types::StackItem::Spell { card, .. } if card.id == card_id => Some(card),
+            _ => None,
+        }) else {
+            return;
+        };
+        let grants = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::LibraryTopCastGainsHaste { filter })
+                            if self.evaluate_requirement_on_card(filter, card, p)
+                    )
+                })
+        });
+        if grants && card.definition.is_creature() {
+            self.players[p].pending_creature_etb_keywords.push(crate::card::Keyword::Haste);
         }
     }
 

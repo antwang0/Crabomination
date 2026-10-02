@@ -31813,6 +31813,7 @@ fn static_effect_to_effects(
             | StaticEffect::AttachedIsGoaded
             // Read by the library-top cast path; no layer.
             | StaticEffect::LibraryTopEquipmentAttachesOnEntry
+            | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered

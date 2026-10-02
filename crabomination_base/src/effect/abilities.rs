@@ -318,6 +318,10 @@ pub enum StaticEffect {
     /// the top of your library], it gains 'When this Equipment enters, attach
     /// it to target creature you control.'" Read by the library-top cast path.
     LibraryTopEquipmentAttachesOnEntry,
+    /// Thundermane Dragon — "if you cast a creature spell this way [off the
+    /// top of your library, matching `filter`], it gains haste until end of
+    /// turn." Read by the library-top cast path, not a trigger.
+    LibraryTopCastGainsHaste { filter: crate::card::SelectionRequirement },
     /// Angelic Arbiter — "Each opponent who attacked with a creature this turn
     /// can't cast spells." Gated at the cast dispatch off the caster's
     /// `Player.attacked_this_turn`.

@@ -285,6 +285,22 @@ fn thundermane_dragon_casts_from_the_top() {
     assert!(!has(&g, from_hand, &Keyword::Haste), "a hand cast gets no haste");
 }
 
+/// Thundermane's haste is for a spell cast by *its* permission: one Bolas's
+/// Citadel lets you cast off the top for life gains nothing.
+#[test]
+fn thundermane_dragon_hastes_only_what_it_let_you_cast() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::thundermane_dragon());
+    g.add_card_to_battlefield(0, catalog::bolass_citadel());
+    let top = g.add_card_to_library(0, catalog::goldlust_triad());
+    let life = g.players[0].life;
+    act(&mut g, GameAction::CastSpell { card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast from the top");
+    assert!(g.players[0].life < life, "paid for with life, by the Citadel");
+    assert!(g.battlefield_find(top).is_some());
+    assert!(!has(&g, top, &Keyword::Haste), "not cast by Thundermane's permission");
+}
+
 /// Carnelian Orb's red mana hastes the creature it pays for.
 #[test]
 fn carnelian_orb_hastes_its_dragon() {
