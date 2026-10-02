@@ -1706,6 +1706,7 @@ impl Effect {
             Effect::Discover { n, .. } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
+            Effect::BottomInRandomOrder { what } => sel_has_target(what),
             Effect::MoveChosen { from, to, .. }
             | Effect::MoveWithinTotalManaValue { from, to, .. } => {
                 sel_has_target(from) || zonedest_has_target(to)
@@ -2777,7 +2778,7 @@ impl Effect {
             | Effect::GrantProtectionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. } => sel_filter(what),
-            Effect::Move { what, .. } => sel_filter(what),
+            Effect::Move { what, .. } | Effect::BottomInRandomOrder { what } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
             // auto-target heuristic can find the opp / caster without a
             // manual Target. The filter is typically `Player` (Mind Rot,
@@ -5076,9 +5077,9 @@ impl Effect {
                 }
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
-                Effect::Move { what, .. } | Effect::MoveChosen { from: what, .. } => {
-                    sel_find(what, slot)
-                }
+                Effect::Move { what, .. }
+                | Effect::BottomInRandomOrder { what }
+                | Effect::MoveChosen { from: what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
                 | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }

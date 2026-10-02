@@ -6513,6 +6513,10 @@ pub enum Effect {
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
     Move { what: Selector, to: ZoneDest },
+    /// CR 401.4 — "put the rest on the bottom of your library in a random
+    /// order": every card `what` resolves to goes to the bottom of its
+    /// owner's library, the group shuffled first (Sanwell, Avenger Ace).
+    BottomInRandomOrder { what: Selector },
     /// "[Return/put/exile] up to `count` cards of your choice from the set
     /// `from` resolves to" — the player-chooses sibling of
     /// `Move { what: Take {..} }` (which auto-takes in iteration order).

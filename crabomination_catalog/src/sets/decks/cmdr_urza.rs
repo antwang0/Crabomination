@@ -15,7 +15,7 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest, ZoneRef};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest, ZoneRef};
 use crate::mana::{b, cost, generic, u, w, Color, ManaCost};
 use std::sync::Arc;
 
@@ -288,7 +288,7 @@ pub fn one_with_the_machine() -> CardDefinition {
 /// Sanwell, Avenger Ace — damage to it is prevented while an artifact
 /// creature of yours attacks; whenever it becomes tapped, exile your top six
 /// and you may cast a Vehicle or artifact creature from among them (chosen on
-/// resolution). Residual: the rest are bottomed in exile order, not random.
+/// resolution); the rest go to the bottom in a random order.
 pub fn sanwell_avenger_ace() -> CardDefinition {
     let exiled = |filter: R| Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource.and(filter) };
     CardDefinition {
@@ -324,10 +324,7 @@ pub fn sanwell_avenger_ace() -> CardDefinition {
                         pay_own_cost: true,
                     },
                 ),
-                Effect::Move {
-                    what: exiled(R::Any),
-                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },
-                },
+                Effect::BottomInRandomOrder { what: exiled(R::Any) },
             ]),
         }],
         ..creature(
@@ -342,8 +339,7 @@ pub fn sanwell_avenger_ace() -> CardDefinition {
 
 /// Scholar of New Horizons — enters with a +1/+1 counter; {T}, remove a
 /// counter from a permanent you control: a Plains, onto the battlefield tapped
-/// if an opponent has more lands, else to hand. Residual: it always takes the
-/// battlefield when it may.
+/// if an opponent has more lands and you choose to, else to hand.
 pub fn scholar_of_new_horizons() -> CardDefinition {
     let plains = || R::HasLandType(LandType::Plains);
     CardDefinition {
@@ -353,10 +349,14 @@ pub fn scholar_of_new_horizons() -> CardDefinition {
             remove_counter_among_filter: Some((None, 1, R::Permanent)),
             effect: Effect::If {
                 cond: Predicate::OpponentControlsMoreLandsThanYou,
-                then: Box::new(Effect::Search {
-                    who: PlayerRef::You,
-                    filter: plains(),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                then: Box::new(Effect::MayDoElse {
+                    description: "Put the Plains onto the battlefield tapped?".into(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: plains(),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    }),
+                    else_: Box::new(Effect::Search { who: PlayerRef::You, filter: plains(), to: ZoneDest::Hand(PlayerRef::You) }),
                 }),
                 else_: Box::new(Effect::Search {
                     who: PlayerRef::You,

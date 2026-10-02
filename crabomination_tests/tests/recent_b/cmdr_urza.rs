@@ -223,6 +223,24 @@ fn scholar_of_new_horizons_fetches_a_plains() {
     assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
 }
 
+/// Scholar of New Horizons behind on lands: the Plains goes onto the
+/// battlefield only if you choose — declined, it goes to your hand.
+#[test]
+fn scholar_of_new_horizons_may_decline_the_battlefield() {
+    for (put, on_bf) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        let s = g.add_card_to_battlefield(0, catalog::scholar_of_new_horizons());
+        g.battlefield_find_mut(s).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+        g.clear_sickness(s);
+        g.add_card_to_battlefield(1, catalog::island());
+        let plains = g.add_card_to_library(0, catalog::plains());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(put)]));
+        activate(&mut g, s, 0, None).expect("activate");
+        assert_eq!(g.battlefield_find(plains).is_some(), on_bf);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == plains), !on_bf);
+    }
+}
+
 /// Tawnos copies an artifact token and mills two.
 #[test]
 fn tawnos_copies_an_artifact_token() {

@@ -23880,6 +23880,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BottomInRandomOrder { what } => {
+                use rand::seq::SliceRandom;
+                let mut ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect();
+                ids.shuffle(&mut self.rng.draw());
+                for id in ids {
+                    let Some(owner) = self.find_card_anywhere(id).map(|c| c.owner) else { continue };
+                    let dest = crate::effect::ZoneDest::Library {
+                        who: crate::effect::PlayerRef::Seat(owner),
+                        pos: crate::effect::LibraryPosition::Bottom,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Move { what, to } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let cid = match ent {
