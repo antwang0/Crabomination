@@ -341,7 +341,7 @@ pub fn bennie_bracks_zoologist() -> CardDefinition {
 
 /// Alandra, Sky Dreamer — your second draw each turn makes a 2/2 flying
 /// Drake; your fifth pumps Alandra and your Drakes +X/+X (X = hand size, locked
-/// on resolution). ⚠ The fifth-card trigger is "five or more, once a turn".
+/// on resolution).
 pub fn alandra_sky_dreamer() -> CardDefinition {
     let drake =
         TokenDefinition { keywords: vec![Keyword::Flying], ..token("Drake", 2, 2, vec![Color::Blue], vec![CreatureType::Drake]) };
@@ -350,9 +350,7 @@ pub fn alandra_sky_dreamer() -> CardDefinition {
         triggered_abilities: vec![
             second_draw(make(drake)),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                    .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::You, n: 5 })
-                    .once_per_turn(),
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(5), EventScope::YourControl),
                 effect: Effect::PumpPT {
                     what: yours(R::Creature.and(R::IsSource.or(R::HasCreatureType(CreatureType::Drake)))),
                     power: hand(),
@@ -383,7 +381,7 @@ pub fn confirm_suspicions() -> CardDefinition {
 }
 
 /// Erdwal Illuminator — flying; the first time you investigate each turn,
-/// investigate again. ⚠ Reads a Clue token entering under your control.
+/// investigate again. Residual: Reads a Clue token entering under your control.
 pub fn erdwal_illuminator() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],

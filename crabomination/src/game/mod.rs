@@ -21236,7 +21236,7 @@ impl GameState {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 if self.players[p].cards_drawn_this_turn == 1 {
                     events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
-                } else if let n @ 2..=3 = self.players[p].cards_drawn_this_turn {
+                } else if let n @ (2..=3 | 5) = self.players[p].cards_drawn_this_turn {
                     events.push(GameEvent::NthCardDrawnThisTurn { player: p, card_id: id, n });
                 }
                 self.maybe_grant_miracle(p, id);
