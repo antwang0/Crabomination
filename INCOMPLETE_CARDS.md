@@ -2133,7 +2133,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
-| 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells only, not activation or other costs. |

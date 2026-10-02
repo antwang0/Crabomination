@@ -23785,13 +23785,34 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
+                // Each chooser picks an affordable option or the penalty
+                // ("unless they …" is their choice), every pick asked before
+                // any option runs; headless, the first affordable option.
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut picks: Vec<Option<usize>> = Vec::with_capacity(choosers.len());
+                for &p in &choosers {
+                    let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
+                    let affordable: Vec<usize> =
+                        (0..options.len()).filter(|&k| self.punisher_option_affordable(&options[k], &opt_ctx)).collect();
+                    let asks = self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+                    if affordable.is_empty() || !asks {
+                        picks.push(affordable.first().copied());
+                        continue;
+                    }
+                    let mut labels: Vec<String> = affordable.iter().map(|&k| options[k].effect_short_text()).collect();
+                    labels.push("Don't".into());
+                    let Some(i) = self.ask_seat_option(&mut cursor, p, "Choose".into(), source, labels, effect) else {
+                        return Ok(());
+                    };
+                    picks.push(affordable.get(i).copied());
+                }
+                self.clear_answer_log();
                 for (i, p) in choosers.iter().copied().enumerate() {
                     // The chooser evaluates the options with themselves as the
                     // effect controller (so `PlayerRef::You` = the chooser).
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
-                    let picked = options
-                        .iter()
-                        .find(|opt| self.punisher_option_affordable(opt, &opt_ctx));
+                    let picked = picks[i].map(|k| &options[k]);
                     match picked {
                         Some(opt) => self.run_effect(opt, &opt_ctx, events)?,
                         // No affordable option — the ability's controller gets

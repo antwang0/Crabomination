@@ -147,8 +147,7 @@ pub fn alchemists_greeting() -> CardDefinition {
 }
 
 /// Archfiend of Spite — whoever damages it loses that much life unless they
-/// sacrifice that many permanents; madness {3}{B}{B}.
-/// Residual: they always sacrifice when they can.
+/// sacrifice that many permanents (their choice); madness {3}{B}{B}.
 pub fn archfiend_of_spite() -> CardDefinition {
     let damager = || Selector::Player(PlayerRef::LastDamagerControllerOf(Box::new(Selector::This)));
     madness(
