@@ -531,6 +531,28 @@ mod recent94 {
         assert!(cp.keywords().contains(&Keyword::Indestructible), "gains indestructible");
     }
 
+    /// Nazahn's tutor puts a found Hammer of Nazahn onto the battlefield and
+    /// any other Equipment into hand (the card's own branch, read off the
+    /// revealed card).
+    #[test]
+    fn nazahn_puts_the_hammer_onto_the_battlefield() {
+        for (find, onto_battlefield) in [
+            (catalog::hammer_of_nazahn as fn() -> crabomination::card::CardDefinition, true),
+            (catalog::bonesplitter, false),
+        ] {
+            let mut g = two_player_game();
+            let found = g.add_card_to_library(0, find());
+            g.add_card_to_library(0, catalog::island());
+            let nazahn = g.add_card_to_battlefield(0, catalog::nazahn_revered_bladesmith());
+            let etb = catalog::nazahn_revered_bladesmith().triggered_abilities[0].effect.clone();
+            let ctx = crabomination::game::effects::EffectContext::for_trigger(nazahn, 0, None, 0);
+            g.resolve_effect(&etb, &ctx).expect("etb");
+            drain_stack(&mut g);
+            assert_eq!(g.battlefield_find(found).is_some(), onto_battlefield);
+            assert_eq!(g.players[0].hand.iter().any(|c| c.id == found), !onto_battlefield);
+        }
+    }
+
     /// Argentum Armor is a +6/+6 anvil.
     #[test]
     fn argentum_armor_equip_bonus() {

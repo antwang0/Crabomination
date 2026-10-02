@@ -224,10 +224,9 @@ pub fn stonehewer_giant() -> CardDefinition {
 }
 
 /// Nazahn, Revered Bladesmith — {4}{G}{W} 5/4 Cat Artificer. ETB: search your
-/// library for an Equipment card and put it into your hand. Whenever an equipped
-/// creature you control attacks, you may tap target creature an opponent
-/// controls. (The Hammer-of-Nazahn-to-battlefield special case is approximated
-/// as a plain tutor to hand.)
+/// library for an Equipment card; Hammer of Nazahn goes onto the battlefield,
+/// anything else into your hand. Whenever an equipped creature you control
+/// attacks, you may tap target creature an opponent controls.
 pub fn nazahn_revered_bladesmith() -> CardDefinition {
     CardDefinition {
         name: "Nazahn, Revered Bladesmith",
@@ -244,7 +243,11 @@ pub fn nazahn_revered_bladesmith() -> CardDefinition {
             etb(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::IfCard {
+                    filter: Box::new(R::HasName("Hammer of Nazahn".into())),
+                    then: Box::new(ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }),
+                    else_: Box::new(ZoneDest::Hand(PlayerRef::You)),
+                },
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(

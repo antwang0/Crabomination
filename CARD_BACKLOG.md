@@ -4569,13 +4569,10 @@ Shipped: `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf),
 
 ## Equipment / Voltron (`decks::recent94`)
 
-- **Stonehewer Giant / Nazahn ETB tutor auto-attach.** Both search an Equipment
-  onto the battlefield/hand but drop the "attach it to a creature you control"
-  rider (the searched card isn't a target, so it lands unattached). Needs a
+- **Stonehewer Giant tutor auto-attach.** It searches an Equipment onto the
+  battlefield but drops the "attach it to a creature you control" rider (the searched card isn't a target, so it lands unattached). Needs a
   `Search`-then-`Attach` variant that threads the found card into a follow-up
   attach.
-- **Nazahn "Hammer of Nazahn to battlefield" branch.** Modeled as a plain tutor to
-  hand; the named-card-to-battlefield special case is elided.
 - **O-Naginata attach restriction.** "Attach only to a creature with power 3+" is
   dropped (no equip-target power gate).
 - **Bigger Voltron cards not yet done:** Halvar, God of Battle // Sword of the
