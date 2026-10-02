@@ -11001,3 +11001,305 @@ needs the same, or the walk taught to read `statics_granted_triggers_for`.
 13. **Leads:** 🔎 `011TamSM` fixed a **2-player** payment bug from a census gap: a summoning-sick mana creature was listed as a source (CR 302.6), so auto-pay picked the Elf, failed, and stranded untapped lands — three walks had the shape (`mana_source_table`, `untapped_producers_of`, the manual-tap relevance walk); any new mana walk must drop a sick creature's {T} abilities. Open: the 🟡 "Seats …" tables (Serpent's Soul-Jar, Motivated Pony, Havengul Lich; Knight of New Alara's colours want the L5 view at L7c); ⚠ **CR 601.2c / 602.2b empty-slot gates (`011TamSM`)**: a spell, a modal cast's chosen modes and an activated ability are refused when a required target is not named (`required_target::slot0_required`, which exempts optional, "may" and deferred-body slots). Loyalty abilities are gated too since their 23 "up to" slots were marked `OptionalTargets { min: 0 }` (audit: `target_slot_optional` vs the Scryfall cache's "up to N target"). Still unmarked: ~100 spells (divided "any number", charms, "up to one") and 8 non-loyalty abilities — harmless now (only a pointless zero-target cast is refused), worth marking when touched. A hostile auto-target at N seats now tries the other opponents before the caster's own side (`targeting.rs`); Ace's Baseball Bat's filtered "must be blocked by a Dalek"; many loyalty −N never activated. 🔎 `014W1HRr` rules fixes from the pod decks: the Will cycle's "as you cast" (CR 601.2b, a cast-time stamp), Immortal Obligation's hold (CR 611.2b), a damage watcher killed by that damage (CR 603.10, Wrathful Raptors), and the **"attacking you" / "attacks you" class (CR 506.3)** — Soul Snare, Hunting Kavu, Flash Foliage, Watchdog, Qasali Ambusher, Briar Patch, Barbed Foliage, Garruk's emblem read any attacker; `scripts/audit_attacking_you.py --gate` is the sweep (0 open). Card bodies: Boseiju's channel discount, Brash Taunter's "another target creature", Emissary of Grudges (only the chosen player's spell — `R::ControlledByChosenPlayerOfSource`), Tahngarth (its `YouAttack/OpponentControl` trigger never fired). 📐 `scripts/audit_cr_citations.py`: CR numbers cited in Rust that the shipped rules text lacks (renumbered — 701.15 is goad now): 68 → 62 open, the Commander range clean, and its keyword check ("Myriad (CR 702.115)" named Ingest — 121 such remapped) at 0; `--max 62` is the ratchet. Open N-seat rows worth an engine primitive: Magus of the Arena ("target creature of an opponent's choice" wants a second bound slot). 🔎 `01PdWYgx` **equip loop, fixed**: Wrecking Ball Arm (base 7/7) × Conqueror's Flail cycled 5,592 equips (seed 992100 g108) past the old host-vs-host guard; `pick_equip` now requires the side's total creature power to rise (a strictly increasing potential — use the same shape for any "move X to the best Y" picker). Protective grants answer removal (`server/keyword_shield.rs`); level up on idle mana (`counter_sink`). 🔎 `01PdWYgx` **Venser × Replication Technique loop, fixed** (seed 1054026 g4, a board cap at stack 512): the demonstrated copy's auto-target took the controller's Venser, whose token's ETB copied the Technique again; a token-copy effect now ranks your legends last (CR 704.5j). 🔎 `01PdWYgx` **CR 614.12 answer-log class, fixed**: an as-enters replacement applied off the stack (a state-based move) while a vote was parked on its next voter read the vote's ballot as its own and dropped it; `resolve_as_enters_driven` now sets the parked channels aside — any NEW off-stack resolution that can run under a parked one must do the same. `01PdWYgx` **COMMANDER_BACKLOG regenerated**: 16 §1 commanders added (`decks::cmdr_legends2`, tests `recent_b/cmdr_legends2.rs`), 263/300 top commanders in; the rest need primitives (Wolverine's dealt-damage-to-a-creature check, Jin Sakai's attacking-a-player-alone, Shadow's artifact-mana split second, Kibo's Banana mana-plus-life token, Deadpool's text-box swap). Raggadragga found `HasManaAbility` unread on the battlefield (Midnight Arsonist took mana rocks) — fixed. Pod smoke after: 8,280 games (seeds 1403000+/1404000+/1406000+), 2 draws; a Black Bolt × Black Bolt mandatory loop (CR 104.4b, each Bolt its controller's only nonland permanent) is the one action cap of 15,840 (seed 1383030). `01PdWYgx` open: Collective Effort's escalate is paid at resolution (the cast-time escalate primitive, `audit_keyword_drift`); Stumpsquall Hydra never offers an opponent's commander; ~80 `audit_incomplete` rows on pod cards are mostly edge cases (extra combats, declined "may"s, reveals).
 14. ⚠ Card fixes touch cube cards too (Etali, Koma, Expressive Iteration, Disallow, …): `--bench` can't see them — run the cube/sos/sealed pools after a card batch. **Loop hunting:** `CRAB_POD_TRACE=<n> --first i --games 1` (release build, `01J1Ud7u`) prints every action from action n — turn, step, stack depth, seat — and a per-turn `uniq -c` names a doubling loop at once; `CRAB_CAP_DIAG=1` names the capped board and stack.
 15. 🔎🔎 **`012RbSk7` (2026-09-28): scopes, slots and picks.** ① **CR 506.3 — `ControllerAttackedByOpponent` means "you OR a planeswalker you control"**; a bare "attacks you" is the new `EventScope::ControllerAttackedDirectlyByOpponent` (13 cards moved), Oath of Kaya is planeswalker-only, Revenge of Ravens drained twice — `scripts/audit_attack_scope.py --gate` (0). ② **CR 400.7 — every library exile reports its origin**: `EventKind::CardExiledFrom(exile_from::{BATTLEFIELD,GRAVEYARD,LIBRARY})` (any NEW library→exile site calls `note_exiled_from_library`; Laelia). ③ **`Selector::TakeGreatestManaValue` (`best_of` / `take_priciest`)** — a resolution-time "choose a card" that the controller would spend on their best took the FIRST in order (Cruel Ultimatum returned the oldest creature card); ~20 pod cards moved. ④ Per-player / per-opponent target wrappers (Blatant Thievery, Nils, Riptide Gearhulk, Demonic Junker), "if you cast it [from your hand]" riders (Lutri, Iridescent Tiger, Weftwalking, Scion of Vitu-Ghazi, Hypnox, …), 21 "up to" slots marked optional (the CR 601.2c later-slot gate still waits on the frozen SOS pool's seven), "Sacrifice a creature" may be the source (10), Wojek Investigator, Rain of Embers. Clean scans: ward costs, SpellCast / CreatureDied / EntersBattlefield scopes, kicked riders, "each opponent" verbs; `--card-census` "never" rows are sampling noise at 60 games a group (probed directly). **Gates:** suite **23,833 / 0 / 7** strict, workspace clippy **0**, `--bench` **196,176 / 27.64 / 613.0 / 0 stalls byte-identical** at six builds; release pods 33,420 + concession pods 11,460 + strict debug concession pods 616 (seeds 6003000+ … 6605000+): zero panics, 6 CR 104.4a draws. ⑤ **"target opponent <verb>" read as EVERY opponent** — the ten Thunder Junction deserts (also a tap-by-trigger "enters tapped"), Highway Robber, Diregraf Captain, Al Bhed Salvagers, Keldon Marauders (and its "leaves" was "dies"), Clackbridge Troll, Hunted Bonebrute: `scripts/audit_target_vs_each.py --gate` (0; `shortcut::drain_target_opponent`). ⑥ **CR 707.10 — a copy is not cast**: `EventSpec::or_copy` (`shortcut::with_copies`) makes "whenever you cast OR COPY" (Magecraft, 25 STX cards + Zaffai) fire per `SpellsCopied`; `magecraft()` stays cast-only because Young Pyromancer / Talrand are built with it (`cr_recent109.rs`). ⑦ **Later the same run:** CR 500.4 kept mana (Klauth, Savage Ventmaw) was RE-SEEDED IN FULL every step — now clipped to its unspent part (`ManaPool::unspent_within`), lifted out before color keepers; `SpendRestriction::SpellsOnly` (Klauth); "you may CAST" impulses let an exiled land be played — `RestrictMayPlayToCasting` after 11 grants + Locke / Rashmi / Xander's Pact, `scripts/audit_cast_not_play.py --gate` (0); `Player.foods_entered_this_turn` (Motivated Pony); `SelectionRequirement::BlockingHostOfSource` (Plasma Caster); `RedirectYourDamageToChosen.creatures_only` (Heroic Sacrifice); the `YouAttack` walk reads station bands; BecameTarget self-subject (Mossdog, Altanak, Pawpatch); ~15 🟡 rows closed (Ao's rest to the bottom, Roots of Wisdom, Time Reaper, Secluded Starforge, Sliver Hive / Cultivator Drone spend limits; Arbor Adherent's row was stale); oracle-verb scans ("draw / create / +1/+1 counter / … in the text, no such effect in the definition") found Dyadrine, Tannuk, Vampiric Embrace, inline tokens missing their printed abilities (Eldrazi Confluence's Scion, Charming Scoundrel's Wicked Role, three Pilot makers, Foggy Swamp's Spirit), Venat's once-a-turn. Also Dawnsire ("whenever you attack" per creature — the `YouAttack` walk can't see station bands, ENGINE_BACKLOG), All-Out Assault's main-phase if, Cunning / Ferocity's missing halves. ⑧ **2026-09-29, protection and costs:** CR 702.16b / 608.2b — no resolution re-check read protection (Mother of Runes answering Murder left the Bear dead with pro-black), abilities re-read only their filter, and the cast gate exempted the caster's own permanents: `spell_protection_blocks` (cast gate + both fizzle paths + the Aura re-check), `ability_target_newly_untargetable` (declared slots only — Flayed Nim's event-bound `Target(0)` isn't targeted), `stack_threat_color` names the removal's colour, bot `keyword_shield` answers with Mother; then `spell_color_hexproof_blocks` (Veil of Summer in response, at cast AND resolution), every target slot gated at cast (Reckless Spite's second), and player targets re-checked (Seht's Tiger under a Bolt; a ping at a Veiled player) — the resolving spell is out of every zone, so its colours are read off the card, not `source_colors`; and for the same reason **a resolving spell's DAMAGE ignored protection** (Pyroclasm killed a pro-red creature, Flame Rift burned a pro-red player) — `GameState::resolving_spell_def` reads the resolver's existing stamps (`resolving_source` + `resolving_spell_snapshot`) for the source lookups — 0.00 % Ir; a first cut that added its own scratch field cost +0.08-0.13 % (PERF log: search the scratch before adding to it). CR 602.5b — seven "Remove a counter" costs lived in the effect behind a gate (one counter, unlimited activations; Javelineers never pinged) → `remove_counter_cost`, pod table re-blessed (bisected to `a380ef08a`); `keyword_once_per_turn` (Leather Armor, Greatsword's pay-3-life equip, Locomotive's crew — Kotori's granted crew exempt); Mairsil's borrowed-ability cap; Battleflies twice; Wand of Ith, Rot-Curse's Renew, Whirling Dervish. Bot (pods): `pick_removal_fight` (Brash Taunter / Vein Drinker fights; Taunter was never activated). **Strict DEBUG pods found a release bug**: the grant scan's printed `HasCreatureType` fast filter missed a GRANTED changeling (Omo's everything counter → Wonderscape Sage never got Hibernation Sliver's ability) — keep running `CRAB_ANSWER_LOG=strict scripts/pod_census.sh target/debug/bot_ladder …`, the debug gates are audits. Clean: loyalty costs, Saga chapters, activate-only-(once / as a sorcery / your turn / if), tap / discard / life costs, standalone can't-block / can't-attack / attacks-each-combat. **Gates:** suite **23,609 / 0 / 5**, workspace clippy 0, `robustness_grid.sh --wide` **52 cells / 301,600 games + 45 pilots, 0 failures**; pods on a `-C debug-assertions=yes` `overflow` build ~8,700 games (3-8 seats) and strict debug pods ~5,000, all decided (draws only), `--bench` byte-identical at eight builds, pools × 150 decided ×7, pods ~4,300 release games (3-8 seats) all decided. Residuals: INCOMPLETE_CARDS' `012RbSk7` section.
+
+## Rollback / Undo — Phases 2–5 (moved verbatim from TODO.md, 2026-10-02)
+
+
+Re-planned against the code as it stands (server and client mapped
+2026-10-01); the old Phase 2–4 sketch is folded in. Phases 0/1 are the
+mechanism. What is left is where snapshots live, what makes one, who may
+rewind, what a rewind may *not* leak, and how the client survives a view
+that goes backwards.
+
+**What a take-back is.** You rewind the game to just before one of *your*
+recent deliberate actions. Everything after it is discarded, every seat's
+actions included (a bot's block, an opponent's response). Against bots it
+is instant. With two or more humans the others must agree. You can only take
+back your own actions. Time spent on the clock stays spent.
+
+#### The shape (decided)
+
+- **The history lives on the match thread, beside the state, not in it.**
+  A match is `run_match_inner`'s locals (`server/mod.rs:548`). Bots run on
+  that same thread (`drive_bots`, `mod.rs:1145`), so a rewind can't race a
+  bot. Add an `UndoHistory` local beside `bots` / `rope`: a ring of
+  `(UndoPoint, GameState)`. A snapshot is cheap. A `GameState` clone is a
+  ~1.6 KB copy plus refcount bumps (cards are `Arc<CardData>`, the big
+  groups are CoW, PERF `(-143)`), and a group is deep-copied only when the
+  live state next writes it. So the ring costs about what the game has
+  changed since its oldest point. Measure RSS over a long game in step 1.
+  `UndoPoint { id: u64 (monotonic), seat, label ("cast Lightning Bolt",
+  "declared blockers", "tapped Mountain"), turn, step, events_at: u64 }`.
+  `events_at` counts the events broadcast so far; the client cuts its log
+  and stats back to it.
+- **A point is taken before each *deliberate* action from a human seat.**
+  Auto-pass would otherwise fill the ring in a turn
+  (`auto_advance_p0` passes every bookkeeping window). So the client sends
+  automatic actions as a new `ClientMsg::SubmitAuto(GameAction)`, which
+  takes no point: auto-advance passes, auto-answered prompts ("Always",
+  the floating-mana confirm), and `drive_pending_mana_cast`'s re-submits.
+  The server rope's forced pass is automatic too. Everything else is
+  `SubmitAction` and takes a point.
+  - A rejected action pops its point (the Phase-1 checkpoint already
+    restored the state). The exception is `ManualTapRequired`, which leaves
+    forced pips tapped and mana floating (`game/mod.rs:19283`), so its
+    point stays.
+  - That closes today's half-paid-cast hole: Esc clears only the client's
+    `PendingManaCast` (`net_plugin.rs:733`), and the server keeps the
+    tapped lands and the floating mana. With the point kept, undo walks
+    back the manual taps one at a time, then the cast attempt, lands
+    untapped. This is the "minimal mana-tap slice" CLIENT_BACKLOG wanted
+    first.
+  - The ring keeps the current and previous turn's points, capped at 64.
+- **Rewinding** (`ClientMsg::RequestUndo { to: Option<u64> }`, `None` = your
+  latest point):
+  - **Validate:** the point is the requester's, the game isn't over
+    (`MatchOver` already deletes the resume token), and no request is
+    pending.
+  - **Restore:** a new `GameState::rewind_to(&mut self, snap)`. It shares
+    the checkpoint restore in `perform_action` and **keeps the live
+    decider** (Phase 1's lesson: the snapshot holds a blank one).
+  - **Trim the history:** drop the point and everything after it, so the
+    next Z goes one further back.
+  - **Reset bots:** a new `Bot::rewound(&mut self)`, default no-op.
+    `HeuristicBot` clears `last_step_key` / `attackers_declared` /
+    `blocks_declared` / `reveal_commit` / `optional_yes_this_step`
+    (`bot.rs:3051`); `MctsBot` forwards it to its fallback.
+  - **Restart the rope.**
+  - **Broadcast** a new `ServerMsg::Rewound { by, label, events_at }`, then a
+    full `View` to every seat and spectator. The TCP outbox collapses and
+    drops `View`/`Update` under load (`tcp.rs:118-131`), so `Rewound` goes
+    on the never-dropped path, like `MatchStarted`.
+  - **Mark** the replay (`CRAB_REPLAY_DIR`) and decision logs, and republish
+    the snapshot sink.
+- **The view carries the undo state.** `view::project` sees only the
+  `GameState`, so `broadcast_update` fills a new `ClientView.undo` after
+  projecting:
+  - the viewer's own latest points (`id`, `label`, `turn`, `step`), up to 10;
+  - whether undo is allowed;
+  - any pending request and whether this seat must answer it.
+
+#### What a rewind must not leak
+
+- **Randomness is already pinned.** The RNG (one `u64`, cloned with the
+  state) and library order are restored, so a rewound shuffle or draw comes
+  out the same. You can't re-roll; you can act on what you've already seen,
+  which is the casual standard. Three holes break that pin:
+  - **Coin flips and die rolls are rolled on the client** (`rand::random`
+    in `decision_ui`'s randomizer handler), so undo plus re-flip fishes
+    for heads. For human seats the server must roll them from
+    `state.rng`; the button just asks. *(Wrong: no coin or die decision
+    ever reaches a client — see step 2.)*
+  - **Bots aren't deterministic.** `HeuristicBot`'s tie-break jitter uses
+    the thread RNG (`set_jitter_seed` is never called in a match), and
+    MCTS rollouts use `rand::rng()` (`mcts.rs:578`). So undo-and-redo
+    fishes for a better bot reply (its blocks, its counterspell). Seed
+    each live-match bot decision from (match seed, turn, step, state
+    action counter): the same state gets the same reply. Ladder and bench
+    drivers keep their own seeding, so no PERF or ladder number moves.
+  - **Information seen while the action played stays seen.** The request,
+    and the log line, say what the rewind crosses, worked out from the
+    events between `events_at` and now: draws, library looks (scry,
+    search, reveal), a hand revealed, a coin or die result. For example
+    "takes back: cast Thoughtseize (you saw their hand)". Against bots
+    that is information; between humans it is what the opponent consents
+    to.
+
+#### Consent (two or more humans)
+
+`RequestUndo` from one human, with others present:
+- The server records `PendingUndo { by, to, answers, deadline: 30 s }` and
+  broadcasts it through `ClientView.undo`. Each other human answers
+  `ClientMsg::RespondUndo { accept }`; bots accept.
+- **While it is pending, the match is paused.** `SubmitAction` from any seat
+  gets an `ActionError` ("take-back pending") and the rope pauses. Chat
+  still works.
+- Any decline, the deadline, or a human seat dropping out ends it as
+  declined, with a log line. Every accept applies it, as above.
+- Spectators see it in the log.
+
+#### The client (mapped 2026-10-01)
+
+The 3-D board reconciles from the view by `CardId` (`sync_game_visuals`),
+so most of a backward jump just re-lays out. These would still break:
+
+- **Rebuild the table on `Rewound`.** Despawn every card entity and lay the
+  view out fresh (the `rematch_in_place` hard-reset path,
+  `game_over.rs:590-613`, minus its log wipe). A rewind is rare and a
+  quick fade beats animating time backwards. This sidesteps:
+  - a viewer's spell back from stack to hand keeps `StackCard` and sits in
+    the stack lane (visual_sync 497/559/579/1141; a latent Remand bug too,
+    fix it on its own);
+  - an undo during a hand→battlefield flight duplicates the card when the
+    flight lands (`animate.rs:710`);
+  - an MDFC played as its back face keeps the back art in hand;
+  - an undone attack plays a fake lunge;
+  - cards returning from graveyard or exile fly out of the deck.
+- **One `reset_after_rewind`.** Today the resets are scattered: match start
+  clears only the log; `teardown_net_session` / `cleanup_in_game_entities`
+  run at the end. Clear:
+  - `TargetingState`/`LegalTargets`;
+  - `PendingManaCast` (it re-submits on any pool change, so an undone tap
+    re-fires the cast);
+  - `NetOutbox.last_cast`;
+  - `BlockingState.declared` (left set, it makes blocking impossible and
+    auto-advance then passes);
+  - `AttackingState`;
+  - `FastForward` (End Turn / Next Turn stay armed otherwise);
+  - the pickers (`cancel_pickers_on_escape`'s list).
+  Re-baseline `LifeTicker` (a restored total would float a green "+N")
+  and `PhaseBannerTracker`.
+- **Hold auto-advance after a rewind** until the viewer acts or another
+  seat moves the game on. Otherwise it re-passes the restored window the
+  next frame.
+- **The log and stats follow the branch actually played.** `GameLog` and
+  `MatchStats` are built from events, forward only, and `LifeHistory`
+  from views, appending per turn. Keep the match's received events; on
+  `Rewound`, truncate them to `events_at` and rebuild the log and stats
+  from them. Drop `LifeHistory` columns past the restored turn. Add one
+  line: "⟲ You took back: cast Lightning Bolt (you saw: 1 draw)".
+- **Controls.**
+  - **Button:** Undo in the action column after Auto-pass
+    (`hud.rs:456-552`, a new `ButtonState.undo`). Greyed with no points;
+    the tooltip names the action.
+  - **Hotkey:** plain `Z` (free; Ctrl is camera zoom, so not Ctrl+Z), in
+    its own system behind `TextInputGuard`, like
+    `handle_auto_pass_toggle`. `handle_game_input` early-returns on
+    pending decisions and off priority, and undo must work in both.
+  - **Help:** a `HELP_SECTIONS` row.
+  - **Consent:** a banner, "<name> wants to take back: cast X (undoes: 1
+    draw) [Allow] [Decline]", with a countdown; the requester sees
+    "Waiting for …".
+
+#### Steps (each ships on its own)
+
+1. ✅ **Undo against bots** (2026-10-01). Shipped as planned, with three
+   changes:
+   - **Undo points get their own message.** `ServerMsg::UndoPoints`, sent
+     to the seat whose list changed, replaces the `ClientView.undo` field:
+     views are projected in six places, and the history isn't in reach of
+     any of them. A reattaching seat gets its points again.
+   - **Mana taps fold into their cast.** After a cast stops for mana
+     (`ManualTapRequired`), that seat's mana-ability taps keep no point
+     until it does something else, so one take-back undoes the whole cast,
+     mid-payment or after it. Taps outside a cast keep their own.
+   - **The hold is a count.** The auto-pass hold lasts until the player's
+     next deliberate action (`NetOutbox::deliberate_count`).
+
+   The rebuilt table goes straight to its places (`RewindSnap`) rather than
+   being dealt again from the decks.
+
+   Code: `server/undo.rs`, `GameState::rewind_to`, `Bot::rewound`,
+   `systems/takeback.rs`.
+
+   Tests: six in `undo` (the history, labels, exact state plus RNG,
+   re-posed decision, half-paid cast), three end to end in `server::tests`,
+   two in the client. Harness: `--take-back play|undo`.
+
+   What was planned:
+   - engine: `rewind_to`;
+   - server: the ring, `SubmitAuto`, immediate `RequestUndo` with one
+     human, `Rewound`, `Bot::rewound`, `ClientView.undo`;
+   - client: button and Z, `reset_after_rewind`, the table rebuild, the
+     auto-advance hold, the log line.
+
+   It includes the half-paid-cast fix and is the whole UX win. Tests:
+   - a cast undone leaves the state identical (the `cow` serde comparison,
+     plus a shuffle after restore that must match);
+   - undo before a decision answer re-poses the decision;
+   - undo after `ManualTapRequired` untaps the forced pips and empties the
+     pool;
+   - automatic actions take no point;
+   - undo is refused after game over (structural: the match loop returns
+     at game over, so no request reaches it);
+   - the ring evicts by turn.
+
+   Client: one test that dirties every reset resource, and a harness
+   `--rewind` screenshot.
+2. ✅ **No fishing** (2026-10-01). What the code turned out to be, and what
+   shipped:
+   - **Coins were never rolled on the client.** No coin or die decision
+     suspends: `flip_one_coin` draws from the game's stream and the live
+     server's `AutoDecider` takes that roll, so a rewind already replays
+     the flip. The client's randomizer button (`handle_randomizer_buttons`)
+     is unreachable; if a coin or die ever does suspend for a human, its
+     answer must come from the decision's roll, not the button. Test:
+     `undo::a_redo_flips_the_same_coin` (16 seeds, both faces seen).
+   - ⏳ **Die rolls in a live match always come out as the middle face**
+     (`AutoDecider` answers `DieRoll` with the midpoint, for tests). Pinned,
+     so nothing to fish, but not random either: Goblin Goliath's d6 is
+     always 3. Rolling from the game's stream would move every golden trace
+     and pool number with a die in it; its own change.
+   - **Bots are pinned per decision.** `drive_bots` pins each bot's
+     randomness to `undo::decision_seed` (the stream position mixed with
+     turn, step, priority, zone sizes and the effect timestamp) for that
+     decision: the scored bot's jitter and the search's rollouts and Gumbel
+     noise (`mcts::PinnedStreams`), each root-parallel worker given its own
+     stream in worker order. Unpinned (every ladder, bench and training
+     run) is the thread RNG as before; a thread that pinned its own jitter
+     (the server's seeded bot-vs-bot sweeps) keeps it. Tests:
+     `a_redo_meets_the_same_bot_reply` (the uniform bot, which fails it
+     unpinned, and a two-worker search bot, event for event),
+     `pinned_streams_replay_a_search`.
+   - **The take-back says what it showed**: `Rewound.saw`, from a journal
+     every broadcast feeds (`undo::note_seen`, armed per match like the
+     replay sink) plus new `hands_revealed_to` pairs: the seat's draws,
+     scries, surveils and searches, every revealed card, coin and die, and
+     a hand a choice laid open (Thoughtseize). Logged as "⟲ You took back:
+     cast Thoughtseize (you saw Bot's hand)". Test:
+     `a_take_back_names_what_it_showed`.
+3. ✅ **The log and stats follow the branch** (2026-10-01). Not by an event
+   count: the TCP outbox may drop an `Update` for a slow client, and a count
+   would cut in the wrong place. The server marks each undo point in every
+   stream instead (`ServerMsg::UndoMark`, never dropped), ahead of what its
+   action sends. At a mark the client notes its log (`GameLog::cut`), its
+   `MatchStats` and its `LifeHistory` samples; a rewind to the point puts
+   them back and drops the later marks. Lines that aren't the game's (chat,
+   notices, earlier take-backs) stay; a line coalesced past the mark gets
+   its count back. `poll_net` holds a mark or rewind behind events to the
+   next frame, so it lands before the events after it are folded in. Tests:
+   `a_rewind_cuts_the_log_and_stats_back_to_its_mark` (the stats equal a
+   game that never took the branch), `a_mark_behind_events_waits_for_the_
+   next_frame`. A client that never heard the mark (it reconnected since)
+   keeps its log and stats.
+4. ✅ **Consent** (2026-10-02), in the one match loop every path shares
+   (lobby, LAN, pair server). With another human at the table
+   `RequestUndo` is a request (`undo::Asked`, `ServerMsg::UndoRequested`)
+   that each other connected human answers (`ClientMsg::RespondUndo`); bots
+   allow. While it waits, actions from every seat are refused ("a take-back
+   is waiting for an answer"), bots don't move, the rope stops (and starts
+   over after), and the chess clock is billed up to the request and stopped
+   (`Clock { running: None }`). Every allow applies it; a decline, the
+   30-second deadline, a seat it involves dropping, or a concession (legal
+   any time, CR 104.3a) ends it with `UndoDeclined { reason }`; the asker
+   may withdraw. A seat that dropped and may come back holds a request off
+   ("Bob is away"); one gone for good has no say. As planned, except the
+   request is its own message rather than a `ClientView` field (step 1's
+   reason). Client: a banner over the table — Allow / Decline for a seat it
+   asks, Withdraw for the asker, the countdown and who it waits on for
+   everyone — and a log line each way; auto-pass holds while it waits.
+   Tests: `a_take_back_with_another_player_asks_them`,
+   `a_declined_take_back_keeps_the_game`, `an_unanswered_take_back_is_
+   declined` (the deadline, then a seat leaving), `the_rope_waits_for_a_
+   take_back`; client `the_banner_names_the_request_and_who_it_waits_for`,
+   `a_request_is_logged_once_and_its_decline_says_why`.
+5. ✅ **History and settings** (2026-10-02). Shift+Z, or a right-click on
+   Undo, opens the list of your points ("Turn 6 · Main 1 — cast Opt"),
+   newest first; a row takes back to just before it, everything after
+   with it (`RequestUndo { to: Some(id) }`, through consent when others
+   sit). The Take-backs setting (`GameplayConfig::takebacks`, in the main
+   menu's Settings and the in-game Esc menu): **Off** (no Undo, and another
+   player's request is declined for you), **Last action**, **Recent
+   actions** (the default, with the list). Consent with humans holds in
+   every setting. Not done: redo of the discarded branch (the plan's
+   "maybe"). Tests: `take_backs_off_declines_for_you`,
+   `the_setting_saves_and_cycles`. Harness: `--take-back list|asked`.
+
+Later, the same ring feeds the replay scrubber and crash recovery. Those
+need persisted snapshots, so first the serde-skipped RNG and the ~78
+skipped scratch fields, plus the `CardInstanceWire` round-trip fix.
+
+**Untouched:** golden traces and every perf number. `perform_action`
+doesn't change, and the ring, `SubmitAuto` and the view field live only on
+the server's human-seat path, which neither bots nor the bench run.
+
