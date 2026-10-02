@@ -939,8 +939,8 @@ pub fn wkabi_shield_of_the_nation() -> CardDefinition {
     }
 }
 
-/// Wakanda Forever! — reveal six: a permanent enters indestructible, another
-/// goes to hand. Residual: the picks are the highest mana values.
+/// Wakanda Forever! — reveal six: a permanent of your choice may enter with an
+/// indestructible counter, another may go to hand.
 pub fn wakanda_forever() -> CardDefinition {
     spell(
         "Wakanda Forever!",

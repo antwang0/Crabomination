@@ -159,8 +159,8 @@ fn kimoyo_beads_uses_each_bead_once() {
     assert_eq!(g.players[0].life, life + 3);
 }
 
-/// Wakanda Forever! puts the biggest permanent in with an indestructible
-/// counter, the next into hand, and bins the rest.
+/// Wakanda Forever!'s headless picks: the biggest permanent in with an
+/// indestructible counter, the next into hand, and the rest binned.
 #[test]
 fn wakanda_forever_deploys_and_takes() {
     let mut g = main_phase(2);
@@ -177,6 +177,23 @@ fn wakanda_forever_deploys_and_takes() {
     assert_eq!(c.keyword_counters.get(&Keyword::Indestructible).copied(), Some(1));
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Wakanda Forever!'s two "you may"s are the caster's picks: deploy the Bears,
+/// take nothing, and the Wurm goes to the graveyard with the rest.
+#[test]
+fn wakanda_forever_picks_are_the_casters() {
+    let mut g = main_phase(2);
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::wakanda_forever());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear]), DecisionAnswer::Cards(vec![])]));
+    let hand = g.players[0].hand.len();
+    cast(&mut g, spell, &[], None).expect("cast");
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm));
+    assert_eq!(g.players[0].hand.len(), hand - 1);
 }
 
 /// Heart-Shaped Herb prevents 1 of each opposing source's damage to you.

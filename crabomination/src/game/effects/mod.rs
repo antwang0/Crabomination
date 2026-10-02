@@ -24053,7 +24053,7 @@ impl GameState {
             Effect::CastExiledFreeOwnersLoseLife { what } => self.cast_exiled_free(what, true, ctx, events),
             Effect::CastExiledFree { what } => self.cast_exiled_free(what, false, ctx, events),
             Effect::RevealDeployOneTakeOne { count, indestructible } => {
-                self.reveal_deploy_one_take_one(count, *indestructible, ctx, events);
+                self.reveal_deploy_one_take_one(count, *indestructible, ctx, effect, events);
                 Ok(())
             }
             Effect::ReverseTurnOrder => {
