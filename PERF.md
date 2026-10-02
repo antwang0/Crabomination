@@ -3065,6 +3065,24 @@ pod              every deck 1-183 in six-seat blocks x 150 (seeds 15001+, 31
                  blocks): 4,650 games, all decided, zero panics
 ```
 
+Second cycle, same session: resolution picks moved off the game-wide decider
+(`effects/seat_mode.rs`, the Half edicts, Dismantle, `ExileFromHand`) — a
+headless seat's path is unchanged, so the two-player pools cannot move.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 against the session's first-cycle binary (release)
+strict debug pod CRAB_ANSWER_LOG=strict, all 183 decks in blocks: 4 seats
+                 1,380 games (one leak, fixed: a parked DistributeCounters re-run
+                 with nothing to split), 6 seats 930, 3 / 5 / 8 seats 1,220 /
+                 740 / 230 — all decided, zero panics
+pod              release-fast, first-N decks, 2..8 seats x 5,000 (seeds
+                 25002-25008): 35,000 games, all decided; turns/game 19.26 /
+                 32.19 / 45.76 / 57.06 / 68.18 / 81.63 / 96.08
+pod              every deck in six-seat blocks x 300 (seeds 26001+): 9,300
+                 games, one undecided — a draw (CR 104.4a), not a stall
+```
+
 ### 2026-10-02 (Commander session `01Hcrp67`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: a per-cast `as_cast_condition`
