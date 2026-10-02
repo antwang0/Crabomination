@@ -489,3 +489,40 @@ fn a_prompting_player_chooses_the_dungeon_and_the_room() {
     g.submit_decision(DecisionAnswer::Mode(1)).expect("Oubliette");
     assert_eq!(g.players[0].dungeon, Some(("Tomb of Annihilation".to_string(), 3)));
 }
+
+/// CR 608.2d — "exiles a card from their hand": a PROMPTING player picks
+/// which (it used to be the first card in hand, unasked).
+#[test]
+fn a_prompting_player_picks_the_card_exiled_from_hand() {
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let first = g.add_card_to_hand(0, catalog::island());
+    let keep = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let pitch = g.add_card_to_hand(0, catalog::forest());
+    g.stack.push(crabomination::game::types::StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(Effect::ExileFromHand { who: Selector::You, amount: Value::ONE }),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        trigger_player: None,
+        intervening_if: None,
+        additional_targets: Vec::new(),
+        mana_spent_by_color: Vec::new(),
+        activated: false,
+        source_transformed_since_push: false,
+    });
+    let _ = g.resolve_top_of_stack();
+    assert!(g.pending_decision.is_some(), "the pick is asked");
+    g.submit_decision(DecisionAnswer::Cards(vec![pitch])).expect("the Forest");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == pitch), "the picked card is exiled");
+    let hand: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    assert_eq!(hand, vec![first, keep]);
+}

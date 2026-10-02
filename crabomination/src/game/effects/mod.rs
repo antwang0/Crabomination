@@ -10294,57 +10294,82 @@ impl GameState {
                 Ok(())
             }
             Effect::ExileFromHand { who, amount } => {
-                // The exiling player picks, asked as a discard-shaped choice
-                // (a bot sheds its least useful cards — Ashiok −3, Kheru
-                // Mind-Eater). A prompting seat keeps hand order: a UI picker
-                // is the follow-up.
+                // The exiling player picks (Ashiok −3, Kheru Mind-Eater). A
+                // headless seat answers a discard-shaped choice (a bot sheds its
+                // least useful cards); a prompting seat picks in the client
+                // (CR 608.2d — logged per-seat asks, every seat asked before
+                // anything is exiled).
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
-                for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        let count = n.min(self.players[p].hand.len());
-                        if count == 0 {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                let mut cursor = 0;
+                let mut plan: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(seats.len());
+                for p in seats {
+                    let count = n.min(self.players[p].hand.len());
+                    if count == 0 {
+                        continue;
+                    }
+                    let hand: Vec<(CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let mut picks: Vec<CardId> = Vec::new();
+                    if self.seat_suspends(p) {
+                        let auto: Vec<CardId> = hand.iter().take(count).map(|(id, _)| *id).collect();
+                        let Some(ids) = self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            format!("Exile {count} from your hand"),
+                            source,
+                            hand.clone(),
+                            count as u32,
+                            count as u32,
+                            PickValue::Cost,
+                            effect,
+                            auto,
+                        ) else {
+                            return Ok(());
+                        };
+                        picks = ids;
+                    } else if let crate::decision::DecisionAnswer::Discard(ids) =
+                        self.decider.decide(&crate::decision::Decision::Discard {
+                            player: p,
+                            count: count as u32,
+                            hand: hand.clone(),
+                        })
+                    {
+                        for id in ids {
+                            if hand.iter().any(|(h, _)| *h == id) && !picks.contains(&id) {
+                                picks.push(id);
+                            }
+                        }
+                    }
+                    for (id, _) in &hand {
+                        if picks.len() >= count {
+                            break;
+                        }
+                        if !picks.contains(id) {
+                            picks.push(*id);
+                        }
+                    }
+                    picks.truncate(count);
+                    plan.push((p, picks));
+                }
+                self.clear_answer_log();
+                for (p, picks) in plan {
+                    for cid in picks {
+                        let Some(i) = self.players[p].hand.iter().position(|c| c.id == cid) else {
                             continue;
-                        }
-                        let mut picks: Vec<CardId> = Vec::new();
-                        if !self.seat_prompts(p) {
-                            let hand: Vec<(CardId, String)> = self.players[p]
-                                .hand
-                                .iter()
-                                .map(|c| (c.id, c.definition.name.to_string()))
-                                .collect();
-                            if let crate::decision::DecisionAnswer::Discard(ids) =
-                                self.decider.decide(&crate::decision::Decision::Discard {
-                                    player: p,
-                                    count: count as u32,
-                                    hand: hand.clone(),
-                                })
-                            {
-                                for id in ids {
-                                    if hand.iter().any(|(h, _)| *h == id) && !picks.contains(&id) {
-                                        picks.push(id);
-                                    }
-                                }
-                            }
-                        }
-                        for c in self.players[p].hand.iter() {
-                            if picks.len() >= count {
-                                break;
-                            }
-                            if !picks.contains(&c.id) {
-                                picks.push(c.id);
-                            }
-                        }
-                        picks.truncate(count);
-                        for cid in picks {
-                            let Some(i) = self.players[p].hand.iter().position(|c| c.id == cid)
-                            else {
-                                continue;
-                            };
-                            let card = self.players[p].hand.remove(i);
-                            self.note_exiled_from_hand_or_by(p);
-                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                            self.scratch.last_moved_cards.push(cid);
-                        }
+                        };
+                        let card = self.players[p].hand.remove(i);
+                        self.note_exiled_from_hand_or_by(p);
+                        self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                        self.scratch.last_moved_cards.push(cid);
                     }
                 }
                 Ok(())
