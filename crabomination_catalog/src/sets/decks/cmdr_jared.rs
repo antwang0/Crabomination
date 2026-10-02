@@ -223,14 +223,14 @@ pub fn jenson_carthalion_druid_exile() -> CardDefinition {
 }
 
 /// Knight of New Alara — your other multicolored creatures get +1/+1 per
-/// color.
-/// Residual: printed colors are counted.
+/// color — its colors as they are now (CR 613 layer 5), so a creature painted
+/// multicolored counts.
 pub fn knight_of_new_alara() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Each other multicolored creature you control gets +1/+1 for each of its colors.",
             effect: StaticEffect::PumpTeamByControlledPermanents {
-                applies_to: R::Creature.and(R::Multicolored).and(R::OtherThanSource),
+                applies_to: R::Creature.and(R::OtherThanSource),
                 count_filter: R::Any,
                 per_power: 1,
                 per_toughness: 1,

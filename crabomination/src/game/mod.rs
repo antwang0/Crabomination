@@ -14717,10 +14717,22 @@ impl GameState {
                         }
                         // "for each OTHER …" — the affected permanent doesn't
                         // count itself.
+                        // "+1/+1 for each of its colors" counts the layer-5
+                        // colors, so the layer pass does the counting.
+                        if *per_own_color {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::just(target.id),
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::ModifyPtPerOwnColorIfMulticolored(*per_power, *per_toughness),
+                            });
+                            continue;
+                        }
                         let count = if let Some(kind) = per_own_counter {
                             target.counter_count(*kind) as i32
-                        } else if *per_own_color {
-                            target.definition.printed_colors().len() as i32
                         } else if *exclude_self
                             && self.evaluate_requirement_static_on(
                                 count_filter,
@@ -30488,6 +30500,7 @@ pub(crate) fn modification_reduces_toughness(m: &Modification) -> bool {
         | Modification::SwitchPowerToughness => true,
         Modification::ModifyToughness(t) | Modification::ModifyPowerToughness(_, t) => *t < 0,
         Modification::ModifyPtPerOwnCreatureType(_, per_t, _) => *per_t < 0,
+        Modification::ModifyPtPerOwnColorIfMulticolored(_, per_t) => *per_t < 0,
         _ => false,
     }
 }

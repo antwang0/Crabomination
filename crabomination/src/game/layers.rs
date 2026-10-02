@@ -163,6 +163,10 @@ pub enum Modification {
     /// creature types, capped at `max` types (Diligent Zookeeper). Reads the
     /// layer-4 computed creature types of the same card.
     ModifyPtPerOwnCreatureType(i32, i32, u32),
+    /// 7c — +per_power/+per_toughness for each of the affected creature's own
+    /// colors, only while it has two or more (Knight of New Alara). Reads the
+    /// layer-5 computed colors of the same card.
+    ModifyPtPerOwnColorIfMulticolored(i32, i32),
     SwitchPowerToughness,          // 7d
 }
 
@@ -254,6 +258,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         | M::ModifyToughness(_)
         | M::ModifyPowerToughness(..)
         | M::ModifyPtPerOwnCreatureType(..)
+        | M::ModifyPtPerOwnColorIfMulticolored(..)
         | M::SwitchPowerToughness => 0,
     };
     let pt = if crate::game::modification_reduces_toughness(m) { F::TOUGHNESS_REDUCE } else { 0 };
@@ -1382,6 +1387,14 @@ fn compute_permanent_pass(
                 let n = (subtypes.creature_types.len() as u32).min(*max) as i32;
                 mod_power += pp * n;
                 mod_toughness += pt * n;
+            }
+            Modification::ModifyPtPerOwnColorIfMulticolored(pp, pt) => {
+                // Colors are final at layer 5, before this layer-7 effect.
+                let n = colors.len() as i32;
+                if n >= 2 {
+                    mod_power += pp * n;
+                    mod_toughness += pt * n;
+                }
             }
             Modification::SwitchPowerToughness => switched = !switched,
         }

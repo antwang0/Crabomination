@@ -93,6 +93,17 @@ fn knight_of_new_alara_counts_colors() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(fe).map(|c| c.power), Some(13));
     assert_eq!(g.computed_permanent(bear).map(|c| c.power), Some(2));
+    // CR 613.1e — its colors as they are now: painted white and blue, the
+    // Bears count two.
+    let paint = crabomination::effect::Effect::BecomeColor {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasName("Grizzly Bears".into())),
+        colors: vec![Color::White, Color::Blue],
+        duration: crabomination::effect::Duration::EndOfTurn,
+        additive: false,
+    };
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&paint, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bear).map(|c| c.power), Some(4));
 }
 
 /// Archelos: untapped, other permanents enter untapped (CR 614.1c) — even an
