@@ -3015,6 +3015,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-02 (Commander session `01Hcrp67`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: a per-cast `as_cast_condition`
+read (the old per-cast commander walk is gone), the etb-counter rider walk
+peels `While*` gates, the trigger dispatcher scans a batch for
+`CardLeftGraveyard` only while a battlefield-death id is recorded, player
+combat fogs emit `DamagePrevented`, the draw path emits the Nth-draw event for
+n = 5. Card fixes reach the cube (Reflecting Pool, Naga Vitalist, Velomachus,
+Stalking Vengeance). 4-core container.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (base 6beb46712 and tip cf0886f5e, release-fast)
+bench_ab.py      12 pairs, base 6beb46712 vs tip cf0886f5e (release-fast):
+                 +3.06 % median (mean +3.21 %, sd 4.77) — noise
+two-player pools cube / sos / sealed x 300 an archetype, seed 20262401: all decided
+pod              9,220 release-fast games over every deck: 4 seats x 4,600
+                 (seed 20262001+), 6 x 1,860 (20262101+), 8 x 920 (20262201+),
+                 4 seats --a dflt x 1,840 (20262301+) — zero panics, zero caps,
+                 one CR 104.4a draw; earlier this run 11,220 more, same result
+suite            23,658 / 0 / 5 strict; workspace clippy 0
+```
+
 ### 2026-09-29 (Commander session `0131vbd2`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: the friendly branch of the
