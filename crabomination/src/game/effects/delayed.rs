@@ -21,6 +21,9 @@ pub(crate) fn delayed_kind_from_effect(
         DelayedTriggerKind::WhenYouLoseControlOfTarget => {
             DelayedKind::WhenPlayerLosesControlOf { card: target_card.unwrap_or(crate::card::CardId(0)), player: controller }
         }
+        DelayedTriggerKind::WhenYouCastTargetThisTurn => {
+            DelayedKind::WhenPlayerCastsCard { card: target_card.unwrap_or(crate::card::CardId(0)), player: controller }
+        }
         // `after_turn` one back lets this turn's end step count when it is
         // the controller's and hasn't begun yet.
         DelayedTriggerKind::YourNextEndStep => {
@@ -54,5 +57,6 @@ pub(crate) fn delayed_kind_from_effect(
 /// duration (CR 603.7b) lapses at this turn's cleanup, fired or not. Every
 /// other kind runs on its own clock.
 pub(crate) fn delayed_expiry(k: DelayedTriggerKind, turn: u32) -> Option<u32> {
-    matches!(k, DelayedTriggerKind::NextMainPhaseThisTurn).then_some(turn)
+    matches!(k, DelayedTriggerKind::NextMainPhaseThisTurn | DelayedTriggerKind::WhenYouCastTargetThisTurn)
+        .then_some(turn)
 }

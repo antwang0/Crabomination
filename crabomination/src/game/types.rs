@@ -1377,6 +1377,9 @@ pub enum DelayedKind {
     /// first `ControlChanged` moving `card` away from `player`; dropped
     /// unfired when `card` leaves the battlefield.
     WhenPlayerLosesControlOf { card: crate::card::CardId, player: usize },
+    /// "When you cast [card] this turn" (Havengul Lich): fires on `card`'s
+    /// `SpellCast` by `player`; dropped when the card leaves its zone uncast.
+    WhenPlayerCastsCard { card: crate::card::CardId, player: usize },
     /// "When [that permanent] leaves the battlefield **this turn**, …"
     /// (Runesword). Same firing site as `WhenCardLeavesBattlefield` but
     /// expires at cleanup.

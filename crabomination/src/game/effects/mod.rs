@@ -3537,7 +3537,8 @@ impl GameState {
         let mut granted = Vec::new();
         for ent in self.resolve_selector(what, ctx) {
             let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
-            if let Some(c) = self.battlefield_find(id) {
+            // A spell on the stack lends its printed abilities (Havengul Lich).
+            if let Some(c) = self.find_card_anywhere(id) {
                 granted.extend(c.definition.activated_abilities.iter().cloned());
             }
             granted.extend(self.granted_abilities_for(id));

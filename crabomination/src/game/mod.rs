@@ -165,6 +165,7 @@ mod simultaneous_deaths;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
+mod cast_watch;
 // "As this becomes attached, choose …" (Sanctuary Blade).
 mod as_attached;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
@@ -23249,6 +23250,7 @@ impl GameState {
             return;
         }
         self.fire_lose_control_delayed(events);
+        self.fire_cast_watch_delayed(events);
         self.apply_as_attached_choices(events);
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
         // Most (permanent, trigger) pairs are ones no event in the batch can
