@@ -23,6 +23,15 @@ impl GameState {
     ) -> Result<(), GameError> {
         let amt = self.evaluate_value(total, ctx).max(0) as u32;
         if amt == 0 || targets.is_empty() {
+            // A re-run whose total or targets vanished since it parked
+            // (Yannik's distribution after its exile pick) has nothing to
+            // split: its stashed division is moot, not a later arm's.
+            if matches!(
+                self.scratch.stashed_resolution_answer,
+                Some(crate::decision::DecisionAnswer::DamageDivision(_))
+            ) {
+                self.scratch.stashed_resolution_answer = None;
+            }
             return Ok(());
         }
         let decision = Decision::DivideDamage {
