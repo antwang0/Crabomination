@@ -1258,6 +1258,29 @@ fn chain_lightning_offers_the_copy_to_the_player_it_burned() {
     assert_eq!(g.players[0].life, life0 - 3, "the copy came back at the caster");
 }
 
+/// CR 608.2h — "that permanent's controller" is read as the spell resolves:
+/// the creature it burned is still on the battlefield until state-based
+/// actions, so the copy is offered to its controller even when the 3 is lethal.
+#[test]
+fn chain_lightning_offers_the_copy_to_a_burned_creatures_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::chain_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::Red, 2);
+    let life0 = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Player(0)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life0 - 3, "the bear's controller chained it back");
+}
+
 // ── Rift Bolt ───────────────────────────────────────────────────────────────
 
 #[test]

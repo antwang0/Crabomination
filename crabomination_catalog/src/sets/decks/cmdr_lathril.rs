@@ -480,10 +480,8 @@ pub fn rhys_the_exiled() -> CardDefinition {
     }
 }
 
-/// Roots of Wisdom — mill three, then a land or Elf card to hand; if you
-/// can't, draw a card.
-///
-/// ⚠ Residual: the card comes from among the three milled.
+/// Roots of Wisdom — mill three, then a land or Elf card from anywhere in
+/// your graveyard to hand; if you can't, draw a card.
 pub fn roots_of_wisdom() -> CardDefinition {
     let your_yard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land.or(elf()) };
     spell(

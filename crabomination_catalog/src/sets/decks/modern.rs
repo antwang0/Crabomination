@@ -20770,9 +20770,8 @@ pub fn aluren() -> CardDefinition {
 /// Chain Lightning — {R} Sorcery. Deal 3 damage to any target, then that
 /// player (or that permanent's controller) may pay {R}{R} to copy it
 /// (`MayCopyThisSpell`, CR 706). `ControllerOf` over a player target resolves
-/// to that player.
-/// Residual: a permanent target that dies to the damage leaves
-/// `ControllerOf(Target(0))` unresolvable, so the chain ends (shared LKI gap).
+/// to that player; a burned creature is still on the battlefield until
+/// state-based actions, so its controller is asked.
 pub fn chain_lightning() -> CardDefinition {
     CardDefinition {
         name: "Chain Lightning",
@@ -33356,8 +33355,8 @@ pub fn concealing_curtains() -> CardDefinition {
 /// Front: 1/1. At the beginning of your upkeep, look at the top card of your
 /// library; you may reveal it. If an instant or sorcery card is revealed this
 /// way, transform Delver of Secrets. (The "you may reveal" is an
-/// intervening-`if` on `Transform`, and that is the optimal line rather than
-/// an approximation: the only rational yes is exactly when the top card *is*
+/// intervening-`if` on `Transform`, and that is the optimal line, not a
+/// gap: the only rational yes is exactly when the top card *is*
 /// an instant or sorcery, so the modelled card reveals strictly less than a
 /// seat that always says yes. `cr_712_delver_transforms_on_an_instant_but_
 /// not_on_a_land` asserts both directions.)
