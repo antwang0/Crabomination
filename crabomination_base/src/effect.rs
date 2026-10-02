@@ -1957,6 +1957,10 @@ pub enum Predicate {
     /// The trigger's leaving permanent had one or more counters on it as it
     /// left (CR 603.10 — its last-known information; Nikara, Lair Scavenger).
     TriggerSourceHadCounters,
+    /// The same last-known read for one counter kind — "for as long as that
+    /// creature has a bounty counter on it, it has 'when this dies …'"
+    /// (Mathas, Fiend Seeker).
+    TriggerSourceHadCounter(crate::card::CounterType),
     /// An opponent of the controller had at least `n` creatures enter under
     /// their control this turn (Whiplash Trap's alternative cost).
     AnOpponentHadCreaturesEnterAtLeast(u32),

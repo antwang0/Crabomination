@@ -3543,6 +3543,13 @@ impl GameState {
                     .get(&cid)
                     .is_some_and(|c| !c.counters.is_empty() || !c.keyword_counters.is_empty())
             }
+            Predicate::TriggerSourceHadCounter(kind) => {
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.died_card_snapshots.get(&cid).is_some_and(|c| c.counter_count(*kind) > 0)
+            }
             Predicate::TriggerSourceEnteredByCast => {
                 let cid = match ctx.trigger_source {
                     Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
