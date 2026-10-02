@@ -3015,6 +3015,26 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-02 (Commander session `01HLca3f`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one bool per attacker in the
+combat-damage gather (the "may assign as though unblocked" ask, answers in the
+cold group — `GameState` stays under its size cap), one match on the effect at
+each trigger push (CR 603.3d X binding), one variant test at the top of
+`place_card_in_dest` (`ZoneDest::IfCard`). No A/B taken: nothing here is a
+perf change and `--bench` is outcome-identical. 4-core container.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip f60e03937, release); games_per_s 278.6 / 289.2 on two runs
+two-player pools cube / sos / sealed x 300, seed 16001: 7,500 games, all decided
+pod              first-N decks, 2..8 seats x 2,000 (seeds 14102-14108): 14,000
+                 games, all decided, every undecided_by column 0; turns/game
+                 19.26 / 32.31 / 45.49 / 56.93 / 68.09 / 81.51 / 96.48
+pod              every deck 1-183 in six-seat blocks x 150 (seeds 15001+, 31
+                 blocks): 4,650 games, all decided, zero panics
+```
+
 ### 2026-10-02 (Commander session `01Hcrp67`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: a per-cast `as_cast_condition`
