@@ -54,9 +54,14 @@ screenshots of a live fixture match (`--take-back play|undo`).
   cast Opt (you saw 1 draw, a scry)"). The log, the match stats and the
   life graph go back to the point (`ServerMsg::UndoMark`): the undone
   lines leave, chat and notices stay.
-- Residual ⏳ (TODO steps 4–5):
-  - no take-backs with another human at the table;
-  - no list for jumping back several at once.
+- ✅ **With other people, and several at once** (TODO steps 4–5,
+  2026-10-02). With another human at the table a take-back is a request:
+  a banner over the paused table, Allow / Decline for those asked, Withdraw
+  for the asker, a 30-second countdown. Shift+Z (or right-click Undo) lists
+  your recent actions to go back to. The Take-backs setting (Settings and
+  the Esc menu): Off — which also declines others' requests for you — Last
+  action, or Recent actions.
+- Residual ⏳: no redo of a taken-back branch.
 
 ## One decision picker (2026-10-01) — shipped
 
@@ -1162,11 +1167,9 @@ indicator + click target. Slims the 2-D chip strip.
 
 ### Undo / Take-Back
 ✅ Against bots, with no fishing and the log following the branch
-(2026-10-01, see the top). ⏳ Between players: a "request
-take-back" the opponent approves — TODO's step 4. **Full plan now lives at
-"Engine — Rollback / Undo system (plan)"** (snapshot-based; re-planned
-2026-10-01 against the server and client as mapped, five steps, the first
-being undo against bots with this UI).
+(2026-10-01); with other people by consent, a list, and a setting
+(2026-10-02). See the top. The plan, all five steps now done, is TODO's
+"Phases 2–5 — player take-back".
 
 ### Responsive Stack Display
 ✅ The panel sits where the stack lane's fit kept room for it, clear of the

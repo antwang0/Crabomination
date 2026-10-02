@@ -381,6 +381,7 @@ impl LobbyManager {
             | ClientMsg::SubmitAction(_)
             | ClientMsg::SubmitAuto(_)
             | ClientMsg::RequestUndo { .. }
+            | ClientMsg::RespondUndo { .. }
             | ClientMsg::Debug(_) => LobbyOutcome::default(),
         }
     }

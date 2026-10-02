@@ -1,5 +1,5 @@
 //! Main-menu Settings panel — window mode / resolution, render quality, UI
-//! size, animation speed, and hand sorting, all persisted through
+//! size, animation speed, hand sorting and take-backs, all persisted through
 //! `config::ConfigStore` so they survive restarts.
 //!
 //! Lives in `AppState::Menu` (the in-game Esc panel keeps its quality +
@@ -37,6 +37,7 @@ pub enum SettingRow {
     UiSize,
     AnimSpeed,
     SortHand,
+    Takebacks,
 }
 
 #[derive(Component)]
@@ -129,6 +130,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::UiSize,
             SettingRow::AnimSpeed,
             SettingRow::SortHand,
+            SettingRow::Takebacks,
         ] {
             p.spawn((
                 Button,
@@ -212,6 +214,7 @@ pub fn update_setting_labels(
                 "Sort hand:  {}",
                 if store.0.gameplay.sort_hand { "On" } else { "Off" }
             ),
+            SettingRow::Takebacks => format!("Take-backs:  {}", store.0.gameplay.takebacks.label()),
         };
         for child in children.iter() {
             if let Ok(mut t) = texts.get_mut(child)
@@ -318,6 +321,10 @@ pub fn handle_setting_rows(
             SettingRow::SortHand => {
                 gameplay.sort_hand = !gameplay.sort_hand;
                 store.0.gameplay.sort_hand = gameplay.sort_hand;
+                dirty = true;
+            }
+            SettingRow::Takebacks => {
+                store.0.gameplay.takebacks = store.0.gameplay.takebacks.next();
                 dirty = true;
             }
         }

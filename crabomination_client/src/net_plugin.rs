@@ -496,8 +496,18 @@ pub fn poll_net(
             // A take-back: `systems::takeback` resets the client once the
             // restored view (which follows) is in.
             ServerMsg::Rewound { by, label, to, saw } => {
+                takeback.asked = None;
                 takeback.heard.push(crate::systems::takeback::Heard::Rewound { by, label, to, saw })
             }
+            // Another player's consent: the match pauses — the rope with it —
+            // until the table answers.
+            ServerMsg::UndoRequested { by, label, saw, seconds, waiting } => {
+                rope.deadline = None;
+                let deadline = time.elapsed_secs_f64() + seconds as f64;
+                let asked = crate::systems::takeback::Asked { by, label, saw, waiting, deadline, answered: false };
+                takeback.ask(asked, &view, &mut log);
+            }
+            ServerMsg::UndoDeclined { by, reason } => takeback.declined(by, &reason, &view, &mut log),
             ServerMsg::UndoMark { id } => takeback.heard.push(crate::systems::takeback::Heard::Mark(id)),
             ServerMsg::UndoPoints(points) => takeback.points = points,
             ServerMsg::Chat { seat, name, text } => {

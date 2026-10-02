@@ -197,6 +197,28 @@ pub fn setup_quality_panel(
                 children![(Text::new(""), tf(12.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE)],
             ));
 
+            // ── Take-backs ────────────────────────────────────────────
+            // The main menu's Settings row, here too. Labelled by
+            // `handle_takebacks_button`.
+            p.spawn((
+                Text::new("Take-backs"),
+                tf(11.0),
+                TextColor(theme::TEXT_SECONDARY),
+            ));
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+                    align_self: AlignSelf::FlexStart,
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                TakebacksButton,
+                children![(Text::new(""), tf(12.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE)],
+            ));
+
             // ── Match ─────────────────────────────────────────────────
             // Export State (also X) and Surrender (two-click confirm). Their
             // handlers are `game_ui::buttons`' — they find the buttons by
@@ -501,6 +523,33 @@ pub fn handle_ui_size_button(
                 && t.0 != label
             {
                 t.0 = label.clone();
+            }
+        }
+    }
+}
+
+/// The Esc menu's Take-backs button.
+#[derive(Component)]
+pub struct TakebacksButton;
+
+/// Cycle the Take-backs setting on a click and persist it; keep the
+/// button's label current.
+pub fn handle_takebacks_button(
+    mut store: ResMut<crate::config::ConfigStore>,
+    clicks: Query<&Interaction, (Changed<Interaction>, With<TakebacksButton>)>,
+    labels: Query<&Children, With<TakebacksButton>>,
+    mut texts: Query<&mut Text>,
+) {
+    if clicks.iter().any(|i| *i == Interaction::Pressed) {
+        crate::config::update_store(&mut store, |c| c.gameplay.takebacks = c.gameplay.takebacks.next());
+    }
+    let label = store.0.gameplay.takebacks.label();
+    for children in &labels {
+        for child in children.iter() {
+            if let Ok(mut t) = texts.get_mut(child)
+                && t.0 != label
+            {
+                t.0 = label.to_string();
             }
         }
     }

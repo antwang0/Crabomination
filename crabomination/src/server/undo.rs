@@ -1,4 +1,4 @@
-//! Take-backs (TODO "Engine — Rollback / Undo system", steps 1–3): a match's
+//! Take-backs (TODO "Engine — Rollback / Undo system", steps 1–5): a match's
 //! recent undo points, one kept just before each deliberate action of a
 //! human seat, and what each is called.
 //!
@@ -29,12 +29,20 @@
 //! - what the undone stretch *showed* can't be taken back, so the rewind
 //!   says what it was ([`seen_since`]): "1 draw", "a coin flip", "Bot's
 //!   hand".
+//!
+//! **Consent** (step 4). With other people at the table a take-back is a
+//! request ([`Asked`]): the match pauses — no actions, no bot moves, the
+//! rope and the chess clock stopped — while each other human still at the
+//! table allows or declines it, for [`ASK_FOR`] at most. Bots allow. Every
+//! allow applies it; a decline, the deadline, a player leaving or a
+//! concession ends it, and play goes on.
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
 use crate::game::{GameAction, GameState, TurnStep};
-use crate::net::{GameEventWire, UndoPointView};
+use crate::net::{GameEventWire, ServerMsg, UndoPointView};
 use crate::server::mcts::PinnedStreams;
 
 /// The most points a match keeps.
@@ -102,16 +110,61 @@ impl UndoHistory {
         self.points.iter().filter(|(p, _)| p.seat == seat).map(|(p, _)| p.view()).collect()
     }
 
+    /// `seat`'s point `to` (its latest for `None`) and the state it keeps,
+    /// left in place.
+    pub fn peek(&self, seat: usize, to: Option<u64>) -> Option<(&UndoPoint, &GameState)> {
+        self.find(seat, to).map(|at| (&self.points[at].0, &self.points[at].1))
+    }
+
     /// Take `seat` back to its point `to` (its latest for `None`): the point
     /// and its state, with that point and every later one — any seat's —
-    /// removed. `None` if `seat` has no such point.
+    /// removed. `None` if `seat` has no such point. What the undone stretch
+    /// showed is forgotten: it is no longer the game's.
     pub fn take(&mut self, seat: usize, to: Option<u64>) -> Option<(UndoPoint, GameState)> {
-        let at = self
-            .points
-            .iter()
-            .rposition(|(p, _)| p.seat == seat && to.is_none_or(|id| p.id == id))?;
+        let at = self.find(seat, to)?;
         let mut later = self.points.split_off(at);
-        later.pop_front()
+        let taken = later.pop_front()?;
+        SEEN.with(|s| {
+            if let Some(journal) = s.borrow_mut().as_mut() {
+                journal.truncate(taken.0.seen_at);
+            }
+        });
+        Some(taken)
+    }
+
+    fn find(&self, seat: usize, to: Option<u64>) -> Option<usize> {
+        self.points.iter().rposition(|(p, _)| p.seat == seat && to.is_none_or(|id| p.id == id))
+    }
+}
+
+/// How long the other players have to answer a take-back request. Two
+/// seconds in this crate's tests, so the deadline test waits that and no
+/// more.
+pub const ASK_FOR: Duration = if cfg!(test) { Duration::from_secs(2) } else { Duration::from_secs(30) };
+
+/// A take-back waiting on the table's consent: `by`'s point `to`.
+#[derive(Clone, Debug)]
+pub struct Asked {
+    pub by: usize,
+    pub to: u64,
+    pub label: String,
+    /// What it would undo that was seen ([`seen_since`]).
+    pub saw: Vec<String>,
+    /// The human seats still to answer.
+    pub waiting: Vec<usize>,
+    pub deadline: Instant,
+}
+
+impl Asked {
+    /// The request as the table hears it, with the time left.
+    pub fn message(&self) -> ServerMsg {
+        ServerMsg::UndoRequested {
+            by: self.by,
+            label: self.label.clone(),
+            saw: self.saw.clone(),
+            seconds: self.deadline.saturating_duration_since(Instant::now()).as_secs_f32().ceil() as u32,
+            waiting: self.waiting.clone(),
+        }
     }
 }
 
@@ -303,12 +356,11 @@ pub(crate) fn note_seen(state: &GameState, events: &[GameEventWire]) {
 
 /// What `point`'s seat saw between keeping it and `now` that rewinding to
 /// `before` (its state) can't take back, in words: "2 draws", "a coin
-/// flip", "Bot's hand". The journal forgets that stretch: it is no longer
-/// the game's.
+/// flip", "Bot's hand".
 pub fn seen_since(point: &UndoPoint, before: &GameState, now: &GameState) -> Vec<String> {
     let seat = point.seat;
     let seen: Vec<Seen> = SEEN.with(|s| {
-        s.borrow_mut().as_mut().map_or_else(Vec::new, |journal| journal.split_off(point.seen_at.min(journal.len())))
+        s.borrow().as_ref().map_or_else(Vec::new, |journal| journal.get(point.seen_at..).unwrap_or_default().to_vec())
     });
     let count = |f: &dyn Fn(&Seen) -> bool| seen.iter().filter(|x| f(x)).count();
     let mut out = Vec::new();
@@ -562,9 +614,10 @@ mod tests {
                 GameEventWire::ScryPerformed { player: 0, looked_at: 2, bottomed: 1 },
             ],
         );
+        let (point, before) = h.peek(0, None).unwrap();
+        assert_eq!(seen_since(point, before, &g), ["2 draws", "a scry", "a coin flip", "P1's hand"]);
         let (point, before) = h.take(0, None).unwrap();
-        assert_eq!(seen_since(&point, &before, &g), ["2 draws", "a scry", "a coin flip", "P1's hand"]);
-        assert!(seen_since(&point, &before, &before).is_empty(), "the stretch is forgotten");
+        assert!(seen_since(&point, &before, &before).is_empty(), "taken back, the stretch is forgotten");
     }
 
     /// Actions read as what they did, by the card they did it with.

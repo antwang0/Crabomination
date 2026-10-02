@@ -734,16 +734,22 @@ fn run_match_inner(
     // Seats paying for a cast that stopped for them to tap mana: their
     // taps belong to that cast's point (`undo`).
     let mut paying: Vec<bool> = vec![false; n];
+    // A take-back waiting on the other players' answers (`undo::Asked`).
+    // While it waits the match is paused: no actions, no bot moves, the rope
+    // and the chess clock stopped.
+    let mut asked: Option<undo::Asked> = None;
 
     loop {
-        if drive_bots(
-            &mut state,
-            &mut bots,
-            &seat_tx,
-            &spectator_tx,
-            &snapshot_sink,
-            &mut last_progress_at,
-        ) {
+        if asked.is_none()
+            && drive_bots(
+                &mut state,
+                &mut bots,
+                &seat_tx,
+                &spectator_tx,
+                &snapshot_sink,
+                &mut last_progress_at,
+            )
+        {
             broadcast_match_over(&state, &seat_tx, &spectator_tx);
             return capture_outcome(&state);
         }
@@ -773,6 +779,10 @@ fn run_match_inner(
             }
         }
         let seat_deadline = seat_gone_until.iter().flatten().min().copied();
+        // Nobody answered in time: the take-back is declined.
+        if asked.as_ref().is_some_and(|a| Instant::now() >= a.deadline) {
+            decline_take_back(&mut asked, "no answer in time".into(), &seat_tx, &spectator_tx);
+        }
 
         // Pick how long to block waiting for the next message:
         // - spectator-only (no human seats): poll on the deadlock watchdog.
@@ -806,7 +816,8 @@ fn run_match_inner(
             // the clock, concede on a flag fall, then aim the clock at the
             // current expected actor (telling a newly-clocked seat its
             // remaining time so the client can render a countdown).
-            if chess_clock.is_some() {
+            // Paused for a take-back request: nobody's clock runs.
+            if chess_clock.is_some() && asked.is_none() {
                 let now = Instant::now();
                 let prev = clock_since.map(|(s, _)| s);
                 if let Some((seat, since)) = clock_since.take()
@@ -832,35 +843,24 @@ fn run_match_inner(
                         // Broadcast every seat's remaining time so clients
                         // can render both clocks (and see who's burning
                         // time), not just their own countdown.
-                        let seats: Vec<Option<u32>> = clock_left
-                            .iter()
-                            .map(|l| l.map(|d| d.as_secs() as u32))
-                            .collect();
-                        for (i, tx) in seat_tx.iter().enumerate() {
-                            if let Some(tx) = tx.as_ref() {
-                                let _ = tx.send(ServerMsg::Clock {
-                                    seconds: clock_left
-                                        .get(i)
-                                        .copied()
-                                        .flatten()
-                                        .unwrap_or_default()
-                                        .as_secs() as u32,
-                                    seats: seats.clone(),
-                                    running: Some(actor),
-                                });
-                            }
-                        }
+                        send_clocks(&clock_left, Some(actor), &seat_tx);
                     }
                 }
             }
-            // Wake for a flag fall or a dropped seat's grace, whichever is first.
+            // Wake for a flag fall, a dropped seat's grace or a take-back's
+            // deadline, whichever is first.
             let wake_at: Option<Instant> = clock_since
                 .and_then(|(seat, since)| clock_left[seat].map(|left| since + left))
                 .into_iter()
                 .chain(seat_deadline)
+                .chain(asked.as_ref().map(|a| a.deadline))
                 .min();
-            // Optional rope: bound the wait when a human seat must act.
-            let rope_deadline = action_timeout.and_then(|t| {
+            // Optional rope: bound the wait when a human seat must act. Not
+            // while a take-back waits, and it starts over after.
+            if asked.is_some() {
+                rope = None;
+            }
+            let rope_deadline = action_timeout.filter(|_| asked.is_none()).and_then(|t| {
                 let actor = expected_actor(&state, &GameAction::PassPriority);
                 if actor < n && bots[actor].is_none() {
                     if rope.map(|(s, _)| s) != Some(actor) {
@@ -950,6 +950,11 @@ fn run_match_inner(
                 // Ignore a stale disconnect from a connection that was
                 // already superseded by a reattach (epoch mismatch).
                 if seat < n && connected[seat] && epoch == seat_epoch[seat] {
+                    // A take-back it asked for or must answer can't wait.
+                    if asked.as_ref().is_some_and(|a| a.by == seat || a.waiting.contains(&seat)) {
+                        let reason = format!("{} left the table", state.players[seat].name);
+                        decline_take_back(&mut asked, reason, &seat_tx, &spectator_tx);
+                    }
                     connected[seat] = false;
                     connected_humans = connected_humans.saturating_sub(1);
                     // A seat still in the game gets the grace to come back,
@@ -995,8 +1000,12 @@ fn run_match_inner(
                     let _ = ch.tx.send(ServerMsg::YourSeat(seat));
                     let _ = ch.tx.send(ServerMsg::MatchStarted);
                     let _ = ch.tx.send(ServerMsg::View(Box::new(view::project(&state, seat))));
-                    // Its take-backs survive the drop.
+                    // Its take-backs survive the drop, and it hears of one
+                    // the table is deciding.
                     let _ = ch.tx.send(ServerMsg::UndoPoints(history.points_for(seat)));
+                    if let Some(a) = &asked {
+                        let _ = ch.tx.send(a.message());
+                    }
                     if let Some(fwd) = attach_forward_tx.as_ref() {
                         spawn_seat_forwarder(seat, seat_epoch[seat], ch.rx, fwd.clone());
                     }
@@ -1052,6 +1061,16 @@ fn run_match_inner(
                     ClientMsg::SubmitAuto(action) => (action, false),
                     _ => unreachable!("matched above"),
                 };
+                // Paused for a take-back. A concession is legal at any time
+                // (CR 104.3a), and ends the request.
+                if asked.is_some() {
+                    if !matches!(action, GameAction::Concede) {
+                        report_error(seat, "a take-back is waiting for an answer", &seat_tx);
+                        continue;
+                    }
+                    let reason = format!("{} conceded", state.players[seat].name);
+                    decline_take_back(&mut asked, reason, &seat_tx, &spectator_tx);
+                }
                 // A human's deliberate action keeps an undo point: the state
                 // just before it. Not a concession, which may end the game,
                 // and not a tap paying for a cast that stopped for it.
@@ -1092,27 +1111,85 @@ fn run_match_inner(
                 }
             }
             ClientMsg::RequestUndo { to } => {
-                // Consent between players is TODO's step 4; until then a
-                // take-back needs the table to be this seat and bots.
-                if human_seats > 1 {
-                    report_error(seat, "take-backs with another player at the table aren't supported yet", &seat_tx);
+                if asked.is_some() {
+                    report_error(seat, "a take-back is already waiting for an answer", &seat_tx);
                     continue;
                 }
-                let Some((point, before)) = history.take(seat, to) else {
+                let Some((point, before)) = history.peek(seat, to) else {
                     report_error(seat, "nothing to take back", &seat_tx);
                     continue;
                 };
-                let saw = undo::seen_since(&point, &before, &state);
-                state.rewind_to(before);
-                for bot in bots.iter_mut().flatten() {
-                    bot.rewound();
+                // The other people at the table must allow it; bots do. A
+                // seat that dropped and may come back can't answer, so it
+                // waits for them; a seat gone for good has no say.
+                let others = (0..n).filter(|&i| i != seat && bots[i].is_none());
+                if let Some(away) = others.clone().find(|&i| !connected[i] && seat_gone_until[i].is_some()) {
+                    let name = &state.players[away].name;
+                    report_error(seat, &format!("{name} is away — a take-back waits for everyone at the table"), &seat_tx);
+                    continue;
                 }
-                paying.fill(false);
+                let waiting: Vec<usize> = others.filter(|&i| connected[i]).collect();
+                if waiting.is_empty() {
+                    let to = Some(point.id);
+                    if take_back(&mut state, &mut history, &mut bots, seat, to, &seat_tx, &spectator_tx) {
+                        paying.fill(false);
+                        rope = None;
+                        last_progress_at = Instant::now();
+                        publish_snapshot(&state, &snapshot_sink);
+                    }
+                    continue;
+                }
+                let a = undo::Asked {
+                    by: seat,
+                    to: point.id,
+                    label: point.label.clone(),
+                    saw: undo::seen_since(point, before, &state),
+                    waiting,
+                    deadline: Instant::now() + undo::ASK_FOR,
+                };
+                send_to_all(a.message(), &seat_tx, &spectator_tx);
+                asked = Some(a);
                 rope = None;
-                last_progress_at = Instant::now();
-                broadcast_rewind(&state, &point, saw, &seat_tx, &spectator_tx);
-                send_undo_points(&history, &seat_tx);
-                publish_snapshot(&state, &snapshot_sink);
+                // Stop the chess clock: bill the running slice; nobody's runs.
+                if let Some((s, since)) = clock_since.take()
+                    && let Some(left) = clock_left[s].as_mut()
+                {
+                    *left = left.saturating_sub(since.elapsed());
+                    send_clocks(&clock_left, None, &seat_tx);
+                }
+            }
+            ClientMsg::RespondUndo { accept } => {
+                // A late answer, to a request already settled, is moot.
+                let Some(a) = asked.as_mut() else { continue };
+                let name = state.players[seat].name.clone();
+                if seat == a.by {
+                    if !accept {
+                        decline_take_back(&mut asked, format!("{name} withdrew it"), &seat_tx, &spectator_tx);
+                    }
+                    continue;
+                }
+                if !a.waiting.contains(&seat) {
+                    continue;
+                }
+                if !accept {
+                    decline_take_back(&mut asked, format!("{name} declined"), &seat_tx, &spectator_tx);
+                    continue;
+                }
+                a.waiting.retain(|&s| s != seat);
+                if !a.waiting.is_empty() {
+                    send_to_all(a.message(), &seat_tx, &spectator_tx);
+                    continue;
+                }
+                // Everyone allowed it.
+                let a = asked.take().expect("matched above");
+                if take_back(&mut state, &mut history, &mut bots, a.by, Some(a.to), &seat_tx, &spectator_tx) {
+                    paying.fill(false);
+                    last_progress_at = Instant::now();
+                    publish_snapshot(&state, &snapshot_sink);
+                }
+            }
+            ClientMsg::Debug(_) if asked.is_some() => {
+                report_error(seat, "a take-back is waiting for an answer", &seat_tx);
             }
             ClientMsg::Debug(debug) => {
                 if apply_debug(&mut state, seat, debug, &seat_tx, &spectator_tx) {
@@ -1516,6 +1593,58 @@ fn handle_action(
 fn send_to_all(msg: ServerMsg, seat_tx: &[Option<mpsc::Sender<ServerMsg>>], spectator_tx: &[mpsc::Sender<ServerMsg>]) {
     for tx in seat_tx.iter().flatten().chain(spectator_tx) {
         let _ = tx.send(msg.clone());
+    }
+}
+
+/// Every seat's remaining chess-clock time, and whose is `running` (`None`:
+/// nobody's, while a take-back request waits).
+fn send_clocks(clock_left: &[Option<Duration>], running: Option<usize>, seat_tx: &[Option<mpsc::Sender<ServerMsg>>]) {
+    let seats: Vec<Option<u32>> = clock_left.iter().map(|l| l.map(|d| d.as_secs() as u32)).collect();
+    for (i, tx) in seat_tx.iter().enumerate() {
+        if let Some(tx) = tx.as_ref() {
+            let _ = tx.send(ServerMsg::Clock {
+                seconds: clock_left.get(i).copied().flatten().unwrap_or_default().as_secs() as u32,
+                seats: seats.clone(),
+                running,
+            });
+        }
+    }
+}
+
+/// Rewind the match to `seat`'s undo point `to` (its latest for `None`) and
+/// tell the table; whether there was one.
+#[allow(clippy::too_many_arguments)]
+fn take_back(
+    state: &mut GameState,
+    history: &mut undo::UndoHistory,
+    bots: &mut [Option<Box<dyn Bot>>],
+    seat: usize,
+    to: Option<u64>,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) -> bool {
+    let Some(saw) = history.peek(seat, to).map(|(point, before)| undo::seen_since(point, before, state)) else {
+        return false;
+    };
+    let Some((point, before)) = history.take(seat, to) else { return false };
+    state.rewind_to(before);
+    for bot in bots.iter_mut().flatten() {
+        bot.rewound();
+    }
+    broadcast_rewind(state, &point, saw, seat_tx, spectator_tx);
+    send_undo_points(history, seat_tx);
+    true
+}
+
+/// End the pending take-back request without a rewind, for `reason`.
+fn decline_take_back(
+    asked: &mut Option<undo::Asked>,
+    reason: String,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) {
+    if let Some(a) = asked.take() {
+        send_to_all(ServerMsg::UndoDeclined { by: a.by, reason }, seat_tx, spectator_tx);
     }
 }
 
@@ -2011,10 +2140,9 @@ mod tests {
         }
     }
 
-    /// Until consent lands (TODO's step 4), a take-back needs a table of
-    /// this seat and bots.
-    #[test]
-    fn a_take_back_with_another_player_is_refused() {
+    /// Two people at a table, seat 0 having played a Forest and asked for
+    /// it back: both channels, the request heard by both.
+    fn asked_table() -> (ClientChannel, ClientChannel, thread::JoinHandle<MatchOutcome>, CardId) {
         let mut state = two_player_game();
         let forest = state.add_card_to_hand(0, catalog::forest());
         let (s0, c0) = seat_pair();
@@ -2025,13 +2153,129 @@ mod tests {
         c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(forest))).unwrap();
         assert_eq!(undo_labels(&c0), ["played Forest"]);
         c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        for c in [&c0, &c1] {
+            match next_where(c, |m| matches!(m, ServerMsg::UndoRequested { .. })) {
+                ServerMsg::UndoRequested { by: 0, label, waiting, seconds, .. } => {
+                    assert_eq!((label.as_str(), waiting.as_slice()), ("played Forest", &[1][..]));
+                    assert!(seconds > 0);
+                }
+                other => panic!("expected seat 0's request, got {other:?}"),
+            }
+        }
+        (c0, c1, handle, forest)
+    }
+
+    fn declined(c: &ClientChannel) -> String {
+        match next_where(c, |m| matches!(m, ServerMsg::UndoDeclined { .. })) {
+            ServerMsg::UndoDeclined { by: 0, reason } => reason,
+            other => panic!("expected seat 0's request declined, got {other:?}"),
+        }
+    }
+
+    /// With another person at the table a take-back is a request (TODO's
+    /// step 4). The match pauses — an action from either seat is refused —
+    /// until they allow it, and then it rewinds for both.
+    #[test]
+    fn a_take_back_with_another_player_asks_them() {
+        let (c0, c1, handle, forest) = asked_table();
+        for c in [&c0, &c1] {
+            c.tx.send(ClientMsg::SubmitAction(GameAction::PassPriority)).unwrap();
+            match next_where(c, |m| matches!(m, ServerMsg::ActionError(_) | ServerMsg::Update { .. })) {
+                ServerMsg::ActionError(e) => assert!(e.contains("waiting for an answer"), "{e}"),
+                other => panic!("the match is paused, got {other:?}"),
+            }
+        }
+        c1.tx.send(ClientMsg::RespondUndo { accept: true }).unwrap();
+        let (label, view) = rewound_view(&c0);
+        assert_eq!(label, "played Forest");
+        assert!(view.players[0].hand.iter().any(|h| h.id() == forest), "the Forest is back in hand");
+        let (_, theirs) = rewound_view(&c1);
+        assert!(theirs.battlefield.is_empty(), "for both seats");
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
+    }
+
+    /// A declined take-back changes nothing, and play goes on: the Forest
+    /// stays, its point stays, and the next action is taken.
+    #[test]
+    fn a_declined_take_back_keeps_the_game() {
+        let (c0, c1, handle, _) = asked_table();
+        c1.tx.send(ClientMsg::RespondUndo { accept: false }).unwrap();
+        assert_eq!(declined(&c0), "P1 declined");
+        assert_eq!(declined(&c1), "P1 declined");
+        c0.tx.send(ClientMsg::SubmitAction(GameAction::PassPriority)).unwrap();
+        match next_where(&c0, |m| matches!(m, ServerMsg::ActionError(_) | ServerMsg::Update { .. })) {
+            ServerMsg::Update { view, .. } => assert_eq!(view.battlefield.len(), 1, "the Forest stayed"),
+            other => panic!("play goes on, got {other:?}"),
+        }
+        assert_eq!(undo_labels(&c0), ["played Forest", "passed priority"], "and so did its point");
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
+    }
+
+    /// Unanswered, a take-back is declined at the deadline; asked of a
+    /// player who then leaves, it is declined at once.
+    #[test]
+    fn an_unanswered_take_back_is_declined() {
+        let (c0, c1, handle, _) = asked_table();
+        let asked_at = Instant::now();
+        assert_eq!(declined(&c0), "no answer in time");
+        assert!(asked_at.elapsed() >= undo::ASK_FOR / 2, "not before the deadline");
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        next_where(&c0, |m| matches!(m, ServerMsg::UndoRequested { .. }));
+        drop(c1);
+        assert_eq!(declined(&c0), "P1 left the table");
+        drop(c0);
+        let _ = handle.join();
+    }
+
+    /// The rope stops while a take-back waits for an answer, and starts over
+    /// once it is settled.
+    #[test]
+    fn the_rope_waits_for_a_take_back() {
+        let mut state = two_player_game();
+        let forest = state.add_card_to_hand(0, catalog::forest());
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                None,
+                None,
+                RECONNECT_GRACE,
+                Some(Duration::from_millis(400)),
+                None,
+            )
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+        c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(forest))).unwrap();
+        assert_eq!(undo_labels(&c0), ["played Forest"]);
+        c0.tx.send(ClientMsg::RequestUndo { to: None }).unwrap();
+        next_where(&c0, |m| matches!(m, ServerMsg::UndoRequested { .. }));
+        // Five ropes' worth of waiting, and none of them fires.
+        loop {
+            match c0.rx.recv_timeout(Duration::from_secs(5)).expect("the request ends") {
+                ServerMsg::ActionError(e) => panic!("nothing runs out while the table decides: {e}"),
+                ServerMsg::UndoDeclined { reason, .. } => {
+                    assert_eq!(reason, "no answer in time");
+                    break;
+                }
+                _ => {}
+            }
+        }
         match next_where(&c0, |m| matches!(m, ServerMsg::ActionError(_))) {
-            ServerMsg::ActionError(e) => assert!(e.contains("aren't supported"), "{e}"),
+            ServerMsg::ActionError(e) => assert!(e.contains("action timeout"), "the rope runs again: {e}"),
             _ => unreachable!(),
         }
         drop(c0);
         drop(c1);
-        handle.join().unwrap();
+        let _ = handle.join();
     }
 
     #[test]

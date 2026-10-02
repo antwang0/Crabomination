@@ -17,8 +17,10 @@
 //! stack, `--stack-depth N` with N (up to six); `--mana-gallery` lays every
 //! kind of mana symbol over the board; `--hover-card NAME` hovers one of the
 //! viewer's battlefield or hand cards (a screenshot run ignores the real
-//! mouse), and `--alt` holds Alt over it; `--take-back play|undo` plays a
-//! Forest through the live match and, with `undo`, takes it back;
+//! mouse), and `--alt` holds Alt over it; `--take-back play|undo|list|asked`
+//! plays a Forest through the live match and, with `undo`, takes it back —
+//! with `list` taps it too and opens the take-back list, and `asked` puts up
+//! an opponent's take-back request instead;
 //! `--combat SCENE` stages a combat
 //! or a targeting pick ([`CombatScene`]); `--tokens` adds piles of tokens
 //! ([`add_token_piles`]); `--impacts AGE` fires deaths, damage, a dig and
@@ -176,6 +178,8 @@ impl HarnessArgs {
             take_back: value("--take-back").and_then(|v| match v.as_str() {
                 "play" => Some(TakeBackScene::Play),
                 "undo" => Some(TakeBackScene::Undo),
+                "list" => Some(TakeBackScene::List),
+                "asked" => Some(TakeBackScene::Asked),
                 _ => None,
             }),
             combat: value("--combat").and_then(|v| CombatScene::parse(&v)),
@@ -657,6 +661,11 @@ pub enum TakeBackScene {
     Play,
     /// Play it, then take it back.
     Undo,
+    /// Play it, tap it for mana, and open the take-back list.
+    List,
+    /// An opponent asks to take something back: the request banner, with
+    /// Allow and Decline. Client-side only — a bot never asks.
+    Asked,
 }
 
 /// `--take-back`: play a Forest from the viewer's hand as the player would
@@ -666,10 +675,27 @@ pub fn take_back_for_screenshot(
     args: Res<HarnessArgs>,
     view: Res<crate::net_plugin::CurrentView>,
     outbox: Option<Res<crate::net_plugin::NetOutbox>>,
-    takeback: Res<crate::systems::takeback::Takeback>,
+    mut takeback: ResMut<crate::systems::takeback::Takeback>,
+    mut list: ResMut<crate::systems::takeback::UndoHistoryOpen>,
+    time: Res<Time>,
     mut step: Local<u8>,
 ) {
     let (Some(scene), Some(cv), Some(outbox)) = (args.take_back, view.0.as_ref(), outbox) else { return };
+    if scene == TakeBackScene::Asked {
+        if *step == 0 && cv.priority == cv.your_seat && cv.pending_decision.is_none() {
+            let them = cv.players.iter().map(|p| p.seat).find(|s| *s != cv.your_seat).unwrap_or(1);
+            takeback.asked = Some(crate::systems::takeback::Asked {
+                by: them,
+                label: "cast Lightning Bolt".into(),
+                saw: vec!["1 draw".into()],
+                waiting: vec![cv.your_seat],
+                deadline: time.elapsed_secs_f64() + 30.0,
+                answered: false,
+            });
+            *step = 1;
+        }
+        return;
+    }
     match *step {
         0 if cv.priority == cv.your_seat && cv.pending_decision.is_none() => {
             let forest = cv.players[cv.your_seat].hand.iter().find_map(|h| match h {
@@ -682,10 +708,29 @@ pub fn take_back_for_screenshot(
             }
         }
         1 if !takeback.points.is_empty() => {
-            if scene == TakeBackScene::Undo {
-                outbox.submit_msg(crabomination::net::ClientMsg::RequestUndo { to: None });
+            match scene {
+                TakeBackScene::Undo => outbox.submit_msg(crabomination::net::ClientMsg::RequestUndo { to: None }),
+                // A second point: tap the Forest for mana.
+                TakeBackScene::List => {
+                    let forest = cv.battlefield.iter().find(|p| p.name == "Forest" && !p.tapped && p.controller == cv.your_seat);
+                    if let Some(f) = forest {
+                        outbox.submit(crabomination::game::GameAction::ActivateAbility {
+                            card_id: f.id,
+                            ability_index: 0,
+                            target: None,
+                            additional_targets: vec![],
+                            x_value: None,
+                            mode: None,
+                        });
+                    }
+                }
+                _ => {}
             }
             *step = 2;
+        }
+        2 if scene == TakeBackScene::List && takeback.points.len() >= 2 => {
+            list.0 = true;
+            *step = 3;
         }
         _ => {}
     }

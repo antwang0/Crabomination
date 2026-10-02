@@ -911,13 +911,38 @@ so most of a backward jump just re-lays out. These would still break:
    game that never took the branch), `a_mark_behind_events_waits_for_the_
    next_frame`. A client that never heard the mark (it reconnected since)
    keeps its log and stats.
-4. **Consent** (lobby, LAN, pair server): request and response, the pause,
-   the deadline, disconnects, the banner. Tests: decline keeps the state;
-   actions are refused while pending; a timeout declines.
-5. **History and settings.** A list of your points (the Esc menu, or the
-   log) to jump back several at once. A Takebacks setting (Off / last
-   action / recent), defaulting to recent against bots and to consent
-   with humans. Maybe redo of the discarded branch until the next action.
+4. ✅ **Consent** (2026-10-02), in the one match loop every path shares
+   (lobby, LAN, pair server). With another human at the table
+   `RequestUndo` is a request (`undo::Asked`, `ServerMsg::UndoRequested`)
+   that each other connected human answers (`ClientMsg::RespondUndo`); bots
+   allow. While it waits, actions from every seat are refused ("a take-back
+   is waiting for an answer"), bots don't move, the rope stops (and starts
+   over after), and the chess clock is billed up to the request and stopped
+   (`Clock { running: None }`). Every allow applies it; a decline, the
+   30-second deadline, a seat it involves dropping, or a concession (legal
+   any time, CR 104.3a) ends it with `UndoDeclined { reason }`; the asker
+   may withdraw. A seat that dropped and may come back holds a request off
+   ("Bob is away"); one gone for good has no say. As planned, except the
+   request is its own message rather than a `ClientView` field (step 1's
+   reason). Client: a banner over the table — Allow / Decline for a seat it
+   asks, Withdraw for the asker, the countdown and who it waits on for
+   everyone — and a log line each way; auto-pass holds while it waits.
+   Tests: `a_take_back_with_another_player_asks_them`,
+   `a_declined_take_back_keeps_the_game`, `an_unanswered_take_back_is_
+   declined` (the deadline, then a seat leaving), `the_rope_waits_for_a_
+   take_back`; client `the_banner_names_the_request_and_who_it_waits_for`,
+   `a_request_is_logged_once_and_its_decline_says_why`.
+5. ✅ **History and settings** (2026-10-02). Shift+Z, or a right-click on
+   Undo, opens the list of your points ("Turn 6 · Main 1 — cast Opt"),
+   newest first; a row takes back to just before it, everything after
+   with it (`RequestUndo { to: Some(id) }`, through consent when others
+   sit). The Take-backs setting (`GameplayConfig::takebacks`, in the main
+   menu's Settings and the in-game Esc menu): **Off** (no Undo, and another
+   player's request is declined for you), **Last action**, **Recent
+   actions** (the default, with the list). Consent with humans holds in
+   every setting. Not done: redo of the discarded branch (the plan's
+   "maybe"). Tests: `take_backs_off_declines_for_you`,
+   `the_setting_saves_and_cycles`. Harness: `--take-back list|asked`.
 
 Later, the same ring feeds the replay scrubber and crash recovery. Those
 need persisted snapshots, so first the serde-skipped RNG and the ~78

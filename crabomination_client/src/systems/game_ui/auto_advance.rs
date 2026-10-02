@@ -31,6 +31,7 @@ pub fn auto_advance_p0(
     stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
     blocking: Res<BlockingState>,
     hold: Res<crate::systems::takeback::RewindHold>,
+    takeback: Res<crate::systems::takeback::Takeback>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
@@ -38,6 +39,8 @@ pub fn auto_advance_p0(
     // A take-back put the player back in a window they had acted in: leave
     // it to them, or it is passed straight away.
     if hold.holds(outbox.deliberate_count()) { return; }
+    // Paused while the table decides a take-back: the server refuses actions.
+    if takeback.asked.is_some() { return; }
     // Any pending decision suspends normal step advancement. If it's our
     // decision, the dedicated decision UI submits the answer; if it's an
     // opponent's, we just wait. Spamming `PassPriority` every frame here

@@ -379,6 +379,7 @@ fn main() {
         .insert_resource(FastForward::default())
         .init_resource::<systems::takeback::Takeback>()
         .init_resource::<systems::takeback::RewindHold>()
+        .init_resource::<systems::takeback::UndoHistoryOpen>()
         .init_resource::<systems::takeback::RewindSnap>()
         .insert_resource(TargetingState::default())
         .insert_resource(game::LegalTargets::default())
@@ -605,6 +606,10 @@ fn main() {
             (
                 systems::takeback::request_undo,
                 systems::takeback::update_undo_button,
+                systems::takeback::sync_undo_history,
+                systems::takeback::handle_undo_history_rows,
+                systems::takeback::sync_asked_banner,
+                systems::takeback::answer_take_backs,
                 systems::takeback::snap_rebuilt_table.after(sync_game_visuals),
             )
                 .run_if(in_state(AppState::InGame)),
@@ -1127,7 +1132,8 @@ fn main() {
         // UI size button beside the quality row.
         .add_systems(
             Update,
-            (handle_leave_game_button, handle_ui_size_button).run_if(in_state(AppState::InGame)),
+            (handle_leave_game_button, handle_ui_size_button, systems::quality::handle_takebacks_button)
+                .run_if(in_state(AppState::InGame)),
         )
         // Animation-speed slider: drag to set, label/fill mirror state.
         .add_systems(

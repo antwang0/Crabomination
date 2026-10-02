@@ -489,7 +489,8 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("A", "Attack all · confirm attackers"),
             ("P", "Pass · skip · proceed"),
             ("H", "Hold priority (auto-pass on/off)"),
-            ("Z", "Undo your last action (against bots)"),
+            ("Z", "Take back your last action (others at the table must allow it)"),
+            ("Shift+Z", "Take back several: pick from your recent actions"),
         ],
     ),
     (

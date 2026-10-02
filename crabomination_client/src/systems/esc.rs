@@ -70,6 +70,8 @@ pub enum EscSurface {
     GraveyardBrowser,
     /// The exile browser.
     ExileBrowser,
+    /// The take-back list.
+    UndoHistory,
     /// Any cast-flow picker: alt-cast, helper tap, spree, split, pay-times,
     /// ability menu, hand menu, or a held manual-mana payment.
     Picker,
@@ -131,6 +133,7 @@ pub struct EscSurfaceStates<'w, 's> {
     help: Query<'w, 's, Entity, With<crate::systems::ui::ShortcutHelpPanel>>,
     graveyard: Res<'w, crate::game::GraveyardBrowserState>,
     exile: Res<'w, crate::game::ExileBrowserState>,
+    undo_history: Res<'w, crate::systems::takeback::UndoHistoryOpen>,
     alt_cast: Res<'w, crate::game::AltCastState>,
     helper_tap: Res<'w, crate::game::HelperTapState>,
     spree_cast: Res<'w, crate::game::SpreeCastState>,
@@ -181,6 +184,7 @@ impl EscSurfaceStates<'_, '_> {
             (S::ShortcutHelp, !self.help.is_empty()),
             (S::GraveyardBrowser, self.graveyard.open),
             (S::ExileBrowser, self.exile.open),
+            (S::UndoHistory, self.undo_history.0),
             (S::Picker, any_picker),
             (S::ModePick, self.modal_cast.card_id.is_some()),
             (S::DecisionPrompt, cancellable_decision),

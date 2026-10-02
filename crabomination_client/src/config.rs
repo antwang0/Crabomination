@@ -150,6 +150,10 @@ pub struct GameplayConfig {
     pub stops_my: std::collections::HashMap<crabomination::game::TurnStep, crate::systems::phase_bar::StopMode>,
     /// Stop overrides for opponents' turns (`StopConfig.opp`).
     pub stops_opp: std::collections::HashMap<crabomination::game::TurnStep, crate::systems::phase_bar::StopMode>,
+    /// What Undo may take back: off (and another player's request declined
+    /// for you), your last action, or any recent one from a list. Default:
+    /// recent.
+    pub takebacks: crate::systems::takeback::TakebackMode,
 }
 
 impl Default for GameplayConfig {
@@ -162,6 +166,7 @@ impl Default for GameplayConfig {
             animation_speed: 1.0,
             stops_my: Default::default(),
             stops_opp: Default::default(),
+            takebacks: Default::default(),
         }
     }
 }

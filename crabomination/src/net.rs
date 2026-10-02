@@ -75,10 +75,13 @@ pub enum ClientMsg {
     SubmitAuto(GameAction),
     /// Take back: rewind the match to just before one of the sender's undo
     /// points ([`ServerMsg::UndoPoints`]) — `None` for the latest. Every
-    /// seat's later actions go with it. Against bots only, for now; with
-    /// another human at the table the server answers with an `ActionError`
-    /// (consent is TODO's step 4).
+    /// seat's later actions go with it. Against bots it applies at once;
+    /// with other people at the table it is a request
+    /// ([`ServerMsg::UndoRequested`]) they must each allow.
     RequestUndo { to: Option<u64> },
+    /// Answer the pending take-back request: allow it or decline it. From
+    /// the seat that asked, a decline withdraws it.
+    RespondUndo { accept: bool },
     /// In-match chat: relayed to every seat and spectator as
     /// [`ServerMsg::Chat`] stamped with the sender's seat + display name.
     /// The server sanitizes (trims, strips control characters, clamps
@@ -280,6 +283,17 @@ pub enum ServerMsg {
         #[serde(default)]
         saw: Vec<String>,
     },
+    /// Seat `by` asks to take back `label` (having seen `saw` since). The
+    /// match is paused — no actions, the rope and the chess clock stopped —
+    /// until each seat in `waiting` answers ([`ClientMsg::RespondUndo`]), for
+    /// `seconds` at most. Sent again, with fewer seats waiting, as each
+    /// allows. Ends in a [`ServerMsg::Rewound`] or an
+    /// [`ServerMsg::UndoDeclined`].
+    UndoRequested { by: usize, label: String, saw: Vec<String>, seconds: u32, waiting: Vec<usize> },
+    /// Seat `by`'s take-back request ended without a rewind, for `reason`
+    /// ("Bob declined", "no answer in time", "Bob left the table"). Play
+    /// goes on.
+    UndoDeclined { by: usize, reason: String },
     /// Undo point `id` was kept: everything sent after this belongs to its
     /// action and after, everything before it to the game it rewinds to.
     /// Sent to every seat and spectator, in the stream, so a client can cut

@@ -24,7 +24,7 @@ pub(crate) const PHASE_CHART_STEPS: &[(TurnStep, &str)] = &[
 
 /// The step as the turn line names it: the phase chart's label, or its own
 /// name for first-strike damage, which the chart has no row for.
-pub(super) fn step_name(step: TurnStep) -> &'static str {
+pub(crate) fn step_name(step: TurnStep) -> &'static str {
     match step {
         TurnStep::FirstStrikeDamage => "First-Strike Damage",
         step => step_short_label(step),
