@@ -457,9 +457,8 @@ pub fn two_headed_hellkite() -> CardDefinition {
 
 /// Unite the Coalition — choose five, repeats allowed: phase out a
 /// permanent, a player draws, exile a graveyard, 2 damage, destroy an
-/// artifact or enchantment.
-/// Residual: a repeated mode needs a different target the bot doesn't always
-/// find.
+/// artifact or enchantment. A repeated mode may name the same target again
+/// (CR 700.2d).
 pub fn unite_the_coalition() -> CardDefinition {
     CardDefinition {
         name: "Unite the Coalition",

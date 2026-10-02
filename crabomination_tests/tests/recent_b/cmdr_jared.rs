@@ -212,3 +212,24 @@ fn primeval_spawn_is_exiled_entering_uncast_or_free() {
     assert!(g.battlefield_find(free).is_none(), "no mana spent");
     assert!(g.exile.iter().any(|c| c.id == free));
 }
+
+/// CR 700.2d — a mode chosen several times may target the same object each
+/// time: Unite the Coalition's 2 damage five times at one face is 10.
+#[test]
+fn cr_700_2d_unite_the_coalition_repeats_a_mode_at_one_target() {
+    let mut g = pod(2);
+    let u = g.add_card_to_hand(0, catalog::unite_the_coalition());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: u,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1); 4],
+        spree_modes: vec![3; 5],
+        x_value: None,
+    })
+    .expect("five times the damage mode at one player");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 10);
+}
