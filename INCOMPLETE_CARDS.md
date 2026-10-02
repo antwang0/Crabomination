@@ -1967,7 +1967,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
-| 🟡 Slippery Bogbonder | Symbiotic Swarm (C20) | every counter on your other creatures moves (the engine's "any number"). |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
 | 🟡 Vitality Hunter | Symbiotic Swarm (C20) | the lifelink counters go on your X greatest-power creatures, not X chosen targets. |
 | 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | the engine exiles your highest mana value other creature; X reads its printed power. |
@@ -2247,7 +2246,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |
-| 🟡 Resourceful Defense | Counter Intelligence (EOC) | the {4}{W} move takes every counter ("any number"). |
 | 🟡 Ripples of Potential | Counter Intelligence (EOC) | the phase-out is all or none of your permanents with counters, not a pick among those proliferated. |
 | 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
 | 🟡 Bygone Marvels | Explorers of the Deep (LCC) | the Descend 8 copies' new targets are the decider's; the auto-decider keeps the original's, so that copy returns nothing. |

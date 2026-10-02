@@ -456,8 +456,7 @@ pub fn selective_adaptation() -> CardDefinition {
 }
 
 /// Slippery Bogbonder — flash, hexproof; entering, a hexproof counter on a
-/// creature, then your other creatures' counters move onto it.
-/// Residual: every counter moves (the engine's "any number").
+/// creature, then any number of your other creatures' counters move onto it.
 pub fn slippery_bogbonder() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Hexproof],
@@ -467,7 +466,10 @@ pub fn slippery_bogbonder() -> CardDefinition {
                 keyword: Keyword::Hexproof,
                 amount: Value::ONE,
             },
-            Effect::MoveCountersFromAmongOnto { onto: Selector::Target(0) },
+            Effect::MoveAnyNumberOfCounters {
+                from: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                to: Selector::Target(0),
+            },
         ]))],
         ..creature(
             "Slippery Bogbonder",

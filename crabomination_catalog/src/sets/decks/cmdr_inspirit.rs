@@ -373,8 +373,8 @@ pub fn patrolling_peacemaker() -> CardDefinition {
 }
 
 /// Resourceful Defense — a permanent of yours leaving with counters puts them
-/// on target permanent you control; {4}{W}: move counters from one of your
-/// permanents onto another. Residual: The move takes every counter.
+/// on target permanent you control; {4}{W}: move any number of counters from
+/// one of your permanents onto another.
 pub fn resourceful_defense() -> CardDefinition {
     let yours_target = |slot| Selector::TargetFiltered { slot, filter: R::Permanent.and(R::ControlledByYou) };
     CardDefinition {
@@ -389,7 +389,7 @@ pub fn resourceful_defense() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), w()]),
-            effect: Effect::MoveAllCounters { from: yours_target(0), to: yours_target(1) },
+            effect: Effect::MoveAnyNumberOfCounters { from: yours_target(0), to: yours_target(1) },
             ..Default::default()
         }],
         ..Default::default()

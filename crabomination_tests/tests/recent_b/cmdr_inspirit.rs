@@ -362,6 +362,35 @@ fn cr_603_10a_resourceful_defense_keeps_counters() {
     let _ = keeper;
 }
 
+/// CR 122.5 — Resourceful Defense's {4}{W} moves *any number* of counters,
+/// chosen per kind: here one +1/+1 counter moves and the charge counter stays.
+#[test]
+fn cr_122_5_resourceful_defense_moves_any_number() {
+    let mut g = pod(2);
+    let rd = g.add_card_to_battlefield(0, catalog::resourceful_defense());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let keeper = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Charge, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1), DecisionAnswer::Amount(0)]));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rd,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(keeper)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, keeper, CounterType::PlusOnePlusOne), 1);
+    assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 1);
+    assert_eq!(counters(&g, bear, CounterType::Charge), 1);
+    assert_eq!(counters(&g, keeper, CounterType::Charge), 0);
+}
+
 /// Ripples of Potential — proliferate, then (on a yes) your permanents with
 /// counters phase out.
 #[test]

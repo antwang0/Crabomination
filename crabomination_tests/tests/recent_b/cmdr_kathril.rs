@@ -178,7 +178,8 @@ fn majestic_myriarch_grows_and_borrows() {
     assert!(has(&g, mm, Keyword::Vigilance));
 }
 
-/// Slippery Bogbonder gathers your creatures' counters onto its target.
+/// Slippery Bogbonder moves *any number* of your creatures' counters onto its
+/// target (CR 122.5): asked per kind, so one of two +1/+1 counters may stay.
 #[test]
 fn slippery_bogbonder_gathers_counters() {
     let mut g = pod(2);
@@ -186,14 +187,21 @@ fn slippery_bogbonder_gathers_counters() {
     g.battlefield_find_mut(donor).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     let host = g.add_card_to_battlefield(0, catalog::craw_wurm());
     let sb = g.add_card_to_hand(0, catalog::slippery_bogbonder());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Amount(1),
+    ]));
     cast(&mut g, sb, &[Target::Permanent(host)]);
-    // The ETB picks its own target; every +1/+1 counter ends up on it.
     let t = [donor, host, sb]
         .into_iter()
         .find(|&id| g.battlefield_find(id).is_some_and(|c| !c.keyword_counters.is_empty()))
         .expect("a hexproof counter landed");
     assert!(has(&g, t, Keyword::Hexproof));
-    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    let on = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    if t == donor {
+        assert_eq!(on(donor), 2, "nothing moves onto its own source");
+    } else {
+        assert_eq!((on(t), on(donor)), (1, 1), "one of the two moved");
+    }
 }
 
 /// Netherborn Altar returns your commander to hand for 3 life a soul counter
