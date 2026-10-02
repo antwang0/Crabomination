@@ -15,7 +15,7 @@
 //!   the Phalanx copying both halves of the pair; "loses soulbond" isn't
 //!   modeled.
 //! - Delina, Wild Mage: "you may roll again" always re-rolls, capped at five
-//!   extra rolls. Flamerush Rider: the copy attacks the Rider's defender.
+//!   extra rolls.
 //! - Kindle the Inner Flame / Chandra, Flameshaper +1: the token's "at the
 //!   beginning of the end step, sacrifice" is a next-end-step delayed
 //!   sacrifice; Kindle's "behold three Elementals" is a count gate (nothing is
@@ -158,13 +158,14 @@ fn a_copy_haste_sac_at_end_step(source: Selector) -> Effect {
 }
 
 /// "Create a token that's a copy of [source] that's tapped and attacking …
-/// exile it at end of combat" — Calamity's shape (tapped copy + join combat)
+/// exile it at end of combat" — Calamity's shape (tapped copy + join combat,
+/// the defender the controller's choice)
 /// with Kiki-Jiki's bound-token delayed exile, keyed to end of combat.
 /// `non_legendary` is Delina's "except it's not legendary".
 fn a_temp_attacking_copy(source: Selector, non_legendary: bool) -> Effect {
     Effect::Seq(vec![
         a_copy_of(source, Value::ONE, true, non_legendary, vec![]),
-        Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
+        Effect::JoinCombatAttackingChosen { what: Selector::LastCreatedTokens },
         Effect::DelayUntil {
             kind: DelayedTriggerKind::EndOfCombat,
             body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
@@ -342,9 +343,9 @@ pub fn delina_wild_mage() -> CardDefinition {
 /// Flamerush Rider — {4}{R} 3/3 Human Warrior. Whenever it attacks, create a
 /// token copy of another target attacking creature, tapped and attacking;
 /// exile the token at end of combat. Dash {2}{R}{R}.
-/// Approximation: the copy attacks the defender Flamerush Rider is attacking
-/// (the controller's choice of defender is collapsed). Under a token doubler
-/// only the last minted token is bound to the end-of-combat exile.
+/// The copy attacks the defending player its controller chooses (CR 508.4).
+/// Approximation: under a token doubler only the last minted token is bound
+/// to the end-of-combat exile.
 pub fn flamerush_rider() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack(a_temp_attacking_copy(

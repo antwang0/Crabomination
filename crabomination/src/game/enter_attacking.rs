@@ -9,10 +9,104 @@
 //! Also the CR 506.3 read of an attack's defender ("creatures attacking you").
 
 use super::GameState;
-use super::types::{Attack, AttackTarget};
+use super::effects::EffectContext;
+use super::types::{Attack, AttackTarget, GameError, Target};
 use crate::card::CardId;
+use crate::effect::{Effect, Selector};
 
 impl GameState {
+    /// `Effect::JoinCombatAttackingChosen` — CR 508.4: each of `what` not yet
+    /// attacking joins combat tapped, attacking the defending player (one
+    /// being attacked this combat) or planeswalker of theirs its controller
+    /// chooses. Headless, and the default, is the source's defender, else the
+    /// first defending player. The asks come first and are replayed by a
+    /// re-run, which names the movers it resolved.
+    pub(crate) fn join_combat_attacking_chosen(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        if self.attacking.is_empty() {
+            return Ok(());
+        }
+        let movers: Vec<(CardId, usize)> = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .filter_map(|e| e.as_card_id())
+            .filter(|id| !self.attacking.iter().any(|a| a.attacker == *id))
+            .filter_map(|id| self.battlefield_find(id).map(|c| (id, c.controller)))
+            .collect();
+        let mut seats: Vec<usize> =
+            self.attacking.iter().filter_map(|a| self.defender_for(a.target)).filter(|&p| self.players[p].is_alive()).collect();
+        seats.sort_unstable();
+        seats.dedup();
+        let source_target = ctx
+            .source
+            .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+            .map(|a| a.target)
+            .filter(|t| self.defender_for(*t).is_some());
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut picks: Vec<(CardId, AttackTarget)> = Vec::new();
+        for &(id, controller) in &movers {
+            let mut legal: Vec<Target> = Vec::new();
+            for &p in seats.iter().filter(|&&p| !self.same_team(p, controller)) {
+                legal.push(Target::Player(p));
+                legal.extend(
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_planeswalker())
+                        .map(|c| Target::Permanent(c.id)),
+                );
+            }
+            let default = match source_target {
+                Some(AttackTarget::Player(p)) => Some(Target::Player(p)),
+                Some(AttackTarget::Planeswalker(pw)) => Some(Target::Permanent(pw)),
+                _ => None,
+            }
+            .filter(|t| legal.contains(t))
+            .or_else(|| legal.first().cloned());
+            let Some(default) = default else { continue };
+            legal.retain(|t| *t != default);
+            legal.insert(0, default.clone());
+            let ask = legal.len() > 1
+                && (self.seat_prompts(controller) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto));
+            let pick = if ask {
+                let ids: Vec<CardId> = movers.iter().map(|m| m.0).collect();
+                let Some(t) = self.ask_seat_target_logged(
+                    &mut cursor,
+                    controller,
+                    "Choose what it's attacking".into(),
+                    source,
+                    legal,
+                    effect,
+                ) else {
+                    super::effects::rewrap_parked(&mut self.suspend_signal, |_| Effect::JoinCombatAttackingChosen {
+                        what: Selector::ExactObjects(ids),
+                    });
+                    return Ok(());
+                };
+                t
+            } else {
+                default
+            };
+            let target = match pick {
+                Target::Player(p) => AttackTarget::Player(p),
+                Target::Permanent(pw) => AttackTarget::Planeswalker(pw),
+            };
+            picks.push((id, target));
+        }
+        self.clear_answer_log();
+        for (id, target) in picks {
+            if let Some(c) = self.battlefield.find_by_id_mut(id) {
+                c.tapped = true;
+            }
+            self.put_into_combat_attacking(id, target);
+        }
+        Ok(())
+    }
+
     /// Mark `id` (already on the battlefield) as attacking `target`, without
     /// declaring it (CR 508.4). Returns false if it isn't on the battlefield.
     pub(crate) fn put_into_combat_attacking(&mut self, id: CardId, target: AttackTarget) -> bool {

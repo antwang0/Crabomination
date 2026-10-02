@@ -8459,6 +8459,11 @@ pub enum Effect {
     /// reanimate a creature "tapped and attacking" (Alesha, Who Smiles at Death,
     /// via `Selector::LastMoved`).
     JoinCombatAttacking { what: Selector },
+    /// CR 508.4 — `JoinCombatAttacking` where the effect names no defender
+    /// ("create a token that's tapped and attacking"): each one's controller
+    /// chooses a defending player or a planeswalker one controls (headless:
+    /// the source's defender). Flamerush Rider, Delina.
+    JoinCombatAttackingChosen { what: Selector },
     /// Exile the top card of the source controller's library; if it's a
     /// creature card, the source gets +power/+toughness until end of turn equal
     /// to that card's power and toughness. Bioplasm's attack trigger.

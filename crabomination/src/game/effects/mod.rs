@@ -21686,6 +21686,8 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::JoinCombatAttackingChosen { what } => self.join_combat_attacking_chosen(what, ctx, effect),
+
             Effect::TokenCopyAttackingUntilEndOfCombat { source } => {
                 self.token_copy_attacking_until_end_of_combat(source, ctx, events)
             }

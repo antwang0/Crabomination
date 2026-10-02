@@ -1279,7 +1279,9 @@ impl Effect {
             Effect::Myriad | Effect::CopiesAttackEachOtherOpponent { .. } => false,
             Effect::TokenCopyAttackingUntilEndOfCombat { source } => sel_has_target(source),
             Effect::RevealUntilSharesCardTypeToBattlefield { with } => sel_has_target(with),
-            Effect::JoinCombatAttacking { what } => sel_has_target(what),
+            Effect::JoinCombatAttacking { what } | Effect::JoinCombatAttackingChosen { what } => {
+                sel_has_target(what)
+            }
             Effect::Enlist => false,
             Effect::EnlistThen { then } => then.requires_target(),
             Effect::StudyTopCard { .. } => false,

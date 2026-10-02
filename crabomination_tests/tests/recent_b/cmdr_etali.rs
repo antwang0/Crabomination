@@ -190,6 +190,30 @@ fn flamerush_rider_copies_another_attacker_for_the_combat() {
     assert!(a_tokens_named(&g, "Grizzly Bears").is_empty(), "exiled at end of combat");
 }
 
+/// CR 508.4 — Flamerush Rider's copy names no defender, so its controller
+/// chooses among the defending players: here the one only the Bears attack.
+#[test]
+fn flamerush_rider_copy_attacks_the_defender_you_choose() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let rider = g.add_card_to_battlefield(0, catalog::flamerush_rider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(rider);
+    g.clear_sickness(bear);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(2))]));
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: rider, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ])
+    .expect("attack");
+    drain_stack(&mut g);
+    let tokens = a_tokens_named(&g, "Grizzly Bears");
+    assert_eq!(tokens.len(), 1);
+    assert!(g.attacking().iter().any(|a| a.attacker == tokens[0] && a.target == AttackTarget::Player(2)));
+}
+
 /// Mirage Phalanx pairs on entry (Soulbond); at the beginning of combat each
 /// of the pair makes a hasty copy of itself, exiled at end of combat.
 #[test]
