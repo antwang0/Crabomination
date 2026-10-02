@@ -8494,6 +8494,11 @@ pub enum Effect {
     /// `filter`); the per-target split is decided at resolution via
     /// `Decision::DivideDamage` (AutoDecider spreads as evenly as possible).
     DistributeCounters { total: Value, counter: CounterType, filter: SelectionRequirement, max_targets: u8 },
+    /// "Distribute N `counter` counters among [these]" with no target: the
+    /// candidates are `what` as it resolves (Stumpsquall Hydra's "it and any
+    /// number of commanders"), split by `Decision::DivideDamage` like
+    /// `DistributeCounters`; a candidate may get none.
+    DistributeCountersAmong { what: Selector, total: Value, counter: CounterType },
     /// "Do X to each of up to N target permanents" (CR 115 — the generic
     /// multi-target rider). Slots `0..max_targets` are targets filtered by
     /// `filter`; at resolution `effect` runs once per supplied target with

@@ -14,6 +14,7 @@ mod combat_copies;
 mod combat_damage_watch;
 // CR 701.50 — connive on a selected permanent (Kamiz, Change of Plans).
 mod connive;
+mod distribute;
 mod commander;
 mod attach_choice;
 mod party;
@@ -8530,62 +8531,26 @@ impl GameState {
             // DivideDamage decision) so a wants-UI seat / test can choose
             // it (AutoDecider spreads evenly).
             Effect::DistributeCounters { total, counter, .. } => {
-                let counter = *counter;
-                let amt = self.evaluate_value(total, ctx).max(0) as u32;
-                if amt == 0 { return Ok(()); }
                 let targets: Vec<Target> = ctx
                     .targets
                     .iter()
                     .filter(|t| matches!(t, Target::Permanent(id) if self.battlefield_find(*id).is_some()))
                     .cloned()
                     .collect();
-                if targets.is_empty() { return Ok(()); }
-                let decision = Decision::DivideDamage {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    total: amt,
-                    targets: targets.clone(),
-                    noun: counter_noun(counter).into(),
-                };
-                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
-                    Some(a) => a,
-                    None if self.seat_prompts(ctx.controller) => {
-                        self.suspend_signal = Some(Box::new((
-                            decision,
-                            PendingEffectState::DivisionAnswerPending,
-                            effect.clone(),
-                        )));
-                        return Ok(());
+                self.distribute_counters_over(targets, total, *counter, ctx, effect, events)
+            }
+
+            Effect::DistributeCountersAmong { what, total, counter } => {
+                let mut among: Vec<Target> = Vec::new();
+                for e in self.resolve_selector(what, ctx) {
+                    if let Some(id) = e.as_permanent_id()
+                        && self.battlefield_find(id).is_some()
+                        && !among.contains(&Target::Permanent(id))
+                    {
+                        among.push(Target::Permanent(id));
                     }
-                    None => self.decider.decide(&decision),
-                };
-                let mut division = match answer {
-                    crate::decision::DecisionAnswer::DamageDivision(v) => v,
-                    _ => vec![],
-                };
-                if division.len() != targets.len() || division.iter().sum::<u32>() != amt {
-                    division = crate::decision::even_damage_split(amt, targets.len());
                 }
-                for (t, n) in targets.iter().zip(division) {
-                    if n == 0 { continue; }
-                    let Target::Permanent(id) = t else { continue };
-                    let id = *id;
-                    // CR 614.16 — counter replacement effects (Doubling Season,
-                    // Hardened Scales) scale the placement.
-                    let n = self
-                        .battlefield_find(id)
-                        .map(|c| (c.controller, self.computed_is_creature(c)))
-                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, counter, n, cre))
-                        .unwrap_or(n);
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.add_counters(counter, n);
-                        events.push(GameEvent::CounterAdded {
-                            card_id: id, counter_type: counter, count: n, placer: self.resolution_causer,
-                        });
-                    }
-                    self.turn.permanents_gained_counter_this_turn.insert(id);
-                }
-                self.check_state_based_actions_mid_resolution(events);
-                Ok(())
+                self.distribute_counters_over(among, total, *counter, ctx, effect, events)
             }
 
             Effect::CreateTokensToFightEach { filter, definition } => {

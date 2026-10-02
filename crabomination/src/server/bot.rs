@@ -3754,6 +3754,28 @@ fn decide_pending_policy_inner(
             let pick = decide_option_by_outcome(state, seat, *source, options.len(), w);
             crate::decision::DecisionAnswer::Amount(pick as u32)
         }
+        // A +1/+1 split offered over anyone's permanents (Stumpsquall Hydra's
+        // "any number of commanders") goes evenly over `seat`'s own; a split
+        // with none of them, or of anything else, keeps the even default.
+        crate::decision::Decision::DivideDamage { total, targets, noun, .. }
+            if noun.starts_with("+1/+1") =>
+        {
+            let mine: Vec<bool> = targets
+                .iter()
+                .map(|t| match t {
+                    Target::Permanent(id) => state.battlefield_find(*id).is_some_and(|c| c.controller == seat),
+                    Target::Player(p) => *p == seat,
+                })
+                .collect();
+            let own = mine.iter().filter(|m| **m).count();
+            if own == 0 || own == targets.len() {
+                return AutoDecider.decide(decision);
+            }
+            let mut split = crate::decision::even_damage_split(*total, own).into_iter();
+            crate::decision::DecisionAnswer::DamageDivision(
+                mine.iter().map(|m| if *m { split.next().unwrap_or(0) } else { 0 }).collect(),
+            )
+        }
         other => AutoDecider.decide(other),
     }
 }

@@ -960,6 +960,7 @@ impl Effect {
             | Effect::ExileTopSelfPumpIfCreature
             | Effect::RandomGraveyardCardToBattlefieldElse { .. }
             | Effect::DistributeCountersAmongLastCreated { .. }
+            | Effect::DistributeCountersAmong { .. }
             | Effect::RevealAndReplayNamedPermanent
             | Effect::ChoosePlayerForSource { .. }
             | Effect::CopyEachCreatureToken => false,
