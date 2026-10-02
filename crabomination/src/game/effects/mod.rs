@@ -17337,8 +17337,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WatchCombatDamageUntilYourNextTurn { what, body } => {
-                self.watch_combat_damage_until_your_next_turn(what, body, ctx);
+            Effect::WatchCombatDamageUntilYourNextTurn { what, body, to_player } => {
+                self.watch_combat_damage_until_your_next_turn(what, body, *to_player, ctx);
                 Ok(())
             }
 

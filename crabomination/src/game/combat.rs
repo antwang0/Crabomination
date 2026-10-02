@@ -5083,7 +5083,7 @@ impl GameState {
         };
         for ((source, damaged, amount), granted) in creature_damage.into_iter().zip(granted) {
             self.fire_source_dealt_damage_watchers(source, amount);
-            self.fire_combat_damage_watchers(source, amount);
+            self.fire_combat_damage_watchers(source, amount, false);
             self.fire_combat_damage_to_creature_triggers(source, damaged, amount, &granted);
         }
 
@@ -6494,7 +6494,7 @@ impl GameState {
         }
         self.fire_source_dealt_damage_watchers(source, damage_amount);
         self.fire_source_combat_damage_to_player_watchers(source, damage_amount);
-        self.fire_combat_damage_watchers(source, damage_amount);
+        self.fire_combat_damage_watchers(source, damage_amount, true);
         let granted = self.static_granted_triggers_of(source);
         // Combat damage is damage: the combat-agnostic wordings fire too, in
         // this order (CR 603.2 — one batch, grouped per kind).

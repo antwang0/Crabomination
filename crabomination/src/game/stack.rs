@@ -4609,6 +4609,7 @@ impl GameState {
                 crate::game::types::DelayedKind::CreatureAttacksYouUntilYourNextTurn
                     | crate::game::types::DelayedKind::MatchingCreatureEntersUntilYourNextTurn(_)
                     | crate::game::types::DelayedKind::SourceDealsCombatDamageUntilYourNextTurn(_)
+                    | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerUntilYourNextTurn(_)
             ) && dt.controller == p)
         });
         {

@@ -10,14 +10,24 @@ use crate::game::types::{DelayedKind, DelayedTrigger, TriggerPush};
 
 impl GameState {
     /// `Effect::WatchCombatDamageUntilYourNextTurn` — one watcher per permanent.
-    pub(super) fn watch_combat_damage_until_your_next_turn(&mut self, what: &Selector, body: &Effect, ctx: &EffectContext) {
+    pub(super) fn watch_combat_damage_until_your_next_turn(
+        &mut self,
+        what: &Selector,
+        body: &Effect,
+        to_player: bool,
+        ctx: &EffectContext,
+    ) {
         let source = ctx.source.unwrap_or(CardId(0));
         for ent in self.resolve_selector(what, ctx) {
             let Some(cid) = ent.as_permanent_id() else { continue };
             self.delayed_triggers.push(DelayedTrigger {
                 controller: ctx.controller,
                 source,
-                kind: DelayedKind::SourceDealsCombatDamageUntilYourNextTurn(cid),
+                kind: if to_player {
+                    DelayedKind::SourceDealsCombatDamageToPlayerUntilYourNextTurn(cid)
+                } else {
+                    DelayedKind::SourceDealsCombatDamageUntilYourNextTurn(cid)
+                },
                 effect: body.clone(),
                 target: None,
                 bound_token: None,
@@ -28,15 +38,20 @@ impl GameState {
         }
     }
 
-    /// Fire the watchers on `source` for one combat-damage assignment.
-    pub(crate) fn fire_combat_damage_watchers(&mut self, source: CardId, amount: u32) {
+    /// Fire the watchers on `source` for one combat-damage assignment; the
+    /// player-only ones when `to_player`.
+    pub(crate) fn fire_combat_damage_watchers(&mut self, source: CardId, amount: u32, to_player: bool) {
         if amount == 0 || self.delayed_triggers.is_empty() {
             return;
         }
         let watchers: Vec<DelayedTrigger> = self
             .delayed_triggers
             .iter()
-            .filter(|dt| matches!(dt.kind, DelayedKind::SourceDealsCombatDamageUntilYourNextTurn(id) if id == source))
+            .filter(|dt| match dt.kind {
+                DelayedKind::SourceDealsCombatDamageUntilYourNextTurn(id) => id == source,
+                DelayedKind::SourceDealsCombatDamageToPlayerUntilYourNextTurn(id) => to_player && id == source,
+                _ => false,
+            })
             .cloned()
             .collect();
         for dt in watchers {

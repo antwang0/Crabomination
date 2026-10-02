@@ -532,6 +532,7 @@ pub fn tamiyo_field_researcher() -> CardDefinition {
                     effect: Box::new(Effect::WatchCombatDamageUntilYourNextTurn {
                         what: Selector::Target(0),
                         body: Box::new(draw(PlayerRef::You, 1)),
+                        to_player: false,
                     }),
                 },
                 ..Default::default()

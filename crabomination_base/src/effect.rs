@@ -8017,7 +8017,13 @@ pub enum Effect {
     /// CR 603.7d — "until your next turn, whenever [those creatures] deal
     /// combat damage, [body]": a delayed trigger per permanent `what` picks,
     /// controlled by this effect's controller (Tamiyo, Field Researcher's +1).
-    WatchCombatDamageUntilYourNextTurn { what: Selector, body: Box<Effect> },
+    /// `to_player`: only combat damage to a player counts (Kang Dynasty).
+    WatchCombatDamageUntilYourNextTurn {
+        what: Selector,
+        body: Box<Effect>,
+        #[serde(default)]
+        to_player: bool,
+    },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
     /// granted_triggers_eot`; `Duration::Permanent` bakes the trigger onto the

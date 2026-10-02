@@ -247,3 +247,64 @@ fn extract_power_exiles_face_down_and_casts_face_up() {
     assert!(!c.face_down);
     assert_eq!(pt(&g, bears), (2, 2));
 }
+
+/// Lady Loki's "your first instant, sorcery, or Villain spell each turn"
+/// counts a spell cast before she arrived: the turn's second instant is kept,
+/// not exiled. The first one cast with her out is exiled for her hit.
+#[test]
+fn lady_loki_counts_the_turns_first_spell_from_before_she_arrived() {
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let first = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_as(&mut g, 0, first, Some(Target::Player(1))).expect("first bolt");
+    g.add_card_to_battlefield(0, catalog::lady_loki_agent_of_chaos());
+    let second = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_as(&mut g, 0, second, Some(Target::Player(1))).expect("second bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == second), "not the first: no trigger, no exile");
+
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(0, catalog::lady_loki_agent_of_chaos());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_as(&mut g, 0, bolt, Some(Target::Player(1))).expect("bolt");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the first is exiled");
+}
+
+/// CR 603.7d — Kang Dynasty's chapter I watches the creatures it tapped:
+/// one of them dealing combat damage to a player (another opponent) draws
+/// Kang's controller a card; an untouched goaded creature would not.
+#[test]
+fn cr_603_7d_kang_dynasty_watches_its_creatures() {
+    let mut g = main_phase(3);
+    let kd = g.add_card_to_battlefield(0, catalog::kang_dynasty());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(kd, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    let chapter = catalog::kang_dynasty().saga_chapters[0].1.clone();
+    g.resolve_effect(&chapter, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(2),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the watched Bear connected");
+}

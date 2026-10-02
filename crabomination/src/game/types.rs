@@ -1407,6 +1407,9 @@ pub enum DelayedKind {
     /// damage, [body]" (CR 603.7d — Tamiyo, Field Researcher's +1). Fires per
     /// combat-damage assignment; expires as its controller's turn begins.
     SourceDealsCombatDamageUntilYourNextTurn(crate::card::CardId),
+    /// `SourceDealsCombatDamageUntilYourNextTurn` for combat damage to a
+    /// player only (Kang Dynasty's goaded creatures).
+    SourceDealsCombatDamageToPlayerUntilYourNextTurn(crate::card::CardId),
     /// "Until end of turn, whenever you gain life, [body]" (CR 603.4). Fires per
     /// `LifeGained` event whose recipient is `DelayedTrigger.controller`, with
     /// the amount bound via `Value::TriggerEventAmount`. Expires at cleanup.

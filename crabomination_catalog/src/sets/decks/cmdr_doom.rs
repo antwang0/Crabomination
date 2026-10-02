@@ -508,23 +508,25 @@ pub fn iron_monger_sadistic_tycoon() -> CardDefinition {
 /// Kang Dynasty — I, II: for each opponent, tap and goad up to one target
 /// creature they control; those creatures' combat damage draws you a card
 /// until your next turn. III: target creature of yours gets +1/+1 per card
-/// in your hand and can't be blocked. Residual: the draw rider reads any
-/// goaded creature an opponent controls, off your turn.
+/// in your hand and can't be blocked. The draw rider watches the tapped
+/// creatures until your next turn (CR 603.7d), Saga or no Saga.
 pub fn kang_dynasty() -> CardDefinition {
     let goad = || {
         per_opponent(
             R::Creature,
-            Effect::Seq(vec![Effect::Tap { what: Selector::Target(0) }, Effect::Goad { what: Selector::Target(0) }]),
+            Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::Goad { what: Selector::Target(0) },
+                Effect::WatchCombatDamageUntilYourNextTurn {
+                    what: Selector::Target(0),
+                    body: Box::new(draw(1)),
+                    to_player: true,
+                },
+            ]),
         )
     };
     let hand = || Value::HandSizeOf(PlayerRef::You);
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer)
-                .dealt_by(R::IsGoaded.and(R::ControlledByOpponent))
-                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
-            effect: draw(1),
-        }],
         ..saga(
             "Kang Dynasty",
             cost(&[generic(3), u()]),
@@ -670,18 +672,17 @@ pub fn klaw_master_of_sound() -> CardDefinition {
 /// Lady Loki, Agent of Chaos — your first instant, sorcery or Villain spell
 /// each turn is exiled; exile from the top until a nonland card, deal each
 /// opponent the mana-value difference, and you may cast that card free.
-/// Residual: "first each turn" counts from when she is in play.
+/// "First each turn" counts spells cast before she was in play too.
 pub fn lady_loki_agent_of_chaos() -> CardDefinition {
     let spell_mv = || Value::ManaValueOf(Box::new(Selector::TriggerSource));
     let found = || Value::LastExiledManaValue;
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).or(villain()),
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellFirstMatchingThisTurn(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).or(villain()),
+                ),
+            ),
             effect: Effect::Seq(vec![
                 Effect::ExileTopUntilNonland { who: PlayerRef::You },
                 Effect::DealDamage {
