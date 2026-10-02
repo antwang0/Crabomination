@@ -7686,3 +7686,32 @@ fn cr_115_1_bonfire_hits_only_the_targets_creatures() {
     assert!(g.battlefield_find(spared).is_some(), "not seat 2's");
     assert!(g.battlefield_find(mine).is_some(), "not the caster's");
 }
+
+/// CR 608.2d — "each player returns a creature they control": every seat
+/// makes its own pick. Sunken Hope's upkeep trigger asked the resolving
+/// controller's decider for every seat; a prompting seat is asked itself, and
+/// its answer is the one used.
+#[test]
+fn cr_608_2d_each_player_picks_their_own_permanent() {
+    let mut g = multi_player_game(3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::hill_giant());
+    g.players[2].wants_ui = true;
+    let effect = crabomination::effect::Effect::EachPlayerReturnsAMatchingPermanent {
+        filter: SelectionRequirement::Creature,
+        opponents: false,
+    };
+    g.stack.push(
+        crabomination::game::types::TriggerPush::new(mine, 0, effect).build(),
+    );
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.pending_decision.as_ref().expect("seat 2 is asked").acting_player(), 2);
+    g.submit_decision(DecisionAnswer::Cards(vec![b])).expect("return the Giant");
+    drain_stack(&mut g);
+    assert!(g.players[2].hand.iter().any(|c| c.id == b), "its own pick");
+    assert!(g.battlefield_find(a).is_some());
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "seat 0 returned its only creature");
+}

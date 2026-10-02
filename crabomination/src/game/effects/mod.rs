@@ -10858,13 +10858,14 @@ impl GameState {
             Effect::RevealChosenCardsLowestCreaturesEnter => {
                 // Stronghold Gambit — every player picks and reveals one card;
                 // the cheapest revealed creature card(s) hit the battlefield.
-                use crate::decision::{Decision, DecisionAnswer};
                 let mut revealed: Vec<(usize, CardId)> = Vec::new();
+                let mut cursor = 0;
                 // CR 800.4a — seat order, live seats only. Latent today (a
                 // departed seat's hand is empty, so the `continue` below hid
                 // it) and a finding of `scripts/audit_seat_walks.py` all the
                 // same: the guard is what stops the next card landing on it.
-                for seat in (0..self.players.len()).filter(|s| self.players[*s].is_alive()) {
+                let seats: Vec<usize> = self.living_seats().collect();
+                for seat in seats {
                     if self.players[seat].hand.is_empty() {
                         continue;
                     }
@@ -10882,18 +10883,22 @@ impl GameState {
                             self.players[seat].hand.iter().min_by_key(|c| c.definition.cost.cmc())
                         })
                         .map(|c| c.id);
-                    let picked = match self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: "Choose a card in your hand".to_string(),
-                        candidates: candidates.clone(),
-                        min: 1,
-                        max: 1, eligible: None, value: PickValue::Cost }) {
-                        DecisionAnswer::Cards(v) => v
-                            .into_iter()
-                            .find(|id| candidates.iter().any(|(c, _)| c == id))
-                            .or(auto),
-                        _ => auto,
+                    // Each seat picks its own card (CR 608.2d).
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        seat,
+                        "Choose a card in your hand".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        auto.into_iter().collect(),
+                    ) else {
+                        return Ok(());
                     };
+                    let picked = v.first().copied().or(auto);
                     if let Some(id) = picked {
                         if let Some(c) = self.players[seat].hand.iter().find(|c| c.id == id) {
                             events.push(GameEvent::TopCardRevealed {
@@ -10905,6 +10910,7 @@ impl GameState {
                         revealed.push((seat, id));
                     }
                 }
+                self.clear_answer_log();
                 let lowest = revealed
                     .iter()
                     .filter_map(|(seat, id)| {
@@ -11145,29 +11151,38 @@ impl GameState {
             }
 
             Effect::PutCardFromHandOnTopOfLibrary { who } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let players: Vec<usize> = self.resolve_selector(who, ctx).into_iter()
                     .filter_map(|e| match e { EntityRef::Player(p) => Some(p), _ => None })
                     .collect();
                 let source = ctx.source.unwrap_or(CardId(0));
+                // Each player picks their own card (CR 608.2d); all asks
+                // first, then the moves.
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, CardId)> = Vec::new();
                 for p in players {
                     let cands: Vec<(CardId, String)> = self.players[p].hand.iter()
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    if cands.is_empty() { continue; }
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    let Some(&(first, _)) = cands.first() else { continue };
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Put which card from your hand on top of your library?".to_string(),
                         source,
-                        prompt: "Put which card from your hand on top of your library?".to_string(),
-                        candidates: cands,
-                        min: 1,
-                        max: 1,
-                        eligible: None,
-                        value: PickValue::Cost,
-                    });
-                    if let DecisionAnswer::Cards(picked) = answer
-                        && let Some(cid) = picked.first()
-                        && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid)
-                    {
+                        cands,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![first],
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((p, v.first().copied().unwrap_or(first)));
+                }
+                self.clear_answer_log();
+                for (p, cid) in picks {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, cid) {
                         self.players[p].library.insert(0, card);
                     }
                 }
@@ -11175,7 +11190,6 @@ impl GameState {
             }
 
             Effect::PutCardsFromHandOnBottom { who, count } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
                 let players: Vec<usize> = self
@@ -11186,6 +11200,10 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
+                // Each player picks their own cards (CR 608.2d); all asks
+                // first, then the moves.
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, Vec<CardId>)> = Vec::new();
                 for p in players {
                     let want = n.min(self.players[p].hand.len());
                     if want == 0 {
@@ -11196,21 +11214,28 @@ impl GameState {
                         .iter()
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    let auto: Vec<CardId> = cands.iter().take(want).map(|(id, _)| *id).collect();
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Put which cards from your hand on the bottom of your library?".to_string(),
                         source,
-                        prompt: "Put which cards from your hand on the bottom of your library?"
-                            .to_string(),
-                        candidates: cands,
-                        min: want as u32,
-                        max: want as u32,
-                        eligible: None,
-                        value: PickValue::Cost,
-                    });
-                    if let DecisionAnswer::Cards(picked) = answer {
-                        for cid in picked.iter().take(want) {
-                            if let Some(card) = Self::take_card(&mut self.players[p].hand, *cid) {
-                                self.players[p].library.push(card);
-                            }
+                        cands,
+                        want as u32,
+                        want as u32,
+                        PickValue::Cost,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((p, v.into_iter().take(want).collect()));
+                }
+                self.clear_answer_log();
+                for (p, ids) in picks {
+                    for cid in ids {
+                        if let Some(card) = Self::take_card(&mut self.players[p].hand, cid) {
+                            self.players[p].library.push(card);
                         }
                     }
                 }
@@ -11238,9 +11263,12 @@ impl GameState {
             }
 
             Effect::LookTopExileOneOfN { who, count } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
+                // Each player picks from their own top cards (CR 608.2d); all
+                // asks first, then the exiles.
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, CardId)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let cands: Vec<(CardId, String)> = self.players[p]
                         .library
@@ -11248,24 +11276,28 @@ impl GameState {
                         .take(n)
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    if cands.is_empty() {
-                        continue;
-                    }
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    let Some(&(first, _)) = cands.first() else { continue };
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Exile which of these cards?".to_string(),
                         source,
-                        prompt: "Exile which of these cards?".to_string(),
-                        candidates: cands,
-                        min: 1,
-                        max: 1,
-                        eligible: None,
-                        value: PickValue::Cost,
-                    });
-                    if let DecisionAnswer::Cards(picked) = answer
-                        && let Some(cid) = picked.first()
-                        && let Some(card) = Self::take_card(&mut self.players[p].library, *cid)
-                    {
+                        cands,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![first],
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((p, v.first().copied().unwrap_or(first)));
+                }
+                self.clear_answer_log();
+                for (p, cid) in picks {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, cid) {
                         self.exile.push(card);
-                        self.note_exiled_from_library(p, *cid, events);
+                        self.note_exiled_from_library(p, cid, events);
                     }
                 }
                 Ok(())
@@ -11339,13 +11371,14 @@ impl GameState {
             }
 
             Effect::EachPlayerReturnsAMatchingPermanent { filter, opponents } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 let seats = if *opponents {
                     self.apnap_sort(self.opponents_of(ctx.controller).into_iter().collect())
                 } else {
                     self.apnap_sort(self.living_seats().collect())
                 };
+                // Each player picks their own (CR 608.2d), in APNAP order.
+                let mut cursor = 0;
                 let mut picks: Vec<CardId> = Vec::new();
                 for p in seats {
                     let mine: Vec<(CardId, String)> = self
@@ -11357,20 +11390,23 @@ impl GameState {
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     let Some(&(first, _)) = mine.first() else { continue };
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Choose a permanent to return to its owner's hand".into(),
                         source,
-                        prompt: "Choose a permanent to return to its owner's hand".into(),
-                        candidates: mine,
-                        min: 1,
-                        max: 1,
-                        eligible: None,
-                        value: PickValue::Cost,
-                    });
-                    picks.push(match answer {
-                        DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
-                        _ => first,
-                    });
+                        mine,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![first],
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push(v.first().copied().unwrap_or(first));
                 }
+                self.clear_answer_log();
                 let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
                 for cid in picks {
                     self.move_card_to(cid, &dest, ctx, events);
@@ -11379,7 +11415,6 @@ impl GameState {
             }
 
             Effect::PlayerReturnsPermanentUnlessPaysLife { who, life } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 let seats = self.apnap_sort(self.resolve_players(who, ctx));
                 let mut cursor = 0;
@@ -11409,19 +11444,22 @@ impl GameState {
                         self.pay_life_cost(p, *life);
                         continue;
                     }
-                    let answer = self.decider.decide(&Decision::ChooseCards {
+                    // The same cursor as the life ask: one replay log.
+                    let Some(v) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Choose a permanent to return to its owner's hand".into(),
                         source,
-                        prompt: "Choose a permanent to return to its owner's hand".into(),
-                        candidates: mine,
-                        min: 1,
-                        max: 1,
-                        eligible: None,
-                        value: PickValue::Cost,
-                    });
-                    picks.push(match answer {
-                        DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
-                        _ => first,
-                    });
+                        mine,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![first],
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push(v.first().copied().unwrap_or(first));
                 }
                 self.clear_answer_log();
                 let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
