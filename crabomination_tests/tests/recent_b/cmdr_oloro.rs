@@ -130,6 +130,30 @@ fn lim_duls_vault_digs_for_a_spell() {
     assert!(g.players[0].library.iter().take(5).any(|c| c.id == bear), "the spell's window is on top");
 }
 
+/// Lim-Dûl's Vault digs "as many times as you choose": a seat that digs past
+/// the spell's window pays twice and keeps the third window on top.
+#[test]
+fn lim_duls_vault_digs_as_often_as_you_choose() {
+    let mut g = main_phase(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..9 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    let vault = g.add_card_to_hand(0, catalog::lim_duls_vault());
+    cast_at(&mut g, vault, &[]).expect("cast");
+    assert_eq!(g.players[0].life, life - 2, "two digs");
+    assert!(g.players[0].library.iter().take(5).all(|c| c.id != bear));
+}
+
 /// Act of Authority's upkeep exile hands the enchantment to the exiled
 /// permanent's controller.
 #[test]

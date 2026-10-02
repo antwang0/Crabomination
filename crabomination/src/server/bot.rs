@@ -5251,6 +5251,11 @@ pub fn decide_optional_trigger(
         K::FreeUpside | K::Neutral => (true, false),
         // Another card averages ~3 mana value: stop with five to spare.
         K::PushYourLuck { total, limit } => (total + 5 <= *limit, false),
+        // Dig past a window with nothing to cast, keeping 10 life back.
+        K::DigForLife { offset } => {
+            let paid = (*offset as usize / crate::game::effects::library_dig::VAULT_WINDOW) as u32;
+            (!state.vault_window_helpful(seat, *offset as usize) && life_after(paid + 1) > 10, false)
+        }
         // The one stateful family: answered on the bot struct in
         // `next_action`, which tracks the reveals committed so far. A sim
         // reaching it has no series to track, so it declines.

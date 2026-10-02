@@ -204,6 +204,9 @@ pub enum OptionalKind {
     /// `limit` or less, …" (Dance with Calamity): `total` is what is already
     /// exiled. Yes risks going over.
     PushYourLuck { total: u32, limit: u32 },
+    /// Lim-Dûl's Vault: yes pays 1 life to bottom the five-card window at
+    /// `offset` into the library and look at the next five.
+    DigForLife { offset: u32 },
 }
 
 impl OptionalKind {
@@ -226,7 +229,8 @@ impl OptionalKind {
             | OptionalKind::KeepByGivingUp
             | OptionalKind::ExileGraveyard { .. }
             | OptionalKind::SelfCost
-            | OptionalKind::RevealTopLoseLife => true,
+            | OptionalKind::RevealTopLoseLife
+            | OptionalKind::DigForLife { .. } => true,
             OptionalKind::MayBody
             | OptionalKind::CastFree
             | OptionalKind::FreeUpside

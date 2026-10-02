@@ -3,8 +3,7 @@
 //! `tests/recent_b/cmdr_oloro.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Lim-Dûl's Vault** — how far to dig is the engine's pick, and the final
-//!   five keep their order.
+//! - **Lim-Dûl's Vault** — the final five keep their order.
 //! - **Springjack Pasture** — no bot path picks an X for its Goat sacrifice.
 
 use crate::card::{
@@ -240,7 +239,8 @@ pub fn kongming_sleeping_dragon() -> CardDefinition {
 }
 
 /// Lim-Dûl's Vault — dig five at a time for 1 life each, then shuffle under
-/// the last five. Residual: the digging is the engine's pick.
+/// the last five, digging as often as you choose. Residual: the final five
+/// keep their order.
 pub fn lim_duls_vault() -> CardDefinition {
     spell("Lim-Dûl's Vault", cost(&[u(), b()]), CardType::Instant, Effect::LookTopFiveDigForLife)
 }

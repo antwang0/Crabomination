@@ -2133,7 +2133,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Path of the Enigma | Cavalry Charge (MOC) | the Will of the Planeswalkers vote isn't held (no planar deck, so planeswalk and chaos do nothing). |
 | 🟡 Syr Elenora, the Discerning | Cavalry Charge (MOC) | her hand-size power is a battlefield static, not a CDA read in every zone. |
 | 🟡 Aryel, Knight of Windgrace | Cavalry Charge (MOC) | X for "tap X untapped Knights" is the target's power (the least that works), not a free choice. |
-| 🟡 Lim-Dûl's Vault | Eternal Bargain (C13) | how far to dig is the engine's pick, and the last five keep their order. |
+| 🟡 Lim-Dûl's Vault | Eternal Bargain (C13) | the last five keep their order. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
 | 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |

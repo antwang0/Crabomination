@@ -32,7 +32,7 @@ mod graveyard_spread;
 mod dice_choices;
 mod copy_each_target;
 mod exchange_power;
-mod library_dig;
+pub(crate) mod library_dig;
 mod order_of_succession;
 mod owners_control;
 mod return_own;
@@ -24179,7 +24179,7 @@ impl GameState {
                 self.damage_each_creature_of_chosen_color(amount, ctx, effect, events)
             }
             Effect::LookTopFiveDigForLife => {
-                self.look_top_five_dig_for_life(ctx, events);
+                self.look_top_five_dig_for_life(ctx, events, effect);
                 Ok(())
             }
             Effect::SacrificeAllButOnePerType { who, include_land } => {

@@ -5515,8 +5515,7 @@ pub enum Effect {
     EachPlayerTakesCreatureOfNext,
     /// Lim-Dûl's Vault — look at the top five; as many times as you choose,
     /// pay 1 life, bottom them and look at the next five; then shuffle and put
-    /// the last five on top. The digging is the engine's pick: it pays while
-    /// the window holds no castable spell and life stays above 10.
+    /// the last five on top. The controller is asked before each dig.
     LookTopFiveDigForLife,
     /// Put one `body` trigger on the stack per permanent `what` resolves to,
     /// sourced from that permanent (so `Selector::This` is it), targets
