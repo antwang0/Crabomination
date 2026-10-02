@@ -95,7 +95,6 @@ SOURCE_ALLOWLIST = {
         "narrowing never allows an illegal play"
     ),
     "nessian_wilds_ravager": "same narrowing, same reason",
-    "brash_taunter": "same narrowing, same reason — an activated fight slot",
     "pucas_covenant": (
         "'another' is other than the creature that died — no requirement "
         "names the trigger source (INCOMPLETE_CARDS' 🟡 row)"
