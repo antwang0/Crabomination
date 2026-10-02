@@ -35225,7 +35225,7 @@ impl GameState {
                 self.copy_all_spells_and_abilities(ctx, events)
             }
             Effect::CopyOnePerOpponentWithTotalStats => {
-                self.copy_one_per_opponent_with_total_stats(ctx, events)
+                self.copy_one_per_opponent_with_total_stats(ctx, events, effect)
             }
             Effect::ChooseAttackDirectionUntilYourNextTurn => {
                 self.choose_attack_direction_until_next_turn(ctx);

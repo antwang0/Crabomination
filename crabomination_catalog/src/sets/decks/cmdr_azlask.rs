@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_azlask.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Benthic Anomaly** — each opponent's greatest-power creature is chosen,
-//!   and the copy is of the one with the greatest mana value.
 //! - **Bismuth Mindrender** — the exiled card may be cast for life until end
 //!   of turn, not only as the trigger resolves.
 //! - **Twins of Discord** — the granted bloodthirst rides colorless creature
@@ -112,8 +110,8 @@ pub fn angelic_aberration() -> CardDefinition {
     def
 }
 
-/// Benthic Anomaly — on cast, a summed copy of one creature per opponent.
-/// Residual: the choices are the engine's.
+/// Benthic Anomaly — on cast, a summed copy of one creature you choose per
+/// opponent.
 pub fn benthic_anomaly() -> CardDefinition {
     let mut def = devoid(CardDefinition {
         triggered_abilities: vec![on_cast(Effect::CopyOnePerOpponentWithTotalStats)],

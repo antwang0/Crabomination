@@ -5682,8 +5682,8 @@ pub enum Effect {
     /// Benthic Anomaly — "for each opponent, choose a creature that player
     /// controls. Create a token that's a copy of one of those creatures,
     /// except its power and toughness are those creatures' totals and it's a
-    /// colorless Eldrazi creature." Each opponent's greatest-power creature
-    /// is chosen; the copy is of the one with the greatest mana value.
+    /// colorless Eldrazi creature." The controller's choices; headless, each
+    /// opponent's greatest-power creature and a copy of the priciest.
     CopyOnePerOpponentWithTotalStats,
     /// "Copy the next loyalty ability you activate this turn" `copies` times
     /// (Jaya's Phoenix: once; Repeated Reverberation: twice). Adds a one-shot

@@ -98,28 +98,56 @@ impl GameState {
     /// Benthic Anomaly: one creature per opponent (their greatest power), a
     /// token copy of the one with the greatest mana value carrying the
     /// chosen creatures' summed power and toughness, colorless and Eldrazi.
+    /// Benthic Anomaly: the controller chooses one creature per opponent,
+    /// then which of them to copy (headless: each opponent's greatest power,
+    /// the copy of the greatest mana value). All asks come first.
     pub(crate) fn copy_one_per_opponent_with_total_stats(
         &mut self,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
+        use crate::game::types::Target;
         let me = ctx.controller;
+        let asks = self.seat_prompts(me) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
         let mut chosen: Vec<CardId> = Vec::new();
         for opp in self.opponents_of(me) {
-            let best = self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == opp && self.computed_permanent(c.id).is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature)))
-                .max_by_key(|c| (self.effective_power(c), std::cmp::Reverse(c.id)))
-                .map(|c| c.id);
-            chosen.extend(best);
+            let mut theirs: Vec<&crate::card::CardInstance> =
+                self.battlefield.iter().filter(|c| c.controller == opp && self.computed_is_creature(c)).collect();
+            // The headless pick first (greatest power, the earliest on ties).
+            theirs.sort_by_key(|c| (std::cmp::Reverse(self.effective_power(c)), c.id));
+            let legal: Vec<Target> = theirs.iter().map(|c| Target::Permanent(c.id)).collect();
+            let Some(first) = legal.first().cloned() else { continue };
+            let pick = if asks && legal.len() > 1 {
+                match self.ask_seat_target_logged(&mut cursor, me, format!("Choose a creature seat {opp} controls"), source, legal, effect) {
+                    None => return Ok(()),
+                    Some(t) => t,
+                }
+            } else {
+                first
+            };
+            if let Target::Permanent(id) = pick {
+                chosen.push(id);
+            }
         }
-        let Some(&model) = chosen.iter().max_by_key(|&&id| {
-            let mv = self.battlefield_find(id).map(|c| c.definition.cost.cmc()).unwrap_or(0);
-            (mv, std::cmp::Reverse(id))
-        }) else {
-            return Ok(());
+        let mut by_mv = chosen.clone();
+        by_mv.sort_by_key(|&id| {
+            (std::cmp::Reverse(self.battlefield_find(id).map(|c| c.definition.cost.cmc()).unwrap_or(0)), id)
+        });
+        let Some(&first) = by_mv.first() else { return Ok(()) };
+        let model = if asks && by_mv.len() > 1 {
+            let legal = by_mv.iter().map(|&id| Target::Permanent(id)).collect();
+            match self.ask_seat_target_logged(&mut cursor, me, "Choose the creature to copy".into(), source, legal, effect) {
+                None => return Ok(()),
+                Some(Target::Permanent(id)) => id,
+                Some(_) => first,
+            }
+        } else {
+            first
         };
+        self.clear_answer_log();
         let (mut p, mut t) = (0i32, 0i32);
         for &id in &chosen {
             if let Some(c) = self.battlefield_find(id) {

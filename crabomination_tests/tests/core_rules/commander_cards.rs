@@ -1771,6 +1771,30 @@ fn cr_707_9_one_copy_with_summed_stats() {
     assert!(cp.colors.is_empty());
 }
 
+/// Benthic Anomaly's choices are its controller's: seat 1's smaller creature
+/// can be the one chosen, and the Goblin the one copied.
+#[test]
+fn benthic_anomaly_choices_are_the_controllers() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = game_with_format(Format::Commander, 3);
+    g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let goblin = g.add_card_to_battlefield(2, catalog::goblin_guide());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(elf)),
+        DecisionAnswer::Target(Target::Permanent(goblin)),
+    ]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CopyOnePerOpponentWithTotalStats, &ctx).expect("copy");
+    let tok = g.battlefield.iter().find(|c| c.controller == 0 && c.is_token).expect("token");
+    assert_eq!(tok.definition.name, "Goblin Guide");
+    let cp = g.computed_permanent(tok.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 Elves + 2/2 Goblin");
+}
+
 /// CR 107.4e — a colorless hybrid pip ({C/W}) is paid with one colorless
 /// mana or one mana of its color, has mana value 1, and counts its color
 /// toward color identity (CR 903.4).
