@@ -6162,8 +6162,9 @@ pub enum Effect {
     /// of the game via `hands_revealed_to`.
     RevealHand { who: PlayerRef },
     /// "Target player reveals the top card of their library" (Aven
-    /// Windreader). Knowledge only — the top card becomes visible to every
-    /// player for as long as it stays on top.
+    /// Windreader); every resolved player, for "each player reveals"
+    /// (Haunting Imitation). The top card becomes visible to every player for
+    /// as long as it stays on top.
     RevealTopOfLibrary { who: PlayerRef },
     /// "Reveal the top card of `who`'s library. If it matches `filter`,
     /// `on_match`. Then that player shuffles." (Prophecy.)

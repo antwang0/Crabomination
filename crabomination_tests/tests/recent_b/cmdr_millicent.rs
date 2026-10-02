@@ -313,6 +313,37 @@ fn spectral_arcanist_recasts_from_a_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == b));
 }
 
+/// Spectral Arcanist's spell is chosen as the trigger resolves (it doesn't
+/// target): a Bolt that reached a graveyard after the trigger went on the
+/// stack is still castable.
+#[test]
+fn spectral_arcanist_chooses_as_it_resolves() {
+    let mut g = main_phase(2);
+    let a = g.add_card_to_hand(0, catalog::spectral_arcanist());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: a, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("enters");
+    assert_eq!(g.stack.len(), 1, "the entry trigger waits");
+    let b = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let life = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.exile.iter().any(|c| c.id == b));
+}
+
+/// Haunting Imitation reveals each player's top card (CR 701.20a).
+#[test]
+fn haunting_imitation_reveals_the_tops() {
+    let mut g = main_phase(2);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let h = g.add_card_to_hand(0, catalog::haunting_imitation());
+    cast_at(&mut g, h, &[]).expect("cast");
+    assert!(g.library_top_revealed_by_effect_for_test(0) && g.library_top_revealed_by_effect_for_test(1));
+}
+
 /// Spectral Shepherd bounces a Spirit you control.
 #[test]
 fn spectral_shepherd_rescues_a_spirit() {

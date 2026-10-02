@@ -36342,9 +36342,18 @@ impl GameState {
             }
 
             Effect::RevealTopOfLibrary { who } => {
-                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-                if !self.library_tops_revealed.contains(&seat) {
-                    self.library_tops_revealed.push(seat);
+                // "Each player reveals the top card of their library" too
+                // (Haunting Imitation): every named seat, each a reveal event.
+                for seat in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[seat].library.first() else { continue };
+                    events.push(GameEvent::TopCardRevealed {
+                        player: seat,
+                        card_name: top.definition.name,
+                        is_land: top.definition.is_land(),
+                    });
+                    if !self.library_tops_revealed.contains(&seat) {
+                        self.library_tops_revealed.push(seat);
+                    }
                 }
                 Ok(())
             }

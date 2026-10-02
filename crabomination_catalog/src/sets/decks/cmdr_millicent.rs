@@ -12,7 +12,7 @@ use crate::card::{
     EventSpec, Keyword, PlayerTally, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, partner_with_search, target_filtered, target_n};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, partner_with_search, target_filtered, target_n};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, cost, generic, u, w, x};
@@ -353,9 +353,8 @@ pub fn haunted_library() -> CardDefinition {
 }
 
 /// Haunting Imitation — each player's top card: a 1/1 flying Spirit token
-/// copy of each creature card; none, and it returns to its owner's hand.
-///
-/// ⚠ Residual: the top cards are read, not revealed.
+/// copy of each creature card revealed; none, and it returns to its owner's
+/// hand.
 pub fn haunting_imitation() -> CardDefinition {
     let creatures_on_top = || Selector::MatchingAmong {
         inner: Box::new(Selector::TopOfLibrary {
@@ -368,7 +367,7 @@ pub fn haunting_imitation() -> CardDefinition {
         "Haunting Imitation",
         cost(&[generic(2), u()]),
         false,
-        Effect::If {
+        Effect::Seq(vec![Effect::RevealTopOfLibrary { who: PlayerRef::EachPlayer }, Effect::If {
             cond: Predicate::SelectorExists(creatures_on_top()),
             then: Box::new(Effect::ForEach {
                 selector: creatures_on_top(),
@@ -387,7 +386,7 @@ pub fn haunting_imitation() -> CardDefinition {
                 }),
             }),
             else_: Box::new(Effect::ReturnResolvingSpellToHand),
-        },
+        }]),
     )
 }
 
@@ -498,26 +497,28 @@ pub fn rhoda_geist_avenger() -> CardDefinition {
 
 /// Spectral Arcanist — flying; entering, you may cast an instant or sorcery
 /// with mana value up to your Spirit count from a graveyard for free, exiled
-/// after.
-///
-/// ⚠ Residual: the spell is chosen as a target when the trigger goes on the
-/// stack, not as it resolves.
+/// after — the spell chosen as the trigger resolves (it doesn't target).
 pub fn spectral_arcanist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
-            what: target_filtered(
-                R::HasCardType(CardType::Instant)
+        triggered_abilities: vec![etb(choose_one_then(
+            Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: Zone::Graveyard,
+                filter: R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))
-                    .and(R::ManaValueAtMostYourCount(Box::new(spirit())))
-                    .from_any_graveyard(),
-            ),
-            source_zone: Zone::Graveyard,
-            exile_after: true,
-            copy: false,
-            reduce_generic: 0,
-            pay_own_cost: false,
-        })],
+                    .and(R::ManaValueAtMostYourCount(Box::new(spirit()))),
+            },
+            PlayerRef::You,
+            Effect::CastWithoutPayingImmediate {
+                what: chosen_one(),
+                source_zone: Zone::Graveyard,
+                exile_after: true,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+        ))],
         ..creature(
             "Spectral Arcanist",
             cost(&[generic(3), u()]),
