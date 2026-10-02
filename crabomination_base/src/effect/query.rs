@@ -1961,9 +1961,9 @@ impl Effect {
             Effect::AddRandomMissingCounter { what, .. } => sel_has_target(what),
             // Untargeted fan-out over creatures you control (Okinec Ahau).
             Effect::AddCountersForPowerOverBase { .. } => false,
-            Effect::MoveAllCounters { from, to } | Effect::MoveOneCounter { from, to } => {
-                sel_has_target(from) || sel_has_target(to)
-            }
+            Effect::MoveAllCounters { from, to }
+            | Effect::MoveAnyNumberOfCounters { from, to }
+            | Effect::MoveOneCounter { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
@@ -2009,7 +2009,6 @@ impl Effect {
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
-            | Effect::MoveCountersFromAmongOnto { onto: what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
@@ -2668,7 +2667,6 @@ impl Effect {
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
-            | Effect::MoveCountersFromAmongOnto { onto: what }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::ExileFromGraveyardBecomeCopy { what }
@@ -3077,6 +3075,7 @@ impl Effect {
             | Effect::LockTargetNameUntilYourNextTurn { what }
             | Effect::Explore { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to }
+            | Effect::MoveAnyNumberOfCounters { from, to }
             | Effect::MoveCounter { from, to, .. }
             | Effect::MoveOneCounter { from, to }
             | Effect::CopyCountersOnto { from, to } => {
@@ -5122,8 +5121,7 @@ impl Effect {
                 | Effect::GainControlWhileSourceTapped { what }
                 | Effect::GainControlWhileCounter { what, .. }
                 | Effect::GainKeywordsYourCreaturesHave { what, .. }
-                | Effect::MoveCountersFromAmongOnto { onto: what }
-                | Effect::GrantKeywordWhileSourceTapped { what, .. }
+                    | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
@@ -5342,6 +5340,7 @@ impl Effect {
                 Effect::LandsDontUntapNextUntapStep { who }
                 | Effect::CreaturesDontUntapNextUntapStep { who } => sel_find(who, slot),
                 Effect::MoveAllCounters { from, to }
+                | Effect::MoveAnyNumberOfCounters { from, to }
                 | Effect::MoveCounter { from, to, .. }
                 | Effect::MoveOneCounter { from, to }
                 | Effect::CopyCountersOnto { from, to } => {

@@ -8275,6 +8275,11 @@ pub enum Effect {
     /// Move every counter (all kinds) from `from` onto `to` (The Ozolith's
     /// begin-combat transfer). Relocation, not creation — no doublers.
     MoveAllCounters { from: Selector, to: Selector },
+    /// CR 122.5 — "move any number of counters from [from] onto [to]"
+    /// (Resourceful Defense, Slippery Bogbonder): per source and per kind of
+    /// counter, the controller chooses how many move. `from` may name several
+    /// permanents ("from among creatures you control"); `to` is never a source.
+    MoveAnyNumberOfCounters { from: Selector, to: Selector },
     /// CR 603.7 — a reflexive "when you do, …" sub-trigger: push `body`
     /// onto the stack as a triggered ability of the same source and
     /// controller instead of resolving it inline. The containing
@@ -11819,9 +11824,6 @@ pub enum Effect {
     /// it has; one chosen permanent card onto the battlefield, the other
     /// chosen cards to hand, the rest to the graveyard (Selective Adaptation).
     RevealTopChooseByKeyword { count: Value, keywords: Vec<crate::card::Keyword> },
-    /// Move the counters on the other creatures you control onto `onto`
-    /// (Slippery Bogbonder).
-    MoveCountersFromAmongOnto { onto: Selector },
     /// Move one counter of any kind from `from` onto `to` (Nesting Grounds).
     MoveOneCounter { from: Selector, to: Selector },
     /// "As this enters, choose one of `options`" — stamps

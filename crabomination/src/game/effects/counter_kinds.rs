@@ -26,6 +26,16 @@ impl CounterKind {
         )
     }
 
+    /// The kind as a prompt names it ("+1/+1", "flying").
+    fn label(&self) -> String {
+        match self {
+            CounterKind::Plain(CounterType::PlusOnePlusOne) => "+1/+1".into(),
+            CounterKind::Plain(CounterType::MinusOneMinusOne) => "-1/-1".into(),
+            CounterKind::Plain(k) => format!("{k:?}").to_lowercase(),
+            CounterKind::Keyword(k) => format!("{k:?}").to_lowercase(),
+        }
+    }
+
     /// The order a player choosing a kind for their own creature prefers:
     /// keyword counters, then shield, then +1/+1, then the rest.
     fn preference(&self) -> u8 {
@@ -243,5 +253,79 @@ impl GameState {
                 events,
             );
         }
+    }
+
+    /// `Effect::MoveAnyNumberOfCounters` (CR 122.5): for each source and each
+    /// kind of counter on it, the controller says how many move onto `to` —
+    /// all asks first (the replay-log contract), then the moves. A headless
+    /// seat moves everything but a counter nobody wants on their own side.
+    pub(super) fn move_any_number_of_counters(
+        &mut self,
+        from: &Selector,
+        to: &Selector,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some(dst) = self.permanents_of(to, ctx).into_iter().next() else { return };
+        let sources: Vec<CardId> = self.permanents_of(from, ctx).into_iter().filter(|id| *id != dst).collect();
+        let source_card = ctx.source.unwrap_or(dst);
+        let mut cursor = 0;
+        let mut moves: Vec<(CardId, CounterKind, u32)> = Vec::new();
+        for src in sources {
+            for kind in self.counter_kinds_on(src) {
+                let Some(c) = self.battlefield_find(src) else { continue };
+                let have = match &kind {
+                    CounterKind::Plain(k) => c.counter_count(*k),
+                    CounterKind::Keyword(k) => c.keyword_counters.get(k).copied().unwrap_or(0),
+                };
+                let prompt = format!("Move how many {} counters from {}?", kind.label(), c.definition.name);
+                let ask = if kind.is_harmful() {
+                    crate::decision::AmountKind::Cost { free: 0 }
+                } else {
+                    crate::decision::AmountKind::Upside
+                };
+                let Some(n) =
+                    self.ask_seat_amount(&mut cursor, ctx.controller, prompt, source_card, have, ask, effect)
+                else {
+                    return;
+                };
+                if n > 0 {
+                    moves.push((src, kind, n));
+                }
+            }
+        }
+        self.clear_answer_log();
+        let placer = self.resolution_causer;
+        for (src, kind, n) in moves {
+            if self.battlefield_find(dst).is_none() {
+                break;
+            }
+            let Some(s) = self.battlefield_find_mut(src) else { continue };
+            match kind {
+                CounterKind::Plain(k) => {
+                    let moved = s.remove_counters(k, n);
+                    if moved == 0 {
+                        continue;
+                    }
+                    events.push(GameEvent::CounterRemoved { card_id: src, counter_type: k, count: moved });
+                    if let Some(d) = self.battlefield_find_mut(dst) {
+                        d.add_counters(k, moved);
+                    }
+                    events.push(GameEvent::CounterAdded { card_id: dst, counter_type: k, count: moved, placer });
+                }
+                CounterKind::Keyword(k) => {
+                    let moved = s.keyword_counters.remove_up_to(&k, n);
+                    if moved == 0 {
+                        continue;
+                    }
+                    if let Some(d) = self.battlefield_find_mut(dst) {
+                        d.keyword_counters.add(k, moved);
+                    }
+                    self.board_instance_keywords = true;
+                }
+            }
+        }
+        self.check_state_based_actions_mid_resolution(events);
     }
 }

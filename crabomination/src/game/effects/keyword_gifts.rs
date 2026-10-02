@@ -19,9 +19,6 @@ fn card_has(card: &CardInstance, wanted: &Keyword) -> bool {
     card.definition.keywords.iter().any(|k| keyword_matches(k, wanted))
 }
 
-/// A donor's counters: the plain kinds and the keyword counters.
-type Donor = (CardId, Vec<(CounterType, u32)>, Vec<(Keyword, u32)>);
-
 impl GameState {
     fn run_on(&mut self, id: CardId, effect: Effect, ctx: &EffectContext, events: &mut Vec<GameEvent>) {
         let mut c = ctx.clone();
@@ -176,58 +173,6 @@ impl GameState {
         Ok(())
     }
 
-    /// `Effect::MoveCountersFromAmongOnto` — every counter on the other
-    /// creatures you control moves onto `onto` (Slippery Bogbonder).
-    pub(super) fn move_counters_from_among_onto(
-        &mut self,
-        onto: &Selector,
-        ctx: &EffectContext,
-        events: &mut Vec<GameEvent>,
-    ) -> Result<(), GameError> {
-        let Some(to) = self.resolve_selector(onto, ctx).into_iter().find_map(|e| e.as_permanent_id()) else {
-            return Ok(());
-        };
-        let p = ctx.controller;
-        let donors: Vec<Donor> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == p && c.id != to && self.computed_is_creature(c))
-            .map(|c| {
-                let plain = c.counters.iter().map(|(k, n)| (*k, *n)).filter(|(_, n)| *n > 0).collect::<Vec<_>>();
-                let kws = c.keyword_counters.iter().map(|(k, n)| (k.clone(), *n)).filter(|(_, n)| *n > 0).collect();
-                (c.id, plain, kws)
-            })
-            .filter(|(_, a, b): &Donor| !a.is_empty() || !b.is_empty())
-            .collect();
-        for (from, plain, kws) in donors {
-            for (kind, n) in plain {
-                let mut c = ctx.clone();
-                c.targets = vec![Target::Permanent(from), Target::Permanent(to)];
-                let _ = self.run_effect(
-                    &Effect::MoveCounter {
-                        from: Selector::Target(0),
-                        to: Selector::Target(1),
-                        kind,
-                        amount: Value::Const(n as i32),
-                    },
-                    &c,
-                    events,
-                );
-            }
-            for (kw, n) in kws {
-                if let Some(c) = self.battlefield_find_mut(from) {
-                    c.keyword_counters.remove_up_to(&kw, n);
-                }
-                self.run_on(
-                    to,
-                    Effect::AddKeywordCounter { what: Selector::Target(0), keyword: kw, amount: Value::Const(n as i32) },
-                    ctx,
-                    events,
-                );
-            }
-        }
-        Ok(())
-    }
 
     /// `Effect::MoveOneCounter` — one counter (a +1/+1 counter when it has
     /// one) from the first permanent onto the second (Nesting Grounds).
