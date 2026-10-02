@@ -343,6 +343,22 @@ fn feather_copies_a_pump_at_two_apiece() {
     assert_eq!(before - g.players[0].mana_pool.total(), 1 + 2, "Giant Growth and one copy");
 }
 
+/// Feather with no one to ask: a hostile spell's copies go at the opponents'
+/// creatures, not its own (the auto-targeter's polarity).
+#[test]
+fn feather_headless_aims_a_hostile_copy_at_an_opponent() {
+    let mut g = main_phase(2);
+    let feather = g.add_card_to_battlefield(0, catalog::feather_radiant_arbiter());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    flood(&mut g, 0);
+    cast_at(&mut g, shock, &[Target::Permanent(feather)]).expect("cast");
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(mine).is_some(), "its own Bears are spared");
+    assert!(g.battlefield_find(theirs).is_none(), "the copy shocked the opponent's");
+}
+
 /// CR 614.5 — Fiendish Duo doubles damage to opponents, not to their
 /// creatures.
 #[test]

@@ -117,13 +117,17 @@ impl GameState {
         if candidates.is_empty() {
             return Ok(());
         }
+        // A person may aim a copy anywhere; a headless policy aims it by the
+        // spell's polarity — a pump at its own creatures, a hostile spell at
+        // its opponents' — the same classifier the auto-targeter reads.
+        let friendly = def.effect.prefers_friendly_target();
         let auto: Vec<CardId> = candidates
             .iter()
-            .filter(|(id, _)| self.battlefield_find(*id).is_some_and(|c| c.controller == caster))
+            .filter(|(id, _)| {
+                self.battlefield_find(*id).is_some_and(|c| self.same_team(c.controller, caster) == friendly)
+            })
             .map(|(id, _)| *id)
             .collect();
-        // A person may aim a copy anywhere; a headless policy cannot tell a
-        // pump from a goad, so it is held to its own creatures.
         let max = if self.seat_prompts(caster) { candidates.len() } else { auto.len() } as u32;
         let Some(picked) = self.choose_up_to_cards(
             caster,

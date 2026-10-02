@@ -162,7 +162,6 @@ pub fn darien_king_of_kjeldor() -> CardDefinition {
 
 /// Feather, Radiant Arbiter — flying, lifelink; a noncreature spell you cast
 /// aimed only at Feather may be copied onto other creatures at {2} apiece.
-/// Residual: A headless caster copies onto its own creatures only.
 pub fn feather_radiant_arbiter() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
