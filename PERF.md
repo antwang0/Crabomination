@@ -3036,6 +3036,9 @@ pod              9,220 release-fast games over every deck: 4 seats x 4,600
                  4 seats --a dflt x 1,840 (20262301+) — zero panics, zero caps,
                  one CR 104.4a draw; earlier this run 11,220 more, same result
 suite            23,658 / 0 / 5 strict; workspace clippy 0
+later tip        d00817b6 (the changeling layer-pass flag): --bench byte-identical,
+                 8 pairs vs cf0886f5e +3.42 % median (sd 8.2) — noise; 4,600 more
+                 4-seat pods (seed 20263001+) all decided; suite 23,662 at the closing tip
 ```
 
 ### 2026-09-29 (Commander session `0131vbd2`) — guardrail, no perf work
