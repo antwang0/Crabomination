@@ -81,9 +81,8 @@ fn lhurgoyf_creature() -> R {
 
 /// Disa the Restless — a Lhurgoyf card reaching your graveyard from anywhere
 /// but the battlefield comes back; connecting makes a Tarmogoyf.
-/// Residual: "Not from the battlefield" is read as "not put there from the
-/// battlefield this turn": a Lhurgoyf that died earlier this turn and then
-/// reached the graveyard another way doesn't return.
+/// "Not from the battlefield" is "not put there from the battlefield this
+/// turn", which a card leaving the graveyard clears (CR 400.7).
 pub fn disa_the_restless() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

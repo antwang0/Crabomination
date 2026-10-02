@@ -438,10 +438,9 @@ pub fn kotis_sibsig_champion() -> CardDefinition {
 /// from anywhere other than the battlefield, or a creature card leaves your
 /// graveyard, Syr Konrad deals 1 damage to each opponent. {1}{B}: Each player
 /// mills a card.
-///
-/// Approximation: "from anywhere other than the battlefield" is read as "a
-/// creature card that wasn't put into a graveyard from the battlefield this
-/// turn".
+/// "From anywhere other than the battlefield" is "not put into a graveyard
+/// from the battlefield this turn" — exact, since a card leaving the
+/// graveyard drops that mark (CR 400.7).
 pub fn syr_konrad_the_grim() -> CardDefinition {
     let ping = || Effect::DealDamage {
         to: Selector::Player(PlayerRef::EachOpponent),

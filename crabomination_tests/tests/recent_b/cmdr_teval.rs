@@ -343,6 +343,33 @@ fn syr_konrad_pings_for_graveyard_traffic() {
     assert_eq!(g.players[1].life, 18, "a creature card left your graveyard");
 }
 
+/// CR 400.7 — a creature that died this turn, came back to hand and is then
+/// discarded reached the graveyard "from anywhere other than the
+/// battlefield": the card that left the graveyard was a new object.
+#[test]
+fn syr_konrad_counts_a_dead_creatures_later_discard() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::syr_konrad_the_grim());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(bear)), None);
+    assert_eq!(g.players[1].life, 19, "another creature died");
+    let raise_dead = g.add_card_to_hand(0, catalog::raise_dead());
+    cast_with(&mut g, raise_dead, Some(Target::Permanent(bear)), None);
+    assert!(in_hand(&g, 0, bear));
+    assert_eq!(g.players[1].life, 18, "a creature card left your graveyard");
+    g.players[0].hand.retain(|c| c.id == bear);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    let evs = g
+        .resolve_effect(&Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }, &ctx)
+        .expect("discard");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(in_graveyard(&g, 0, bear));
+    assert_eq!(g.players[1].life, 17, "put into the graveyard from the hand");
+}
+
 /// The Scarab God reanimates a graveyard creature as a 4/4 black Zombie and
 /// drains for Zombies each upkeep.
 #[test]
