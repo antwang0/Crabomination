@@ -1143,6 +1143,32 @@ fn kozileks_command_chooses_two_modes() {
     assert_eq!(g.players[1].hand.len(), 1, "target player scries X, then draws *one*");
 }
 
+/// Kozilek's Command's graveyard mode: "exile up to X target cards from
+/// graveyards" — targets in more than one graveyard, capped at X (CR 601.2c).
+#[test]
+fn kozileks_command_exiles_from_several_graveyards() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_graveyard(0, catalog::island());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let spare = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::kozileks_command());
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![0, 3],
+        card_id: id,
+        target: Some(crabomination::game::types::Target::Player(0)),
+        additional_targets: vec![
+            crabomination::game::types::Target::Permanent(mine),
+            crabomination::game::types::Target::Permanent(theirs),
+        ],
+        x_value: Some(2),
+    })
+    .expect("Kozilek's Command castable for X=2");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == mine) && g.exile.iter().any(|c| c.id == theirs));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spare), "untargeted stays");
+}
+
 /// Eldrazi Confluence "choose three, modes may repeat" (CR 700.2d): the
 /// Scion mode chosen thrice mints three tokens.
 #[test]

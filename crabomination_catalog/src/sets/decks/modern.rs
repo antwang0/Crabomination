@@ -20606,9 +20606,8 @@ pub fn collective_defiance() -> CardDefinition {
 /// instead of the exile, and no graveyard mode at all.
 ///
 /// The two modes are chosen as it is cast (`ChooseModesCast`, CR 700.2a),
-/// each target-bearing one owning its own slots. Residual: the graveyard mode
-/// exiles from **target player's** graveyard rather than "graveyards", which
-/// is the shape `Effect::ExileFromGraveyard` has.
+/// each target-bearing one owning its own slots; the graveyard mode's cards
+/// are up to X targets across every graveyard (Profane Command's shape).
 pub fn kozileks_command() -> CardDefinition {
     CardDefinition {
         name: "Kozilek's Command",
@@ -20638,10 +20637,13 @@ pub fn kozileks_command() -> CardDefinition {
                             .and(SelectionRequirement::ManaValueAtMostXFromCost),
                     ),
                 },
-                Effect::ExileFromGraveyard {
-                    who: PlayerRef::Target(0),
-                    count: Value::XFromCost,
-                    filter: SelectionRequirement::Any,
+                Effect::CapTargetsAtX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: SelectionRequirement::InGraveyard,
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                    }),
                 },
             ],
         },
@@ -43437,17 +43439,36 @@ pub fn phelia_exuberant_shepherd() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
-            Effect::ExileReturnNextEndStep {
+            Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Permanent
                         .and(SelectionRequirement::Nonland)
                         .and(SelectionRequirement::OtherThanSource),
                 ),
+                to: ZoneDest::Exile,
             },
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+            Effect::AtNextEndStep {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            tapped: false,
+                        },
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: SelectionRequirement::ControlledByYou,
+                        },
+                        then: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
             },
         ]))],
         ..Default::default()

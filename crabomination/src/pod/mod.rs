@@ -2552,6 +2552,11 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-02 (Kozilek's Command's fourth mode exiles up to
+        // X target cards from any graveyards instead of one target player's;
+        // bisected: its parent passes, and the later commits to the tip read
+        // the same rows): seed 43 71→60 turns, 4242 72→99, same winners;
+        // 0xC0FFEE unmoved.
         // Re-blessed 2026-09-29 (seven "Remove a counter" costs paid on
         // activation — a380ef08a; bisected: its parent 1f1b7bc71 passes):
         // Icatian Javelineers' ping became a bare `DealDamage` the bot's ping
@@ -2809,8 +2814,8 @@ mod tests {
         // Same winners; seed 43 66→71 turns, the other two unmoved.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 58, 2585),
-            (43, Some(0), 71, 3460),
-            (4242, Some(3), 72, 3387),
+            (43, Some(0), 60, 2902),
+            (4242, Some(3), 99, 4753),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
