@@ -2818,11 +2818,6 @@ mod tests {
         // Re-blessed 2026-09-29 (`server/land_ramp.rs`): pod seats now take
         // their land-fetch activations (Sakura-Tribe Elder, Burnished Hart).
         // Same winners; seed 43 66→71 turns, the other two unmoved.
-        // Re-blessed 2026-10-02 (bisected to 2edb33140, "Eshki deck: a
-        // prompting seat may decline a clone's copy" — pod seats prompt, so
-        // the bot policy now answers that "may"): 0xC0FFEE 58→64 turns /
-        // 2585→3089 actions, same winner; 43 and 4242 unmoved. The commit
-        // landed without the re-bless; every later tip reproduces it.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 64, 3089),
             (43, Some(0), 60, 2902),
