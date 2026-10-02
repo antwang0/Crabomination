@@ -35,8 +35,6 @@
 //! - Open the Omenpaths: the mana pays creature spells only (not
 //!   enchantments), and the two colors may coincide.
 //! - Tinder Wall: the damage targets any blocked creature.
-//! - Arena of Glory: exert is a "doesn't untap next untap step" rider on the
-//!   mana ability, not a cost.
 //! - Game Trail: the reveal is an ETB check (the Snarl shape).
 //! - Pia, Aether Ascetic / Formidable Speaker: the discarded card is the
 //!   engine's pick. Kogla and Yidaro: the shuffle-back moves the card from any
@@ -1696,9 +1694,10 @@ pub fn blank_goblin() -> CardDefinition {
 /// mana is spent on a creature spell, it gains haste until end of turn.`
 ///
 /// The haste rider is `SpendRestriction::CreatureHaste` (Generator
-/// Servant). Approximation: the exert cost is folded into the mana ability's
-/// effect as `SkipNextUntap` on itself (the ability stays a mana ability —
-/// CR 605.1a allows a non-targeting rider beside the mana).
+/// Servant). The exert cost is paid as `SkipNextUntap` on itself beside the
+/// mana (CR 701.43a: exerting a permanent is exactly that; a mana ability
+/// can't be responded to, so cost and effect are indistinguishable, and no
+/// "whenever you exert" card watches a land).
 pub fn arena_of_glory() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
