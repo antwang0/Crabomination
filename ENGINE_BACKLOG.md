@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 25 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 14 |
 | Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
@@ -134,6 +134,14 @@ the handoff.
   every self-play game. `roll_one_die` now rolls off the seeded stream and
   hands the face to the decider (`Decision::DieRoll::rolled`, like
   `CoinFlip::heads`); `Effect::RollDie` and the planar die share it.
+- **FIXED:** CR 702.29c — the SCG and LGN `on_cycle` helpers wrapped every
+  cycling rider in an invented `MayDo`; Decree of Pain (six target decks),
+  Decree of Annihilation and three Gempalms were declined in all self-play.
+  `on_cycle_may` keeps the printed ones. And `server/cycling.rs` now cycles a
+  card for its own rider when the settled outcome beats passing — the
+  `--card-census` over every deck (9,200 four-seat games) had cycled no
+  Decree of Pain at all. ⚠ `audit_invented_may` did not see either helper:
+  a "may" invented inside a shared helper is invisible to it.
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, `claude/modern_decks`) — face-down exile, and the implicit "target opponent"
 

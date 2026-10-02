@@ -103,7 +103,9 @@ TOKEN_MARKERS = ("TokenDefinition", "token_def", "TokenSpec")
 
 
 def slug(name):
-    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    # "Summoner's Sending" is `summoners_sending`: an apostrophe is dropped,
+    # not a word break, or the walk falls back to the minted token's `name:`.
+    return re.sub(r"[^a-z0-9]+", "_", name.lower().replace("'", "").replace("’", "")).strip("_")
 
 
 def defs_in(path):
@@ -142,6 +144,32 @@ def defs_in(path):
         yield fn, own or keyed[0], body
 
 
+def needle_helpers(path):
+    """{helper name: needle} for the file's own non-factory `fn`s whose body
+    carries a needle. A card body that calls one carries that needle too: the
+    SCG/LGN `on_cycle` helpers wrapped every cycling rider in `MayDo`, and
+    Decree of Pain's invented "may" was invisible to a body-only read."""
+    src = open(path, encoding="utf-8").read()
+    out = {}
+    for m in re.finditer(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn (\w+)\([^)]*\)[^{;]*\{", src):
+        if "-> CardDefinition" in m.group(0) and "()" in m.group(0):
+            continue
+        start = m.end() - 1
+        depth, i = 0, start
+        while i < len(src):
+            if src[i] == "{":
+                depth += 1
+            elif src[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        needle = next((n for n in NEEDLES if n in src[start : i + 1]), None)
+        if needle:
+            out[m.group(1)] = needle
+    return out
+
+
 def printed_text(card):
     """Every face's oracle text, reminder text kept (see gate 2)."""
     parts = [card.get("oracle_text") or ""]
@@ -164,8 +192,11 @@ def main():
             if not f.endswith(".rs"):
                 continue
             path = os.path.join(dirpath, f)
+            helpers = needle_helpers(path)
             for fn, name, body in defs_in(path):
                 needle = next((n for n in NEEDLES if n in body), None)
+                if needle is None:
+                    needle = next((n for h, n in helpers.items() if re.search(rf"\b{h}\(", body)), None)
                 if needle is None:
                     continue
                 card = lower.get(name.lower())
