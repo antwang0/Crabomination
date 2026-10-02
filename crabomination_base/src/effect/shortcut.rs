@@ -3496,3 +3496,17 @@ pub fn chosen_one() -> Selector { Selector::SeparatedPile { chosen: true } }
 pub fn choose_some_then(what: Selector, chooser: PlayerRef, count: Value, up_to: bool, body: Effect) -> Effect {
     Effect::ChooseSomeAmong { what, chooser, count, up_to, chosen: Box::new(body), other: Box::new(Effect::Noop) }
 }
+
+/// "Will of the Planeswalkers — Starting with you, each player votes for
+/// planeswalk or chaos. If planeswalk gets more votes, planeswalk. If chaos
+/// gets more votes or the vote is tied, chaos ensues." (the Path cycle). Outside
+/// Planechase the vote is still held and both outcomes do nothing (CR 701.31a).
+pub fn will_of_the_planeswalkers() -> Effect {
+    Effect::Vote {
+        options: vec![
+            VoteOption::new("planeswalk", Effect::Planeswalk { who: PlayerRef::You }),
+            VoteOption::new("chaos", Effect::ChaosEnsues { who: PlayerRef::You }),
+        ],
+        tally: VoteTally::Majority,
+    }
+}

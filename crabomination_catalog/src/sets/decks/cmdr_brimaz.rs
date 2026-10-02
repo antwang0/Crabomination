@@ -16,9 +16,11 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
 };
-use crate::effect::shortcut::{choose_one_then, chosen_one, encore, etb, on_attack, target_filtered, unearth};
+use crate::effect::shortcut::{
+    choose_one_then, chosen_one, encore, etb, on_attack, target_filtered, unearth, will_of_the_planeswalkers,
+};
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, LookPick, PlayerRef, Predicate, VoteOption, VoteTally, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, LookPick, PlayerRef, Predicate, ZoneDest,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, generic, w};
@@ -463,13 +465,7 @@ pub fn path_of_the_schemer() -> CardDefinition {
                     },
                 ]),
             ),
-            Effect::Vote {
-                options: vec![
-                    VoteOption::new("planeswalk", Effect::Planeswalk { who: PlayerRef::You }),
-                    VoteOption::new("chaos", Effect::ChaosEnsues { who: PlayerRef::You }),
-                ],
-                tally: VoteTally::Majority,
-            },
+            will_of_the_planeswalkers(),
         ]),
         ..Default::default()
     }

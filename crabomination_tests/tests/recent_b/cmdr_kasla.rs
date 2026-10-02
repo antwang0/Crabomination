@@ -203,6 +203,19 @@ fn nesting_dovehawk_populates() {
     assert_eq!(g.battlefield_find(nd).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+/// CR 701.31a / 701.38a — outside Planechase nobody can planeswalk, but Path
+/// of the Ghosthunter's Will of the Planeswalkers vote is still held: every
+/// seat votes, starting with the caster, and the Spirits are made either way.
+#[test]
+fn path_of_the_ghosthunter_holds_its_vote_without_a_planar_deck() {
+    let mut g = pod(3);
+    let p = g.add_card_to_hand(0, catalog::path_of_the_ghosthunter());
+    cast(&mut g, p, &[], Some(2));
+    assert_eq!(named(&g, "Spirit"), 2);
+    let voters: Vec<usize> = g.last_vote.iter().map(|&(seat, _)| seat).collect();
+    assert_eq!(voters, vec![0, 1, 2]);
+}
+
 /// Wildfire Awakener makes X Elementals.
 #[test]
 fn wildfire_awakener_makes_x_elementals() {

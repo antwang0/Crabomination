@@ -10,9 +10,9 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Selector, SplitCard, SplitHalf, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{backup_with, etb, on_attack, riot, target_filtered};
+use crate::effect::shortcut::{backup_with, etb, on_attack, riot, target_filtered, will_of_the_planeswalkers};
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, VoteOption, VoteTally,
+    DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate,
 };
 use crate::mana::{Color, cost, g, generic, r, w, x};
 use crate::sets::{enters_tapped, tap_add};
@@ -437,13 +437,7 @@ pub fn path_of_the_pyromancer() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Sum(vec![Value::CardsDiscardedThisEffect, Value::ONE]),
             },
-            Effect::Vote {
-                options: vec![
-                    VoteOption::new("planeswalk", Effect::Planeswalk { who: PlayerRef::You }),
-                    VoteOption::new("chaos", Effect::ChaosEnsues { who: PlayerRef::You }),
-                ],
-                tally: VoteTally::Majority,
-            },
+            will_of_the_planeswalkers(),
         ]),
         ..Default::default()
     }

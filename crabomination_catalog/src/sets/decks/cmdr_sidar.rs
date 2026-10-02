@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_sidar.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Path of the Enigma** — with no planar deck the Will of the Planeswalkers
-//!   vote isn't held (planeswalk and chaos do nothing without one).
 //! - **Syr Elenora** — her hand-size power is a battlefield static, not a CDA
 //!   read in every zone.
 //! - **Aryel** — X is the target's power (the least that makes it legal), not
@@ -15,7 +13,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, target_filtered, will_of_the_planeswalkers};
 use crate::effect::{Effect, LookPick, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, u, w};
@@ -412,14 +410,17 @@ pub fn locthwain_lancer() -> CardDefinition {
     }
 }
 
-/// Path of the Enigma — target player draws four. Residual: the Will of the
-/// Planeswalkers vote isn't held (nothing to planeswalk to).
+/// Path of the Enigma — target player draws four, then the will of the
+/// planeswalkers.
 pub fn path_of_the_enigma() -> CardDefinition {
     CardDefinition {
         name: "Path of the Enigma",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: target_filtered(R::Player), amount: Value::Const(4) },
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: target_filtered(R::Player), amount: Value::Const(4) },
+            will_of_the_planeswalkers(),
+        ]),
         ..Default::default()
     }
 }

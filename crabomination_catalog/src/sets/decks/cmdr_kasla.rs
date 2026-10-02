@@ -10,7 +10,7 @@ use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{counter_target_spell, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{counter_target_spell, etb, on_attack, target_filtered, will_of_the_planeswalkers};
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, generic, hybrid, r, u, w, x};
@@ -275,15 +275,17 @@ pub fn nesting_dovehawk() -> CardDefinition {
     }
 }
 
-/// Path of the Ghosthunter — X 1/1 flying Spirits.
-/// Residual: with no planar deck the Will of the Planeswalkers vote isn't
-/// held (planeswalk and chaos do nothing without one).
+/// Path of the Ghosthunter — X 1/1 flying Spirits, then the will of the
+/// planeswalkers.
 pub fn path_of_the_ghosthunter() -> CardDefinition {
     CardDefinition {
         name: "Path of the Ghosthunter",
         cost: cost(&[x(), generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: mint(token("Spirit", vec![Color::White], CreatureType::Spirit, 1, 1, vec![Keyword::Flying]), Value::XFromCost),
+        effect: Effect::Seq(vec![
+            mint(token("Spirit", vec![Color::White], CreatureType::Spirit, 1, 1, vec![Keyword::Flying]), Value::XFromCost),
+            will_of_the_planeswalkers(),
+        ]),
         ..Default::default()
     }
 }

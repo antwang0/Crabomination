@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_gimbal.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Path of the Animist** — Will of the Planeswalkers is a vote with no
-//!   effect: outside Planechase, planeswalking and chaos do nothing (CR 901).
 //! - **Gimbal** — its trample grant, like every static type filter, reads
 //!   printed types (an animated artifact misses it; ENGINE_BACKLOG).
 
@@ -13,7 +11,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{bolster, etb, investigate, mint_treasures, target_filtered};
+use crate::effect::shortcut::{bolster, etb, investigate, mint_treasures, target_filtered, will_of_the_planeswalkers};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, u, Color, ManaCost};
@@ -305,8 +303,8 @@ pub fn pain_distributor() -> CardDefinition {
     }
 }
 
-/// Path of the Animist — two basic lands tapped; the planeswalkers' vote does
-/// nothing outside Planechase.
+/// Path of the Animist — two basic lands tapped, then the will of the
+/// planeswalkers.
 pub fn path_of_the_animist() -> CardDefinition {
     CardDefinition {
         name: "Path of the Animist",
@@ -319,6 +317,7 @@ pub fn path_of_the_animist() -> CardDefinition {
                     filter: R::IsBasicLand,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 })
+                .chain([will_of_the_planeswalkers()])
                 .collect(),
         ),
         ..Default::default()
