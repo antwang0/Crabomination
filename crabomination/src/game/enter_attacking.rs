@@ -24,6 +24,7 @@ impl GameState {
     pub(crate) fn join_combat_attacking_chosen(
         &mut self,
         what: &Selector,
+        cleanup: crate::effect::AttackingTokenCleanup,
         ctx: &EffectContext,
         effect: &Effect,
     ) -> Result<(), GameError> {
@@ -84,6 +85,7 @@ impl GameState {
                 ) else {
                     super::effects::rewrap_parked(&mut self.suspend_signal, |_| Effect::JoinCombatAttackingChosen {
                         what: Selector::ExactObjects(ids),
+                        cleanup,
                     });
                     return Ok(());
                 };
@@ -102,7 +104,9 @@ impl GameState {
             if let Some(c) = self.battlefield.find_by_id_mut(id) {
                 c.tapped = true;
             }
-            self.put_into_combat_attacking(id, target);
+            if self.put_into_combat_attacking(id, target) && cleanup != crate::effect::AttackingTokenCleanup::None {
+                self.attacking_token_cleanup.push((id, cleanup));
+            }
         }
         Ok(())
     }

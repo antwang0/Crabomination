@@ -68,7 +68,7 @@ use crate::effect::shortcut::{
     mint_treasures, myriad, on_attack, target_any, target_filtered,
 };
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
+    AttackingTokenCleanup, DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
     ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::game::TurnStep;
@@ -162,10 +162,11 @@ fn a_copy_haste_sac_at_end_step(source: Selector) -> Effect {
 fn a_temp_attacking_copy(source: Selector, non_legendary: bool) -> Effect {
     Effect::Seq(vec![
         a_copy_of(source, Value::ONE, true, non_legendary, vec![]),
-        Effect::JoinCombatAttackingChosen { what: Selector::LastCreatedTokens },
-        Effect::DelayUntil {
-            kind: DelayedTriggerKind::EndOfCombat,
-            body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+        // Every token a doubler made is exiled at end of combat, not only
+        // the last.
+        Effect::JoinCombatAttackingChosen {
+            what: Selector::LastCreatedTokens,
+            cleanup: AttackingTokenCleanup::ExileAtEndOfCombat,
         },
     ])
 }
@@ -343,8 +344,6 @@ pub fn delina_wild_mage() -> CardDefinition {
 /// token copy of another target attacking creature, tapped and attacking;
 /// exile the token at end of combat. Dash {2}{R}{R}.
 /// The copy attacks the defending player its controller chooses (CR 508.4).
-/// Approximation: under a token doubler only the last minted token is bound
-/// to the end-of-combat exile.
 pub fn flamerush_rider() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack(a_temp_attacking_copy(

@@ -205,6 +205,30 @@ fn flamerush_rider_copies_another_attacker_for_the_combat() {
     assert!(a_tokens_named(&g, "Grizzly Bears").is_empty(), "exiled at end of combat");
 }
 
+/// Under a token doubler both Flamerush copies attack, and both are exiled
+/// at end of combat (it used to bind only the last one minted).
+#[test]
+fn flamerush_rider_exiles_every_doubled_copy() {
+    let mut g = a_main_phase();
+    g.add_card_to_battlefield(0, catalog::parallel_lives());
+    let rider = g.add_card_to_battlefield(0, catalog::flamerush_rider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(rider);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: rider, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    drain_stack(&mut g);
+    let tokens = a_tokens_named(&g, "Grizzly Bears");
+    assert_eq!(tokens.len(), 2);
+    assert!(tokens.iter().all(|t| g.attacking().iter().any(|a| a.attacker == *t)));
+    a_finish_combat(&mut g);
+    assert!(a_tokens_named(&g, "Grizzly Bears").is_empty());
+}
+
 /// CR 508.4 — Flamerush Rider's copy names no defender, so its controller
 /// chooses among the defending players: here the one only the Bears attack.
 #[test]
