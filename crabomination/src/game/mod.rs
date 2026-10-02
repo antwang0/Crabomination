@@ -25697,6 +25697,16 @@ impl GameState {
         // distinct legal picks the same way the cast path threads
         // `additional_targets`. Without this the auto-targeter under-filled to
         // a single target.
+        // "Up to X target …, where X is" the triggering event's number (The
+        // Wise Mothman's milled cards, Vitality Hunter's monstrosity X): the
+        // number of targets is fixed as the trigger goes on the stack (CR
+        // 603.3d), so bind it before the targets are picked.
+        let effect = match effect {
+            Effect::CapTargetsAt { amount: crate::effect::Value::TriggerEventAmount, body } => {
+                Effect::CapTargetsAt { amount: crate::effect::Value::Const(event_amount as i32), body }
+            }
+            other => other,
+        };
         let additional = self.auto_extra_targets_for(&effect, source, controller, target.clone());
         // Only effects that DECLARE a target slot (printed "target …"
         // wording → `Selector::Target`/`TargetFiltered`) count as
