@@ -4569,7 +4569,10 @@ impl GameState {
                 if on_bf && gates.land(self) {
                     return None;
                 }
-                Some(card.definition.subtypes.land_types.contains(lt))
+                Some(
+                    card.definition.subtypes.land_types.contains(lt)
+                        || (!on_bf && self.card_off_battlefield_gains_land_type(card, *lt)),
+                )
             }
             // CR 613.5 layer 5 — the colour arm needs the same gate its
             // creature-type and land-type neighbours have, and did not have
@@ -6535,7 +6538,9 @@ impl GameState {
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => self.card_off_battlefield_has_creature_type(card, *ct),
             R::IsOutlaw => card_is_outlaw(card),
-            R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+            R::HasLandType(lt) => {
+                card.definition.subtypes.land_types.contains(lt) || self.card_off_battlefield_gains_land_type(card, *lt)
+            }
             R::ControllerControlsLandType(lt) => {
                 self.seat_controls_land_type(card.controller, *lt)
             }

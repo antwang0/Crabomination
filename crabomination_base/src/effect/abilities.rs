@@ -1953,6 +1953,11 @@ pub enum StaticEffect {
     /// control and cards you own that aren't on the battlefield are every
     /// creature type (CR 205.3). The battlefield half is a changeling grant.
     OwnedCardsOffBattlefieldAreEveryCreatureType { filter: SelectionRequirement },
+    /// "Land cards you own that aren't on the battlefield are [type]s in
+    /// addition to their other types" (Dune Chanter's Deserts). Read by the
+    /// off-battlefield `HasLandType` arms; the battlefield half is a
+    /// `LandTypeChanger`.
+    OwnedLandCardsOffBattlefieldHaveLandType(crate::card::LandType),
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,

@@ -71,6 +71,20 @@ impl GameState {
             || self.off_battlefield_type_grants(card).is_some_and(|g| g.every || g.chosen.contains(&ct))
     }
 
+    /// CR 205.3 — does the land card `card`, off the battlefield, gain land
+    /// type `lt` from a static its owner controls (Dune Chanter)?
+    pub(crate) fn card_off_battlefield_gains_land_type(&self, card: &CardInstance, lt: crate::card::LandType) -> bool {
+        use crate::effect::StaticEffect as SE;
+        card.definition.is_land()
+            && self.battlefield.find_by_id(card.id).is_none()
+            && self.battlefield.iter().filter(|c| c.controller == card.owner).any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, SE::OwnedLandCardsOffBattlefieldHaveLandType(t) if t == lt))
+            })
+    }
+
     /// CR 702.73a / 205.3 — is `card`, off the battlefield, every creature
     /// type (changeling, or Maskwood Nexus's "cards you own")?
     pub(crate) fn card_off_battlefield_is_every_creature_type(&self, card: &CardInstance) -> bool {
