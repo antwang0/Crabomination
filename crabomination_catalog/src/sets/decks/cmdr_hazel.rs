@@ -9,8 +9,6 @@
 //!   card exiled with it, not only the creature cards.
 //! - **Sword of the Squeak** — "base power or toughness 1" reads the printed
 //!   power and toughness.
-//! - **Insatiable Frugivore** — the three cards exiled each time are the first
-//!   three in your graveyard, not your pick.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -18,7 +16,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_some_then, chosen_one, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest, ZoneRef};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic};
@@ -323,7 +321,6 @@ pub fn hazels_brewmaster() -> CardDefinition {
 /// Insatiable Frugivore — enters: a Food, then you may exile three cards from
 /// your graveyard to repeat; {3}{B}, sacrifice X Foods: your creatures get
 /// +X/+0 and menace until end of turn.
-/// Residual: the three cards are the graveyard's first three.
 pub fn insatiable_frugivore() -> CardDefinition {
     let gy = || Selector::EachMatching { zone: ZoneRef::Graveyard(PlayerRef::You), filter: R::Any };
     CardDefinition {
@@ -331,8 +328,7 @@ pub fn insatiable_frugivore() -> CardDefinition {
             make(Value::ONE, Arc::new(food_token())),
             // "You may exile three cards from your graveyard. If you do,
             // repeat": the first ask is the MayDo, each later one MayRepeat's
-            // (its first pass is unconditional). The three are the graveyard's
-            // first three — no pick, so nothing inside the loop suspends.
+            // (its first pass is unconditional); the three are your picks.
             Effect::If {
                 cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(gy())), Value::Const(3)),
                 then: Box::new(Effect::MayDo {
@@ -343,9 +339,9 @@ pub fn insatiable_frugivore() -> CardDefinition {
                         body: Box::new(Effect::If {
                             cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(gy())), Value::Const(3)),
                             then: Box::new(Effect::Seq(vec![
-                                Effect::Exile {
-                                    what: Selector::Take { inner: Box::new(gy()), count: Box::new(Value::Const(3)) },
-                                },
+                                choose_some_then(gy(), PlayerRef::You, Value::Const(3), false, Effect::Exile {
+                                    what: chosen_one(),
+                                }),
                                 make(Value::ONE, Arc::new(food_token())),
                             ])),
                             else_: Box::new(Effect::Noop),

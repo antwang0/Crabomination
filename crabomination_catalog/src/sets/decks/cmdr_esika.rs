@@ -13,7 +13,7 @@ use crate::card::{
     PlaneswalkerSubtype, SelectionRequirement as R, Selector, StateTriggeredAbility, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, RevealMissDest, ZoneDest,
 };
@@ -1310,13 +1310,12 @@ pub fn valki_god_of_lies() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![etb(Effect::ForEach {
             selector: Selector::Player(PlayerRef::EachOpponent),
-            body: Box::new(Effect::ExileUntilSourceLeaves {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone { who: PlayerRef::Triggerer, zone: Zone::Hand, filter: R::Creature }),
-                    count: Box::new(Value::ONE),
-                },
-                return_to: crate::card::ExileReturnZone::Hand,
-            }),
+            // "a creature card they revealed" — your pick per opponent (CR 608.2d).
+            body: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::Triggerer, zone: Zone::Hand, filter: R::Creature },
+                PlayerRef::You,
+                Effect::ExileUntilSourceLeaves { what: chosen_one(), return_to: crate::card::ExileReturnZone::Hand },
+            )),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x()]),

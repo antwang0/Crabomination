@@ -6,8 +6,6 @@
 //! - **Flamebraider / Smokebraider / Primal Beyond** — the mana spends on
 //!   Elemental creature spells and Elemental sources' abilities; a Kindred
 //!   Elemental noncreature spell can't use it (the precon has none).
-//! - **Haunting Voyage** — unforetold, the two cards returned are the two
-//!   with the greatest power, not the caster's pick.
 //! - **Horde of Notions** — casts the Elemental; an Elemental land card
 //!   can't be played this way.
 
@@ -16,7 +14,7 @@ use crate::card::{
     Keyword, LandType, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{encore, etb, evoke, myriad, on_attack, on_dies, target_filtered};
+use crate::effect::shortcut::{choose_some_then, chosen_one, encore, etb, evoke, myriad, on_attack, on_dies, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{
@@ -286,8 +284,6 @@ pub fn flamebraider() -> CardDefinition {
 /// Haunting Voyage — choose a creature type; return up to two creature
 /// cards of it from your graveyard to the battlefield, or all of them if
 /// this spell was foretold. Foretell {5}{B}{B}.
-/// Residual: unforetold, the two returned are the two with the greatest
-/// power rather than the caster's pick.
 pub fn haunting_voyage() -> CardDefinition {
     let of_type = || R::Creature.and(R::IsSourceChosenCreatureType);
     CardDefinition {
@@ -304,17 +300,17 @@ pub fn haunting_voyage() -> CardDefinition {
                     filter: of_type(),
                     sacrifice_eot: false,
                 }),
-                else_: Box::new(Effect::Move {
-                    what: Selector::TakeGreatestPower {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: of_type(),
-                        }),
-                        count: Box::new(Value::Const(2)),
+                // "up to two" — the caster's picks (CR 608.2d).
+                else_: Box::new(choose_some_then(
+                    Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: of_type() },
+                    PlayerRef::You,
+                    Value::Const(2),
+                    true,
+                    Effect::Move {
+                        what: chosen_one(),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                }),
+                )),
             }),
         },
         ..Default::default()

@@ -210,22 +210,23 @@ fn garruks_wolves_feed_him() {
     assert_eq!(g.battlefield_find(garruk).unwrap().counter_count(CounterType::Loyalty), before + 1);
 }
 
-/// Insatiable Frugivore eats the graveyard three at a time for Foods.
+/// Insatiable Frugivore eats the graveyard three at a time for Foods — the
+/// three it exiles each time are its controller's picks (CR 608.2d).
 #[test]
 fn insatiable_frugivore_turns_graveyard_into_food() {
     let mut g = pod(2);
-    for _ in 0..7 {
-        g.add_card_to_graveyard(0, catalog::island());
-    }
+    let gy: Vec<CardId> = (0..7).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(gy[1..4].to_vec()),
         DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(gy[4..7].to_vec()),
         DecisionAnswer::Bool(true),
     ]));
     let f = g.add_card_to_hand(0, catalog::insatiable_frugivore());
     cast(&mut g, f, &[]);
     assert_eq!(named(&g, 0, "Food").len(), 3, "one, then two more");
-    assert_eq!(g.players[0].graveyard.len(), 1);
+    assert_eq!(g.players[0].graveyard.iter().map(|c| c.id).collect::<Vec<_>>(), vec![gy[0]], "the unpicked one stays");
 }
 
 /// Moonstone Eulogist: an opponent's creature dying makes you a Blood.

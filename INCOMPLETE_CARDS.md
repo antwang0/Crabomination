@@ -409,13 +409,14 @@ West Coast Expansion, Desecrate Reality, Wreck and Rebuild (its "may" too),
 Fugitive of the Judoon (two picks in turn), Infernal Offering (each player
 returns their own pick; its "choose an opponent" was already asked — the
 residual note was stale), and per player inside a `ForEach`: Summon: Esper
-Valigarmanda, The Weaver King. **`Effect::MaySacrifice` asks which
+Valigarmanda, The Weaver King, Valki. **`Effect::MaySacrifice` asks which
 permanent** (CR 701.17a) — 82 cards; the source stays a last resort and a
 headless seat keeps the weakest-first pick.
 
-Left on the same scan (multi-card or two-chooser picks, which `ChooseOneAmong`
-can't carry): Haunting Voyage's "up to two", Insatiable Frugivore's three,
-Dawnbreak Reclaimer's two choosers, Valki's per-opponent exile, Foreboding
+Multi-card picks: `Effect::ChooseSomeAmong` (`shortcut::choose_some_then`,
+exactly N or up to N) — Haunting Voyage's "up to two", Insatiable
+Frugivore's three each loop. Left on the same scan: Dawnbreak Reclaimer's
+two choosers (both picks must stand at once), Foreboding
 Steamboat, Neyam Shai Murad's "that player chooses", `Effect::ExileFromGraveyard`
 (8 cards, cheapest-first).
 
@@ -1963,7 +1964,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
-| 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
 | 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
 | 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
@@ -2043,7 +2043,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |
 | 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
-| 🟡 Haunting Voyage | Dance of the Elements (ECC) | cast unforetold, the two returned are the two with the greatest power, not the caster's pick. |
 | 🟡 Horde of Notions | Dance of the Elements (ECC) | casts the Elemental card; an Elemental land card can't be played this way. |
 | 🟡 Dack Fayden, Helping Hand | Multiverse Reforged (FRC) | the revealed creatures go to the opponents in turn order, not by your choice. |
 | 🟡 Tamiyo, Upriser Crowned | Multiverse Reforged (FRC) | "one or more creatures" fires once per creature (same taps and stun counters). |

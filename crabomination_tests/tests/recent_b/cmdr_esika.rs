@@ -652,3 +652,18 @@ fn cosima_voyages_and_comes_home_with_its_counters() {
     play(&mut g, false);
     assert!(g.battlefield_find(cosima).is_none(), "a plain exile stays exiled");
 }
+
+/// Valki's entry exiles "a creature card they revealed" from each opponent's
+/// hand — its controller's pick (CR 608.2d), here the Bears over the Angel.
+#[test]
+fn valki_exiles_the_chosen_creature_card() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_hand(1, catalog::serra_angel());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let valki = g.add_card_to_hand(0, catalog::valki_god_of_lies());
+    flood(&mut g);
+    cast(&mut g, valki, None).expect("Valki");
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    assert!(g.players[1].hand.iter().any(|c| c.id == angel));
+}

@@ -94,7 +94,8 @@ fn cr_702_74_ashling_evokes_and_copies_the_sacrificed_elemental() {
 }
 
 /// CR 702.143 — Haunting Voyage returns up to two creature cards of the
-/// chosen type; cast for its foretell cost, all of them.
+/// chosen type (the caster's picks, CR 608.2d); cast for its foretell cost,
+/// all of them.
 #[test]
 fn cr_702_143_haunting_voyage_foretold_returns_all() {
     for foretold in [false, true] {
@@ -105,7 +106,10 @@ fn cr_702_143_haunting_voyage_foretold_returns_all() {
             .collect();
         g.add_card_to_graveyard(0, catalog::grizzly_bears());
         let voyage = g.add_card_to_hand(0, catalog::haunting_voyage());
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Elemental)]));
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::CreatureType(CreatureType::Elemental),
+            DecisionAnswer::Cards(vec![dead[1], dead[2]]),
+        ]));
         if foretold {
             flood(&mut g, 0);
             g.perform_action(GameAction::Foretell { card_id: voyage }).expect("foretell");
@@ -123,6 +127,7 @@ fn cr_702_143_haunting_voyage_foretold_returns_all() {
         }
         let back = dead.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
         assert_eq!(back, if foretold { 3 } else { 2 }, "foretold: {foretold}");
+        assert_eq!(g.battlefield_find(dead[0]).is_some(), foretold, "unforetold, the first wasn't picked");
         assert!(named(&g, 0, "Grizzly Bears").is_empty(), "only the chosen type");
     }
 }
