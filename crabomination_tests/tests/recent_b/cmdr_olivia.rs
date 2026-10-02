@@ -115,8 +115,8 @@ fn olivia_mints_treasure_and_spends_it() {
 }
 
 /// CR 613.1d — Vihaan's animated Treasures are Construct Assassins, so
-/// they're outlaws on the layered type line: one connecting mints Olivia's
-/// Treasure. (Vihaan's own haste grant reads printed types — a residual.)
+/// they're outlaws on the layered type line: Vihaan's layer-6 grant gives them
+/// vigilance and haste (CR 613.8), and one connecting mints Olivia's Treasure.
 #[test]
 fn cr_613_1d_vihaan_treasures_become_outlaws() {
     let mut g = main_phase(2);
@@ -132,6 +132,7 @@ fn cr_613_1d_vihaan_treasures_become_outlaws() {
     let _ = g.advance_step(Vec::new());
     drain_stack(&mut g);
     assert_eq!(pt(&g, stock), (3, 3));
+    assert!(kw(&g, stock, Keyword::Haste) && kw(&g, stock, Keyword::Vigilance));
     swing(&mut g, &[stock], 1);
     assert_eq!(named(&g, 0, "Treasure").len(), 1, "the animated Assassin is an outlaw");
 }

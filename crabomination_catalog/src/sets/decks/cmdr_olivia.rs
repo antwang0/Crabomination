@@ -569,9 +569,8 @@ pub fn mistmeadow_skulk() -> CardDefinition {
 }
 
 /// Vihaan, Goldwaker — other outlaws have vigilance and haste; at your
-/// combat, your Treasures may become 3/3 Construct Assassins (so outlaws).
-/// Residual: the grant's outlaw filter reads printed types, so the animated
-/// Treasures don't get vigilance and haste.
+/// combat, your Treasures may become 3/3 Construct Assassins (so outlaws,
+/// and the grants reach them — CR 613.8).
 pub fn vihaan_goldwaker() -> CardDefinition {
     let other_outlaws = || Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou).and(R::OtherThanSource));
     CardDefinition {

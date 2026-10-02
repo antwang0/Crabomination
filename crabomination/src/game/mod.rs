@@ -32442,7 +32442,6 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsBlockingAlone
         | R::IsEnchanted
         | R::EnchantedByYourAura
-        | R::IsOutlaw
         | R::IsSource
         | R::TurnedFaceUpThisTurn
         | R::HasSuspend

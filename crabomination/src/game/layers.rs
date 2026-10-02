@@ -982,8 +982,9 @@ impl SecondPass {
                 {
                     g.card_type_filtered = true
                 }
-                AffectedPermanents::CardMatch { requirement, .. } if requirement_reads_card_type(requirement) => {
-                    g.card_type_filtered = true
+                AffectedPermanents::CardMatch { requirement, .. } => {
+                    g.card_type_filtered |= requirement_reads_card_type(requirement);
+                    g.type_lord |= requirement_reads_creature_type(requirement);
                 }
                 _ => {}
             }
@@ -1662,7 +1663,13 @@ fn affected_includes_gated(
             if requirement_mentions_other_than_source(requirement) && source == card.id {
                 return false;
             }
-            requirement_matches_card_typed(requirement, card, *source_controller, computed_types)
+            requirement_matches_card_typed(
+                requirement,
+                card,
+                *source_controller,
+                computed_types,
+                gate_types.map(|t| (t, changeling_types)),
+            )
         }
         AffectedPermanents::CardMatchPowerGated { source_controller, requirement, power_at_least } => {
             let Some(power) = gate_power else { return false };
@@ -1683,7 +1690,8 @@ fn requirement_reads_card_type(req: &SelectionRequirement) -> bool {
     use SelectionRequirement as R;
     match req {
         R::Creature | R::Artifact | R::Enchantment | R::Planeswalker | R::Land | R::Nonland | R::Noncreature => true,
-        R::HasCardType(_) => true,
+        // An outlaw is a creature (CR 613.8 — an animated Assassin Treasure).
+        R::HasCardType(_) | R::IsOutlaw => true,
         R::And(a, b) | R::Or(a, b) => requirement_reads_card_type(a) || requirement_reads_card_type(b),
         R::Not(inner) => requirement_reads_card_type(inner),
         _ => false,
@@ -1726,7 +1734,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // layer recompute via the dynamic CardMatch path ("permanents you
         // control with counters on them have ward {1}" — Innkeeper's Talent).
         R::WithAnyCounter | R::WithCounter(_) => true,
-        R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
+        R::IsOutlaw | R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
         | R::HasMutate => true,
         // Keyword presence is live `CardInstance` state too — the grant, the
@@ -1790,21 +1798,39 @@ pub(crate) fn requirement_matches_card(
     card: &crate::card::CardInstance,
     source_controller: usize,
 ) -> bool {
-    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types)
+    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None)
+}
+
+/// True when `req` has a creature-type leaf — the ones
+/// [`requirement_matches_card_typed`] reads from the computed types.
+fn requirement_reads_creature_type(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::HasCreatureType(_) | R::IsOutlaw => true,
+        R::And(a, b) | R::Or(a, b) => requirement_reads_creature_type(a) || requirement_reads_creature_type(b),
+        R::Not(inner) => requirement_reads_creature_type(inner),
+        _ => false,
+    }
 }
 
 /// [`requirement_matches_card`] with the card-type leaves read from `types`
 /// — the CR 613.8 second pass hands in the layer-4 computed types, so "each
 /// nonartifact creature" skips a creature a static made an artifact (The
-/// Flesh Is Weak).
+/// Flesh Is Weak). `ctypes` is the second pass's computed creature types and
+/// whether changeling still counts (CR 613.1d), else the printed line.
 pub(crate) fn requirement_matches_card_typed(
     req: &SelectionRequirement,
     card: &crate::card::CardInstance,
     source_controller: usize,
     types: &[CardType],
+    ctypes: Option<(&[CreatureType], bool)>,
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
+    let has_ctype = |ct: &CreatureType| match ctypes {
+        Some((t, changeling)) => t.contains(ct) || changeling && card.has_keyword(&Keyword::Changeling),
+        None => def.subtypes.creature_types.contains(ct) || card.has_keyword(&Keyword::Changeling),
+    };
     match req {
         R::Any | R::Permanent => true,
         R::PermanentCard => def.is_permanent(),
@@ -1833,8 +1859,13 @@ pub(crate) fn requirement_matches_card_typed(
         R::OwnedByYou => card.owner == source_controller,
         R::HasCardType(t) => types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
-        R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
-            || card.has_keyword(&Keyword::Changeling),
+        R::HasCreatureType(ct) => has_ctype(ct),
+        // OTJ — an outlaw creature (CR 613.8: the second pass's types, so
+        // Vihaan's animated Assassin Treasures count).
+        R::IsOutlaw => {
+            types.contains(&CardType::Creature)
+                && crate::game::effects::OUTLAW_TYPES.iter().any(has_ctype)
+        }
         R::HasLandType(lt) => def.subtypes.land_types.contains(lt),
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
@@ -1855,14 +1886,14 @@ pub(crate) fn requirement_matches_card_typed(
         R::Multicolored => def.printed_color_set().len() >= 2,
         R::Monocolored => def.printed_color_set().len() == 1,
         R::And(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types)
-                && requirement_matches_card_typed(b, card, source_controller, types)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes)
+                && requirement_matches_card_typed(b, card, source_controller, types, ctypes)
         }
         R::Or(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types)
-                || requirement_matches_card_typed(b, card, source_controller, types)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes)
+                || requirement_matches_card_typed(b, card, source_controller, types, ctypes)
         }
-        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types),
+        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types, ctypes),
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,

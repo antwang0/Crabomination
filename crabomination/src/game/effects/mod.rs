@@ -99,7 +99,7 @@ pub use crabomination_base::tokens::{
     token_arc_with_pt, token_card_arc, token_to_card_definition, treasure_token,
 };
 pub(crate) use delayed::delayed_kind_from_effect;
-pub(crate) use eval::card_is_outlaw;
+pub(crate) use eval::{OUTLAW_TYPES, card_is_outlaw};
 pub(crate) use events::{
     emblem_event_matches, event_matches_spec, event_subject, is_graveyard_self_source_kind,
 };
