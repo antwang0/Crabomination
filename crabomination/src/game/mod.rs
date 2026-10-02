@@ -4253,6 +4253,9 @@ pub(crate) struct ResolvingSpell {
     pub mode: Option<usize>,
     pub x_value: u32,
     pub converged_value: u32,
+    /// `CardData::cast_desert_mana` — the card itself is out of every zone
+    /// while it resolves.
+    pub cast_desert_mana: u8,
 }
 
 impl GameState {
@@ -17703,8 +17706,14 @@ impl GameState {
     /// `resolving_source`'s (stamped around the effect), the definition
     /// `resolving_spell_snapshot`'s (set as each spell starts resolving).
     pub(crate) fn resolving_spell_def(&self, id: CardId) -> Option<&crate::card::CardDefinition> {
+        self.resolving_spell(id).map(|snap| &*snap.definition)
+    }
+
+    /// The snapshot of the spell being resolved, when `id` is it (see
+    /// [`resolving_spell_def`](Self::resolving_spell_def)).
+    pub(crate) fn resolving_spell(&self, id: CardId) -> Option<&ResolvingSpell> {
         match (&self.scratch.resolving_source, &self.scratch.resolving_spell_snapshot) {
-            (Some((sid, ..)), Some(snap)) if *sid == id => Some(&*snap.definition),
+            (Some((sid, ..)), Some(snap)) if *sid == id => Some(snap),
             _ => None,
         }
     }

@@ -2386,6 +2386,7 @@ impl GameState {
                         mode,
                         x_value,
                         converged_value,
+                        cast_desert_mana: card.cast_desert_mana,
                     }));
 
                 // CR 702.140 — a creature with mutate merges onto its host

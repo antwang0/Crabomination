@@ -1196,6 +1196,12 @@ pub struct ManaPool {
     /// skipped on the wire exactly like `treasure`.
     #[serde(default, skip_serializing_if = "is_zero_u32")]
     artifact: u32,
+    /// Provenance counter: how much of the pool came from a Desert's mana
+    /// ability. Read only to count "mana from a Desert spent to cast this
+    /// spell" (Cataclysmic Prospecting); clamped and skipped on the wire
+    /// exactly like `treasure`.
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    desert: u32,
 }
 
 fn is_zero_u32(n: &u32) -> bool {
@@ -1318,6 +1324,7 @@ impl ManaPool {
         }
         self.treasure *= 2;
         self.artifact *= 2;
+        self.desert *= 2;
     }
 
     /// Add mana that a creature produced (`None` color = colorless). Ordinary
@@ -1356,6 +1363,9 @@ impl ManaPool {
         if self.artifact > 0 {
             self.artifact = self.artifact.min(self.total());
         }
+        if self.desert > 0 {
+            self.desert = self.desert.min(self.total());
+        }
     }
 
     /// Tag `amount` mana just added as Treasure-produced (the mana-ability
@@ -1363,6 +1373,18 @@ impl ManaPool {
     pub fn mark_from_treasure(&mut self, amount: u32) {
         self.treasure += amount;
         self.clamp_creature();
+    }
+
+    /// Tag `amount` mana just added as Desert-produced (the same
+    /// activation-path delta as [`mark_from_treasure`](Self::mark_from_treasure)).
+    pub fn mark_from_desert(&mut self, amount: u32) {
+        self.desert += amount;
+        self.clamp_creature();
+    }
+
+    /// Desert-produced mana floating (see the field).
+    pub fn desert_amount(&self) -> u32 {
+        self.desert
     }
 
     /// Tag `amount` mana just added as artifact-produced (the same
@@ -2033,6 +2055,7 @@ impl ManaPool {
             && self.creature.iter().all(|&n| n == 0)
             && self.treasure == 0
             && self.artifact == 0
+            && self.desert == 0
     }
 
     /// Fold every bucket of `other` into this pool (colors, colorless, snow,
@@ -2102,6 +2125,7 @@ impl ManaPool {
         }
         self.treasure += other.treasure;
         self.artifact += other.artifact;
+        self.desert += other.desert;
         for (n, r) in &other.restricted_colorless {
             self.add_restricted_colorless(*n, *r);
         }

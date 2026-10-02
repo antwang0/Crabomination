@@ -3651,6 +3651,10 @@ impl crate::game::GameState {
         if spent > 0 {
             self.players[p].cast_paid_artifact_mana = spent;
         }
+        let spent = receipt.pool_before.desert_amount().saturating_sub(self.players[p].mana_pool.desert_amount());
+        if spent > 0 {
+            self.players[p].cast_paid_desert_mana = spent;
+        }
         // Generator Servant — mana spent on a creature spell grants it haste.
         let dragon = kind.changeling || kind.creature_types.contains(&crate::card::CreatureType::Dragon);
         if kind.creature
@@ -11785,6 +11789,9 @@ impl GameState {
         if self.players[p].cast_paid_artifact_mana > 0 {
             card.cast_artifact_mana = std::mem::take(&mut self.players[p].cast_paid_artifact_mana).min(255) as u8;
         }
+        if self.players[p].cast_paid_desert_mana > 0 {
+            card.cast_desert_mana = std::mem::take(&mut self.players[p].cast_paid_desert_mana).min(255) as u8;
+        }
 
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
@@ -19133,6 +19140,10 @@ impl GameState {
         let artifact_before = source
             .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
             .map(|_| self.players[p].mana_pool.total());
+        // Cataclysmic Prospecting — a Desert's mana, printed or granted.
+        let desert_before = source
+            .filter(|c| self.permanent_has_land_type(c, crate::card::LandType::Desert))
+            .map(|_| self.players[p].mana_pool.total());
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
             && source.is_some_and(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
@@ -19185,6 +19196,13 @@ impl GameState {
             let d = pool.total().saturating_sub(total);
             if d > 0 {
                 pool.mark_from_artifact(d);
+            }
+        }
+        if let Some(total) = desert_before {
+            let pool = &mut self.players[p].mana_pool;
+            let d = pool.total().saturating_sub(total);
+            if d > 0 {
+                pool.mark_from_desert(d);
             }
         }
         out

@@ -9222,6 +9222,10 @@ pub struct CardData {
     /// Read by `Value::ArtifactManaSpentToCastSource` (Coin of Mastery). Not
     /// serialized.
     pub cast_artifact_mana: u8,
+    /// Mana from Deserts spent to cast this spell, capped at 255. Read by
+    /// `Value::DesertManaSpentToCastSource` (Cataclysmic Prospecting). Not
+    /// serialized.
+    pub cast_desert_mana: u8,
     /// The source whose `PutFromHandOntoBattlefield` put this permanent onto
     /// the battlefield; cleared as it leaves (CR 400.7). Read by
     /// `SelectionRequirement::PutOntoBattlefieldBySource`. Not serialized.
@@ -10199,6 +10203,7 @@ impl CardInstance {
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
             cast_artifact_mana: 0,
+            cast_desert_mana: 0,
             put_onto_battlefield_by: None,
             cast_via_mayhem: false,
             cast_via_madness: false,

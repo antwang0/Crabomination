@@ -1312,6 +1312,9 @@ pub enum Value {
     /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
     /// a permanent that wasn't cast.
     ArtifactManaSpentToCastSource,
+    /// Mana from Deserts spent to cast the source spell (Cataclysmic
+    /// Prospecting): the `CardData::cast_desert_mana` stamp.
+    DesertManaSpentToCastSource,
     /// "Each creature `who` controlled that dealt combat damage to a player
     /// this turn" (Excess): the distinct creatures in the other players'
     /// combat-damage lists, gone ones included — on the battlefield read by

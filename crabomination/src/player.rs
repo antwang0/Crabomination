@@ -197,6 +197,10 @@ pub struct PlayerCold {
     /// same way.
     #[serde(skip)]
     pub cast_paid_artifact_mana: u32,
+    /// Transient: the Desert-produced twin of `cast_paid_artifact_mana`,
+    /// consumed into `CardData::cast_desert_mana`.
+    #[serde(skip)]
+    pub cast_paid_desert_mana: u32,
     /// CR 903.4a — this seat's combined commander colour identity, computed
     /// once as the commanders are seated because identity is established
     /// before the game and never changes. Cached because the walk behind it
