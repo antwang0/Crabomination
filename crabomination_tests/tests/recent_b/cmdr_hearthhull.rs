@@ -288,6 +288,20 @@ fn soul_of_windgrace_takes_a_graveyard_land() {
     assert_eq!(g.players[0].life, life + 3);
 }
 
+/// Soul of Windgrace: "a land card from a graveyard" is chosen on
+/// resolution (CR 608.2d), from any graveyard.
+#[test]
+fn soul_of_windgrace_takes_the_chosen_land() {
+    let mut g = main_phase(2);
+    let first = g.add_card_to_graveyard(1, catalog::forest());
+    let mine = g.add_card_to_graveyard(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![mine])]));
+    let sw = g.add_card_to_hand(0, catalog::soul_of_windgrace());
+    cast_at(&mut g, sw, &[]).expect("cast");
+    assert!(g.battlefield_find(mine).is_some_and(|l| l.tapped));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == first));
+}
+
 /// Sprouting Goblin kicked finds a basic-typed land.
 #[test]
 fn sprouting_goblin_kicked_finds_a_land() {

@@ -391,6 +391,34 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
+## Resolution-time picks handed to the player (2026-10-02) — what the fixes left
+
+"Choose a card / a permanent" made on resolution (CR 608.2d) was a `Take` /
+`TakeGreatestPower` / `TakeGreatestManaValue` engine pick on ~25 pod cards;
+they now go through `shortcut::choose_one_then` (`Effect::ChooseOneAmong`,
+whose headless default is the best pick for a gain and the least for a harm
+on your own things). Fixed: God-Pharaoh's Gift, The Mending of Dominaria
+(its "may" too), Path of the Schemer, Soul of Windgrace, Prototype Portal,
+Obscura Confluence (the target player chooses), Nahiri, the Lithomancer
+(+2 and −2, with their "may"), Zara, Ugin's Mastery, Armed and Armored,
+Desecrator Hag (only the cards tied for greatest power — `PowerAbove` now
+reads a card's printed power), Sanwell, Mission Briefing, Idris, Currency
+Converter, Journey to the Lost City, Astarion's Thirst, This Is How It Ends
+(the facing player picks), The War Games, Kefnet the Mindful, Scarlet Witch,
+West Coast Expansion, Desecrate Reality, Wreck and Rebuild (its "may" too),
+Fugitive of the Judoon (two picks in turn), Infernal Offering (each player
+returns their own pick; its "choose an opponent" was already asked — the
+residual note was stale), and per player inside a `ForEach`: Summon: Esper
+Valigarmanda, The Weaver King. **`Effect::MaySacrifice` asks which
+permanent** (CR 701.17a) — 82 cards; the source stays a last resort and a
+headless seat keeps the weakest-first pick.
+
+Left on the same scan (multi-card or two-chooser picks, which `ChooseOneAmong`
+can't carry): Haunting Voyage's "up to two", Insatiable Frugivore's three,
+Dawnbreak Reclaimer's two choosers, Valki's per-opponent exile, Foreboding
+Steamboat, Neyam Shai Murad's "that player chooses", `Effect::ExileFromGraveyard`
+(8 cards, cheapest-first).
+
 ## Oracle-vs-definition scans (2026-09-28, session `01WRiz7c`) — what the fixes left
 
 Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
@@ -1900,9 +1928,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
-| 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice). |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
-| 🟡 The Mending of Dominaria | Land's Wrath (ZNC) | chapters I and II return your greatest-power creature card; the "may" is always taken. |
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
 | 🟡 Highcliff Felidar | Raining Cats and Dogs (SLD) | the destructions run one opponent at a time, not simultaneously; the engine picks among tied creatures. |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
@@ -1910,13 +1936,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Showdown of the Skalds | Raining Cats and Dogs (SLD) | chapters II and III choose the counter's target as each trigger resolves. |
 | 🟡 Cataclysmic Gearhulk | Growing Threat (MOC) | each player keeps their highest-mana-value permanent of each type rather than choosing. |
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
-| 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
 | 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
 | 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
-| 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, not secretly. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
@@ -1925,17 +1949,14 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
-| 🟡 Obscura Confluence | Obscura Operation (NCC) | the third mode returns a creature card from your graveyard (the engine's pick), not a target player's choice. |
 | 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
-| 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
-| 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
 | 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand or the command zone (tax still owed), not from a graveyard or exile. |
@@ -2137,14 +2158,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Ancestral Communion | Wakanda Forever (MSC) | its copy keeps the original's target on auto seats (a second return of a card already moved does nothing). |
-| 🟡 Heart-Shaped Herb | Wakanda Forever (MSC) | the sacrificed creature is the auto-pick. |
 | 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
 | 🟡 Wakanda Forever! | Wakanda Forever (MSC) | the battlefield and hand picks are the two highest-mana-value permanent cards revealed, not the player's choice. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
-| 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles each graveyard's greatest-mana-value instant or sorcery card (the engine's pick, not a prompt). |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
@@ -2169,14 +2188,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
-| 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your greatest-mana-value Equipment card from hand or graveyard (the engine's pick, not a choice). |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
-| 🟡 Prototype Portal | Exquisite Invention (C18) | the imprint takes the first artifact card in hand. |
 | 🟡 Tawnos, Urza's Apprentice | Exquisite Invention (C18) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
 | 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |
@@ -2201,7 +2218,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
 | 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |
 | 🟡 Abstruse Archaic | Eldrazi Unbound (CMM) | the target is the ability's source permanent (a colorless permanent you control with an ability on the stack), as Strionic Resonator. |
-| 🟡 Ugin's Mastery | Eldrazi Unbound (CMM) | the face-down creature turned face up is the first one you control, not a choice. |
 | 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |
 | 🟡 Bismuth Mindrender | Eldrazi Incursion (M3C) | the exiled card may be cast for life until end of turn, not only as the trigger resolves. |
 | 🟡 Selective Obliteration | Eldrazi Incursion (M3C) | each player's color is the one most common among their permanents. |
@@ -2224,7 +2240,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
 | 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the ability copy is Strionic Resonator's: the target is the ability's source permanent, and the copy keeps its targets. |
 | 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
-| 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the cast offer is the first matching card of the six, not a choice; the rest go to the bottom in exile order, not a random one. |
+| 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Cosmic Intervention | Phantom Premonition (KHC) | the exile-instead replacement covers the permanents you control as it resolves (not ones that arrive later that turn); the end-step return takes the cards you own that a this-turn "exile it instead" moved. |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | the cage takes the highest-mana-value artifact or creature card. |
@@ -2242,7 +2258,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ripples of Potential | Counter Intelligence (EOC) | the phase-out is all or none of your permanents with counters, not a pick among those proliferated. |
 | 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
 | 🟡 Bygone Marvels | Explorers of the Deep (LCC) | the Descend 8 copies' new targets are the decider's; the auto-decider keeps the original's, so that copy returns nothing. |
-| 🟡 Armed and Armored | Buckle Up (NEC) | "choose a Dwarf" is the engine's pick, and every Equipment you control is attached. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |

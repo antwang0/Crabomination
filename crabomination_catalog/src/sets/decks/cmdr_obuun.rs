@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Scaretiller** — the mode is the engine's (a land from hand when there
 //!   is one, else the first land card in your graveyard, untargeted).
-//! - **The Mending of Dominaria** — chapters I and II return your
-//!   greatest-power creature card (the "may" is always taken).
 //! - **Trove Warden** — the exiled cards return when it leaves the
 //!   battlefield by any route, not only when it dies.
 
@@ -16,7 +14,7 @@ use crate::card::{
     Selector, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
     Value, Zone,
 };
-use crate::effect::shortcut::{bolster, support, target_filtered};
+use crate::effect::shortcut::{bolster, choose_one_then, chosen_one, support, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{cost, g, generic, r, w};
@@ -365,15 +363,22 @@ pub fn sylvan_reclamation() -> CardDefinition {
 /// cards from your graveyard to the battlefield, then shuffle your graveyard
 /// into your library.
 pub fn the_mending_of_dominaria() -> CardDefinition {
+    let your_creature_cards =
+        || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature };
     let mill_and_regrow = || {
         Effect::Seq(vec![
             Effect::Mill { who: Selector::You, amount: Value::Const(2) },
-            Effect::Move {
-                what: Selector::TakeGreatestPower {
-                    inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature }),
-                    count: Box::new(Value::Const(1)),
-                },
-                to: ZoneDest::Hand(PlayerRef::You),
+            Effect::If {
+                cond: Predicate::SelectorExists(your_creature_cards()),
+                then: Box::new(Effect::MayDo {
+                    description: "Return a creature card from your graveyard to your hand?".into(),
+                    body: Box::new(choose_one_then(
+                        your_creature_cards(),
+                        PlayerRef::You,
+                        Effect::Move { what: chosen_one(), to: ZoneDest::Hand(PlayerRef::You) },
+                    )),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ])
     };

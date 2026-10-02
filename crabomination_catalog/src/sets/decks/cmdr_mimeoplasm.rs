@@ -6,15 +6,13 @@
 //! - **The Mimeoplasm** — the engine picks the two cards: it copies the
 //!   greatest-power creature card in any graveyard and takes counters from the
 //!   next greatest, rather than letting the player pick either role.
-//! - **Desecrator Hag** — a tie for greatest power is broken by graveyard
-//!   order, not by the player.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
 };
-use crate::effect::shortcut::{etb, target_any};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, target_any};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, u, Color, ManaCost};
@@ -115,17 +113,24 @@ pub fn damia_sage_of_stone() -> CardDefinition {
 }
 
 /// Desecrator Hag — {2}{B/G}{B/G} 2/2 Hag. ETB: return the greatest-power
-/// creature card in your graveyard to your hand (not targeted).
+/// creature card in your graveyard to your hand (not targeted); you choose
+/// among cards tied for it.
 pub fn desecrator_hag() -> CardDefinition {
     let bg = || hybrid(Color::Black, Color::Green);
+    let creature_cards =
+        || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature };
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::TakeGreatestPower {
-                inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature }),
-                count: Box::new(Value::ONE),
+        triggered_abilities: vec![etb(choose_one_then(
+            Selector::PowerAbove {
+                inner: Box::new(creature_cards()),
+                than: Box::new(Value::Diff(
+                    Box::new(Value::GreatestPowerAmongCards(Box::new(creature_cards()))),
+                    Box::new(Value::ONE),
+                )),
             },
-            to: ZoneDest::Hand(PlayerRef::You),
-        })],
+            PlayerRef::You,
+            Effect::Move { what: chosen_one(), to: ZoneDest::Hand(PlayerRef::You) },
+        ))],
         ..creature("Desecrator Hag", cost(&[generic(2), bg(), bg()]), vec![CreatureType::Hag], 2, 2)
     }
 }

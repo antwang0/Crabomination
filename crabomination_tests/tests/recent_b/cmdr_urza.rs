@@ -177,20 +177,22 @@ fn one_with_the_machine_draws_by_mana_value() {
 }
 
 /// Sanwell — tapped by its attack, it exiles six and casts the artifact
-/// creature among them; damage to it is prevented while an artifact creature
-/// of yours attacks.
+/// creature its controller picks among them (CR 608.2d); damage to it is
+/// prevented while an artifact creature of yours attacks.
 #[test]
 fn sanwell_digs_when_tapped_and_hides_behind_artifacts() {
     let mut g = pod(2);
     let sanwell = g.add_card_to_battlefield(0, catalog::sanwell_avenger_ace());
-    for _ in 0..5 {
+    for _ in 0..4 {
         g.add_card_to_library(0, catalog::island());
     }
+    let thopter = g.add_card_to_library(0, catalog::ornithopter());
     let hexa = g.add_card_to_library(0, catalog::hexavus());
     flood(&mut g, 0);
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![hexa]), DecisionAnswer::Bool(true)]));
     attack(&mut g, sanwell, 1);
     assert!(g.battlefield_find(hexa).is_some(), "cast from among the six");
+    assert!(g.players[0].library.iter().any(|c| c.id == thopter), "the other went to the bottom");
     assert!(g.exile.iter().all(|c| c.exiled_with != Some(sanwell)), "the rest went to the bottom");
     assert_eq!(g.players[0].library.len(), 5);
 

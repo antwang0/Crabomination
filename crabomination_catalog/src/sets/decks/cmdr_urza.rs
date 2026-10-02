@@ -3,9 +3,8 @@
 //! `tests/recent_b/cmdr_urza.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Sanwell, Avenger Ace** — the cast offer is the first matching card
-//!   exiled, not a choice among them; the rest go to the bottom in exile
-//!   order, not a random one.
+//! - **Sanwell, Avenger Ace** — the rest go to the bottom in exile order,
+//!   not a random one.
 //! - **Scholar of New Horizons** — when the Plains may go onto the
 //!   battlefield, it always does.
 
@@ -15,7 +14,7 @@ use crate::card::{
     Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
     Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest, ZoneRef};
 use crate::mana::{b, cost, generic, u, w, Color, ManaCost};
 use std::sync::Arc;
@@ -288,9 +287,8 @@ pub fn one_with_the_machine() -> CardDefinition {
 
 /// Sanwell, Avenger Ace — damage to it is prevented while an artifact
 /// creature of yours attacks; whenever it becomes tapped, exile your top six
-/// and you may cast a Vehicle or artifact creature from among them. Residuals:
-/// the offer is the first matching card, and the rest are bottomed in exile
-/// order.
+/// and you may cast a Vehicle or artifact creature from among them (chosen on
+/// resolution). Residual: the rest are bottomed in exile order, not random.
 pub fn sanwell_avenger_ace() -> CardDefinition {
     let exiled = |filter: R| Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource.and(filter) };
     CardDefinition {
@@ -314,14 +312,18 @@ pub fn sanwell_avenger_ace() -> CardDefinition {
                     link_to_source: true,
                     face_down: false,
                 },
-                Effect::CastWithoutPayingImmediate {
-                    what: exiled(R::HasArtifactSubtype(ArtifactSubtype::Vehicle).or(artifact_creature())),
-                    source_zone: Zone::Exile,
-                    exile_after: false,
-                    copy: false,
-                    reduce_generic: 0,
-                    pay_own_cost: true,
-                },
+                choose_one_then(
+                    exiled(R::HasArtifactSubtype(ArtifactSubtype::Vehicle).or(artifact_creature())),
+                    PlayerRef::You,
+                    Effect::CastWithoutPayingImmediate {
+                        what: chosen_one(),
+                        source_zone: Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    },
+                ),
                 Effect::Move {
                     what: exiled(R::Any),
                     to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },

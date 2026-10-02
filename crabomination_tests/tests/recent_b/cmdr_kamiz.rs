@@ -330,13 +330,34 @@ fn obscura_confluence_resolves_its_picks() {
     let c = g.add_card_to_hand(0, catalog::obscura_confluence());
     act(&mut g, GameAction::CastSpellSpree {
         card_id: c, spree_modes: vec![0, 1, 2], target: Some(Target::Permanent(angel)),
-        additional_targets: vec![Target::Permanent(bear)], x_value: None,
+        additional_targets: vec![Target::Permanent(bear), Target::Player(0)], x_value: None,
     })
     .expect("three modes");
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(!cp.keywords().contains(&Keyword::Flying));
     assert_eq!(g.players[0].hand.len(), 1, "the creature card came back");
+}
+
+/// Obscura Confluence's third mode: "target player returns a creature card
+/// from their graveyard" — any player, and the card is that player's pick
+/// (CR 608.2d).
+#[test]
+fn obscura_confluence_target_player_returns_their_pick() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::serra_angel());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let c = g.add_card_to_hand(0, catalog::obscura_confluence());
+    act(&mut g, GameAction::CastSpellSpree {
+        card_id: c, spree_modes: vec![0, 0, 2], target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(mine), Target::Player(1)], x_value: None,
+    })
+    .expect("three modes");
+    assert!(g.players[1].hand.iter().any(|h| h.id == bear));
+    assert_eq!(g.players[1].graveyard.len(), 1);
 }
 
 /// Skyway Robber escapes, exiling five other cards with it.

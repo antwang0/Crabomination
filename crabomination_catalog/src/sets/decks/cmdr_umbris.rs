@@ -51,7 +51,7 @@ use crate::card::{
     EnchantmentSubtype, EnterMode, Keyword, LandType, MayPlayDuration, SelectionRequirement as R,
     StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{etb, on_attack, on_attack_player, target_any, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, on_attack_player, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, RevealMissDest,
     Selector, StaticEffect, Value, ZoneDest,
@@ -315,18 +315,20 @@ pub fn the_weaver_king() -> CardDefinition {
                     who: Selector::Player(PlayerRef::TriggerEventPlayer),
                     amount: Value::TriggerEventAmount,
                 },
+                // "a creature card" per opponent — your pick (CR 608.2d).
                 Effect::ForEachOpponent {
-                    body: Box::new(Effect::Move {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::CardsInZone {
-                                who: PlayerRef::Triggerer,
-                                zone: crate::card::Zone::Graveyard,
-                                filter: R::Creature.and(R::PutIntoGraveyardFromLibraryThisTurn),
-                            }),
-                            count: Box::new(Value::ONE),
+                    body: Box::new(choose_one_then(
+                        Selector::CardsInZone {
+                            who: PlayerRef::Triggerer,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: R::Creature.and(R::PutIntoGraveyardFromLibraryThisTurn),
                         },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    }),
+                        PlayerRef::You,
+                        Effect::Move {
+                            what: chosen_one(),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                    )),
                 },
             ]),
         }],

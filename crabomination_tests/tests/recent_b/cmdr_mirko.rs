@@ -382,6 +382,22 @@ fn mission_briefing_recasts_then_exiles() {
     assert!(g.exile.iter().any(|c| c.id == div), "exiled instead of the graveyard");
 }
 
+/// Mission Briefing's "choose an instant or sorcery card" is made on
+/// resolution (CR 608.2d): only the chosen card gets the cast permission.
+#[test]
+fn mission_briefing_grants_the_chosen_card() {
+    let mut g = pod(2);
+    let first = g.add_card_to_graveyard(0, catalog::divination());
+    let second = g.add_card_to_graveyard(0, catalog::divination());
+    flood(&mut g, 0);
+    g.players[0].library.clear(); // nothing to surveil, so the pick is the only ask
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![second])]));
+    let mb = g.add_card_to_hand(0, catalog::mission_briefing());
+    cast(&mut g, 0, mb, None).expect("Mission Briefing");
+    assert!(cast_from_zone(&mut g, first).is_err(), "not the chosen card");
+    cast_from_zone(&mut g, second).expect("the chosen card");
+}
+
 /// CR 719 — Case of the Shifting Visage is solved with fifteen cards in the
 /// graveyard; solved, a nonlegendary creature spell is copied.
 #[test]

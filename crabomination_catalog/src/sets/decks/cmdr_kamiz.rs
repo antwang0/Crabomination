@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kamiz.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Obscura Confluence** — its third mode returns a creature card from
-//!   *your* graveyard (the engine's pick), not a target player's choice.
 //! - **Oskar, Rubbish Reclaimer** — the discarded card may be cast from the
 //!   graveyard until end of turn rather than right away.
 
@@ -14,7 +12,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes,
     Supertype, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, LibraryPosition, LookPick, PlayerRef, Predicate, VoteOption, VoteTally, ZoneDest,
 };
@@ -450,9 +448,6 @@ pub fn obscura_charm() -> CardDefinition {
 /// Obscura Confluence — choose three, repeats allowed: a creature loses its
 /// abilities and is 1/1 until end of turn; a creature connives; a creature
 /// card returns from a graveyard to hand.
-///
-/// ⚠ Residual: the third mode returns a creature card from *your*
-/// graveyard, the engine's pick.
 pub fn obscura_confluence() -> CardDefinition {
     spell(
         "Obscura Confluence",
@@ -477,17 +472,13 @@ pub fn obscura_confluence() -> CardDefinition {
                     },
                 ]),
                 Effect::Connive { what: target_filtered(R::Creature), amount: Value::ONE },
-                Effect::Move {
-                    what: Selector::TakeGreatestManaValue {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: R::Creature,
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
+                // "Target player returns a creature card from their
+                // graveyard" — the target player chooses (CR 608.2d).
+                choose_one_then(
+                    Selector::CardsInZone { who: PlayerRef::Target(0), zone: Zone::Graveyard, filter: R::Creature },
+                    PlayerRef::Target(0),
+                    Effect::Move { what: chosen_one(), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                ),
             ],
         },
     )

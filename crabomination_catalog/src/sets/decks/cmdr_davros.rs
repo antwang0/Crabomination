@@ -28,7 +28,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{afflict, battalion, etb, investigate, myriad, on_attack, on_cast, target_filtered};
+use crate::effect::shortcut::{afflict, battalion, choose_one_then, chosen_one, etb, investigate, myriad, on_attack, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, r, u, x, Color, ManaCost};
@@ -1242,13 +1242,14 @@ pub fn this_is_how_it_ends() -> CardDefinition {
             villainous(
                 Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 Effect::LoseLife { who: Selector::You, amount: Value::Const(5) },
-                Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::EachPermanent(R::Creature.and(R::OwnedByYou))),
-                        count: Box::new(Value::ONE),
+                choose_one_then(
+                    Selector::EachPermanent(R::Creature.and(R::OwnedByYou)),
+                    PlayerRef::You,
+                    Effect::Move {
+                        what: chosen_one(),
+                        to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
                     },
-                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
-                },
+                ),
             ),
         ]),
     )

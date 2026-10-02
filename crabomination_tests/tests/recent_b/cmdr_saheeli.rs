@@ -221,6 +221,20 @@ fn prototype_portal_copies_its_imprint() {
     assert_eq!(named(&g, 0, "Master of Etherium").len(), 1);
 }
 
+/// Prototype Portal's imprint is the chosen artifact card (CR 608.2d), not
+/// the first in hand.
+#[test]
+fn prototype_portal_imprints_the_chosen_card() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    let master = g.add_card_to_hand(0, catalog::master_of_etherium());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![master])]));
+    let portal = g.add_card_to_hand(0, catalog::prototype_portal());
+    cast(&mut g, 0, portal, None).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == master && c.exiled_with == Some(portal)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+}
+
 /// Retrofitter Foundry climbs Servo → Thopter → Construct.
 #[test]
 fn retrofitter_foundry_upgrades_tokens() {

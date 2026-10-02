@@ -18,7 +18,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, LandType, LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement as R,
     Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, VoteOption, VoteTally, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, generic, hybrid, r, w, Color, ManaCost};
@@ -363,11 +363,8 @@ pub fn currency_converter() -> CardDefinition {
             },
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::Take { inner: Box::new(Selector::CardExiledWithSource), count: Box::new(Value::ONE) },
-                        to: ZoneDest::Graveyard,
-                    },
+                effect: choose_one_then(Selector::CardExiledWithSource, PlayerRef::You, Effect::Seq(vec![
+                    Effect::Move { what: chosen_one(), to: ZoneDest::Graveyard },
                     Effect::If {
                         cond: Predicate::SelectorCountAtLeast {
                             sel: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: R::Land },
@@ -384,7 +381,7 @@ pub fn currency_converter() -> CardDefinition {
                             else_: Box::new(Effect::Noop),
                         }),
                     },
-                ]),
+                ])),
                 ..Default::default()
             },
         ],

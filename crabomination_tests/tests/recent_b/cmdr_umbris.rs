@@ -268,6 +268,24 @@ fn cmdr_umbris_weaver_king_mills_and_steals() {
     assert_eq!(named_on_battlefield(&g, "Grizzly Bears", 0), 1, "the milled Bears are yours");
 }
 
+/// The Weaver King's "a creature card from that player's graveyard" is its
+/// controller's pick among the cards milled this turn (CR 608.2d) — the Bears
+/// over the bigger Angel.
+#[test]
+fn cmdr_umbris_weaver_king_steals_the_chosen_card() {
+    let mut g = game(2);
+    let stock: Vec<_> = std::mem::take(&mut *g.players[1].library);
+    let angel = g.add_card_to_library(1, catalog::serra_angel());
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::island());
+    g.players[1].library.extend(stock);
+    let king = g.add_card_to_battlefield(0, catalog::the_weaver_king());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    attack(&mut g, &[king], 1);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 0));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == angel));
+}
+
 /// The Master of Lake-town mills whoever loses life; on death it draws per
 /// seven-card graveyard.
 #[test]

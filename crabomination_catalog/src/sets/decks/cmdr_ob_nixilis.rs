@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_ob_nixilis.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Infernal Offering** — each "choose an opponent" is the engine's pick,
-//!   and each return takes the first creature card in graveyard order.
 //! - **Profane Command** — the two modes are resolution-time picks
 //!   (`Effect::ChooseN`, default: life loss + −X/−X), so targets follow the
 //!   default pair's slots.
@@ -15,7 +13,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
 };
-use crate::effect::shortcut::{target_filtered, target_n};
+use crate::effect::shortcut::{choose_one_then, chosen_one, target_filtered, target_n};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, x};
@@ -213,8 +211,8 @@ pub fn flesh_carver() -> CardDefinition {
 
 /// Infernal Offering — you and a chosen opponent each sacrifice a creature
 /// and each who did draws two; then you and a chosen opponent each return a
-/// creature card from graveyard to the battlefield. Each return takes the
-/// first creature card in graveyard order.
+/// creature card from graveyard to the battlefield, each player picking their
+/// own (CR 608.2d).
 pub fn infernal_offering() -> CardDefinition {
     let chosen = || Selector::Player(PlayerRef::ChosenPlayerOfSource);
     let sacrificed = |who: PlayerRef| {
@@ -224,12 +222,12 @@ pub fn infernal_offering() -> CardDefinition {
         )
     };
     let draw_two = |who: Selector| Effect::Draw { who, amount: Value::Const(2) };
-    let return_one = |who: PlayerRef| Effect::Move {
-        what: Selector::TakeGreatestManaValue {
-            inner: Box::new(Selector::CardsInZone { who: who.clone(), zone: Zone::Graveyard, filter: R::Creature }),
-            count: Box::new(Value::ONE),
-        },
-        to: ZoneDest::Battlefield { controller: who, tapped: false },
+    let return_one = |who: PlayerRef| {
+        choose_one_then(
+            Selector::CardsInZone { who: who.clone(), zone: Zone::Graveyard, filter: R::Creature },
+            who.clone(),
+            Effect::Move { what: chosen_one(), to: ZoneDest::Battlefield { controller: who, tapped: false } },
+        )
     };
     spell(
         "Infernal Offering",

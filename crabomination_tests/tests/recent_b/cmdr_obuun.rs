@@ -255,6 +255,7 @@ fn the_mending_of_dominaria_mills_and_regrows() {
     let mut g = main_phase(2);
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::plains());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let m = g.add_card_to_hand(0, catalog::the_mending_of_dominaria());
     cast(&mut g, m, &[]);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"));
@@ -335,4 +336,22 @@ fn connect(g: &mut GameState, attacker: CardId, defender: usize) {
         let _ = g.advance_step(Vec::new());
         drain_stack(g);
     }
+}
+
+/// The Mending of Dominaria's chapter I: mill two, then "you may return a
+/// creature card" — chosen on resolution (CR 608.2d), not the biggest.
+#[test]
+fn mending_of_dominaria_returns_the_chosen_creature() {
+    let mut g = main_phase(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![bear])]));
+    let saga = g.add_card_to_hand(0, catalog::the_mending_of_dominaria());
+    cast(&mut g, saga, &[]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == angel));
+    assert!(g.players[0].library.is_empty(), "milled two");
 }

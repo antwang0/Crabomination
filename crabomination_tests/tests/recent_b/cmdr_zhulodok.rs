@@ -306,3 +306,31 @@ fn ugins_mastery_manifests() {
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).count(), 1);
     let _ = (Attack { attacker: a, target: AttackTarget::Player(1) }, Keyword::Trample);
 }
+
+/// Ugin's Mastery's attack trigger: "turn a face-down creature you control
+/// face up" — the one its controller chooses (CR 608.2d).
+#[test]
+fn ugins_mastery_turns_the_chosen_face_down_creature_up() {
+    let mut g = pod();
+    g.add_card_to_battlefield(0, catalog::ugins_mastery());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::serra_angel());
+    for _ in 0..2 {
+        let o = g.add_card_to_hand(0, catalog::ornithopter());
+        cast(&mut g, o, None).expect("a colorless creature spell manifests");
+    }
+    let down: Vec<CardId> = g.battlefield.iter().filter(|c| c.face_down).map(|c| c.id).collect();
+    assert_eq!(down.len(), 2);
+    let (second, first) = (down[1], down[0]);
+    let maw = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    g.clear_sickness(maw);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![second])]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: maw, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(second).unwrap().face_down);
+    assert!(g.battlefield_find(first).unwrap().face_down);
+}

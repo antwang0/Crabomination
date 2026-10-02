@@ -15,7 +15,7 @@ use crate::card::{
     LandType, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered, unearth};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered, unearth};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, w, x, Color, ManaCost};
@@ -477,16 +477,22 @@ pub fn wreck_and_rebuild() -> CardDefinition {
             Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
             Effect::Seq(vec![
                 Effect::Mill { who: Selector::You, amount: Value::Const(5) },
-                Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: R::Land,
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                // "then you may put a land card" — chosen on resolution (CR 608.2d).
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: R::Land,
+                    }),
+                    then: Box::new(Effect::MayDo {
+                        description: "Put a land card from your graveyard onto the battlefield tapped?".into(),
+                        body: Box::new(choose_one_then(
+                            Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land },
+                            PlayerRef::You,
+                            Effect::Move { what: chosen_one(), to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+                        )),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
         ]),

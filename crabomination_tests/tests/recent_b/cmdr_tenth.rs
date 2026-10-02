@@ -390,6 +390,21 @@ fn idris_taps_for_the_exiled_sol_ring() {
     assert_eq!(g.players[0].mana_pool.total(), 2);
 }
 
+/// Idris's imprint is "another artifact you control" of her controller's
+/// choice (CR 608.2d) — the Mind Stone, not the Sol Ring.
+#[test]
+fn idris_exiles_the_chosen_artifact() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![stone])]));
+    let idris = g.add_card_to_hand(0, catalog::idris_soul_of_the_tardis());
+    cast(&mut g, idris, None).expect("Idris");
+    assert!(g.exile.iter().any(|c| c.id == stone));
+    assert!(g.battlefield_find(ring).is_some());
+}
+
 /// The Day of the Doctor IV — up to three Doctors stay; every other creature
 /// is exiled.
 #[test]

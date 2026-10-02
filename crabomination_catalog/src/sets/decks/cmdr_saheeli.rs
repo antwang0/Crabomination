@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_saheeli.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Prototype Portal** — the imprint takes the first artifact card in hand.
 //! - **Tawnos, Urza's Apprentice** — Gogo's `CopyAbility`: the target is the
 //!   ability's source permanent, and the copy keeps the original's targets.
 
@@ -13,7 +12,7 @@ use crate::card::{
     Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
     Value, Zone,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{cost, generic, r, u, x, Color, ManaCost};
 use std::sync::Arc;
@@ -261,8 +260,7 @@ pub fn loyal_drake() -> CardDefinition {
 }
 
 /// Prototype Portal — imprint an artifact card from hand; {X}, {T}: a token
-/// copy of it, X its mana value. Residual: it imprints the first artifact
-/// card in hand.
+/// copy of it, X its mana value.
 pub fn prototype_portal() -> CardDefinition {
     CardDefinition {
         name: "Prototype Portal",
@@ -270,12 +268,11 @@ pub fn prototype_portal() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Imprint: exile an artifact card from your hand?".into(),
-            body: Box::new(Effect::ExileTaggedWithSource {
-                what: Selector::take(
-                    Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: R::Artifact },
-                    Value::ONE,
-                ),
-            }),
+            body: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: R::Artifact },
+                PlayerRef::You,
+                Effect::ExileTaggedWithSource { what: chosen_one() },
+            )),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

@@ -190,6 +190,21 @@ fn kefnet_needs_a_full_hand() {
     assert_eq!(g.players[0].hand.len(), 1);
 }
 
+/// Kefnet's "you may return a land you control" — which land is its
+/// controller's pick (CR 608.2d).
+#[test]
+fn kefnet_returns_the_chosen_land() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 3);
+    let k = g.add_card_to_battlefield(0, catalog::kefnet_the_mindful());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![island])]));
+    activate(&mut g, k, 0, &[]).expect("draw");
+    assert!(g.players[0].hand.iter().any(|c| c.id == island));
+    assert!(g.battlefield_find(forest).is_some());
+}
+
 /// Kheru Spellsnatcher turned face up steals the spell on the stack.
 #[test]
 fn kheru_spellsnatcher_snatches() {

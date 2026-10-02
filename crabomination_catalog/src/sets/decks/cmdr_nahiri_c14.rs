@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Arcane Lighthouse** — the creatures lose hexproof and shroud until end
 //!   of turn; a grant made later that turn is not stopped ("can't have").
-//! - **Nahiri, the Lithomancer** — the +2 attaches your first Equipment, the
-//!   −2 puts your first Equipment card from hand, else graveyard.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt,
@@ -14,7 +12,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, on_dies};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, on_dies};
 use crate::effect::{Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, cost, generic, w};
 use crate::sets::tap_add_colorless;
@@ -86,7 +84,14 @@ fn your_creatures() -> Value {
 pub fn nahiri_the_lithomancer() -> CardDefinition {
     let equipment_you_control =
         || R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou);
-    let equipment_card = || R::HasArtifactSubtype(ArtifactSubtype::Equipment);
+    let equipment_cards = || {
+        let card = |zone| Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone,
+            filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+        };
+        Selector::Both(Box::new(card(Zone::Hand)), Box::new(card(Zone::Graveyard)))
+    };
     CardDefinition {
         name: "Nahiri, the Lithomancer",
         cost: cost(&[generic(3), w(), w()]),
@@ -107,12 +112,13 @@ pub fn nahiri_the_lithomancer() -> CardDefinition {
                         cond: Predicate::SelectorExists(Selector::EachPermanent(
                             equipment_you_control(),
                         )),
-                        then: Box::new(Effect::Attach {
-                            what: Selector::Take {
-                                inner: Box::new(Selector::EachPermanent(equipment_you_control())),
-                                count: Box::new(Value::ONE),
-                            },
-                            to: Selector::LastCreatedToken,
+                        then: Box::new(Effect::MayDo {
+                            description: "Attach an Equipment you control to the Kor Soldier?".into(),
+                            body: Box::new(choose_one_then(
+                                Selector::EachPermanent(equipment_you_control()),
+                                PlayerRef::You,
+                                Effect::Attach { what: chosen_one(), to: Selector::LastCreatedToken },
+                            )),
                         }),
                         else_: Box::new(Effect::Noop),
                     },
@@ -121,24 +127,20 @@ pub fn nahiri_the_lithomancer() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::Move {
-                    // The engine's pick: the priciest Equipment card.
-                    what: Selector::TakeGreatestManaValue {
-                        inner: Box::new(Selector::Both(
-                            Box::new(Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Hand,
-                                filter: equipment_card(),
-                            }),
-                            Box::new(Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: equipment_card(),
-                            }),
+                effect: Effect::If {
+                    cond: Predicate::SelectorExists(equipment_cards()),
+                    then: Box::new(Effect::MayDo {
+                        description: "Put an Equipment card from your hand or graveyard onto the battlefield?".into(),
+                        body: Box::new(choose_one_then(
+                            equipment_cards(),
+                            PlayerRef::You,
+                            Effect::Move {
+                                what: chosen_one(),
+                                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            },
                         )),
-                        count: Box::new(Value::ONE),
-                    },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
                 ..Default::default()
             },

@@ -145,17 +145,19 @@ fn gate_to_the_afterlife_loots_and_fetches_the_gift() {
     assert_eq!(count_named(&g, 0, "God-Pharaoh's Gift"), 1);
 }
 
-/// At the beginning of combat: exile the best creature card for a hasty
-/// 4/4 black Zombie copy.
+/// At the beginning of combat: exile a creature card for a hasty 4/4 black
+/// Zombie copy. "A creature card" is the controller's choice on resolution
+/// (CR 608.2d) — the Angel over a bigger Craw Wurm.
 #[test]
 fn god_pharaohs_gift_makes_a_hasty_four_four_copy() {
     let mut g = main_phase(2);
     g.add_card_to_battlefield(0, catalog::god_pharaohs_gift());
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
     let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![angel])]));
     advance_to(&mut g, TurnStep::DeclareAttackers);
-    assert!(g.exile.iter().any(|c| c.id == angel), "the angel (greatest power) is exiled");
+    assert!(g.exile.iter().any(|c| c.id == angel), "the chosen angel is exiled");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm));
     let copy = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel").unwrap().id;
     assert_eq!(pt(&g, copy), (4, 4));
     assert!(g.permanent_has_keyword(copy, &Keyword::Haste));

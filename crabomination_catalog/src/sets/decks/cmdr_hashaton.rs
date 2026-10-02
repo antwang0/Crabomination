@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_hashaton.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **God-Pharaoh's Gift** — exiles your greatest-power creature card
-//!   (the pick is the engine's).
 //! - **Rot Hulk** — the returns are the greatest-power Zombie cards, not
 //!   targets chosen on entry.
 //! - **Gate to the Afterlife** — the loot's "you may draw" is always taken.
@@ -14,7 +12,7 @@ use crate::card::{
     EventSpec, Keyword, LandType, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{choose_one_then, chosen_one, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, generic, u, w};
@@ -87,14 +85,6 @@ fn black_zombie_copy(source: Selector, tapped: bool) -> Effect {
         // (unlike eternalize) — CR 707.9b.
         Effect::SetCopiableCreatureTypes { what: Selector::LastCreatedToken, creature_types: vec![CreatureType::Zombie] },
     ])
-}
-
-/// Your greatest-power card in `zone` matching `filter`.
-fn best_in(zone: Zone, filter: R) -> Selector {
-    Selector::TakeGreatestPower {
-        inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone, filter }),
-        count: Box::new(Value::Const(1)),
-    }
 }
 
 /// Binding Mummy — whenever another Zombie you control enters, you may tap
@@ -229,18 +219,27 @@ pub fn god_pharaohs_gift() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
             effect: Effect::If {
-                cond: Predicate::SelectorExists(best_in(Zone::Graveyard, R::Creature)),
+                cond: Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: R::Creature,
+                }),
                 then: Box::new(Effect::MayDo {
                     description: "Exile a creature card for a 4/4 Zombie copy?".into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Move { what: best_in(Zone::Graveyard, R::Creature), to: ZoneDest::Exile },
-                        black_zombie_copy(Selector::LastMoved, false),
-                        Effect::GrantKeyword {
-                            what: Selector::LastCreatedToken,
-                            keyword: Keyword::Haste,
-                            duration: Duration::EndOfTurn,
-                        },
-                    ])),
+                    // "a creature card" — your pick on resolution (CR 608.2d).
+                    body: Box::new(choose_one_then(
+                        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+                        PlayerRef::You,
+                        Effect::Seq(vec![
+                            Effect::Move { what: chosen_one(), to: ZoneDest::Exile },
+                            black_zombie_copy(Selector::LastMoved, false),
+                            Effect::GrantKeyword {
+                                what: Selector::LastCreatedToken,
+                                keyword: Keyword::Haste,
+                                duration: Duration::EndOfTurn,
+                            },
+                        ]),
+                    )),
                 }),
                 else_: Box::new(Effect::Noop),
             },

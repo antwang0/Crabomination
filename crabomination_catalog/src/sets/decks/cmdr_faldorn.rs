@@ -13,7 +13,7 @@ use crate::card::{
     Keyword, LandType, MayPlayDuration, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{cascade, etb, target_filtered};
+use crate::effect::shortcut::{cascade, choose_one_then, chosen_one, etb, target_filtered};
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate, RevealMissDest,
     ZoneDest,
@@ -348,16 +348,14 @@ pub fn journey_to_the_lost_city() -> CardDefinition {
                         Effect::MayDo {
                             description: "Put a land card from among them onto the battlefield?"
                                 .into(),
-                            body: Box::new(Effect::Move {
-                                what: Selector::Take {
-                                    inner: Box::new(exiled(R::Land)),
-                                    count: Box::new(Value::ONE),
+                            body: Box::new(choose_one_then(
+                                exiled(R::Land),
+                                PlayerRef::You,
+                                Effect::Move {
+                                    what: chosen_one(),
+                                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                                 },
-                                to: ZoneDest::Battlefield {
-                                    controller: PlayerRef::You,
-                                    tapped: false,
-                                },
-                            }),
+                            )),
                         },
                     ),
                     (

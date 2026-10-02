@@ -10,16 +10,14 @@
 //!   combat this turn.
 //! - **Planetary Annihilation** — each player keeps their six lands of
 //!   highest mana value (the engine's pick).
-//! - **Scouring Swarm** and **Soul of Windgrace** — the token is tapped just
-//!   after it is created; Windgrace's land comes from the first graveyard
-//!   holding one.
+//! - **Scouring Swarm** — the token is tapped just after it is created.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind,
     EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, StationBand, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{encore, etb, landfall, on_attack, on_dies, station, target_any};
+use crate::effect::shortcut::{choose_one_then, chosen_one, encore, etb, landfall, on_attack, on_dies, station, target_any};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r};
@@ -390,17 +388,11 @@ pub fn soul_of_windgrace() -> CardDefinition {
     let fetch = || {
         Effect::MayDo {
             description: "Put a land card from a graveyard onto the battlefield?".into(),
-            body: Box::new(Effect::Move {
-                what: Selector::TakeGreatestPower {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::EachPlayer,
-                        zone: Zone::Graveyard,
-                        filter: R::Land,
-                    }),
-                    count: Box::new(Value::ONE),
-                },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-            }),
+            body: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::EachPlayer, zone: Zone::Graveyard, filter: R::Land },
+                PlayerRef::You,
+                Effect::Move { what: chosen_one(), to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+            )),
         }
     };
     let discard_land = |mana: crate::mana::ManaCost, effect: Effect| ActivatedAbility {

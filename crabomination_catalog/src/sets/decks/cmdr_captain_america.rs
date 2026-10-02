@@ -17,7 +17,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, on_you_attack, target_any, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, on_you_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, ManaCost, SpendRestriction, cost, generic, r, u, w, x};
 use crate::sets::tap_add_colorless;
@@ -540,21 +540,22 @@ pub fn scarlet_witch_chaotic_avenger() -> CardDefinition {
             },
             may(
                 "Cast a Hero or noncreature spell exiled with Scarlet Witch without paying its mana cost?",
-                Effect::CastWithoutPayingImmediate {
-                    what: Selector::TakeGreatestManaValue {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Exile,
-                            filter: R::ExiledWithSource.and(hero().or(R::Noncreature)).and(R::Nonland),
-                        }),
-                        count: Box::new(Value::ONE),
+                choose_one_then(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Exile,
+                        filter: R::ExiledWithSource.and(hero().or(R::Noncreature)).and(R::Nonland),
                     },
-                    source_zone: Zone::Exile,
-                    exile_after: false,
-                    copy: false,
-                    reduce_generic: 0,
-                    pay_own_cost: false,
-                },
+                    PlayerRef::You,
+                    Effect::CastWithoutPayingImmediate {
+                        what: chosen_one(),
+                        source_zone: Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    },
+                ),
             ),
         ]))],
         ..creature(
@@ -1030,17 +1031,18 @@ pub fn west_coast_expansion() -> CardDefinition {
                 cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
                 then: Box::new(may(
                     "Cast a Hero spell from your hand without paying its mana cost?",
-                    Effect::CastWithoutPayingImmediate {
-                        what: Selector::TakeGreatestManaValue {
-                            inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: hero() }),
-                            count: Box::new(Value::ONE),
+                    choose_one_then(
+                        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: hero() },
+                        PlayerRef::You,
+                        Effect::CastWithoutPayingImmediate {
+                            what: chosen_one(),
+                            source_zone: Zone::Hand,
+                            exile_after: false,
+                            copy: false,
+                            reduce_generic: 0,
+                            pay_own_cost: false,
                         },
-                        source_zone: Zone::Hand,
-                        exile_after: false,
-                        copy: false,
-                        reduce_generic: 0,
-                        pay_own_cost: false,
-                    },
+                    ),
                 )),
                 else_: Box::new(Effect::Noop),
             },

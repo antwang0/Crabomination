@@ -16,7 +16,7 @@ use crate::card::{
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, SplitCard,
     SplitHalf, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{counter_target_spell, etb, investigate, on_attack, target_filtered, token_copy_of};
+use crate::effect::shortcut::{choose_one_then, chosen_one, counter_target_spell, etb, investigate, on_attack, target_filtered, token_copy_of};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, hybrid, u, x, Color, ManaCost};
@@ -561,17 +561,18 @@ pub fn mission_briefing() -> CardDefinition {
         CardType::Instant,
         Effect::Seq(vec![
             surveil(2),
-            Effect::GrantMayPlay {
-                what: Selector::take(
-                    your_graveyard(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
-                    Value::ONE,
-                ),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: true,
-                pay_own_cost: true,
-                any_color: false,
-            },
+            choose_one_then(
+                your_graveyard(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                PlayerRef::You,
+                Effect::GrantMayPlay {
+                    what: chosen_one(),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: true,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+            ),
         ]),
     )
 }

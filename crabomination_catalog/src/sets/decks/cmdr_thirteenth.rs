@@ -33,9 +33,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{
-    battle_cry, etb, investigate, mentor, on_attack, on_cast, on_dies, target_any, target_filtered, training,
-};
+use crate::effect::shortcut::{battle_cry, choose_one_then, chosen_one, etb, investigate, mentor, on_attack, on_cast, on_dies, target_any, target_filtered, training};
 use crate::effect::{
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, VoteOption, VoteTally, ZoneDest,
 };
@@ -365,9 +363,9 @@ pub fn frost_fair_lure_fish() -> CardDefinition {
 /// put a Doctor from your library onto the battlefield.
 pub fn fugitive_of_the_judoon() -> CardDefinition {
     let human = R::HasCreatureType(CreatureType::Human);
-    let one = |filter: R| Selector::Take {
-        inner: Box::new(Selector::EachPermanent(yours(filter))),
-        count: Box::new(Value::ONE),
+    // Each exile is your pick on resolution (CR 608.2d).
+    let exile_one = |filter: R| {
+        choose_one_then(Selector::EachPermanent(yours(filter)), PlayerRef::You, Effect::Exile { what: chosen_one() })
     };
     saga("Fugitive of the Judoon", cost(&[generic(4), g()]), vec![
         (
@@ -391,8 +389,8 @@ pub fn fugitive_of_the_judoon() -> CardDefinition {
                 then: Box::new(Effect::MayDo {
                     description: "Exile a Human and an artifact you control to search for a Doctor?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Exile { what: one(human) },
-                        Effect::Exile { what: one(R::Artifact) },
+                        exile_one(human),
+                        exile_one(R::Artifact),
                         Effect::Search {
                             who: PlayerRef::You,
                             filter: doctors(),

@@ -15,8 +15,6 @@
 //!   only the target's controller's.
 //! - **Locke, Treasure Hunter** — any of the milled cards may be played this
 //!   turn, not just one spell.
-//! - **Summon: Esper Valigarmanda** — chapter I exiles the first instant or
-//!   sorcery card of each graveyard, not a chosen one.
 //! - **The Warring Triad** — the mill is part of the effect, not a cost, and
 //!   you are always the player who adds the mana.
 //! - **Umaro, Raging Yeti** — the random mode is picked, and a damage target
@@ -27,7 +25,7 @@ use crate::card::{
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
@@ -777,7 +775,7 @@ pub fn strago_and_relm() -> CardDefinition {
 
 /// Summon: Esper Valigarmanda — a Saga Drake: exile an instant or sorcery from
 /// each graveyard, then {R} per lore counter and those cards castable with
-/// any mana. Residual: chapter I takes the first such card.
+/// any mana.
 pub fn summon_esper_valigarmanda() -> CardDefinition {
     let spells_and_mana = || {
         Effect::Seq(vec![
@@ -819,17 +817,13 @@ pub fn summon_esper_valigarmanda() -> CardDefinition {
                 1,
                 Effect::ForEach {
                     selector: Selector::Player(PlayerRef::EachPlayer),
-                    body: Box::new(Effect::Move {
-                        what: Selector::TakeGreatestManaValue {
-                            inner: Box::new(Selector::CardsInZone {
-                                who: PlayerRef::Triggerer,
-                                zone: Zone::Graveyard,
-                                filter: instant_or_sorcery(),
-                            }),
-                            count: Box::new(Value::ONE),
-                        },
-                        to: ZoneDest::ExileWithSourceStamp,
-                    }),
+                    // "an instant or sorcery card from each graveyard" — the
+                    // Saga's controller picks each (CR 608.2d).
+                    body: Box::new(choose_one_then(
+                        Selector::CardsInZone { who: PlayerRef::Triggerer, zone: Zone::Graveyard, filter: instant_or_sorcery() },
+                        PlayerRef::You,
+                        Effect::Move { what: chosen_one(), to: ZoneDest::ExileWithSourceStamp },
+                    )),
                 },
             ),
             (2, spells_and_mana()),

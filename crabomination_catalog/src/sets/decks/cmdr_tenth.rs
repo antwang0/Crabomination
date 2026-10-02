@@ -15,7 +15,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{emerge, etb, explore, investigate, on_attack, on_you_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, emerge, etb, explore, investigate, on_attack, on_you_attack, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, generic, r, u, w, Color, ManaCost};
@@ -430,13 +430,11 @@ pub fn idris_soul_of_the_tardis() -> CardDefinition {
         // reading `exiled_with` never saw a card `ExileUntilSourceLeaves`
         // links through `exiled_by`, so Idris had none.
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ExileUntilSourceLeaves {
-                what: Selector::Take {
-                    inner: Box::new(Selector::EachPermanent(yours(R::Artifact).and(R::OtherThanSource))),
-                    count: Box::new(Value::ONE),
-                },
-                return_to: ExileReturnZone::Battlefield,
-            },
+            choose_one_then(
+                Selector::EachPermanent(yours(R::Artifact).and(R::OtherThanSource)),
+                PlayerRef::You,
+                Effect::ExileUntilSourceLeaves { what: chosen_one(), return_to: ExileReturnZone::Battlefield },
+            ),
             Effect::AcquireAbilitiesOfExiledWithSource,
         ]))],
         ..legend(creature(

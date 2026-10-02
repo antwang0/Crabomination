@@ -13,7 +13,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Selector, SpellSubtype, StaticAbility, StaticEffect,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{mint_treasures, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, mint_treasures, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
@@ -407,14 +407,15 @@ pub fn astarions_thirst() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Exile { what: target_filtered(R::Creature) },
-            Effect::AddCounter {
-                what: Selector::take(
-                    Selector::EachPermanent(R::Creature.and(your_commanders())),
-                    Value::ONE,
-                ),
-                kind: crate::card::CounterType::PlusOnePlusOne,
-                amount: Value::PowerOf(Box::new(Selector::ExiledThisResolution { filter: R::Creature })),
-            },
+            choose_one_then(
+                Selector::EachPermanent(R::Creature.and(your_commanders())),
+                PlayerRef::You,
+                Effect::AddCounter {
+                    what: chosen_one(),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::PowerOf(Box::new(Selector::ExiledThisResolution { filter: R::Creature })),
+                },
+            ),
         ]),
         ..Default::default()
     }

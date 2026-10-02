@@ -431,17 +431,20 @@ fn warkite_marauder_strips_a_defender() {
     assert!(!has(&g, angel, &Keyword::Flying));
 }
 
-/// Zara recruits a creature from the defending player's hand, attacking.
+/// Zara recruits a creature from the defending player's hand, attacking —
+/// the one Zara's controller picks (CR 608.2d), not the priciest.
 #[test]
 fn zara_recruits_from_their_hand() {
     let mut g = main_phase(2);
     let z = g.add_card_to_battlefield(0, catalog::zara_renegade_recruiter());
+    let angel = g.add_card_to_hand(1, catalog::serra_angel());
     let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![bear])]));
     attack(&mut g, &[z], 1);
     let b = g.battlefield_find(bear).expect("recruited");
     assert_eq!(b.controller, 0);
     assert!(g.attacking.iter().any(|a| a.attacker == bear));
+    assert!(g.players[1].hand.iter().any(|c| c.id == angel));
 }
 
 /// The Grim Captain's Locker's second {T}: creature cards in your graveyard

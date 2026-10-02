@@ -33,7 +33,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, investigate, on_attack, on_you_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, investigate, on_attack, on_you_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, GoadLasts, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, VoteOption,
     VoteTally, ZoneDest,
@@ -1027,15 +1027,14 @@ pub fn the_war_games() -> CardDefinition {
             cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Creature.and(R::NotToken)))),
             then: Box::new(Effect::MayDo {
                 description: "Exile a nontoken creature you control to exile all Warriors?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Exile {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::EachPermanent(yours(R::Creature.and(R::NotToken)))),
-                            count: Box::new(Value::ONE),
-                        },
-                    },
-                    Effect::Exile { what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Warrior)) },
-                ])),
+                body: Box::new(choose_one_then(
+                    Selector::EachPermanent(yours(R::Creature.and(R::NotToken))),
+                    PlayerRef::You,
+                    Effect::Seq(vec![
+                        Effect::Exile { what: chosen_one() },
+                        Effect::Exile { what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Warrior)) },
+                    ]),
+                )),
             }),
             else_: Box::new(Effect::Noop),
         }),

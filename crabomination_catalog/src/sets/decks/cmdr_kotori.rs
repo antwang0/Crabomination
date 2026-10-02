@@ -2,8 +2,6 @@
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_kotori.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Armed and Armored** — "choose a Dwarf" takes the engine's pick and
-//!   attaches every Equipment you control.
 //! - **Katsumasa, the Animator** / **Dance of the Manse** — "up to" target
 //!   counts take what the targeter picks.
 
@@ -14,7 +12,7 @@ use crate::card::{
     EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{counter_target_spell, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, counter_target_spell, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, LookPick, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, generic, hybrid, u, w, x, Color, ManaCost};
@@ -177,8 +175,8 @@ pub fn arcanists_owl() -> CardDefinition {
 }
 
 /// Armed and Armored — your Vehicles become artifact creatures until end of
-/// turn; attach your Equipment to a Dwarf you control. ⚠ The engine picks the
-/// Dwarf and attaches every Equipment.
+/// turn; attach any number of your Equipment to a Dwarf you control (both
+/// chosen on resolution).
 pub fn armed_and_armored() -> CardDefinition {
     CardDefinition {
         name: "Armed and Armored",
@@ -186,10 +184,14 @@ pub fn armed_and_armored() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             animate_until_eot(yours(vehicle())),
-            Effect::AttachAnyNumberTo {
-                what: yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
-                to: Selector::one_of(yours(R::Creature.and(R::HasCreatureType(CreatureType::Dwarf)))),
-            },
+            choose_one_then(
+                yours(R::Creature.and(R::HasCreatureType(CreatureType::Dwarf))),
+                PlayerRef::You,
+                Effect::AttachAnyNumberTo {
+                    what: yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    to: chosen_one(),
+                },
+            ),
         ]),
         ..Default::default()
     }

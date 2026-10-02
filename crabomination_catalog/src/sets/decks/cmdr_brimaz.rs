@@ -7,8 +7,6 @@
 //!   permanent of each type rather than choosing.
 //! - **Filigree Vector** — the counters go on every creature and artifact you
 //!   control rather than on chosen targets.
-//! - **Path of the Schemer** — the creature card is the greatest-power one
-//!   among all graveyards.
 //! - **Vulpine Harvester** — the target may be any artifact card in your
 //!   graveyard; the mana-value check happens as the trigger resolves.
 
@@ -18,7 +16,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
 };
-use crate::effect::shortcut::{encore, etb, on_attack, target_filtered, unearth};
+use crate::effect::shortcut::{choose_one_then, chosen_one, encore, etb, on_attack, target_filtered, unearth};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LookPick, PlayerRef, Predicate, VoteOption, VoteTally, ZoneDest,
 };
@@ -444,9 +442,6 @@ pub fn moira_and_teshar() -> CardDefinition {
 /// Path of the Schemer — each player mills two; you put a creature card from
 /// a graveyard onto the battlefield as an artifact too; then the will of the
 /// planeswalkers: planeswalk, or chaos on a tie.
-///
-/// ⚠ Residual: the creature card is the greatest-power one among all
-/// graveyards.
 pub fn path_of_the_schemer() -> CardDefinition {
     CardDefinition {
         name: "Path of the Schemer",
@@ -454,22 +449,22 @@ pub fn path_of_the_schemer() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
-            Effect::Move {
-                what: Selector::TakeGreatestPower {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::EachPlayer,
-                        zone: Zone::Graveyard,
-                        filter: R::Creature,
-                    }),
-                    count: Box::new(Value::ONE),
-                },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-            Effect::AddCardTypeIndefinitely {
-                what: Selector::LastMoved,
-                card_type: CardType::Artifact,
-                until_eot: false,
-            },
+            // "a creature card from a graveyard" — chosen on resolution (CR 608.2d).
+            choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::EachPlayer, zone: Zone::Graveyard, filter: R::Creature },
+                PlayerRef::You,
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: chosen_one(),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCardTypeIndefinitely {
+                        what: Selector::LastMoved,
+                        card_type: CardType::Artifact,
+                        until_eot: false,
+                    },
+                ]),
+            ),
             Effect::Vote {
                 options: vec![
                     VoteOption::new("planeswalk", Effect::Planeswalk { who: PlayerRef::You }),

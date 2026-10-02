@@ -416,3 +416,23 @@ fn bot_attacks_with_a_crewed_vehicle() {
     }
     assert!(declared.contains(&plow), "the crewed Plow attacks: {declared:?}");
 }
+
+/// Armed and Armored: "choose a Dwarf you control" is made on resolution
+/// (CR 608.2d), then "any number of Equipment" — here one of two.
+#[test]
+fn armed_and_armored_suits_up_the_chosen_dwarf() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::liberated_dwarf());
+    let second = g.add_card_to_battlefield(0, catalog::enslaved_dwarf());
+    let blade = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(0, catalog::short_sword());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![second]),
+        DecisionAnswer::Cards(vec![blade]),
+    ]));
+    let spell = g.add_card_to_hand(0, catalog::armed_and_armored());
+    flood(&mut g, 0);
+    cast(&mut g, 0, spell, None).expect("cast");
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(second));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Short Sword" && c.attached_to.is_none()));
+}

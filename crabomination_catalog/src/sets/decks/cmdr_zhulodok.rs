@@ -6,15 +6,13 @@
 //! - **Abstruse Archaic** — the target is the ability's source permanent (a
 //!   colorless permanent you control with an ability on the stack), as
 //!   Strionic Resonator.
-//! - **Ugin's Mastery** — the face-down creature turned up is the first one
-//!   you control.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_cast, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{colorless, cost, generic, x, Color, ManaCost};
 use std::sync::Arc;
@@ -133,17 +131,15 @@ pub fn desecrate_reality() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::ColorlessManaSpentAtLeast(3),
-                then: Box::new(Effect::Move {
-                    what: Selector::TakeGreatestManaValue {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: crate::card::Zone::Graveyard,
-                            filter: R::Permanent.and(R::ManaValueParity { odd: true }),
-                        }),
-                        count: Box::new(Value::ONE),
+                then: Box::new(choose_one_then(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Permanent.and(R::ManaValueParity { odd: true }),
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                }),
+                    PlayerRef::You,
+                    Effect::Move { what: chosen_one(), to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
+                )),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -475,7 +471,7 @@ pub fn transmogrifying_wand() -> CardDefinition {
 }
 
 /// Ugin's Mastery — each colorless creature spell manifests; a six-power
-/// attack may turn a face-down creature up. Residual: the first face-down one.
+/// attack may turn a face-down creature up (chosen on resolution).
 pub fn ugins_mastery() -> CardDefinition {
     CardDefinition {
         name: "Ugin's Mastery",
@@ -493,13 +489,11 @@ pub fn ugins_mastery() -> CardDefinition {
                     .with_filter(Predicate::AttackedWithTotalPowerAtLeast { who: PlayerRef::You, at_least: 6 }),
                 effect: Effect::MayDo {
                     description: "Turn a face-down creature you control face up?".into(),
-                    body: Box::new(Effect::TurnFaceUpFree {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::EachPermanent(R::FaceDown.and(R::ControlledByYou))),
-                            count: Box::new(Value::ONE),
-                        },
-                        if_cant: None,
-                    }),
+                    body: Box::new(choose_one_then(
+                        Selector::EachPermanent(R::FaceDown.and(R::ControlledByYou)),
+                        PlayerRef::You,
+                        Effect::TurnFaceUpFree { what: chosen_one(), if_cant: None },
+                    )),
                 },
             },
         ],

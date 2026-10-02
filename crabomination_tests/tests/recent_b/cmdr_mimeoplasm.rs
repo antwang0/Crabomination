@@ -188,6 +188,26 @@ fn desecrator_hag_returns_the_biggest() {
     assert!(g.players[0].hand.iter().any(|c| c.id == angel));
 }
 
+/// Desecrator Hag's ruling text: "if two or more cards are tied for
+/// greatest power, you choose one of them" — only the tied cards are offered.
+#[test]
+fn desecrator_hag_chooses_among_the_tied() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    let second = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![second])]));
+    let hag = g.add_card_to_hand(0, catalog::desecrator_hag());
+    cast(&mut g, 0, hag, None).expect("cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == second));
+    let crabomination::decision::DeciderKind::Scripted { asked, .. } = g.decider.kind() else { panic!() };
+    let offered = asked.iter().find_map(|d| match d {
+        crabomination::decision::Decision::ChooseCards { candidates, .. } => Some(candidates.len()),
+        _ => None,
+    });
+    assert_eq!(offered, Some(2), "the two Angels, not the Bears");
+}
+
 /// Triskelavus: remove a counter for a flier that can ping.
 #[test]
 fn triskelavus_trades_counters_for_pinging_fliers() {

@@ -16,7 +16,7 @@ use crate::card::{
     RoomDoors, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered, target_n};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered, target_n};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, u};
@@ -325,13 +325,11 @@ pub fn kefnet_the_mindful() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
                 Effect::MayDo {
                     description: "Return a land you control to its owner's hand?".into(),
-                    body: Box::new(Effect::Move {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: R::Land }),
-                            count: Box::new(Value::ONE),
-                        },
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                    }),
+                    body: Box::new(choose_one_then(
+                        Selector::ControlledBy { who: PlayerRef::You, filter: R::Land },
+                        PlayerRef::You,
+                        Effect::Move { what: chosen_one(), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                    )),
                 },
             ]),
             ..Default::default()

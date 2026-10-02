@@ -13,8 +13,6 @@
 //!   permanent you control.
 //! - **Timestream Navigator** — it goes to the bottom as part of the effect,
 //!   not as a cost.
-//! - **Zara, Renegade Recruiter** — the stolen creature is the engine's pick,
-//!   and you don't look at the rest of the hand.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -22,7 +20,7 @@ use crate::card::{
     Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
     Value, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{choose_one_then, chosen_one, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, u};
@@ -792,30 +790,24 @@ pub fn warkite_marauder() -> CardDefinition {
 /// Zara, Renegade Recruiter — flying; attacking, put a creature card from
 /// the defending player's hand onto the battlefield under your control,
 /// tapped and attacking; it returns to its owner's hand at the next end
-/// step.
-///
-/// ⚠ Residual: the creature is the engine's pick, and you don't look at the
-/// rest of the hand.
+/// step. The creature is chosen from the hand on resolution (CR 608.2d).
 pub fn zara_renegade_recruiter() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_attack(Effect::MayDo {
             description: "Put a creature from the defending player's hand onto the battlefield attacking?".into(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::TakeGreatestManaValue {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::DefendingPlayer,
-                            zone: Zone::Hand,
-                            filter: R::Creature,
-                        }),
-                        count: Box::new(Value::ONE),
+            body: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::DefendingPlayer, zone: Zone::Hand, filter: R::Creature },
+                PlayerRef::You,
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: chosen_one(),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                },
-                Effect::JoinCombatAttacking { what: Selector::LastMoved },
-                Effect::ReturnToOwnersHandAtNextEndStep { what: Selector::LastMoved },
-            ])),
+                    Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                    Effect::ReturnToOwnersHandAtNextEndStep { what: Selector::LastMoved },
+                ]),
+            )),
         })],
         ..creature(
             "Zara, Renegade Recruiter",

@@ -2645,14 +2645,38 @@ fn nahiri_suits_up_a_soldier_and_puts_out_equipment() {
     let mut g = main_phase();
     let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
     let spear = g.add_card_to_battlefield(0, catalog::moonsilver_spear());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     loyalty(&mut g, n, 0);
     let soldier = g.battlefield.iter().find(|c| c.definition.name == "Kor Soldier").unwrap().id;
     assert_eq!(g.battlefield_find(spear).unwrap().attached_to, Some(soldier));
     let mut g = main_phase();
     let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
     let scythe = g.add_card_to_graveyard(0, catalog::strata_scythe());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     loyalty(&mut g, n, 1);
     assert!(g.battlefield_find(scythe).is_some());
+}
+
+/// Nahiri's Equipment picks are hers (CR 608.2d): the +2 suits the soldier
+/// with the chosen Equipment, the −2 the chosen card from hand or graveyard.
+#[test]
+fn nahiri_picks_which_equipment() {
+    let mut g = main_phase();
+    let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
+    g.add_card_to_battlefield(0, catalog::moonsilver_spear());
+    let scythe = g.add_card_to_battlefield(0, catalog::strata_scythe());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![scythe])]));
+    loyalty(&mut g, n, 0);
+    let soldier = g.battlefield.iter().find(|c| c.definition.name == "Kor Soldier").unwrap().id;
+    assert_eq!(g.battlefield_find(scythe).unwrap().attached_to, Some(soldier));
+    let mut g = main_phase();
+    let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
+    let spear = g.add_card_to_hand(0, catalog::moonsilver_spear());
+    let scythe = g.add_card_to_graveyard(0, catalog::strata_scythe());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![scythe])]));
+    loyalty(&mut g, n, 1);
+    assert!(g.battlefield_find(scythe).is_some());
+    assert!(g.players[0].hand.iter().any(|c| c.id == spear));
 }
 
 /// Adarkar Valkyrie — the marked creature comes back under your control.

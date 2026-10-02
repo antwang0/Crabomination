@@ -306,6 +306,24 @@ fn path_of_the_schemer_steals_a_creature_as_an_artifact() {
     assert!(a.card_types().contains(&CardType::Artifact));
 }
 
+/// Path of the Schemer: "a creature card from a graveyard" is the caster's
+/// choice on resolution (CR 608.2d) — the Bears over a milled Serra Angel.
+#[test]
+fn path_of_the_schemer_reanimates_the_chosen_card() {
+    let mut g = main_phase(2);
+    g.add_card_to_library(1, catalog::plains());
+    let angel = g.add_card_to_library(1, catalog::serra_angel());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let p = g.add_card_to_hand(0, catalog::path_of_the_schemer());
+    cast(&mut g, p);
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == angel));
+}
+
 /// Phyrexian Triniform leaves three Golems.
 #[test]
 fn phyrexian_triniform_splits_into_golems() {
