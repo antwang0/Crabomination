@@ -21301,6 +21301,21 @@ impl GameState {
                 self.choose_one_among(what, chooser, chosen, other, ctx, events, effect)
             }
 
+            Effect::PlayerChoosesOne { who, options } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if options.is_empty() {
+                    return Ok(());
+                }
+                let mut cursor = 0;
+                let labels = options.iter().map(|o| o.label.clone()).collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                let Some(i) = self.ask_seat_option(&mut cursor, seat, "Choose one".into(), source, labels, effect) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let sub = EffectContext { controller: seat, ..ctx.clone() };
+                self.run_effect(&options[i.min(options.len() - 1)].effect, &sub, events)
+            }
             Effect::ChoosePerDistinctPower { filter, up_to, chosen, other } => {
                 self.choose_per_distinct_power(filter, *up_to, chosen, other, ctx, events, effect)
             }

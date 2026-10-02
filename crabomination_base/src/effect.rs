@@ -4455,6 +4455,11 @@ pub enum Effect {
     /// "that player may put a +1/+1 counter on target creature of their
     /// choice").
     MayDoBy { who: PlayerRef, description: String, body: Box<Effect> },
+    /// "[Player] may [A] or [B]": `who` picks one of `options` (a
+    /// `ChooseOption` ask, judged by outcome for a bot) and its effect runs
+    /// with `who` as controller. Headless, option 0 — list the do-nothing
+    /// option first where there is one. Lavabrink Floodgates.
+    PlayerChoosesOne { who: PlayerRef, options: Vec<VoteOption> },
 
     /// "[Player] may pay [cost]. If they do, `body`; otherwise `else_`" —
     /// [`Effect::MayPay`] routed to another seat (Phyrexian Tyranny's

@@ -9,8 +9,6 @@
 //!   permission is granted as Pako exiles the cards while you control
 //!   Haldan (not re-read if Haldan comes or goes later), and creature cards
 //!   are playable too.
-//! - **Lavabrink Floodgates** — each upkeep's player may only add a doom
-//!   counter (removing one isn't offered).
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
@@ -18,7 +16,7 @@ use crate::card::{
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, VoteOption, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, hybrid, r, u, x};
 use std::sync::Arc;
@@ -269,9 +267,9 @@ pub fn pako_arcane_retriever() -> CardDefinition {
     }
 }
 
-/// Lavabrink Floodgates — {T}: {R}{R}; each upkeep its player may add a doom
-/// counter; at three it's sacrificed for 6 damage to each creature.
-/// Residual: removing a doom counter isn't offered.
+/// Lavabrink Floodgates — {T}: {R}{R}; each upkeep that player may add or
+/// remove a doom counter; at three it's sacrificed for 6 damage to each
+/// creature.
 pub fn lavabrink_floodgates() -> CardDefinition {
     CardDefinition {
         name: "Lavabrink Floodgates",
@@ -285,14 +283,19 @@ pub fn lavabrink_floodgates() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
             effect: Effect::Seq(vec![
-                Effect::MayDoBy {
+                Effect::PlayerChoosesOne {
                     who: PlayerRef::ActivePlayer,
-                    description: "Put a doom counter on Lavabrink Floodgates?".into(),
-                    body: Box::new(Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::Doom,
-                        amount: Value::ONE,
-                    }),
+                    options: vec![
+                        VoteOption::new("Leave it", Effect::Noop),
+                        VoteOption::new(
+                            "Put a doom counter on it",
+                            Effect::AddCounter { what: Selector::This, kind: CounterType::Doom, amount: Value::ONE },
+                        ),
+                        VoteOption::new(
+                            "Remove a doom counter from it",
+                            Effect::RemoveCounter { what: Selector::This, kind: CounterType::Doom, amount: Value::ONE },
+                        ),
+                    ],
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(

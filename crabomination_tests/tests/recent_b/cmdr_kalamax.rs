@@ -208,3 +208,28 @@ fn cr_702_16_eon_frolicker_protects_you_from_the_extra_turn_player() {
         drain_stack(&mut g);
     }
 }
+
+/// Lavabrink Floodgates: each upkeep the active player may put a doom
+/// counter on it or remove one; at three it is sacrificed for 6 damage to
+/// each creature.
+#[test]
+fn lavabrink_floodgates_doom_counter_either_way() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let setup = |answer: u32| {
+        let mut g = pod(2);
+        let gates = g.add_card_to_battlefield(0, catalog::lavabrink_floodgates());
+        g.battlefield_find_mut(gates).unwrap().add_counters(CounterType::Doom, 2);
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(answer)]));
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        (g, gates, bear)
+    };
+    let (g, gates, bear) = setup(2);
+    assert_eq!(g.battlefield_find(gates).unwrap().counter_count(CounterType::Doom), 1, "removed one");
+    assert!(g.battlefield_find(bear).is_some());
+    let (g, gates, bear) = setup(1);
+    assert!(g.battlefield_find(gates).is_none(), "the third counter sacrifices it");
+    assert!(g.battlefield_find(bear).is_none(), "6 damage to each creature");
+}

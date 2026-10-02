@@ -591,6 +591,11 @@ impl Effect {
                 f(chosen);
                 f(other);
             }
+            Effect::PlayerChoosesOne { options, .. } => {
+                for o in options {
+                    f(&o.effect);
+                }
+            }
             Effect::OpponentVetoesOne { then, .. } => f(then),
             Effect::PayEnergyOrElse { otherwise, .. }
             | Effect::PayEnergyOrElseValue { otherwise, .. }
@@ -1153,7 +1158,9 @@ impl Effect {
             Effect::WillOfTheCouncilExile { .. } => false,
             // CR 701.38 votes are untargeted; the chosen option's body may
             // target, but it's chosen at resolution.
-            Effect::Vote { options, .. } => options.iter().any(|o| o.effect.requires_target()),
+            Effect::Vote { options, .. } | Effect::PlayerChoosesOne { options, .. } => {
+                options.iter().any(|o| o.effect.requires_target())
+            }
             Effect::EachPlayerVotesForAPlayer { on_opponent, on_you } => {
                 on_opponent.requires_target() || on_you.requires_target()
             }
