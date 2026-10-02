@@ -3507,7 +3507,7 @@ impl HeuristicBot {
                 // Spare mana with nothing to cast: cycle, else a scry /
                 // surveil / loot sink (pods only).
                 if matches!(action.action, GameAction::PassPriority)
-                    && let Some(cycle) = super::cycling::pick_cycle(state, seat)
+                    && let Some(cycle) = super::cycling::pick_cycle(state, seat, &self.weights)
                         .or_else(|| super::command_zone::pick_command_zone_ability(state, seat, &self.weights))
                         .or_else(|| super::library_top::pick_library_top(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
