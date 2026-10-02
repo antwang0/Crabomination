@@ -649,7 +649,7 @@ pub fn braids_arisen_nightmare() -> CardDefinition {
 /// bottom card of each opponent's library face down. For as long as those
 /// cards remain exiled, you may look at them, you may cast permanent spells
 /// from among them, and you may spend mana as though it were mana of any color
-/// to cast those spells." Approximation: the cards are exiled face up.
+/// to cast those spells."
 pub fn arvinox_the_mind_flail() -> CardDefinition {
     CardDefinition {
         name: "Arvinox, the Mind Flail",
@@ -674,11 +674,13 @@ pub fn arvinox_the_mind_flail() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: your_step(TurnStep::End),
             effect: Effect::Seq(vec![
-                Effect::EachPlayerDoes {
-                    who: PlayerRef::EachOpponent,
-                    body: Box::new(Effect::Move {
-                        what: Selector::BottomOfLibrary { who: PlayerRef::You, count: Value::ONE },
-                        to: ZoneDest::ExileWithSourceStamp,
+                Effect::ExileFaceDown {
+                    body: Box::new(Effect::EachPlayerDoes {
+                        who: PlayerRef::EachOpponent,
+                        body: Box::new(Effect::Move {
+                            what: Selector::BottomOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            to: ZoneDest::ExileWithSourceStamp,
+                        }),
                     }),
                 },
                 may_play_any_color(Selector::MatchingAmong {

@@ -462,9 +462,18 @@ fn exile_entry(
     viewer: Option<usize>,
     plotted: bool,
 ) -> ExileCardView {
-    // CR 708 — a face-down exiled card (hideaway, foretell) is hidden from
-    // everyone but its controller: mask the identity.
-    let hidden = card.face_down && viewer != Some(card.controller);
+    // CR 406.3 — a face-down exiled card (hideaway, foretell) is hidden from
+    // everyone but whoever may look: the holder of a may-play grant on it
+    // (Gonti, Intet), else its controller.
+    let looker = card
+        .may_play_until
+        .as_ref()
+        .map(|p| p.player)
+        .filter(|&p| p < state.players.len())
+        .unwrap_or(card.controller);
+    let hidden = card.face_down
+        && viewer != Some(looker)
+        && !viewer.is_some_and(|v| state.face_down_revealed_to.contains(&(card.id, v)));
     ExileCardView {
         id: card.id,
         name: if hidden { "Face-down card".to_string() } else { card.definition.name.to_string() },

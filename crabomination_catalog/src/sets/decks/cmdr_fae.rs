@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_fae.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Blightwing Bandit** — the stolen card is exiled face up.
 //! - **Halo Forager** — a mana-value-0 card can't be cast (paying {0} is a
 //!   decline).
 //! - **Illusionist's Gambit** — the must-attack and can't-attack-you grants
@@ -178,18 +177,20 @@ pub fn archmage_of_echoes() -> CardDefinition {
 
 /// Blightwing Bandit — flying, deathtouch; your first spell on each
 /// opponent's turn exiles their top card, which you may play while it stays
-/// exiled, with mana of any type (exiled face up).
+/// exiled (face down), with mana of any type.
 pub fn blightwing_bandit() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::ExileTopAndGrantMayPlay {
-            who: PlayerRef::ActivePlayer,
-            count: Value::ONE,
-            duration: MayPlayDuration::WhileExiled,
-            pay_any_color: true,
-            max_mana_value: None,
-            pay_own_cost: false,
-            uncast_penalty: None,
+        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::ExileFaceDown {
+            body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::ActivePlayer,
+                count: Value::ONE,
+                duration: MayPlayDuration::WhileExiled,
+                pay_any_color: true,
+                max_mana_value: None,
+                pay_own_cost: false,
+                uncast_penalty: None,
+            }),
         })],
         ..creature("Blightwing Bandit", cost(&[generic(3), b()]), vec![CreatureType::Faerie, CreatureType::Rogue], 2, 2)
     }

@@ -4,7 +4,7 @@
 //! the life — and Necropotence skips its controller's draw step, so a seat
 //! that never activates it only loses cards (`--card-census`: never activated).
 
-use crate::effect::{Effect, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Effect, ZoneDest};
 use crate::game::GameState;
 use crate::game::types::{GameAction, TurnStep};
 
@@ -25,7 +25,10 @@ fn life_floor(state: &GameState, seat: usize) -> i32 {
 fn delayed_draw(effect: &Effect) -> bool {
     match effect {
         Effect::Seq(v) => v.iter().any(delayed_draw),
-        Effect::AtNextEndStep { body } => matches!(**body, Effect::Move { to: ZoneDest::Hand(_), .. }),
+        Effect::AtNextEndStep { body }
+        | Effect::DelayUntil { kind: DelayedTriggerKind::NextEndStep | DelayedTriggerKind::YourNextEndStep, body } => {
+            matches!(**body, Effect::Move { to: ZoneDest::Hand(_), .. })
+        }
         _ => false,
     }
 }

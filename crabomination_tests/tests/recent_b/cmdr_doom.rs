@@ -219,3 +219,31 @@ fn cr_714_2_age_of_ultron_builds_robots_per_opponent() {
     assert_eq!(robots.len(), 3);
     assert_eq!(pt(&g, robots[0]), (2, 2));
 }
+
+/// Extract Power — CR 406.3: each top card is exiled face down; one cast from
+/// there enters face up, as itself.
+#[test]
+fn extract_power_exiles_face_down_and_casts_face_up() {
+    let mut g = main_phase(3);
+    for seat in 0..3 {
+        g.players[seat].library.clear();
+    }
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(2, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::extract_power());
+    cast_as(&mut g, 0, spell, None).expect("cast");
+    assert_eq!(g.exile.iter().filter(|c| c.face_down).count(), 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from exile");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bears).expect("on the battlefield");
+    assert!(!c.face_down);
+    assert_eq!(pt(&g, bears), (2, 2));
+}

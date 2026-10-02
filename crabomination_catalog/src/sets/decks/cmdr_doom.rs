@@ -378,17 +378,19 @@ pub fn endless_ranks_of_hydra() -> CardDefinition {
     }
 }
 
-/// Extract Power — exile the top card of each library; you may play them
-/// free while they stay exiled. Residual: they're exiled face up.
+/// Extract Power — exile the top card of each library face down; you may play
+/// them free while they stay exiled.
 pub fn extract_power() -> CardDefinition {
     CardDefinition {
         name: "Extract Power",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE },
-                to: ZoneDest::Exile,
+            Effect::ExileFaceDown {
+                body: Box::new(Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE },
+                    to: ZoneDest::Exile,
+                }),
             },
             Effect::GrantMayPlay {
                 what: Selector::LastMoved,

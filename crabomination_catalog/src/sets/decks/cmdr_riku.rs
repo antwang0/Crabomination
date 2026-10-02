@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_riku.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Intet, the Dreamer** — the card is exiled face up.
 //! - **Ray of Command** — the creature is tapped at the next end step rather
 //!   than as its control returns (the same turn; it stays tapped either way).
 
@@ -242,7 +241,7 @@ pub fn hydra_omnivore() -> CardDefinition {
 
 /// Intet, the Dreamer — {3}{G}{U}{R} 6/6 legendary flying Dragon. On combat
 /// damage to a player you may pay {2}{U}: exile your top card; you may play it
-/// free for as long as Intet remains on the battlefield. (Residual: face up.)
+/// face down, free for as long as Intet remains on the battlefield.
 pub fn intet_the_dreamer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -251,9 +250,11 @@ pub fn intet_the_dreamer() -> CardDefinition {
                 description: "Pay {2}{U} to exile your top card to play for free?".into(),
                 mana_cost: cost(&[generic(2), u()]),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
-                        to: ZoneDest::ExileWithSourceStamp,
+                    Effect::ExileFaceDown {
+                        body: Box::new(Effect::Move {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            to: ZoneDest::ExileWithSourceStamp,
+                        }),
                     },
                     Effect::GrantMayPlay {
                         what: Selector::LastMoved,

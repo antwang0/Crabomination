@@ -7,8 +7,7 @@
 //!   {3}, and the graveyard card isn't exiled.
 //! - **Estinien Varlineau** — counts opponents dealt combat damage by any
 //!   creature, not only by it or a Dragon.
-//! - **Urianger Augurelt** — the card is exiled face up; a land played from
-//!   exile gains no life.
+//! - **Urianger Augurelt** — a land played from exile gains no life.
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -822,8 +821,7 @@ pub fn transpose() -> CardDefinition {
 /// your top card; {T}: this turn you may play the cards exiled with it, and
 /// those spells cost {2} less.
 ///
-/// ⚠ Residual: the card is exiled face up; a land played from exile gains no
-/// life.
+/// ⚠ Residual: a land played from exile gains no life.
 pub fn urianger_augurelt() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -839,8 +837,10 @@ pub fn urianger_augurelt() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::MayDo {
                     description: "Exile the top card of your library?".into(),
-                    body: Box::new(Effect::ExileLinked {
-                        what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                    body: Box::new(Effect::ExileFaceDown {
+                        body: Box::new(Effect::ExileLinked {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                        }),
                     }),
                 },
                 ..Default::default()

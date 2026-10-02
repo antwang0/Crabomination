@@ -1926,7 +1926,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
 | 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | a madness cast names one target (the auto-pick), so its X isn't divided. |
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
-| 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
@@ -1953,9 +1952,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
-| 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life. |
+| 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | a land played from exile gains no life. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
-| 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
 | 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand or the command zone (tax still owed), not from a graveyard or exile. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
@@ -1983,7 +1981,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Deck | Gap |
 |---|---|---|
-| 🟡 Domineering Will | Peer Through Time (C14) | "target player" is always you; the three creatures are the real targets. |
 | 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
 | 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
@@ -2044,7 +2041,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 Kang Dynasty | Doom Prevails (MSC) | the draw rider reads any goaded creature an opponent controls dealing combat damage off your turn, not only the ones this Saga goaded. |
 | 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
-| 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
 | 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
@@ -2171,7 +2167,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Saheeli, Radiant Creator | Living Energy (DRC) | the copied permanent is chosen as the trigger goes on the stack, not in a reflexive trigger after paying. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
-| 🟡 Kheru Mind-Eater | Vampiric Bloodlust (C17) | the exiled card is exiled face up. |
 | 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
@@ -2291,7 +2286,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
 | 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
-| 🟡 Scarlet Witch, Chaotic Avenger | Avengers Assemble (MSC) | the two cards are exiled face up. |
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Mister Fantastic | The Fantastic Four (MSC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |

@@ -123,6 +123,7 @@ fn intet_grants_its_exile_only_while_it_remains() {
     connect(&mut g, intet, 1);
     let card = g.exile.iter().find(|c| c.id == top).expect("exiled");
     assert!(card.may_play_until.is_some(), "playable while Intet remains");
+    assert!(card.face_down, "CR 406.3: exiled face down");
     g.step = TurnStep::PostCombatMain;
     flood(&mut g, 0);
     let murder = g.add_card_to_hand(0, catalog::murder());

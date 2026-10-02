@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 14 |
 | Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
@@ -109,6 +110,19 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED/OPEN 2026-10-02 (Commander routine, `claude/modern_decks`) — face-down exile, and the implicit "target opponent"
+
+- **FIXED:** a card cast out of face-down exile entered the battlefield still
+  `face_down` with no `face_up_def` (Gonti's stolen card was a face-down
+  permanent no view could name). `finalize_cast` and `move_card_to`'s exile
+  exit now clear it (CR 406.3); a morph cast keeps its face. Found by
+  `recent_b::cmdr_doom::extract_power_exiles_face_down_and_casts_face_up`.
+- **OPEN:** `query.rs::IMPLICIT_OPPONENT_TARGET` makes every
+  `GainControl { to: Target(n) }` recipient an *opponent* slot. Donate prints
+  "target player", so it can't hand a permanent to a teammate or back to you.
+  Domineering Will sidesteps it with `TargetPlayerThen { filter: Player }`;
+  Donate is in the cube, so changing the default moves the two-player pools.
 
 ## FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour
 

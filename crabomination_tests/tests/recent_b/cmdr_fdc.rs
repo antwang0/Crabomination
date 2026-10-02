@@ -1923,15 +1923,22 @@ fn fell_the_mighty_destroys_the_bigger_creatures() {
     assert!(g.battlefield_find(giant).is_none());
 }
 
-/// Kheru Mind-Eater — the player it hits exiles a card of their choice; you
-/// may cast it.
+/// Kheru Mind-Eater — the player it hits exiles a card of their choice face
+/// down; you may look at and cast it. CR 406.3: only Kheru's controller may
+/// look, so the card's owner sees a mask.
 #[test]
 fn kheru_mind_eater_takes_a_card_you_may_cast() {
     let mut g = main_phase();
     let k = g.add_card_to_battlefield(0, catalog::kheru_mind_eater());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     combat(&mut g, vec![Attack { attacker: k, target: AttackTarget::Player(1) }], 0, |_| {});
-    assert!(g.exile.iter().any(|c| c.id == bolt));
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.face_down), "exiled face down");
+    let seen = |seat| {
+        let v = crabomination::server::view::project(&g, seat);
+        v.exile.iter().find(|c| c.id == bolt).map(|c| c.name.clone()).unwrap()
+    };
+    assert_eq!(seen(0), "Lightning Bolt", "the may-play holder looks");
+    assert_eq!(seen(1), "Face-down card", "the owner doesn't");
     g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;

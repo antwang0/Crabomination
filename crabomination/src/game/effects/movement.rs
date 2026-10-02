@@ -2383,6 +2383,9 @@ impl GameState {
             ) {
                 card.exiled_with = None;
                 card.exiled_by = None;
+            } else if card.face_down && card.face_up_def.is_none() {
+                // CR 406.3 — a face-down exiled card leaves exile face up.
+                card.face_down = false;
             }
             // Fire Lord Zuko's gate — record exile→battlefield entries so a
             // "whenever a permanent you control enters from exile" trigger can

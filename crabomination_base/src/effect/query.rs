@@ -453,6 +453,7 @@ impl Effect {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
+            | Effect::ExileFaceDown { body }
             | Effect::DelayUntil { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
@@ -1495,7 +1496,8 @@ impl Effect {
             Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
-            Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. } => {
+            Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. }
+            | Effect::ExileFaceDown { body } => {
                 body.requires_target()
             }
             Effect::OnYourNextSpellCastThisTurn { body }
@@ -3023,6 +3025,7 @@ impl Effect {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
+            | Effect::ExileFaceDown { body }
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
@@ -5397,6 +5400,7 @@ impl Effect {
                 | Effect::WithTappedPower { body, .. }
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
+            | Effect::ExileFaceDown { body }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextAttackThisTurn { body }

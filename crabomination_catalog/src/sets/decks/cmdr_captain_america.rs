@@ -8,7 +8,6 @@
 //!   as it enters.
 //! - **Heroic Sacrifice** — damage to your noncreature permanents is
 //!   redirected too.
-//! - **Scarlet Witch, Chaotic Avenger** — the two cards are exiled face up.
 //! - **Winter Soldier, Reborn Avenger** — the Hero's counter is put on as it
 //!   lands, not as it enters.
 
@@ -526,17 +525,17 @@ pub fn rescue_pepper_potts() -> CardDefinition {
 }
 
 /// Scarlet Witch, Chaotic Avenger — flying; connecting exiles the top two
-/// cards, then you may cast a Hero or noncreature spell among the cards
-/// exiled with her for free.
-///
-/// ⚠ Residual: the cards are exiled face up.
+/// cards face down, then you may cast a Hero or noncreature spell among the
+/// cards exiled with her for free.
 pub fn scarlet_witch_chaotic_avenger() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_combat_damage_to_player(Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(2) },
-                to: ZoneDest::ExileWithSourceStamp,
+            Effect::ExileFaceDown {
+                body: Box::new(Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(2) },
+                    to: ZoneDest::ExileWithSourceStamp,
+                }),
             },
             may(
                 "Cast a Hero or noncreature spell exiled with Scarlet Witch without paying its mana cost?",

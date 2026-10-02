@@ -7,7 +7,6 @@
 //!   cast trigger resolves, not as the creature enters.
 //! - **Mathas, Fiend Seeker** — a bounty counter grants its dies trigger only
 //!   while Mathas is on the battlefield.
-//! - **Kheru Mind-Eater** — the exiled card is exiled face up.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -281,17 +280,19 @@ pub fn stone_quarry() -> CardDefinition {
     tapland("Stone Quarry", Color::Red, Color::White)
 }
 
-/// Kheru Mind-Eater — the player it hits exiles a card from hand, which you
-/// may play. Residual: The card is exiled face up.
+/// Kheru Mind-Eater — the player it hits exiles a card from hand face down,
+/// which you may look at and play.
 pub fn kheru_mind_eater() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::ExileFromHand {
-                    who: Selector::Player(PlayerRef::Target(0)),
-                    amount: Value::ONE,
+                Effect::ExileFaceDown {
+                    body: Box::new(Effect::ExileFromHand {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ONE,
+                    }),
                 },
                 Effect::GrantMayPlay {
                     what: Selector::LastMoved,

@@ -30714,6 +30714,19 @@ impl GameState {
                 self.run_effect(body, ctx, events)
             }
 
+            Effect::ExileFaceDown { body } => {
+                let before: Vec<CardId> = self.exile.iter().map(|c| c.id).collect();
+                let r = self.run_effect(body, ctx, events);
+                for c in self.exile.iter_mut().filter(|c| !before.contains(&c.id)) {
+                    c.face_down = true;
+                }
+                // A parked body resumes still wrapped, so its later exiles hide too.
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::ExileFaceDown {
+                    body: Box::new(carried),
+                });
+                r
+            }
+
             Effect::WithCastDiscards { nonland, body } => {
                 *self
                     .scratch

@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_teferi.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Domineering Will** — "target player" is always you (the engine's
-//!   recipient); the three creatures are the real targets.
 //! - **Shaper Parasite** — +2/−2 or −2/+2 is picked as the trigger is put on
 //!   the stack, not as it resolves.
 //! - **Infinite Reflection** — the ETB copies onto every nontoken creature you
@@ -152,27 +150,28 @@ pub fn crown_of_doom() -> CardDefinition {
     }
 }
 
-/// Domineering Will — up to three nonattacking creatures: you control them
-/// until end of turn, untap them, and they block this turn if able.
-/// Residual: "target player" is always you.
+/// Domineering Will — target player gains control of up to three target
+/// nonattacking creatures until end of turn; untap them; they block this turn
+/// if able. Slot 0 is the player, slots 1-3 the optional creatures.
 pub fn domineering_will() -> CardDefinition {
+    let creature = |slot| Selector::TargetFiltered { slot, filter: R::Creature.and(R::Not(Box::new(R::IsAttacking))) };
+    let each = (1..=3)
+        .flat_map(|slot| {
+            [
+                Effect::GainControl { what: creature(slot), to: Some(PlayerRef::Target(0)), duration: Duration::EndOfTurn },
+                Effect::Untap { what: creature(slot), up_to: None },
+                Effect::GrantKeyword { what: creature(slot), keyword: Keyword::MustBlock, duration: Duration::EndOfTurn },
+            ]
+        })
+        .collect();
     spell(
         "Domineering Will",
         cost(&[generic(3), u()]),
         CardType::Instant,
-        Effect::ApplyToTargets {
-            max_targets: 3,
-            min_targets: 0,
-            filter: R::Creature.and(R::Not(Box::new(R::IsAttacking))),
-            effect: Box::new(Effect::Seq(vec![
-                Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::EndOfTurn },
-                Effect::Untap { what: Selector::Target(0), up_to: None },
-                Effect::GrantKeyword {
-                    what: Selector::Target(0),
-                    keyword: Keyword::MustBlock,
-                    duration: Duration::EndOfTurn,
-                },
-            ])),
+        // Any player, not the implicit opponent a `GainControl` recipient gets.
+        Effect::TargetPlayerThen {
+            filter: R::Player,
+            then: Box::new(Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(each)) }),
         },
     )
 }

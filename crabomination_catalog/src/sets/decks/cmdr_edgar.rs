@@ -10,8 +10,6 @@
 //!   order (the engine's gift model has no recipient choice).
 //! - **Gleaming Splendor** — "two target players" are two player slots; the
 //!   engine does not require them to be distinct.
-//! - **Necropotence** — the exiled card is exiled face up, and it returns at
-//!   the next end step (any player's), not strictly "your next end step".
 //! - **Drana and Linvala** — the "spend mana as though it were mana of any
 //!   color" rider on the borrowed abilities is dropped; the lock gates the
 //!   activation path, so a creature's mana ability tapped by the auto-payer
@@ -37,7 +35,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, on_dies, on_you_attack, target_filtered};
 use crate::effect::{
-    CounteredSpellZone, Duration, Effect, LibraryPosition, ManaPayload,
+    CounteredSpellZone, DelayedTriggerKind, Duration, Effect, LibraryPosition, ManaPayload,
     PlayerRef, Predicate, StaticAbility, StaticEffect, ZoneDest,
 };
 use crate::game::types::TurnStep;
@@ -1516,8 +1514,7 @@ pub fn gleaming_splendor() -> CardDefinition {
 /// Necropotence — {B}{B}{B} Enchantment. "Skip your draw step. Whenever you
 /// discard a card, exile that card from your graveyard. Pay 1 life: Exile the
 /// top card of your library face down. Put that card into your hand at the
-/// beginning of your next end step." (Face-up exile, next end step — see the
-/// residuals.)
+/// beginning of your next end step."
 pub fn necropotence() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -1534,16 +1531,19 @@ pub fn necropotence() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             life_cost: 1,
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::TopOfLibrary {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                    },
-                    to: ZoneDest::ExileWithSourceStamp,
+                Effect::ExileFaceDown {
+                    body: Box::new(Effect::Move {
+                        what: Selector::TopOfLibrary {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                        },
+                        to: ZoneDest::ExileWithSourceStamp,
+                    }),
                 },
-                // One delayed trigger per activation; each returns one card
-                // still stamped as exiled with Necropotence.
-                Effect::AtNextEndStep {
+                // One delayed trigger per activation; the first returns every
+                // card still stamped as exiled with Necropotence.
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::YourNextEndStep,
                     body: Box::new(Effect::Move {
                         what: Selector::CardExiledWithSource,
                         to: ZoneDest::Hand(PlayerRef::You),

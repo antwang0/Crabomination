@@ -11540,6 +11540,12 @@ impl GameState {
         mana_spent: u32,
         from_hand: bool,
     ) {
+        let mut card = card;
+        // CR 406.3 — a card cast out of face-down exile is a face-up spell; a
+        // morph cast keeps its face (it carries `face_up_def`).
+        if card.face_down && card.face_up_def.is_none() {
+            card.face_down = false;
+        }
         let card_id = card.id;
         // CR 601.2d / 608.2h — "where X is … as you cast this spell" is fixed
         // now; the body reads it back as the spell's X.
@@ -11688,7 +11694,6 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
             || std::mem::take(&mut self.cast_paid_uncounterable);
         // Written only when set: `card` is a CoW handle and the write unshares.
-        let mut card = card;
         if self.players[p].cast_paid_with_treasure {
             self.players[p].cast_paid_with_treasure = false;
             card.cast_with_treasure_mana = true;

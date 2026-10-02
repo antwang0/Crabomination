@@ -9,7 +9,6 @@
 //!   half a madness cost can't carry.
 //! - **Imposing Grandeur** — counts a commander in any zone, not only the
 //!   battlefield or command zone.
-//! - **Predators' Hour** — the stolen card is exiled face up.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType,
@@ -300,14 +299,16 @@ pub fn predators_hour() -> CardDefinition {
                 filter: yours(),
                 trigger: Box::new(TriggeredAbility {
                     event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                    effect: Effect::ExileTopAndGrantMayPlay {
-                        who: PlayerRef::TriggerEventPlayer,
-                        count: Value::Const(1),
-                        duration: MayPlayDuration::WhileExiled,
-                        pay_any_color: true,
-                        max_mana_value: None,
-                        pay_own_cost: false,
-                        uncast_penalty: None,
+                    effect: Effect::ExileFaceDown {
+                        body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                            who: PlayerRef::TriggerEventPlayer,
+                            count: Value::Const(1),
+                            duration: MayPlayDuration::WhileExiled,
+                            pay_any_color: true,
+                            max_mana_value: None,
+                            pay_own_cost: false,
+                            uncast_penalty: None,
+                        }),
                     },
                 }),
             },

@@ -164,8 +164,8 @@ fn crown_of_doom_pumps_attackers_and_never_goes_home() {
     assert_eq!(pt(&g, bear), (4, 2));
 }
 
-/// Domineering Will: you take up to three nonattacking creatures until end
-/// of turn, untapped, and each must block.
+/// Domineering Will: target player takes up to three nonattacking creatures
+/// until end of turn, untapped, and each must block.
 #[test]
 fn domineering_will_borrows_blockers() {
     let mut g = main_phase(2);
@@ -173,13 +173,24 @@ fn domineering_will_borrows_blockers() {
     let b = g.add_card_to_battlefield(1, catalog::hill_giant());
     g.battlefield_find_mut(a).unwrap().tapped = true;
     let will = g.add_card_to_hand(0, catalog::domineering_will());
-    cast(&mut g, will, &[Target::Permanent(a), Target::Permanent(b)]);
+    cast(&mut g, will, &[Target::Player(0), Target::Permanent(a), Target::Permanent(b)]);
     for id in [a, b] {
         let c = g.battlefield_find(id).unwrap();
         assert_eq!(c.controller, 0);
         assert!(!c.tapped);
         assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::MustBlock));
     }
+}
+
+/// Domineering Will's "target player" can be another seat: in a pod, seat 2
+/// takes seat 1's creature (CR 115.1 — the player is a target of its own).
+#[test]
+fn domineering_will_hands_the_creatures_to_the_target_player() {
+    let mut g = main_phase(3);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let will = g.add_card_to_hand(0, catalog::domineering_will());
+    cast(&mut g, will, &[Target::Player(2), Target::Permanent(a)]);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 2);
 }
 
 /// CR 508.1d — Dulcet Sirens: the target creature must attack the named

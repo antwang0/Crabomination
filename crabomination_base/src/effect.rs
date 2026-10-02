@@ -10449,6 +10449,11 @@ pub enum Effect {
     /// cast path.
     WithRevealedForCost { power: i16, mana_value: i16, body: Box<Effect> },
 
+    /// CR 406.3 — "exile … face down": run `body`, then turn every card it
+    /// put into exile face down. Only a may-play holder (else the controller)
+    /// may look at one (Intet, Kheru Mind-Eater, Predators' Hour).
+    ExileFaceDown { body: Box<Effect> },
+
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,
     /// Thoughtseize, etc. Currently the **caster** auto-picks the first

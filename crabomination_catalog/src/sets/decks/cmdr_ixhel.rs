@@ -359,9 +359,8 @@ pub fn wurmquake() -> CardDefinition {
 }
 
 /// Ixhel, Scion of Atraxa — flying, vigilance, toxic 2; at your end step each
-/// corrupted opponent exiles their top card for you to play, spending mana as
-/// though it were any color. Residual: The card is exiled face up (hidden
-/// information only — who may play it is unchanged).
+/// corrupted opponent exiles their top card face down for you to play,
+/// spending mana as though it were any color.
 pub fn ixhel_scion_of_atraxa() -> CardDefinition {
     CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
@@ -378,14 +377,16 @@ pub fn ixhel_scion_of_atraxa() -> CardDefinition {
                         Value::PoisonCountersOf(PlayerRef::Triggerer),
                         Value::Const(3),
                     ),
-                    then: Box::new(Effect::ExileTopAndGrantMayPlay {
-                        who: PlayerRef::Triggerer,
-                        count: Value::ONE,
-                        duration: crate::card::MayPlayDuration::WhileExiled,
-                        pay_any_color: true,
-                        max_mana_value: None,
-                        pay_own_cost: false,
-                        uncast_penalty: None,
+                    then: Box::new(Effect::ExileFaceDown {
+                        body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                            who: PlayerRef::Triggerer,
+                            count: Value::ONE,
+                            duration: crate::card::MayPlayDuration::WhileExiled,
+                            pay_any_color: true,
+                            max_mana_value: None,
+                            pay_own_cost: false,
+                            uncast_penalty: None,
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 }),
