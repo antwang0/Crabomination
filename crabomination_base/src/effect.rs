@@ -1312,6 +1312,11 @@ pub enum Value {
     /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
     /// a permanent that wasn't cast.
     ArtifactManaSpentToCastSource,
+    /// "Each creature `who` controlled that dealt combat damage to a player
+    /// this turn" (Excess): the distinct creatures in the other players'
+    /// combat-damage lists, gone ones included — on the battlefield read by
+    /// controller, elsewhere by owner.
+    CreaturesThatCombatDamagedAPlayerThisTurn(PlayerRef),
     /// CR 702.157 — the number of times the source permanent's Squad cost was
     /// paid (`CardInstance.squad_count`). Reads `ctx.source`. Zero off-source.
     SquadCount,

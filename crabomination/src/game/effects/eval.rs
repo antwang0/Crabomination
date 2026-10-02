@@ -1536,6 +1536,25 @@ impl GameState {
                 self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _, _)| c == p).count() as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::CreaturesThatCombatDamagedAPlayerThisTurn(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut seen: Vec<CardId> = Vec::new();
+                for (seat, pl) in self.players.iter().enumerate() {
+                    if seat == p {
+                        continue;
+                    }
+                    for &id in pl.creatures_that_combat_damaged_me_this_turn.iter() {
+                        let theirs = match self.battlefield_find(id) {
+                            Some(c) => c.controller == p,
+                            None => self.find_card_owner(id) == Some(p),
+                        };
+                        if theirs && !seen.contains(&id) {
+                            seen.push(id);
+                        }
+                    }
+                }
+                seen.len() as i32
+            }
             Value::ArtifactManaSpentToCastSource => ctx
                 .source
                 .and_then(|id| self.find_card_anywhere(id))
