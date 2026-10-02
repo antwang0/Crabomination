@@ -316,3 +316,33 @@ fn glorious_protector_shelters_what_the_stack_threatens() {
     assert!(g.exile.iter().any(|c| c.id == bear), "the Murder's target is sheltered");
     assert!(g.battlefield_find(giant).is_some(), "the unthreatened Giant stays");
 }
+
+/// The bot sizes Grim Hireling's "sacrifice X Treasures" itself: an X = 0
+/// activation pays nothing and shrinks nothing, so it was never worth taking.
+#[test]
+fn bot_sizes_grim_hirelings_treasure_sacrifice() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let gh = g.add_card_to_battlefield(0, catalog::grim_hireling());
+    g.clear_sickness(gh);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: gh, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let action = HeuristicBot::new().next_action(&g, 0).expect("an action");
+    assert!(
+        matches!(action, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), x_value: Some(2), .. }
+            if card_id == gh && t == bear),
+        "two Treasures for the Bears: {action:?}"
+    );
+}

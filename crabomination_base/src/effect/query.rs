@@ -4474,6 +4474,10 @@ impl Effect {
     fn value_is_non_negative(v: &Value) -> bool {
         match v {
             Value::Const(n) => *n >= 0,
+            // "-X/-X where X is …" (Grim Hireling's sacrificed Treasures): a
+            // negated count is a debuff, so the pump wants an opponent's
+            // creature. It read as a friendly pump and aimed at its own.
+            Value::Negate(inner) => !Self::value_is_non_negative(inner),
             // Dynamic values (`SacrificedPower`, `XFromCost`, etc.) are always
             // ≥ 0 in practice.
             _ => true,

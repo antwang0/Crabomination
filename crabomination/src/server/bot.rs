@@ -10187,21 +10187,46 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
             } else {
                 None
             };
-            let action = GameAction::ActivateAbility {
-                card_id: card.id,
-                ability_index: idx,
-                target,
-                additional_targets: Vec::new(),
-                x_value: None,
-                mode: None,
+            // "Sacrifice X [filter]" (Springjack Pasture, Grim Hireling): X
+            // is the activator's, so each payable size is scored and the
+            // best one that beats passing is taken; X = 0 pays nothing.
+            let sizes: Vec<Option<u32>> = match (&ab.sac_other_filter, ab.sac_other_x) {
+                (Some((filter, _)), true) => {
+                    let fodder = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == seat
+                                && c.id != card.id
+                                && state.evaluate_requirement_static(filter, &Target::Permanent(c.id), seat, Some(card.id))
+                        })
+                        .count() as u32;
+                    (1..=fodder).map(Some).collect()
+                }
+                _ => vec![None],
             };
-            if !ward_gate_ok(state, seat, &action) {
-                continue;
+            let mut best: Option<(i32, GameAction)> = None;
+            for x_value in sizes {
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: target.clone(),
+                    additional_targets: Vec::new(),
+                    x_value,
+                    mode: None,
+                };
+                if !ward_gate_ok(state, seat, &action) {
+                    continue;
+                }
+                let Some(settled) = state.accept(action.clone()) else { continue };
+                if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
+                    && ev > baseline
+                    && best.as_ref().is_none_or(|(b, _)| ev > *b)
+                {
+                    best = Some((ev, action));
+                }
             }
-            let Some(settled) = state.accept(action.clone()) else { continue };
-            if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
-                && ev > baseline
-            {
+            if let Some((_, action)) = best {
                 return Some(action);
             }
         }
