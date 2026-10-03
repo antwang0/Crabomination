@@ -8,8 +8,8 @@
 //!   the finality counter is added as the card enters rather than with it.
 //! - **Cemetery Tampering** — a hidden land is put onto the battlefield
 //!   rather than played (it doesn't use the land drop).
-//! - **Polluted Cistern** — counts milled cards, not every card put into
-//!   your graveyard from your library.
+//! - **Polluted Cistern** — counts milled and surveiled cards, not other
+//!   library-to-graveyard moves (reveal-until).
 //! - **Into the Pit** — the sacrifice is paid as the cast completes.
 //! - **Old Stickfingers** — reveals creature by creature, bottoming each
 //!   run of misses before the next.
@@ -503,7 +503,8 @@ pub fn old_stickfingers() -> CardDefinition {
 /// Polluted Cistern // Dim Oubliette — Cistern: one or more cards put into
 /// your graveyard from your library (milled or surveiled) drain each opponent
 /// 1 per card type among them. Oubliette: on unlock, mill three, then return
-/// a creature card from your graveyard.
+/// a creature card from your graveyard. Residual: other library-to-graveyard
+/// moves (reveal-until) aren't seen.
 pub fn polluted_cistern_dim_oubliette() -> CardDefinition {
     CardDefinition {
         name: "Polluted Cistern // Dim Oubliette",

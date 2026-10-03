@@ -1,10 +1,6 @@
 //! Commander: the cards the **Riders of Rohan** precon (LTC, Éowyn,
 //! Shieldmaiden) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_eowyn.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Gilraen, Dúnedain Protector** — the creature always comes back at the
-//!   next end step with its counters (never at once).
 
 use std::sync::Arc;
 

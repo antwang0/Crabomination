@@ -6,7 +6,6 @@
 //!   not only when it shares a color with the land's mana.
 //! - **Expert-Level Safe** — both numbers are drawn at random (the
 //!   equilibrium strategy); no player is asked.
-//! - **Plasma Caster** — the target may be any blocking creature.
 //! - **Vault 112: Sadistic Simulation** — chapter III reveals rather than
 //!   exiles, and only a spell (not a land) may be played from among them.
 

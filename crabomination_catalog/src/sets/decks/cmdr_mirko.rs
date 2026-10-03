@@ -6,8 +6,6 @@
 //! - **Marvo, Deep Operative** — "whenever you win a clash" rides its own
 //!   attack clash (the deck's only clash) rather than triggering on any clash,
 //!   and the clash is with the most hostile opponent, not the defending player.
-//! - **Watcher of Hours** — removing the last time counter casts it at once, so
-//!   that removal doesn't surveil.
 //! - **Whispering Snitch** — "for the first time each turn" reads as once per
 //!   turn, so a surveil before it entered doesn't use up the turn's trigger.
 

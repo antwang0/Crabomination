@@ -1,13 +1,6 @@
 //! Commander: the cards the **Mishra's Burnished Banner** precon (BRC,
 //! Mishra, Eminent One) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_mishra.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Mishra, Eminent One** — the Warform keeps the copied artifact's name;
-//!   it isn't legendary, so the legend rule leaves it alone as the printed
-//!   rename would.
-//! - **Smelting Vat** — each card is capped at the sacrificed artifact's mana
-//!   value, not the pair's total.
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType,

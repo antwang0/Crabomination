@@ -7,8 +7,8 @@
 //!   basic land types and the five colors only.
 //! - **Tayam, Luminous Enigma** — the vigilance counter arrives by trigger,
 //!   not as the creature enters.
-//! - **Yannik, Scavenging Sentinel** — the engine exiles your highest mana
-//!   value other creature, and X reads its printed power.
+//! - **Yannik, Scavenging Sentinel** — X reads the exiled card's printed
+//!   power, not its last power on the battlefield.
 //! - **Archon of Valor's Reach** — the bot's pick of type is the first
 //!   offered (instant).
 

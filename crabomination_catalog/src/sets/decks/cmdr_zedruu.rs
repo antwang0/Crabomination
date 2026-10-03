@@ -148,7 +148,8 @@ pub fn dominus_of_fealty() -> CardDefinition {
 }
 
 /// Jötun Grunt — cumulative upkeep: two cards from a single graveyard to the
-/// bottom of their owner's library.
+/// bottom of their owner's library. Residual: the graveyard and the cards are
+/// the engine's pick.
 pub fn jotun_grunt() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::GraveyardCardsToBottom(2))],

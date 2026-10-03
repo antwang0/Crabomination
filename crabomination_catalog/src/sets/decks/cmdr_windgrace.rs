@@ -2,9 +2,6 @@
 //! Windgrace) needed beyond what the catalog had (Forge of Heroes and Moldgraf
 //! Monstrosity landed with Exquisite Invention and Death Toll). Tests in
 //! `tests/recent_b/cmdr_windgrace.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Emissary of Grudges** — the opponent is chosen openly, not secretly.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,

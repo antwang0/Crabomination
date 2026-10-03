@@ -5,11 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Bold Plagiarist** — copies +1/+1 counters only; an opponent's own
 //!   Plagiarist is never the creature it copies from.
-//! - **Guardian Archon** — "protection from the chosen player" is hexproof
-//!   and indestructible for the permanent, and your life can't drop this turn
-//!   is not modeled; the chosen player is the engine's most hostile opponent.
-//! - **Nils, Discipline Enforcer** — the counters go on each player's first
-//!   creature, chosen rather than targeted.
 //! - **Victory Chimes** — you are always the player who adds the mana.
 
 use std::sync::Arc;

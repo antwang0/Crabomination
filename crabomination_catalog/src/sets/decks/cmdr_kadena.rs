@@ -7,8 +7,6 @@
 //!   "as" replacement), so it attaches by a trigger if it survives.
 //! - **Rayami, First of the Fallen** — protection isn't among the shared
 //!   keywords.
-//! - **Road of Return** — the entwined cast takes both modes; the choice of
-//!   one is the engine's.
 //! - **Vesuvan Shapeshifter** — it copies only as it enters (not as it's
 //!   turned face up), and has no upkeep turn-face-down ability.
 

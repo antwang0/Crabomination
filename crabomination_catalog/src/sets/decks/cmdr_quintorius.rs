@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_quintorius.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Ao, the Dawn Sky** — the unpicked cards stay on top, not bottomed at
-//!   random.
 //! - **Quintorius, Loremaster** — the exiled card is cast as the ability
 //!   resolves (not any time this turn), and goes to the graveyard, not the
 //!   bottom of the library.

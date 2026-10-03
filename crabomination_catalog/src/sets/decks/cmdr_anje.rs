@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_anje.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Boneyard Parley** — the up-to-five creature cards are an untargeted
-//!   pick (the first five in seat order).
 //! - **Chainer, Nightmare Adept** — the permission names one creature card
 //!   (the first in your graveyard) as it resolves.
 //! - **Hedonist's Trove** — the exiled cards stay playable after the Trove

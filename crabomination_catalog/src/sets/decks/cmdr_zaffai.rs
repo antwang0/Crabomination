@@ -3,10 +3,6 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
 //! Residuals (each also on its card):
-//! - **Apex of Power** — the exiled cards may also be played as lands.
-//! - **Muse Vortex** — the uncast non-instant/sorcery cards go to the bottom
-//!   in exile order, not a random one.
-//! - **Radiant Performer** — copies spells only, not abilities.
 //! - **Zaffai** — one trigger per copy event, however many copies it made.
 
 use std::sync::Arc;

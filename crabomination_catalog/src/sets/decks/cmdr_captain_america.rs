@@ -6,8 +6,6 @@
 //! - **Captain Marvel, Apex Avenger** — only +1/+1 counters are copied.
 //! - **Heroic Return** — the Hero's two counters are put on as it lands, not
 //!   as it enters.
-//! - **Heroic Sacrifice** — damage to your noncreature permanents is
-//!   redirected too.
 //! - **Winter Soldier, Reborn Avenger** — the Hero's counter is put on as it
 //!   lands, not as it enters.
 

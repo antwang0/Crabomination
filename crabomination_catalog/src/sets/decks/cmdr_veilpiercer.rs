@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Fear of Sleep Paralysis** — only the untap step's stun removal is
 //!   stopped; an effect that removes or moves counters still takes a stun.
-//! - **Mirrormade** — the copy isn't optional.
 //! - **One with the Multiverse** — the free cast is from hand only, not from
 //!   the top of the library.
 //! - **Phenomenon Investigators** — Doubt's return targets the permanent.

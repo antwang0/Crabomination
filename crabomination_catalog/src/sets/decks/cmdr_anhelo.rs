@@ -9,7 +9,6 @@
 //! - **Syrix, Carrier of the Flame** — its end-step check counts any card
 //!   leaving your graveyard, and "you may cast this from your graveyard" is a
 //!   permission for the rest of the turn.
-//! - **Xander's Pact** — lands exiled this way may be played for life too.
 //! - **Zndrsplt's Judgment** — you are the only friend and every opponent a
 //!   foe.
 

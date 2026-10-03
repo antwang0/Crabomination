@@ -1,11 +1,6 @@
 //! Commander: the cards the **Silverquill Influence** precon (SOC, Killian,
 //! Decisive Mentor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_killian.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Armored Skyhunter** — an Equipment it puts onto the battlefield stays
-//!   unattached.
-//! - **Herald of Amity** — the eight cards are revealed rather than exiled.
 
 use std::sync::Arc;
 

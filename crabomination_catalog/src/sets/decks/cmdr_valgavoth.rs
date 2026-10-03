@@ -254,7 +254,7 @@ pub fn sadistic_shell_game() -> CardDefinition {
 
 /// Spiked Corridor // Torture Pit — unlocking the Corridor makes three
 /// Devils that ping when they die; the Pit adds 2 to your noncombat damage
-/// to opponents.
+/// to opponents. Residual: the +2 also reaches permanents opponents control.
 pub fn spiked_corridor_torture_pit() -> CardDefinition {
     let devil = TokenDefinition {
         name: "Devil".into(),

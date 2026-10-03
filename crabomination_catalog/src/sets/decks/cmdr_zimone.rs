@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Deathmist Raptor** — it returns face up; the face-down option isn't
 //!   offered.
-//! - **Disorienting Choice** — the targets' controllers decide through the
-//!   engine's may-prompt, and the lands found are the engine's pick.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,

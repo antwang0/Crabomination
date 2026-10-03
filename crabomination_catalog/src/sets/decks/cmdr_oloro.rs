@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_oloro.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Lim-Dûl's Vault** — the final five keep their order.
 //! - **Springjack Pasture** — no bot path picks an X for its Goat sacrifice.
 
 use crate::card::{

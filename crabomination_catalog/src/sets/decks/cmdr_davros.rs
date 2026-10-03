@@ -12,9 +12,6 @@
 //! - **The Master, Multiplied** — your triggered abilities can still make you
 //!   sacrifice or exile your creature tokens.
 //! - **The Toymaker's Trap** — numbers already chosen may be chosen again.
-//! - **Time Reaper** — the life is gained whether or not a card moved.
-//! - **Vislor Turlough** — goaded for the rest of the game, not only while
-//!   the opponent controls it.
 //! - **Weeping Angel** — its combat damage to a creature is dealt, then the
 //!   creature is shuffled away.
 //! - **Zygon Infiltrator** — the copy lasts until end of turn, not while the

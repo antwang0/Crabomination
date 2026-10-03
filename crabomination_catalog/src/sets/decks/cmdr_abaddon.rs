@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_abaddon.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Khârn the Betrayer** — the next opponent in turn order gains control,
-//!   not an opponent of your choice.
 //! - **The Lost and the Damned** — a land played from outside your hand
 //!   (graveyard, exile) doesn't count.
 //! - **The Ruinous Powers** — the life-loss rider reads any spell you cast
