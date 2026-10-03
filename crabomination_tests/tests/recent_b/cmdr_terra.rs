@@ -264,8 +264,23 @@ fn espers_to_magicite_crystallizes_a_creature() {
     let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).map(|c| c.id).expect("a token");
     let types = g.computed_permanent(tok).unwrap().card_types().to_vec();
     assert_eq!(types, vec![CardType::Artifact]);
-    // The chosen card is the best one, not the first exiled.
+    // A headless seat chooses the best one, not the first exiled.
     assert_eq!(g.battlefield_find(tok).unwrap().definition.name, "Craw Wurm");
+
+    // "Choose up to one … creature card exiled this way": a prompting seat
+    // picks — here the bear — and the pick survives the suspend (CR 608.2d).
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::craw_wurm());
+    let spell = g.add_card_to_hand(0, catalog::espers_to_magicite());
+    flood(&mut g, 0);
+    cast(&mut g, spell, &[]).expect("cast");
+    assert!(g.pending_decision.is_some(), "asked which card");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![bear]))).expect("pick");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).expect("a token");
+    assert_eq!(tok.definition.name, "Grizzly Bears");
 }
 
 /// Shadow may sacrifice a permanent on a hit: draw two, drain its mana value.

@@ -276,9 +276,9 @@ pub fn edgar_master_machinist() -> CardDefinition {
 }
 
 /// Espers to Magicite — exile each opponent's graveyard and copy a creature
-/// card from it as a noncreature artifact token.
-/// Residual: the copied card is the greatest-power creature card exiled,
-/// picked rather than targeted by a reflexive trigger.
+/// card exiled this way, your choice, as a noncreature artifact token.
+/// Residual: the card is chosen as the spell resolves, not targeted by a
+/// reflexive "when you do" trigger (no window to respond between).
 pub fn espers_to_magicite() -> CardDefinition {
     spell(
         "Espers to Magicite",
@@ -286,26 +286,27 @@ pub fn espers_to_magicite() -> CardDefinition {
         CardType::Instant,
         Effect::Seq(vec![
             Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent, filter: None },
-            Effect::CreateTokenCopyOf {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                // "choose up to one target creature card exiled this way":
-                // the biggest body, not the first one exiled.
-                source: Selector::TakeGreatestPower {
-                    inner: Box::new(Selector::ExiledThisResolution { filter: R::Creature }),
-                    count: Box::new(Value::ONE),
-                },
-                extra_creature_types: vec![],
-                extra_card_types: vec![],
-                override_pt: None,
-                override_colors: None,
-                enters_tapped: false,
-                non_legendary: false,
-                legendary: false,
-                extra_keywords: vec![],
-                no_mana_cost: false,
-            },
-            Effect::SetCardTypesTo { what: Selector::LastCreatedTokens, card_types: vec![CardType::Artifact] },
+            crate::effect::shortcut::choose_one_then(
+                Selector::ExiledThisResolution { filter: R::Creature },
+                PlayerRef::You,
+                Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: crate::effect::shortcut::chosen_one(),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![],
+                        no_mana_cost: false,
+                    },
+                    Effect::SetCardTypesTo { what: Selector::LastCreatedTokens, card_types: vec![CardType::Artifact] },
+                ]),
+            ),
         ]),
     )
 }

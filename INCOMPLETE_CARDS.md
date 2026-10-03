@@ -386,7 +386,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
-| Espers to Magicite (pod) | the copied card is auto-picked (greatest power among the exiled creature cards), not a chosen target (the artifact-only type change ships: `SetCardTypesTo`) | the reflexive "choose up to one target … exiled this way" has no target slot over a resolution-exiled set |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
@@ -1990,7 +1989,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
-| 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
+| 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
