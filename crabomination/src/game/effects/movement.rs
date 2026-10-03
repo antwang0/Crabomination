@@ -2484,7 +2484,8 @@ impl GameState {
             | ZoneDest::ExilePlotted
             | ZoneDest::ExileWithSourceStamp
             | ZoneDest::Ante
-            | ZoneDest::Command => dest.clone(),
+            | ZoneDest::Command
+            | ZoneDest::BattlefieldAttached { .. } => dest.clone(),
             ZoneDest::IfCard { filter, then, else_ } => ZoneDest::IfCard {
                 filter: filter.clone(),
                 then: Box::new(self.resolve_zonedest_player(then, ctx)),
@@ -2504,6 +2505,12 @@ impl GameState {
             let next = if self.evaluate_requirement_on_card(filter, &card, default_player) { then } else { else_ };
             let next = (**next).clone();
             return self.place_card_in_dest(card, default_player, &next, events);
+        }
+        // Attached placement is `Effect::Move`'s (it needs the host and the
+        // CR 303.4i check); a bare placement just enters.
+        if let ZoneDest::BattlefieldAttached { .. } = dest {
+            let plain = ZoneDest::Battlefield { controller: PlayerRef::Seat(default_player), tapped: false };
+            return self.place_card_in_dest(card, default_player, &plain, events);
         }
         // Phase H — consult the replacement-effect registry. The
         // resolver only sees the *destination kind* (a `Zone`); the
@@ -2526,7 +2533,7 @@ impl GameState {
                 crate::card::Zone::Exile
             }
             // Branched to a plain destination above.
-            ZoneDest::IfCard { .. } => return,
+            ZoneDest::IfCard { .. } | ZoneDest::BattlefieldAttached { .. } => return,
         };
         // CR 702.47e — a spell loses its splice changes once it leaves the
         // stack for any reason. Guarded: both live in the `CardCold` group,
@@ -2727,7 +2734,7 @@ impl GameState {
                 self.offboard_keyword_grants = true;
             }
             // Branched to a plain destination at the top.
-            ZoneDest::IfCard { .. } => {}
+            ZoneDest::IfCard { .. } | ZoneDest::BattlefieldAttached { .. } => {}
             ZoneDest::ExilePlotted => {
                 // CR 702.170 — exile it face up and mark it plotted so its
                 // owner may cast it for free as a sorcery on a later turn.

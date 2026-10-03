@@ -24029,6 +24029,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Move { what, to: ZoneDest::BattlefieldAttached { host } } => {
+                self.move_onto_battlefield_attached(what, host, ctx, events);
+                Ok(())
+            }
             Effect::Move { what, to } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let cid = match ent {

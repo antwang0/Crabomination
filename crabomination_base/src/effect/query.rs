@@ -3339,7 +3339,9 @@ impl Effect {
                 | Effect::GainControlWhileSourceRemains { .. }
                 | Effect::GainControlWhileYouControlSource { .. }
                 | Effect::GainControlWhileSourceTapped { .. } => true,
-                Effect::Move { to, .. } => !matches!(to, ZoneDest::Battlefield { .. }),
+                Effect::Move { to, .. } => {
+                    !matches!(to, ZoneDest::Battlefield { .. } | ZoneDest::BattlefieldAttached { .. })
+                }
                 Effect::PumpPT { power, toughness, .. } => {
                     !(Effect::value_is_non_negative(power) && Effect::value_is_non_negative(toughness))
                 }
@@ -3475,6 +3477,7 @@ impl Effect {
                         controller: PlayerRef::You,
                         ..
                     }
+                    | ZoneDest::BattlefieldAttached { .. }
             ),
             // Untapping a land or creature is mana or a blocker back (Garruk
             // Wildspeaker, Tezzeret the Seeker).
@@ -3507,6 +3510,7 @@ impl Effect {
                         controller: PlayerRef::You,
                         ..
                     }
+                    | ZoneDest::BattlefieldAttached { .. }
                     // Both exile destinations: `ExileWithSourceStamp` is
                     // `Exile` plus an `exiled_with` link (Ghost Vacuum, so its
                     // second ability can find what the first ate), and a
@@ -3765,6 +3769,7 @@ impl Effect {
                     ZoneDest::Hand(_) => format!("return {t} to its owner's hand"),
                     ZoneDest::Graveyard => format!("put {t} into its owner's graveyard"),
                     ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),
+                    ZoneDest::BattlefieldAttached { .. } => format!("put {t} onto the battlefield attached"),
                     ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
                     ZoneDest::Ante => format!("ante {t}"),
                     ZoneDest::Command => format!("put {t} into the command zone"),

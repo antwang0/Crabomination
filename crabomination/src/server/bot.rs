@@ -5485,7 +5485,7 @@ fn removal_targets_own_permanent(state: &GameState, body: &Effect) -> bool {
         | Effect::Exile { what }
         | Effect::Destroy { what }
         | Effect::DestroyNoRegen { what } => what,
-        Effect::Move { what, to } if !matches!(to, ZoneDest::Battlefield { .. }) => what,
+        Effect::Move { what, to } if !matches!(to, ZoneDest::Battlefield { .. } | ZoneDest::BattlefieldAttached { .. }) => what,
         _ => return false,
     };
     if !matches!(what, Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }) {

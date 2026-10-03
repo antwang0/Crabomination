@@ -78,6 +78,28 @@ impl GameState {
         }
     }
 
+    /// `Move { to: ZoneDest::BattlefieldAttached }` — each moved card enters
+    /// attached to `host` if it legally can (CR 303.4f); one that can't stays
+    /// where it is (CR 303.4i), as does every card once the host is gone.
+    pub(super) fn move_onto_battlefield_attached(
+        &mut self,
+        what: &Selector,
+        host: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some(h) = self.resolve_selector(host, ctx).into_iter().find_map(|e| e.as_permanent_id()) else { return };
+        if self.battlefield_find(h).is_none() {
+            return;
+        }
+        for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()) {
+            if !self.attach_hosts_for(id, Some(h), false, ctx.controller).is_empty() {
+                self.put_attached(id, h, ctx, events);
+                self.scratch.last_moved_cards.push(id);
+            }
+        }
+    }
+
     /// `Effect::PutOntoBattlefieldAttached` — every `filter` card in the
     /// controller's `zones` (greatest mana value first, at most `max`) goes
     /// onto the battlefield attached to `host`, or to its own best legal host

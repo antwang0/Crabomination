@@ -2937,6 +2937,11 @@ pub enum ZoneDest {
     /// reveal a card named Hammer of Nazahn this way, put it onto the
     /// battlefield. Otherwise, put that card into your hand").
     IfCard { filter: Box<SelectionRequirement>, then: Box<ZoneDest>, else_: Box<ZoneDest> },
+    /// CR 303.4f / 301.5c — onto the battlefield under the mover's control
+    /// attached to `host` ("return up to two target Aura and/or Equipment
+    /// cards … attached to that creature" — Unfinished Business). A card that
+    /// can't legally attach to it stays where it is (CR 303.4i).
+    BattlefieldAttached { host: Box<Selector> },
 }
 
 /// Where a countered spell goes after being lifted off the stack. The
@@ -12586,6 +12591,8 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
         | ZoneDest::Ante
         | ZoneDest::Command => false,
         ZoneDest::IfCard { then, else_, .. } => zonedest_has_target(then) || zonedest_has_target(else_),
+        // The host is a slot another step declares ("that creature").
+        ZoneDest::BattlefieldAttached { .. } => false,
     }
 }
 
