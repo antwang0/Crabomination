@@ -507,3 +507,29 @@ fn cr_615_weeping_angel_shuffles_its_blocker_away() {
     assert!(g.battlefield_find(angel).is_some_and(|a| a.damage == 0));
 }
 
+/// Zygon Infiltrator is a copy "for as long as that creature remains
+/// tapped" (CR 611.2b): it lasts past the turn and ends when the creature
+/// untaps.
+#[test]
+fn zygon_infiltrator_copies_while_its_mark_stays_tapped() {
+    let mut g = main_phase(2);
+    let zygon = g.add_card_to_battlefield(0, catalog::zygon_infiltrator());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zygon,
+        ability_index: 0,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("body-print");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(zygon).unwrap().definition.name, "Hill Giant");
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(zygon).unwrap().definition.name, "Hill Giant", "still tapped");
+    g.battlefield_find_mut(giant).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(zygon).unwrap().definition.name, "Zygon Infiltrator");
+}

@@ -34183,7 +34183,9 @@ impl GameState {
                         original_name: original.name.to_string(),
                         original: Some(original),
                         duration: *duration,
-                        source: ctx.source,
+                        // "While that creature remains tapped" watches the copied
+                        // permanent, not the copier.
+                        source: if *duration == crate::effect::Duration::WhileSourceTapped { src } else { ctx.source },
                     });
                 }
                 Ok(())

@@ -1292,7 +1292,7 @@ pub fn vislor_turlough() -> CardDefinition {
 
 /// Weeping Angel — flash, first strike, vigilance; stops being a creature
 /// when an opponent casts one; its combat damage to a creature shuffles that
-/// creature into its owner's library. Residual: the damage is dealt first.
+/// creature into its owner's library instead (CR 615).
 pub fn weeping_angel() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::FirstStrike, Keyword::Vigilance],
@@ -1330,8 +1330,7 @@ pub fn wound_reflection() -> CardDefinition {
 }
 
 /// Zygon Infiltrator — sorcery speed {2}{U}: tap another target creature with
-/// a stun counter and become a copy of it. Residual: the copy lasts until end
-/// of turn.
+/// a stun counter and become a copy of it while that creature stays tapped.
 pub fn zygon_infiltrator() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
@@ -1343,7 +1342,7 @@ pub fn zygon_infiltrator() -> CardDefinition {
                 Effect::BecomeCopyOfFor {
                     what: Selector::This,
                     source: Selector::Target(0),
-                    duration: Duration::EndOfTurn,
+                    duration: Duration::WhileSourceTapped,
                     non_legendary: false,
                 },
             ]),

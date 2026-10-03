@@ -9067,7 +9067,8 @@ pub enum Effect {
     /// supertype from the copy (CR 707.2e — Echoing Equation's "except
     /// they aren't legendary"). Computed characteristics (types, colors,
     /// keywords, P/T) and printed-ability dispatch both honor the copy
-    /// while it lasts.
+    /// while it lasts. `Duration::WhileSourceTapped` here watches the copied
+    /// `source` ("for as long as that creature remains tapped" — Zygon).
     BecomeCopyOfFor {
         what: Selector,
         source: Selector,

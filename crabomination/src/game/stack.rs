@@ -6678,20 +6678,22 @@ impl GameState {
         // CR 611.2c — "for as long as this remains attached to it"
         // (Assimilation Aegis): the copy ends the moment the Equipment
         // unattaches or leaves.
-        if self
-            .temporary_copies
-            .iter()
-            .any(|tc| tc.duration == crate::effect::Duration::WhileSourceAttached)
-        {
+        // CR 611.2b — "for as long as that creature remains tapped" (Zygon
+        // Infiltrator): `WhileSourceTapped` on a copy watches the copied one.
+        if self.temporary_copies.iter().any(|tc| {
+            matches!(tc.duration, crate::effect::Duration::WhileSourceAttached | crate::effect::Duration::WhileSourceTapped)
+        }) {
             let lapsed: Vec<CardId> = self
                 .temporary_copies
                 .iter()
-                .filter(|tc| {
-                    tc.duration == crate::effect::Duration::WhileSourceAttached
-                        && !tc.source.is_some_and(|s| {
-                            self.battlefield_find(s)
-                                .is_some_and(|e| e.attached_to == Some(tc.card))
-                        })
+                .filter(|tc| match tc.duration {
+                    crate::effect::Duration::WhileSourceAttached => !tc.source.is_some_and(|s| {
+                        self.battlefield_find(s).is_some_and(|e| e.attached_to == Some(tc.card))
+                    }),
+                    crate::effect::Duration::WhileSourceTapped => {
+                        !tc.source.is_some_and(|s| self.battlefield_find(s).is_some_and(|e| e.tapped))
+                    }
+                    _ => false,
                 })
                 .map(|tc| tc.card)
                 .collect();
