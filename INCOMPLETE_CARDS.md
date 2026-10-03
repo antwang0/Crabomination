@@ -2097,8 +2097,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 | 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
-| 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
-| 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)

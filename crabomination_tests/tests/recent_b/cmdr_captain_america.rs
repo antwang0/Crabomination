@@ -371,3 +371,23 @@ fn black_widow_watches_second_draws() {
     assert_eq!((plus(&g, bw), g.players[0].hand.len()), (1, hand + 1));
 }
 
+
+/// CR 614.1c — Heroic Return's Hero enters with its two additional +1/+1
+/// counters (they're on it as it enters, so an "enters" check sees them); a
+/// non-Hero gets none.
+#[test]
+fn cr_614_1c_heroic_return_hero_enters_with_counters() {
+    for (hero, want) in [(true, 2u32), (false, 0)] {
+        let mut g = pod(2);
+        let card = if hero {
+            g.add_card_to_graveyard(0, catalog::winter_soldier_reborn_avenger())
+        } else {
+            g.add_card_to_graveyard(0, catalog::hill_giant())
+        };
+        let spell = g.add_card_to_hand(0, catalog::heroic_return());
+        flood(&mut g, 0);
+        cast_as(&mut g, 0, spell, &[Target::Permanent(card)]).expect("Heroic Return");
+        assert!(g.battlefield_find(card).is_some());
+        assert_eq!(plus(&g, card), want);
+    }
+}

@@ -1,13 +1,6 @@
 //! Commander: the cards the **Avengers Assemble** precon (MSC, Captain
 //! America, Team Leader) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_captain_america.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Captain Marvel, Apex Avenger** — only +1/+1 counters are copied.
-//! - **Heroic Return** — the Hero's two counters are put on as it lands, not
-//!   as it enters.
-//! - **Winter Soldier, Reborn Avenger** — the Hero's counter is put on as it
-//!   lands, not as it enters.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind,
@@ -736,9 +729,7 @@ pub fn war_machine_avenging_arsenal() -> CardDefinition {
 }
 
 /// Winter Soldier, Reborn Avenger — attacking reanimates a creature card
-/// with mana value up to his power; a Hero gets an extra counter.
-///
-/// ⚠ Residual: the Hero's counter is put on as it lands, not as it enters.
+/// with mana value up to his power; a Hero enters with an extra counter.
 pub fn winter_soldier_reborn_avenger() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![on_attack(reanimate_hero_bonus(
@@ -755,18 +746,23 @@ pub fn winter_soldier_reborn_avenger() -> CardDefinition {
     })
 }
 
-/// Return target `filter` card to the battlefield; a Hero gets `n` more
-/// +1/+1 counters.
+/// "Return target [filter] … If a Hero enters this way, it enters with `n`
+/// additional +1/+1 counters": the counters are stamped on the card before
+/// the move, so it enters with them (CR 614.1c).
 fn reanimate_hero_bonus(filter: R, n: i32) -> Effect {
     Effect::Seq(vec![
-        Effect::Move {
-            what: target_filtered(filter),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-        },
         Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: hero() },
-            then: Box::new(plus(Selector::Target(0), Value::Const(n))),
+            cond: Predicate::EntityMatches { what: target_filtered(filter), filter: hero() },
+            then: Box::new(Effect::SpellEntersWithCounters {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(n),
+            }),
             else_: Box::new(Effect::Noop),
+        },
+        Effect::Move {
+            what: Selector::Target(0),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         },
     ])
 }
@@ -945,9 +941,7 @@ pub fn avenge() -> CardDefinition {
 }
 
 /// Heroic Return — {2} less while a creature attacks you; reanimate a
-/// creature card, a Hero with two more counters.
-///
-/// ⚠ Residual: the Hero's counters are put on as it lands, not as it enters.
+/// creature card, a Hero with two more counters (it enters with them).
 pub fn heroic_return() -> CardDefinition {
     CardDefinition {
         self_cost_reduction_if: Some((
