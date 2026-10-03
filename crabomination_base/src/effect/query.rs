@@ -3309,6 +3309,7 @@ impl Effect {
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
+                | Effect::ForEachPlayerTarget { body }
                 | Effect::BindTargetSlot { body, .. }
                 | Effect::BindTargetObjects { body, .. }
                 | Effect::BindScratch { body, .. }
@@ -4769,6 +4770,7 @@ impl Effect {
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
+                | Effect::ForEachPlayerTarget { body }
                 | Effect::BindTargetSlot { body, .. }
                 | Effect::BindTargetObjects { body, .. }
                 | Effect::BindScratch { body, .. }
