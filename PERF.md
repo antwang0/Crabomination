@@ -3015,6 +3015,25 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01QFHGia`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: the combat-damage trigger loop
+tests one more `matches!` per (listener, kind) and, for the two
+recipient-agnostic kinds only, a step-set lookup; one more `debug_flags`
+read per attacker hitting a player (`remembers_combat_victims_by_name`);
+`ColdState::combat_victims_by_name` (cold, written only for Gollum).
+4-core container, release-fast, tip 425b03c7b.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 games_per_s 288.7-302 (box noise); determinism ok; rss 34.1
+two-player pools cube / sos / sealed x 300, seed 75001: 7,500 games, all decided
+pod              4 seats x 1,000 (31001) and 6 seats x 600 (31002), all decided;
+                 every deck 1-183 in four-seat blocks x 100 (seeds 31100+):
+                 4,600, all decided, zero panics
+suite            23,847 / 0 / 5; workspace clippy 0
+```
+
 ### 2026-10-03 (Commander session `01HA5hiK`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `SpellCast` scan per trigger
