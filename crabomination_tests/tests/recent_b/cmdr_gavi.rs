@@ -364,6 +364,19 @@ fn akim_makes_one_bird_a_turn_and_doubles_tokens() {
     assert!(!g.permanent_has_keyword(akim, &Keyword::DoubleStrike), "tokens only");
 }
 
+/// "Whenever you create one or more tokens for the first time each turn":
+/// tokens made before Akim arrived spend the turn's trigger.
+#[test]
+fn akim_counts_tokens_made_before_it_arrived() {
+    let mut g = main_phase(2);
+    let tok = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, tok, &[]).expect("two Soldiers first");
+    g.add_card_to_battlefield(0, catalog::akim_the_soaring_wind());
+    let tok = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, tok, &[]).expect("two more");
+    assert_eq!(count_named(&g, 0, "Bird"), 0, "not the first time this turn");
+}
+
 /// Descend upon the Sinful exiles every creature; with delirium (CR 207.2c)
 /// an Angel is made.
 #[test]

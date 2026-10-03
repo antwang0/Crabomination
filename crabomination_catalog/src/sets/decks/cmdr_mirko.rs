@@ -6,8 +6,6 @@
 //! - **Marvo, Deep Operative** — "whenever you win a clash" rides its own
 //!   attack clash (the deck's only clash) rather than triggering on any clash,
 //!   and the clash is with the most hostile opponent, not the defending player.
-//! - **Whispering Snitch** — "for the first time each turn" reads as once per
-//!   turn, so a surveil before it entered doesn't use up the turn's trigger.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CaseData, CounterType, CreatureType,
@@ -320,15 +318,17 @@ pub fn thoughtbound_phantasm() -> CardDefinition {
 
 /// Whispering Snitch — {1}{B} Creature — Vampire Rogue 1/3. Whenever you
 /// surveil for the first time each turn, this creature deals 1 damage to each
-/// opponent and you gain 1 life.
-///
-/// ⚠ Residual: read as once per turn, so a surveil before it entered doesn't
-/// use up the turn's trigger.
+/// opponent and you gain 1 life. A surveil before it entered spends the turn's
+/// trigger.
 pub fn whispering_snitch() -> CardDefinition {
     let mut trigger = on_surveil(Effect::Seq(vec![
         Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
         Effect::GainLife { who: Selector::You, amount: Value::ONE },
     ]));
+    trigger.event = trigger.event.with_filter(Predicate::FirstBatchThisTurn {
+        who: PlayerRef::You,
+        kind: crate::effect::FirstBatchKind::Surveiled,
+    });
     trigger.event.once_per_turn = true;
     CardDefinition {
         triggered_abilities: vec![trigger],

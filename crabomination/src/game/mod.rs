@@ -175,6 +175,8 @@ mod cast_watch;
 mod absorb;
 // CR 614.12 — static grants read as a permanent enters.
 mod granted_entry;
+// "For the first time each turn" batch tallies.
+mod first_each_turn;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -23212,6 +23214,7 @@ impl GameState {
     }
 
     fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
+        self.tally_first_each_turn_batches(events);
         // CR 400.7 — a card that left a graveyard is a new object: if it
         // isn't back in one, it no longer counts as "put there from the
         // battlefield this turn" when it next arrives (Syr Konrad, Disa). The

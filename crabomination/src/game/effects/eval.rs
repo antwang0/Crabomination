@@ -2492,6 +2492,16 @@ impl GameState {
                     .map(|p| self.players[p].life_gained_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::FirstBatchThisTurn { who, kind } => self
+                .resolve_player(who, ctx)
+                .map(|p| {
+                    let pl = &self.players[p];
+                    match kind {
+                        crate::effect::FirstBatchKind::TokensCreated => pl.token_batches_this_turn == 1,
+                        crate::effect::FirstBatchKind::Surveiled => pl.surveil_batches_this_turn == 1,
+                    }
+                })
+                .unwrap_or(false),
             Predicate::FirstLifeGainThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .map(|p| !self.players[p].gained_life_earlier_this_turn)

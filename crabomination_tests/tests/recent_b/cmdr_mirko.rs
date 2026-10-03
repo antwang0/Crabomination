@@ -450,6 +450,17 @@ fn whispering_snitch_once_per_turn() {
     assert_eq!(g.players[0].life, 21);
 }
 
+/// "For the first time each turn": a surveil before the Snitch entered
+/// spends the turn's trigger.
+#[test]
+fn whispering_snitch_counts_a_surveil_before_it_arrived() {
+    let mut g = pod(2);
+    surveil(&mut g, 1, vec![]);
+    g.add_card_to_battlefield(0, catalog::whispering_snitch());
+    surveil(&mut g, 1, vec![]);
+    assert_eq!(g.players[1].life, 20);
+}
+
 /// Final-Word Phantom — sorceries at instant speed in an opponent's end step,
 /// but not in their upkeep.
 #[test]

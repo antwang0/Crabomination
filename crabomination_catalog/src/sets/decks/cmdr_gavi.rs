@@ -2,10 +2,6 @@
 //! Warden) needed beyond what the catalog had (Descend upon the Sinful
 //! landed first with Desert Bloom, `cmdr_yuma.rs`). Tests in
 //! `tests/recent_b/cmdr_gavi.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Akim, the Soaring Wind** — "the first time each turn" counts from when
-//!   Akim is on the battlefield: tokens made earlier that turn don't use it up.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
@@ -113,14 +109,18 @@ pub fn gavi_nest_warden() -> CardDefinition {
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 /// Akim, the Soaring Wind — flying; your first tokens each turn add a 1/1
-/// flying Bird; {3}{U}{R}{W}: your creature tokens gain double strike.
-/// Residual: "the first time each turn" is counted from Akim's arrival — the
-/// trigger is once per turn, so tokens made before it entered don't spend it.
+/// flying Bird (a batch before Akim arrived spends it); {3}{U}{R}{W}: your
+/// creature tokens gain double strike.
 pub fn akim_the_soaring_wind() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
+                .with_filter(Predicate::FirstBatchThisTurn {
+                    who: PlayerRef::You,
+                    kind: crate::effect::FirstBatchKind::TokensCreated,
+                })
+                .once_per_turn(),
             effect: make(token("Bird", vec![Color::White], 1, 1, vec![CreatureType::Bird], vec![Keyword::Flying])),
         }],
         activated_abilities: vec![ActivatedAbility {

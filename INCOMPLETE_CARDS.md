@@ -2034,7 +2034,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
-| 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
 | 🟡 Phenomenon Investigators | Miracle Worker (DSC) | Doubt's "return a nonland permanent you own" targets it. |
@@ -2111,7 +2110,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
-| 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |

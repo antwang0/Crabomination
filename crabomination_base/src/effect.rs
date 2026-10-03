@@ -1681,6 +1681,14 @@ impl Value {
 pub const UNBOUND_OBJECT_STAMP: u64 = u64::MAX;
 
 /// A boolean game-state condition (for `Effect::If` / cast-time checks).
+
+/// The event batches [`Predicate::FirstBatchThisTurn`] counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FirstBatchKind {
+    TokensCreated,
+    Surveiled,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Predicate {
     #[default]
@@ -1812,6 +1820,12 @@ pub enum Predicate {
     /// Pair with `once_per_turn()` so a multi-event first batch still
     /// fires only once. Backed by `Player.gained_life_earlier_this_turn`.
     FirstLifeGainThisTurn { who: PlayerRef },
+    /// The trigger's batch is `who`'s first of `kind` this turn — "whenever
+    /// you create one or more tokens / surveil for the first time each turn"
+    /// (Akim, the Soaring Wind; Whispering Snitch). A batch before the
+    /// listener arrived still counts. Backed by the per-turn batch tallies
+    /// `GameState::tally_first_each_turn_batches` keeps.
+    FirstBatchThisTurn { who: PlayerRef, kind: FirstBatchKind },
     /// CR 700.14 — true exactly on the spell-cast whose payment first
     /// pushes the active player's running mana-spent-on-spells total to
     /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the
