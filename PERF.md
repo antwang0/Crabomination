@@ -3134,6 +3134,32 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01BaSouG`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: `distinct_target_range` (one
+`SlotGroups` test where `distinct_target_count` was read), `pick_is_gain`
+reading through `WithX` / reflexive steals, one `ctx.trigger_source` test per
+inline `Reflexive`, a target-legality filter on `OpponentChoosesPermanentThen`
+and `PlayerChoosesToDestroy` candidates; `ColdState::combat_damage_prevented_
+to_matching_this_turn` (cold, written only by Pack Leader, one `is_empty` per
+incoming combat hit). 4-core container, release-fast, tip da4adeb45.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 games_per_s 359.3 (box); determinism ok; rss 33.1
+two-player pools cube / sos / sealed x 300, seed 75101: 7,500 games, 7,490
+                 decided, 10 cube CR 104.4a draws (75001: 0, 75002: 2 — the
+                 same draws earlier blocks saw)
+pod              3 / 4 / 6 / 8 seats x 600 / 1,000 / 600 / 300 (seeds 41003 /
+                 41001 / 41002 / 41008): all decided, zero panics, turns/game
+                 32.27 / 45.85 / 69.58 / 95.98; Marath / Rin and Seri / Kathril
+                 / Inalla x 500 (41101, --card-census): all decided, nothing
+                 unplayed; six seats with Sefris and Abaddon x 300 (41102): 298
+                 decided, 2 CR 104.4a draws
+suite            23,876 / 2 / 5 (both the target audits, fixed at da4adeb45 —
+                 OpponentChoosesPermanentThen rebinds its body's targets)
+```
+
 ### 2026-10-03 (Commander session `01QFHGia`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: the combat-damage trigger loop
