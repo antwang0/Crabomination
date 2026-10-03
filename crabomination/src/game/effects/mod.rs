@@ -2195,6 +2195,19 @@ impl GameState {
             let yard_card = matches!(orig, crate::game::types::Target::Permanent(id)
                 if self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == *id)));
             if yard_card && !legal.is_empty() {
+                // …and to one no other object on the stack already names, so
+                // Bygone Marvels' two copies don't collide with each other.
+                let named = |t: &crate::game::types::Target| {
+                    self.stack.iter().any(|si| match si {
+                        crate::game::types::StackItem::Spell { target, additional_targets, .. }
+                        | crate::game::types::StackItem::Trigger { target, additional_targets, .. } => {
+                            target.as_ref() == Some(t) || additional_targets.contains(t)
+                        }
+                    })
+                };
+                let (fresh, claimed): (Vec<_>, Vec<_>) = legal.drain(..).partition(|t| !named(t));
+                legal = fresh;
+                legal.extend(claimed);
                 legal.push(orig.clone());
             } else if hostile_at_self && !legal.is_empty() {
                 let mine = |t: &crate::game::types::Target| match t {

@@ -2017,7 +2017,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | its two modes are two abilities (same cost and timing; nothing in the pod reads the difference). |
 | 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
-| 🟡 Bygone Marvels | Explorers of the Deep (LCC) | the Descend 8 copies' new targets are the decider's; the auto-decider keeps the original's, so that copy returns nothing. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |

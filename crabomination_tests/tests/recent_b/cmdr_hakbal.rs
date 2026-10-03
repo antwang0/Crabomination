@@ -381,3 +381,17 @@ fn bygone_marvels_returns_and_exiles() {
     assert!(g.exile.iter().any(|c| c.definition.name == "Bygone Marvels"));
 }
 
+/// Bygone Marvels descended 8: its two copies default to other graveyard
+/// cards, so three permanent cards come back, not one (`repoint_copy_slot`).
+#[test]
+fn bygone_marvels_copies_return_other_cards() {
+    let mut g = pod(2);
+    let picks: Vec<CardId> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::grizzly_bears())).collect();
+    for _ in 0..6 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let bm = g.add_card_to_hand(0, catalog::bygone_marvels());
+    flood(&mut g, 0);
+    cast(&mut g, 0, bm, Some(Target::Permanent(picks[0]))).expect("cast");
+    assert_eq!(g.players[0].hand.len(), 3, "three permanent cards");
+}

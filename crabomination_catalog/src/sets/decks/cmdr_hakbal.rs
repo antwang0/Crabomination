@@ -111,7 +111,7 @@ pub fn hakbal_of_the_surging_soul() -> CardDefinition {
 
 /// Bygone Marvels — return target permanent card from your graveyard to hand;
 /// Descend 8: the cast copies it twice, new targets allowed. Exiles itself.
-/// Residual: The auto-decider keeps a copy's original target.
+/// (The copies default to other cards, `repoint_copy_slot`.)
 pub fn bygone_marvels() -> CardDefinition {
     CardDefinition {
         name: "Bygone Marvels",
