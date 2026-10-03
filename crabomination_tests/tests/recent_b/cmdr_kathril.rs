@@ -299,12 +299,44 @@ fn yannik_exiles_the_chosen_creature() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
     let etb = catalog::yannik_scavenging_sentinel().triggered_abilities[0].effect.clone();
-    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(yannik, 0, None, 0);
-    ctx.targets = vec![Target::Permanent(wurm)];
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(yannik, 0, None, 0);
     g.resolve_effect(&etb, &ctx).expect("etb");
-    drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "the chosen one is exiled");
+    // CR 603.12 — "when you do" is its own trigger, targeted after the exile.
+    retarget_reflexive(&mut g, vec![Target::Permanent(wurm)]);
+    drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Point the reflexive trigger on top of the stack at `targets`, as its
+/// controller would pick them.
+fn retarget_reflexive(g: &mut GameState, targets: Vec<Target>) {
+    match g.stack.last_mut() {
+        Some(crabomination::game::types::StackItem::Trigger { target, additional_targets, .. }) => {
+            *target = targets.first().cloned();
+            *additional_targets = targets.into_iter().skip(1).collect();
+        }
+        _ => panic!("no reflexive trigger on the stack"),
+    }
+}
+
+/// The 2020-04-17 ruling: X is the exiled creature's power "as it last
+/// existed on the battlefield" — counters and pumps included.
+#[test]
+fn yannik_reads_the_exiled_creatures_last_power() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let yannik = g.add_card_to_battlefield(0, catalog::yannik_scavenging_sentinel());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let etb = catalog::yannik_scavenging_sentinel().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(yannik, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    retarget_reflexive(&mut g, vec![Target::Permanent(wurm)]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::PlusOnePlusOne), 5, "2 + 3 counters");
 }
 
 /// CR 608.2d / 111.7 — the same with Yannik's controller PROMPTING and the
@@ -322,12 +354,11 @@ fn yannik_prompting_controller_picks_and_divides() {
     g.battlefield_find_mut(bear).unwrap().is_token = true;
     g.players[0].wants_ui = true;
     let etb = catalog::yannik_scavenging_sentinel().triggered_abilities[0].effect.clone();
-    // The bear is both a target and the creature exiled.
     g.stack.push(crabomination::game::types::StackItem::Trigger {
         source: yannik,
         controller: 0,
         effect: Box::new(etb),
-        target: Some(Target::Permanent(wurm)),
+        target: None,
         mode: None,
         x_value: 0,
         converged_value: 0,
@@ -336,7 +367,7 @@ fn yannik_prompting_controller_picks_and_divides() {
         event_amount: 0,
         trigger_player: None,
         intervening_if: None,
-        additional_targets: vec![Target::Permanent(bear), Target::Permanent(elf)],
+        additional_targets: vec![],
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
@@ -345,6 +376,8 @@ fn yannik_prompting_controller_picks_and_divides() {
     let _ = g.resolve_top_of_stack();
     assert_eq!(g.pending_decision.as_ref().expect("the exile pick").acting_player(), 0);
     g.submit_decision(DecisionAnswer::Cards(vec![bear])).expect("exile the bear");
+    retarget_reflexive(&mut g, vec![Target::Permanent(wurm), Target::Permanent(elf)]);
+    let _ = g.resolve_top_of_stack();
     assert!(g.pending_decision.is_some(), "the division");
     g.submit_decision(DecisionAnswer::DamageDivision(vec![2, 0])).expect("all on the wurm");
     drain_stack(&mut g);

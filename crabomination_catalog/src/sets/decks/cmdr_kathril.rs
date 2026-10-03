@@ -562,37 +562,37 @@ pub fn vitality_hunter() -> CardDefinition {
 }
 
 /// Yannik, Scavenging Sentinel — partner with Nikara; vigilance; entering,
-/// exile another creature you control until Yannik leaves, then distribute
-/// its power in +1/+1 counters.
-/// Residual: X reads the exiled card's printed power, not its last power on
-/// the battlefield.
+/// exile another creature you control until Yannik leaves; when you do,
+/// distribute its power in +1/+1 counters. X is read off the creature before
+/// the exile (its last power on the battlefield, 2020-04-17 ruling), and the
+/// counters' targets are picked after it (the reflexive trigger, CR 603.12).
 pub fn yannik_scavenging_sentinel() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::PartnerWith("Nikara, Lair Scavenger".into()), Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            // "Exile another creature you control" is chosen as it resolves.
-            crate::effect::shortcut::choose_one_then(
-                Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-                PlayerRef::You,
-                Effect::ExileUntilSourceLeaves {
-                    what: crate::effect::shortcut::chosen_one(),
-                    return_to: ExileReturnZone::Battlefield,
-                },
-            ),
-            // X is read once, before the division can park: an exiled token
-            // ceases to exist meanwhile and "still lets the ability
-            // distribute counters" (2020-04-17 ruling).
+        triggered_abilities: vec![etb(crate::effect::shortcut::choose_one_then(
+            Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            PlayerRef::You,
+            // X is pinned before the exile: an exiled token ceases to exist
+            // and "still lets the ability distribute counters".
             Effect::WithX {
-                x: Value::PowerOf(Box::new(Selector::CardExiledWithSource)),
-                body: Box::new(Effect::DistributeCounters {
-                    total: Value::XFromCost,
-                    counter: CounterType::PlusOnePlusOne,
-                    filter: R::Creature,
-                    max_targets: 5,
-                }),
+                x: Value::PowerOf(Box::new(crate::effect::shortcut::chosen_one())),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ExileUntilSourceLeaves {
+                        what: crate::effect::shortcut::chosen_one(),
+                        return_to: ExileReturnZone::Battlefield,
+                    },
+                    Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DistributeCounters {
+                            total: Value::XFromCost,
+                            counter: CounterType::PlusOnePlusOne,
+                            filter: R::Creature,
+                            max_targets: 5,
+                        }),
+                    },
+                ])),
             },
-        ]))],
+        ))],
         ..creature(
             "Yannik, Scavenging Sentinel",
             cost(&[generic(2), g(), w()]),

@@ -2108,9 +2108,8 @@ missing; the primitives: `StaticEffect::TokensMayBecome` (Jinnie Fay's CR
 nonlands). Mirror Entity landed in Open Hostility at the same time; one
 definition stays. Residuals: **Highcliff Felidar** destroys one opponent at a
 time and picks among ties itself; **Jinnie Fay** always takes a bigger body
-and never replaces a noncreature token; **Pack Leader**'s shield covers the
-Dogs present as it resolves; **Showdown of the Skalds** II/III choose the
-counter's target on resolution. A debug pod beside Nahiri / Tegwyll /
+and never replaces a noncreature token (Pack Leader's shield and Showdown
+of the Skalds' counter target since fixed). A debug pod beside Nahiri / Tegwyll /
 N'ghathrod (seed 9501, 30 games) decided 30/30, zero panics; a 120-game census
 beside Ghired / Kynaios / Emmara (seed 9502) decided 120/120 and leaves no card
 of the four lists unplayed, Rin and Seri winning 24.2 %.
@@ -2348,7 +2347,7 @@ Wanderer is one `PumpTeamIf` per keyword. ⚠ **An "up to N target cards"
 slot named one graveyard card twice** (CR 115.3): Ever After was never cast
 until the graveyard sweep skipped cards an earlier slot took. Residuals:
 **Cairn Wanderer**, **Slippery Bogbonder**, **Tayam**, **Vitality Hunter**,
-**Yannik**, **Archon of Valor's Reach** (INCOMPLETE_CARDS). Release pods
+**Archon of Valor's Reach** (INCOMPLETE_CARDS; Yannik since fixed). Release pods
 beside Kasla / Ellivere / Zinnia (seed 10302, 1,000 games): 1,000 decided,
 Kathril 21.8 %, and the census leaves no card of the four lists unplayed;
 strict debug pods (seeds 10303/10304, 120 games) decided 120/120. Suite

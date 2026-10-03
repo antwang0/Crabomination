@@ -363,7 +363,7 @@ Ajani's Chosen's Aura move (offered for an Aura on your own creature only);
 Comeuppance's reflection; Conduit of Worlds' {T} cast (residual: a spell cast
 between the activation and that cast isn't refused); Deep Analysis' target
 player; Mishra's Factory's pump; Astrologian's Planisphere's third draw;
-Fiery Justice's life (now the healthiest opponent, not the one being raced).
+Fiery Justice's life (a targeted opponent since `SlotGroups`).
 
 Read and left open: none. Telling Time, Zack Fair, Waste Management and
 Quandrix Command's "target player" (a player slot inside the modal cast, as
@@ -1924,8 +1924,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 Highcliff Felidar | Raining Cats and Dogs (SLD) | the destructions run one opponent at a time, not simultaneously; the engine picks among tied creatures. |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
-| 🟡 Pack Leader | Raining Cats and Dogs (SLD) | the shield covers the Dogs you control as the trigger resolves, not one that arrives later that turn. |
-| 🟡 Showdown of the Skalds | Raining Cats and Dogs (SLD) | chapters II and III choose the counter's target as each trigger resolves. |
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
@@ -1939,7 +1937,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
-| 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | X reads the exiled card's printed power, not its last power on the battlefield. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 
