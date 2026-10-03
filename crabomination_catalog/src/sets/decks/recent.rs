@@ -5507,24 +5507,6 @@ pub fn pawpatch_recruit() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Offspring(cost(&[generic(2)]))],
         triggered_abilities: vec![
-            // Offspring (CR 702.175): if its cost was paid, mint a 1/1 copy.
-            etb(Effect::If {
-                cond: Predicate::SpellWasKicked,
-                then: Box::new(Effect::CreateTokenCopyOf {
-                    extra_keywords: vec![],
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    source: Selector::This,
-                    extra_creature_types: vec![],
-                    extra_card_types: vec![],
-                    override_pt: Some((1, 1)),
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
             TriggeredAbility {
                 // "Whenever a CREATURE you control becomes the target …".
                 event: EventSpec::new(

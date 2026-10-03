@@ -469,24 +469,6 @@ pub fn steelburr_champion() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Offspring(cost(&[generic(1), w()]))],
         triggered_abilities: vec![
-            // CR 702.175 — the offspring copy, when its cost was paid.
-            etb(Effect::If {
-                cond: Predicate::SpellWasKicked,
-                then: Box::new(Effect::CreateTokenCopyOf {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    source: Selector::This,
-                    extra_creature_types: vec![],
-                    extra_card_types: vec![],
-                    override_pt: Some((1, 1)),
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                    extra_keywords: vec![],
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Noncreature },

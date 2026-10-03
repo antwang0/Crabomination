@@ -171,6 +171,7 @@ mod stack_ability;
 mod trigger_time;
 mod cast_watch;
 mod live_pt;
+mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
 mod as_attached;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
@@ -23354,6 +23355,7 @@ impl GameState {
         }
         self.fire_lose_control_delayed(events);
         self.fire_cast_watch_delayed(events);
+        self.fire_offspring_triggers(events);
         self.apply_as_attached_choices(events);
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
         // Most (permanent, trigger) pairs are ones no event in the batch can

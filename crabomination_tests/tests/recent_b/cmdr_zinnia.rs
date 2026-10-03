@@ -436,3 +436,27 @@ fn pollywog_prodigy_draws_off_cheap_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// CR 702.175a — a granted offspring is the creature's own ability once paid:
+/// Zinnia leaving while the spell is on the stack doesn't lose the copy.
+#[test]
+fn zinnia_offspring_survives_zinnia_leaving() {
+    let mut g = pod(2);
+    let z = g.add_card_to_battlefield(0, catalog::zinnia_valleys_voice());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("offspring paid");
+    let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&crabomination::effect::Effect::Exile { what: crabomination::effect::Selector::ExactObjects(vec![z]) }, &ctx)
+        .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2);
+}

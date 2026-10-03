@@ -18903,24 +18903,6 @@ pub fn thundertrap_trainer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Offspring(cost(&[generic(4)]))],
         triggered_abilities: vec![
-            // Offspring (CR 702.175): if its cost was paid, mint a 1/1 copy.
-            etb(Effect::If {
-                cond: Predicate::SpellWasKicked,
-                then: Box::new(Effect::CreateTokenCopyOf {
-                    extra_keywords: vec![],
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    source: Selector::This,
-                    extra_creature_types: vec![],
-                    extra_card_types: vec![],
-                    override_pt: Some((1, 1)),
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
             etb(Effect::RevealTopTakeMatchingToHand {
                 who: PlayerRef::You,
                 count: Value::Const(4),

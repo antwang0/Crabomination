@@ -56,37 +56,10 @@ fn alliance(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// CR 702.175 — the 1/1 token copy an offspring payment buys.
-fn offspring_copy(source: Selector) -> Effect {
-    Effect::CreateTokenCopyOf {
-        who: PlayerRef::You,
-        count: Value::ONE,
-        source,
-        extra_creature_types: vec![],
-        extra_card_types: vec![],
-        override_pt: Some((1, 1)),
-        override_colors: None,
-        enters_tapped: false,
-        non_legendary: false,
-        legendary: false,
-        extra_keywords: vec![],
-    }
-}
-
-/// A printed offspring: the ETB copy when its cost was paid.
-fn offspring_etb() -> TriggeredAbility {
-    etb(Effect::If {
-        cond: Predicate::SpellWasKicked,
-        then: Box::new(offspring_copy(Selector::This)),
-        else_: Box::new(Effect::Noop),
-    })
-}
-
 /// Zinnia, Valley's Voice — flying; +X/+0 for your other creatures with base
-/// power 1; creature spells you cast gain offspring {2}.
-/// Residual: the granted copy is Zinnia's own trigger, so it is lost if Zinnia
-/// leaves before the creature enters; a creature with its own kicker or
-/// offspring gets no second one.
+/// power 1; creature spells you cast gain offspring {2} — the copy is the
+/// creature's own trigger (`game/offspring.rs`), Zinnia gone or not.
+/// Residual: a creature with its own kicker or offspring gets no second one.
 pub fn zinnia_valleys_voice() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -105,12 +78,6 @@ pub fn zinnia_valleys_voice() -> CardDefinition {
                 effect: StaticEffect::CreatureSpellsGainOffspring { cost: cost(&[generic(2)]) },
             },
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::PaidGrantedOffspring) },
-            ),
-            effect: offspring_copy(Selector::TriggerSource),
-        }],
         ..creature("Zinnia, Valley's Voice", cost(&[u(), r(), w()]), vec![CreatureType::Bird, CreatureType::Bard], 1, 3)
     }
 }
@@ -145,10 +112,10 @@ pub fn arthur_marigold_knight() -> CardDefinition {
 pub fn agate_instigator() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Offspring(cost(&[generic(1), r()]))],
-        triggered_abilities: vec![
-            offspring_etb(),
-            alliance(Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE }),
-        ],
+        triggered_abilities: vec![alliance(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+        })],
         ..creature("Agate Instigator", cost(&[generic(1), r()]), vec![CreatureType::Lizard, CreatureType::Rogue], 1, 3)
     }
 }

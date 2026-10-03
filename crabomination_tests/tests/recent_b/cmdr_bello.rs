@@ -407,3 +407,24 @@ fn wildsear_cascades_enchantments_from_hand() {
         "cascaded into the Bolt"
     );
 }
+
+/// CR 702.175a — Offspring: cast with its offspring cost paid, the creature
+/// makes a 1/1 token copy of itself as it enters.
+#[test]
+fn prosperous_bandit_offspring_makes_a_one_one_copy() {
+    let mut g = main_phase();
+    flood(&mut g);
+    let bandit = g.add_card_to_hand(0, catalog::prosperous_bandit());
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: bandit,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("offspring paid");
+    drain_stack(&mut g);
+    let copies: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Prosperous Bandit").collect();
+    assert_eq!(copies.len(), 2);
+    assert!(copies.iter().any(|c| c.is_token && c.power() == 1 && c.toughness() == 1));
+}
