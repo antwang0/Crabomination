@@ -2221,7 +2221,7 @@ impl GameState {
     /// CR 115.7 — repoint one declared target slot. Slot 0 walks the effect's
     /// own legal-target enumeration; later slots filter the same pool by that
     /// slot's printed requirement.
-    fn retarget_slot(
+    pub(crate) fn retarget_slot(
         &mut self,
         effect: &crate::effect::Effect,
         name: &str,
@@ -34631,6 +34631,11 @@ impl GameState {
                         matches!(s, crate::game::types::StackItem::Spell { card, .. }
                             if card.id == sid)
                     }) else {
+                        // CR 115.7d — "spell or ability": an ability on the
+                        // stack, by its own id, repointed slot by slot.
+                        if crate::game::types::is_stack_ability_id(sid) {
+                            self.choose_new_targets_for_ability(sid, chooser);
+                        }
                         continue;
                     };
                     let (def, orig_target, orig_extra) =

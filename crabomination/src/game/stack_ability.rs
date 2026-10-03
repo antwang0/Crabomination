@@ -137,6 +137,19 @@ impl GameState {
             // CR 115.5 — not a spell; never the resolving object itself.
             R::IsSpellOnStack | R::Player | R::OpponentPlayer => false,
             R::ControlledByYou => *owner == controller,
+            // Emissary of Grudges: the ability's controller is the chosen one.
+            R::ControlledByChosenPlayerOfSource => source
+                .and_then(|s| self.battlefield_find(s))
+                .and_then(|c| c.chosen_player)
+                .is_some_and(|p| p == *owner),
+            // "targets you or a permanent you control" (CR 115.7) — the
+            // ability's targets, read as `SpellTargetsControllerOrControlled`
+            // reads a spell's.
+            R::SpellTargetsControllerOrControlled => target.iter().chain(additional_targets.iter()).any(|t| match t {
+                Target::Player(p) => *p == controller,
+                Target::Permanent(id) => self.battlefield_find(*id).is_some_and(|o| o.controller == controller),
+            }),
+            R::ControlledByOpponent => !self.same_team(*owner, controller),
             R::AbilityTargetsMatching(inner) => target
                 .iter()
                 .chain(additional_targets.iter())
@@ -163,5 +176,30 @@ impl GameState {
             .filter(|aid| self.evaluate_requirement_on_ability(req, *aid, controller, source))
             .map(Target::Permanent)
             .collect()
+    }
+
+    /// CR 115.7d — `chooser` chooses new targets for the stack ability `aid`,
+    /// each declared slot against the ability's own slot filter.
+    pub(crate) fn choose_new_targets_for_ability(&mut self, aid: CardId, chooser: usize) {
+        let Some(pos) = self.stack_ability_pos(aid, None) else { return };
+        let StackItem::Trigger { effect, source, target, additional_targets, .. } = &self.stack[pos] else { return };
+        if target.is_none() {
+            return;
+        }
+        let (effect, source, orig, extra) = ((**effect).clone(), *source, target.clone(), additional_targets.clone());
+        let name = self.find_card_anywhere(source).map_or("ability", |c| c.definition.name);
+        let first = self.retarget_slot(&effect, name, chooser, 0, &orig, &[]);
+        let mut taken: Vec<Target> = first.iter().cloned().collect();
+        for (i, t) in extra.iter().enumerate() {
+            let pick = self
+                .retarget_slot(&effect, name, chooser, (i + 1) as u8, &Some(t.clone()), &taken)
+                .unwrap_or_else(|| t.clone());
+            taken.push(pick);
+        }
+        let new_extra = taken.split_off(first.iter().len());
+        if let StackItem::Trigger { target, additional_targets, .. } = &mut self.stack[pos] {
+            *target = first;
+            *additional_targets = new_extra;
+        }
     }
 }

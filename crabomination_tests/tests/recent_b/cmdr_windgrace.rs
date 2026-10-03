@@ -411,3 +411,32 @@ fn emissary_of_grudges_answers_only_the_chosen_player() {
     g.priority.player_with_priority = 0;
     assert!(g.would_accept(redirect(from_one)), "seat 1's spell is");
 }
+
+/// CR 115.7d — Emissary of Grudges redirects an *ability* too ("target spell
+/// or ability"), named by its own stack id: the chosen opponent's Prodigal
+/// Sorcerer ping at our Bear goes back at its controller.
+#[test]
+fn emissary_of_grudges_redirects_an_ability() {
+    let mut g = pod(4);
+    let em = g.add_card_to_battlefield(0, catalog::emissary_of_grudges());
+    g.battlefield_find_mut(em).unwrap().chosen_player = Some(1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pinger = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("ping the bear");
+    let ping = g.top_ability_of(pinger).expect("the ping is on the stack");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: em, ability_index: 0, target: Some(Target::Permanent(ping)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("redirect the ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the Bear was spared");
+    assert_eq!(g.players[1].life, life - 1, "the ping hit its controller");
+}
