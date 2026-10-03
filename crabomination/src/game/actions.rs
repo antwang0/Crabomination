@@ -706,14 +706,16 @@ impl GameState {
             return Some(crate::card::AlternativeCost { once_per_turn_zero: true, ..Default::default() });
         }
         // Darksteel Monolith — once each turn, {0} for a matching spell cast
-        // from hand.
+        // from hand; One with the Multiverse's also covers the library top
+        // (the card hops into hand tagged `HopFrom::LibraryTop`).
+        let from_library_top = self.casting_hop == Some((card.id, crate::game::HopFrom::LibraryTop));
         if matches!(zone, AltCastZone::Hand)
             && !self.players[p].zero_alt_cast_used_this_turn
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
                         crate::effect::StaticEffect::ZeroAlternativeCostOncePerTurn { filter } => {
-                            self.evaluate_requirement_on_card(filter, card, p)
+                            !from_library_top && self.evaluate_requirement_on_card(filter, card, p)
                         }
                         crate::effect::StaticEffect::ZeroAlternativeCostOncePerYourTurn { filter } => {
                             self.active_player_idx == p && self.evaluate_requirement_on_card(filter, card, p)

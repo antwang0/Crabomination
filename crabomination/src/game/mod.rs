@@ -187,6 +187,8 @@ mod for_each_chosen;
 mod attached_rename;
 // The Master, Multiplied: your triggers can't remove your creature tokens.
 mod token_shield;
+// CR 118.9 — an alternative cost for a spell cast off the library top.
+mod library_top_alt;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -20043,9 +20045,15 @@ impl GameState {
                 additional_targets,
                 mode,
                 x_value,
-            } => self.cast_spell_alternative_from(
-                crate::game::actions::AltCastZone::Hand, card_id, pitch_card, target, additional_targets, mode, x_value,
-            ),
+            } => {
+                if self.alt_cast_from_library_top(self.priority.player_with_priority, card_id) {
+                    self.cast_alternative_from_library_top(card_id, pitch_card, target, additional_targets, mode, x_value)
+                } else {
+                    self.cast_spell_alternative_from(
+                        crate::game::actions::AltCastZone::Hand, card_id, pitch_card, target, additional_targets, mode, x_value,
+                    )
+                }
+            }
             GameAction::CastFlashback {
                 card_id,
                 target,
