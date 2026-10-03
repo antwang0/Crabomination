@@ -1934,7 +1934,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
-| 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
@@ -1994,7 +1993,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
-| 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
+| 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own. |
 | 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
 | 🟡 Doomsday Confluence | Masters of Evil (WHO) | each of the X modes is chosen as it resolves, not all on cast. |
 | 🟡 Genesis of the Daleks | Masters of Evil (WHO) | chapter IV counts the Daleks it destroyed, not every Dalek that died this turn. |
@@ -2044,7 +2043,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
-| 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
 | 🟡 Phenomenon Investigators | Miracle Worker (DSC) | Doubt's "return a nonland permanent you own" targets it. |
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
@@ -2064,7 +2062,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |
-| 🟡 Road of Return | Faceless Menace (C19) | an unentwined cast's mode is the engine's pick. |
 | 🟡 Vesuvan Shapeshifter | Faceless Menace (C19) | copies only as it enters, not as it's turned face up; no upkeep turn-face-down. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
@@ -2103,7 +2100,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
-| 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
 | 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
 | 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
@@ -2132,7 +2128,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
-| 🟡 Watcher of Hours | Revenant Recon (MKC) | removing the last time counter casts it at once, so that removal doesn't surveil. |
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
