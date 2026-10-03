@@ -2922,6 +2922,7 @@ impl GameState {
                     }
                 }
                 self.apply_etb_type_riders(cid, p);
+                self.apply_etb_keyword_counters(cid, p, events);
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {
                     let mut etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);

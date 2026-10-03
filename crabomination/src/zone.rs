@@ -851,6 +851,7 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
                 | S::TypeEntersWithCountersPerControlled { .. }
                 | S::TypedCreaturesEnterWithExtraCounter { .. }
                 | S::MatchingEntersWithExtraCounters { .. }
+                | S::MatchingEntersWithKeywordCounter { .. }
                 | S::MatchingEntersWithCountersPer { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
                 | S::OtherCreaturesEnterAsAdditionalType { .. }

@@ -122,6 +122,7 @@ pub mod affordances;
 /// "as this permanent enters" replacements through.
 #[doc(hidden)]
 pub mod as_enters;
+mod etb_keyword_counters;
 #[doc(hidden)]
 pub mod combat;
 // CR 508.1d — "attack [this] if able" during a player's next turn.
@@ -10460,6 +10461,7 @@ impl GameState {
         // creatures), and so do the creating effect's own "with N counters".
         // Skipped while counters are locked (Solemnity).
         self.apply_etb_type_riders(id, ctrl);
+        self.apply_etb_keyword_counters(id, ctrl, events);
         if !self.counters_locked() {
             let minted = counters.and_then(|(kind, value, ctx)| {
                 let n = self.evaluate_value(value, ctx).max(0) as u32;
@@ -32647,6 +32649,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantCastInstantsOrSorceries
             | StaticEffect::ControllerIsStartingPlayer
             | StaticEffect::MatchingEntersWithExtraCounters { .. }
+            | StaticEffect::MatchingEntersWithKeywordCounter { .. }
             | StaticEffect::MatchingEntersWithCountersPer { .. }
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast

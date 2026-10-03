@@ -2728,6 +2728,7 @@ impl GameState {
                     }
                     if is_creature_resolve {
                         self.apply_etb_type_riders(card_id, caster);
+                        self.apply_etb_keyword_counters(card_id, caster, &mut events);
                     }
                     // CR 603.7e — one-shot "your next creature spell enters
                     // with N counters / these keywords" riders (FIN "Summon"

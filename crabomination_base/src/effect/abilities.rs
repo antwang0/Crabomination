@@ -2579,6 +2579,11 @@ pub enum StaticEffect {
     /// counters on it, where X is the number of `kind` counters on this"
     /// (Bloodspore Thrinax). The counter-count sibling of the power one.
     OtherCreaturesEnterWithCountersEqualToSourceCounters { kind: CounterType },
+    /// "Each [filter] you control enters with a `keyword` counter on it"
+    /// (Tayam's vigilance, Veiled Ascension's flying on face-down creatures):
+    /// placed as it enters (CR 122.6), by `apply_etb_keyword_counters` at the
+    /// three entry sites, not by a trigger after it.
+    MatchingEntersWithKeywordCounter { filter: SelectionRequirement, keyword: crate::card::Keyword },
     /// "Each permanent you control matching `filter` enters with `amount`
     /// additional `kind` counters on it" (Muzzio's Preparations — the filter
     /// carries `NamedBySource`, resolved against the source's chosen name).
