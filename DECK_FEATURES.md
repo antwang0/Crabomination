@@ -2847,7 +2847,8 @@ CR 707.9b); "each player chooses two … exile them until" (Foreboding
 Steamboat, CR 603.6e); Enhanced Surveillance's extra look and Eye of
 Duskmantle's pay-life casts of surveiled cards. The bot now reads a
 counterspell wrapped in an X binding as a counterspell (Counterpoint went
-uncast in the census). Residuals: **Marvo**, **Watcher of Hours**,
+uncast in the census). Residuals: ~~**Marvo**~~ (`01QFHGia`: `ClashWon`,
+defending player), **Watcher of Hours**,
 **Whispering Snitch** (INCOMPLETE_CARDS). Four-seat pods beside Cloud /
 Lathril / Pantlaza (seed 15801, 1,000) and six seats beside Sauron / Sevinne
 / Anje / Kotori / Hakbal (15802, 1,000): all decided, Mirko 16.4 / 13.7 %;

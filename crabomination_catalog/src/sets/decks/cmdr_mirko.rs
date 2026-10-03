@@ -141,21 +141,25 @@ pub fn mirko_obsessive_theorist() -> CardDefinition {
 /// Whenever Marvo attacks, clash with defending player. Whenever you win a
 /// clash, draw a card, then you may cast a spell from your hand with mana
 /// value 8 or less without paying its mana cost.
-///
-/// ⚠ Residual: the win payoff rides Marvo's own clash (the deck's only one),
-/// and the clash is with the most hostile opponent.
 pub fn marvo_deep_operative() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::ClashWithOpponent {
-            on_win: Box::new(Effect::Seq(vec![
-                draw(1),
-                Effect::MayCastFromHandFreeMatching {
-                    filter: R::Nonland,
-                    max_mv: Value::Const(8),
-                    else_: Box::new(Effect::Noop),
-                },
-            ])),
-        })],
+        triggered_abilities: vec![
+            on_attack(Effect::ClashWithOpponent {
+                on_win: Box::new(Effect::Noop),
+                with: Some(PlayerRef::DefendingPlayer),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::WonContest { clash: true }, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::MayCastFromHandFreeMatching {
+                        filter: R::Nonland,
+                        max_mv: Value::Const(8),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
         ..legend(
             "Marvo, Deep Operative",
             cost(&[generic(3), u(), b()]),

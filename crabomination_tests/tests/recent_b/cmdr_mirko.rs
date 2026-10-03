@@ -599,6 +599,42 @@ fn mirko_end_step_needs_strictly_less_power() {
     assert!(in_graveyard(&g, 0, bears), "Bears (2) isn't under Mirko's 1");
 }
 
+/// CR 701.30 — Marvo clashes with the DEFENDING player (seat 2, not the
+/// seat 1 whose top card would beat it), and "whenever you win a clash" pays
+/// off any clash of yours: Pollen Lullaby's wins draw too (CR 701.30d).
+#[test]
+fn marvo_clashes_with_defending_player_and_pays_off_any_clash() {
+    use crabomination::game::types::GameEvent;
+    let mut g = pod(3);
+    let marvo = g.add_card_to_battlefield(0, catalog::marvo_deep_operative());
+    on_top(&mut g, 0, catalog::hill_giant());
+    on_top(&mut g, 1, catalog::colossal_dreadmaw());
+    g.clear_sickness(marvo);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: marvo, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    let events = drain_stack(&mut g);
+    let revealed: Vec<usize> = events
+        .iter()
+        .filter_map(|e| match e {
+            GameEvent::TopCardRevealed { player, .. } => Some(*player),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(revealed, vec![0, 2]);
+    assert!(events.iter().any(|e| matches!(e, GameEvent::ClashWon { player: 0 })));
+    // A clash from another card: Pollen Lullaby, Hill Giant (4) vs Sol Ring.
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::marvo_deep_operative());
+    on_top(&mut g, 0, catalog::hill_giant());
+    let lullaby = g.add_card_to_hand(0, catalog::pollen_lullaby());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, 0, lullaby, None).expect("cast");
+    let giant_cast = !named(&g, 0, "Hill Giant").is_empty();
+    assert!(giant_cast || g.players[0].hand.len() == hand, "won: drew (and maybe cast) the Giant");
+}
+
 /// Marvo — winning its attack clash draws and casts a spell for free.
 #[test]
 fn marvo_wins_clash_and_casts_free() {
