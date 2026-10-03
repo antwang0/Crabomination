@@ -3518,3 +3518,24 @@ pub fn will_of_the_planeswalkers() -> Effect {
         tally: VoteTally::Majority,
     }
 }
+
+/// "(You may) attach it to a creature you control" after an Equipment was put
+/// onto the battlefield (`Selector::LastMoved`): the creature is chosen, not
+/// targeted (CR 701.3a); `may` lets the controller choose none.
+pub fn attach_moved_equipment_to_your_creature(may: bool) -> Effect {
+    use crate::card::{ArtifactSubtype, SelectionRequirement as R};
+    Effect::If {
+        cond: Predicate::EntityMatches {
+            what: Selector::LastMoved,
+            filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+        },
+        then: Box::new(choose_some_then(
+            Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            PlayerRef::You,
+            Value::ONE,
+            may,
+            Effect::Attach { what: Selector::LastMoved, to: chosen_one() },
+        )),
+        else_: Box::new(Effect::Noop),
+    }
+}
