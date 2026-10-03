@@ -2019,7 +2019,7 @@ impl Effect {
             | Effect::AddMissingCounterKindFromYours { what }
             | Effect::ExileSameNameInvestigate { what } => sel_has_target(what),
             Effect::CopyCountersOnto { from, to } => sel_has_target(from) || sel_has_target(to),
-            Effect::Proliferate => false,
+            Effect::Proliferate | Effect::ChooseNewTargetsForAnyNumber => false,
             Effect::BlockersPoisonedThisTurn { .. } => false,
             Effect::AuraSwapFromHand
             | Effect::DoubleUnspentMana

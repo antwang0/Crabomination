@@ -35127,6 +35127,7 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseNewTargetsForAnyNumber => self.choose_new_targets_for_any_number(ctx, events),
             Effect::ChooseNewTargetsForSpell { what } => {
                 // CR 115.7d — repoint *every* declared target slot of the
                 // spell in place, each against its own printed filter. The

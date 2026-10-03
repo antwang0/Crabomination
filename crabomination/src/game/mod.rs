@@ -169,6 +169,7 @@ mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
 mod stack_ability;
+mod retarget_any;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;

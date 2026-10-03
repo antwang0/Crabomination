@@ -1976,7 +1976,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
-| 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |

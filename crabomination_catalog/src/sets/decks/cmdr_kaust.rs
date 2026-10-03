@@ -102,15 +102,12 @@ pub fn ashcloud_phoenix() -> CardDefinition {
     }
 }
 
-/// Boltbender — disguise; turning it up lets you re-aim a spell.
-///
-/// Residual: one target spell, not any number of spells and abilities.
+/// Boltbender — disguise; turning it up lets you re-aim any number of other
+/// spells and abilities (the policy: an opponent's, aimed at your side).
 pub fn boltbender() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Disguise(cost(&[generic(1), r()]))],
-        triggered_abilities: vec![turned_up(Effect::ChooseNewTargetsForSpell {
-            what: target_filtered(R::IsSpellOnStack),
-        })],
+        triggered_abilities: vec![turned_up(Effect::ChooseNewTargetsForAnyNumber)],
         ..creature(
             "Boltbender",
             cost(&[generic(3), r()]),

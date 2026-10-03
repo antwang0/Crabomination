@@ -9547,6 +9547,10 @@ pub enum Effect {
     /// redirector) chooses via `Decision::ChooseTarget`. Unlike
     /// `CopySpellMayChooseTargets` this mutates the original spell.
     ChooseNewTargetsForSpell { what: Selector },
+    /// "You may choose new targets for any number of other spells and/or
+    /// abilities" (Boltbender, CR 115.7d): untargeted, so the controller's
+    /// pick of which ones — `game/retarget_any.rs` names its policy.
+    ChooseNewTargetsForAnyNumber,
     /// "Gain control of target spell" (Aethersnatch). The spell's controller
     /// becomes this effect's controller (CR 110.2, 608.2 — a permanent spell
     /// enters under it); its owner is unchanged.

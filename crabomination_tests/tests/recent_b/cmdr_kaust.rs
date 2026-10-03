@@ -408,3 +408,43 @@ fn boltbender_redirects_a_spell() {
     turn_up(&mut g, bb);
     assert_eq!(g.players[0].life, 20, "the Bolt went elsewhere");
 }
+
+/// CR 115.7d — Boltbender re-aims ANY number of other spells and abilities:
+/// two opposing Bolts aimed at you and your creature both leave you,
+/// while a spell of your own keeps its target.
+#[test]
+fn boltbender_redirects_any_number_of_spells_and_abilities() {
+    let mut g = pod(3);
+    let bb = face_down(&mut g, catalog::boltbender());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(2, catalog::hill_giant());
+    for seat in [1, 2] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        flood(&mut g, seat);
+        g.priority.player_with_priority = seat;
+        let target = if seat == 1 { Target::Player(0) } else { Target::Permanent(mine) };
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(target),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+    }
+    let shock = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("our bolt");
+    turn_up(&mut g, bb);
+    assert_eq!(g.players[0].life, 20, "the first Bolt went elsewhere");
+    assert!(g.battlefield_find(mine).is_some(), "so did the second");
+    assert!(g.battlefield_find(theirs).is_none(), "ours stayed on the Giant");
+}
