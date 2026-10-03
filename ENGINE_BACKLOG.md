@@ -112,6 +112,24 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token
+
+- ✅ **CR 510.2** — "whenever ~ deals combat damage" fired once per RECIPIENT
+  (a trampler rolled Sword of Hours twice). `BatchSubject::Dealer`.
+  ⏳ **Open half:** a NONCOMBAT delivery is still one batch per call, so a
+  source dealing damage to several recipients in one effect fires its
+  recipient-agnostic `DealsDamage` trigger per recipient.
+- ✅ **CR 702.34a** — a countered / Memory Lapsed / Remanded flashback or
+  jump-start spell went to the graveyard (or library) instead of exile
+  (`countered_spell_off_stack`, `CounterSpellToZone`).
+- ✅ **CR 111.7/111.8** — `Selector::CardsInZone` offered a token that died
+  mid-resolution as "a creature card": Infernal Offering reanimated it. Found
+  by a strict debug pod. ⏳ **Open class:** 94 `graveyard.iter()` walks in
+  `game/effects/` don't skip tokens either; within one resolution a dead
+  token inflates "cards in your graveyard" counts until the SBA removes it.
+- ✅ `keyword_is_friendly` read MustBlock as a buff — a lure's headless
+  target was the caster's own creature.
+
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 
 - **FIXED:** CR 903.9a — the commander's return from a graveyard or exile was
