@@ -7182,7 +7182,18 @@ impl GameState {
                 for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
                     match t.event.scope {
                         crate::effect::EventScope::YourControl if mine => {
-                            if let Some(i) = slot(&t.event.kind) {
+                            // "Whenever a Mutant, Ninja or Turtle you control
+                            // deals combat damage" gates on the dealer too.
+                            if let Some(i) = slot(&t.event.kind)
+                                && t.event.dealer_filter.as_ref().is_none_or(|f| {
+                                    self.evaluate_requirement_static(
+                                        f,
+                                        &Target::Permanent(source),
+                                        c.controller,
+                                        Some(c.id),
+                                    )
+                                })
+                            {
                                 by_kind[i].push((
                                     c.id,
                                     t.effect.clone(),

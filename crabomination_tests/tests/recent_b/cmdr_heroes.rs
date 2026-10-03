@@ -101,6 +101,14 @@ fn heroes_in_a_half_shell_grows_the_turtle_that_connected() {
     assert_eq!(plus(&g, heroes), 1);
     assert_eq!(plus(&g, bear), 0, "not a Mutant, Ninja or Turtle");
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the batch");
+
+    // A bear connecting alone is no Mutant, Ninja or Turtle: no trigger.
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::heroes_in_a_half_shell());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    connect(&mut g, &[(bear, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand);
 }
 
 // ── Engine primitives ────────────────────────────────────────────────────────
