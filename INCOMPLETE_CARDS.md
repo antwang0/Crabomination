@@ -2097,7 +2097,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
-| 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
 | 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
 | 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |

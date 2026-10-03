@@ -1,5 +1,6 @@
-//! Radiant Performer — "copy that spell for each other permanent or player
-//! the spell could target. Each copy targets a different one of those."
+//! Radiant Performer — "copy that spell or ability for each other permanent
+//! or player the spell or ability could target. Each copy targets a different
+//! one of those."
 
 use super::EffectContext;
 use crate::card::CardId;
@@ -23,6 +24,10 @@ impl GameState {
         else {
             return Ok(());
         };
+        if crate::game::types::is_stack_ability_id(spell_id) {
+            self.copy_ability_for_each_other_legal_target(spell_id, ctx);
+            return Ok(());
+        }
         let Some(idx) = self
             .stack
             .iter()
@@ -65,5 +70,33 @@ impl GameState {
             events.push(GameEvent::SpellsCopied { original: spell_id, count: 1, controller: me });
         }
         Ok(())
+    }
+
+    /// The ability half (CR 115.1 — the stack ability `aid` names): each copy
+    /// is a clone of the ability, controlled by the resolving controller and
+    /// aimed at one other permanent or player its effect could target.
+    fn copy_ability_for_each_other_legal_target(&mut self, aid: CardId, ctx: &EffectContext) {
+        let Some(pos) = self.stack_ability_pos(aid, None) else { return };
+        let item = self.stack[pos].clone();
+        let StackItem::Trigger { source, effect, target: Some(current), additional_targets, .. } = &item else {
+            return;
+        };
+        if !additional_targets.is_empty() {
+            return;
+        }
+        let me = ctx.controller;
+        let others: Vec<Target> = self
+            .enumerate_legal_targets_with_source(effect, me, Some(*source))
+            .into_iter()
+            .filter(|t| t != current && matches!(t, Target::Permanent(_) | Target::Player(_)))
+            .collect();
+        for t in others {
+            let mut copy = item.clone();
+            if let StackItem::Trigger { controller, target, .. } = &mut copy {
+                *controller = me;
+                *target = Some(t);
+            }
+            self.push_stack(copy);
+        }
     }
 }

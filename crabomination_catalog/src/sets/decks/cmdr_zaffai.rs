@@ -409,9 +409,9 @@ pub fn pyromancers_goggles() -> CardDefinition {
     }
 }
 
-/// Radiant Performer — flash; cast from hand, entering copies target spell
-/// with a single target for each other permanent or player it could target.
-/// Residual: spells only, not abilities.
+/// Radiant Performer — flash; cast from hand, entering copies target spell or
+/// ability with a single target for each other permanent or player it could
+/// target.
 pub fn radiant_performer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -419,7 +419,7 @@ pub fn radiant_performer() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
                 .with_filter(Predicate::CastFromHand),
             effect: Effect::CopySpellForEachOtherLegalTarget {
-                what: target_filtered(R::SpellWithSingleTarget),
+                what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack).and(R::SpellWithSingleTarget)),
             },
         }],
         ..creature(

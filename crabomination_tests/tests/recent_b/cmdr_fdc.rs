@@ -6289,6 +6289,34 @@ fn cr_707_10_radiant_performer_copies_for_every_other_target() {
     assert_eq!(g.players[1].life, 18, "and the opponent");
 }
 
+/// CR 707.10 / 115.1 — Radiant Performer copies an *ability* with a single
+/// target too: a ping at one Elf is copied at the other and the opponent.
+#[test]
+fn cr_707_10_radiant_performer_copies_an_ability() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let pyro = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    g.clear_sickness(pyro);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyro,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    let rp = g.add_card_to_hand(0, catalog::radiant_performer());
+    flood(&mut g, 0);
+    cast_with(&mut g, 0, rp, None).expect("flash it in");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none());
+    assert!(g.battlefield_find(b).is_none(), "a copy found the other Elf");
+    assert_eq!(g.players[1].life, 19, "and the opponent");
+}
+
 /// CR 601.2c — a spell cast for free from a graveyard (Diluvian Primordial)
 /// names no target when it has none, so Radiant Performer can't take an
 /// untargeted Devastation Tide as "a spell with a single target". The free
