@@ -3194,6 +3194,23 @@ strict debug     ~3,000 pod games at 3-8 seats (CRAB_ANSWER_LOG=strict): one
 suite            23,868 / 0 / 5
 ```
 
+### 2026-10-03 (Commander session `01HA5hiK`, closing) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: `TriggerPush::build` asks
+`pad_empty_slot_zero` (a no-op unless slot 0 is empty AND slots 1.. are
+filled — `game/target_hole.rs`); the trigger fan-out filler may take its own
+source last and stops a friendly fan-out at its controller's board;
+`Predicate::ActivationCostHasX` is read only by Unbound Flourishing's filter.
+No `GameState` field.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical,
+                 determinism ok
+pod              --commander seed 9321: 4 / 6 / 8 seats x 700 = 2,100 games,
+                 all decided, every undecided_by column zero, zero panics
+suite            23,914 / 0 / 5 without the client (golden traces included)
+```
+
 ### 2026-10-03 (Commander session `01HA5hiK`, second half) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: `LandPlayed` carries `from_hand`
