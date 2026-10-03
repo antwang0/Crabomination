@@ -9,8 +9,6 @@
 //!   command zone).
 //! - **Protection Racket** — every opponent is offered each revealed card,
 //!   not only the one whose pass of the process it is.
-//! - **The Beamtown Bullies** — the opponent whose turn it is isn't
-//!   targeted.
 //! - **Turf War** — the contested lands are chosen, not targeted; the
 //!   stolen land is the engine's pick.
 
@@ -434,11 +432,10 @@ pub fn riveteers_confluence() -> CardDefinition {
     }
 }
 
-/// The Beamtown Bullies — {1}{B}{R}{G} 4/4 vigilance, haste. {T}: the
-/// opponent whose turn it is puts a nonlegendary creature card from your
-/// graveyard onto the battlefield under their control; it gains haste, is
-/// goaded (CR 701.15), and is exiled at the next end step.
-/// Residual: that opponent isn't targeted.
+/// The Beamtown Bullies — {1}{B}{R}{G} 4/4 vigilance, haste. {T}: target
+/// opponent whose turn it is (slot 0) puts target nonlegendary creature card
+/// from your graveyard (slot 1) onto the battlefield under their control; it
+/// gains haste, is goaded (CR 701.15), and is exiled at the next end step.
 pub fn the_beamtown_bullies() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -447,17 +444,22 @@ pub fn the_beamtown_bullies() -> CardDefinition {
             tap_cost: true,
             condition: Some(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(
-                        R::Creature.and(R::HasSupertype(Supertype::Legendary).negate()).and(R::InYourGraveyard),
-                    ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::ActivePlayer, tapped: false },
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer.and(R::ControlledByActivePlayer),
+                    then: Box::new(Effect::Noop),
                 },
-                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
-                Effect::Goad { what: Selector::Target(0) },
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::HasSupertype(Supertype::Legendary).negate()).and(R::InYourGraveyard),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::Target(0), tapped: false },
+                },
+                Effect::GrantKeyword { what: Selector::Target(1), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                Effect::Goad { what: Selector::Target(1) },
                 Effect::DelayUntilWithCapture {
                     kind: DelayedTriggerKind::NextEndStep,
-                    capture: Selector::Target(0),
+                    capture: Selector::Target(1),
                     body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
                 },
             ]),

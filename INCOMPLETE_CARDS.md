@@ -2009,7 +2009,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
 | 🟡 Next of Kin | Riveteers Rampage (NCC) | the lesser creature card comes from your hand only, not the command zone. |
 | 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
-| 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |

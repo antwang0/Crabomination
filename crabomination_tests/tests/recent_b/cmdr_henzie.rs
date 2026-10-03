@@ -221,15 +221,20 @@ fn beamtown_bullies_loan_a_creature() {
     let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
     g.active_player_idx = 1;
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: bb,
-        ability_index: 0,
-        target: Some(Target::Permanent(wurm)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("activate");
+    // Slot 0 is TARGET opponent whose turn it is: seat 2 isn't (not its turn).
+    let act = |g: &mut GameState, opp: usize| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: bb,
+            ability_index: 0,
+            target: Some(Target::Player(opp)),
+            additional_targets: vec![Target::Permanent(wurm)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(act(&mut g, 2).is_err(), "not the opponent whose turn it is");
+    act(&mut g, 1).expect("activate");
     drain_stack(&mut g);
     let c = g.battlefield_find(wurm).expect("loaned");
     assert_eq!(c.controller, 1);
