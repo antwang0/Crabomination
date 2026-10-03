@@ -4193,6 +4193,11 @@ pub struct ActivatedAbility {
     /// that many counters, and the body reads `Value::XFromCost`.
     #[serde(default)]
     pub remove_counter_x: Option<crate::card::CounterType>,
+    /// "[Cost], Roll a dN:" (CR 602.2b) — the die is rolled as the ability
+    /// is activated, its result the ability's X (`Value::XFromCost`), so it is
+    /// known while the ability waits on the stack (Clay Golem). 0 = none.
+    #[serde(default)]
+    pub roll_die_cost: u8,
     /// Optional cost: remove `u32` counters of the named kind (`None` = any
     /// mix of kinds — Tekuthal's "remove three counters") from among
     /// permanents matching the filter the activator controls (CR 602.5b —

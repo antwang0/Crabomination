@@ -22782,6 +22782,19 @@ impl GameState {
                 Some(m) => Some(clamp_activated_mode(&queued_effect, m)),
                 None => self.pick_trigger_mode(&queued_effect, card_id, p),
             };
+            // CR 602.2b / 706.2 — a die rolled as a cost is rolled now, the
+            // last cost paid, and fixes the ability's X.
+            let activated_x = if ability.roll_die_cost > 0 {
+                let sides = ability.roll_die_cost.max(2);
+                let rolled = self.roll_one_die(p, sides);
+                events.push(GameEvent::DiceRolled { player: p, count: 1, high: rolled });
+                if rolled == sides {
+                    events.push(GameEvent::RolledNaturalMax { player: p });
+                }
+                u32::from(rolled)
+            } else {
+                activated_x
+            };
             self.push_stack(
                 TriggerPush::new(card_id, p, queued_effect)
                     .target(target)
