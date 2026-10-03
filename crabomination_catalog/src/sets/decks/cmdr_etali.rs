@@ -2077,10 +2077,9 @@ pub fn last_march_of_the_ents() -> CardDefinition {
 /// Cream of the Crop — {1}{G} Enchantment. Whenever a creature you control
 /// enters, you may look at the top X cards of your library, where X is that
 /// creature's power. If you do, put one of those cards on top of your library
-/// and the rest on the bottom in any order.
-/// Approximation: modeled as scry X (`Scry`), which additionally lets you keep
-/// more than one card on top, and counts as a scry for "whenever you scry"
-/// triggers.
+/// and the rest on the bottom in any order. One card picked back on top
+/// (`LookTopKeepOneRestToGraveyard` with the rest bottomed) — not a scry.
+/// Residual: the rest go to the bottom in a random order, not one you choose.
 pub fn cream_of_the_crop() -> CardDefinition {
     CardDefinition {
         name: "Cream of the Crop",
@@ -2094,9 +2093,11 @@ pub fn cream_of_the_crop() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "Look at the top X cards of your library?".into(),
-                body: Box::new(Effect::Scry {
-                    who: PlayerRef::You,
-                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                body: Box::new(Effect::LookTopKeepOneRestToGraveyard {
+                    count: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    who: None,
+                    exile_rest: false,
+                    rest_bottom_random: true,
                 }),
             },
         }],

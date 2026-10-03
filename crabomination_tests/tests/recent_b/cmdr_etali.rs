@@ -1605,7 +1605,8 @@ fn last_march_of_the_ents_draws_by_toughness_and_deploys() {
 }
 
 /// Cream of the Crop: a power-3 creature entering lets you look at the top
-/// three and keep one on top, bottoming the rest.
+/// three and keep ONE on top, bottoming the rest — not a scry, which could
+/// keep more (CR 701.22 doesn't apply).
 #[test]
 fn cream_of_the_crop_keeps_one_of_top_x_on_top() {
     let mut g = main_phase_d();
@@ -1616,7 +1617,7 @@ fn cream_of_the_crop_keeps_one_of_top_x_on_top() {
     g.add_card_to_library(0, catalog::mountain());
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
-        DecisionAnswer::ScryOrder { kept_top: vec![c], bottom: vec![a, b] },
+        DecisionAnswer::Search(Some(c)),
     ]));
     flood_d(&mut g, 0);
     let giant = g.add_card_to_hand(0, catalog::hill_giant()); // power 3
