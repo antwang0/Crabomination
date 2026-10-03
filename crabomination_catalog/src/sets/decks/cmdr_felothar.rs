@@ -14,7 +14,7 @@ use std::sync::Arc;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
+    TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack, on_becomes_monstrous, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
