@@ -531,8 +531,8 @@ pub fn naktamun_lorespinner() -> CardDefinition {
 
 /// Quintorius, Loremaster — vigilance; your end step exiles a noncreature,
 /// nonland card from your graveyard and makes a Spirit; {1}{R}{W}, {T},
-/// sacrifice a Spirit: cast a card exiled with it free. Residual: cast on
-/// resolution, and it isn't bottomed afterward.
+/// sacrifice a Spirit: you may cast target card exiled with it free this turn,
+/// and if that spell would go to a graveyard it goes to the bottom instead.
 pub fn quintorius_loremaster() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -550,14 +550,18 @@ pub fn quintorius_loremaster() -> CardDefinition {
             mana_cost: cost(&[generic(1), r(), w()]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Spirit)), 1)),
-            effect: Effect::CastWithoutPayingImmediate {
-                what: Selector::TakeGreatestManaValue { inner: Box::new(Selector::CardExiledWithSource), count: Box::new(Value::ONE) },
-                source_zone: Zone::Exile,
-                exile_after: false,
-                pay_own_cost: false,
-                copy: false,
-                reduce_generic: 0,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: target_filtered(R::InExile.and(R::ExiledWithSource)),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+                Effect::RestrictMayPlayToCasting { what: Selector::Target(0) },
+                Effect::BottomInsteadAfterGrantedCast { what: Selector::Target(0) },
+            ]),
             ..Default::default()
         }],
         ..creature(

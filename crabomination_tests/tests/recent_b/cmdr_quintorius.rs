@@ -328,3 +328,46 @@ fn ao_puts_the_rest_on_the_bottom() {
     assert_eq!(g.players[0].library[0].id, eighth, "the six Islands went under");
     assert_eq!(g.players[0].library.len(), 7);
 }
+
+/// Quintorius, Loremaster — the target card exiled with it may be cast free
+/// this turn (not on the spot), and once it resolves it goes to the bottom of
+/// its owner's library instead of the graveyard.
+#[test]
+fn quintorius_loremaster_casts_its_exile_later_and_bottoms_it() {
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(2);
+    let lore = g.add_card_to_battlefield(0, catalog::quintorius_loremaster());
+    g.clear_sickness(lore);
+    let spirit = crabomination::card::TokenDefinition {
+        name: "Spirit".into(),
+        power: 3,
+        toughness: 2,
+        card_types: vec![crabomination::card::CardType::Creature],
+        subtypes: crabomination::card::Subtypes {
+            creature_types: vec![crabomination::card::CreatureType::Spirit],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    g.add_token_to_battlefield(0, &spirit);
+    g.add_card_to_library(0, catalog::forest());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(lore);
+    g.resolve_effect(&Effect::ExileWithSource { what: Selector::ExactObjects(vec![bolt]) }, &ctx).expect("exile");
+    activate(&mut g, 0, lore, 0, Some(Target::Permanent(bolt))).expect("activate");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "granted, not cast on resolution");
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt), "bottom of the library");
+}

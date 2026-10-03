@@ -1299,8 +1299,8 @@ Chaser, `--pod-decks 127`. Twenty-one cards were missing
 found one engine gap: ⚠ **`ExileFromGraveyard` / `ExileBottomOfGraveyard`
 never recorded what they exiled this resolution**, so an "exiled this way"
 count after them read 0 (Augusta, Order Returned). Residuals: **Ao, the Dawn
-Sky** leaves the unpicked cards on top; **Quintorius, Loremaster** casts the
-exiled card as the ability resolves and doesn't bottom it (Serra Paragon's
+Sky** leaves the unpicked cards on top; ~~**Quintorius, Loremaster**~~
+(`01QFHGia`: a this-turn grant, bottomed after) (Serra Paragon's
 shared once and exile rider shipped since). Four-seat pods beside Sigarda / Teval / Disa (seed 11104,
 1,000 games, all decided): Quintorius 35.7 %; census: no card of the four
 unplayed; 6 and 8 seats (seed 11105) 1,000 / 1,000 each once a self-copying
