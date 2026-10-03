@@ -183,6 +183,8 @@ mod escape_extra;
 mod attack_only_chosen;
 // CR 608.2d — "choose any number of them", then each.
 mod for_each_chosen;
+// Psychic Paper's chosen name and creature type on the equipped creature.
+mod attached_rename;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -32031,6 +32033,7 @@ fn static_effect_to_effects(
             // Read by the library-top cast path; no layer.
             | StaticEffect::LibraryTopEquipmentAttachesOnEntry
             | StaticEffect::ChooseColorAsAttached
+            | StaticEffect::AttachedTakesChosenNameAndType
             | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.

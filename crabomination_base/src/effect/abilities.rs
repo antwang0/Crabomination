@@ -322,6 +322,14 @@ pub enum StaticEffect {
     /// Blade): the choice is part of the attachment, made before any player
     /// gets priority, not a trigger. Read by `apply_as_attached_choices`.
     ChooseColorAsAttached,
+    /// "As this Equipment becomes attached to a creature, choose a creature
+    /// card name and a creature type. Equipped creature's name and creature
+    /// type are the last chosen name and creature type" (Psychic Paper). The
+    /// choices are made with the attachment (`apply_as_attached_choices`);
+    /// the rename is a copiable-value edit on the host (CR 707.9b) that lasts
+    /// while this stays attached to it (CR 611.2c, the `WhileSourceAttached`
+    /// copy sweep).
+    AttachedTakesChosenNameAndType,
     /// Thundermane Dragon — "if you cast a creature spell this way [off the
     /// top of your library, matching `filter`], it gains haste until end of
     /// turn." Read by the library-top cast path, not a trigger.

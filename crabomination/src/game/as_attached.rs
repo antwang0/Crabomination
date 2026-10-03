@@ -12,8 +12,12 @@ use crate::game::effects::EffectContext;
 impl GameState {
     pub(crate) fn apply_as_attached_choices(&mut self, events: &[GameEvent]) {
         for ev in events {
-            let GameEvent::AttachmentMoved { attachment, attached_to: Some(_) } = *ev else { continue };
+            let GameEvent::AttachmentMoved { attachment, attached_to: Some(host) } = *ev else { continue };
             let Some(c) = self.battlefield_find(attachment) else { continue };
+            if c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::AttachedTakesChosenNameAndType)) {
+                self.rename_attached_host(attachment, host);
+                continue;
+            }
             let chooses = c
                 .definition
                 .static_abilities
