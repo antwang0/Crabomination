@@ -3057,6 +3057,13 @@ pod              every deck 1-183 in six-seat blocks x 150 (seeds 54001+):
                  990-token board (Everlasting Torment's wither on Chain
                  Reaction, Flourishing Defenses' Elf per counter), not a loop
 suite            23,791 at 06b370af2 after two fixes it found; clippy 0
+later, after SlotGroups / Suspend X / Aboleth / AsSubjectsAbility (tip 62dce254f):
+suite            23,804 / 0 / 5; strict debug four-seat sweep (CRAB_ANSWER_LOG=strict,
+                 debug assertions on) over every deck, 46 blocks x 10 (seeds
+                 57001+): 460 games, all decided, no panic or assertion
+two-player pools cube / sos / sealed x 300 at seed 32201 (the base's): 7,500,
+                 all decided; at 56001 cube has 7 CR 104.4 draws — the base
+                 binary (2ae83329c) has the same 7
 ```
 
 ### 2026-10-03 (Commander session `01HLca3f`, third cycle) — guardrail, no perf work
