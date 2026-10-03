@@ -2080,7 +2080,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
-| 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
 | 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |

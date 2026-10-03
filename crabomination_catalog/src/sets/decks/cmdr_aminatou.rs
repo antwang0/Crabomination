@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Aminatou's Augury** — the one free spell per card type is picked at
 //!   resolution (greatest mana value first), not as each is cast.
-//! - **Portent** — never has the player shuffle.
 //! - **Primordial Mist** — exiling the face-down permanent is the ability's
 //!   target, not its cost.
 
@@ -286,8 +285,8 @@ pub fn night_incarnate() -> CardDefinition {
     }
 }
 
-/// Portent — order a player's top three; draw at the next upkeep. Residual:
-/// never shuffles.
+/// Portent — order a player's top three (or have them shuffle); draw at the
+/// next upkeep.
 pub fn portent() -> CardDefinition {
     spell(
         "Portent",
@@ -297,6 +296,12 @@ pub fn portent() -> CardDefinition {
             filter: R::Player,
             then: Box::new(Effect::Seq(vec![
                 Effect::RearrangeTop { who: PlayerRef::Target(0), amount: Value::Const(3) },
+                // "You may have that player shuffle" — a headless seat keeps
+                // the order it just chose.
+                Effect::MayDo {
+                    description: "Have that player shuffle their library?".into(),
+                    body: Box::new(Effect::ShuffleLibrary { who: PlayerRef::Target(0) }),
+                },
                 Effect::AtNextTurnsUpkeep {
                     body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
                 },

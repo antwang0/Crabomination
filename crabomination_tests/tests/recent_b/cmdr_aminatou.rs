@@ -274,6 +274,36 @@ fn portent_draws_later() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
+/// Portent: "You may have that player shuffle" — the caster is asked, and a
+/// yes shuffles the arranged library.
+#[test]
+fn portent_offers_the_shuffle() {
+    use crabomination::decision::{AutoDecider, Decider, Decision, DeciderKind};
+    use std::sync::{Arc, Mutex};
+    struct Shuffler(Arc<Mutex<bool>>);
+    impl Decider for Shuffler {
+        fn decide(&mut self, d: &Decision) -> DecisionAnswer {
+            match d {
+                Decision::OptionalTrigger { description, .. } if description.contains("shuffle") => {
+                    *self.0.lock().unwrap() = true;
+                    DecisionAnswer::Bool(true)
+                }
+                other => AutoDecider.decide(other),
+            }
+        }
+        fn kind(&self) -> DeciderKind {
+            DeciderKind::Scripted { answers: vec![], asked: vec![] }
+        }
+    }
+    let mut g = pod();
+    library(&mut g, 1, 6);
+    let asked = Arc::new(Mutex::new(false));
+    g.decider = Box::new(Shuffler(asked.clone()));
+    let p = g.add_card_to_hand(0, catalog::portent());
+    cast(&mut g, p, Some(Target::Player(1))).expect("cast");
+    assert!(*asked.lock().unwrap(), "the shuffle is offered");
+}
+
 /// CR 701.34 — Primordial Mist manifests; a face-down card may be played.
 #[test]
 fn primordial_mist_manifests() {
