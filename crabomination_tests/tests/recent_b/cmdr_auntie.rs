@@ -479,9 +479,34 @@ fn pucas_covenant_returns_by_counter_count() {
     let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
     let a = g.add_card_to_battlefield(0, catalog::craw_wurm());
     g.battlefield_find_mut(a).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     kill(&mut g, a);
     assert!(g.players[0].hand.iter().any(|c| c.id == ring), "Sol Ring (1) back");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == giant), "Hill Giant (4) stays");
+}
+
+/// Puca's Covenant targets "**another** permanent card" as it triggers: the
+/// dying Bears (mana value 2, two counters) is not its own target, so with
+/// nothing else in the graveyard nothing comes back; with a Sol Ring there,
+/// the Ring does (the X is the dead creature's last-known counters).
+#[test]
+fn pucas_covenant_targets_another_card_at_trigger_time() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::pucas_covenant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, bear);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "not its own target");
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::pucas_covenant());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, bear);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring), "the other card came back");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
 }
 
 /// Fire Covenant — pay X life, X damage divided among creatures (the

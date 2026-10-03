@@ -616,21 +616,27 @@ pub fn lasting_tarfire() -> CardDefinition {
 /// mana value less than or equal to the number of counters on that creature
 /// from your graveyard to your hand. Do this only once each turn.
 ///
-/// ⚠ Residual: the card is chosen on resolution, not targeted, and the dying
-/// creature's own card is among the choices.
+/// The X is read as the trigger is targeted (`settle_trigger_time_x`, the
+/// dead creature's last-known counters) and "another" is the dying creature
+/// (`OtherThanTriggerSubject`).
 pub fn pucas_covenant() -> CardDefinition {
     let mut trigger = TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
             .with_filter(trigger_is(R::WithAnyCounter)),
         effect: Effect::WithX {
             x: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
-            body: Box::new(Effect::MoveChosen {
-                from: your_graveyard(R::PermanentCard.and(R::ManaValueAtMostXFromCost)),
-                filter: None,
-                count: Value::ONE,
-                up_to: true,
-                to: ZoneDest::Hand(PlayerRef::You),
-            }),
+            body: Box::new(may(
+                "Return a permanent card from your graveyard to your hand?",
+                Effect::Move {
+                    what: target_filtered(
+                        R::PermanentCard
+                            .and(R::InYourGraveyard)
+                            .and(R::ManaValueAtMostXFromCost)
+                            .and(R::OtherThanTriggerSubject),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            )),
         },
     };
     trigger.event.once_per_turn = true;

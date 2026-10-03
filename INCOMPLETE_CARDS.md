@@ -386,7 +386,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
-| Puca's Covenant | "another target permanent card" can pick the creature that just died | no "other than the trigger source" requirement (the requirement walkers would all need it) |
 | Espers to Magicite (pod) | the copied card is auto-picked (greatest power among the exiled creature cards), not a chosen target (the artifact-only type change ships: `SetCardTypesTo`) | the reflexive "choose up to one target … exiled this way" has no target slot over a resolution-exiled set |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
@@ -2144,7 +2143,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
 | 🟡 Watcher of Hours | Revenant Recon (MKC) | removing the last time counter casts it at once, so that removal doesn't surveil. |
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
-| 🟡 Puca's Covenant | Blight Curse (ECC) | the returned card is chosen on resolution, not targeted, and the dying creature's own card is among the choices. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
