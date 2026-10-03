@@ -3654,6 +3654,9 @@ impl GameState {
             Predicate::SourceDoneThisTurn => ctx
                 .source
                 .is_some_and(|s| self.triggered_once_per_turn_used.contains(&(s, crate::game::DONE_THIS_TURN_SLOT))),
+            Predicate::SourceTriggerUsedThisTurn(i) => ctx
+                .source
+                .is_some_and(|s| self.triggered_once_per_turn_used.contains(&(s, *i as usize))),
             Predicate::SourceGiftPromised => {
                 // CR 702.165 — read the source permanent's persisted gift flag.
                 ctx.source
@@ -5756,6 +5759,19 @@ impl GameState {
                             }
                         })
                     }
+                    // The latest activation of `card` targets only the
+                    // evaluating source (Bill Potts).
+                    R::ActivatedAbilityTargetsOnlySource => source.is_some_and(|src| {
+                        self.stack.iter().rev().find_map(|si| match si {
+                            StackItem::Trigger { source: s, activated: true, target, additional_targets, .. }
+                                if *s == card.id =>
+                            {
+                                Some(additional_targets.is_empty()
+                                    && *target == Some(crate::game::types::Target::Permanent(src)))
+                            }
+                            _ => None,
+                        }) == Some(true)
+                    }),
                     R::SpellTargetsOnlySource => source.is_some_and(|src| {
                         self.stack.iter().any(|si| {
                             let StackItem::Spell { card: c, target, additional_targets, .. } = si
@@ -7072,6 +7088,7 @@ impl GameState {
             | R::SpellWouldDestroyALandYouControl
             | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource
+            | R::ActivatedAbilityTargetsOnlySource
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn

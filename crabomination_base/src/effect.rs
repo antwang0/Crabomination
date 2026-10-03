@@ -2599,6 +2599,11 @@ pub enum Predicate {
     /// (`Effect::MarkDoneThisTurn`). Gates the trigger; see
     /// `shortcut::may_once_each_turn`.
     SourceDoneThisTurn,
+    /// CR 603.3d — the source's triggered ability at `index` already
+    /// triggered this turn under its "only once each turn" clause. Lets two
+    /// printed triggers share one budget (Bill Potts' spell and ability
+    /// halves are one ability).
+    SourceTriggerUsedThisTurn(u8),
     /// True if the most recently discarded card this resolution had mana value
     /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
     /// "draw unless they discarded a card with mana value 4 or greater").

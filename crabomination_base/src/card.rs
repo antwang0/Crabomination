@@ -3229,6 +3229,10 @@ pub enum SelectionRequirement {
     /// source — one target slot, filled with the source (Ink-Treader
     /// Nephilim's "if that spell targets only this creature").
     SpellTargetsOnlySource,
+    /// The permanent's latest activated ability on the stack targets *only*
+    /// the evaluating source — one slot, filled with it (Bill Potts' "activate
+    /// an ability that targets only Bill Potts").
+    ActivatedAbilityTargetsOnlySource,
     /// CR 115.7 — a stack spell with exactly one target ("target spell with a
     /// single target" — Ricochet Trap, Deflection).
     SpellWithSingleTarget,
