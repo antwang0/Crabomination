@@ -1,9 +1,5 @@
 //! Commander: the cards the **Buckle Up** precon (NEC, Kotori, Pilot Prodigy)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_kotori.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Katsumasa, the Animator** / **Dance of the Manse** — "up to" target
-//!   counts take what the targeter picks.
 
 use std::sync::Arc;
 

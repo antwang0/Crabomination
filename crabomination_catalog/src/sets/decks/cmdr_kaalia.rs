@@ -1,10 +1,6 @@
 //! Commander: the cards the **Heavenly Inferno** precon (CMD, Kaalia of the
 //! Vast) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kaalia.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Archangel of Strife** — war or peace is chosen as its ETB trigger
-//!   resolves, not as it enters.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,

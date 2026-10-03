@@ -1,12 +1,6 @@
 //! Commander: the cards the **Grand Larceny** precon (OTC, Gonti, Canny
 //! Acquisitor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_gonti.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Nashi, Moon Sage's Scion** — you may play any of the exiled cards, not
-//!   only one.
-//! - **Siphon Insight** — the exiled card may be cast with mana of any type
-//!   (the printed "as though any color" excludes colorless).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EquipBonus, EventKind, EventScope,

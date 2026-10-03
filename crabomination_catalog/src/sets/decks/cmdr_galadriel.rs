@@ -3,16 +3,12 @@
 //! `tests/recent_b/cmdr_galadriel.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Celeborn the Wise** — +1/+1 per scry or surveil, not per card looked
-//!   at.
 //! - **Elrond of the White Council** — the voter's creature is the engine's
 //!   pick, and it may attack its owner.
 //! - **Sail into the West** — on embark every player wheels; the "may"
 //!   isn't offered.
 //! - **Gandalf, Westward Voyager** — the opponents' top cards are read, not
 //!   revealed.
-//! - **Mirkwood Trapper** — the shrunk attacker is the first one declared,
-//!   not a target.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

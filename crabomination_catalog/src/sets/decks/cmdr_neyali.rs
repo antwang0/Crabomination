@@ -1,10 +1,6 @@
 //! Commander: the cards the **Rebellion Rising** precon (ONC, Neyali, Suns'
 //! Vanguard) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Goldwardens' Gambit** — each token takes your highest-mana-value
-//!   *unattached* Equipment (no pick); an attached one is never moved.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

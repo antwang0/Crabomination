@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_brimaz.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Cataclysmic Gearhulk** — each player keeps their highest-mana-value
-//!   permanent of each type rather than choosing.
 //! - **Filigree Vector** — the counters go on every creature and artifact you
 //!   control rather than on chosen targets.
 //! - **Vulpine Harvester** — the target may be any artifact card in your

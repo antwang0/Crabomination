@@ -1,18 +1,6 @@
 //! Commander: the cards the **Ahoy Mateys** precon (LCC, Admiral Brass,
 //! Unsinkable) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_brass.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Admiral Beckett Brass** — any damage from three Pirates this turn
-//!   counts, not only combat damage.
-//! - **Gemcutter Buccaneer** — Treasures get equip {3} only, not equip
-//!   Pirate {1}.
-//! - **Merchant Raiders** — the lock lasts while it's on the battlefield,
-//!   not while you control it.
-//! - **Siren Stormtamer** — counters spells only, targeting you or any
-//!   permanent you control.
-//! - **Timestream Navigator** — it goes to the bottom as part of the effect,
-//!   not as a cost.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

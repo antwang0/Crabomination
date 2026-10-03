@@ -10,8 +10,6 @@
 //!   rather than played (it doesn't use the land drop).
 //! - **Polluted Cistern** — counts milled cards, not every card put into
 //!   your graveyard from your library.
-//! - **Demonic Covenant** — "attack a player" also fires on an attack at a
-//!   planeswalker.
 //! - **Into the Pit** — the sacrifice is paid as the cast completes.
 //! - **Old Stickfingers** — reveals creature by creature, bottoming each
 //!   run of misses before the next.

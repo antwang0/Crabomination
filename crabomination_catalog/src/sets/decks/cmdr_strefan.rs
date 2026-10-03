@@ -1,14 +1,6 @@
 //! Commander: the cards the **Vampiric Bloodline** precon (VOC, Strefan,
 //! Maurer Progenitor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_strefan.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Avacyn's Judgment** — a madness cast names one target (the
-//!   madness cast's auto-pick), so its X damage isn't divided.
-//! - **Shadowgrange Archfiend** — no madness: "{2}{B}, Pay 8 life" has a life
-//!   half a madness cost can't carry.
-//! - **Imposing Grandeur** — counts a commander in any zone, not only the
-//!   battlefield or command zone.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType,

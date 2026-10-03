@@ -1,11 +1,6 @@
 //! Commander: the cards the **Eternal Might** precon (DRC, Hashaton,
 //! Scarab's Fist) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_hashaton.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Rot Hulk** — the returns are the greatest-power Zombie cards, not
-//!   targets chosen on entry.
-//! - **Gate to the Afterlife** — the loot's "you may draw" is always taken.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

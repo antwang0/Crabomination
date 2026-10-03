@@ -1,10 +1,6 @@
 //! Commander: the cards **The Fantastic Four** precon (MSC, Invisible Woman)
 //! needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_invisible_woman.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Mister Fantastic** — the copies keep the original's targets, and an
-//!   activated ability of yours is a legal target too.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

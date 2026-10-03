@@ -1,16 +1,6 @@
 //! Commander: the cards the **Doom Prevails** precon (MSC, Doctor Doom, King
 //! of Latveria) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_doom.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Kang Dynasty** — the draw rider reads "goaded creatures your opponents
-//!   control dealing combat damage off your turn", so a creature someone
-//!   else goaded draws you a card too.
-//! - **Lady Loki, Agent of Chaos** — "your first … spell each turn" counts
-//!   from when it is on the battlefield (`once_per_turn`).
-//! - **Superior Foes of Spider-Man** — the exiled card is playable this
-//!   turn, not "until you exile another card with this".
-//! - **Extract Power** — the exiled cards are face up.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

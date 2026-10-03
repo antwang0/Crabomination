@@ -1,12 +1,6 @@
 //! Commander: the cards the **Elven Empire** precon (KHC, Lathril, Blade of
 //! the Elves) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_lathril.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Serpent's Soul-Jar** — every creature card it exiled is castable
-//!   until end of turn, not one of them.
-//! - **Roots of Wisdom** — the returned card comes from among the three
-//!   milled, not from anywhere in the graveyard.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,

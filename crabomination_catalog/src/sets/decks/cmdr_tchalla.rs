@@ -7,8 +7,6 @@
 //!   prompting seat re-aims it.
 //! - **Panther Habit** — a replacement, so damage that can't be prevented still
 //!   becomes counters.
-//! - **Wakanda Forever!** — the two picks are the highest-mana-value
-//!   permanent cards revealed.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind,

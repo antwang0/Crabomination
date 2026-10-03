@@ -1,11 +1,6 @@
 //! Commander: the cards the **Limit Break** precon (FIC, Final Fantasy VII,
 //! Cloud, Ex-SOLDIER) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_cloud_fic.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Professor Hojo** — the draw fires for any ability of a permanent
-//!   that targets your creature.
-//! - **Lifestream's Blessing** — X is read as it resolves, not as it's cast.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, ConditionalEquipBonus, CounterType, CreatureType,

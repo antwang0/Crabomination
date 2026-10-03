@@ -1,11 +1,6 @@
 //! Commander: the cards the **Feline Ferocity** precon (C17, Arahbo, Roar of
 //! the World) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Divine Reckoning** — each player keeps their highest-mana-value
-//!   creature (the engine's pick, as Deadly Vanity).
-//! - **Stalking Leonin** — the opponent is chosen openly, not secretly.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, LandType,

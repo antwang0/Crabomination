@@ -1,11 +1,6 @@
 //! Commander: the cards the **Sworn to Darkness** precon (C14, Ob Nixilis of
 //! the Black Oath) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_ob_nixilis.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Profane Command** — the two modes are resolution-time picks
-//!   (`Effect::ChooseN`, default: life loss + −X/−X), so targets follow the
-//!   default pair's slots.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,

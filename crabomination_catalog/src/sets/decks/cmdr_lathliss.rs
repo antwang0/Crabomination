@@ -1,9 +1,6 @@
 //! Commander: the cards the **Reign of Dragons** precon (FDC, Lathliss,
 //! Dragon Queen) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_lathliss.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Thundermane Dragon** — the top card isn't shown to you.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

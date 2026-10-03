@@ -1,10 +1,6 @@
 //! Commander: the cards the **Undead Unleashed** precon (MIC, Wilhelt, the
 //! Rotcleaver) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_wilhelt.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Rooftop Storm** — Zombie creature spells cast from hand or the command
-//!   zone only.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind,

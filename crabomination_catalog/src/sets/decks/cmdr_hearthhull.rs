@@ -8,7 +8,6 @@
 //! - **Moraug, Fury of Akoum** — +1/+0 once for a creature that has attacked
 //!   this turn, however many times it attacked; the untap rides every later
 //!   combat this turn.
-//! - **Scouring Swarm** — the token is tapped just after it is created.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind,

@@ -1,12 +1,6 @@
 //! Commander: the cards the **Angels: They're Just Like Us but Cooler and
 //! with Wings** Secret Lair Commander deck (SLD, Gisela, the Broken Blade)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_gisela.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Angel of Destiny** — "each player this creature attacked this turn"
-//!   is the last player it attacked (one combat a turn is the common case).
-//! - **Dawnbreak Reclaimer** — both graveyard picks are the engine's (the
-//!   cheapest creature card each way).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

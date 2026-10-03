@@ -1,11 +1,6 @@
 //! Commander: the cards the **Spirit Squadron** precon (VOC, Millicent,
 //! Restless Revenant) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_millicent.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Haunting Imitation** — the top cards aren't revealed, only read.
-//! - **Spectral Arcanist** — the graveyard spell is chosen as a target when
-//!   the trigger goes on the stack, not as it resolves.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

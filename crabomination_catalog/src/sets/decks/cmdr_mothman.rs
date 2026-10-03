@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_mothman.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **The Wise Mothman** — the "up to X target creatures" are your own
-//!   greatest-power creatures, chosen on resolution rather than targeted.
 //! - **Rampaging Yao Guai** — the artifacts and enchantments are chosen on
 //!   resolution rather than targeted.
 //! - **Struggle for Project Purity** — Brotherhood draws you one card per

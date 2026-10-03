@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_valgavoth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Star Athlete** — "up to one target" always takes a target.
 //! - **Torture Pit** — its +2 also reaches permanents opponents control
 //!   (the shared `NoncombatDamageToOpponentsBonus`).
 

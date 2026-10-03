@@ -1,10 +1,6 @@
 //! Commander: the cards the **Exquisite Invention** precon (C18, Saheeli, the
 //! Gifted) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_saheeli.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Tawnos, Urza's Apprentice** — Gogo's `CopyAbility`: the target is the
-//!   ability's source permanent, and the copy keeps the original's targets.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

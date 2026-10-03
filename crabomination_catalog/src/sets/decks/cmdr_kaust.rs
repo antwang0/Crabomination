@@ -6,8 +6,6 @@
 //! - **Boltbender** — turning it up re-aims one target spell, not any number
 //!   of spells and abilities.
 //! - **Tesak, Judith's Hellhound** — other Dogs don't gain unleash.
-//! - **Unexplained Absence** — it never takes one of your own permanents
-//!   (the printed "for each player" includes you).
 //! - **Veiled Ascension** — face-down creatures get their flying counter
 //!   from a trigger after they enter, not as they enter.
 

@@ -1,11 +1,6 @@
 //! Commander: the cards the **Stalwart Unity** precon (C16, Kynaios and Tiro
 //! of Meletis) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kynaios.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Orzhov Advokist** — a taker's counters go on their greatest-power
-//!   creature, and the attack restriction covers the creatures they control
-//!   as it resolves.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

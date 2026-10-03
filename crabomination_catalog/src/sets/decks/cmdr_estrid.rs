@@ -1,9 +1,6 @@
 //! Commander: the cards the **Adaptive Enchantment** precon (C18, Estrid, the
 //! Masked) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_estrid.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Myth Unbound** — the discount counts both partners' casts together.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,

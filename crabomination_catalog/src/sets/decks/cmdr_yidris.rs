@@ -6,10 +6,6 @@
 //! - **Aeon Chronicler** — no Suspend X: the engine's suspend takes no X and
 //!   bots suspend only cards with no mana cost, so its time-counter draw never
 //!   comes up.
-//! - **Vial Smasher the Fierce** — the random opponent is always dealt the
-//!   damage, never one of their planeswalkers.
-//! - **Blood Tyrant** — grows by the number of living players, not the life
-//!   actually lost (a "can't lose life" effect isn't counted out).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, DynamicPt, EnchantmentSubtype,

@@ -1,10 +1,6 @@
 //! Commander: the cards the **Peace Offering** precon (BLC, Ms.
 //! Bumbleflower) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_bumbleflower.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Perch Protection** — the life lock lasts this turn, not until your
-//!   next turn.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

@@ -1,12 +1,6 @@
 //! Commander: the cards the **Vampiric Bloodlust** precon (C17, Edgar Markov)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_fdc.rs`
 //! (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Bloodlord of Vaasgoth** — the granted bloodthirst is checked as the
-//!   cast trigger resolves, not as the creature enters.
-//! - **Mathas, Fiend Seeker** — a bounty counter grants its dies trigger only
-//!   while Mathas is on the battlefield.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_willowdusk.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Revival Experiment** — the engine picks the cards: the highest mana
-//!   value per type, a multi-typed card counting for the first type it fills.
 //! - **Suffer the Past** — the cards are chosen as it resolves, not targeted.
 
 use std::sync::Arc;

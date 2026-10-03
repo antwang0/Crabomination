@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_felothar.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Arbor Adherent** — its X counts its own toughness too.
 //! - **Baldin, Century Herdmaster** — the +0/+X goes on each creature you
 //!   control rather than up to one hundred targets.
 //! - **Betor, Ancestor's Voice** — the counters go on your greatest-power

@@ -1,12 +1,6 @@
 //! Commander: the cards the **Scions & Spellcraft** precon (FIC, Y'shtola,
 //! Night's Blessed) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_yshtola.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Blue Mage's Cane** — the copy costs the card's own mana cost, not
-//!   {3}, and the graveyard card isn't exiled.
-//! - **Estinien Varlineau** — counts opponents dealt combat damage by any
-//!   creature, not only by it or a Dragon.
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

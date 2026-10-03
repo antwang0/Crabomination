@@ -1,9 +1,6 @@
 //! Commander: the cards the **Call for Backup** precon (MOC, Bright-Palm,
 //! Soul Awakener) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_brightpalm.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Inscription of Abundance** — never kicked (one mode only).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

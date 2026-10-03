@@ -6,9 +6,6 @@
 //! - **Jötun Grunt** — the graveyard and the two cards for each installment
 //!   are the engine's pick (an opponent's fullest graveyard, its highest mana
 //!   values).
-//! - **Ruhan of the Fomori** — the random opponent is re-drawn each combat,
-//!   as printed, but stored on Ruhan (so a later effect that also stores a
-//!   player on it overwrites the pick).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,

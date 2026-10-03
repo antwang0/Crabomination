@@ -1,14 +1,6 @@
 //! Commander: the cards the **Built From Scratch** precon (C14, Daretti,
 //! Scrap Savant) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_daretti.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Bitter Feud** — the two chosen players are its controller and the
-//!   opponent it picks (the engine's pick, as for Sawhorn Nemesis).
-//! - **Impact Resonance** — X is read as the spell resolves, from each
-//!   permanent's per-source tally and each player's largest single hit.
-//! - **Volcanic Offering** — the opponent who chooses is the caster's most
-//!   hostile one, for both halves.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

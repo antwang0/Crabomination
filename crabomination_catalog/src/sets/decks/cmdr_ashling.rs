@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_ashling.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Flamebraider / Smokebraider / Primal Beyond** — the mana spends on
-//!   Elemental creature spells and Elemental sources' abilities; a Kindred
-//!   Elemental noncreature spell can't use it (the precon has none).
 //! - **Horde of Notions** — casts the Elemental; an Elemental land card
 //!   can't be played this way.
 

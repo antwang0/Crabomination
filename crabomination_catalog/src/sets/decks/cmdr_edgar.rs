@@ -8,17 +8,6 @@
 //!   countered-spell-to-hand path (as Reprieve does), so an uncounterable spell
 //!   is not bounced; the gift's Treasure goes to the first opponent in turn
 //!   order (the engine's gift model has no recipient choice).
-//! - **Gleaming Splendor** — "two target players" are two player slots; the
-//!   engine does not require them to be distinct.
-//! - **Florian, Voldaren Scion** — the exiled card may be cast while it stays
-//!   exiled (the engine's look-and-exile-with-permission primitive), not
-//!   "played this turn"; a land among them can't be played.
-//! - **Charismatic Conqueror** — the tap choice is asked of the permanent's
-//!   controller as a yes/no.
-//! - **Edgar, Charmed Groom** — returns under the control of its controller at
-//!   death (its owner in every ordinary game).
-//! - **Westvale Abbey** — the transform ability's five sacrifices are "other
-//!   creatures" (the land itself is not a creature, so this matches).
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,

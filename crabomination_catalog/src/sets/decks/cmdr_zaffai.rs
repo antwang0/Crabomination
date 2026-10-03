@@ -4,7 +4,6 @@
 //!
 //! Residuals (each also on its card):
 //! - **Apex of Power** — the exiled cards may also be played as lands.
-//! - **Dazzling Sphinx** — a found card you don't cast stays in exile.
 //! - **Muse Vortex** — the uncast non-instant/sorcery cards go to the bottom
 //!   in exile order, not a random one.
 //! - **Radiant Performer** — copies spells only, not abilities.

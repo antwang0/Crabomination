@@ -1,11 +1,6 @@
 //! Commander: the cards the **Devour for Power** precon (CMD, The Mimeoplasm)
 //! needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_mimeoplasm.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **The Mimeoplasm** — the engine picks the two cards: it copies the
-//!   greatest-power creature card in any graveyard and takes counters from the
-//!   next greatest, rather than letting the player pick either role.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,

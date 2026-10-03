@@ -1,12 +1,6 @@
 //! Commander: the cards the **Living Energy** precon (DRC, Saheeli, Radiant
 //! Creator) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_saheeli_radiant.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Territorial Aetherkite** / **Rampaging Aetherhood** — "one or more
-//!   {E}" is paid in full by the headless seat.
-//! - **Saheeli, Radiant Creator** — the copy's target is picked as the
-//!   trigger goes on the stack, not in a reflexive trigger.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

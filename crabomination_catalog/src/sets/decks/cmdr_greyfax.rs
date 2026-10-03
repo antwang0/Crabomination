@@ -7,10 +7,6 @@
 //!   creature that shares a name with another permanent, not only the copy's.
 //! - **Cybernetica Datasmith** — the two target players may be the same.
 //! - **Inquisitor Eisenhorn** — the first-draw reveal is automatic.
-//! - **Neyam Shai Murad** — the card you take is the engine's pick, not
-//!   theirs.
-//! - **Triumph of Saint Katherine** — Praesidium Protectiva isn't
-//!   implemented.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

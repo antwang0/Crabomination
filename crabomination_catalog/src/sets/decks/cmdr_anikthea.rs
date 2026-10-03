@@ -2,12 +2,6 @@
 //! Hand of Erebos) needed beyond what the catalog had (Greater Tanuki is
 //! Raining Cats and Dogs', `cmdr_rinseri.rs`). Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Battle at the Helvault** — chapters I and II target one permanent per
-//!   *opponent*; your own permanents can't be picked.
-//! - **Ghoulish Impetus** — the goad is re-applied each of your upkeeps rather
-//!   than held by a static, so it outlives the Aura until your next turn.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

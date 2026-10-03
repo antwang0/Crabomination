@@ -1,10 +1,6 @@
 //! Commander: the cards the **Counterpunch** precon (CMD, Ghave, Guru of
 //! Spores) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_ghave.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Footbottom Feast** — the cards are chosen as it resolves, not targeted
-//!   on cast, and go on top in mana-value order (the greatest on top).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

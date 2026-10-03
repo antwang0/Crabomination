@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Armored Skyhunter** — an Equipment it puts onto the battlefield stays
 //!   unattached.
-//! - **Coercive Impetus** — the goad is renewed at the beginning of each
-//!   combat by a trigger, not a static.
 //! - **Herald of Amity** — the eight cards are revealed rather than exiled.
 
 use std::sync::Arc;

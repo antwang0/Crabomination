@@ -1,10 +1,6 @@
 //! Commander: the cards the **Call the Spirits** precon (C15, Daxos the
 //! Returned) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_daxos.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Sandstone Oracle** — the chosen opponent is the one with the most cards
-//!   in hand (the pick that draws the most).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

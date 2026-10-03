@@ -1,10 +1,6 @@
 //! Commander: the cards the **Coven Counters** precon (MIC, Leinore, Autumn
 //! Sovereign) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_leinore.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Curse of Conformity** — a changeling keeps every creature type (the
-//!   engine reads Changeling as a type wildcard, not a layer-4 CDA).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind,

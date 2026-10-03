@@ -1,10 +1,6 @@
 //! Commander: the cards the **Draconic Domination** precon (C17, The
 //! Ur-Dragon) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_urdragon.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Orator of Ojutai** — the Dragon check reads your board and hand as it
-//!   enters; there is no reveal.
 
 use std::sync::Arc;
 

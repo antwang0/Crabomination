@@ -5,12 +5,8 @@
 //! Residuals (each also on its card):
 //! - **Chandra, Legacy of Fire** — the 0 removes a loyalty counter from each
 //!   planeswalker you control with two or more (never "any number" chosen).
-//! - **Guff Rewrites History** — only opponents' permanents are chosen (not
-//!   your own), and the exiled lands go to the bottom in exile order.
 //! - **Leori** — the planeswalker type is the one most common among yours on
 //!   the battlefield and in hand, not a free choice.
-//! - **Narset of the Ancient Way** — the −2's damage target is chosen as the
-//!   ability is activated, not by a reflexive trigger.
 //! - **Repeated Reverberation** — its instant, sorcery and loyalty halves are
 //!   three separate "next" riders; each can fire.
 //! - **Sparkshaper Visionary** — all or none of your planeswalkers become

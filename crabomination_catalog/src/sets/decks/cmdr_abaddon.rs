@@ -3,13 +3,8 @@
 //! `tests/recent_b/cmdr_abaddon.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Bloodthirster** — it may attack a player it already attacked this
-//!   turn.
-//! - **Chaos Mutation** — two targets may share a controller.
 //! - **Khârn the Betrayer** — the next opponent in turn order gains control,
 //!   not an opponent of your choice.
-//! - **The Horus Heresy** — chapter III's choices start with the next
-//!   opponent, not with you.
 //! - **The Lost and the Damned** — a land played from outside your hand
 //!   (graveyard, exile) doesn't count.
 //! - **The Ruinous Powers** — the life-loss rider reads any spell you cast

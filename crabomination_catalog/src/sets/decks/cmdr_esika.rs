@@ -3,7 +3,6 @@
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 

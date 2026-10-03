@@ -1,10 +1,6 @@
 //! Commander: the cards the **Guided By Nature** precon (C14, Freyalise,
 //! Llanowar's Fury) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Siege Behemoth** — every creature you control assigns as though
-//!   unblocked while it attacks; the per-creature "you may" is always yes.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

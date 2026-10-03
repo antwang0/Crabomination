@@ -1,10 +1,6 @@
 //! Commander: the cards the **Invent Superiority** precon (C16, Breya,
 //! Etherium Shaper) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_breya.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Armory Automaton** — attaches every Equipment you control; "any number
-//!   of target Equipment" also reaches other players' Equipment.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

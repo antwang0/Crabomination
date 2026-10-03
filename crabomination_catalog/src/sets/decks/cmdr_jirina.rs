@@ -1,13 +1,6 @@
 //! Commander: the cards the **Ruthless Regiment** precon (C20, Jirina Kudro)
 //! needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_jirina.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Sanctuary Blade** — the colour is chosen by a trigger as the Blade
-//!   becomes attached, not as a replacement, so the protection starts once
-//!   that trigger resolves.
-//! - **Odric, Master Tactician** — the block choice holds for the rest of the
-//!   turn, not only this combat (it matters only with an extra combat).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus, EventKind,

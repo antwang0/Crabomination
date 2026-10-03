@@ -8,8 +8,6 @@
 //! - **Quintorius, Loremaster** — the exiled card is cast as the ability
 //!   resolves (not any time this turn), and goes to the graveyard, not the
 //!   bottom of the library.
-//! - **Serra Paragon** — lands from the graveyard aren't counted against the
-//!   once-a-turn limit, and the dies-exile-gain-2 rider isn't granted.
 
 use std::sync::Arc;
 

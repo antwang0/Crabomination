@@ -11,8 +11,6 @@
 //!   one is the engine's.
 //! - **Vesuvan Shapeshifter** — it copies only as it enters (not as it's
 //!   turned face up), and has no upkeep turn-face-down ability.
-//! - **Volrath, the Shapestealer** — the copy isn't 7/5 and loses the {1}
-//!   ability for the turn.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EntersAsCopy,

@@ -1,16 +1,6 @@
 //! Commander: the cards the **Chaos Incarnate** Secret Lair Commander deck
 //! (SCD, Kardur, Doomscourge) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kardur.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Kardur, Doomscourge** — creatures that enter after its ETB are goaded
-//!   by a delayed trigger rather than a static rule (they are goaded once it
-//!   resolves, before any combat).
-//! - **Theater of Horrors** — the permission outlives the enchantment, and
-//!   lands among the exiled cards can't be played (the engine-wide may-play
-//!   land gap).
-//! - **Wildfire Devils** — the random player's pick is their first instant or
-//!   sorcery in graveyard order.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,

@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Bell Borca** — the noted mana values are every card exiled this turn,
 //!   including before Bell Borca entered.
-//! - **The Peregrine Dynamo** — the ability copy is Strionic Resonator's (the
-//!   target is the ability's source permanent, the copy keeps its targets).
 //! - **Verrak** — only a fixed life cost counts as "life paid" (not X or half
 //!   your life), and the copy keeps its targets.
 

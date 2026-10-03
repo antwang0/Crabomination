@@ -4,13 +4,9 @@
 //! Residuals (each also on its card):
 //! - **C.A.M.P.** — the Junk token comes whenever the creature is colored,
 //!   not only when it shares a color with the land's mana.
-//! - **Endurance Bobblehead** — the X creatures are your greatest-power ones,
-//!   chosen on resolution rather than targeted.
 //! - **Expert-Level Safe** — both numbers are drawn at random (the
 //!   equilibrium strategy); no player is asked.
 //! - **Plasma Caster** — the target may be any blocking creature.
-//! - **Vault 13: Dweller's Journey** — chapter I's "one per player" isn't
-//!   enforced on the targets.
 //! - **Vault 112: Sadistic Simulation** — chapter III reveals rather than
 //!   exiles, and only a spell (not a land) may be played from among them.
 

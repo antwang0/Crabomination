@@ -8,13 +8,9 @@
 //! - **Espers to Magicite** — the copied card is the first creature card
 //!   exiled, not a chosen target; the artifact-only type is a layer-4 set,
 //!   not a copiable value.
-//! - **General Leo Cristophe** — the "up to one" return target is required
-//!   when one exists.
 //! - **Gogo, Mysterious Mime** — the copy takes the copied creature's name.
 //! - **Legions to Ashes** — same-name tokens of every player are exiled, not
 //!   only the target's controller's.
-//! - **Locke, Treasure Hunter** — any of the milled cards may be played this
-//!   turn, not just one spell.
 //! - **The Warring Triad** — the mill is part of the effect, not a cost, and
 //!   you are always the player who adds the mana.
 //! - **Umaro, Raging Yeti** — the random mode is picked, and a damage target

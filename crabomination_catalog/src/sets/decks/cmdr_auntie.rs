@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_auntie.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Eventide's Shadow** — each chosen permanent loses all its counters.
 //! - **Puca's Covenant** — the returned card is chosen on resolution (not
 //!   targeted), and the dying creature's own card is among the choices.
 

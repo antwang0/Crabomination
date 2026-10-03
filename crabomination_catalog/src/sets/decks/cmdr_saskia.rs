@@ -2,13 +2,6 @@
 //! Unyielding) needed beyond what the catalog had (Dauntless Escort landed with
 //! Token Triumph first). Tests in
 //! `tests/recent_b/cmdr_saskia.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Saskia the Unyielding** — "choose a player" is the engine's most
-//!   hostile opponent (the card allows any player, you included).
-//! - **Brutal Hordechief** — its creatures-block ability makes each
-//!   opponent's creature block if able; *how* they block is still their
-//!   controller's choice, not yours.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind,

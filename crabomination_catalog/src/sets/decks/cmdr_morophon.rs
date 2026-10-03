@@ -6,10 +6,6 @@
 //! - **Amoeboid Changeling, Nameless Inversion** — "loses all creature types"
 //!   empties the type line and strips Changeling until end of turn (a later
 //!   grant the same turn doesn't restore it).
-//! - **Moritte of the Frost** — the two counters come from an entry trigger,
-//!   and a noncreature copy has changeling too (harmless).
-//! - **Unsettled Mariner** — ward {1} on your permanents; you aren't
-//!   protected, and it doesn't stack with a printed ward.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

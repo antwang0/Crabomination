@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_zimone.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Ashaya, Soul of the Wild** — its P/T counts printed lands only, not
-//!   the creatures it makes lands.
 //! - **Deathmist Raptor** — it returns face up; the face-down option isn't
 //!   offered.
 //! - **Disorienting Choice** — the targets' controllers decide through the

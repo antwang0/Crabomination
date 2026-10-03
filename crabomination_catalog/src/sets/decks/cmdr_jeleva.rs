@@ -2,10 +2,6 @@
 //! Scourge) needed beyond what the catalog had (Curse of Chaos and Terra
 //! Ravager are Nature of the Beast's, `cmdr_marath.rs`). Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **True-Name Nemesis** — the chosen player is the engine's most hostile
-//!   opponent, not the controller's pick.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

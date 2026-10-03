@@ -10,11 +10,6 @@
 //!   so an ability whose source was itself sacrificed can't be copied.
 //! - **Smelting Vat** — each card is capped at the sacrificed artifact's mana
 //!   value, not the pair's total.
-//! - **Lithoform Engine** — the ability copy is Strionic Resonator's (the
-//!   target is the source permanent, the copy keeps its targets).
-//! - **Workshop Elders** — its flying grant matches printed card types, so an
-//!   artifact it (or anything) animates doesn't fly (CR 613.8 dependency).
-//! - **Glint Raker** — the reveal isn't optional.
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType,

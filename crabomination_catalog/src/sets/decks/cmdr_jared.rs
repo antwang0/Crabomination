@@ -1,11 +1,5 @@
 //! Commander: the cards the **Painbow** precon (DMC, Jared Carthalion)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_jared.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Knight of New Alara** — counts printed colors (a Kavu token is all
-//!   colors; a static that paints a creature all colors isn't seen).
-//! - **Unite the Coalition** — a repeated mode needs a different target the
-//!   bot doesn't always find.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,

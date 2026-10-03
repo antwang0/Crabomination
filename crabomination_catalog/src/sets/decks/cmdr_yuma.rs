@@ -1,12 +1,6 @@
 //! Commander: the cards the **Desert Bloom** precon (OTC, Yuma, Proud
 //! Protector) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_yuma.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Cataclysmic Prospecting** — mana spent from Deserts isn't tracked; the
-//!   Treasures count the tapped Deserts you control as it resolves.
-//! - **Dune Chanter** — land cards off the battlefield aren't Deserts (lands
-//!   you control are).
 
 use std::sync::Arc;
 

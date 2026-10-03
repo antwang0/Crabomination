@@ -1,14 +1,6 @@
 //! Commander: the cards the **Fae Dominion** precon (WOC, Tegwyll, Duke of
 //! Splendor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fae.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Halo Forager** — a mana-value-0 card can't be cast (paying {0} is a
-//!   decline).
-//! - **Illusionist's Gambit** — the must-attack and can't-attack-you grants
-//!   last the turn, not just the extra combat.
-//! - **Puppeteer Clique** — the creature is exiled at the next end step, not
-//!   necessarily yours.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,

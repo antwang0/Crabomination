@@ -7,8 +7,6 @@
 //!   Ninja or Turtle of yours that dealt damage to a player this turn.
 //! - **Coin of Mastery** — artifact mana is counted from the pool, so mana
 //!   floated from lands and artifacts together can read low.
-//! - **Special Move** — Foot Toss's creature is your greatest-power creature,
-//!   chosen on resolution rather than targeted.
 //! - **Vigor** — the prevention is a replacement, so "damage can't be
 //!   prevented" doesn't stop it.
 

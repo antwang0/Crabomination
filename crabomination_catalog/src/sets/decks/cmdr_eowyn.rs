@@ -3,15 +3,8 @@
 //! `tests/recent_b/cmdr_eowyn.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Call for Aid** — nothing stops you sacrificing the borrowed creatures.
-//! - **Denethor, Stone Seer** and **Éomer, King of Rohan** — you become the
-//!   monarch (the printed "target player").
-//! - **Fealty to the Realm** — the Aura's controller controls the creature,
-//!   not whoever is the monarch.
 //! - **Gilraen, Dúnedain Protector** — the creature always comes back at the
 //!   next end step with its counters (never at once).
-//! - **Visions of Glory** — its flashback isn't discounted by your
-//!   commander's mana value.
 
 use std::sync::Arc;
 

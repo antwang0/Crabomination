@@ -1,14 +1,6 @@
 //! Commander: the cards the **Quantum Quandrix** precon (C21, Adrix and Nev,
 //! Twincasters) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_quandrix.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Esix, Fractal Bloom** — the copied creature is the engine's pick (the
-//!   greatest mana value, anyone's), and the "may" is always taken.
-//! - **Primal Empathy** — the +1/+1 counter goes on your creature of greatest
-//!   power (the engine's pick).
-//! - **Ruxa, Patient Professor** — "no abilities" reads printed abilities, and
-//!   the unblocked-damage option is always taken.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

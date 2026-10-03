@@ -1,13 +1,6 @@
 //! Commander: the cards the **Most Wanted** precon (OTC, Olivia, Opulent
 //! Outlaw) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_olivia.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Dire Fleet Ravager** — the players lose their thirds one after
-//!   another (each reads only its own life, so the totals match).
-//! - **Vihaan, Goldwaker** — its vigilance/haste grant reads printed types,
-//!   so animated Treasures (outlaws on the layered type line, which Olivia's
-//!   trigger does see) don't get them.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

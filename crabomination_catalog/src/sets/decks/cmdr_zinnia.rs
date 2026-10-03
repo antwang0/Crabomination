@@ -6,10 +6,6 @@
 //! - **Zinnia, Valley's Voice** — the granted offspring copy is Zinnia's
 //!   trigger, so it is lost if Zinnia leaves before the creature enters; a
 //!   creature with its own kicker or offspring gets no second one.
-//! - **Echoing Assault** — one copy per combat, not one per player attacked.
-//! - **Combat Celebrant** — a second exert in the same turn is allowed but
-//!   does nothing (the bonus is once a turn).
-//! - **Rose Room Treasurer** — the {X} is paid from floating mana.
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,

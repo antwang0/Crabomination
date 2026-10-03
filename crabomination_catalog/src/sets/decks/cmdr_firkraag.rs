@@ -10,8 +10,6 @@
 //!   must-attack when the damage is dealt.
 //! - **Rowan Kenrith** — the +2's forced attacks last until your next turn
 //!   and reach the target player's creatures at resolution only.
-//! - **Stuffy Doll** — the chosen player is the engine's most hostile
-//!   opponent.
 
 use std::sync::Arc;
 

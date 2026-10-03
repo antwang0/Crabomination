@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_prosper.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Karazikar, the Eye Tyrant** — the creature it taps and goads is the
-//!   engine's pick (the attacked player's strongest), not a target.
 //! - **Hellish Rebuke** — modelled as your watcher for the turn, so the
 //!   sacrifice-and-lose-life trigger is yours rather than the permanent
 //!   controller's (same outcome).

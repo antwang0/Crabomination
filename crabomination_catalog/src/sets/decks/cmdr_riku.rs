@@ -1,10 +1,6 @@
 //! Commander: the cards the **Mirror Mastery** precon (CMD, Riku of Two
 //! Reflections) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_riku.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Ray of Command** — the creature is tapped at the next end step rather
-//!   than as its control returns (the same turn; it stays tapped either way).
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,

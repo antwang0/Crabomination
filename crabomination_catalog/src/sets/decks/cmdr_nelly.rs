@@ -1,11 +1,5 @@
 //! Commander: the cards the **Blame Game** precon (MKC, Nelly Borca) needed
 //! beyond what the catalog had. Tests in `tests/recent_b/cmdr_nelly.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Agitator Ant** — each taker's counters go on their greatest-power
-//!   creature rather than one they choose.
-//! - **Feather, Radiant Arbiter** — a headless caster only copies onto its
-//!   own creatures (a person is offered every legal creature).
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

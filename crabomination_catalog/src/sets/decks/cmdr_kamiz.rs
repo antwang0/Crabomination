@@ -1,10 +1,6 @@
 //! Commander: the cards the **Obscura Operation** precon (NCC, Kamiz,
 //! Obscura Oculus) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kamiz.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Oskar, Rubbish Reclaimer** — the discarded card may be cast from the
-//!   graveyard until end of turn rather than right away.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,

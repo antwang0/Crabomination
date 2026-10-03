@@ -1,14 +1,6 @@
 //! Commander: the cards the **Power Hungry** precon (C13, Prossh, Skyraider
 //! of Kher) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_prossh.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Sudden Demise** — the color is the engine's pick.
-//! - **Night Soil** — the two creature cards come from your own graveyard.
-//! - **Widespread Panic** — any shuffle a spell or ability makes counts, not
-//!   only one its controller made of their own library.
-//! - **Capricious Efreet** — the up-to-two opponents' targets are the
-//!   auto-picker's.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,

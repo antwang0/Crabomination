@@ -1,12 +1,6 @@
 //! Commander: the cards the **Urza's Iron Alliance** precon (BRC, Urza, Chief
 //! Artificer) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_urza.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Sanwell, Avenger Ace** — the rest go to the bottom in exile order,
-//!   not a random one.
-//! - **Scholar of New Horizons** — when the Plains may go onto the
-//!   battlefield, it always does.
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType,

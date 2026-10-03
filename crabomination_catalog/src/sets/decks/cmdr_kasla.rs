@@ -1,10 +1,6 @@
 //! Commander: the cards the **Divine Convocation** precon (MOC, Kasla, the
 //! Broken Halo) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kasla.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Path of the Ghosthunter** — with no planar deck the Will of the
-//!   Planeswalkers vote isn't held (its outcome would change nothing).
 
 use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,

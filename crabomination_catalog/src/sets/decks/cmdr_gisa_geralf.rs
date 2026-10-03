@@ -1,12 +1,6 @@
 //! Commander: the cards the **Grave Danger** precon (SCD, Gisa and Geralf)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_fdc.rs`
 //! (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Havengul Lich** — the cast permission lands, but the Lich does not gain
-//!   the cast card's activated abilities.
-//! - **Liliana, Untouched by Death** — the −3 covers the Zombie cards in your
-//!   graveyard as it resolves, not ones that arrive later that turn.
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType,

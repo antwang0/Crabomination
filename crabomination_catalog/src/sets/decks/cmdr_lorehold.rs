@@ -1,12 +1,6 @@
 //! Commander: the cards the **Lorehold Legacies** precon (C21, Osgir, the
 //! Reconstructor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_lorehold.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Key to the City** — "up to one target creature" always takes a target.
-//! - **Laelia, the Blade Reforged** — only her own attack's library exile
-//!   counts (no event announces one), and an exile from your battlefield
-//!   counts beside your graveyard.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

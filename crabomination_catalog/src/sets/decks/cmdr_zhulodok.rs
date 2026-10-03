@@ -1,11 +1,6 @@
 //! Commander: the cards the **Eldrazi Unbound** precon (CMM, Zhulodok, Void
 //! Gorger) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_zhulodok.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Abstruse Archaic** — the target is the ability's source permanent (a
-//!   colorless permanent you control with an ability on the stack), as
-//!   Strionic Resonator.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

@@ -1,10 +1,6 @@
 //! Commander: the cards the **Swell the Host** precon (C15, Ezuri, Claw of
 //! Progress) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_ezuri.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Skullwinder** — "choose an opponent" is the engine's pick (fewest
-//!   creatures, as for Sylvan Offering).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

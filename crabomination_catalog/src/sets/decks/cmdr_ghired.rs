@@ -1,12 +1,6 @@
 //! Commander: the cards the **Primal Genesis** precon (C19, Ghired, Conclave
 //! Exile) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Cliffside Rescuer** — protection from each opponent is protection from
-//!   what opponents control (`ProtectionFromMatching(ControlledByOpponent)`).
-//! - **Tahngarth, First Mate** — it attacks its new controller's default
-//!   opponent, not a chosen player that opponent is attacking.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,

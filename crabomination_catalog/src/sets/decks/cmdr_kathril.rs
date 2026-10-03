@@ -5,12 +5,8 @@
 //! Residuals (each also on its card):
 //! - **Cairn Wanderer** — landwalk and protection are copied for the five
 //!   basic land types and the five colors only.
-//! - **Slippery Bogbonder** — every counter on your other creatures moves
-//!   (the engine's "any number").
 //! - **Tayam, Luminous Enigma** — the vigilance counter arrives by trigger,
 //!   not as the creature enters.
-//! - **Vitality Hunter** — the lifelink counters go on your X greatest-power
-//!   creatures, not X chosen targets.
 //! - **Yannik, Scavenging Sentinel** — the engine exiles your highest mana
 //!   value other creature, and X reads its printed power.
 //! - **Archon of Valor's Reach** — the bot's pick of type is the first

@@ -1,9 +1,5 @@
 //! Commander: the cards the **Temur Roar** precon (TDC, Eshki, Temur's Roar)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_eshki.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Deceptive Frostkite** — the copy isn't optional when a creature with
-//!   power 4 or greater is there to copy.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EntersAsCopy, EventKind, EventScope,

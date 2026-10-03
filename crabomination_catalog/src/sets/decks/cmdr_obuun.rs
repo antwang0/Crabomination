@@ -1,12 +1,6 @@
 //! Commander: the cards the **Land's Wrath** precon (ZNC, Obuun, Mul Daya
 //! Ancestor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_obuun.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Scaretiller** — the mode is the engine's (a land from hand when there
-//!   is one, else the first land card in your graveyard, untargeted).
-//! - **Trove Warden** — the exiled cards return when it leaves the
-//!   battlefield by any route, not only when it dies.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

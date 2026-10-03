@@ -1,12 +1,6 @@
 //! Commander: the cards the **Multiverse Reforged** precon (FRC, Jace,
 //! Multiverse Architect) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_jace.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Dack Fayden, Helping Hand** — the revealed creatures go to the
-//!   opponents in turn order, not by your choice.
-//! - **Tamiyo, Upriser Crowned** — "one or more creatures" fires once per
-//!   creature (the same taps and stun counters).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind,

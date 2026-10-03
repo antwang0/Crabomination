@@ -4,12 +4,8 @@
 //!
 //! Residuals (each also on its card):
 //! - **Cloud Key** — the card-type choice also offers land and planeswalker.
-//! - **Inspirit, Flagship Vessel** / **Depthshaker Titan** — "up to one" /
-//!   "any number of" targets take what the targeter picks; Inspirit always
-//!   targets when it can.
 //! - **Moxite Refinery** — the X counters may come from among several of your
 //!   artifacts and creatures, not from one.
-//! - **Resourceful Defense** — "any number of counters" moves all of them.
 //! - **Ripples of Potential** — the phase-out is all or none of your
 //!   permanents with counters, not a pick among those proliferated.
 

@@ -2,13 +2,6 @@
 //! Ever-Watchful) needed beyond what the catalog had (Inspired Sphinx and
 //! Thunderclap Wyvern landed with First Flight first). Tests in
 //! `tests/recent_b/cmdr_ranar.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Cosmic Intervention** — the exile-instead replacement covers the
-//!   permanents you control as it resolves, and the end-step return brings
-//!   back the cards you own that a this-turn "exile it instead" moved.
-//! - **Niko Defies Destiny** — chapter III's target is the first card with
-//!   foretell in your graveyard the engine's picker takes.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,

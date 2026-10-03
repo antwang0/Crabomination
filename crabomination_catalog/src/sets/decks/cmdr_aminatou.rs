@@ -8,8 +8,6 @@
 //! - **Portent** — never has the player shuffle.
 //! - **Primordial Mist** — exiling the face-down permanent is the ability's
 //!   target, not its cost.
-//! - **Sower of Discord** — the two players are the opponents with the least
-//!   life (you and your only opponent at two seats).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,

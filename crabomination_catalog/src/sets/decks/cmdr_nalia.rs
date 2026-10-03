@@ -1,9 +1,5 @@
 //! Commander: the cards the **Party Time** precon (CLB, Nalia de'Arnise)
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_nalia.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Glorious Protector** — the exiled creatures are the controller's pick
-//!   through the choose-cards prompt (the bot keeps them all home).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,

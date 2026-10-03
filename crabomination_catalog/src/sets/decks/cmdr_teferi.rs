@@ -1,12 +1,6 @@
 //! Commander: the cards the **Peer Through Time** precon (C14, Teferi,
 //! Temporal Archmage) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_teferi.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Shaper Parasite** — +2/−2 or −2/+2 is picked as the trigger is put on
-//!   the stack, not as it resolves.
-//! - **Infinite Reflection** — the ETB copies onto every nontoken creature you
-//!   control, the enchanted one included (a copy of itself changes nothing).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind,

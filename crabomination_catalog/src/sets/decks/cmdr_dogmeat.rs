@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_dogmeat.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Agility Bobblehead** — the X creatures are your greatest-power ones,
-//!   chosen on resolution rather than targeted.
 //! - **Brotherhood Outcast** — the Aura or Equipment card is picked rather
 //!   than targeted.
 //! - **Vault 101: Birthday Party** — an Aura only goes on a creature, and an

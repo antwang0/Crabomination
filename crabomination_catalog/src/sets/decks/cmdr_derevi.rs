@@ -1,10 +1,6 @@
 //! Commander: the cards the **Evasive Maneuvers** precon (C13, Derevi,
 //! Empyrial Tactician) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_derevi.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Curse of Inertia** — the attacking player's tap-or-untap is the
-//!   engine's pick of permanent and direction.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind,
