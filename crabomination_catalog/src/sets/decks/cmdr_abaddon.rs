@@ -504,8 +504,7 @@ pub fn heralds_of_tzeentch() -> CardDefinition {
 
 /// Khârn the Betrayer — attacks or blocks each combat if able; losing
 /// control of it draws you two; damage to it is prevented and an opponent
-/// gains control of it. Residual: the next opponent in turn order, not one
-/// of your choice.
+/// of your choice gains control of it.
 pub fn kharn_the_betrayer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::MustAttackOrBlock],

@@ -239,9 +239,7 @@ pub fn company_commander() -> CardDefinition {
 }
 
 /// Cybernetica Datasmith — protection from Robots; {U}, {T}: one player
-/// draws, another gets a 4/4 Robot that can't block.
-///
-/// ⚠ Residual: the two target players may be the same.
+/// draws, another target player gets a 4/4 Robot that can't block.
 pub fn cybernetica_datasmith() -> CardDefinition {
     let robot = Arc::new(TokenDefinition {
         name: "Robot".to_string(),
