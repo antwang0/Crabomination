@@ -6,8 +6,6 @@
 //! - **Boltbender** — turning it up re-aims one target spell, not any number
 //!   of spells and abilities.
 //! - **Tesak, Judith's Hellhound** — other Dogs don't gain unleash.
-//! - **Veiled Ascension** — face-down creatures get their flying counter
-//!   from a trigger after they enter, not as they enter.
 
 use std::sync::Arc;
 
@@ -476,22 +474,20 @@ pub fn unexplained_absence() -> CardDefinition {
     }
 }
 
-/// Veiled Ascension — your face-down creatures get flying counters; your
-/// upkeep may cloak.
-///
-/// Residual: an entering face-down creature gets its counter from a
-/// trigger rather than entering with it.
+/// Veiled Ascension — your face-down creatures get flying counters (one
+/// entering face down enters with it, CR 122.6); your upkeep may cloak.
 pub fn veiled_ascension() -> CardDefinition {
     let flying_counter = |what: Selector| Effect::AddKeywordCounter { what, keyword: Keyword::Flying, amount: Value::ONE };
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Face-down creatures you control enter with a flying counter on them.",
+            effect: StaticEffect::MatchingEntersWithKeywordCounter {
+                filter: R::Creature.and(R::FaceDown),
+                keyword: Keyword::Flying,
+            },
+        }],
         triggered_abilities: vec![
             etb(flying_counter(Selector::EachPermanent(yours().and(R::FaceDown)))),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::FaceDown) },
-                ),
-                effect: flying_counter(Selector::TriggerSource),
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
                 effect: Effect::MayDo {

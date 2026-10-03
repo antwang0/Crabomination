@@ -1933,7 +1933,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
-| 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
@@ -1982,7 +1981,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
-| 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
 | 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | activated abilities with {X} in their cost aren't copied. |

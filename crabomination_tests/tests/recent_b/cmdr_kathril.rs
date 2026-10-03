@@ -120,6 +120,31 @@ fn soulflayer_keeps_what_it_delved() {
     assert!(!has(&g, s, Keyword::Trample));
 }
 
+/// CR 122.6 — Tayam's other creatures ENTER with a vigilance counter, by every
+/// route: a cast creature, a token, and one put onto the battlefield.
+#[test]
+fn tayam_creatures_enter_with_vigilance_counters() {
+    use crabomination::effect::{Effect, PlayerRef, ZoneDest};
+    let mut g = pod(2);
+    let tayam = g.add_card_to_battlefield(0, catalog::tayam_luminous_enigma());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, &[]);
+    let gy = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(tayam, 0, None);
+    g.resolve_effect(
+        &Effect::Move {
+            what: crabomination::effect::Selector::ExactObjects(vec![gy]),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        &ctx,
+    )
+    .expect("reanimate");
+    for id in [bear, gy] {
+        assert!(has(&g, id, Keyword::Vigilance), "entered with a vigilance counter");
+    }
+    assert!(!has(&g, tayam, Keyword::Vigilance), "not Tayam itself");
+}
+
 /// Archon of Valor's Reach: nobody casts the chosen type (CR 601.2 — the
 /// cast is illegal).
 #[test]

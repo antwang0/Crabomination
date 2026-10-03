@@ -383,6 +383,10 @@ fn veiled_ascension_gives_face_downs_wings() {
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).count(), 3);
+    // CR 122.6 — the cloaked card entered WITH its flying counter.
+    for id in g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).map(|c| c.id).collect::<Vec<_>>() {
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
+    }
 }
 
 /// Boltbender — turning it up re-aims a spell on the stack.

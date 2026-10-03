@@ -5,12 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Cairn Wanderer** — landwalk and protection are copied for the five
 //!   basic land types and the five colors only.
-//! - **Tayam, Luminous Enigma** — the vigilance counter arrives by trigger,
-//!   not as the creature enters.
-//! - **Yannik, Scavenging Sentinel** — X reads the exiled card's printed
-//!   power, not its last power on the battlefield.
-//! - **Archon of Valor's Reach** — the bot's pick of type is the first
-//!   offered (instant).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
@@ -491,22 +485,16 @@ pub fn soulflayer() -> CardDefinition {
     }
 }
 
-/// Tayam, Luminous Enigma — your other creatures get a vigilance counter as
-/// they enter; {3}, remove three counters from among your creatures: mill
-/// three, then a permanent card of mana value 3 or less from your graveyard
-/// onto the battlefield.
-/// Residual: the vigilance counter arrives by trigger.
+/// Tayam, Luminous Enigma — your other creatures enter with a vigilance
+/// counter (CR 122.6); {3}, remove three counters from among your creatures:
+/// mill three, then a permanent card of mana value 3 or less from your
+/// graveyard onto the battlefield.
 pub fn tayam_luminous_enigma() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
-            effect: Effect::AddKeywordCounter {
-                what: Selector::TriggerSource,
-                keyword: Keyword::Vigilance,
-                amount: Value::ONE,
-            },
+        static_abilities: vec![StaticAbility {
+            description: "Each other creature you control enters with an additional vigilance counter on it.",
+            effect: StaticEffect::MatchingEntersWithKeywordCounter { filter: R::Creature, keyword: Keyword::Vigilance },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),

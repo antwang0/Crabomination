@@ -2340,8 +2340,8 @@ cast-lock lane); delve-linked cards and
 Wanderer is one `PumpTeamIf` per keyword. ⚠ **An "up to N target cards"
 slot named one graveyard card twice** (CR 115.3): Ever After was never cast
 until the graveyard sweep skipped cards an earlier slot took. Residuals:
-**Cairn Wanderer**, **Slippery Bogbonder**, **Tayam**, **Vitality Hunter**,
-(INCOMPLETE_CARDS; Yannik and Archon of Valor's Reach since fixed). Release pods
+**Cairn Wanderer**, **Slippery Bogbonder**, **Vitality Hunter**,
+(INCOMPLETE_CARDS; Yannik, Archon of Valor's Reach and Tayam since fixed). Release pods
 beside Kasla / Ellivere / Zinnia (seed 10302, 1,000 games): 1,000 decided,
 Kathril 21.8 %, and the census leaves no card of the four lists unplayed;
 strict debug pods (seeds 10303/10304, 120 games) decided 120/120. Suite
