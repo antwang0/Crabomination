@@ -42,7 +42,7 @@ fn cr_115_7b_change_a_target_moves_one_ability_target() {
     float(&mut g, 0);
     g.perform_action(GameAction::CastSpell {
         card_id: reroute,
-        target: Some(Target::Permanent(pinger)),
+        target: Some(Target::Permanent(g.top_ability_of(pinger).expect("an ability on the stack"))),
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -73,7 +73,7 @@ fn cr_115_7a_original_target_stands_when_nothing_else_is_legal() {
     float(&mut g, 0);
     g.perform_action(GameAction::CastSpell {
         card_id: reroute,
-        target: Some(Target::Permanent(kraj)),
+        target: Some(Target::Permanent(g.top_ability_of(kraj).expect("an ability on the stack"))),
         additional_targets: vec![],
         mode: None,
         x_value: None,

@@ -1413,7 +1413,7 @@ fn bot_stifles_a_threatening_opponent_ability() {
     match bot.next_action(&g, 1) {
         Some(GameAction::CastSpell { card_id, target, .. }) => {
             assert_eq!(card_id, stifle, "bot casts Stifle");
-            assert_eq!(target, Some(Target::Permanent(dev)),
+            assert_eq!(target, Some(Target::Permanent(g.top_ability_of(dev).expect("an ability on the stack"))),
                 "Stifle targets the ability's source");
         }
         other => panic!("expected the bot to Stifle the trigger, got {other:?}"),
@@ -1679,6 +1679,7 @@ fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1722,6 +1723,7 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1783,6 +1785,7 @@ fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1831,6 +1834,7 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2163,6 +2167,7 @@ fn cr_705_3_static_grants_coin_flip_advantage() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);

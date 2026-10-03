@@ -1282,6 +1282,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         mana_spent_by_color: Vec::new(),
         activated: false,
         source_transformed_since_push: false,
+        ability_id: 0,
     });
     let mut events = Vec::new();
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);

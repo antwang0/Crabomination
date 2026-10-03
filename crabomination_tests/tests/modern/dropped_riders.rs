@@ -629,7 +629,9 @@ fn disallow_counters_a_triggered_ability() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
-    cast(&mut g, d, Some(Target::Permanent(boss))).expect("Disallow the trigger");
+    // CR 115.1 — the ability itself, not its source.
+    let ability = g.top_ability_of(boss).expect("an ability on the stack");
+    cast(&mut g, d, Some(Target::Permanent(ability))).expect("Disallow the trigger");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Goblin"));
 }

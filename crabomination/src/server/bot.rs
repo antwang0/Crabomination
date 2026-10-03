@@ -4401,9 +4401,12 @@ fn pick_ability_counter_response(
     w: &EvalWeights,
 ) -> Option<GameAction> {
     use crate::game::types::StackItem;
-    // Topmost opponent ability on the stack — counter the most recent one.
+    // Topmost opponent ability on the stack — counter the most recent one,
+    // named by its own id (CR 115.1; an unstamped fixture by its source).
     let source = state.stack.iter().rev().find_map(|si| match si {
-        StackItem::Trigger { source, controller, .. } if *controller != seat => Some(*source),
+        StackItem::Trigger { source, controller, ability_id, .. } if *controller != seat => {
+            Some(if *ability_id != 0 { crate::card::CardId(*ability_id) } else { *source })
+        }
         _ => None,
     })?;
     let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]

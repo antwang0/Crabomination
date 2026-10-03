@@ -24,7 +24,7 @@ impl GameState {
                     continue;
                 }
                 let dt = self.delayed_triggers.remove(i);
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect)
                         .target(dt.target)
                         .trigger_source(Some(EntityRef::Permanent(card_id)))

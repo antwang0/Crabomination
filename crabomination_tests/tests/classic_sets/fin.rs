@@ -5352,7 +5352,7 @@ fn gogo_copies_an_ability_x_times() {
     // Copy it twice with Gogo (X=2 → pay {2}{2}).
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gogo, ability_index: 0, target: Some(Target::Permanent(scamp)),
+        card_id: gogo, ability_index: 0, target: Some(Target::Permanent(g.top_ability_of(scamp).expect("an ability on the stack"))),
         additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("Gogo copies");
     drain_stack(&mut g);

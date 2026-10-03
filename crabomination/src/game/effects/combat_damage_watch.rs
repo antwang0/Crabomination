@@ -55,7 +55,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                     .event_amount(amount)

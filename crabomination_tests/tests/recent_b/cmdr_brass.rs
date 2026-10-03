@@ -580,7 +580,8 @@ fn siren_stormtamer_counters_an_ability_aimed_at_your_creature() {
         flood(g, 0);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: siren, ability_index: 0, target: Some(Target::Permanent(pinger)),
+            card_id: siren, ability_index: 0,
+            target: Some(Target::Permanent(g.top_ability_of(pinger).expect("an ability on the stack"))),
             additional_targets: vec![], x_value: None, mode: None,
         })
     };

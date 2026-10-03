@@ -867,7 +867,7 @@ impl GameState {
                 amount: crate::effect::Value::Const(amount as i32),
             };
             let target = self.auto_target_for_effect_avoiding(&redirect, controller, Some(cid));
-            self.stack.push(
+            self.push_stack(
                 crate::game::types::TriggerPush::new(cid, controller, redirect)
                     .target(target)
                     .build(),
@@ -2005,7 +2005,7 @@ impl GameState {
         self.spell_damage_trigger_fired = true;
         for (listener, effect, controller) in listeners {
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(listener, controller, effect)
                     .target(auto_target)
                     .event_amount(amount)
@@ -3122,7 +3122,7 @@ impl GameState {
             }
         });
         for dt in fire {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect)
                     .target(dt.target)
                     .trigger_source(Some(super::EntityRef::Card(id)))

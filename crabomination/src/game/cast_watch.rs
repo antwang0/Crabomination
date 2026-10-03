@@ -36,7 +36,7 @@ impl GameState {
                 }
                 let dt = self.delayed_triggers.remove(i);
                 if caster == Some(player) {
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect)
                             .target(dt.target)
                             .trigger_source(Some(EntityRef::Card(card)))

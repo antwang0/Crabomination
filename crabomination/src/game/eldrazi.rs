@@ -90,7 +90,7 @@ impl GameState {
             )?;
         }
         for item in abilities {
-            self.stack.push(item);
+            self.push_stack(item);
         }
         Ok(())
     }

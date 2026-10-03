@@ -2916,7 +2916,9 @@ fn reroute_retargets_an_activated_ability() {
     })
     .expect("ping my bear");
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
-    cast21(&mut g, 0, catalog::reroute(), Some(Target::Permanent(prodigal)));
+    // CR 115.1 — the ability itself, not its source.
+    let ability = g.top_ability_of(prodigal).expect("an ability on the stack");
+    cast21(&mut g, 0, catalog::reroute(), Some(Target::Permanent(ability)));
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "the ping went upstairs instead");
     assert_eq!(g.battlefield_find(mine).map(|c| c.damage), Some(0));
@@ -2953,7 +2955,7 @@ fn reroute_asks_the_caster_where_the_ability_goes() {
     }
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
-        target: Some(Target::Permanent(prodigal)),
+        target: Some(Target::Permanent(g.top_ability_of(prodigal).expect("an ability on the stack"))),
         additional_targets: vec![],
         mode: None,
         x_value: None,

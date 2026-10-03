@@ -71,7 +71,7 @@ impl GameState {
         self.players[p].loyalty_copy_grants.retain(|g| !(g.once && applies(g)));
         let Some(item) = self.stack.last().cloned() else { return };
         for _ in 0..copies {
-            self.stack.push(item.clone());
+            self.push_stack(item.clone());
         }
     }
 

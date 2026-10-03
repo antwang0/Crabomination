@@ -4247,6 +4247,12 @@ impl GameState {
         controller: usize,
         source: Option<CardId>,
     ) -> bool {
+        // CR 115.1 — a stack ability is a target of its own, not a card.
+        if let Target::Permanent(cid) = target
+            && crate::game::types::is_stack_ability_id(*cid)
+        {
+            return self.evaluate_requirement_on_ability(req, *cid, controller, source);
+        }
         self.evaluate_requirement_static_hinted(req, target, controller, source, None)
     }
 
@@ -5638,8 +5644,12 @@ impl GameState {
                             })
                     }),
                     R::AbilityTargetsMatching(inner) => self.stack.iter().any(|si| {
-                        let StackItem::Trigger { source: s, target, additional_targets, .. } = si else { return false };
+                        let StackItem::Trigger { source: s, target, additional_targets, ability_id, .. } = si
+                        else {
+                            return false;
+                        };
                         *s == card.id
+                            && *ability_id == 0
                             && target.iter().chain(additional_targets.iter()).any(|t| {
                                 self.evaluate_requirement_static(inner, t, controller, source)
                             })
@@ -5755,14 +5765,11 @@ impl GameState {
                         si,
                         StackItem::Spell { card: c, .. } if c.id == card.id && !c.cast_from_hand
                     )),
-                    R::HasAbilityOnStack => self.stack.iter().any(|si| matches!(
-                        si,
-                        StackItem::Trigger { source, .. } if *source == card.id
-                    )),
-                    R::HasTriggeredAbilityOnStack => self.stack.iter().any(|si| matches!(
-                        si,
-                        StackItem::Trigger { source, activated: false, .. } if *source == card.id
-                    )),
+                    // A stamped ability is targeted by its own id
+                    // (`evaluate_requirement_on_ability`); its source names
+                    // only an unstamped fixture's.
+                    R::HasAbilityOnStack => self.has_unstamped_ability_from(card.id, false),
+                    R::HasTriggeredAbilityOnStack => self.has_unstamped_ability_from(card.id, true),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     R::ManaValueAtMostOpponentsAttackedThisCombat => {
                         card.definition.cost.cmc() <= self.opponents_attacked_this_combat()

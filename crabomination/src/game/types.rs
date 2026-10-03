@@ -3236,7 +3236,26 @@ pub enum StackItem {
         /// `resolving_source_transformed`.
         #[serde(default)]
         source_transformed_since_push: bool,
+        /// CR 113.7 / 115.1 — this ability's own identity as an object on the
+        /// stack, so "target activated or triggered ability" names *it* rather
+        /// than its source (two abilities of one source are two objects).
+        /// Stamped by `GameState::push_stack` from a separate id space
+        /// ([`is_stack_ability_id`]); a copy is stamped afresh. 0 = unstamped.
+        #[serde(default)]
+        ability_id: u32,
     },
+}
+
+/// First id of the stack-ability id space: above every card id the game
+/// mints (`next_id` counts up from 1), below the emblem sources that count
+/// down from `u32::MAX`.
+pub const ABILITY_ID_BASE: u32 = 0x8000_0000;
+
+/// True when `id` names an ability on the stack (`StackItem::Trigger::ability_id`)
+/// rather than a card.
+#[inline]
+pub fn is_stack_ability_id(id: CardId) -> bool {
+    (ABILITY_ID_BASE..0xFFFF_0000).contains(&id.0)
 }
 
 /// Builder for `StackItem::Trigger`. The variant has 11 fields and ~25
@@ -3354,6 +3373,7 @@ impl TriggerPush {
             // CR 701.27f — false at push by definition; `transform_permanent`
             // sets it on items already on the stack.
             source_transformed_since_push: false,
+            ability_id: 0,
         }
     }
 }

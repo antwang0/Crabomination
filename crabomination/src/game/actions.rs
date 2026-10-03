@@ -5353,7 +5353,7 @@ impl GameState {
             let additional =
                 self.auto_extra_targets_for(view, card_id, controller, auto_target.clone());
             for _ in 0..multiplier {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(card_id, controller, effect.clone())
                         .target(auto_target.clone())
                         .additional_targets(additional.clone())
@@ -5373,7 +5373,7 @@ impl GameState {
                     let copy_additional =
                         self.auto_extra_targets_for(&copy, card_id, copier, copy_target.clone());
                     for _ in 0..multiplier {
-                        self.stack.push(
+                        self.push_stack(
                             TriggerPush::new(card_id, copier, copy.clone())
                                 .target(copy_target.clone())
                                 .additional_targets(copy_additional.clone())
@@ -7818,7 +7818,7 @@ impl GameState {
             .unwrap_or_default();
         for effect in unlock_triggers {
             let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(card_id, controller, effect)
                     .target(auto_target)
                     .mode(mode)
@@ -11866,7 +11866,7 @@ impl GameState {
             card.kicked = true;
             card.kick_count = self.cast_kick_count;
         }
-        self.stack.push(StackItem::Spell {
+        self.push_stack(StackItem::Spell {
             card: Box::new(card),
             caster: p,
             target: target.clone(),
@@ -11895,7 +11895,7 @@ impl GameState {
                     &copy_target,
                     Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
                 );
-                self.stack.push(StackItem::Spell {
+                self.push_stack(StackItem::Spell {
                     card: Box::new(copy_inst),
                     caster: p,
                     target: copy_target,
@@ -12111,7 +12111,7 @@ impl GameState {
                     what: Selector::Target(0),
                     cost: ward_cost,
                 };
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(perm_id, ward_controller, effect)
                         .target(Some(Target::Permanent(target_for_trigger)))
                         .build(),
@@ -12139,7 +12139,7 @@ impl GameState {
             }
         }
         for (source, cost) in wards {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(source, pl, Effect::CounterUnless { what: Selector::Target(0), cost })
                     .target(Some(Target::Permanent(target_for_trigger)))
                     .build(),
@@ -12181,7 +12181,7 @@ impl GameState {
             return;
         }
         self.triggered_once_per_turn_used.insert(key);
-        self.stack.push(
+        self.push_stack(
             TriggerPush::new(
                 perm_id,
                 controller,
@@ -12325,7 +12325,7 @@ impl GameState {
                 controller,
                 auto_target.clone(),
             );
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(source, controller, effect)
                     .target(auto_target)
                     .mode(mode)
@@ -15478,7 +15478,7 @@ impl GameState {
                     };
                     // X is the spells cast before the one it saw (CR 702.40a's
                     // storm count, fixed now — Crackling Spellslinger).
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                             .event_amount(cast_mv)
@@ -15534,7 +15534,7 @@ impl GameState {
                 }
                 self.delayed_triggers = kept;
                 for dt in fired {
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                             .event_amount(cast.definition.cost.cmc())
@@ -15569,7 +15569,7 @@ impl GameState {
                 std::mem::take(&mut self.delayed_triggers).into_iter().partition(fires);
             self.delayed_triggers = rest;
             for dt in named_fire {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                         .build(),
@@ -15873,7 +15873,7 @@ impl GameState {
             // `repeat_n` yields the original last, so the ordinary board — no
             // doubler, `fires == 1` — pays no clone at all (PERF `(-361)`).
             for (effect, auto_target) in std::iter::repeat_n((effect, auto_target), fires) {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(source, listener_controller, effect)
                         .target(auto_target)
                         .additional_targets(additional.clone())
@@ -22780,7 +22780,7 @@ impl GameState {
                 Some(m) => Some(clamp_activated_mode(&queued_effect, m)),
                 None => self.pick_trigger_mode(&queued_effect, card_id, p),
             };
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(card_id, p, queued_effect)
                     .target(target)
                     .additional_targets(additional_targets.clone())
@@ -22794,7 +22794,7 @@ impl GameState {
             // Pit Automaton — the claimed exhaust watchers go above the
             // ability they copy, so each resolves before its original.
             for dt in &exhaust_watchers {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(card_id)))
                         .build(),

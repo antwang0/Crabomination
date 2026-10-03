@@ -60,7 +60,7 @@ fn cr_115_7c_reroute_repoints_every_slot() {
     ]));
     g.perform_action(GameAction::CastSpell {
         card_id: reroute,
-        target: Some(Target::Permanent(groodion)),
+        target: Some(Target::Permanent(g.top_ability_of(groodion).expect("an ability on the stack"))),
         additional_targets: vec![],
         mode: None,
         x_value: None,

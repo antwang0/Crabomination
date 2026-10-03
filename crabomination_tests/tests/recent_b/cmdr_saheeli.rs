@@ -308,7 +308,7 @@ fn tawnos_copies_an_artifact_ability() {
     g.perform_action(GameAction::ActivateAbility { card_id: f, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
         .expect("servo");
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility { card_id: t, ability_index: 0, target: Some(Target::Permanent(f)), additional_targets: vec![], x_value: None, mode: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: t, ability_index: 0, target: Some(Target::Permanent(g.top_ability_of(f).expect("an ability on the stack"))), additional_targets: vec![], x_value: None, mode: None })
         .expect("copy it");
     drain_stack(&mut g);
     assert_eq!(named(&g, 0, "Servo").len(), 2);

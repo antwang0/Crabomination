@@ -1488,7 +1488,7 @@ fn stifle_counters_a_triggered_ability_off_the_stack() {
     g.players[1].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: stifle,
-        target: Some(Target::Permanent(dev)),
+        target: Some(Target::Permanent(g.top_ability_of(dev).expect("an ability on the stack"))),
         additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Stifle should accept Devourer as the source target");

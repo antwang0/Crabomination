@@ -3977,6 +3977,16 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when the filter names an ability on the stack (CR 115.1) — the
+    /// candidates `GameState::stack_ability_targets` walks.
+    pub fn mentions_stack_ability(&self) -> bool {
+        match self {
+            Self::HasAbilityOnStack | Self::HasTriggeredAbilityOnStack | Self::AbilityTargetsMatching(_) => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_stack_ability() || b.mentions_stack_ability(),
+            _ => false,
+        }
+    }
+
     /// True when the filter can match an object on the stack (a spell or an
     /// ability) — candidates no battlefield/graveyard/exile walk sees.
     /// Recurses through And/Or/Not.

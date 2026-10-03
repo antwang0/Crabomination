@@ -1748,7 +1748,7 @@ fn strionic_resonator_copies_a_triggered_ability() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: resonator,
         ability_index: 0,
-        target: Some(Target::Permanent(bond)),
+        target: Some(Target::Permanent(g.top_ability_of(bond).expect("an ability on the stack"))),
         additional_targets: vec![],
         x_value: None,
         mode: None,
@@ -1781,7 +1781,7 @@ fn strionic_resonator_copy_chooses_a_new_target() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: resonator,
         ability_index: 0,
-        target: Some(Target::Permanent(kavu)),
+        target: Some(Target::Permanent(g.top_ability_of(kavu).expect("an ability on the stack"))),
         additional_targets: vec![],
         x_value: None,
         mode: None,
@@ -1840,7 +1840,7 @@ fn strionic_resonator_copies_a_dies_trigger() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: resonator,
         ability_index: 0,
-        target: Some(Target::Permanent(traveler)),
+        target: Some(Target::Permanent(g.top_ability_of(traveler).expect("an ability on the stack"))),
         additional_targets: vec![],
         x_value: None,
         mode: None,

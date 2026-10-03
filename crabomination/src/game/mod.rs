@@ -167,6 +167,7 @@ mod simultaneous_deaths;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
+mod stack_ability;
 mod cast_watch;
 mod live_pt;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -4504,7 +4505,7 @@ impl GameState {
 
     /// The CR 726.2 "venture into Undercity" trigger, pushed for `player`.
     pub(crate) fn push_undercity_venture(&mut self, player: usize) {
-        self.stack.push(
+        self.push_stack(
             crate::game::types::TriggerPush::new(
                 CardId(0),
                 player,
@@ -20387,7 +20388,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 crate::game::types::TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(card_id)))
                     .build(),
@@ -22750,7 +22751,7 @@ impl GameState {
                 .cloned()
                 .collect();
             for dt in watchers {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(src)))
                         .build(),
@@ -22784,7 +22785,7 @@ impl GameState {
                 .cloned()
                 .collect();
             for dt in watchers {
-                self.stack.push(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).event_amount(n).build());
+                self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).event_amount(n).build());
             }
         }
     }
@@ -22879,7 +22880,7 @@ impl GameState {
                     target = slot0;
                     additional = rest;
                 }
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect)
                         .target(target)
                         .additional_targets(additional)
@@ -22922,7 +22923,7 @@ impl GameState {
                         .attack_for(atk_id)
                         .and_then(|a| self.defender_for(a.target));
                     if defender == Some(dt.controller) {
-                        self.stack.push(
+                        self.push_stack(
                             TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                                 .trigger_source(Some(
                             crate::game::effects::EntityRef::Permanent(atk_id),
@@ -22947,7 +22948,7 @@ impl GameState {
                     std::mem::take(&mut self.delayed_triggers).into_iter().partition(next_attack);
                 self.delayed_triggers = rest;
                 for dt in fired {
-                    self.stack.push(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).build());
+                    self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).build());
                     if !dt.fires_once {
                         self.delayed_triggers.push(dt);
                     }
@@ -22973,7 +22974,7 @@ impl GameState {
                         .battlefield_find(atk_id)
                         .is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller));
                     if matches {
-                        self.stack.push(
+                        self.push_stack(
                             TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                                 .trigger_source(Some(
                                     crate::game::effects::EntityRef::Permanent(atk_id),
@@ -23013,7 +23014,7 @@ impl GameState {
                 };
                 for &b in &blockers {
                     if self.battlefield_find(b).is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller)) {
-                        self.stack.push(
+                        self.push_stack(
                             TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                                 .trigger_source(Some(crate::game::effects::EntityRef::Permanent(b)))
                                 .build(),
@@ -23062,7 +23063,7 @@ impl GameState {
                     if dt.controller != *controller {
                         continue;
                     }
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
                             .build(),
@@ -23098,7 +23099,7 @@ impl GameState {
                     ) {
                         continue;
                     }
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
                             .build(),
@@ -23138,7 +23139,7 @@ impl GameState {
                     if dt.controller != *controller {
                         continue;
                     }
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
                             .build(),
@@ -23166,7 +23167,7 @@ impl GameState {
                         if !self.evaluate_requirement_on_card(filt, &snap, dt.controller) {
                             continue;
                         }
-                        self.stack.push(
+                        self.push_stack(
                             TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                                 .trigger_source(Some(crate::game::effects::EntityRef::Permanent(
                                     *cid,
@@ -25905,7 +25906,7 @@ impl GameState {
         } else {
             self.battlefield_find(source).map(|c| c.cast_x_value).unwrap_or(0)
         };
-        self.stack.push(
+        self.push_stack(
             TriggerPush::new(source, controller, effect)
                 .target(target)
                 .additional_targets(additional)
@@ -26466,7 +26467,7 @@ impl GameState {
         let extra_targets = self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone());
         let all_targets: Vec<Target> =
             target.iter().cloned().chain(extra_targets.iter().cloned()).collect();
-        self.stack.push(
+        self.push_stack(
             TriggerPush::new(card_id, p, ability.effect)
                 .target(target)
                 .additional_targets(extra_targets)

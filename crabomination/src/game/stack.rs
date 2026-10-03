@@ -898,7 +898,7 @@ impl GameState {
                 // to (and doubled) like any other trigger.
                 if self.monarch == Some(self.active_player_idx) {
                     let seat = self.active_player_idx;
-                    self.stack.push(
+                    self.push_stack(
                         crate::game::types::TriggerPush::new(
                             CardId(0),
                             seat,
@@ -2431,7 +2431,7 @@ impl GameState {
                             .unwrap_or_default();
                         for effect in mutate_effects {
                             let auto_target = self.auto_target_for_effect(&effect, caster);
-                            self.stack.push(
+                            self.push_stack(
                                 TriggerPush::new(host_id, caster, effect)
                                     .target(auto_target)
                                     .trigger_source(Some(
@@ -2961,7 +2961,7 @@ impl GameState {
                     // sacrifice funnel, so leave-the-battlefield triggers
                     // (Spitebellows) and sacrifice payoffs never saw it.
                     if evoked {
-                        self.stack.push(
+                        self.push_stack(
                         TriggerPush::new(card_id, caster, Effect::SacrificePermanent {
                             what: crate::effect::Selector::This,
                         })
@@ -3295,6 +3295,7 @@ impl GameState {
                 trigger_player,
                 mana_spent_by_color,
                 source_transformed_since_push,
+                ability_id: _,
             } => {
                 // `mana_spent_by_color` is empty for every *triggered*
                 // ability and for every activation that paid no coloured
@@ -3504,7 +3505,7 @@ impl GameState {
                 }
                 other => other.clone(),
             };
-            self.stack.push(StackItem::Spell {
+            self.push_stack(StackItem::Spell {
                 card: Box::new(copy),
                 caster: p,
                 target,
@@ -6506,7 +6507,7 @@ impl GameState {
             }
             if self.state_trigger_armed.insert(id) {
                 let target = self.auto_target_for_effect(&st.effect, ctrl);
-                self.stack.push(
+                self.push_stack(
                     crate::game::types::TriggerPush::new(id, ctrl, st.effect)
                         .target(target)
                         .build(),
@@ -7410,7 +7411,7 @@ impl GameState {
                 // other death funnel and `push_pending_trigger` fill them.
                 let additional =
                     self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
                         .additional_targets(additional)
@@ -8263,7 +8264,7 @@ impl GameState {
             // controller (CR 603.x reflexive trigger off the replacement).
             if let Some((_src, controller, Some(effect))) = valentin_redirect {
                 let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(id, controller, effect)
                         .target(auto_target)
                         .mode(mode)
@@ -8802,7 +8803,7 @@ impl GameState {
                 // fills them (Vindictive Lich's three opponents).
                 let additional =
                     self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
                         .additional_targets(additional)

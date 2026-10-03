@@ -445,7 +445,7 @@ impl GameState {
                 .restricted_mana_source(seat, SpendRestriction::RedInstantSorceryCopy)
                 .unwrap_or(CardId(0));
             for _ in 0..copy_pips {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(
                         source,
                         seat,
@@ -464,7 +464,7 @@ impl GameState {
                 .restricted_mana_source(seat, SpendRestriction::SpellOrAbilityCopy)
                 .unwrap_or(CardId(0));
             for _ in 0..copy_pips {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(
                         source,
                         seat,
@@ -484,7 +484,7 @@ impl GameState {
                 .restricted_mana_source(seat, SpendRestriction::CommanderCastScry)
                 .unwrap_or(CardId(0));
             for _ in 0..study_pips {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(
                         source,
                         seat,
@@ -502,7 +502,7 @@ impl GameState {
             .restricted_mana_source(seat, SpendRestriction::CommanderTypeScry)
             .unwrap_or(CardId(0));
         for _ in 0..pips {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(
                     source,
                     seat,

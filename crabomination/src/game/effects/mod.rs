@@ -2037,7 +2037,7 @@ impl GameState {
             // CR 707.10a — a copy of a spell ceases to exist off the stack.
             copy_inst.is_token = true;
             copy_inst.resolve_riders = riders;
-            self.stack.push(StackItem::Spell {
+            self.push_stack(StackItem::Spell {
                 card: Box::new(copy_inst),
                 caster,
                 target: copy_target,
@@ -2090,7 +2090,7 @@ impl GameState {
             crate::card::CardInstance::new(new_id, (*snap.definition).clone(), seat);
         // CR 707.10a — a copy of a spell ceases to exist off the stack.
         copy_inst.is_token = true;
-        self.stack.push(StackItem::Spell {
+        self.push_stack(StackItem::Spell {
             card: Box::new(copy_inst),
             caster: seat,
             target: copy_target,
@@ -5765,7 +5765,7 @@ impl GameState {
                         *additional_targets = new_extra;
                     }
                 }
-                self.stack.push(copy);
+                self.push_stack(copy);
                 Ok(())
             }
 
@@ -6151,7 +6151,7 @@ impl GameState {
                         uncounterable: true,
                     }
                 };
-                self.stack.push(copy);
+                self.push_stack(copy);
                 let copy_pos = self.stack.len() - 1;
                 // Random retarget: legal picks are permanents you don't
                 // control and players other than you, matching the spell's
@@ -19352,7 +19352,7 @@ impl GameState {
                 // Auron's" — `PowerLessThanSource`).
                 let (slot0, additional) =
                     self.auto_targets_for_effect_all_slots_sourced(body, ctx.controller, None, Some(src));
-                self.stack.push(
+                self.push_stack(
                     crate::game::TriggerPush::new(src, ctx.controller, (**body).clone())
                         .target(slot0)
                         .additional_targets(additional)
@@ -20145,13 +20145,20 @@ impl GameState {
                 else {
                     return Ok(());
                 };
+                // The ability by its own id (CR 115.1); a bare source id names
+                // its bottom-most targeted activation.
+                let by_id = crate::game::types::is_stack_ability_id(id);
                 let Some(pos) = self.stack.iter().position(|si| match si {
-                    StackItem::Trigger { source, activated, target, .. } => {
-                        *source == id && *activated && target.is_some()
+                    StackItem::Trigger { source, activated, target, ability_id, .. } => {
+                        (if by_id { *ability_id == id.0 } else { *source == id }) && *activated && target.is_some()
                     }
                     _ => false,
                 }) else {
                     return Ok(());
+                };
+                let id = match &self.stack[pos] {
+                    StackItem::Trigger { source, .. } => *source,
+                    StackItem::Spell { .. } => id,
                 };
                 let current = match &self.stack[pos] {
                     StackItem::Trigger { target: Some(t), .. } => t.clone(),
@@ -22949,29 +22956,14 @@ impl GameState {
             }
 
             Effect::CounterAbility { what } => {
-                // Counter target activated/triggered ability. The selector
-                // resolves to a permanent (the ability's source); we remove
-                // the topmost `StackItem::Trigger` whose `source` matches.
-                // Used by Consign to Memory.
+                // Counter target activated/triggered ability (Consign to Memory).
+                // The target is the ability's own id (CR 115.1); a bare source
+                // id (an unstamped fixture) names its topmost ability.
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
-                    if let Some(cid) = t.as_permanent_id() {
-                        // Walk top-down so we counter the most recent
-                        // matching trigger (the one the player most likely
-                        // intends to cancel).
-                        if let Some(pos) = self
-                            .stack
-                            .iter()
-                            .enumerate()
-                            .rev()
-                            .find_map(|(i, si)| match si {
-                                StackItem::Trigger { source, .. } if *source == cid => Some(i),
-                                _ => None,
-                            })
-                        {
-                            to_remove.push(pos);
-                        }
+                    if let Some(pos) = t.as_permanent_id().and_then(|cid| self.stack_ability_pos(cid, None)) {
+                        to_remove.push(pos);
                     }
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
@@ -22984,13 +22976,16 @@ impl GameState {
             }
 
             Effect::CounterAbilityAndDestroySource { what } => {
-                // Ouphe Vandals — counter the targeted permanent's topmost
-                // ability on the stack, then destroy that permanent.
+                // Ouphe Vandals — counter the targeted ability, then destroy
+                // its source (read before the counter takes the ability away).
+                let sources: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id().and_then(|cid| self.stack_ability_source(cid)))
+                    .collect();
                 self.run_effect(&Effect::CounterAbility { what: what.clone() }, ctx, events)?;
-                for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id() {
-                        self.destroy_permanent(cid, false, events);
-                    }
+                for cid in sources {
+                    self.destroy_permanent(cid, false, events);
                 }
                 Ok(())
             }
@@ -23015,16 +23010,7 @@ impl GameState {
                             self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                             self.countered_spell_off_stack(*card, ctx.controller, events);
                         }
-                    } else if let Some(pos) = self
-                        .stack
-                        .iter()
-                        .enumerate()
-                        .rev()
-                        .find_map(|(i, si)| match si {
-                            StackItem::Trigger { source, .. } if *source == cid => Some(i),
-                            _ => None,
-                        })
-                    {
+                    } else if let Some(pos) = self.stack_ability_pos(cid, None) {
                         self.stack.remove(pos);
                     }
                 }
@@ -23036,14 +23022,12 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 for t in &targets {
                     let Some(cid) = t.as_permanent_id() else { continue };
-                    // The topmost ability from that source, the copier's first.
-                    let from = |mine: bool| {
-                        self.stack.iter().rev().find(|si| matches!(si,
-                            StackItem::Trigger { source, controller, .. }
-                                if *source == cid && (!mine || *controller == ctx.controller)))
-                    };
-                    let Some(item) = from(true).or_else(|| from(false)).cloned() else { continue };
-                    let name = self.find_card_anywhere(cid).map_or("ability", |c| c.definition.name);
+                    // The targeted ability (CR 115.1); a bare source id names
+                    // its topmost one, the copier's first.
+                    let Some(pos) = self.stack_ability_pos(cid, Some(ctx.controller)) else { continue };
+                    let item = self.stack[pos].clone();
+                    let StackItem::Trigger { source: from, .. } = &item else { continue };
+                    let name = self.find_card_anywhere(*from).map_or("ability", |c| c.definition.name);
                     for _ in 0..n {
                         let mut copy = item.clone();
                         // CR 707.10 — the copier controls the copy and "may
@@ -23055,7 +23039,7 @@ impl GameState {
                                 *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);
                             }
                         }
-                        self.stack.push(copy);
+                        self.push_stack(copy);
                     }
                 }
                 Ok(())
@@ -25300,11 +25284,17 @@ impl GameState {
                     // CR 115.7 — "spell or ability": retarget a targeted
                     // triggered/activated ability whose source is the
                     // selected permanent (topmost if several).
-                    if let Some(tidx) = self.stack.iter().rposition(|si| matches!(
-                        si,
-                        StackItem::Trigger { source, target: Some(_), .. } if *source == spell_id
-                    )) {
-                        let legal = if let StackItem::Trigger { effect, controller, .. } =
+                    let tidx = if crate::game::types::is_stack_ability_id(spell_id) {
+                        self.stack_ability_pos(spell_id, None)
+                            .filter(|&i| matches!(&self.stack[i], StackItem::Trigger { target: Some(_), .. }))
+                    } else {
+                        self.stack.iter().rposition(|si| matches!(
+                            si,
+                            StackItem::Trigger { source, target: Some(_), .. } if *source == spell_id
+                        ))
+                    };
+                    if let Some(tidx) = tidx {
+                        let legal = if let StackItem::Trigger { effect, controller, source: from, .. } =
                             &self.stack[tidx]
                         {
                             effect
@@ -25314,14 +25304,14 @@ impl GameState {
                                         f,
                                         &Target::Permanent(src),
                                         *controller,
-                                        Some(spell_id),
+                                        Some(*from),
                                     )
                                 })
                                 && self
                                     .check_target_legality_with_source(
                                         &Target::Permanent(src),
                                         ctx.controller,
-                                        Some(spell_id),
+                                        Some(*from),
                                     )
                                     .is_ok()
                         } else {
@@ -30120,7 +30110,7 @@ impl GameState {
                     let new_id = self.next_id();
                     let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
                     copy_inst.is_token = true;
-                    self.stack.push(StackItem::Spell {
+                    self.push_stack(StackItem::Spell {
                         card: Box::new(copy_inst),
                         caster,
                         target: Some(t),
@@ -34517,7 +34507,7 @@ impl GameState {
                     let new_id = self.next_id();
                     let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
                     copy_inst.is_token = true;
-                    self.stack.push(StackItem::Spell {
+                    self.push_stack(StackItem::Spell {
                         card: Box::new(copy_inst),
                         caster,
                         target: Some(t),

@@ -915,7 +915,7 @@ fn spellskite_redirects_ability_target() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: skite, ability_index: 0,
-        target: Some(Target::Permanent(tim)), additional_targets: Vec::new(), x_value: None, mode: None,
+        target: Some(Target::Permanent(g.top_ability_of(tim).expect("an ability on the stack"))), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Spellskite at the ability");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "bear untouched");
@@ -1646,7 +1646,7 @@ fn trickbind_counters_activated_ability() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[1].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: t, target: Some(Target::Permanent(stone)),
+        card_id: t, target: Some(Target::Permanent(g.top_ability_of(stone).expect("an ability on the stack"))),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Trickbind");
     drain_stack(&mut g);

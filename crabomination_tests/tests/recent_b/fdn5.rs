@@ -1250,7 +1250,8 @@ fn ouphe_vandals_counters_and_destroys() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ouphe, ability_index: 0, target: Some(Target::Permanent(station)),
+        card_id: ouphe, ability_index: 0,
+        target: Some(Target::Permanent(g.top_ability_of(station).expect("an ability on the stack"))),
         additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("counter it");

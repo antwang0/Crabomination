@@ -299,6 +299,23 @@ impl GameState {
                 return Some(t);
             }
         }
+        // CR 115.1 — "target activated or triggered ability": each stack
+        // ability by its own id, topmost first, the side the effect favours
+        // first (Stifle an opponent's, Strionic Resonator one of yours).
+        if req.mentions_stack_ability() {
+            let cands = self.stack_ability_targets(req, controller, avoid_source);
+            let side = |t: &Target| {
+                let Target::Permanent(aid) = t else { return false };
+                let mine = self.stack_ability_pos(*aid, None).is_some_and(|i| {
+                    matches!(&self.stack[i], crate::game::types::StackItem::Trigger { controller: c, .. } if *c == controller)
+                });
+                mine == prefer_friendly
+            };
+            let legal = |t: &&Target| self.check_target_legality(t, controller).is_ok();
+            if let Some(t) = cands.iter().filter(legal).find(|t| side(t)).or_else(|| cands.iter().find(legal)) {
+                return Some(t.clone());
+            }
+        }
 
         // Graveyard-target effects: Reanimate/Disentomb (friendly) hit the
         // caster's graveyard; Ghost Vacuum (hostile) hits an opponent's
@@ -722,6 +739,14 @@ impl GameState {
             if is_legal_bf(c) {
                 out.push(Target::Permanent(c.id));
             }
+        }
+        // CR 115.1 — each stack ability is a candidate of its own.
+        if req.mentions_stack_ability() {
+            out.extend(
+                self.stack_ability_targets(req, controller, source)
+                    .into_iter()
+                    .filter(|t| self.check_target_legality(t, controller).is_ok()),
+            );
         }
         if !offboard {
             return out;

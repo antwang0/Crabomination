@@ -1037,7 +1037,7 @@ fn voidslime_counters_an_ability() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     let hand_before = g.players[1].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: vs, target: Some(Target::Permanent(stone)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: vs, target: Some(Target::Permanent(g.top_ability_of(stone).expect("an ability on the stack"))), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("cast Voidslime at the ability");
     drain_stack(&mut g);

@@ -29,7 +29,7 @@ impl GameState {
         for id in ids {
             let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else { continue };
             let (slot0, additional) = self.auto_targets_for_effect_all_slots(body, controller, None);
-            self.stack.push(
+            self.push_stack(
                 crate::game::TriggerPush::new(id, controller, body.clone())
                     .target(slot0)
                     .additional_targets(additional)

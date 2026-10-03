@@ -51,7 +51,7 @@ impl GameState {
             let new_id: CardId = self.next_id();
             let mut copy = crate::card::CardInstance::new(new_id, def.clone(), me);
             copy.is_token = true;
-            self.stack.push(StackItem::Spell {
+            self.push_stack(StackItem::Spell {
                 card: Box::new(copy),
                 caster: me,
                 target: Some(t),

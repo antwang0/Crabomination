@@ -2330,7 +2330,7 @@ impl GameState {
                             continue;
                         }
                     }
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(src, defender, effect)
                             .target(Some(Target::Player(p)))
                             // Bind the attacking creature as the trigger source so
@@ -2417,7 +2417,7 @@ impl GameState {
                     if *once {
                         batch_fired.push(i);
                     }
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(*src, *ctrl, effect.clone())
                             .target(Some(Target::Player(p)))
                             .trigger_source(Some(crate::game::effects::EntityRef::Player(d)))
@@ -2455,7 +2455,7 @@ impl GameState {
                 if filter.as_ref().is_some_and(|f| !self.evaluate_predicate(f, &ctx)) {
                     continue;
                 }
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(src, ctrl, effect)
                         .target(Some(Target::Player(p)))
                         .trigger_source(subject)
@@ -2598,7 +2598,7 @@ impl GameState {
             for (effect, auto_target, additional) in
                 std::iter::repeat_n((effect, auto_target, additional), fires)
             {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
                         .additional_targets(additional)
@@ -2703,7 +2703,7 @@ impl GameState {
                 for (effect, auto_target) in
                     std::iter::repeat_n((effect, auto_target), fires)
                 {
-                    self.stack.push(
+                    self.push_stack(
                         TriggerPush::new(src, ctrl, effect).target(auto_target).mode(mode).build(),
                     );
                 }
@@ -6484,7 +6484,7 @@ impl GameState {
                 .cloned()
                 .collect();
             for dt in watchers {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                         .event_amount(damage_amount)
@@ -6581,7 +6581,7 @@ impl GameState {
             // Bind the creature that dealt the damage as `Selector::TriggerSource`
             // so "whenever a creature deals combat damage to you, destroy it"
             // clauses can reference the dealer (Teysa, Envoy of Ghosts).
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(listener, controller, effect)
                     .target(auto_target)
                     .mode(mode)
@@ -6610,7 +6610,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                     .event_amount(amount)
@@ -6642,7 +6642,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                     .event_amount(amount)
@@ -6669,7 +6669,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .event_amount(amount)
                     .build(),
@@ -6694,7 +6694,7 @@ impl GameState {
             .cloned()
             .collect();
         for dt in watchers {
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .target(Some(Target::Player(owner)))
                     .build(),
@@ -7425,7 +7425,7 @@ impl GameState {
                 0
             };
             for _ in 0..extra {
-                self.stack.push(
+                self.push_stack(
                     TriggerPush::new(trig_source, controller, effect.clone())
                         .target(target.clone())
                         .mode(mode)
@@ -7439,7 +7439,7 @@ impl GameState {
                         .build(),
                 );
             }
-            self.stack.push(
+            self.push_stack(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
                     .mode(mode)

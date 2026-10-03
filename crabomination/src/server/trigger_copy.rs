@@ -32,9 +32,12 @@ pub(super) fn pick_trigger_copy(state: &GameState, seat: usize) -> Option<GameAc
     if state.players[seat].commanders.is_empty() {
         return None;
     }
-    let Some(StackItem::Trigger { source, controller, effect, target: None, .. }) = state.stack.last() else {
+    let Some(StackItem::Trigger { source, controller, effect, target: None, ability_id, .. }) = state.stack.last()
+    else {
         return None;
     };
+    // CR 115.1 — the ability by its own id (an unstamped fixture by its source).
+    let named = if *ability_id != 0 { crate::card::CardId(*ability_id) } else { *source };
     if *controller != seat || !worth_copying(effect) {
         return None;
     }
@@ -46,7 +49,7 @@ pub(super) fn pick_trigger_copy(state: &GameState, seat: usize) -> Option<GameAc
             let action = GameAction::ActivateAbility {
                 card_id: c.id,
                 ability_index: i,
-                target: Some(Target::Permanent(*source)),
+                target: Some(Target::Permanent(named)),
                 additional_targets: Vec::new(),
                 x_value: None,
                 mode: None,

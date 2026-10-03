@@ -174,3 +174,96 @@ fn cr_613_1d_liquimetal_coated_land_is_an_artifact_to_tezzeret() {
     activate(&mut g, vault, 1, None);
     assert!(g.computed_permanent(vault).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
 }
+
+/// Two abilities of one permanent pushed by hand, a 1-life and a 5-life gain;
+/// returns (source, lower ability id, upper ability id).
+fn two_abilities_of_one_source(g: &mut GameState) -> (crabomination::card::CardId, crabomination::card::CardId, crabomination::card::CardId) {
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::types::TriggerPush;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gain = |n| Effect::GainLife { who: Selector::You, amount: Value::Const(n) };
+    g.push_stack(TriggerPush::new(src, 0, gain(1)).build());
+    g.push_stack(TriggerPush::new(src, 0, gain(5)).build());
+    let ids: Vec<_> = g.stack.iter().filter_map(|si| match si {
+        StackItem::Trigger { ability_id, .. } => Some(crabomination::card::CardId(*ability_id)),
+        _ => None,
+    }).collect();
+    assert_ne!(ids[0], ids[1], "each ability is its own object");
+    (src, ids[0], ids[1])
+}
+
+use crabomination::game::types::StackItem;
+
+/// CR 115.1 / 113.7 — "copy target triggered ability" names one ability, not
+/// its source: of two abilities of one permanent on the stack, Strionic
+/// Resonator copies the LOWER one when that is the one targeted (the old
+/// source-addressed target always took the topmost). The source permanent
+/// itself is no longer a legal target.
+#[test]
+fn cr_115_1_strionic_resonator_copies_the_targeted_one_of_two_abilities() {
+    let mut g = main_phase();
+    let resonator = g.add_card_to_battlefield(0, catalog::strionic_resonator());
+    let (src, lower, upper) = two_abilities_of_one_source(&mut g);
+    g.players[0].mana_pool.add_colorless(2);
+    let legal = g.legal_targets_for_filter(
+        &crabomination::card::SelectionRequirement::HasTriggeredAbilityOnStack
+            .and(crabomination::card::SelectionRequirement::ControlledByYou),
+        false,
+        0,
+        Some(resonator),
+    );
+    assert_eq!(legal, vec![Target::Permanent(upper), Target::Permanent(lower)], "both abilities, topmost first");
+    let by_source = GameAction::ActivateAbility {
+        card_id: resonator, ability_index: 0, target: Some(Target::Permanent(src)),
+        additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(g.perform_action(by_source).is_err(), "the source is not an ability");
+    let life = g.players[0].life;
+    activate(&mut g, resonator, 0, Some(Target::Permanent(lower)));
+    assert_eq!(g.players[0].life, life + 1 + 5 + 1, "the 1-life ability was copied");
+}
+
+/// CR 115.1 — Stifle counters the targeted ability; the other ability of the
+/// same source still resolves.
+#[test]
+fn cr_115_1_stifle_counters_the_targeted_one_of_two_abilities() {
+    let mut g = main_phase();
+    let (_, lower, _) = two_abilities_of_one_source(&mut g);
+    let stifle = g.add_card_to_hand(0, catalog::stifle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stifle, target: Some(Target::Permanent(lower)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Stifle the lower ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 5, "only the 5-life ability resolved");
+}
+
+/// CR 707.10 — a copy of an ability is a new object with its own id, so a
+/// second copier can't confuse it with the original.
+#[test]
+fn cr_707_10_a_copied_ability_gets_its_own_id() {
+    let mut g = main_phase();
+    let resonator = g.add_card_to_battlefield(0, catalog::strionic_resonator());
+    let (_, _, upper) = two_abilities_of_one_source(&mut g);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: resonator, ability_index: 0, target: Some(Target::Permanent(upper)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    // Resolve only the Resonator's ability: the copy lands on top.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    let ids: Vec<u32> = g.stack.iter().filter_map(|si| match si {
+        StackItem::Trigger { ability_id, .. } => Some(*ability_id),
+        _ => None,
+    }).collect();
+    assert_eq!(ids.len(), 3, "two originals and the copy: {ids:?}");
+    let mut uniq = ids.clone();
+    uniq.sort_unstable();
+    uniq.dedup();
+    assert_eq!(uniq.len(), 3, "every ability on the stack has its own id");
+}

@@ -367,7 +367,9 @@ fn the_peregrine_dynamo_copies_a_legends_ability() {
         mode: None,
     })
     .expect("pump");
-    activate(&mut g, dynamo, 0, Some(Target::Permanent(ashling))).expect("copy");
+    // CR 115.1 — the ability itself, not its source.
+    let ability = g.top_ability_of(ashling).expect("an ability on the stack");
+    activate(&mut g, dynamo, 0, Some(Target::Permanent(ability))).expect("copy");
     assert_eq!(g.battlefield_find(ashling).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
