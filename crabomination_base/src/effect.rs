@@ -1615,6 +1615,10 @@ pub enum Value {
     /// put into your graveyard from the battlefield this turn" is
     /// `NotToken.and(OwnedByYou)` (Caller of the Claw).
     CreatureDeathsThisTurnMatching { filter: SelectionRequirement },
+    /// The total power (last known) of the creatures matching `filter` that
+    /// died this turn — "the total power of Daleks that died this turn"
+    /// (Genesis of the Daleks IV).
+    CreatureDeathsThisTurnTotalPower { filter: SelectionRequirement },
     /// Number of Zubera that died this turn across **every** player. Sums
     /// `Player.zuberas_died_this_turn`. Powers the Champions-of-Kamigawa
     /// Zubera death-trigger cycle ("for each Zubera that died this turn").
@@ -7913,8 +7917,17 @@ pub enum Effect {
     /// [on_miss]" (Expert-Level Safe). Each pick is uniform at random —
     /// the game's equilibrium strategy, so no seat is asked. `on_miss` reads
     /// the opponent's guess as `Value::TriggerEventAmount` (The Toymaker's
-    /// Trap).
-    SecretNumbersMatch { opponent: PlayerRef, max: u32, on_match: Box<Effect>, on_miss: Box<Effect> },
+    /// Trap). `fresh`: "a number that hasn't been chosen" — the source
+    /// keeps the numbers it chose (`CardCold::chosen_numbers`), both picks
+    /// come from the rest, and with none left nothing happens.
+    SecretNumbersMatch {
+        opponent: PlayerRef,
+        max: u32,
+        on_match: Box<Effect>,
+        on_miss: Box<Effect>,
+        #[serde(default)]
+        fresh: bool,
+    },
     /// "At the beginning of combat on enchanted opponent's turn, that player
     /// may pay {1} for each artifact they control. If they don't, creatures
     /// can't attack this combat" (Overencumbered) — the payment half; the
@@ -11168,6 +11181,10 @@ pub enum Effect {
         #[serde(default)]
         restrict_to: Option<SelectionRequirement>,
     },
+    /// Keep the name `what` just named in its list of chosen names, so
+    /// `SelectionRequirement::NameChosenForSource` still matches it after the
+    /// next `NameCard` (Day of the Moon's three chapters).
+    RememberNamedCard { what: Selector },
 
     /// "As [this] enters, choose a number." Stores the chosen number on the
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the

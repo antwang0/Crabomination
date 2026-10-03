@@ -924,6 +924,7 @@ pub fn expert_level_safe() -> CardDefinition {
             effect: Effect::TargetPlayerThen {
                 filter: R::OpponentPlayer,
                 then: Box::new(Effect::SecretNumbersMatch {
+                    fresh: false,
                     opponent: PlayerRef::Target(0),
                     max: 3,
                     on_match: Box::new(Effect::Seq(vec![

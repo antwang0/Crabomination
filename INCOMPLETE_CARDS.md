@@ -1992,12 +1992,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own. |
-| 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
 | 🟡 Doomsday Confluence | Masters of Evil (WHO) | each of the X modes is chosen as it resolves, not all on cast. |
-| 🟡 Genesis of the Daleks | Masters of Evil (WHO) | chapter IV counts the Daleks it destroyed, not every Dalek that died this turn. |
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
-| 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |
 | 🟡 The Day of the Doctor | Timey-Wimey (WHO) | chapter IV keeps your own greatest-power Doctors; you can't keep an opponent's. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |

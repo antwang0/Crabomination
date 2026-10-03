@@ -2225,7 +2225,7 @@ impl Effect {
             Effect::NameCreatureType { what }
             | Effect::NameCreatureTypeBy { what, .. }
             | Effect::NameCreatureTypeAmong { what, .. } => sel_has_target(what),
-            Effect::NameCard { what, .. } => sel_has_target(what),
+            Effect::NameCard { what, .. } | Effect::RememberNamedCard { what } => sel_has_target(what),
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
@@ -3108,6 +3108,7 @@ impl Effect {
             | Effect::NameCreatureType { what }
             | Effect::NameCreatureTypeBy { what, .. }
             | Effect::NameCard { what, .. }
+            | Effect::RememberNamedCard { what }
             | Effect::LockTargetNameUntilYourNextTurn { what }
             | Effect::Explore { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to }
@@ -5408,6 +5409,7 @@ impl Effect {
                 | Effect::NameCreatureType { what }
                 | Effect::NameCreatureTypeBy { what, .. }
                 | Effect::NameCard { what, .. }
+                | Effect::RememberNamedCard { what }
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),

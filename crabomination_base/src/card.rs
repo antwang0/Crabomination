@@ -3401,6 +3401,10 @@ pub enum SelectionRequirement {
     /// target creature with the same name as this creature"). The source-less
     /// card walker reads it as false.
     SharesNameWithSource,
+    /// Has a name chosen for the source so far (its `named_card` or one
+    /// `Effect::RememberNamedCard` kept — Day of the Moon). The source-less
+    /// card walker reads it as false.
+    NameChosenForSource,
     /// No permanent the evaluating player controls shares this card's name
     /// (Central Elevator's "a Room card that doesn't have the same name as a
     /// Room you control").
@@ -3983,6 +3987,7 @@ impl SelectionRequirement {
             | Self::SharesColorWithExiledBySource
             | Self::SameNameAsExiledWithSource
             | Self::SharesNameWithSource
+            | Self::NameChosenForSource
             | Self::SharesColorWithAttachedHost
             | Self::SharesCreatureTypeWithAttachedHost
             | Self::SharesCreatureTypeWithSource => true,
@@ -7990,6 +7995,13 @@ pub struct CardCold {
     /// CR 702.106b double agenda — the second of two secretly chosen names
     /// (Summoner's Bond). `None` for every single-name namer.
     pub named_card_2: Option<String>,
+    /// Every name chosen for this permanent so far — "all creatures with a
+    /// name chosen for this enchantment" (Day of the Moon). Appended by
+    /// `Effect::RememberNamedCard`.
+    pub chosen_names: Vec<String>,
+    /// The numbers this permanent has secretly chosen (The Toymaker's Trap's
+    /// "a number … that hasn't been chosen").
+    pub chosen_numbers: Vec<u8>,
     /// CR 702.33b — which of the definition's `kicker_options` were paid for
     /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
     /// spell.
@@ -11648,6 +11660,8 @@ struct CardInstanceWire {
     licid_attached: bool,
     #[serde(default)]
     named_card_2: Option<String>,
+    #[serde(default)]
+    chosen_names: Vec<String>,
     /// Chosen color (Coldsteel Heart-style mana rocks). `#[serde(default)]`
     /// so older snapshots load as `None`.
     #[serde(default)]
@@ -11874,6 +11888,7 @@ impl serde::Serialize for CardInstance {
             granted_cast_surcharge_eot: self.granted_cast_surcharge_eot.clone(),
             named_card: self.named_card.clone(),
             named_card_2: self.named_card_2.clone(),
+            chosen_names: self.chosen_names.clone(),
             chosen_color: self.chosen_color,
             chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
@@ -12048,6 +12063,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.make_licid_aura();
         }
         c.named_card_2 = wire.named_card_2;
+        if !wire.chosen_names.is_empty() {
+            c.chosen_names = wire.chosen_names;
+        }
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;

@@ -3,15 +3,11 @@
 //! `tests/recent_b/cmdr_davros.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Day of the Moon** — only the latest chosen name is goaded.
 //! - **Doomsday Confluence** — each of the X modes is chosen as it resolves.
-//! - **Genesis of the Daleks** — chapter IV counts the Daleks it destroyed,
-//!   not every Dalek that died this turn.
 //! - **Rassilon, the War President** — noncreature spells cast from exile
 //!   don't have conspire.
 //! - **The Master, Multiplied** — your triggered abilities can still make you
 //!   sacrifice or exile your creature tokens.
-//! - **The Toymaker's Trap** — numbers already chosen may be chosen again.
 
 use std::sync::Arc;
 
@@ -407,12 +403,13 @@ pub fn davros_dalek_creator() -> CardDefinition {
 }
 
 /// Day of the Moon — each chapter names a creature card and goads every
-/// creature with that name. Residual: only the latest name is goaded.
+/// creature with a name chosen for it so far.
 pub fn day_of_the_moon() -> CardDefinition {
     let chapter = || {
         Effect::Seq(vec![
             Effect::NameCard { what: Selector::This, restrict_to: Some(R::Creature) },
-            Effect::Goad { what: Selector::EachPermanent(R::Creature.and(R::NamedBySource)) },
+            Effect::RememberNamedCard { what: Selector::This },
+            Effect::Goad { what: Selector::EachPermanent(R::Creature.and(R::NameChosenForSource)) },
         ])
     };
     saga("Day of the Moon", cost(&[generic(2), r()]), vec![(1, chapter()), (2, chapter()), (3, chapter())])
@@ -550,8 +547,7 @@ pub fn exterminate() -> CardDefinition {
 
 /// Genesis of the Daleks — I–III: a Dalek per lore counter. IV: target
 /// opponent chooses — destroy all Daleks and each of your opponents loses
-/// their total power, or destroy all non-Daleks. Residual: IV counts the
-/// Daleks it destroyed.
+/// the total power of Daleks that died this turn, or destroy all non-Daleks.
 pub fn genesis_of_the_daleks() -> CardDefinition {
     let muster = || make_dalek(PlayerRef::You, Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Lore });
     saga(
@@ -567,12 +563,9 @@ pub fn genesis_of_the_daleks() -> CardDefinition {
                     target_filtered(R::Player.and(R::OpponentPlayer)),
                     Effect::Seq(vec![
                         Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(dalek())) },
-                        Effect::ForEach {
-                            selector: Selector::DestroyedThisResolution { filter: dalek() },
-                            body: Box::new(Effect::LoseLife {
-                                who: Selector::Player(PlayerRef::OpponentOf(Box::new(me()))),
-                                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
-                            }),
+                        Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::OpponentOf(Box::new(me()))),
+                            amount: Value::CreatureDeathsThisTurnTotalPower { filter: dalek() },
                         },
                     ]),
                     Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(dalek())))) },
@@ -1171,7 +1164,7 @@ pub fn the_sound_of_drums() -> CardDefinition {
 
 /// The Toymaker's Trap — your upkeep: a secret number from 1 to 5 an opponent
 /// guesses; a miss loses them life and draws you a card, a match sacrifices
-/// it. Residual: numbers already chosen may be chosen again.
+/// it. A number it chose is never chosen again; with none left it does nothing.
 pub fn the_toymakers_trap() -> CardDefinition {
     CardDefinition {
         name: "The Toymaker's Trap",
@@ -1180,6 +1173,7 @@ pub fn the_toymakers_trap() -> CardDefinition {
         triggered_abilities: vec![step(
             TurnStep::Upkeep,
             Effect::SecretNumbersMatch {
+                fresh: true,
                 opponent: PlayerRef::HostileOpponent,
                 max: 5,
                 on_match: Box::new(Effect::SacrificeSource),

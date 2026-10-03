@@ -1072,6 +1072,13 @@ impl GameState {
                 .iter()
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
                 .count() as i32,
+            Value::CreatureDeathsThisTurnTotalPower { filter } => self
+                .deaths
+                .creature_deaths_this_turn
+                .iter()
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                .map(|c| c.power().max(0))
+                .sum(),
             Value::TurnNumber => self.turn_number as i32,
             // Turn 1 starts without an `advance_turn`, so it is not in the
             // tally: it belongs to `starting_player` (CR 103.5).
@@ -6131,6 +6138,10 @@ impl GameState {
                         // fall back to the per-resolution scratchpad (Predict).
                         .or(self.scratch.named_card_this_resolution.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    R::NameChosenForSource => source.and_then(|sid| self.static_source(sid)).is_some_and(|s| {
+                        s.named_card.as_deref() == Some(card.definition.name)
+                            || s.cold_any(|k| k.chosen_names.iter().any(|n| n == card.definition.name))
+                    }),
                     R::NamedByEitherAgendaOfSource => source
                         .and_then(|sid| self.static_source(sid))
                         .is_some_and(|s| {
@@ -6618,6 +6629,7 @@ impl GameState {
             | R::SharesColorWithExiledBySource
             | R::SameNameAsExiledWithSource
             | R::SharesNameWithSource
+            | R::NameChosenForSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost
             | R::SharesCreatureTypeWithSource => false,

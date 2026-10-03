@@ -533,3 +533,82 @@ fn zygon_infiltrator_copies_while_its_mark_stays_tapped() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(zygon).unwrap().definition.name, "Zygon Infiltrator");
 }
+
+/// Day of the Moon goads "all creatures with a name chosen for this
+/// enchantment": chapter II's goad still covers chapter I's name.
+#[test]
+fn day_of_the_moon_goads_every_name_chosen_for_it() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_battlefield(0, catalog::day_of_the_moon());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Hill Giant".into()),
+        DecisionAnswer::NamedCard("Grizzly Bears".into()),
+    ]));
+    let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[0].1.clone();
+    let ctx = EffectContext::for_ability(saga, 0, None);
+    g.resolve_effect(&chapter, &ctx).expect("I");
+    // Chapter I's goad has worn off by the next chapter.
+    for id in [giant, bear] {
+        g.battlefield_find_mut(id).unwrap().goaded_by.clear();
+    }
+    g.resolve_effect(&chapter, &ctx).expect("II");
+    for id in [giant, bear] {
+        assert!(!g.battlefield_find(id).unwrap().goaded_by.is_empty(), "both names are chosen for it");
+    }
+}
+
+/// The Toymaker's Trap chooses "a number between 1 and 5 that hasn't been
+/// chosen": its picks never repeat, and once all five are used it does
+/// nothing.
+#[test]
+fn the_toymakers_trap_never_repeats_a_number() {
+    for seed in 0..12u64 {
+        let mut g = main_phase(2);
+        g.rng = crabomination::game::rng::GameRng::seeded(seed);
+        let trap = g.add_card_to_battlefield(0, catalog::the_toymakers_trap());
+        for _ in 0..6 {
+            if g.battlefield_find(trap).is_none() {
+                break;
+            }
+            let life = g.players[1].life;
+            g.step = TurnStep::Upkeep;
+            g.fire_step_triggers(TurnStep::Upkeep);
+            drain_stack(&mut g);
+            let Some(t) = g.battlefield_find(trap) else { break };
+            let picks = t.chosen_numbers.clone();
+            let mut uniq = picks.clone();
+            uniq.sort();
+            uniq.dedup();
+            assert_eq!(uniq.len(), picks.len(), "seed {seed}: {picks:?}");
+            if picks.len() == 5 && g.players[1].life == life {
+                break;
+            }
+        }
+    }
+}
+
+/// Genesis of the Daleks IV's first option drains the total power of Daleks
+/// that died this turn — one that died earlier in the turn counts too.
+#[test]
+fn genesis_of_the_daleks_counts_every_dalek_that_died_this_turn() {
+    use crabomination::effect::Effect;
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_hand(0, catalog::genesis_of_the_daleks());
+    cast(&mut g, saga, None).expect("Genesis: one Dalek");
+    let saga = named(&g, 0, "Genesis of the Daleks")[0];
+    let first = named(&g, 0, "Dalek")[0];
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![first]) }, saga);
+    let ch = g.battlefield_find(saga).unwrap().definition.saga_chapters[1].1.clone();
+    run(&mut g, ch, saga);
+    assert_eq!(named(&g, 0, "Dalek").len(), 1, "chapter II's Dalek");
+    let Effect::VillainousChoice { option_a, .. } = g.battlefield_find(saga).unwrap().definition.saga_chapters[3].1.clone()
+    else {
+        panic!("IV is a villainous choice")
+    };
+    let life = g.players[1].life;
+    g.resolve_effect(&option_a, &EffectContext::for_ability(saga, 1, None)).expect("IV, option A");
+    assert_eq!(g.players[1].life, life - 6, "the earlier Dalek's 3 and this one's 3");
+}

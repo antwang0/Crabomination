@@ -32909,12 +32909,22 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SecretNumbersMatch { opponent, max, on_match, on_miss } => {
+            Effect::SecretNumbersMatch { opponent, max, on_match, on_miss, fresh } => {
                 use rand::seq::IteratorRandom;
                 let Some(_opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
                 let hi = (*max).max(1);
-                let mine = (1..=hi).choose(&mut self.rng.draw()).unwrap_or(1);
-                let theirs = (1..=hi).choose(&mut self.rng.draw()).unwrap_or(1);
+                let used: Vec<u8> = match ctx.source.and_then(|s| self.battlefield_find(s)) {
+                    Some(c) if *fresh => c.chosen_numbers.clone(),
+                    _ => Vec::new(),
+                };
+                let open = || (1..=hi).filter(|n| !used.contains(&(*n as u8)));
+                let Some(mine) = open().choose(&mut self.rng.draw()) else { return Ok(()) };
+                let theirs = open().choose(&mut self.rng.draw()).unwrap_or(1);
+                if *fresh
+                    && let Some(c) = ctx.source.and_then(|s| self.battlefield_find_mut(s))
+                {
+                    c.chosen_numbers.push(mine as u8);
+                }
                 if mine == theirs {
                     self.run_effect(on_match, ctx, events)
                 } else {
@@ -35056,6 +35066,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RememberNamedCard { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id)
+                        && let Some(n) = c.named_card.clone()
+                        && !c.chosen_names.contains(&n)
+                    {
+                        c.chosen_names.push(n);
+                    }
+                }
+                Ok(())
+            }
             Effect::NameCard { what, restrict_to } => {
                 // CR 201.3 — "as this enters, choose a card name." Mirrors
                 // NameCreatureType: stamp the chosen name onto the source
