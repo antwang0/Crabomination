@@ -2013,7 +2013,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
 | 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
-| 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
 | 🟡 Grave Endeavor | Dungeons of Death (AFC) | its counters are put on after the creature enters. |

@@ -58,7 +58,6 @@ they call a deck 🟡, the table wins.
 | 100 | Ulalek, Fused Atrocity (WUBRG) | 3: bismuth_mindrender, suffer_the_past, twins_of_discord |
 | 103 | Kathril, Aspect Warper (WBG) | 4: archon_of_valors_reach, cairn_wanderer, tayam_luminous_enigma, yannik_scavenging_sentinel |
 | 104 | Vrondiss, Rage of Ancients (RG) | 3: berserkers_frenzy, dragonborn_champion, sword_of_hours |
-| 105 | Killian, Decisive Mentor (WB) | 1: herald_of_amity |
 | 106 | Galea, Kindler of Hope (GWU) | 3: clay_golem, song_of_inspiration, sword_of_hours |
 | 107 | Firkraag, Cunning Instigator (UR) | 3: baeloth_barrityl_entertainer, firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
@@ -110,7 +109,7 @@ they call a deck 🟡, the table wins.
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
 
-110 / 183 pod decks carry no residual in their card docs; the rest are listed.
+111 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
