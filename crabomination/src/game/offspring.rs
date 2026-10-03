@@ -16,7 +16,7 @@ impl GameState {
             // A granted offspring rides the `kicked` stamp, so a multikicked
             // or non-creature permanent (Marshal's Anthem) is not one.
             let granted = c.paid_granted_offspring()
-                && c.definition.is_creature()
+                && self.computed_is_creature(c)
                 && c.definition.has_multikicker().is_none();
             if !c.kicked || (c.definition.has_offspring().is_none() && !granted) {
                 continue;
