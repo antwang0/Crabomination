@@ -1983,7 +1983,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
-| 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |

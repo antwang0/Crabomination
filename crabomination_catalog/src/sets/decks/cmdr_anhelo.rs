@@ -591,37 +591,39 @@ pub fn xanders_pact() -> CardDefinition {
     }
 }
 
-/// Zndrsplt's Judgment — friends copy a creature of theirs; foes bounce one.
-///
-/// Residual: you are the only friend and every opponent a foe.
+/// Zndrsplt's Judgment — for each player, friend or foe (`FriendOrFoe`):
+/// each friend copies a creature of theirs, each foe bounces one, each of
+/// their own choice.
 pub fn zndrsplts_judgment() -> CardDefinition {
     spell(
         "Zndrsplt's Judgment",
         cost(&[generic(4), u()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::CreateTokenCopyOf {
+        Effect::FriendOrFoe {
+            friend: Box::new(crate::effect::shortcut::choose_one_then(
+                Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                PlayerRef::You,
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: crate::effect::shortcut::chosen_one(),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                },
+            )),
+            foe: Box::new(Effect::PlayerReturnsPermanentsToHand {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                source: Selector::GreatestPowerYouControl,
-                extra_creature_types: vec![],
-                extra_card_types: vec![],
-                override_pt: None,
-                override_colors: None,
-                enters_tapped: false,
-                non_legendary: false,
-                legendary: false,
-                extra_keywords: vec![],
-                no_mana_cost: false,
-            },
-            Effect::ForEachOpponent {
-                body: Box::new(Effect::PlayerReturnsPermanentsToHand {
-                    who: PlayerRef::Triggerer,
-                    count: Value::ONE,
-                    filter: R::Creature,
-                    up_to: false,
-                }),
-            },
-        ]),
+                filter: R::Creature,
+                up_to: false,
+            }),
+        },
     )
 }

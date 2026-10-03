@@ -961,7 +961,13 @@ mod recent36 {
         let art = g.add_card_to_battlefield(1, catalog::ornithopter());
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(3);
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(land))]));
+        // Friend or foe: you a friend, the opponent a foe (each ballot lists
+        // that answer first).
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Amount(0),
+            DecisionAnswer::Amount(0),
+            DecisionAnswer::Search(Some(land)),
+        ]));
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::CastSpell {

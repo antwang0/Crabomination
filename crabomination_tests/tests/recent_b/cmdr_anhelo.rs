@@ -455,6 +455,24 @@ fn zndrsplts_judgment_friend_and_foe() {
     cast(&mut g, 0, zj, None).expect("judgment");
     assert_eq!(named(&g, 0, "Serra Angel").len(), 2);
     assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+
+    // The caster calls each player: here an opponent a friend (it copies its
+    // own creature) and the other a foe.
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(2, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(0), // you: friend (listed first)
+        DecisionAnswer::Amount(1), // player 2: friend (listed second)
+        DecisionAnswer::Amount(0), // player 3: foe
+    ]));
+    let zj = g.add_card_to_hand(0, catalog::zndrsplts_judgment());
+    cast(&mut g, 0, zj, None).expect("judgment");
+    assert_eq!(named(&g, 0, "Serra Angel").len(), 2);
+    assert_eq!(named(&g, 1, "Grizzly Bears").len(), 2, "a friend copies its own");
+    assert!(g.players[2].hand.iter().any(|c| c.id == wurm), "a foe bounces");
 }
 
 /// CR 601.2c — each chosen goad instance needs its target player: three

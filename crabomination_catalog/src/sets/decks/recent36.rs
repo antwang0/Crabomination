@@ -74,30 +74,29 @@ pub fn hour_of_promise() -> CardDefinition {
     }
 }
 
-/// Pir's Whim — {3}{G} Sorcery. You search your library for a land and put it
-/// onto the battlefield tapped; each opponent sacrifices an artifact or
-/// enchantment. (The full friend/foe vote is approximated as you=friend,
-/// opponents=foe.)
+/// Pir's Whim — {3}{G} Sorcery. For each player, friend or foe
+/// (`FriendOrFoe`): each friend searches for a land and puts it onto the
+/// battlefield tapped; each foe sacrifices an artifact or enchantment.
 pub fn pirs_whim() -> CardDefinition {
     CardDefinition {
         name: "Pir's Whim",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Search {
+        effect: Effect::FriendOrFoe {
+            friend: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: true,
                 },
-            },
-            Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+            }),
+            foe: Box::new(Effect::Sacrifice {
+                who: Selector::You,
                 count: Value::Const(1),
                 filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-            },
-        ]),
+            }),
+        },
         ..Default::default()
     }
 }
