@@ -198,38 +198,43 @@ pub fn behind_the_scenes() -> CardDefinition {
     }
 }
 
-/// Betor, Ancestor's Voice — flying, lifelink; your end step grows a creature
-/// by the life you gained and reanimates one no bigger than the life you
-/// lost.
+/// Betor, Ancestor's Voice — flying, lifelink; your end step grows up to one
+/// other target creature of yours by the life you gained and reanimates up to
+/// one target creature card no bigger than the life you lost (X read as it
+/// triggers and again as it resolves, `game/trigger_time.rs`).
 ///
-/// Residual: neither pick is targeted.
+/// Residual: the two halves are two triggers — a target list can't hold an
+/// empty slot 0 before a filled slot 1.
 pub fn betor_ancestors_voice() -> CardDefinition {
+    let end_step = || EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer);
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
-            effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::GreatestPowerControlledMatching(yours().and(R::OtherThanSource)),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::LifeGainedThisTurn(PlayerRef::You),
-                },
-                Effect::WithX {
-                    x: Value::LifeLostThisTurn(PlayerRef::You),
-                    body: Box::new(Effect::Move {
-                        what: Selector::TakeGreatestPower {
-                            inner: Box::new(Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: R::Creature.and(R::ManaValueAtMostXFromCost),
-                            }),
-                            count: Box::new(Value::ONE),
-                        },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: end_step(),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::AddCounter {
+                        what: target_filtered(yours().and(R::OtherThanSource)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::LifeGainedThisTurn(PlayerRef::You),
                     }),
                 },
-            ]),
-        }],
+            },
+            TriggeredAbility {
+                event: end_step(),
+                effect: Effect::WithX {
+                    x: Value::LifeLostThisTurn(PlayerRef::You),
+                    body: Box::new(Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMostXFromCost)),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    }),
+                },
+            },
+        ],
         ..legend(
             "Betor, Ancestor's Voice",
             cost(&[generic(2), w(), b(), g()]),
@@ -483,22 +488,30 @@ pub fn slaughter_the_strong() -> CardDefinition {
     )
 }
 
-/// Tip the Scales — sacrifice a creature; all creatures get -X/-X, X its
-/// toughness.
-///
-/// Residual: the -X/-X is not a separate reflexive trigger.
+/// Tip the Scales — sacrifice a creature; when you do, all creatures get
+/// -X/-X, X its toughness (a reflexive trigger, CR 603.12).
 pub fn tip_the_scales() -> CardDefinition {
+    let minus_x = || Value::Diff(Box::new(Value::ZERO), Box::new(Value::XFromCost));
     spell(
         "Tip the Scales",
         cost(&[generic(2), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
             Effect::SacrificeAndRemember { who: PlayerRef::You, filter: R::Creature },
-            Effect::PumpPT {
-                what: Selector::EachPermanent(R::Creature),
-                power: Value::Diff(Box::new(Value::ZERO), Box::new(Value::SacrificedToughness)),
-                toughness: Value::Diff(Box::new(Value::ZERO), Box::new(Value::SacrificedToughness)),
-                duration: Duration::EndOfTurn,
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::WithX {
+                    x: Value::SacrificedToughness,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::PumpPT {
+                            what: Selector::EachPermanent(R::Creature),
+                            power: minus_x(),
+                            toughness: minus_x(),
+                            duration: Duration::EndOfTurn,
+                        }),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
     )

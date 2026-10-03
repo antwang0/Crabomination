@@ -185,6 +185,20 @@ fn betor_grows_and_reanimates() {
     assert!(g.battlefield_find(giant).is_some(), "mana value 4 ≤ 4 life lost");
 }
 
+/// Betor's two picks are targets chosen as it triggers (CR 603.3d): a
+/// creature card too big for the life lost then is never chosen.
+#[test]
+fn betor_targets_by_life_lost_at_trigger() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::betor_ancestors_voice());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life_lost_this_turn = 2;
+    step(&mut g, TurnStep::End);
+    assert!(g.battlefield_find(bears).is_some());
+    assert!(g.battlefield_find(giant).is_none());
+}
+
 /// Blight Pile — drains per defender.
 #[test]
 fn blight_pile_drains_per_defender() {
@@ -337,6 +351,25 @@ fn tip_the_scales_sacrifices_the_chosen_creature() {
     assert!(g.battlefield_find(giant).is_none(), "the chosen Giant was sacrificed");
     assert!(g.battlefield_find(first).is_none(), "-3/-3 kills the Bears");
     assert_eq!(pt(&g, ancients), (-1, 7), "X is the Giant's toughness");
+}
+
+/// CR 603.12 — Tip the Scales' -X/-X is a reflexive trigger: the spell
+/// resolves (the Giant is gone) and the shrink waits on the stack.
+#[test]
+fn tip_the_scales_shrink_is_a_reflexive_trigger() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::tip_the_scales());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: t, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("tip");
+    g.resolve_top_of_stack().expect("resolve the spell");
+    assert_eq!(g.stack.len(), 1, "the reflexive trigger");
+    assert!(g.battlefield_find(bears).is_some());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
 }
 
 /// Towering Titan — enters with your creatures' total toughness as counters.
