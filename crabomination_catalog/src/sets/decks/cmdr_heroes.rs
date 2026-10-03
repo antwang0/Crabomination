@@ -165,11 +165,8 @@ fn robot_token() -> TokenDefinition {
 // ── Commander ───────────────────────────────────────────────────────────────
 
 /// Heroes in a Half Shell — a five-color 5/5 whose Mutants, Ninjas and
-/// Turtles grow and draw when they connect.
-///
-/// ⚠ Residual: "each of those creatures" is each such creature of yours that
-/// dealt damage to a player this turn (no selector names one batch's
-/// damage sources).
+/// Turtles grow and draw when they connect. "Each of those creatures" is
+/// the batch's dealers (`OverTriggerBatch`).
 pub fn heroes_in_a_half_shell() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Menace, Keyword::Trample, Keyword::Haste],
@@ -177,13 +174,10 @@ pub fn heroes_in_a_half_shell() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                 .once_per_batch()
                 .dealt_by(yours(tmnt())),
-            effect: Effect::Seq(vec![
-                plus(
-                    Selector::EachPermanent(yours(R::Creature.and(tmnt())).and(R::DamagedAPlayerThisTurn)),
-                    Value::ONE,
-                ),
-                draw(Value::ONE),
-            ]),
+            effect: Effect::OverTriggerBatch {
+                ids: vec![],
+                body: Box::new(Effect::Seq(vec![plus(Selector::TriggerBatch, Value::ONE), draw(Value::ONE)])),
+            },
         }],
         ..creature(
             "Heroes in a Half Shell",

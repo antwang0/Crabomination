@@ -111,6 +111,25 @@ fn heroes_in_a_half_shell_grows_the_turtle_that_connected() {
     assert_eq!(g.players[0].hand.len(), hand);
 }
 
+/// "Each of those creatures" is the batch that dealt the damage (CR 603.2c):
+/// a first-striking Ninja connects in the first-strike step and the
+/// commander in the regular one (CR 510.4), so each grows once — the Ninja
+/// isn't counted again with the second batch.
+#[test]
+fn heroes_in_a_half_shell_grows_only_that_batch() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let heroes = g.add_card_to_battlefield(0, catalog::heroes_in_a_half_shell());
+    let mut ninja = catalog::grizzly_bears();
+    ninja.subtypes.creature_types = vec![CreatureType::Ninja];
+    ninja.keywords.push(Keyword::FirstStrike);
+    let ninja = g.add_card_to_battlefield(0, ninja);
+    let hand = g.players[0].hand.len();
+    connect(&mut g, &[(heroes, 1), (ninja, 1)]);
+    assert_eq!((plus(&g, ninja), plus(&g, heroes)), (1, 1));
+    assert_eq!(g.players[0].hand.len(), hand + 2, "a draw per batch");
+}
+
 // ── Engine primitives ────────────────────────────────────────────────────────
 
 /// Coin of Mastery: a creature enters with a counter for each mana from an

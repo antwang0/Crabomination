@@ -70,16 +70,15 @@ they call a deck 🟡, the table wins.
 | 160 | Terra, Herald of Hope (RWB) | 4: edgar_master_machinist, espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 166 | The Wise Mothman (BGU) | 3: rampaging_yao_guai, struggle_for_project_purity, winding_constrictor |
-| 167 | T'Challa, the Black Panther (GW) | 2: ancestral_communion, panther_habit |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
 | 175 | The Swarmlord (GUR) | 5: ghyrson_starn_kelermorph, hierophant_bio_titan, magus_lucea_kane, the_first_tyrannic_war, the_red_terror |
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
-| 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
+| 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 9: aces_baseball_bat, displaced_dinosaurs, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
-141 / 183 pod decks carry no residual in their card docs; the rest are listed.
+142 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
