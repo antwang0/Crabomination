@@ -123,7 +123,8 @@ the handoff.
   jump-start spell went to the graveyard (or library) instead of exile
   (`countered_spell_off_stack`, `CounterSpellToZone`).
 - ✅ **CR 111.7/111.8** — `Selector::CardsInZone` offered a token that died
-  mid-resolution as "a creature card": Infernal Offering reanimated it. Found
+  mid-resolution as "a creature card" (graveyard only — a cast-me card copy
+  in exile is flagged `is_token` too): Infernal Offering reanimated it. Found
   by a strict debug pod. ⏳ **Open class:** 94 `graveyard.iter()` walks in
   `game/effects/` don't skip tokens either; within one resolution a dead
   token inflates "cards in your graveyard" counts until the SBA removes it.
