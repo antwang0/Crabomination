@@ -359,3 +359,25 @@ fn motivated_pony_needs_a_food_not_any_artifact() {
     make(&mut g, crabomination_base::tokens::food_token());
     assert!(g.evaluate_predicate(&food, &ctx));
 }
+
+/// CR 702.6e — Field-Tested Frying Pan's lifegain pump is an ability the
+/// equipped creature has: the trigger on the stack is the creature's.
+#[test]
+fn frying_pan_pump_is_the_creatures_trigger() {
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pan = g.add_card_to_battlefield(0, catalog::field_tested_frying_pan());
+    g.battlefield_find_mut(pan).unwrap().attached_to = Some(bear);
+    let ctx = EffectContext::for_ability(pan, 0, None);
+    let events = g.resolve_effect(&Effect::GainLife { who: Selector::You, amount: Value::Const(3) }, &ctx).expect("gain");
+    g.dispatch_triggers_for_events(&events);
+    assert!(
+        g.stack.iter().any(|it| matches!(it, StackItem::Trigger { source, .. } if *source == bear)),
+        "the Bears' own trigger"
+    );
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5));
+}

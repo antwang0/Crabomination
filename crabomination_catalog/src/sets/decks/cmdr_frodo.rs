@@ -6,14 +6,10 @@
 //! - **Gollum, Obsessed Stalker** — the drain reaches players this Gollum
 //!   has dealt any damage this game, not every creature named Gollum's
 //!   combat damage.
-//! - **Motivated Pony** — the rider checks for any artifact entering under
-//!   your control this turn, not a Food.
-//! - **Field-Tested Frying Pan** — the lifegain pump is the Equipment's own
-//!   trigger, not an ability the equipped creature has.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, ExileReturnZone, Keyword, MayPlayDuration, SelectionRequirement as R, Selector, StaticAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind,
+    EventScope, EventSpec, ExileReturnZone, Keyword, MayPlayDuration, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack, partner_with_search, target_filtered};
@@ -326,8 +322,6 @@ pub fn feasting_hobbit() -> CardDefinition {
 
 /// Field-Tested Frying Pan — entering, a Food and a 1/1 Halfling it attaches
 /// to; the equipped creature grows by each lifegain until end of turn.
-///
-/// ⚠ Residual: the pump is the Equipment's trigger, not the creature's.
 pub fn field_tested_frying_pan() -> CardDefinition {
     CardDefinition {
         name: "Field-Tested Frying Pan",
@@ -340,16 +334,20 @@ pub fn field_tested_frying_pan() -> CardDefinition {
                 halflings(Value::ONE),
                 Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
             ])),
-            TriggeredAbility {
+        ],
+        // CR 702.6e — the trigger is the equipped creature's own.
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                 effect: Effect::PumpPT {
-                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    what: Selector::This,
                     power: Value::TriggerEventAmount,
                     toughness: Value::TriggerEventAmount,
                     duration: Duration::EndOfTurn,
                 },
-            },
-        ],
+            }],
+            ..Default::default()
+        }),
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         ..Default::default()
     }
