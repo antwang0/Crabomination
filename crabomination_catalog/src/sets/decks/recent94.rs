@@ -191,9 +191,8 @@ pub fn kazuuls_toll_collector() -> CardDefinition {
 }
 
 /// Stonehewer Giant — {3}{W}{W} 4/4 Giant Warrior, vigilance. {1}{W}, {T}:
-/// Search your library for an Equipment card and put it onto the battlefield.
-/// (The immediate "attach it to a creature you control" is approximated — the
-/// Equipment lands unattached and can be equipped normally.)
+/// Search your library for an Equipment card, put it onto the battlefield,
+/// then attach it to a creature you control.
 pub fn stonehewer_giant() -> CardDefinition {
     CardDefinition {
         name: "Stonehewer Giant",
@@ -209,14 +208,17 @@ pub fn stonehewer_giant() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             tap_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-            },
+                crate::effect::shortcut::attach_moved_equipment_to_your_creature(false),
+            ]),
             ..Default::default()
         }],
         ..Default::default()

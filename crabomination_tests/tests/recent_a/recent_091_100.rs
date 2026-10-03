@@ -438,6 +438,23 @@ mod recent94 {
         g.battlefield.iter_mut().find(|c| c.id == eq).unwrap().attached_to = Some(creature);
     }
 
+    /// Stonehewer Giant's fetched Equipment is attached to a creature you
+    /// control as part of the ability (not left for a later equip).
+    #[test]
+    fn stonehewer_giant_attaches_what_it_fetches() {
+        let mut g = two_player_game();
+        let giant = g.add_card_to_battlefield(0, catalog::stonehewer_giant());
+        g.clear_sickness(giant);
+        let blade = g.add_card_to_library(0, catalog::bonesplitter());
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: giant, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("activate");
+        drain_stack(&mut g);
+        let host = g.battlefield_find(blade).expect("fetched").attached_to.expect("attached");
+        assert_eq!(g.battlefield_find(host).unwrap().controller, 0);
+    }
+
     /// Akiri's power tracks the number of artifacts you control; toughness stays 3.
     #[test]
     fn akiri_power_scales_with_artifacts() {

@@ -373,3 +373,15 @@ fn silverquill_duals_enter_tapped() {
     g.perform_action(GameAction::PlayLand(tm)).expect("land");
     assert!(!g.battlefield_find(tm).unwrap().tapped);
 }
+
+/// Armored Skyhunter's attack deploys an Equipment off the top and may attach
+/// it to a creature you control — chosen, not targeted (CR 701.3a).
+#[test]
+fn armored_skyhunter_attaches_the_equipment_it_deploys() {
+    let mut g = pod(2);
+    let sky = g.add_card_to_battlefield(0, catalog::armored_skyhunter());
+    let blade = g.add_card_to_library(0, catalog::bonesplitter());
+    declare(&mut g, 0, vec![(sky, 1)]).expect("attack");
+    let host = g.battlefield_find(blade).expect("deployed").attached_to.expect("attached");
+    assert_eq!(g.battlefield_find(host).unwrap().controller, 0);
+}

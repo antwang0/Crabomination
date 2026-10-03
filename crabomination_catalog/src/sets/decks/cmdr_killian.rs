@@ -14,7 +14,7 @@ use crate::card::{
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{attach_moved_equipment_to_your_creature, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, w, Color, ManaCost};
@@ -121,8 +121,8 @@ pub fn killian_decisive_mentor() -> CardDefinition {
 }
 
 /// Armored Skyhunter — flying; attacking looks at the top six for an Aura or
-/// Equipment to put onto the battlefield. Residual: an Equipment isn't
-/// attached.
+/// Equipment to put onto the battlefield; an Equipment may be attached to a
+/// creature you control.
 pub fn armored_skyhunter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -130,7 +130,7 @@ pub fn armored_skyhunter() -> CardDefinition {
             count: Value::Const(6),
             filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
                 .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
-            then: None,
+            then: Some(Box::new(attach_moved_equipment_to_your_creature(true))),
             max: Some(1),
             tapped: false,
             exile_rest: false,
