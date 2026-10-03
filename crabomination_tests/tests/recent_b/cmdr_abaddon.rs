@@ -275,8 +275,8 @@ fn cr_601_2_the_ruinous_powers_casts_their_card_against_them() {
     assert_eq!(g.players[1].life, life - 2, "Shock only");
 }
 
-/// CR 305.4 — The Lost and the Damned: a land put onto the battlefield (not
-/// played) makes a Spawn; a land played from hand doesn't.
+/// CR 305.4 — The Lost and the Damned: a land entering from anywhere but your
+/// hand makes a Spawn, played or not; one played or put from hand doesn't.
 #[test]
 fn cr_305_4_the_lost_and_the_damned_rewards_lands_from_elsewhere() {
     let mut g = main_phase(2);
@@ -298,6 +298,39 @@ fn cr_305_4_the_lost_and_the_damned_rewards_lands_from_elsewhere() {
         other,
     );
     assert_eq!(named(&g, 0, "Spawn").len(), 1);
+    // "From anywhere other than your hand": a land PUT onto the battlefield
+    // from hand makes nothing; one PLAYED from exile makes a Spawn.
+    let from_hand = g.add_card_to_hand(0, catalog::forest());
+    run(
+        &mut g,
+        Effect::Move {
+            what: Selector::ExactObjects(vec![from_hand]),
+            to: crabomination::effect::ZoneDest::Battlefield {
+                controller: crabomination::effect::PlayerRef::You,
+                tapped: false,
+            },
+        },
+        from_hand,
+    );
+    assert_eq!(named(&g, 0, "Spawn").len(), 1, "put from hand");
+    let exiled = g.add_card_to_hand(0, catalog::forest());
+    run(&mut g, Effect::Move { what: Selector::ExactObjects(vec![exiled]), to: crabomination::effect::ZoneDest::Exile }, exiled);
+    run(
+        &mut g,
+        Effect::GrantMayPlay {
+            what: Selector::ExactObjects(vec![exiled]),
+            duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: false,
+            pay_own_cost: true,
+            any_color: false,
+        },
+        exiled,
+    );
+    g.players[0].lands_played_this_turn = 0;
+    g.perform_action(GameAction::PlayLand(exiled)).expect("land drop from exile");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Spawn").len(), 2, "played from exile");
     // A land *played* from the graveyard enters from outside your hand too.
     let mut g = main_phase(2);
     g.add_card_to_battlefield(0, catalog::the_lost_and_the_damned());

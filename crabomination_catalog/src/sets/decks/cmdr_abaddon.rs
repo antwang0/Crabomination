@@ -868,9 +868,8 @@ pub fn the_horus_heresy() -> CardDefinition {
 }
 
 /// The Lost and the Damned — a land of yours entering from anywhere but your
-/// hand (put onto the battlefield, or played from a graveyard, exile or a
-/// library), or a spell you cast from anywhere but your hand, makes a 3/3
-/// Spawn.
+/// hand (played or put there), or a spell you cast from anywhere but your
+/// hand, makes a 3/3 Spawn.
 pub fn the_lost_and_the_damned() -> CardDefinition {
     CardDefinition {
         name: "The Lost and the Damned",
@@ -878,13 +877,9 @@ pub fn the_lost_and_the_damned() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl)
-                    // Event amount: 0 put onto the battlefield, 1 played from
-                    // hand, 2 played from anywhere else.
-                    .with_filter(Predicate::Any(vec![
-                        Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(0)),
-                        Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(2)),
-                    ])),
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::EnteredFromHandThisTurn.negate() },
+                ),
                 effect: make(spawn(), Value::ONE),
             },
             TriggeredAbility {
