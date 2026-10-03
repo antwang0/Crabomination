@@ -10824,6 +10824,15 @@ pub enum Effect {
     /// when another reveal-cost spell was cast in response. Wrapped by the
     /// cast path.
     WithRevealedForCost { power: i16, mana_value: i16, body: Box<Effect> },
+    /// Internal plumbing: the card discarded to pay this activation's cost,
+    /// carried to resolution for `Effect::IfDiscardedForCost`. Wrapped around
+    /// the queued ability by `activate_ability` only when its effect holds an
+    /// `IfDiscardedForCost`; not meant for card definitions.
+    WithDiscardedForCost { card: crate::card::CardId, body: Box<Effect> },
+    /// "If the discarded card was a [filter] card, [then]" — the card
+    /// discarded to pay this activation's cost (Moria Scavenger's "if the
+    /// discarded card was a creature card, amass Orcs 1").
+    IfDiscardedForCost { filter: SelectionRequirement, then: Box<Effect> },
 
     /// CR 406.3 — "exile … face down": run `body`, then turn every card it
     /// put into exile face down. Only a may-play holder (else the controller)

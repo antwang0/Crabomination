@@ -462,6 +462,8 @@ impl Effect {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
+            | Effect::WithDiscardedForCost { body, .. }
+            | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body }
             | Effect::DelayUntil { body, .. }
@@ -1524,6 +1526,8 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. }
+            | Effect::WithDiscardedForCost { body, .. }
+            | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body } => {
                 body.requires_target()
@@ -3078,6 +3082,8 @@ impl Effect {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
+            | Effect::WithDiscardedForCost { body, .. }
+            | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body }
             | Effect::OnYourNextSpellCastThisTurn { body }
@@ -5504,6 +5510,8 @@ impl Effect {
                 | Effect::WithTappedPower { body, .. }
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
+            | Effect::WithDiscardedForCost { body, .. }
+            | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body }
                 | Effect::OnYourNextSpellCastThisTurn { body }

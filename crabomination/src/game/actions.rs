@@ -22556,6 +22556,7 @@ impl GameState {
         // Fauna Shaman's "Discard a creature card:" cost runs here.
         let mut discarded_for_cost_mv = None;
         let mut discarded_for_cost = 0u32;
+        let first_cost_discard = discard_picks.first().copied();
         for cid in discard_picks {
             let mv = self.players[p]
                 .hand
@@ -22904,6 +22905,14 @@ impl GameState {
             // (CR 702.184a) so `Value::TappedForCostPower` reads it.
             if let Some(power) = tap_other_power {
                 queued_effect = Effect::WithTappedPower { power, body: Box::new(queued_effect) };
+            }
+            // "If the discarded card was a creature card" (Moria Scavenger):
+            // the cost's card rides to resolution — only for an ability that
+            // asks, so every other discard-cost ability queues as before.
+            if let Some(card) = first_cost_discard
+                && ability.effect.any_nested(&|e| matches!(e, Effect::IfDiscardedForCost { .. }))
+            {
+                queued_effect = Effect::WithDiscardedForCost { card, body: Box::new(queued_effect) };
             }
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).

@@ -308,6 +308,8 @@ impl GameState {
             | Effect::WithTappedPower { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
+            | Effect::WithDiscardedForCost { body, .. }
+            | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
