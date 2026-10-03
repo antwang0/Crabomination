@@ -305,17 +305,31 @@ fn sapling_of_colfenor_takes_a_revealed_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == top));
 }
 
-/// Suffer the Past exiles X cards from one graveyard and drains per card.
+/// CR 601.2c — Suffer the Past targets a player (slot 0) and X cards in THAT
+/// player's graveyard (slots 1..=X): it drains per exiled card, a card in
+/// another graveyard is not a legal target, and slots 1..=X are required.
 #[test]
-fn suffer_the_past_drains_per_exiled_card() {
+fn suffer_the_past_targets_a_player_and_x_cards_in_their_graveyard() {
     let mut g = pod(3);
-    for _ in 0..3 {
-        g.add_card_to_graveyard(1, catalog::grizzly_bears());
-    }
+    let bears: Vec<CardId> = (0..3).map(|_| g.add_card_to_graveyard(1, catalog::grizzly_bears())).collect();
+    let elsewhere = g.add_card_to_graveyard(2, catalog::grizzly_bears());
     let (l0, l1) = (g.players[0].life, g.players[1].life);
     let stp = g.add_card_to_hand(0, catalog::suffer_the_past());
-    cast_x(&mut g, 0, stp, Some(Target::Player(1)), Some(2)).expect("cast");
-    assert_eq!(g.players[1].graveyard.len(), 1);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let cast = |cards: Vec<Target>, x: u32| GameAction::CastSpell {
+        card_id: stp, target: Some(Target::Player(1)), additional_targets: cards, mode: None, x_value: Some(x),
+    };
+    assert!(
+        !g.would_accept(cast(vec![Target::Permanent(bears[0]), Target::Permanent(elsewhere)], 2)),
+        "a card in another player's graveyard isn't a legal target"
+    );
+    let d = catalog::suffer_the_past();
+    assert!(!d.effect.target_slot_optional_x(2, None, 2), "slots 1..=X are required");
+    assert!(d.effect.slot_past_x_cap(3, 2), "no slot past the X-th card");
+    g.perform_action(cast(vec![Target::Permanent(bears[0]), Target::Permanent(bears[1])], 2)).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.iter().map(|c| c.id).collect::<Vec<_>>(), vec![bears[2]], "the two targets left");
     assert_eq!((g.players[0].life, g.players[1].life), (l0 + 2, l1 - 2));
 }
 

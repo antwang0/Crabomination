@@ -400,27 +400,31 @@ pub fn sapling_of_colfenor() -> CardDefinition {
     }
 }
 
-/// Suffer the Past — exile X cards from target player's graveyard; they lose
-/// 1 life and you gain 1 per card. Residual: the cards are chosen as it
-/// resolves rather than targeted.
+/// Suffer the Past — exile X target cards from target player's graveyard;
+/// they lose 1 life and you gain 1 per card. Slot 0 is the player and slots
+/// 1..=X the cards in that player's graveyard (`Effect::SlotGroups`; CR
+/// 601.2c "target player" + "X target cards").
 pub fn suffer_the_past() -> CardDefinition {
-    let exiled = || Value::CountOf(Box::new(Selector::LastMoved));
+    let exiled = || Value::CountOf(Box::new(Selector::ExiledThisResolution { filter: R::Any }));
     spell(
         "Suffer the Past",
         cost(&[x(), b()]),
         true,
-        Effect::TargetPlayerThen {
-            filter: R::Player,
-            then: Box::new(Effect::Seq(vec![
-                Effect::ExileUpToNFromGraveyards {
-                    count: Value::XFromCost,
-                    of: Some(PlayerRef::Target(0)),
-                    single: true,
+        Effect::Seq(vec![
+            Effect::SlotGroups(vec![
+                Effect::TargetPlayerThen { filter: R::Player, then: Box::new(Effect::Noop) },
+                Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::InGraveyard.and(R::SameGraveyardAsTargetSlot(0)),
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                    }),
                 },
-                Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: exiled() },
-                Effect::GainLife { who: Selector::You, amount: exiled() },
-            ])),
-        },
+            ]),
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: exiled() },
+            Effect::GainLife { who: Selector::You, amount: exiled() },
+        ]),
     )
 }
 

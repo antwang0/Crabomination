@@ -1964,7 +1964,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | the undaunted discount holds only while Durnan is on the battlefield; the rest go to the bottom in a random order, not one you choose. |
-| 🟡 Suffer the Past | Witherbloom Witchcraft (C21) | the X cards are chosen as it resolves (from the target player's graveyard), not targeted. |
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
