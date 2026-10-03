@@ -167,6 +167,19 @@ its kind), never in a cold one. The census is one dump:
 `cg_edges.py --callers make_mut_slow17h<hash>` per instance and a grep of
 the top caller's body for the group's field names.
 
+## Card catalog layout
+
+- **The card files live under `crabomination_catalog/src/sets/`, but nine
+  part crates under `crabomination_catalog/parts/` compile them** (each names
+  its files with `#[path]`), and `crabomination_catalog` re-exports them as the
+  one tree every caller uses. A new `decks/` file is two lines (`#[path]`
+  `mod`, `pub use`) in `parts/decks4/src/decks.rs`; a new set module goes in
+  `parts/sets3/src/sets.rs`; a helper several sets share goes in
+  `sets/helpers.rs`. A part may use the core part's helpers and hub sets, never
+  another part's files. `sets/mod.rs` has the rules and the measurement behind
+  them, and the core_rules test
+  `every_card_file_is_compiled_by_exactly_one_catalog_part` enforces them.
+
 ## Test suite conventions (`crabomination_tests`)
 
 The functional suite lives in `crabomination_tests/tests/` as a small number of

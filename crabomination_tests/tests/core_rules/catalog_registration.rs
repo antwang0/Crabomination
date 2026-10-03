@@ -119,6 +119,77 @@ fn every_card_factory_in_the_catalog_is_registered() {
     );
 }
 
+/// Every card file is compiled by exactly one catalog part.
+///
+/// The card files live under `crabomination_catalog/src/sets/`, but nine
+/// crates under `crabomination_catalog/parts/` compile them, each naming its
+/// files with `#[path]` (see `sets/mod.rs` for why). A file no part names is
+/// silently dead — `all_factories.rs` would not compile if it registered one
+/// of its cards, but a file whose cards are not registered yet would not show
+/// up anywhere. A file two parts name compiles twice into two crates, and
+/// every glob that meets both copies goes ambiguous.
+#[test]
+fn every_card_file_is_compiled_by_exactly_one_catalog_part() {
+    let sets = catalog_src();
+    let parts = sets.join("../../parts");
+    let prefix = "../../../src/sets/";
+    let mut declared: Vec<(String, String)> = Vec::new();
+    for entry in fs::read_dir(&parts).expect("parts dir") {
+        let dir = entry.unwrap().path();
+        let part = dir.file_name().unwrap().to_string_lossy().to_string();
+        for list in ["sets.rs", "decks.rs"] {
+            let Ok(src) = fs::read_to_string(dir.join("src").join(list)) else { continue };
+            for (i, _) in src.match_indices("#[path = \"") {
+                let rest = &src[i + "#[path = \"".len()..];
+                let target = &rest[..rest.find('"').unwrap()];
+                if let Some(rel) = target.strip_prefix(prefix) {
+                    declared.push((rel.trim_end_matches("/mod.rs").to_string(), part.clone()));
+                }
+            }
+        }
+    }
+
+    let mut expected: Vec<String> = Vec::new();
+    for entry in fs::read_dir(&sets).expect("sets dir") {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        if path.is_dir() {
+            if name != "decks" {
+                expected.push(name);
+            }
+        } else if name.ends_with(".rs") && name != "mod.rs" && name != "all_factories.rs" {
+            expected.push(name);
+        }
+    }
+    for entry in fs::read_dir(sets.join("decks")).expect("decks dir") {
+        let name = entry.unwrap().file_name().to_string_lossy().to_string();
+        if name.ends_with(".rs") && name != "mod.rs" {
+            expected.push(format!("decks/{name}"));
+        }
+    }
+    expected.sort();
+
+    let mut problems = Vec::new();
+    for file in &expected {
+        let owners: Vec<&str> =
+            declared.iter().filter(|(f, _)| f == file).map(|(_, p)| p.as_str()).collect();
+        if owners.len() != 1 {
+            problems.push(format!("{file}: {owners:?}"));
+        }
+    }
+    for (file, part) in &declared {
+        if !expected.contains(file) {
+            problems.push(format!("{part} names {file}, which does not exist"));
+        }
+    }
+    assert!(expected.len() > 700, "found only {} card files — did the tree move?", expected.len());
+    assert!(
+        problems.is_empty(),
+        "card files not compiled by exactly one part (see crabomination_catalog/src/sets/mod.rs \
+         for where a file goes): {problems:?}"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // The mechanic-keyword ratchet.
 // ---------------------------------------------------------------------------

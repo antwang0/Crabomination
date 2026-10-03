@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crabomination_base", "crabomination_catalog", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests", "crabomination_nn", "crabomination_ml"]
+members = ["crabomination_base", "crabomination_catalog", "crabomination_catalog/parts/core", "crabomination_catalog/parts/sets1", "crabomination_catalog/parts/sets2", "crabomination_catalog/parts/sets3", "crabomination_catalog/parts/decks1", "crabomination_catalog/parts/decks2", "crabomination_catalog/parts/decks3", "crabomination_catalog/parts/decks4", "crabomination_catalog/parts/stx", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests", "crabomination_nn", "crabomination_ml"]
 
 [profile.dev]
 # opt-level = 0 (default) keeps clean compile times short. Dependencies
@@ -200,6 +200,33 @@ debug-assertions = false
 opt-level = 3
 debug-assertions = false
 [profile.play.package.crabomination_catalog]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_core]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_sets1]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_sets2]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_sets3]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_decks1]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_decks2]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_decks3]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_decks4]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog_stx]
 opt-level = 3
 debug-assertions = false
 

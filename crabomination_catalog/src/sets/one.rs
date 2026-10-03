@@ -2576,7 +2576,7 @@ pub fn mesmerizing_dose() -> CardDefinition {
 // ── For Mirrodin! Equipment + equipment-matters ──────────────────────────────
 
 /// CR 702.163 — For Mirrodin! ETB mints a 2/2 red Rebel and self-attaches.
-pub(crate) fn for_mirrodin(
+pub fn for_mirrodin(
     name: &'static str,
     mana: crate::mana::ManaCost,
     equip: crate::mana::ManaCost,

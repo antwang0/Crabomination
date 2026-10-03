@@ -2279,6 +2279,86 @@ name = "crabomination_catalog"
 version = "0.1.0"
 dependencies = [
  "crabomination_base",
+ "crabomination_catalog_core",
+ "crabomination_catalog_decks1",
+ "crabomination_catalog_decks2",
+ "crabomination_catalog_decks3",
+ "crabomination_catalog_decks4",
+ "crabomination_catalog_sets1",
+ "crabomination_catalog_sets2",
+ "crabomination_catalog_sets3",
+ "crabomination_catalog_stx",
+]
+
+[[package]]
+name = "crabomination_catalog_core"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+]
+
+[[package]]
+name = "crabomination_catalog_decks1"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_decks2"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_decks3"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_decks4"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_sets1"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_sets2"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_sets3"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
+]
+
+[[package]]
+name = "crabomination_catalog_stx"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "crabomination_catalog_core",
 ]
 
 [[package]]

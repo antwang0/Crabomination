@@ -5501,7 +5501,7 @@ pub fn swimmer_in_nightmares() -> CardDefinition {
 
 /// Gold token (CR 111.10) — artifact, "Sacrifice this token: Add one mana of
 /// any color." (Treasure without the {T}.)
-pub(crate) fn gold_token() -> TokenDefinition {
+pub fn gold_token() -> TokenDefinition {
     TokenDefinition {
         name: "Gold".into(),
         card_types: vec![CardType::Artifact],

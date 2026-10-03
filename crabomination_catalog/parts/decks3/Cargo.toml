@@ -1,0 +1,17 @@
+[package]
+name = "crabomination_catalog_decks3"
+version = "0.1.0"
+edition = "2024"
+# One part of the card catalog. The card files stay under
+# `crabomination_catalog/src/sets/`; `src/sets.rs` here names the ones this
+# crate compiles. Why the catalog is split, and where a new file goes:
+# `crabomination_catalog/src/sets/mod.rs`.
+
+[dependencies]
+crabomination_base = { path = "../../../crabomination_base" }
+crabomination_catalog_core = { path = "../core" }
+
+[lib]
+# Card data only: no unit tests and no doctests to build a harness for.
+test = false
+doctest = false

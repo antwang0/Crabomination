@@ -1,10 +1,11 @@
 //! Card catalog — factory functions for every implemented Magic: The Gathering card.
 //! Cards are grouped by the set in which they first appeared.
 //!
-//! This crate was split out of the monolithic `crabomination` crate so that
-//! editing a card recompiles only the catalog, not the game engine or the test
-//! suite. It depends solely on `crabomination_base` (the card/mana/effect data
-//! model). The name→factory registry used by snapshot deserialization lives in
+//! This crate was split out of the monolithic `crabomination` crate, and is
+//! itself now a facade over nine part crates (`parts/*`) that compile the card
+//! files in parallel; `sets/mod.rs` has the layout and the measurements. It
+//! depends solely on `crabomination_base` (the card/mana/effect data model) and
+//! its parts. The name→factory registry used by snapshot deserialization lives in
 //! the top-level `crabomination` crate, since it also aggregates the cube/demo
 //! pools.
 
@@ -14,30 +15,13 @@
 #![allow(clippy::large_enum_variant)]
 
 // ── Crate-private compatibility shims ────────────────────────────────────────
-// To avoid rewriting the thousands of `crate::card` / `crate::effect` /
-// `crate::game` / `crate::catalog` paths in the factory modules, re-expose the
-// foundational items under their original crate-relative names.
-
-// Lets `crate::catalog::foo()` paths inside the factories keep resolving.
+// The card files spell `crate::card`, `crate::effect`, `crate::mana`,
+// `crate::game::..` and `crate::catalog::..`. They are compiled by the parts
+// (`parts/*`, see `sets/mod.rs`), which take these names from the core part;
+// this crate keeps the same set so a file declared here still resolves them.
 extern crate self as catalog;
-
-// `crate::card`, `crate::effect`, `crate::mana`.
-use crabomination_base::{card, effect, mana};
-
-// `crate::game::types::TurnStep`, `crate::game::TurnStep`, and the engine token
-// factories under `crate::game::effects::*` (all now live in the base crate).
-mod game {
-    pub use crabomination_base::TurnStep;
-    pub mod types {
-        pub use crabomination_base::TurnStep;
-    }
-    pub mod effects {
-        pub use crabomination_base::tokens::{
-            blood_token, detective_token, eldrazi_spawn_token, food_token,
-            map_token, powerstone_token, treasure_token,
-        };
-    }
-}
+#[allow(unused_imports)]
+use crabomination_catalog_core::*;
 
 pub mod sets;
 
@@ -206,8 +190,6 @@ pub use sets::war::*;
 pub use sets::xtra::*;
 pub use sets::zen::*;
 
-use crabomination_base::card::CardDefinition;
-
 /// A zero-arg factory that produces a fresh `CardDefinition`. The name→factory
 /// registry (in the top-level `crabomination` crate) is built from these.
-pub type CardFactory = fn() -> CardDefinition;
+pub use crabomination_catalog_core::CardFactory;

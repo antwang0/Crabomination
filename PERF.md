@@ -2343,6 +2343,83 @@ reading eight of the 185 found the first three, and reading three of the
 fourteen in one file found the fourth. **Read the file with the most hits
 first: a filter's false positives cluster, because they share a helper.**
 
+## Build time — the catalog split into nine part crates, measured 2026-10-02
+
+**The catalog was 745 k lines in one crate, and a one-card edit paid for all
+of them before anything downstream started.** Measured by re-running the
+catalog's own rustc invocation after `touch`ing one set file, steady state
+(three runs, the first discarded), `-Ztime-passes` via `RUSTC_BOOTSTRAP=1`
+on a session that had already been warmed under the same flags:
+
+```text
+crabomination_catalog, touch one file, incremental, isolated   25.0 / 25.1 s
+  link_rlib                     9.3 s   rewriting a 343 MB rlib
+  incr_comp_persist_dep_graph   8.5 s   (serialize 10.2 s) of a 1.7-2.0 GB cache
+  macro expansion + resolve     ~2 s
+  everything incremental reuse could skip   reused
+```
+
+Nearly all of it is proportional to the crate, not to the edit. So the card
+files stay where they are and nine crates under `crabomination_catalog/parts/`
+compile them (`#[path]` per file), with `crabomination_catalog` a facade that
+glob-re-exports them into the old tree — every downstream path, every
+`scripts/audit_*.py` and the registration tests are untouched. A layered
+partition from the census of cross-file references (~60 edges, nearly all
+shared helpers): `core` = `sets/helpers.rs` (moved out of `sets/mod.rs`) plus
+the hub sets `cmdr lea one rna sos thb`, 36 k lines; `sets1..3` 74-79 k each;
+`decks1..4` ~85 k each with the six groups of `decks/` files that reference
+each other kept whole; `stx` 110 k. Every part depends on `core` only, so the
+eight build in parallel. Four `pub(crate)` helpers became `pub`
+(`gold_token`, `crowd_land`, `locket`, `for_mirrodin`) and `CardFactory` moved
+to `core`. `sets/mod.rs` documents where a new file goes;
+`every_card_file_is_compiled_by_exactly_one_catalog_part` enforces it.
+
+```text
+the same edit after the split (decks/recent331.rs, part decks4), isolated, 3 runs
+  decks4   4.2 / 5.5 / 6.0 s      facade   2.3 / 2.4 / 2.4 s
+  total    6.5 / 7.9 / 8.3 s      against 25.0 s        rlibs rewritten 41.5 + 6.1 MB
+```
+
+**The whole loop, ABBA, two worktrees with their own target dirs** (base at
+`f60e03937`, `touch decks/recent331.rs` then `cargo test --workspace --exclude
+crabomination_client --no-run`, 4 builds a side after a warm-up each; CPU and
+bytes written from `getrusage(RUSAGE_CHILDREN)` around the cargo process):
+
+```text
+            CPU (user+sys)              written      wall (median)
+  before    35.4 34.7 35.0 36.8 s       3.69 GB      118.8 s
+  after     30.4 31.8 30.2 32.8 s       2.80 GB      116.7 s
+            -12 %, no overlap            -24 %        not resolvable
+```
+
+⚠ **Wall clock does not resolve on this box today, and the reason is the
+finding.** The build is IO-bound, not CPU-bound: a 30 CPU-second rebuild
+takes 70-145 s, the rustc processes sit at 3-4 % CPU in `futex_wait`, IO
+pressure reads `full avg60=56 %`, 8 GB of dirty pages drain at 50-100 MB/s,
+and the NVMe is 78 % busy writing 38 MB/s **with no build running** — KDE's
+`baloo_file` indexer, which has written 2 TB in 36 hours and indexes
+`target/` (no excluded folders). Two other projects were building on the box
+during the series. So the honest numbers are the contention-immune ones —
+CPU and bytes written — and the isolated catalog phase. **Bytes written per
+rebuild is the lever on this machine:** after the split the 2.8 GB left is
+almost all the eight test binaries and the engine harness relinking at
+330-415 MB each, of which ~320 MB is engine + catalog that every binary
+carries. Excluding `target/` from the indexer
+(`balooctl6 config add excludeFolders <repo>/target`) is outside the repo
+and probably worth more than anything in it.
+
+**Cold build:** the catalog phase is now `core` (36 k) then the largest part
+(`stx`, 110 k) instead of 745 k serially; not re-measured cold on this box
+for the reason above.
+
+**Measured and NOT worth taking: the catalog parts at `opt-level = 1` in
+`dev`.** The idea was that unoptimized struct-building code inflates every
+test binary. It does not: the parts' rlibs read 357 MB at opt-level 1 against
+353 MB at 0, the test binaries shrank by ~5 MB of ~410, and the cold catalog
+build cost **1,255 CPU-seconds**. A part's objects are ~20 MB of `.text` and
+~2 MB of line tables per 41 MB; the rest is relocations and symbols, which
+optimization does not remove.
+
 ## Suite wall clock — nested memo audits, measured 2026-10-02
 
 The suite's wall clock is one test: `cr_903_5a_the_official_precon_seats_play_pod_games`

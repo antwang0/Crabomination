@@ -680,7 +680,7 @@ pub fn opal_palace() -> CardDefinition {
 /// nothing else, and in a pod every one is a dual. `Value::OpponentCount`
 /// reads the seats still in the game, so a pod that has shrunk back to two
 /// players taps the next one (CR 800.4a leaves no opponent behind).
-pub(crate) fn crowd_land(name: &'static str, a: Color, b_color: Color) -> CardDefinition {
+pub fn crowd_land(name: &'static str, a: Color, b_color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
