@@ -2040,8 +2040,8 @@ Rewrites History). Residuals: **Chandra, Legacy of Fire**'s 0 takes one loyalty
 from each walker with two or more; **Guff Rewrites History** bottoms the
 exiled lands in exile order; **Leori**'s type is the most common one you have; **Narset of the
 Ancient Way**'s −2 target is chosen on activation; **Repeated Reverberation**'s
-three halves are separate riders; **Sparkshaper Visionary** turns all or none;
-**Vronos**'s +1 phases out all your other walkers.
+three halves are separate riders (Sparkshaper Visionary and Vronos target
+since `01BaSouG`).
 Four-seat pods beside Marath / Atarka / Dina (seed 10200, 1,000 games, all
 decided): Guff 38.4 %; a 300-game census (seed 10201) leaves none of Guff's cards
 unplayed (Marath's and Atarka's lists each leave one — theirs); 12 seats (89..78 at

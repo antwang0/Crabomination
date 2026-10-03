@@ -2054,8 +2054,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Repeated Reverberation | Planeswalker Party (CMM) | the instant, sorcery and loyalty-ability halves are three separate "next" riders; each can fire. |
-| 🟡 Sparkshaper Visionary | Planeswalker Party (CMM) | all or none of your planeswalkers become Birds; they keep their colours and lack the scry trigger. |
-| 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | the new creature enters before the old one is destroyed. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |

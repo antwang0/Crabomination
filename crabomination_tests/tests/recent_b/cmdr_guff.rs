@@ -331,12 +331,24 @@ fn sparkshaper_visionary_makes_birds() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::sparkshaper_visionary());
     let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     step(&mut g, TurnStep::BeginCombat);
     let c = g.computed_permanent(teyo).expect("on the battlefield");
     assert_eq!((c.power, c.toughness), (3, 3));
     assert!(c.card_types().contains(&CardType::Creature));
+    assert!(!c.card_types().contains(&CardType::Planeswalker), "no longer a planeswalker");
+    assert_eq!(c.colors.to_vec(), vec![crabomination::mana::Color::Blue]);
     assert!(g.permanent_has_keyword(teyo, &Keyword::Flying));
+    // The granted "deals combat damage to a player, scry 1".
+    library(&mut g, 0, 2);
+    g.decider = Box::new(ScriptedDecider::new(vec![]));
+    connect(&mut g, teyo, 1);
+    let scried = match g.decider.kind() {
+        crabomination::decision::DeciderKind::Scripted { asked, .. } => {
+            asked.iter().any(|d| matches!(d, crabomination::decision::Decision::Scry { .. }))
+        }
+        _ => false,
+    };
+    assert!(scried, "the Bird scries on its hit");
 }
 
 /// CR 606 — Teyo makes a Wall and draws for two.
@@ -360,9 +372,12 @@ fn vronos_masks_and_bounces() {
     let mut g = pod(2);
     let vronos = g.add_card_to_battlefield(0, catalog::vronos_masked_inquisitor());
     let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
-    loyalty(&mut g, vronos, 0, None, None).expect("+1");
+    // "Up to two OTHER target planeswalkers": Vronos never hides itself.
+    loyalty(&mut g, vronos, 0, Some(Target::Permanent(teyo)), None).expect("+1");
     step(&mut g, TurnStep::End);
     assert!(g.phased_out.iter().any(|c| c.id == teyo));
+    assert!(g.battlefield_find(vronos).is_some());
+    assert!(loyalty(&mut g, vronos, 0, Some(Target::Permanent(vronos)), None).is_err(), "not itself");
     g.step = TurnStep::PreCombatMain;
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     loyalty(&mut g, vronos, 1, Some(Target::Permanent(bear)), None).expect("−2");

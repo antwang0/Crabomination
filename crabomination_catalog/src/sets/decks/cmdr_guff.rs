@@ -554,23 +554,45 @@ pub fn repeated_reverberation() -> CardDefinition {
     }
 }
 
-/// Sparkshaper Visionary — each combat on your turn your planeswalkers may
-/// become 3/3 flying, hexproof Birds until end of turn. Residual: all or none;
-/// no colour change or scry trigger.
+/// Sparkshaper Visionary — at the beginning of combat on your turn, any number
+/// of target planeswalkers you control become 3/3 blue Bird creatures with
+/// flying, hexproof and "whenever this creature deals combat damage to a
+/// player, scry 1" until end of turn, no longer planeswalkers (loyalty
+/// abilities still activate — the activation reads the printed card).
 pub fn sparkshaper_visionary() -> CardDefinition {
+    let scry_on_hit = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+    };
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: your_step(TurnStep::BeginCombat),
-            effect: Effect::MayDo {
-                description: "Turn your planeswalkers into 3/3 flying Birds?".into(),
-                body: Box::new(Effect::BecomeCreature {
-                    what: Selector::EachPermanent(your_walkers()),
-                    power: Value::Const(3),
-                    toughness: Value::Const(3),
-                    creature_types: vec![CreatureType::Bird],
-                    keywords: vec![Keyword::Flying, Keyword::Hexproof],
-                    duration: Duration::EndOfTurn,
-                }),
+            effect: Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: your_walkers(),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Bird],
+                        keywords: vec![Keyword::Flying, Keyword::Hexproof],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::BecomeColor {
+                        what: Selector::Target(0),
+                        colors: vec![Color::Blue],
+                        duration: Duration::EndOfTurn,
+                        additive: false,
+                    },
+                    Effect::LoseCardTypeUntilEot { what: Selector::Target(0), card_type: CardType::Planeswalker },
+                    Effect::GrantTriggeredAbility {
+                        what: Selector::Target(0),
+                        trigger: Box::new(scry_on_hit),
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
             },
         }],
         ..creature(
@@ -623,7 +645,7 @@ pub fn teyo_geometric_tactician() -> CardDefinition {
 
 /// Vronos, Masked Inquisitor — +1 hides your other planeswalkers at the end
 /// step; −2 bounces a nonland permanent per opponent; −7 makes an artifact a
-/// 9/9 unblockable Construct. Residual: the +1 phases out all your others.
+/// 9/9 unblockable Construct. The +1 names up to two other walkers of yours.
 pub fn vronos_masked_inquisitor() -> CardDefinition {
     walker(
         "Vronos, Masked Inquisitor",
@@ -631,12 +653,15 @@ pub fn vronos_masked_inquisitor() -> CardDefinition {
         PlaneswalkerSubtype::Vronos,
         5,
         vec![
+            // Each target captures its own end-step phase-out.
             la(
                 1,
-                Effect::AtNextEndStep {
-                    body: Box::new(Effect::PhaseOut {
-                        what: Selector::EachPermanent(your_walkers().and(R::OtherThanSource)),
-                        until_source_leaves: false,
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: your_walkers().and(R::OtherThanSource),
+                    effect: Box::new(Effect::AtNextEndStep {
+                        body: Box::new(Effect::PhaseOut { what: Selector::Target(0), until_source_leaves: false }),
                     }),
                 },
             ),
