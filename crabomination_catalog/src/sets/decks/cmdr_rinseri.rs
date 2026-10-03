@@ -481,9 +481,8 @@ pub fn nacatl_war_pride() -> CardDefinition {
 }
 
 /// Pack Leader — other Dogs you control get +1/+1; whenever it attacks,
-/// prevent all combat damage that would be dealt this turn to your Dogs.
-///
-/// ⚠ Residual: the shield covers the Dogs you control as the trigger resolves.
+/// prevent all combat damage that would be dealt this turn to your Dogs —
+/// judged as the damage would be dealt (`PreventCombatDamageToMatchingThisTurn`).
 pub fn pack_leader() -> CardDefinition {
     let dogs = || R::Creature.and(R::HasCreatureType(CreatureType::Dog));
     CardDefinition {
@@ -491,24 +490,23 @@ pub fn pack_leader() -> CardDefinition {
             description: "Other Dogs you control get +1/+1.",
             effect: StaticEffect::PumpPT { applies_to: yours(dogs().and(R::OtherThanSource)), power: 1, toughness: 1 },
         }],
-        triggered_abilities: vec![on_attack(Effect::PreventCombatDamageToTargetThisTurn { target: yours(dogs()) })],
+        triggered_abilities: vec![on_attack(Effect::PreventCombatDamageToMatchingThisTurn {
+            filter: dogs().and(R::ControlledByYou),
+        })],
         ..creature("Pack Leader", cost(&[generic(1), w()]), vec![CreatureType::Dog], 2, 2)
     }
 }
 
 /// Showdown of the Skalds — Saga. I: exile the top four; you may play them
 /// until the end of your next turn. II, III: whenever you cast a spell this
-/// turn, a +1/+1 counter on target creature you control.
-///
-/// ⚠ Residual: the counter's target is chosen as each trigger resolves.
+/// turn, a +1/+1 counter on target creature you control (targeted as each
+/// trigger goes on the stack, CR 603.3d).
 pub fn showdown_of_the_skalds() -> CardDefinition {
     let counters = || Effect::OnEachSpellCastThisTurn {
-        body: Box::new(Effect::Reflexive {
-            body: Box::new(Effect::AddCounter {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            }),
+        body: Box::new(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
         }),
     };
     CardDefinition {

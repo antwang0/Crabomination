@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, StackItem, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -373,6 +373,24 @@ fn cr_615_1_pack_leader_shields_dogs_in_combat() {
     assert_eq!(l.damage, 0);
 }
 
+/// CR 615.1 — the shield names "Dogs you control", judged as the damage would
+/// be dealt: a Dog put onto the battlefield attacking after the trigger
+/// resolved is covered too.
+#[test]
+fn cr_615_1_pack_leader_shields_a_dog_that_arrives_later() {
+    let mut g = main_phase(2);
+    let leader = g.add_card_to_battlefield(0, catalog::pack_leader());
+    attack_with(&mut g, &[leader], 1);
+    let late = g.add_card_to_battlefield(0, catalog::pack_leader());
+    let mut attacks = g.attacking.clone();
+    attacks.push(Attack { attacker: late, target: AttackTarget::Player(1) });
+    g.set_attacking(attacks);
+    let a1 = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let a2 = g.add_card_to_battlefield(1, catalog::serra_angel());
+    block_and_finish_combat(&mut g, 1, vec![(a1, leader), (a2, late)]);
+    assert!(g.battlefield_find(late).is_some_and(|c| c.damage == 0), "the late Dog took nothing");
+}
+
 /// Showdown of the Skalds I exiles four you may play; II grows a creature per
 /// spell you cast that turn.
 #[test]
@@ -413,6 +431,30 @@ fn showdown_of_the_skalds_impulses_then_grows() {
         .map(|&id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne))
         .sum();
     assert_eq!(grown, 1, "one spell, one counter");
+    // CR 603.3d — the counter's target is chosen as the trigger goes on the
+    // stack: the only creature then is the exiled Bear, and a creature that
+    // arrives before it resolves isn't a candidate.
+    let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.remove_from_battlefield_to_graveyard_raw(bear);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear2,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let picked = g.stack.iter().find_map(|it| match it {
+        StackItem::Trigger { target, .. } => Some(target.clone()),
+        _ => None,
+    });
+    assert_eq!(picked, Some(Some(Target::Permanent(exiled))), "targeted on the stack");
+    g.remove_from_battlefield_to_graveyard_raw(exiled);
+    let late = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(late).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "fizzled");
 }
 
 /// Lieutenant — Skyhunter gives your other creatures melee only while you
