@@ -140,8 +140,8 @@ Corrupting Influence, Sliver Swarm).
 🟡 **Residuals in the list** (each also on its card's doc): Colossal
 Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
 Scheme (convokers don't connive), Cephalid Coliseum (the sacrifice is folded into resolution).
-Steward of the Harvest and Life from the Loam pick at resolution rather than
-target.
+(Steward of the Harvest, Shigeki's Channel and Life from the Loam target since
+`01BaSouG`.)
 
 The **twelfth** is the second official precon, **Mind Flayarrrs** (Commander
 Legends: Battle for Baldur's Gate, 2022), MTGJSON's `MindFlayarrrs_CLB` card

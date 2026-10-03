@@ -563,10 +563,7 @@ pub fn the_scarab_god() -> CardDefinition {
 /// four cards of your library. You may put a land card from among them onto the
 /// battlefield tapped. Put the rest into your graveyard. Channel — {X}{X}{G}{G},
 /// Discard this card: Return X target nonlegendary cards from your graveyard to
-/// your hand.
-///
-/// Approximation: the Channel returns are picked at resolution rather than
-/// targeted.
+/// your hand (X targets, `TargetsExactlyX`).
 pub fn shigeki_jukai_visionary() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
@@ -589,12 +586,13 @@ pub fn shigeki_jukai_visionary() -> CardDefinition {
                 mana_cost: cost(&[x(), x(), g(), g()]),
                 from_hand: true,
                 discard_self_cost: true,
-                effect: Effect::MoveChosen {
-                    from: your_graveyard(R::HasSupertype(Supertype::Legendary).negate()),
-                    filter: None,
-                    count: Value::XFromCost,
-                    up_to: true,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                effect: Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::InYourGraveyard.and(R::HasSupertype(Supertype::Legendary).negate()),
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                    }),
                 },
                 ..Default::default()
             },
@@ -644,16 +642,14 @@ pub fn floral_evoker() -> CardDefinition {
 /// Creatures you control have all activated abilities of all land cards exiled
 /// with this creature.
 ///
-/// The grant is `ControlledHaveAbilitiesOfExiledWithSource`. Approximation:
-/// the exile is a resolution-time pick rather than targets.
+/// The grant is `ControlledHaveAbilitiesOfExiledWithSource`.
 pub fn steward_of_the_harvest() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::MoveChosen {
-            from: your_graveyard(R::Land),
-            filter: None,
-            count: Value::Const(3),
-            up_to: true,
-            to: ZoneDest::ExileWithSourceStamp,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 3,
+            min_targets: 0,
+            filter: R::Land.and(R::InYourGraveyard),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::ExileWithSourceStamp }),
         })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control have all activated abilities of all land \

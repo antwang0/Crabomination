@@ -417,6 +417,39 @@ fn shigeki_digs_a_land_and_bins_the_rest() {
     );
 }
 
+/// Shigeki's Channel returns X TARGET nonlegendary cards (CR 601.2c): the
+/// cards are named as it's activated, and a legendary one can't be.
+#[test]
+fn shigeki_channel_targets_x_cards() {
+    let mut g = main_phase();
+    let shigeki = g.add_card_to_hand(0, catalog::shigeki_jukai_visionary());
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::forest());
+    let legend = g.add_card_to_graveyard(0, catalog::isamaru_hound_of_konda());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shigeki,
+        ability_index: 1,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(legend)],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect_err("a legendary card isn't a legal target");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shigeki,
+        ability_index: 1,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("channel");
+    drain_stack(&mut g);
+    assert!(in_hand(&g, 0, a) && in_hand(&g, 0, b));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == legend));
+}
+
 /// Floral Evoker grows on landfall and pitches a creature to return a land.
 #[test]
 fn floral_evoker_landfall_and_land_recursion() {
