@@ -447,7 +447,7 @@ pub fn ghost_of_ramirez_depietro() -> CardDefinition {
 
 /// King Narfi's Betrayal — I: each player mills four, then you may exile a
 /// creature or planeswalker card from each graveyard. II, III: you may cast
-/// those this turn, with any mana.
+/// those this turn, with mana of any color.
 pub fn king_narfis_betrayal() -> CardDefinition {
     let cast_them = || Effect::GrantMayPlay {
         what: Selector::CardExiledWithSource,

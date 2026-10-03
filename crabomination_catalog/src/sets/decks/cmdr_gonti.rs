@@ -57,7 +57,11 @@ pub fn gonti_canny_acquisitor() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: your_creatures_hit(),
-            effect: Effect::ExileTopFaceDownGrantPlay { library: PlayerRef::Target(0), grantee: PlayerRef::You },
+            effect: Effect::ExileTopFaceDownGrantPlay {
+                library: PlayerRef::Target(0),
+                grantee: PlayerRef::You,
+                spend: crate::effect::ExiledPlaySpend::AnyType,
+            },
         }],
         ..creature(
             "Gonti, Canny Acquisitor",
@@ -128,6 +132,7 @@ pub fn dream_thiefs_bandana() -> CardDefinition {
             triggered_abilities: vec![hits_player(Effect::ExileTopFaceDownGrantPlay {
                 library: PlayerRef::Target(0),
                 grantee: PlayerRef::You,
+                spend: crate::effect::ExiledPlaySpend::AnyType,
             })],
             triggers_on_equipment: true,
             ..Default::default()

@@ -2253,7 +2253,7 @@ death trigger never saw its hit — it reads the death snapshot now (CR
 603.10). Two base-branch ratchets were red from another seat and fixed here:
 `for_each_inner` didn't recurse `EachPushesTrigger`, and the reanimation
 audit read a `DelayUntilWithCapture` return as an unzoned target. Residuals:
-**Henzie**, **First Responder**, **Mezzio Mugger**, **Next of Kin**,
+**Henzie**, **First Responder**, **Next of Kin**,
 **Protection Racket**, **The Beamtown Bullies**, **Turf War**
 (INCOMPLETE_CARDS). Release pods beside Millicent / Yuma / Otrimi (seed
 13001, 1,000 games): 999 decided (the one board cap is Yuma's Scute Swarm
@@ -2297,7 +2297,8 @@ mastery, CR 207.2c, read as it resolves), `LookTopMayPutLandOrCreatureMvAtMost`
 (Nissa's 0, its "you may" through `MayDo`), and
 `StaticEffect::HasActivatedAbilitiesOfBattlefieldLands` (Manascape
 Refractor, the battlefield sibling of Mirran Safehouse). Residuals:
-**Capricopian**, **Manascape Refractor**, **Mindleecher**, **Vastwood Hydra**
+**Capricopian**, **Manascape Refractor**, **Vastwood Hydra** (Mindleecher and
+Mezzio Mugger pay as printed since `01BaSouG`)
 (INCOMPLETE_CARDS). Release pods beside Kalamax / Kathril / Jared (seed
 12001, 1,000 games): 1,000 decided, Otrimi 23.2 %, no card of the four lists
 unplayed; strict debug pods beside Olivia / Aminatou (seeds 12003/12004, 120

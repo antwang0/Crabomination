@@ -989,6 +989,7 @@ pub fn gonti_night_minister() -> CardDefinition {
                 effect: Effect::ExileTopFaceDownGrantPlay {
                     library: PlayerRef::Target(0),
                     grantee: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    spend: crate::effect::ExiledPlaySpend::AnyType,
                 },
             },
         ],

@@ -1096,7 +1096,7 @@ impl Effect {
             | Effect::RevealHandDiscardMatchingUnlessPayLife { who, .. } => {
                 player_has_target(who)
             }
-            Effect::ExileTopFaceDownGrantPlay { library, grantee } => {
+            Effect::ExileTopFaceDownGrantPlay { library, grantee, .. } => {
                 player_has_target(library) || player_has_target(grantee)
             }
             Effect::SacrificeAtNextUpkeep { what }

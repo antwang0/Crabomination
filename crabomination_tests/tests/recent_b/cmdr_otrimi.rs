@@ -351,3 +351,66 @@ fn cr_603_10_vastwood_hydra_spreads_over_any_number() {
         assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     }
 }
+
+/// CR 609.4b — a card played off an exile grant pays as the grant says:
+/// "mana of any type" (Gonti) and "as though any color" (Rogue Class) let a
+/// lone {G} cast an exiled Lightning Bolt; Mindleecher prints neither, so the
+/// Bolt costs its {R}.
+#[test]
+fn exiled_play_grants_pay_as_printed() {
+    use crabomination::effect::{Effect, ExiledPlaySpend, PlayerRef};
+    for (spend, castable) in
+        [(ExiledPlaySpend::AnyType, true), (ExiledPlaySpend::AnyColor, true), (ExiledPlaySpend::Own, false)]
+    {
+        let mut g = pod(2);
+        let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+        let src = g.add_card_to_battlefield(0, catalog::mindleecher());
+        let effect = Effect::ExileTopFaceDownGrantPlay { library: PlayerRef::Seat(1), grantee: PlayerRef::You, spend };
+        let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+        g.resolve_effect(&effect, &ctx).expect("exile");
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_ok(), castable, "{spend:?}: {r:?}");
+    }
+}
+
+/// CR 609.4b — "as though it were mana of any COLOR" (Mezzio Mugger, Stolen
+/// Strategy) is not "of any type": a {C} pip still wants colorless mana, so
+/// Thought-Knot Seer ({3}{C}) can't be cast from four green.
+#[test]
+fn any_color_impulse_keeps_colorless_pips() {
+    use crabomination::effect::{Effect, PlayerRef};
+    for (any_color, own, castable) in [(true, false, true), (true, true, false)] {
+        let mut g = pod(2);
+        let seer = g.add_card_to_library(0, catalog::thought_knot_seer());
+        let src = g.add_card_to_battlefield(0, catalog::mezzio_mugger());
+        let effect = Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+            pay_any_color: any_color,
+            max_mana_value: None,
+            pay_own_cost: own,
+            uncast_penalty: None,
+        };
+        let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+        g.resolve_effect(&effect, &ctx).expect("exile");
+        g.players[0].mana_pool.add(Color::Green, 4);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: seer,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_ok(), castable, "any_color {any_color} own {own}: {r:?}");
+    }
+}

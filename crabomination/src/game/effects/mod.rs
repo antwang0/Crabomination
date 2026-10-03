@@ -38514,9 +38514,12 @@ impl GameState {
                                 pay_life: false,
                                 bottom_after: false,
                             });
-                            // Pay-to-cast rider (CR 609.4b any-type spend):
-                            // the cast costs the card's MV as generic.
-                            if *pay_any_color {
+                            // Pay-to-cast rider (CR 609.4b): "any color" is
+                            // the own cost with its coloured pips generic,
+                            // "any type" the card's MV as generic.
+                            if *pay_any_color && *pay_own_cost {
+                                card.granted_alt_cast_cost_eot = Some(card.definition.cost.colored_as_generic());
+                            } else if *pay_any_color {
                                 card.granted_alt_cast_cost_eot =
                                     Some(crate::mana::ManaCost::new(vec![crate::mana::generic(
                                         card.definition.cost.cmc(),
@@ -38594,7 +38597,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopFaceDownGrantPlay { library, grantee } => {
+            Effect::ExileTopFaceDownGrantPlay { library, grantee, spend } => {
                 // Gonti, Night Minister — the library and the player who gets
                 // to play the card are different seats (the damaged opponent
                 // and the damaging creature's controller).
@@ -38617,10 +38620,16 @@ impl GameState {
                     bottom_after: false,
                 });
                 // CR 609.4b — "mana of any type can be spent": paying the
-                // mana value as generic is the same set of payments.
-                card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
-                    crate::mana::generic(card.definition.cost.cmc()),
-                ]));
+                // mana value as generic is the same set of payments; "of any
+                // color" turns only the coloured pips generic.
+                card.granted_alt_cast_cost_eot = match spend {
+                    crate::effect::ExiledPlaySpend::AnyType => Some(crate::mana::ManaCost::new(vec![
+                        crate::mana::generic(card.definition.cost.cmc()),
+                    ])),
+                    crate::effect::ExiledPlaySpend::AnyColor => Some(card.definition.cost.colored_as_generic()),
+                    // Stamped, not left unset: an unset cost is a free cast.
+                    crate::effect::ExiledPlaySpend::Own => Some(card.definition.cost.clone()),
+                };
                 self.exile.push(card);
                 events.push(GameEvent::PermanentExiled { card_id: top_id });
                 self.note_exiled_from_library(lib, top_id, events);

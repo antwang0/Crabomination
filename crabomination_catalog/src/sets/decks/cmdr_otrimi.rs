@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Capricopian** — the attacked player's "{2}: put a +1/+1 counter on it,
 //!   then reselect which player it's attacking" isn't offered.
-//! - **Mindleecher** — the exiled cards may be cast with mana of any type
-//!   (the face-down exile primitive's Gonti spend).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,
@@ -231,8 +229,7 @@ pub fn manascape_refractor() -> CardDefinition {
 
 /// Mindleecher — {4}{B}{B} 5/5 Nightmare. Mutate {4}{B}; flying; mutating,
 /// it exiles the top card of each opponent's library face down, playable by
-/// you while exiled.
-/// Residual: those cards may be cast with mana of any type.
+/// you while exiled (paying their own costs).
 pub fn mindleecher() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -241,6 +238,7 @@ pub fn mindleecher() -> CardDefinition {
             body: Box::new(Effect::ExileTopFaceDownGrantPlay {
                 library: PlayerRef::Triggerer,
                 grantee: PlayerRef::You,
+                spend: crate::effect::ExiledPlaySpend::Own,
             }),
         })],
         ..creature("Mindleecher", cost(&[generic(4), b(), b()]), vec![CreatureType::Nightmare], 5, 5)

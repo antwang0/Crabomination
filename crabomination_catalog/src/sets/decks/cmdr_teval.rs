@@ -1172,7 +1172,7 @@ fn level_up(mana: ManaCost, from_level: u8) -> ActivatedAbility {
 /// play cards exiled with this Class, and you may spend mana as though it were
 /// mana of any color to cast those spells.
 ///
-/// At level 3 the exile is `ExileTopFaceDownGrantPlay` (playable, any mana).
+/// At level 3 the exile is `ExileTopFaceDownGrantPlay` (playable, mana as though of any color).
 /// Approximation: cards exiled before level 3 don't become playable later.
 pub fn rogue_class() -> CardDefinition {
     CardDefinition {
@@ -1187,6 +1187,7 @@ pub fn rogue_class() -> CardDefinition {
                 then: Box::new(Effect::ExileTopFaceDownGrantPlay {
                     library: PlayerRef::Target(0),
                     grantee: PlayerRef::You,
+                    spend: crate::effect::ExiledPlaySpend::AnyColor,
                 }),
                 else_: Box::new(Effect::ExileTopOfLibrary {
                     who: Selector::Player(PlayerRef::Target(0)),

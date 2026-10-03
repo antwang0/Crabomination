@@ -237,6 +237,18 @@ pub enum ZoneRef {
     Command,
 }
 
+/// How a card played off an exile grant may be paid for (CR 609.4b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ExiledPlaySpend {
+    /// "Mana of any type can be spent" — the mana value as generic.
+    #[default]
+    AnyType,
+    /// "As though it were mana of any color" — coloured pips become generic.
+    AnyColor,
+    /// Its own cost.
+    Own,
+}
+
 // ── Selector ─────────────────────────────────────────────────────────────────
 
 /// A lazy reference to a (possibly empty, possibly multi-) set of game
@@ -9785,7 +9797,10 @@ pub enum Effect {
         duration: crate::card::MayPlayDuration,
         /// "You may cast" *paying* the card's cost as generic — the
         /// any-type-mana pay-to-cast rider (Nassari, Dean of Expression).
-        /// `false` keeps the free-cast grant (Urza, Lord High Artificer; Kotis).
+        /// With `pay_own_cost` too it is "as though it were mana of any
+        /// COLOR": the own cost with only its coloured pips generic (CR
+        /// 609.4b — {C} and snow pips keep). `false` keeps the free-cast grant
+        /// (Urza, Lord High Artificer; Kotis).
         #[serde(default)]
         pay_any_color: bool,
         /// Only cards at or under this mana value get the permission — the
@@ -9821,8 +9836,15 @@ pub enum Effect {
     /// `grantee` may play it for as long as it remains exiled, and mana of
     /// any type can be spent to cast it" (Gonti, Night Minister). The
     /// any-type spend is the card's mana value as generic (CR 609.4b), the
-    /// same equivalence Gonti, Lord of Luxury uses.
-    ExileTopFaceDownGrantPlay { library: PlayerRef, grantee: PlayerRef },
+    /// same equivalence Gonti, Lord of Luxury uses. `spend` narrows it: a
+    /// card printing neither clause pays its own cost (Mindleecher), "as
+    /// though it were mana of any color" keeps {C} pips (Rogue Class).
+    ExileTopFaceDownGrantPlay {
+        library: PlayerRef,
+        grantee: PlayerRef,
+        #[serde(default)]
+        spend: ExiledPlaySpend,
+    },
 
     /// CR 614 — "As this enters, exile up to `count` cards matching `filter`
     /// from your graveyard." Each exiled card is stamped `exiled_with =

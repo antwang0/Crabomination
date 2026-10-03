@@ -2006,9 +2006,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |
-| 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
-| 🟡 Mezzio Mugger | Riveteers Rampage (NCC) | the exiled cards may be cast with mana of any type (the printed "as though any color" excludes colorless). |
 | 🟡 Next of Kin | Riveteers Rampage (NCC) | the lesser creature card comes from your hand only, not the command zone. |
 | 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
 | 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |

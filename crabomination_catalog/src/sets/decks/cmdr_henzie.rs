@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Henzie** — a spell with its own blitz uses its printed blitz cost, not
 //!   a choice between that and Henzie's.
-//! - **Mezzio Mugger** — the exiled cards may be cast with mana of any type.
 //! - **Next of Kin** — the creature card comes from your hand only (not the
 //!   command zone).
 //! - **Protection Racket** — every opponent is offered each revealed card,
@@ -322,8 +321,8 @@ pub fn kresh_the_bloodbraided() -> CardDefinition {
 }
 
 /// Mezzio Mugger — {4}{R} 3/3 Lizard Rogue. Attacking, it exiles the top
-/// card of each player's library, playable this turn. Blitz {2}{R}.
-/// Residual: those cards may be cast with mana of any type.
+/// card of each player's library, playable this turn with mana as though of
+/// any color. Blitz {2}{R}.
 pub fn mezzio_mugger() -> CardDefinition {
     CardDefinition {
         alternative_cost: Some(blitz(cost(&[generic(2), r()]))),
@@ -333,7 +332,7 @@ pub fn mezzio_mugger() -> CardDefinition {
             duration: crate::card::MayPlayDuration::EndOfThisTurn,
             pay_any_color: true,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         })],
         ..creature(

@@ -274,7 +274,7 @@ pub fn mob_rule() -> CardDefinition {
 }
 
 /// Predators' Hour — your creatures gain menace and a connect trigger that
-/// exiles the damaged player's top card for you to play, any mana.
+/// exiles the damaged player's top card for you to play, mana of any color.
 pub fn predators_hour() -> CardDefinition {
     let yours = || R::Creature.and(R::ControlledByYou);
     CardDefinition {
@@ -298,7 +298,7 @@ pub fn predators_hour() -> CardDefinition {
                             duration: MayPlayDuration::WhileExiled,
                             pay_any_color: true,
                             max_mana_value: None,
-                            pay_own_cost: false,
+                            pay_own_cost: true,
                             uncast_penalty: None,
                         }),
                     },

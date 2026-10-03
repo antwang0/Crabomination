@@ -2096,7 +2096,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::WhileExiled,
                 pay_any_color: true,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
         }],

@@ -457,7 +457,7 @@ pub fn sarevoks_tome() -> CardDefinition {
 }
 
 /// Stolen Strategy — each upkeep, exile the top card of each opponent's
-/// library; you may cast those spells this turn with any mana.
+/// library; you may cast those spells this turn with mana of any color.
 pub fn stolen_strategy() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![upkeep(Effect::Seq(vec![
@@ -467,7 +467,7 @@ pub fn stolen_strategy() -> CardDefinition {
             duration: MayPlayDuration::EndOfThisTurn,
             pay_any_color: true,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         },
                 Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
