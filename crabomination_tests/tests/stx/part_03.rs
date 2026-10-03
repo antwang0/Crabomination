@@ -1457,11 +1457,11 @@ fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
     let hand_island = g.add_card_to_hand(0, catalog::island());
     let lib_card = g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add_colorless(1);
-    // Accept MayPay {1}, accept the discard, and (greedily) accept any
-    // further prompt — the land discard must not offer an exile.
+    // Accept "pay {1} and discard", name the Island, and (greedily) accept
+    // any further prompt — the land discard must not offer an exile.
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![hand_island]),
         DecisionAnswer::Bool(true),
     ]));
 
@@ -1482,9 +1482,30 @@ fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
         "discarded LAND must not be exiled by the nonland trigger");
 }
 
+/// "Pay {1} and discard a card" is one payment: with an empty hand the {1}
+/// isn't offered (nothing could be discarded), so the mana stays.
+#[test]
+fn conspiracy_theorist_cant_pay_without_a_card_to_discard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = crabomination::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: ct,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }])).expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "no {{1}} paid for nothing");
+    assert!(g.players[0].hand.is_empty(), "and no draw");
+}
+
 /// The same trigger with a `wants_ui` controller, so BOTH asks suspend.
-/// `MayPay > MayDiscard` is one of the seven shipped cards that nest two
-/// answer-log arms, and the log is one channel per resolution: the inner arm's
+/// `MayPay > MayDiscard` was one of the seven shipped cards that nested two
+/// answer-log arms (now a `MayPay` over a plain discard), and the log is one channel per resolution: the inner arm's
 /// cursor starts at 0 over whatever the outer left. It works — the outer clears
 /// the channel before running its body, and the resume re-enters at the INNER
 /// arm, whose own answer is then the only thing in it — but the structural gate
@@ -1517,6 +1538,10 @@ fn conspiracy_theorist_nested_asks_pay_once_when_both_suspend() {
             Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
                 candidates.iter().take((*min).max(1) as usize).map(|(id, _)| *id).collect(),
             ),
+            // The discard half of the compound payment.
+            Decision::Discard { hand, count, .. } => {
+                DecisionAnswer::Discard(hand.iter().take(*count as usize).map(|(id, _)| *id).collect())
+            }
             _ => DecisionAnswer::Bool(true),
         };
         g.submit_decision(answer).expect("answer the nested ask");
@@ -1544,11 +1569,12 @@ fn conspiracy_theorist_attack_with_discard_exiles_top_and_grants_may_play() {
     let hand_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     let lib_card = g.add_card_to_library(0, catalog::island());
     g.players[0].mana_pool.add_colorless(1);
-    // Scripted decider: accept MayPay {1}, accept the discard, then
-    // accept exiling the discarded nonland card from the graveyard.
+    // Scripted decider: accept "pay {1} and discard" (the discard is part of
+    // the payment, so only the card is asked), then accept exiling the
+    // discarded nonland card from the graveyard.
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![hand_bolt]),
         DecisionAnswer::Bool(true),
     ]));
     let exile_before = g.exile.len();

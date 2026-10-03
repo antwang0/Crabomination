@@ -1460,12 +1460,10 @@ pub fn professor_onyx() -> CardDefinition {
 /// Whenever you discard one or more nonland cards, you may exile one of
 /// them from your graveyard. If you do, you may cast it this turn."
 ///
-/// Approximations, both minor: (1) the attack trigger's "pay {1} and
-/// discard" compound cost is modeled as nested `MayPay {1}` →
-/// `MayDiscard 1` (a player could pay the {1} then decline the discard,
-/// wasting the mana — the draw is still correctly gated on the
-/// discard); (2) the discard trigger fires once per batch (CR 603.2c)
-/// and offers the batch's first nonland card as "one of them" — the
+/// "Pay {1} and discard a card" is one compound payment: offered only with a
+/// card in hand, and paying the {1} commits to the discard.
+/// Approximation, minor: the discard trigger fires once per batch (CR
+/// 603.2c) and offers the batch's first nonland card as "one of them" — the
 /// player doesn't pick which.
 /// The exile + cast permission is Move→Exile + `GrantMayPlay`
 /// (pay-own-cost, this turn) on the just-moved card.
@@ -1485,19 +1483,18 @@ pub fn conspiracy_theorist() -> CardDefinition {
         triggered_abilities: vec![
             // "Whenever this creature attacks, you may pay {1} and
             // discard a card. If you do, draw a card."
-            on_attack(Effect::MayPay {
-                description: "Pay {1} and discard a card to draw a card?".into(),
-                mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::MayDiscard {
-                    description: "Discard a card to draw a card?".into(),
-                    count: Value::Const(1),
-                    then: Box::new(Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    }),
+            on_attack(Effect::If {
+                cond: Predicate::ValueAtLeast(Value::HandSizeOf(crate::effect::PlayerRef::You), Value::ONE),
+                then: Box::new(Effect::MayPay {
+                    description: "Pay {1} and discard a card to draw a card?".into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ])),
                     else_: None,
                 }),
-                else_: None,
+                else_: Box::new(Effect::Noop),
             }),
             // "Whenever you discard one or more nonland cards, you may
             // exile one of them from your graveyard. If you do, you may

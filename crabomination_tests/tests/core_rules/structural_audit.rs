@@ -797,14 +797,14 @@ fn no_shipped_card_nests_two_answer_log_arms() {
             flagged.push(format!("{}: {h}", def.name));
         }
     }
-    // The seven shipped nestings. Each is safe for the reason in this test's
+    // The six shipped nestings (Conspiracy Theorist left when its "pay {1}
+    // and discard" became one payment). Each is safe for the reason in this test's
     // doc comment — the outer arm clears before its body and has nothing left
     // to do after it — and not one of them is safe by construction, which is
     // why they are listed one by one rather than waved through by shape. This
     // list is the allowlist, not an endorsement: a NEW nesting fails here and
     // has to prove the same two properties before it joins.
     const KNOWN: &[&str] = &[
-        "Conspiracy Theorist: MayPay > MayDiscard",
         "Emberwilde Djinn: MayPayBy > MayPayLife",
         "Forbidden Ritual: MaySacrifice > UnlessPlayerPays",
         "Giant Albatross: MayPay > DestroyEachUnlessPaysLife",
