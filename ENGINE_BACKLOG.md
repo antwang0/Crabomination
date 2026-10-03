@@ -142,6 +142,10 @@ the handoff.
   `--card-census` over every deck (9,200 four-seat games) had cycled no
   Decree of Pain at all. ⚠ `audit_invented_may` did not see either helper:
   a "may" invented inside a shared helper is invisible to it.
+- **FIXED:** CR 602.2b — cycling, landcycling, reinforce, hand discard
+  abilities and reconfigure paid mana from the floated pool only, so a seat
+  that doesn't pre-float could never use them (632 failed probes of Decree of
+  Pain's cycle in one 100-game run). `pay_action_mana` auto-taps them.
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, `claude/modern_decks`) — face-down exile, and the implicit "target opponent"
 

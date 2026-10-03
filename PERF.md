@@ -3035,6 +3035,30 @@ pod              every deck 1-183 in six-seat blocks x 100 (seeds 26001+): 3,100
 suite            23,775 / 0 / 5 at fd95415ff; clippy 0
 ```
 
+### 2026-10-03 (Commander session `01G77x8s`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `players.iter().any(commanders)`
+read and one `legend_rule_ask_owed` read per `perform_action_inner`; one RNG
+draw per die roll; auto-tap on the six action-cost payments (cycling,
+landcycling, reinforce, discard abilities, reconfigure). 4-core container,
+release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 0 stalls — byte-identical
+                 (tip 1e25b21d6); determinism ok. games_per_s 274-311 base vs
+                 277-295 with the 903.9a hook (5 alternating runs each, noise)
+two-player pools cube / sos / sealed x 300, seeds 9601-9604, 9902-9903: 45,000
+                 games, all decided
+pod              every deck in 4- and 6-seat blocks, seed 9301, before/after the
+                 903.9a hook: 4,600 / 3,100 games, all decided; 42.28 -> 42.25 /
+                 66.19 -> 66.14 turns/game
+pod              every deck, seeds 9401-9405: 29,580 games at 2/3/4/5
+                 (CRAB_POD_CONCEDE=20)/8 seats, all decided but two CR 104.4a
+                 draws; seed 9701 / 9901 six seats x 300: 9,300 + 9,300, all
+                 decided; zero panics throughout
+suite            23,775 / 0 / 5 (strict answer log); workspace clippy 0
+```
+
 ### 2026-10-02 (Commander session `015MggrL`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `delayed_triggers` scan per
