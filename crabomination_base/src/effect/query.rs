@@ -4549,10 +4549,12 @@ impl Effect {
         // Most keywords benefit the bearer, so a grant defaults to a friendly
         // pick. The exceptions are the "can't act" / restriction keywords —
         // a "target creature can't block" grant should hit an *opponent's*
-        // creature, so classify those as hostile.
+        // creature, so classify those as hostile — and "blocks this turn if
+        // able" (Culling Mark, Vortex Elemental), a lure aimed at theirs.
         !matches!(
             kw,
-            Keyword::Defender
+            Keyword::MustBlock
+                | Keyword::Defender
                 | Keyword::Decayed
                 | Keyword::CantBlock
                 | Keyword::CantAttack

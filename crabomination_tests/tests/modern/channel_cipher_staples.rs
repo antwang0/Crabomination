@@ -463,6 +463,26 @@ fn disguise_culvert_ambusher_etb_forces_block() {
         "target must block this turn");
 }
 
+/// A "blocks this turn if able" grant is a lure aimed at an opponent's
+/// creature: the headless default no longer hands it to the caster's own
+/// (MustBlock read as a friendly keyword).
+#[test]
+fn culvert_ambusher_auto_target_lures_an_opponents_creature() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::culvert_ambusher());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Culvert Ambusher");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::MustBlock));
+    assert!(!g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::MustBlock));
+}
+
 /// Alley Assailant enters tapped and drains 3 when it's turned face up.
 #[test]
 fn disguise_alley_assailant_enters_tapped_and_drains_on_turn_up() {
