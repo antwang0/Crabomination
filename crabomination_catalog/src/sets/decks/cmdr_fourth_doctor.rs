@@ -247,9 +247,14 @@ pub fn the_second_doctor() -> CardDefinition {
                         description: "Draw a card? You can't attack The Second Doctor's controller next turn.".into(),
                         body: Box::new(Effect::Seq(vec![
                             Effect::Draw { who: Selector::Player(PlayerRef::Triggerer), amount: Value::ONE },
-                            Effect::GrantCantAttackYou {
-                                what: Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature },
-                                duration: Duration::UntilYourNextUntap,
+                            // "Can't attack YOU": the body runs as the drawing
+                            // opponent, so the Doctor's controller is named back.
+                            Effect::AsPlayer {
+                                who: PlayerRef::ControllerOf(Box::new(Selector::This)),
+                                body: Box::new(Effect::GrantCantAttackYou {
+                                    what: Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature },
+                                    duration: Duration::UntilYourNextUntap,
+                                }),
                             },
                         ])),
                     }),

@@ -316,3 +316,25 @@ fn nyssa_of_traken_taps_up_to_that_many_targets() {
     let tapped = bears.iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count();
     assert_eq!(tapped, 2, "up to two targets: no more than were sacrificed");
 }
+
+/// The Second Doctor — "each opponent who [draws] can't attack YOU": the
+/// drawing opponent's creatures are barred from the Doctor's controller
+/// (CR 508.1a), not from attacking their own controller (the body runs as
+/// the opponent); an opponent who declines is free.
+#[test]
+fn the_second_doctor_bars_the_drawer_from_attacking_you() {
+    use crabomination::card::Keyword;
+    let mut g = pod(3);
+    let doc = g.add_card_to_battlefield(0, catalog::the_second_doctor());
+    let drew = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let declined = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false), // you
+        DecisionAnswer::Bool(true),  // player 2 draws
+        DecisionAnswer::Bool(false), // player 3 doesn't
+    ]));
+    fire(&mut g, doc, 0);
+    let barred = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantAttackPlayer(0));
+    assert!(barred(&g, drew), "can't attack the Doctor's controller");
+    assert!(!barred(&g, declined));
+}
