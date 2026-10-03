@@ -86,8 +86,15 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| {
+                let t = Target::Permanent(c.id);
+                // "Destroy TARGET … of their choice" (The Abyss, its Magus):
+                // the ability's controller targets, so hexproof, shroud and
+                // protection from the source count against the pick (the
+                // 2020-08-07 ruling).
                 c.controller == seat
-                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), seat, Some(source))
+                    && self.evaluate_requirement_static(filter, &t, seat, Some(source))
+                    && self.check_target_legality(&t, ctx.controller).is_ok()
+                    && !self.ability_target_has_protection(&t, source)
             })
             .map(|c| (c.definition.cost.cmc(), c.definition.power, c.id))
             .collect();

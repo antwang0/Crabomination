@@ -256,9 +256,9 @@ pub fn kess_dissident_mage() -> CardDefinition {
     }
 }
 
-/// Magus of the Abyss — at each player's upkeep, that player loses a
-/// nonartifact creature of their choice; no regeneration. Residual: the pick
-/// is a choice, so hexproof doesn't stop it.
+/// Magus of the Abyss — at each player's upkeep, destroy target nonartifact
+/// creature that player controls of their choice; no regeneration. The pick
+/// must be a legal target for the Magus's controller (hexproof stops it).
 pub fn magus_of_the_abyss() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {

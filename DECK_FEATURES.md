@@ -952,7 +952,7 @@ only** (CR 115.1c), and the slot filler offered only the *first* opponent — a
 two-seat assumption, so Vindictive Lich's "each mode must target a different
 player" hit one seat at four. Residuals: **Mairsil** activates a borrowed
 ability any number of times a turn and cages the highest-mana-value card;
-**Magus of the Abyss**'s pick is a choice, so hexproof doesn't stop it;
+~~**Magus of the Abyss**~~ (its pick must be a legal target since `01BaSouG`);
 **Shifting Shadow** reveals from the Aura controller's library and the new
 creature enters before the old one is destroyed; **Vindictive Lich** always
 picks all three modes in a fixed order. Four-seat pods beside Rin and Seri /

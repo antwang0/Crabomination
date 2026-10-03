@@ -194,6 +194,28 @@ fn magus_of_the_abyss_takes_one_nonartifact_creature() {
     assert!(g.battlefield_find(angel).is_some() && g.battlefield_find(thopter).is_some());
 }
 
+/// 2020-08-07 ruling — the upkeep player chooses, but the Magus's controller
+/// TARGETS: an opponent's hexproof creature can't be the one destroyed, while
+/// on your own upkeep your hexproof creature can.
+#[test]
+fn magus_of_the_abyss_targets_so_hexproof_counts() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::magus_of_the_abyss());
+    let scout = g.add_card_to_battlefield(1, catalog::gladecover_scout());
+    g.active_player_idx = 1;
+    step(&mut g, TurnStep::Upkeep);
+    assert!(g.battlefield_find(scout).is_some(), "an opponent's hexproof creature isn't a legal target");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut g2 = g.clone();
+    g2.active_player_idx = 1;
+    step(&mut g2, TurnStep::Upkeep);
+    assert!(g2.battlefield_find(bear).is_none() && g2.battlefield_find(scout).is_some());
+    let mine = g.add_card_to_battlefield(0, catalog::gladecover_scout());
+    g.active_player_idx = 0;
+    step(&mut g, TurnStep::Upkeep);
+    assert!(g.battlefield_find(mine).is_none(), "your own hexproof creature is targetable");
+}
+
 /// Magus of the Mind exiles one plus the turn's spell count and grants free
 /// plays from among them.
 #[test]
