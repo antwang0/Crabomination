@@ -8487,6 +8487,11 @@ pub enum Effect {
     /// "{T}, Exile a card from your graveyard: Add {R}. When you do,
     /// this creature deals 1 damage to each opponent."
     ReflexiveTrigger { body: Box<Effect> },
+    /// "Put the same number and kind of counters on …" — `amount` counters of
+    /// the kind the triggering `CounterAdded` event put (Bold Plagiarist,
+    /// Captain Marvel). Rewritten to an `AddCounter` as the trigger is
+    /// created (`for_trigger_event`); a no-op anywhere else.
+    AddCounterOfTriggerKind { what: Selector, amount: Value },
     /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
     /// players that have a counter, then give each another counter of a
     /// kind already there." The auto-decider implements a strategic

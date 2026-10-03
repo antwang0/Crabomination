@@ -39509,6 +39509,10 @@ impl GameState {
                 Ok(())
             }
 
+            // Fixed to an `AddCounter` as its trigger was created; reached only
+            // outside a counter event.
+            Effect::AddCounterOfTriggerKind { .. } => Ok(()),
+
             Effect::BottomInsteadAfterGrantedCast { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
@@ -44388,3 +44392,28 @@ pub(super) fn proliferate_wants(kind: CounterType, friendly: bool) -> bool {
 /// caster's side, a copy aimed back at the caster's own permanent defaults to
 /// another legal object. Far past any duel board.
 const CROWDED_COPY_BOARD: usize = 150;
+
+/// `effect` as the trigger it becomes for `ev`: a `CounterAdded` event fixes
+/// `Effect::AddCounterOfTriggerKind` to the kind it put ("the same number and
+/// kind of counters" — Bold Plagiarist). Any other pair is a plain clone.
+pub(crate) fn for_trigger_event(effect: &Effect, ev: &GameEvent) -> Effect {
+    fn fix(e: &mut Effect, kind: crate::card::CounterType) {
+        match e {
+            Effect::AddCounterOfTriggerKind { what, amount } => {
+                *e = Effect::AddCounter { what: what.clone(), kind, amount: amount.clone() };
+            }
+            Effect::Seq(v) => v.iter_mut().for_each(|x| fix(x, kind)),
+            Effect::MayDo { body, .. } => fix(body, kind),
+            Effect::If { then, else_, .. } => {
+                fix(then, kind);
+                fix(else_, kind);
+            }
+            _ => {}
+        }
+    }
+    let mut out = effect.clone();
+    if let GameEvent::CounterAdded { counter_type, .. } = ev {
+        fix(&mut out, *counter_type);
+    }
+    out
+}

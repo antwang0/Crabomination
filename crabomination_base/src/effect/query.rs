@@ -1984,6 +1984,7 @@ impl Effect {
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
+            | Effect::AddCounterOfTriggerKind { what, amount }
             | Effect::RemoveCounter { what, amount, .. }
             | Effect::AddKeywordCounter { what, amount, .. }
             | Effect::RemoveKeywordCounter { what, amount, .. } => {
@@ -2758,6 +2759,7 @@ impl Effect {
             }
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
             Effect::AddCounter { what, .. }
+            | Effect::AddCounterOfTriggerKind { what, .. }
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }
             | Effect::RemoveAnyCounter { what }
@@ -5321,9 +5323,9 @@ impl Effect {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::RedirectDamageToThisThisTurn { to } => sel_find(to, slot),
-                Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
-                    sel_find(what, slot)
-                }
+                Effect::AddCounter { what, .. }
+                | Effect::AddCounterOfTriggerKind { what, .. }
+                | Effect::RemoveCounter { what, .. } => sel_find(what, slot),
                 Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => {
                     sel_find(what, slot)
                 }
