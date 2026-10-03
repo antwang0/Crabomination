@@ -346,10 +346,9 @@ pub fn grave_birthing() -> CardDefinition {
             cost(&[generic(2), b()]),
             CardType::Instant,
             Effect::Seq(vec![
-                Effect::ExileChosenFromHandOrGraveyard {
-                    who: PlayerRef::Target(0),
-                    filter: R::Any,
-                },
+                // "Target opponent exiles a card from their graveyard" — their
+                // pick, graveyard only (the cheapest, headless).
+                Effect::ExileFromGraveyard { who: PlayerRef::Target(0), count: Value::Const(1), filter: R::Any },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),

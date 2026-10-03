@@ -950,8 +950,8 @@ source pay (Inalla is one of its five Wizards; Crookclaw Elder one of its two
 Birds); ⚠⚠ **both death funnels pushed a trigger with its first target slot
 only** (CR 115.1c), and the slot filler offered only the *first* opponent — a
 two-seat assumption, so Vindictive Lich's "each mode must target a different
-player" hit one seat at four. Residuals: **Mairsil** activates a borrowed
-ability any number of times a turn and cages the highest-mana-value card;
+player" hit one seat at four. Residuals: ~~**Mairsil**~~ (a borrowed ability once a turn;
+the cage is its controller's pick since `01BaSouG`);
 ~~**Magus of the Abyss**~~ (its pick must be a legal target since `01BaSouG`);
 **Shifting Shadow** reveals from the Aura controller's library and the new
 creature enters before the old one is destroyed; **Vindictive Lich** always

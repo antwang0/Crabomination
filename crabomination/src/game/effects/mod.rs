@@ -15295,15 +15295,43 @@ impl GameState {
 
             Effect::ExileChosenFromHandOrGraveyard { who, filter } => {
                 for p in self.resolve_players(who, ctx) {
-                    // Candidates across both zones; auto-pick the highest MV.
-                    let pick = self.players[p].hand.iter()
+                    // Candidates across both zones, the controller's pick. The
+                    // headless default is the highest MV — from your own
+                    // cards (Mairsil's cage) one with an activated ability
+                    // first, since that is what the cage lends.
+                    let own = p == ctx.controller;
+                    let cands: Vec<(bool, u32, CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
                         .chain(self.players[p].graveyard.iter())
                         .filter(|c| {
                             self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
                         })
-                        .max_by_key(|c| c.definition.cost.cmc())
-                        .map(|c| c.id);
-                    if let Some(id) = pick {
+                        .map(|c| {
+                            let lends = own && !c.definition.activated_abilities.is_empty();
+                            (lends, c.definition.cost.cmc(), c.id, c.definition.name.to_string())
+                        })
+                        .collect();
+                    // `max_by_key` takes the last of a tie, as the old auto-pick did.
+                    let Some(default) = cands.iter().max_by_key(|c| (c.0, c.1)).map(|c| c.2) else { continue };
+                    // Offered best-first: a bot's mixed-zone pick takes the order.
+                    let mut offer: Vec<(CardId, String)> = Vec::with_capacity(cands.len());
+                    offer.extend(cands.iter().filter(|c| c.2 == default).map(|c| (c.2, c.3.clone())));
+                    offer.extend(cands.iter().filter(|c| c.2 != default).map(|c| (c.2, c.3.clone())));
+                    let picked = self.choose_up_to_cards(
+                        ctx.controller,
+                        "Choose a card to exile.".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        offer,
+                        1,
+                        if own { PickValue::Gain } else { PickValue::Cost },
+                        effect,
+                        vec![default],
+                    );
+                    if self.suspend_signal.is_some() {
+                        return Ok(());
+                    }
+                    if let Some(id) = picked.and_then(|v| v.first().copied()) {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                         self.scratch.last_moved_cards.push(id);
                     }

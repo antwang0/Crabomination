@@ -7395,8 +7395,9 @@ pub enum Effect {
     /// and land, then every enchantment, and bottoms the rest.
     WarpWorld,
     /// "You choose a card matching `filter` from `who`'s graveyard or hand
-    /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
-    /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).
+    /// and exile it." A single cross-zone choice by the resolving controller
+    /// (Memory Leak; Mairsil's cage). Headless: the highest-mana-value match,
+    /// and from your own cards one with an activated ability first.
     ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
     /// "Target player reveals the top `reveal` cards of their library. You
     /// choose `pick` of those cards and put them into that player's graveyard.

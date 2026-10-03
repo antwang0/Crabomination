@@ -244,8 +244,8 @@ fn magus_of_the_mind_scales_with_the_storm_count() {
 #[test]
 fn mairsil_borrows_a_caged_cards_ability() {
     let mut g = pod(2);
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     let sorcerer = g.add_card_to_graveyard(0, catalog::prodigal_sorcerer());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![sorcerer])]));
     let m = g.add_card_to_hand(0, catalog::mairsil_the_pretender());
     cast(&mut g, 0, m, None).expect("cast");
     let caged = g.exile.iter().find(|c| c.id == sorcerer).expect("caged");
@@ -259,6 +259,21 @@ fn mairsil_borrows_a_caged_cards_ability() {
     // untapped Mairsil still can't ping twice (CR 602.5b).
     g.battlefield_find_mut(m).expect("Mairsil").tapped = false;
     assert!(activate(&mut g, 0, m, 0, Some(Target::Player(1)), None).is_err());
+}
+
+/// The cage is Mairsil's controller's pick, from hand or graveyard: a
+/// chooser may cage the Angel over the Sorcerer (the engine offers the card
+/// with an activated ability first — `bot_choose_cards_takes_the_offer_*`).
+#[test]
+fn mairsil_cages_the_card_it_chooses() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    let sorcerer = g.add_card_to_graveyard(0, catalog::prodigal_sorcerer());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![angel])]));
+    let m = g.add_card_to_hand(0, catalog::mairsil_the_pretender());
+    cast(&mut g, 0, m, None).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == angel), "caged from hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == sorcerer));
 }
 
 /// Mirror of the Forebears names Bear and becomes a copy of your Bear until

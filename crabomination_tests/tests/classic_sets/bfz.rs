@@ -663,3 +663,31 @@ fn hedron_blade_grants_deathtouch_on_a_colorless_blocker() {
         assert_eq!(has, want, "{}", blocker_def().name);
     }
 }
+
+/// Grave Birthing — "target opponent exiles a card from their graveyard":
+/// their graveyard only (a card in hand is never at risk), then a Scion and
+/// a draw for the caster.
+#[test]
+fn grave_birthing_exiles_from_the_graveyard_only() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let in_hand = g.add_card_to_hand(1, catalog::serra_angel());
+    let in_gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let gb = g.add_card_to_hand(0, catalog::grave_birthing());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gb,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == in_hand), "the hand is untouched");
+    assert!(g.exile.iter().any(|c| c.id == in_gy));
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Eldrazi Scion"));
+}
