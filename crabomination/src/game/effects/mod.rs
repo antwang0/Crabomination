@@ -18154,12 +18154,22 @@ impl GameState {
                 }
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_card_id() else { continue };
+                    let mut on_stack = false;
                     for it in self.stack.iter_mut() {
                         if let StackItem::Spell { card, .. } = it
                             && card.id == cid
                         {
                             card.pending_etb_counters.push((*kind, n));
+                            on_stack = true;
                         }
+                    }
+                    // A card about to be put onto the battlefield ("return it
+                    // with N counters on it") carries the rider into its entry.
+                    if !on_stack
+                        && self.battlefield.find_by_id(cid).is_none()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        card.pending_etb_counters.push((*kind, n));
                     }
                 }
                 Ok(())

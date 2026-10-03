@@ -7223,7 +7223,9 @@ pub enum Effect {
     /// this resolves; taxes and discounts still apply.
     CastCopyForCost { what: Selector, source_zone: crate::card::Zone, cost: crate::mana::ManaCost },
     /// "That creature enters with N additional [kind] counters" on a spell
-    /// still on the stack — stamps the spell's `pending_etb_counters`
+    /// still on the stack, or on a card a following move puts onto the
+    /// battlefield ("return it with N counters", Grave Endeavor) — stamps the
+    /// object's `pending_etb_counters`
     /// (Bloodlord of Vaasgoth's granted bloodthirst).
     SpellEntersWithCounters { what: Selector, kind: crate::card::CounterType, amount: Value },
     /// "It gains [keyword]" on a spell still on the stack — stamps the

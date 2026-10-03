@@ -2892,6 +2892,20 @@ impl GameState {
                 for (kind, n) in self.chosen_type_etb_counter_specs(cid, p) {
                     counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                 }
+                // "Return it to the battlefield with N counters on it" (Grave
+                // Endeavor) — stamped on the card just before the move. Read
+                // through `&self` first: a `CardCold` field, empty on nearly
+                // every entry.
+                if self
+                    .battlefield
+                    .find_by_id(cid)
+                    .is_some_and(|c| c.cold_any(|k| !k.pending_etb_counters.is_empty()))
+                    && let Some(c) = self.battlefield.find_by_id_mut(cid)
+                {
+                    for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
+                        counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                    }
+                }
                 self.apply_etb_type_riders(cid, p);
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {
