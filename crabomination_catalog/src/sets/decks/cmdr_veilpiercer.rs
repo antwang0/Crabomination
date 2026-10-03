@@ -7,10 +7,7 @@
 //!   stopped; an effect that removes or moves counters still takes a stun.
 //! - **One with the Multiverse** — the free cast is from hand only, not from
 //!   the top of the library.
-//! - **Phenomenon Investigators** — Doubt's return targets the permanent.
 //! - **Secret Arcade** — permanent *spells* aren't enchantments on the stack.
-//! - **Spirit-Sister's Call** — the sacrifice shares the chosen card's first
-//!   card type (creature, artifact, enchantment, land, planeswalker, battle).
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EntersAsCopy, EventKind, EventScope,
@@ -236,7 +233,7 @@ pub fn one_with_the_multiverse() -> CardDefinition {
 
 /// Phenomenon Investigators — Believe: your nontoken deaths make 2/2 Horror
 /// enchantment creatures; Doubt: your end step may bounce a nonland
-/// permanent of yours to draw. Residual: Doubt's return targets.
+/// permanent of yours (chosen, not targeted) to draw.
 pub fn phenomenon_investigators() -> CardDefinition {
     let horror = Arc::new(TokenDefinition {
         name: "Horror".into(),
@@ -264,13 +261,15 @@ pub fn phenomenon_investigators() -> CardDefinition {
                 TurnStep::End,
                 Effect::MayDo {
                     description: "Return a nonland permanent you own to draw a card?".into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Move {
-                            what: target_filtered(R::Nonland.and(R::OwnedByYou)),
-                            to: ZoneDest::Hand(PlayerRef::You),
-                        },
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    ])),
+                    // Chosen on resolution, not targeted.
+                    body: Box::new(crate::effect::shortcut::choose_one_then(
+                        Selector::EachPermanent(R::Nonland.and(R::OwnedByYou)),
+                        PlayerRef::You,
+                        Effect::Seq(vec![
+                            Effect::Move { what: crate::effect::shortcut::chosen_one(), to: ZoneDest::Hand(PlayerRef::You) },
+                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        ]),
+                    )),
                 },
             )),
         ])),
@@ -390,7 +389,7 @@ pub fn soaring_lightbringer() -> CardDefinition {
 
 /// Spirit-Sister's Call — your end step: for a permanent card in your
 /// graveyard, you may sacrifice a permanent sharing a card type to return it,
-/// exiled if it would leave. Residual: The shared type is the card's first one.
+/// exiled if it would leave (any card type it shares).
 pub fn spirit_sisters_call() -> CardDefinition {
     let back = || {
         Effect::Seq(vec![
@@ -402,25 +401,13 @@ pub fn spirit_sisters_call() -> CardDefinition {
             Effect::ExileIfLeavesBattlefield { what: Selector::LastMoved },
         ])
     };
-    let types = [
-        CardType::Creature,
-        CardType::Artifact,
-        CardType::Enchantment,
-        CardType::Land,
-        CardType::Planeswalker,
-        CardType::Battle,
-    ];
-    let chain = types.iter().rev().fold(Effect::Noop, |rest, t| Effect::If {
-        cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::HasCardType(t.clone()) },
-        then: Box::new(Effect::MaySacrifice {
-            description: "Sacrifice a permanent sharing a card type to return it?".into(),
-            filter: R::HasCardType(t.clone()).and(R::ControlledByYou),
-            count: Value::ONE,
-            then: Box::new(back()),
-            else_: None,
-        }),
-        else_: Box::new(rest),
-    });
+    let chain = Effect::MaySacrifice {
+        description: "Sacrifice a permanent sharing a card type to return it?".into(),
+        filter: R::SharesCardTypeWithTarget.and(R::ControlledByYou),
+        count: Value::ONE,
+        then: Box::new(back()),
+        else_: None,
+    };
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),

@@ -3405,6 +3405,10 @@ pub enum SelectionRequirement {
     /// `Effect::RememberNamedCard` kept — Day of the Moon). The source-less
     /// card walker reads it as false.
     NameChosenForSource,
+    /// Shares a card type with the effect's first target — concretized by the
+    /// effect that reads it (`resolve_target_card_types`; Spirit-Sister's
+    /// Call's sacrifice). Unconcretized, it matches nothing.
+    SharesCardTypeWithTarget,
     /// No permanent the evaluating player controls shares this card's name
     /// (Central Elevator's "a Room card that doesn't have the same name as a
     /// Room you control").
@@ -3756,6 +3760,29 @@ impl SelectionRequirement {
                 Box::new(b.resolve_noted_names(names)),
             ),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_noted_names(names))),
+            other => other.clone(),
+        }
+    }
+
+    /// Concretize `SharesCardTypeWithTarget` against the target's card types
+    /// (an `Or` of `HasCardType`, or "matches nothing"), recursing through
+    /// And/Or/Not.
+    pub fn resolve_target_card_types(&self, types: &[CardType]) -> Self {
+        match self {
+            Self::SharesCardTypeWithTarget => types
+                .iter()
+                .map(|t| Self::HasCardType(t.clone()))
+                .reduce(|a, b| Self::Or(Box::new(a), Box::new(b)))
+                .unwrap_or_else(|| Self::Not(Box::new(Self::Any))),
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_target_card_types(types)),
+                Box::new(b.resolve_target_card_types(types)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_target_card_types(types)),
+                Box::new(b.resolve_target_card_types(types)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_target_card_types(types))),
             other => other.clone(),
         }
     }

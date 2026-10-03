@@ -6208,7 +6208,7 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
                         .is_some_and(|t| card.definition.card_types.contains(&t)),
-                    R::SameNameAsTarget => false,
+                    R::SameNameAsTarget | R::SharesCardTypeWithTarget => false,
                     // Shares a creature type with the source: the live
                     // permanent (Haunted One's granted trigger), else its
                     // last-known information (Heirloom Blade's dying host).
@@ -6937,7 +6937,7 @@ impl GameState {
             R::IsSourceChosenCreatureType => self
                 .chosen_creature_type_scratch
                 .is_some_and(|ct| self.card_off_battlefield_has_creature_type(card, ct)),
-            R::SameNameAsTarget | R::TargetsALandYouControl | R::TargetsAPermanentYouControlMatching(_) => false,
+            R::SameNameAsTarget | R::SharesCardTypeWithTarget | R::TargetsALandYouControl | R::TargetsAPermanentYouControlMatching(_) => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControllerHand => {

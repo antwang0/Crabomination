@@ -318,6 +318,37 @@ fn spirit_sisters_call_trades_and_exiles() {
     assert!(g.exile.iter().any(|c| c.id == dead), "exiled instead");
 }
 
+/// Spirit-Sister's Call's sacrifice may share ANY card type with the chosen
+/// card: an artifact creature card comes back for a noncreature artifact.
+#[test]
+fn spirit_sisters_call_matches_any_shared_type() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::spirit_sisters_call());
+    let dead = g.add_card_to_graveyard(0, catalog::memnite());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    fire(&mut g, TurnStep::End);
+    assert!(g.battlefield_find(dead).is_some() && g.battlefield_find(rock).is_none());
+}
+
+/// Phenomenon Investigators' Doubt chooses what it returns on resolution —
+/// nothing is targeted.
+#[test]
+fn phenomenon_investigators_doubt_chooses_its_return() {
+    let mut g = main_phase(2);
+    library(&mut g, 0, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let pi = g.add_card_to_hand(0, catalog::phenomenon_investigators());
+    flood(&mut g, 0);
+    cast_at(&mut g, pi, &[]).expect("cast, Doubt");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    fire(&mut g, TurnStep::End);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "a permanent back and a card drawn");
+    assert!(g.battlefield_find(bear).is_none() || g.battlefield_find(pi).is_none());
+}
+
 /// The Master of Keys: X counters and 2X milled; an enchantment card in the
 /// graveyard escapes.
 #[test]

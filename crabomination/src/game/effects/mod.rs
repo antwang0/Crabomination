@@ -7906,6 +7906,15 @@ impl GameState {
                 // seat takes the weakest non-source matches) and run `then`.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source_id = ctx.source;
+                // "A permanent that shares a card type with the chosen card"
+                // (Spirit-Sister's Call) reads the target's types.
+                let types: Vec<crate::card::CardType> = match ctx.targets.first() {
+                    Some(crate::game::Target::Permanent(id)) => {
+                        self.find_card_anywhere(*id).map(|c| c.definition.card_types.clone()).unwrap_or_default()
+                    }
+                    _ => Vec::new(),
+                };
+                let filter = &filter.resolve_target_card_types(&types);
                 let candidates = self.sacrifice_candidates(ctx.controller, filter, source_id);
                 if n == 0 || candidates.len() < n {
                     if let Some(e) = else_ {
