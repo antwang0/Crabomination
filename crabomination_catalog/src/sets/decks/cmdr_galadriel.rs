@@ -7,8 +7,6 @@
 //!   pick, and it may attack its owner.
 //! - **Sail into the West** — on embark every player wheels; the "may"
 //!   isn't offered.
-//! - **Gandalf, Westward Voyager** — the opponents' top cards are read, not
-//!   revealed.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -339,19 +337,20 @@ pub fn galadriel_elven_queen() -> CardDefinition {
 
 /// Gandalf, Westward Voyager — a big spell cast: if an opponent's top card
 /// shares a card type with it, copy it and each opponent draws; otherwise you
-/// draw.
-///
-/// ⚠ Residual: the opponents' top cards are read, not revealed.
+/// draw. Each opponent reveals their top card first (CR 701.20).
 pub fn gandalf_westward_voyager() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![big_spell_cast(Effect::If {
-            cond: Predicate::AnOpponentsTopCardSharesCardTypeWith(Selector::TriggerSource),
-            then: Box::new(Effect::Seq(vec![
-                Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
-                draw(PlayerRef::EachOpponent, 1),
-            ])),
-            else_: Box::new(draw(PlayerRef::You, 1)),
-        })],
+        triggered_abilities: vec![big_spell_cast(Effect::Seq(vec![
+            Effect::RevealTopOfLibrary { who: PlayerRef::EachOpponent },
+            Effect::If {
+                cond: Predicate::AnOpponentsTopCardSharesCardTypeWith(Selector::TriggerSource),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+                    draw(PlayerRef::EachOpponent, 1),
+                ])),
+                else_: Box::new(draw(PlayerRef::You, 1)),
+            },
+        ]))],
         ..legendary(creature(
             "Gandalf, Westward Voyager",
             cost(&[generic(3), g(), u()]),

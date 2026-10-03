@@ -223,9 +223,20 @@ fn gandalf_voyages_west() {
     g.add_card_to_library(1, catalog::grizzly_bears());
     g.add_card_to_library(1, catalog::grizzly_bears());
     let whale = g.add_card_to_hand(0, catalog::colossal_whale());
-    cast_at(&mut g, whale, &[]).expect("cast");
+    let mut seen = Vec::new();
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 20);
+    }
+    g.priority.player_with_priority = 0;
+    seen.extend(
+        g.perform_action(GameAction::CastSpell { card_id: whale, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast"),
+    );
+    seen.extend(drain_stack(&mut g));
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Colossal Whale").count(), 2);
     assert_eq!(g.players[1].hand.len(), 1, "the opponent drew");
+    // CR 701.20 — the opponent's top card is revealed, not just read.
+    assert!(seen.iter().any(|e| matches!(e, GameEvent::TopCardRevealed { player: 1, .. })));
 }
 
 /// Haldir pumps the other Elves by his counters.
