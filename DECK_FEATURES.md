@@ -2106,8 +2106,8 @@ missing; the primitives: `StaticEffect::TokensMayBecome` (Jinnie Fay's CR
 614.1a token replacement, applied per token at mint time) and
 `Value::LandCardsRevealedThisEffect` (Phabine's parley splits lands from
 nonlands). Mirror Entity landed in Open Hostility at the same time; one
-definition stays. Residuals: **Highcliff Felidar** destroys one opponent at a
-time and picks among ties itself; **Jinnie Fay** always takes a bigger body
+definition stays. Residuals: ~~**Highcliff Felidar**~~ (`DestroyOnePerOpponent`
+since `01BaSouG`); **Jinnie Fay** always takes a bigger body
 and never replaces a noncreature token (Pack Leader's shield and Showdown
 of the Skalds' counter target since fixed). A debug pod beside Nahiri / Tegwyll /
 N'ghathrod (seed 9501, 30 games) decided 30/30, zero panics; a 120-game census

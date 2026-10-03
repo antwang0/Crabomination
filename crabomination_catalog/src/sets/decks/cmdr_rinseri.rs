@@ -390,22 +390,15 @@ pub fn greater_tanuki() -> CardDefinition {
     }
 }
 
-/// Highcliff Felidar — vigilance; on entry, destroy a greatest-power creature
-/// of each opponent's.
-///
-/// ⚠ Residual: the destructions run one opponent at a time, and the engine
-/// picks among tied creatures.
+/// Highcliff Felidar — vigilance; on entry, for each opponent, choose a
+/// creature with the greatest power among theirs (your pick among ties), then
+/// destroy those creatures at once (`DestroyOnePerOpponent`).
 pub fn highcliff_felidar() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::EachPlayerDoes {
-            who: PlayerRef::EachOpponent,
-            body: Box::new(Effect::Destroy {
-                what: Selector::TakeGreatestPower {
-                    inner: Box::new(yours(R::Creature)),
-                    count: Box::new(Value::ONE),
-                },
-            }),
+        triggered_abilities: vec![etb(Effect::DestroyOnePerOpponent {
+            filter: R::Creature.and(R::HasGreatestPowerAmongControlled(Box::new(R::Creature))),
+            random_one: false,
         })],
         ..creature(
             "Highcliff Felidar",

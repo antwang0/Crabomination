@@ -275,6 +275,18 @@ fn highcliff_felidar_destroys_each_opponents_biggest() {
     assert!(g.battlefield_find(mine).is_some());
 }
 
+/// Among tied greatest-power creatures the Felidar's controller chooses.
+#[test]
+fn highcliff_felidar_lets_its_controller_break_a_tie() {
+    let mut g = main_phase(2);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let other = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(other))]));
+    let f = g.add_card_to_hand(0, catalog::highcliff_felidar());
+    cast(&mut g, f);
+    assert!(g.battlefield_find(other).is_none() && g.battlefield_find(angel).is_some());
+}
+
 /// CR 208.3 — "greatest power" is current power: Grizzly Bears grown to 4/4
 /// by counters out-powers a Hill Giant (3/3); the printed read took the Giant.
 #[test]
