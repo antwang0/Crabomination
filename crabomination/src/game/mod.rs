@@ -185,6 +185,8 @@ mod attack_only_chosen;
 mod for_each_chosen;
 // Psychic Paper's chosen name and creature type on the equipped creature.
 mod attached_rename;
+// The Master, Multiplied: your triggers can't remove your creature tokens.
+mod token_shield;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -2183,6 +2185,11 @@ pub struct ResolutionScratch {
     /// of Potential). Cleared between resolutions.
     #[serde(skip)]
     pub(crate) proliferated_this_resolution: Vec<CardId>,
+    /// The controller of the triggered ability resolving now, set only while
+    /// they control a `YourTriggersCantRemoveYourCreatureTokens` static (The
+    /// Master, Multiplied) — so an ordinary trigger never writes it.
+    #[serde(skip)]
+    pub(crate) token_shield_seat: Option<usize>,
     /// Transient: per-player count of cards discarded within the current
     /// effect resolution, indexed by player seat. Bumped alongside the
     /// flat `cards_discarded_this_resolution` whenever a discard event
@@ -18403,6 +18410,11 @@ impl GameState {
                 continue; // already gone (died in combat, bounced, etc.)
             }
             let who = self.battlefield_find(id).map(|c| c.controller).unwrap_or(0);
+            // The cleanup is the token maker's delayed trigger (myriad's
+            // "exile the tokens at end of combat"): The Master shields them.
+            if self.shields_own_creature_token(id) {
+                continue;
+            }
             match kind {
                 AttackingTokenCleanup::SacrificeAtEndOfCombat => {
                     // Shared sacrifice funnel — die snapshot included.
@@ -32092,6 +32104,7 @@ fn static_effect_to_effects(
             | StaticEffect::LibraryTopEquipmentAttachesOnEntry
             | StaticEffect::ChooseColorAsAttached
             | StaticEffect::AttachedTakesChosenNameAndType
+            | StaticEffect::YourTriggersCantRemoveYourCreatureTokens
             | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.

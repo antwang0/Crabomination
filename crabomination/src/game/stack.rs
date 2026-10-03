@@ -3294,7 +3294,7 @@ impl GameState {
                 event_amount,
                 intervening_if,
                 additional_targets,
-                activated: _,
+                activated,
                 trigger_player,
                 mana_spent_by_color,
                 source_transformed_since_push,
@@ -3362,7 +3362,13 @@ impl GameState {
                     }
                     _ => None,
                 };
-                self.continue_trigger_resolution_with_source_into(
+                // The Master, Multiplied — guarded, so an ordinary trigger
+                // never writes the scratch.
+                let token_shield = !activated && self.has_token_shield(controller);
+                if token_shield {
+                    self.scratch.token_shield_seat = Some(controller);
+                }
+                let resolved = self.continue_trigger_resolution_with_source_into(
                     source,
                     controller,
                     *effect,
@@ -3377,7 +3383,11 @@ impl GameState {
                     additional_targets,
                     false,
                     &mut events,
-                )?;
+                );
+                if token_shield {
+                    self.scratch.token_shield_seat = None;
+                }
+                resolved?;
                 // CR 603.10 — a suspended resolution is the SAME resolution, so
                 // its continuation still has to read the dying object. Tearing
                 // the LKI down here left Giant Albatross's "each creature that

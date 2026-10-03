@@ -330,6 +330,12 @@ pub enum StaticEffect {
     /// while this stays attached to it (CR 611.2c, the `WhileSourceAttached`
     /// copy sweep).
     AttachedTakesChosenNameAndType,
+    /// "Triggered abilities you control can't cause you to sacrifice or
+    /// exile creature tokens you control" (The Master, Multiplied). Read by
+    /// `game/token_shield.rs` while one of its controller's triggered
+    /// abilities resolves, and by the end-of-combat token cleanup (myriad's
+    /// "exile the tokens at end of combat" is such a trigger).
+    YourTriggersCantRemoveYourCreatureTokens,
     /// Thundermane Dragon — "if you cast a creature spell this way [off the
     /// top of your library, matching `filter`], it gains haste until end of
     /// turn." Read by the library-top cast path, not a trigger.

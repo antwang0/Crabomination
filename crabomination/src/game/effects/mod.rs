@@ -3253,6 +3253,7 @@ impl GameState {
         !self
             .computed_permanent(id)
             .is_some_and(|c| c.keywords().contains(&crate::card::Keyword::CantBeSacrificed))
+            && !self.trigger_shields_token(id)
     }
 
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
@@ -23892,7 +23893,10 @@ impl GameState {
             }
 
             Effect::SacrificeSource => {
+                // CR 701.16 — the shared sacrifice gate: `CantBeSacrificed`
+                // (Assault Suit) and The Master's token shield.
                 if let Some(id) = ctx.source
+                    && self.can_be_sacrificed(id)
                     && let Some(c) = self.battlefield_find(id)
                 {
                     let p = c.controller;
@@ -23912,6 +23916,7 @@ impl GameState {
             Effect::ExileSource => {
                 if let Some(id) = ctx.source
                     && self.battlefield.find_by_id(id).is_some()
+                    && !self.trigger_shields_token(id)
                 {
                     self.remove_from_battlefield_to_exile(id);
                     if ctx.controller < self.players.len() {

@@ -2192,6 +2192,11 @@ impl GameState {
             }
             return;
         }
+        // The Master, Multiplied — your own trigger can't exile your creature
+        // token.
+        if matches!(dest, ZoneDest::Exile) && self.trigger_shields_token(cid) {
+            return;
+        }
         // A permanent already on the battlefield can't be put onto it: the
         // card a "return it" names has become a new object there (CR 400.7).
         // Moving it anyway was a blink — it left and re-entered, so two
