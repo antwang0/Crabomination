@@ -154,6 +154,26 @@ fn turf_war_takes_contested_land() {
     assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
 }
 
+/// Turf War's entry TARGETS one land per player (CR 601.2c): every seat gets
+/// one counter, and a shroud land can't be chosen (CR 702.18a), so its
+/// controller's other land takes the counter.
+#[test]
+fn turf_war_targets_a_land_per_player() {
+    use crabomination::card::Keyword;
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::mountain());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    let mut tower = catalog::command_tower();
+    tower.keywords.push(Keyword::Shroud);
+    let shrouded = g.add_card_to_battlefield(2, tower);
+    let plains = g.add_card_to_battlefield(2, catalog::plains());
+    let tw = g.add_card_to_hand(0, catalog::turf_war());
+    cast(&mut g, tw, &[]);
+    let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::Contested);
+    assert_eq!([n(&g, mine), n(&g, theirs), n(&g, plains)], [1, 1, 1]);
+    assert_eq!(n(&g, shrouded), 0, "shroud can't be targeted");
+}
+
 /// Bellowing Mauler: at your end step a player without a nontoken creature
 /// to sacrifice loses 4.
 #[test]

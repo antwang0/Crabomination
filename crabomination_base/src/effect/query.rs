@@ -892,7 +892,6 @@ impl Effect {
             | Effect::RevealTopPutLandsRestBottomRandom { .. }
             | Effect::LookTopMayPutLandOrCreatureMvAtMost { .. }
             | Effect::ExileOnePerCardTypeFromGraveyardGrow { .. }
-            | Effect::ContestOneLandPerPlayer
             | Effect::TakeContestedLand
             | Effect::OpponentChoosesXFromHandCastOneFree { .. }
             | Effect::ExileTopMayCastFreeIfNonland { .. }

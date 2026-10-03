@@ -467,12 +467,23 @@ pub fn the_beamtown_bullies() -> CardDefinition {
 
 /// Turf War — {4}{R} enchantment. Entering, a contested counter on a land
 /// each player controls; a creature dealing combat damage to a player takes
-/// one of their contested lands and untaps it.
-/// Residual: the lands are chosen, not targeted.
+/// one of their contested lands and untaps it. The entry targets one land
+/// per player (`ForEachPlayerTarget`, CR 601.2c).
 pub fn turf_war() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            etb(Effect::ContestOneLandPerPlayer),
+            etb(Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Land,
+                    effect: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Contested,
+                        amount: Value::ONE,
+                    }),
+                }),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer),
                 effect: Effect::TakeContestedLand,

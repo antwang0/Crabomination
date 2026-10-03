@@ -51,7 +51,7 @@ they call a deck 🟡, the table wins.
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
 | 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
-| 125 | Henzie "Toolbox" Torre (BRG) | 2: henzie_toolbox_torre, turf_war |
+| 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 135 | Kaust, Eyes of the Glade (RGW) | 2: boltbender, tesak_judiths_hellhound |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
@@ -2240,7 +2240,8 @@ grant), `StaticEffect::TreasureCreationAddsTreasure` (Jolene),
 CR 508.1a — Defender waived per defending player, checked per attack; the bot
 re-aims it or leaves it home), `Effect::ExileOnePerCardTypeFromGraveyardGrow`
 (Grime Gorger, CR 205.2a) and `CounterType::Contested` +
-`ContestOneLandPerPlayer` / `TakeContestedLand` (Turf War). ⚠
+`TakeContestedLand` (Turf War; its entry targets per player through
+`ForEachPlayerTarget` since `01BaSouG`). ⚠
 `R::DamagedAPlayerThisTurn` read only the battlefield, so Wave of Rats' own
 death trigger never saw its hit — it reads the death snapshot now (CR
 603.10). Two base-branch ratchets were red from another seat and fixed here:

@@ -12271,9 +12271,6 @@ pub enum Effect {
     /// Exile up to one card of each card type from `who`'s graveyard; put a
     /// +1/+1 counter on the source for each card exiled (Grime Gorger).
     ExileOnePerCardTypeFromGraveyardGrow { who: PlayerRef },
-    /// For each player, a contested counter on a land they control — the
-    /// engine's pick, not a target (Turf War).
-    ContestOneLandPerPlayer,
     /// The damaging creature's controller gains control of one of the damaged
     /// player's contested lands and untaps it (Turf War).
     TakeContestedLand,

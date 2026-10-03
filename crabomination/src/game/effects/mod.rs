@@ -38312,7 +38312,6 @@ impl GameState {
             Effect::ExileOnePerCardTypeFromGraveyardGrow { who } => {
                 self.exile_one_per_card_type_from_graveyard_grow(who, ctx, events)
             }
-            Effect::ContestOneLandPerPlayer => self.contest_one_land_per_player(ctx, events),
             Effect::TakeContestedLand => self.take_contested_land(ctx, events),
             Effect::ExileSpellLinked { what } => self.exile_spell_linked(what, ctx, events),
             Effect::LookTopExileOneFaceDownMayPlay { who, count, rest_to_graveyard, any_color } => {
