@@ -3526,6 +3526,7 @@ impl GameState {
             // from exile, the library or the command zone also satisfies.
             Predicate::CastFromGraveyard => ctx.cast_from_graveyard,
             Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
+            Predicate::CombatPhaseNumberIs(n) => self.combat_phases_this_turn == *n,
             Predicate::IsFirstEndStepThisTurn => self.end_steps_this_turn <= 1,
             Predicate::IsFirstUpkeepThisTurn => self.upkeep_steps_this_turn <= 1,
             Predicate::TriggerSourceFirstTappedThisTurn => match ctx.trigger_source {

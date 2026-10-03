@@ -2498,6 +2498,9 @@ pub enum Predicate {
     /// first combat phase of the turn, …" attack riders (Genji Glove) so the
     /// extra combat they grant doesn't re-trigger and loop.
     IsFirstCombatPhaseThisTurn,
+    /// The turn's current combat phase is its `n`th (1-based) — pins a
+    /// delayed trigger to the combat it was created in (CR 506.1).
+    CombatPhaseNumberIs(u32),
     /// True while the current turn is in (or has only ever reached) its first
     /// end step — i.e. no extra end step has begun yet. Gates "if it's the
     /// first end step of the turn, …" riders (Y'shtola Rhul).
@@ -10901,10 +10904,14 @@ pub enum Effect {
     /// CR 603.4 — "Whenever [the creature in target slot `slot`] deals combat
     /// damage to a player this turn, [body]" (Captain Howler). Expires at
     /// cleanup; the amount rides in via `Value::TriggerEventAmount`.
+    /// `this_combat`: "… this combat" (Stensian Sanguinist) — only damage in
+    /// the combat phase the trigger was created in counts (CR 506.1).
     WhenTargetDealsCombatDamageToPlayerThisTurn {
         #[serde(default)]
         slot: usize,
         body: Box<Effect>,
+        #[serde(default)]
+        this_combat: bool,
     },
 
     /// "Until end of turn, whenever a creature you control dies, [body]."

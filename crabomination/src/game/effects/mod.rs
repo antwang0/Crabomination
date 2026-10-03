@@ -32589,14 +32589,23 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { slot, body } => {
+            Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { slot, body, this_combat } => {
                 if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
+                    let effect = if *this_combat {
+                        Effect::If {
+                            cond: crate::effect::Predicate::CombatPhaseNumberIs(self.combat_phases_this_turn),
+                            then: body.clone(),
+                            else_: Box::new(Effect::Noop),
+                        }
+                    } else {
+                        (**body).clone()
+                    };
                     self.delayed_triggers.push(DelayedTrigger {
                         controller: ctx.controller,
                         source: ctx.source.unwrap_or(crate::card::CardId(0)),
                         kind: crate::game::types::DelayedKind::
                             SourceDealsCombatDamageToPlayerThisTurn(cid),
-                        effect: (**body).clone(),
+                        effect,
                         target: None,
                         bound_token: None,
                         bound_subject: None,

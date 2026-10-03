@@ -815,6 +815,7 @@ pub fn captain_howler_sea_scourge() -> CardDefinition {
                 Effect::WhenTargetDealsCombatDamageToPlayerThisTurn {
                     slot: 0,
                     body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    this_combat: false,
                 },
             ]),
         }],
