@@ -11715,6 +11715,9 @@ struct CardInstanceWire {
     exiled_by: Option<ExileLink>,
     #[serde(default)]
     exiled_with: Option<CardId>,
+    /// Rod of Absorption's cast-time stamp. `#[serde(default)]`.
+    #[serde(default)]
+    absorbed_by: Option<CardId>,
     /// CR 603.4 — turn this permanent last entered. `#[serde(default)]` so
     /// older snapshots load as `None`.
     #[serde(default)]
@@ -11889,6 +11892,7 @@ impl serde::Serialize for CardInstance {
             crewed_by: self.crewed_by.clone(),
             split_cast: self.split_cast,
             exiled_by: self.exiled_by,
+            absorbed_by: self.absorbed_by,
             exiled_with: self.exiled_with,
             entered_turn: self.entered_turn,
             battlefield_timestamp: self.battlefield_timestamp,
@@ -12072,6 +12076,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;
+        if wire.absorbed_by.is_some() {
+            c.absorbed_by = wire.absorbed_by;
+        }
         c.remembered_amount = wire.remembered_amount;
         c.entered_turn = wire.entered_turn;
         c.battlefield_timestamp = wire.battlefield_timestamp;
