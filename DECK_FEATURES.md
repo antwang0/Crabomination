@@ -38,7 +38,6 @@ they call a deck 🟡, the table wins.
 |---|---|---|
 | 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
 | 50 | Temmet, Naktamun's Will (WUB) | 2: lost_monarch_of_ifnir, vizier_of_many_faces |
-| 55 | Zedruu the Greathearted (URW) | 1: jotun_grunt |
 | 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
 | 66 | Inalla, Archmage Ritualist (UBR) | 4: magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
@@ -825,9 +824,9 @@ picks the most hostile opponent and binds them as "that player" (Pollen
 Lullaby). ⚠ **Crescendo of War found a layer gap**: a
 `PumpPTPerCounterOnSource` over a live filter (attacking, blocking) was dropped
 whole — only `PumpPT`/`GrantKeyword` rode the gather's live pass; it now shares
-it, and the dropped-static ratchet covers it. Residuals: **Jötun Grunt**'s
-graveyard and cards are the engine's pick; **Ruhan**'s random opponent is
-stored on Ruhan.
+it, and the dropped-static ratchet covers it. Residual: **Ruhan**'s random
+opponent is stored on Ruhan. (Jötun Grunt's graveyard and card picks became
+the seat's choice in `01QFHGia`.)
 
 The **fifty-seventh** is Commander 2016's **Stalwart Unity**
 (`StalwartUnity_C16`) — four-colour group hug under Kynaios and Tiro of Meletis,

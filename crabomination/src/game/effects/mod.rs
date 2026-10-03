@@ -9670,9 +9670,88 @@ impl GameState {
                 ) else {
                     return Ok(()); // suspended for the seat's answer
                 };
+                // CR 702.24 + Jötun Grunt's ruling — each age counter's two
+                // cards come from a single graveyard, and each may be a
+                // different one. Every pick is asked before any card moves.
+                let mut gy_picks: Vec<(usize, Vec<CardId>)> = Vec::new();
+                if let (true, CumulativeUpkeepCost::GraveyardCardsToBottom(per)) = (pay, cost) {
+                    let per = (*per as usize).max(1);
+                    let left = |g: &Self, picks: &[(usize, Vec<CardId>)], s: usize| {
+                        g.players[s].graveyard.len() - picks.iter().filter(|(q, _)| *q == s).map(|(_, v)| v.len()).sum::<usize>()
+                    };
+                    let capacity: usize = self.living_seats().map(|s| self.players[s].graveyard.len() / per).sum();
+                    if capacity >= n as usize {
+                        for _ in 0..n {
+                            let seats: Vec<usize> =
+                                self.living_seats().filter(|&s| left(self, &gy_picks, s) >= per).collect();
+                            if seats.is_empty() {
+                                break;
+                            }
+                            let options = seats
+                                .iter()
+                                .map(|&s| format!("Player {}'s graveyard ({} cards)", s + 1, left(self, &gy_picks, s)))
+                                .collect();
+                            let Some(i) = self.ask_seat_option(
+                                &mut cursor,
+                                p,
+                                format!("{name}: put {per} cards from which graveyard on the bottom?"),
+                                id,
+                                options,
+                                effect,
+                            ) else {
+                                return Ok(());
+                            };
+                            let seat = seats[i.min(seats.len() - 1)];
+                            let mut cands: Vec<(CardId, u32, String)> = self.players[seat]
+                                .graveyard
+                                .iter()
+                                .filter(|c| !gy_picks.iter().any(|(_, v)| v.contains(&c.id)))
+                                .map(|c| (c.id, c.definition.cost.cmc(), c.definition.name.to_string()))
+                                .collect();
+                            cands.sort_by_key(|&(cid, mv, _)| (std::cmp::Reverse(mv), cid.0));
+                            let auto: Vec<CardId> = cands.iter().take(per).map(|c| c.0).collect();
+                            let Some(mut ids) = self.ask_seat_cards_logged(
+                                &mut cursor,
+                                p,
+                                format!("{name}: choose {per} cards to put on the bottom"),
+                                id,
+                                cands.iter().map(|(cid, _, nm)| (*cid, nm.clone())).collect(),
+                                per as u32,
+                                per as u32,
+                                PickValue::Cost,
+                                effect,
+                                auto.clone(),
+                            ) else {
+                                return Ok(());
+                            };
+                            // A short pick is topped up with the default order.
+                            for a in auto {
+                                if ids.len() >= per {
+                                    break;
+                                }
+                                if !ids.contains(&a) {
+                                    ids.push(a);
+                                }
+                            }
+                            gy_picks.push((seat, ids));
+                        }
+                    }
+                }
                 self.clear_answer_log();
                 let paid = pay
                     && match cost {
+                        CumulativeUpkeepCost::GraveyardCardsToBottom(_) => {
+                            let paid = gy_picks.len() == n as usize;
+                            for (seat, ids) in gy_picks.iter().filter(|_| paid) {
+                                for id in ids {
+                                    if let Some(card) = Self::take_card(&mut self.players[*seat].graveyard, *id) {
+                                        self.players[*seat].library.push(card);
+                                        self.note_left_graveyard(*seat, *id, events);
+                                    }
+                                }
+                            }
+                            paid
+                        }
                         CumulativeUpkeepCost::Mana(mc) => {
                             let mut symbols = Vec::new();
                             for _ in 0..n {

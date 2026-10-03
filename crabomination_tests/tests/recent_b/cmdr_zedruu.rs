@@ -91,6 +91,48 @@ fn jotun_grunt_eats_graveyards_or_dies() {
     assert!(g.battlefield_find(grunt).is_none(), "two age counters want four cards");
 }
 
+/// CR 702.24 + Jötun Grunt's 2006-07-15 ruling — a deciding seat picks the
+/// graveyard and the cards for each age counter, and each counter may use a
+/// different graveyard.
+#[test]
+fn jotun_grunt_seat_picks_graveyard_and_cards_per_counter() {
+    let mut g = pod(3);
+    let grunt = g.add_card_to_battlefield(0, catalog::jotun_grunt());
+    g.battlefield_find_mut(grunt).unwrap().add_counters(CounterType::Age, 1);
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(1, catalog::forest());
+    let bears = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let ring = g.add_card_to_graveyard(2, catalog::sol_ring());
+    let land = g.add_card_to_graveyard(2, catalog::forest());
+    let mine: Vec<CardId> = g.players[0].graveyard.iter().map(|c| c.id).collect();
+    g.players[0].wants_ui = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    let _ = g.advance_step(Vec::new());
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    for answer in [
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Amount(1), // [seat 0, seat 2] → seat 2
+        DecisionAnswer::Cards(vec![ring, land]),
+        DecisionAnswer::Amount(0), // seat 2 has one left → only seat 0
+        DecisionAnswer::Cards(mine),
+    ] {
+        assert!(g.pending_decision.is_some(), "asked before {answer:?}");
+        g.submit_decision(answer).expect("answer");
+    }
+    assert!(g.pending_decision.is_none());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(grunt).is_some());
+    assert!(g.players[0].graveyard.is_empty());
+    assert_eq!(g.players[1].graveyard.len(), 1);
+    let left: Vec<CardId> = g.players[2].graveyard.iter().map(|c| c.id).collect();
+    assert_eq!(left, vec![bears], "the seat's pick, not the highest mana values");
+}
+
 /// Martyr's Bond: your creature dies → each opponent sacrifices a creature;
 /// the Bond itself going → each opponent sacrifices an enchantment.
 #[test]

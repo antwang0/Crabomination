@@ -8276,10 +8276,15 @@ impl GameState {
             });
             let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
             // A wants_ui controller gets a real pay-or-sacrifice trigger for
-            // mana/life cumulative upkeeps (coin-flip and sacrifice kinds have
+            // mana/life/graveyard cumulative upkeeps (coin-flip and sacrifice kinds have
             // no meaningful decline and stay synchronous).
             if self.seat_prompts(active)
-                && matches!(cost, CumulativeUpkeepCost::Mana(_) | CumulativeUpkeepCost::Life(_))
+                && matches!(
+                    cost,
+                    CumulativeUpkeepCost::Mana(_)
+                        | CumulativeUpkeepCost::Life(_)
+                        | CumulativeUpkeepCost::GraveyardCardsToBottom(_)
+                )
             {
                 self.push_pending_trigger(
                     PendingTriggerPush {

@@ -1954,7 +1954,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
-| 🟡 Jötun Grunt | Political Puppets (CMD) | the graveyard and the two cards of each installment are the engine's pick (an opponent's fullest, highest mana values). |
 | 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
