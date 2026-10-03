@@ -1457,7 +1457,7 @@ impl Effect {
             Effect::PutCountersOf { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::SpellGainsSunburst { what } => sel_has_target(what),
             Effect::FreeSpellsFromHandThisTurn => false,
-            Effect::ChooseCardTypeForSource => false,
+            Effect::ChooseCardTypeForSource | Effect::ChooseCardTypeFromForSource { .. } => false,
             Effect::PlayFromGraveyardThisTurn
             | Effect::ExileYourGraveyardBoundThisTurn
             | Effect::GlimpseOfTomorrow

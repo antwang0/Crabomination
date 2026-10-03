@@ -8358,6 +8358,9 @@ pub enum Effect {
     /// controller via `ChooseMode` over the permanent+spell card types and
     /// stamps `CardInstance.chosen_card_type` on the source.
     ChooseCardTypeForSource,
+    /// `ChooseCardTypeForSource` over a printed list, in printed order (Cloud
+    /// Key's "artifact, creature, enchantment, instant, or sorcery").
+    ChooseCardTypeFromForSource { options: Vec<crate::card::CardType> },
     /// Lonis's steal: target opponent reveals the top `count` cards of their
     /// library; you may put a nonland permanent card with mana value at most
     /// `max_mv` from among them onto the battlefield under your control; the

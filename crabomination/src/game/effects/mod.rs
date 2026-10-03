@@ -6291,10 +6291,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseCardTypeForSource => {
+            Effect::ChooseCardTypeForSource | Effect::ChooseCardTypeFromForSource { .. } => {
                 use crate::card::CardType;
                 let Some(source) = ctx.source else { return Ok(()) };
-                let options = [
+                const ALL: [CardType; 7] = [
                     CardType::Creature,
                     CardType::Instant,
                     CardType::Sorcery,
@@ -6303,6 +6303,10 @@ impl GameState {
                     CardType::Planeswalker,
                     CardType::Land,
                 ];
+                let options: &[CardType] = match effect {
+                    Effect::ChooseCardTypeFromForSource { options } if !options.is_empty() => options,
+                    _ => &ALL,
+                };
                 let texts = options.iter().map(|t| format!("{t:?}")).collect();
                 let Some(n) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
                     return Ok(());
