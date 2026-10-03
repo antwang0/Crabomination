@@ -371,7 +371,7 @@ pub fn gogo_mysterious_mime() -> CardDefinition {
     }];
     body.push(Effect::AmendCopiableValues {
         what: Selector::This,
-        name: Some("Gogo, Mysterious Mime".into()),
+        name: Some("Gogo, Mysterious Mime"),
         set_creature_types: None,
         add_creature_types: vec![],
         legendary: false,
