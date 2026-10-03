@@ -12039,6 +12039,7 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
+                    self.clear_answer_log();
                     picks = fit(&mut chosen.into_iter(), &candidates);
                 }
                 if !self.scratch.last_moved_cards.is_empty() {
