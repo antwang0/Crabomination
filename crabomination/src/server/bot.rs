@@ -9611,7 +9611,8 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
                         | crate::effect::StaticEffect::GraveyardCardsHaveUnearth { .. }
                 )
             });
-        for (_, ab) in usable_abilities(state, c, &scan) {
+        let printed = def.activated_abilities.len();
+        for (idx, ab) in usable_abilities(state, c, &scan) {
             // An ability whose *colour* pips this board cannot cover can never
             // be activated, so it must not light its sink bit: the gate is
             // what keeps the whole `gated_pick!` chain below from walking the
@@ -9629,7 +9630,12 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             // artifacts") is outside `have`, and it can pay an artifact's
             // ability: with any floating, the gate stays open (a four-seat
             // debug pod asserted on Executioner's Capsule, seed 91040).
-            if ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
+            // Only a PRINTED ability's pips are read: a granted one may be
+            // paid "as though it were mana of any color" (Drana and Linvala —
+            // a six-seat strict debug pod asserted on its stolen sacrifice
+            // ability, seed 55001).
+            if idx < printed
+                && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
                 && !colors_coverable(&ab.mana_cost, have.get())
             {
@@ -21162,6 +21168,27 @@ mod tests {
         );
         assert!(optional_trigger_beneficial(&g, id, "you may"),
             "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    /// The main-phase sink gate reads a GRANTED ability's pips as payable:
+    /// Drana and Linvala spends any color on the abilities it takes, so a
+    /// stolen "{R}, sacrifice a creature: 1 damage" must not be gated out by a
+    /// board with only black mana (six-seat strict debug pod, seed 55001).
+    #[test]
+    fn sink_gate_keeps_a_granted_ability_payable_with_any_color() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::PostCombatMain;
+        let drana = g.add_card_to_battlefield(0, catalog::drana_and_linvala());
+        g.clear_sickness(drana);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::scorched_rusalka());
+        g.players[1].life = 1;
+        g.players[2].life = 1;
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.priority.player_with_priority = 0;
+        // The debug assertion inside `gated_pick!` is the check.
+        let _ = main_phase_action(&g, 0);
     }
 
     /// The bot pays Offspring (CR 702.175) when it can afford it — the chosen
