@@ -3015,6 +3015,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01YCsdtK`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `ControlChanged` scan per
+trigger dispatch (`release_lapsed_control_goads`, the Duty-counter scan's
+sibling); a reflexive trigger asks `slot_past_x_cap` once per pick; the slot
+and hostility walkers gained the `ForEachPlayerTarget` arm. Everything else is
+behind effect variants only Commander cards carry. 4-core container,
+release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip bf52c4b1c); games_per_s 294.3; determinism ok
+two-player pools cube / sos / sealed x 300, seed 64001: 7,500 games, all decided
+pod              3 / 4 / 6 / 8 seats x 500 (seeds 61003-61008): 2,000, all
+                 decided; turns/game 32.21 / 46.15 / 67.90 / 95.38
+pod              every deck 1-183 in six-seat blocks x 100 (seeds 62001+): 3,100,
+                 all decided; card census over the twelve touched decks (63001-
+                 63002, 600 games): all decided, nothing unplayed; zero panics
+suite            see TODO NEXT; clippy 0
+```
+
 ### 2026-10-03 (Commander session `01B4jiWU`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `is_stack_ability_id` range
