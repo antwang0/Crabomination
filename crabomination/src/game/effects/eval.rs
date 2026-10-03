@@ -4621,6 +4621,7 @@ impl GameState {
                 Some(card.definition.printed_color_set().contains(c))
             }
             R::IsToken => Some(card.is_token),
+            R::RoomDoorUnlocked(bit) => Some(card.unlocked_doors & bit != 0),
             R::NotToken => Some(!card.is_token),
             R::Tapped => Some(card.tapped),
             R::Untapped => Some(!card.tapped),
@@ -5526,6 +5527,7 @@ impl GameState {
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
                     R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
                     R::IsToken => card.is_token,
+                    R::RoomDoorUnlocked(bit) => card.unlocked_doors & bit != 0,
                     R::NotToken => !card.is_token,
                     // CR 605.1a — a permanent's printed mana ability. It fell
                     // to the default arm here, so on the battlefield no
@@ -6592,6 +6594,7 @@ impl GameState {
             R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
             R::HasSpellSubtype(s) => card.definition.subtypes.spell_subtypes.contains(s),
             R::IsToken => card.is_token,
+            R::RoomDoorUnlocked(bit) => card.unlocked_doors & bit != 0,
             R::NotToken => !card.is_token,
             R::HasManaAbility => card
                 .definition

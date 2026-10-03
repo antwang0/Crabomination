@@ -291,6 +291,28 @@ fn secret_arcade_and_dusty_parlor() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
 }
 
+/// With Secret Arcade unlocked, your permanent spells are enchantments too,
+/// so Dusty Parlor sees a creature spell; with only the Parlor, it doesn't.
+#[test]
+fn dusty_parlor_sees_permanent_spells_through_secret_arcade() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let r = g.add_card_to_hand(0, catalog::secret_arcade_dusty_parlor());
+    door(&mut g, r, true).expect("Dusty Parlor");
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast_at(&mut g, giant, &[]).expect("a creature spell");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::UnlockRoomDoor { card_id: r, right: false }).expect("unlock Secret Arcade");
+    drain_stack(&mut g);
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast_at(&mut g, giant, &[]).expect("now an enchantment spell");
+    let total: u32 = g.battlefield.iter().map(|c| c.counter_count(CounterType::PlusOnePlusOne)).sum();
+    assert_eq!(total, 4, "the Giant's mana value, on the creature the trigger aimed at");
+}
+
 /// Soaring Lightbringer: a Glimmer at each player you attack, and your other
 /// enchantment creatures fly.
 #[test]

@@ -2031,7 +2031,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | an effect that moves counters still takes an opponent's stun counter (untaps and remove-a-counter effects are stopped). |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
-| 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |

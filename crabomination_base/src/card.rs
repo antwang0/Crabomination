@@ -3409,6 +3409,9 @@ pub enum SelectionRequirement {
     /// effect that reads it (`resolve_target_card_types`; Spirit-Sister's
     /// Call's sacrifice). Unconcretized, it matches nothing.
     SharesCardTypeWithTarget,
+    /// CR 709.5 — a Room whose door `bit` (1 = left, 2 = right) is unlocked
+    /// (Dusty Parlor reading its own Secret Arcade).
+    RoomDoorUnlocked(u8),
     /// No permanent the evaluating player controls shares this card's name
     /// (Central Elevator's "a Room card that doesn't have the same name as a
     /// Room you control").

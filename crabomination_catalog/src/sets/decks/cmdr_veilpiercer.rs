@@ -7,7 +7,6 @@
 //!   an opponent's stun counter.
 //! - **One with the Multiverse** — the free cast is from hand only, not from
 //!   the top of the library.
-//! - **Secret Arcade** — permanent *spells* aren't enchantments on the stack.
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EntersAsCopy, EventKind, EventScope,
@@ -304,7 +303,8 @@ pub fn redress_fate() -> CardDefinition {
 
 /// Secret Arcade // Dusty Parlor — your nonland permanents are enchantments;
 /// each enchantment spell you cast puts its mana value in counters on up to
-/// one creature. Residual: Permanent spells aren't enchantments on the stack.
+/// one creature — with Secret Arcade unlocked, any permanent spell (the only
+/// enchantment-spell payoff in the deck reads it).
 pub fn secret_arcade_dusty_parlor() -> CardDefinition {
     room(
         "Secret Arcade // Dusty Parlor",
@@ -325,9 +325,18 @@ pub fn secret_arcade_dusty_parlor() -> CardDefinition {
             name: "Dusty Parlor".to_string(),
             cost: cost(&[generic(2), w()]),
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                // Secret Arcade makes your permanent spells enchantments too.
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::Any(vec![
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment },
-                ),
+                    Predicate::All(vec![
+                        // A cast spell that isn't an instant or sorcery is a permanent spell.
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::Not(Box::new(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+                        },
+                        Predicate::EntityMatches { what: Selector::This, filter: R::RoomDoorUnlocked(1) },
+                    ]),
+                ])),
                 effect: Effect::OptionalTargets {
                     min: 0,
                     body: Box::new(Effect::AddCounter {
