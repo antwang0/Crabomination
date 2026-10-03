@@ -266,9 +266,10 @@ pub fn mire_in_misery() -> CardDefinition {
 /// creature that would die is exiled with a blood counter instead (CR 614);
 /// Rayami has each listed keyword an exiled blood-countered creature card
 /// has.
-/// Residual: protection isn't shared.
+/// Residual: protection is shared for the five colors only (as Cairn
+/// Wanderer's).
 pub fn rayami_first_of_the_fallen() -> CardDefinition {
-    let shared = [
+    let mut shared = vec![
         Keyword::Flying,
         Keyword::FirstStrike,
         Keyword::DoubleStrike,
@@ -282,6 +283,7 @@ pub fn rayami_first_of_the_fallen() -> CardDefinition {
         Keyword::Trample,
         Keyword::Vigilance,
     ];
+    shared.extend([Color::White, Color::Blue, Color::Black, Color::Red, Color::Green].into_iter().map(Keyword::Protection));
     let mut statics = vec![StaticAbility {
         description: "If a nontoken creature would die, exile that card with a blood counter on it instead.",
         effect: StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter: CounterType::Blood },

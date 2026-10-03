@@ -64,6 +64,14 @@ fn rayami_collects_the_fallen() {
     let exiled = g.exile.iter().find(|c| c.id == aven).expect("exiled, not dead");
     assert_eq!(exiled.counter_count(CounterType::Blood), 1);
     assert!(g.computed_permanent(r).unwrap().keywords().contains(&Keyword::Flying));
+
+    // "The same is true for … protection": Black Knight's protection from
+    // white (CR 702.16).
+    let knight = g.add_card_to_battlefield(1, catalog::black_knight());
+    let m = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast_by(&mut g, 0, m, &[Target::Permanent(knight)]);
+    assert!(g.computed_permanent(r).unwrap().keywords().contains(&Keyword::Protection(Color::White)));
 }
 
 /// Leadership Vacuum sends a commander home (CR 903.9).
