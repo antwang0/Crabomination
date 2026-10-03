@@ -64,6 +64,24 @@ fn plus_one_plus_one() -> CounterType {
     CounterType::PlusOnePlusOne
 }
 
+/// How a damage-to-counters static words its counters, which decides what
+/// unpreventable damage does to it (CR 615.12).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum DamageToCounters {
+    /// "…put that many counters on it instead" (Phytohydra): a replacement
+    /// (CR 614), applied whether or not the damage can be prevented.
+    #[default]
+    Instead,
+    /// "…prevent that damage and put that many counters on it" (Panther
+    /// Habit, Anti-Venom): unpreventable damage is dealt AND the counters
+    /// come, an additional effect (CR 615.5, 615.12).
+    PreventAndPut,
+    /// "…prevent that damage. Put a counter … for each 1 damage prevented
+    /// this way" (Vigor, Phyrexian Hydra): unpreventable damage is dealt and
+    /// prevents nothing, so no counters.
+    PreventPerPoint,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
@@ -2924,27 +2942,28 @@ pub enum StaticEffect {
     /// damage sites; the shuffles follow the damage step's assignments.
     CombatDamageToCreatureShufflesIt,
     /// CR 614 — "If damage would be dealt to this creature, put that many
-    /// +1/+1 counters on it instead." Phytohydra. A true replacement (not
-    /// prevention, so it fires even when damage can't be prevented), consulted
-    /// at both the combat and noncombat self-damage sites; grows by the full
-    /// amount rather than a single counter.
+    /// +1/+1 counters on it instead." Phytohydra; `how` carries the
+    /// prevention-worded variants. Consulted at both the combat and
+    /// noncombat self-damage sites.
     ReplaceDamageToSelfWithCounters {
         /// Which counter the damage becomes — `PlusOnePlusOne` for Phytohydra,
         /// `MinusOneMinusOne` for Phyrexian Hydra.
         #[serde(default = "plus_one_plus_one")]
         kind: CounterType,
+        #[serde(default)]
+        how: DamageToCounters,
     },
     /// "If equipped creature would be dealt damage, prevent that damage and put
     /// that many `kind` counters on it" (Panther Habit): the
     /// `ReplaceDamageToSelfWithCounters` of the permanent this is attached to,
     /// read at the same two damage sites.
-    ReplaceDamageToAttachedWithCounters { kind: CounterType },
+    ReplaceDamageToAttachedWithCounters { kind: CounterType, how: DamageToCounters },
     /// Vigor — "If damage would be dealt to another creature you control,
     /// prevent that damage. Put a +1/+1 counter on that creature for each 1
     /// damage prevented this way": the `ReplaceDamageToSelfWithCounters` of
     /// every other creature the source's controller controls, read at the
     /// same two damage sites.
-    ReplaceDamageToOtherCreaturesYouControlWithCounters { kind: CounterType },
+    ReplaceDamageToOtherCreaturesYouControlWithCounters { kind: CounterType, how: DamageToCounters },
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
     /// counters on this permanent instead" (Delaying Shield).
     ReplaceDamageToYouWithCountersOnSource { kind: CounterType },

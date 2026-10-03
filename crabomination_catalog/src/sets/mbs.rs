@@ -1914,10 +1914,11 @@ pub fn phyrexian_hydra() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Infect],
         static_abilities: vec![StaticAbility {
-            description: "If damage would be dealt to this creature, prevent it and put that \
-                          many -1/-1 counters on it instead.",
+            description: "If damage would be dealt to this creature, prevent that damage. Put a \
+                          -1/-1 counter on this creature for each 1 damage prevented this way.",
             effect: StaticEffect::ReplaceDamageToSelfWithCounters {
                 kind: CounterType::MinusOneMinusOne,
+                how: crate::effect::DamageToCounters::PreventPerPoint,
             },
         }],
         ..creature(

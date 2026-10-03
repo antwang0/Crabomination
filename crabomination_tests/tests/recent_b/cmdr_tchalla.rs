@@ -142,6 +142,23 @@ fn panther_habit_absorbs_damage() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
 }
 
+/// CR 615.12 / 615.5 — Panther Habit's counters are an additional effect of
+/// its prevention: unpreventable damage is dealt AND the counters come.
+#[test]
+fn panther_habit_counts_unpreventable_damage_too() {
+    let mut g = main_phase(2);
+    let habit = g.add_card_to_battlefield(0, catalog::panther_habit());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.battlefield_find_mut(habit).unwrap().attached_to = Some(wurm);
+    g.damage_cant_be_prevented_this_turn = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, &[Target::Permanent(wurm)], None).expect("bolt");
+    let c = g.battlefield_find(wurm).expect("survives");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
+    assert_eq!(c.damage, 3);
+}
+
 /// Kimoyo Beads: three end steps, three different beads.
 #[test]
 fn kimoyo_beads_uses_each_bead_once() {

@@ -26,6 +26,7 @@ pub fn phytohydra() -> CardDefinition {
             description: "If damage would be dealt to this creature, put that many +1/+1 counters on it instead.",
             effect: StaticEffect::ReplaceDamageToSelfWithCounters {
                 kind: crate::card::CounterType::PlusOnePlusOne,
+                how: crate::effect::DamageToCounters::Instead,
             },
         }],
         ..Default::default()

@@ -448,7 +448,10 @@ pub fn anti_venom_horrifying_healer() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If damage would be dealt to Anti-Venom, prevent that damage and put that many +1/+1 counters on him.",
-            effect: StaticEffect::ReplaceDamageToSelfWithCounters { kind: CounterType::PlusOnePlusOne },
+            effect: StaticEffect::ReplaceDamageToSelfWithCounters {
+                kind: CounterType::PlusOnePlusOne,
+                how: crate::effect::DamageToCounters::PreventAndPut,
+            },
         }],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::If {
             cond: Predicate::SourceWasCast,

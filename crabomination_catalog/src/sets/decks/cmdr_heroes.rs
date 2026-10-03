@@ -743,9 +743,6 @@ pub fn tokka_rahzar_unsupervised() -> CardDefinition {
 
 /// Vigor — damage to your other creatures becomes +1/+1 counters; shuffles
 /// back from any graveyard trip.
-///
-/// ⚠ Residual: modelled as a replacement, so "damage can't be prevented"
-/// doesn't stop it.
 pub fn vigor() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -753,6 +750,7 @@ pub fn vigor() -> CardDefinition {
             description: "If damage would be dealt to another creature you control, prevent that damage. Put a +1/+1 counter on that creature for each 1 damage prevented this way.",
             effect: StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters {
                 kind: CounterType::PlusOnePlusOne,
+                how: crate::effect::DamageToCounters::PreventPerPoint,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

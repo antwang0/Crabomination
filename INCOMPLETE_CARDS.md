@@ -2007,7 +2007,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Ancestral Communion | Wakanda Forever (MSC) | its copy keeps the original's target on auto seats (a second return of a card already moved does nothing). |
-| 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
@@ -2068,7 +2067,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Second Doctor | Blast from the Past (WHO) | an opponent who draws has only its current creatures barred from attacking you. |
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
-| 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)

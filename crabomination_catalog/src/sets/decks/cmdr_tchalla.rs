@@ -606,14 +606,17 @@ pub fn okoye_mighty_and_adored() -> CardDefinition {
     }
 }
 
-/// Panther Habit — damage to the equipped creature becomes +1/+1 counters.
-/// Residual: a replacement, so unpreventable damage converts too.
+/// Panther Habit — damage to the equipped creature becomes +1/+1 counters
+/// (unpreventable damage is dealt and still adds them, CR 615.12).
 pub fn panther_habit() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         static_abilities: vec![StaticAbility {
             description: "If equipped creature would be dealt damage, prevent that damage and put that many +1/+1 counters on it.",
-            effect: StaticEffect::ReplaceDamageToAttachedWithCounters { kind: CounterType::PlusOnePlusOne },
+            effect: StaticEffect::ReplaceDamageToAttachedWithCounters {
+                kind: CounterType::PlusOnePlusOne,
+                how: crate::effect::DamageToCounters::PreventAndPut,
+            },
         }],
         equipped_bonus: Some(EquipBonus::default()),
         ..artifact_sub("Panther Habit", cost(&[generic(4)]), ArtifactSubtype::Equipment)

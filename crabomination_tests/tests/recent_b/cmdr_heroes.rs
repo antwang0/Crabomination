@@ -225,6 +225,19 @@ fn vigor_turns_damage_into_counters() {
     assert!(g.battlefield_find(theirs).is_none(), "an opponent's creature isn't yours");
 }
 
+/// CR 615.12 — Vigor prevents, then counts what it prevented: damage that
+/// can't be prevented is dealt in full and adds no counters.
+#[test]
+fn vigor_adds_nothing_for_unpreventable_damage() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::vigor());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.damage_cant_be_prevented_this_turn = true;
+    run(&mut g, 1, Effect::DealDamage { to: Selector::ExactObjects(vec![wurm]), amount: Value::Const(3) });
+    assert_eq!(plus(&g, wurm), 0);
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 3);
+}
+
 /// Fast Forward: {1} less per opponent attacked this turn.
 #[test]
 fn fast_forward_counts_opponents_attacked_this_turn() {

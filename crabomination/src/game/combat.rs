@@ -4773,7 +4773,7 @@ impl GameState {
                     // Ironscale Hydra replaces the damage with a +1/+1 counter
                     // (and so the attacker's lifelink scales off 0).
                     let dealt =
-                        self.ironscale_replace(blocker_id, redirect_to, dealt, events);
+                        self.ironscale_replace(blocker_id, atk.id, redirect_to, dealt, events);
                     let dealt = if dealt > 0 && self.combat_damage_shuffles_creatures(atk.id) {
                         shuffled.push((atk.id, blocker_id));
                         0
@@ -4967,7 +4967,7 @@ impl GameState {
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
                         let dmg = self
-                            .ironscale_replace(atk.id, redirect_to, dmg as i32, events)
+                            .ironscale_replace(atk.id, bid, redirect_to, dmg as i32, events)
                             as u32;
                         let dmg = if dmg > 0 && self.combat_damage_shuffles_creatures(bid) {
                             shuffled.push((bid, atk.id));
@@ -5198,6 +5198,7 @@ impl GameState {
     fn ironscale_replace(
         &mut self,
         recipient: CardId,
+        source: CardId,
         redirect_to: Option<usize>,
         dealt: i32,
         events: &mut Vec<GameEvent>,
@@ -5233,8 +5234,8 @@ impl GameState {
                         | SE::PreventDamageToSelfWhileCountersForRad { .. }
                         | SE::PreventDamageToSelfOpponentGainsControl => sekki = true,
                         SE::PreventCombatDamageToSelfAndGrow => grows = true,
-                        SE::ReplaceDamageToSelfWithCounters { kind: k } => {
-                            kind.get_or_insert(k);
+                        SE::ReplaceDamageToSelfWithCounters { kind: k, how } => {
+                            kind.get_or_insert((k, how));
                         }
                         _ => {}
                     }
@@ -5254,25 +5255,32 @@ impl GameState {
         if sekki && self.trade_counters_for_damage(recipient, dealt as u32, events) {
             return 0;
         }
-        // Ironscale Hydra grows by exactly one; Phytohydra grows by the full
-        // amount. Both are replacements (CR 614), so they apply even when
-        // damage can't be prevented.
-        let (kind, grow) = if grows {
-            (crate::card::CounterType::PlusOnePlusOne, 1)
-        } else if let Some(kind) = replace_kind {
-            (kind, dealt as u32)
+        // Ironscale Hydra ("prevent that damage and put a +1/+1 counter")
+        // grows by exactly one; the replace-with-counters family by the
+        // amount, as its wording reads unpreventable damage (CR 615.12).
+        use crate::effect::DamageToCounters as How;
+        let (kind, how, per) = if grows {
+            (crate::card::CounterType::PlusOnePlusOne, How::PreventAndPut, false)
+        } else if let Some((kind, how)) = replace_kind {
+            (kind, how, true)
         } else {
             return dealt;
         };
-        if let Some(c) = self.battlefield_find_mut(recipient) {
-            c.add_counters(kind, grow);
+        let unpreventable = how != How::Instead
+            && self.damage_is_unpreventable_now(Some(source));
+        let (grow, left) = damage_to_counters_split(how, unpreventable, dealt as u32);
+        let grow = if per { grow } else { grow.min(1) };
+        if grow > 0 {
+            if let Some(c) = self.battlefield_find_mut(recipient) {
+                c.add_counters(kind, grow);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: recipient,
+                counter_type: kind,
+                count: grow, placer: self.resolution_causer,
+            });
         }
-        events.push(GameEvent::CounterAdded {
-            card_id: recipient,
-            counter_type: kind,
-            count: grow, placer: self.resolution_causer,
-        });
-        0
+        left as i32
     }
 
     /// Weeping Angel — `src` prevents its combat damage to creatures and
@@ -5425,11 +5433,11 @@ impl GameState {
     pub(crate) fn creature_replaces_damage_with_counters(
         &self,
         id: CardId,
-    ) -> Option<crate::card::CounterType> {
+    ) -> Option<(crate::card::CounterType, crate::effect::DamageToCounters)> {
         self.battlefield_find(id)
             .and_then(|c| {
                 c.definition.static_abilities.iter().find_map(|s| match s.effect {
-                    crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind } => Some(kind),
+                    crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind, how } => Some((kind, how)),
                     _ => None,
                 })
             })
@@ -5439,7 +5447,10 @@ impl GameState {
 
     /// Vigor — another permanent of the creature's controller turning damage
     /// to it into counters.
-    fn teammate_replaces_damage_with_counters(&self, id: CardId) -> Option<crate::card::CounterType> {
+    fn teammate_replaces_damage_with_counters(
+        &self,
+        id: CardId,
+    ) -> Option<(crate::card::CounterType, crate::effect::DamageToCounters)> {
         let c = self.battlefield_find(id)?;
         if !self.computed_is_creature(c) {
             return None;
@@ -5447,17 +5458,22 @@ impl GameState {
         let ctrl = c.controller;
         self.battlefield.iter().filter(|s| s.controller == ctrl && s.id != id).find_map(|s| {
             s.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                crate::effect::StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters { kind } => Some(kind),
+                crate::effect::StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters { kind, how } => {
+                    Some((kind, how))
+                }
                 _ => None,
             })
         })
     }
 
     /// Panther Habit — an attachment turning damage to `id` into counters.
-    fn attached_replaces_damage_with_counters(&self, id: CardId) -> Option<crate::card::CounterType> {
+    fn attached_replaces_damage_with_counters(
+        &self,
+        id: CardId,
+    ) -> Option<(crate::card::CounterType, crate::effect::DamageToCounters)> {
         self.battlefield.iter().filter(|a| a.attached_to == Some(id)).find_map(|a| {
             a.definition.static_abilities.iter().find_map(|s| match s.effect {
-                crate::effect::StaticEffect::ReplaceDamageToAttachedWithCounters { kind } => Some(kind),
+                crate::effect::StaticEffect::ReplaceDamageToAttachedWithCounters { kind, how } => Some((kind, how)),
                 _ => None,
             })
         })
@@ -7643,5 +7659,20 @@ impl GameState {
                 }
             }
         }
+    }
+}
+
+/// CR 614 / 615.5 / 615.12 — a damage-to-counters static meeting `amount`
+/// damage: `(counters put, damage still dealt)`.
+pub(crate) fn damage_to_counters_split(
+    how: crate::effect::DamageToCounters,
+    unpreventable: bool,
+    amount: u32,
+) -> (u32, u32) {
+    use crate::effect::DamageToCounters as How;
+    match (how, unpreventable) {
+        (How::Instead, _) | (_, false) => (amount, 0),
+        (How::PreventAndPut, true) => (amount, amount),
+        (How::PreventPerPoint, true) => (0, amount),
     }
 }

@@ -395,6 +395,63 @@ impl GameState {
         self.apply_prevention_shields_with(ent, amount, source, events, statics)
     }
 
+    /// CR 615.12 — can damage from `source` not be prevented right now: the
+    /// turn flag, a `DamageCantBePrevented` static, Questing Beast's creature
+    /// damage, or Excruciator's own. `statics` is [`prevent_static_scan`]'s.
+    pub(crate) fn damage_is_unpreventable(
+        &self,
+        source: Option<crate::card::CardId>,
+        statics: u32,
+    ) -> bool {
+        if self.damage_cant_be_prevented_this_turn
+            || (statics & prevent_static::CANT_PREVENT != 0 && self.damage_cant_be_prevented_now())
+        {
+            return true;
+        }
+        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
+        // the controller controls can't be prevented. Bypass shields when the
+        // damage source is a creature whose controller has the static.
+        if statics & prevent_static::COMBAT_UNPREVENTABLE != 0
+            && let Some(src_id) = source
+            && let Some(src) = self.battlefield_find(src_id)
+            && self.computed_is_creature(src)
+        {
+            let ctrl = src.controller;
+            let unpreventable = self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CombatDamageCantBePrevented)
+                        || (c.controller == ctrl
+                            && matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                            ))
+                })
+            });
+            if unpreventable {
+                return true;
+            }
+        }
+        // CR 615.12 (source-scoped) — Excruciator: damage dealt by this
+        // permanent can't be prevented. Keyed on the damage source itself.
+        if statics & prevent_static::SOURCE_UNPREVENTABLE != 0
+            && let Some(src_id) = source
+            && self.battlefield_find(src_id).is_some_and(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::SourceDamageCantBePrevented)
+                })
+            })
+        {
+            return true;
+        }
+        false
+    }
+
+    /// [`damage_is_unpreventable`](Self::damage_is_unpreventable) with its
+    /// own board scan.
+    pub(crate) fn damage_is_unpreventable_now(&self, source: Option<crate::card::CardId>) -> bool {
+        self.damage_is_unpreventable(source, prevent_static_scan(self))
+    }
+
     /// [`apply_prevention_shields`](Self::apply_prevention_shields) with
     /// [`prevent_static_scan`]'s mask: each battlefield-static leg of the
     /// funnel is skipped when no permanent carries its family. See
@@ -412,9 +469,9 @@ impl GameState {
             statics & prevent_static::CANT_PREVENT != 0 || !self.damage_cant_be_prevented_now(),
             "prevent_static_scan missed a DamageCantBePrevented static",
         );
-        if self.damage_cant_be_prevented_this_turn
-            || (statics & prevent_static::CANT_PREVENT != 0 && self.damage_cant_be_prevented_now())
-        {
+        // CR 615.12 — unpreventable damage leaves every shield untouched,
+        // Dark Sphere's half-shield included.
+        if self.damage_is_unpreventable(source, statics) {
             return amount;
         }
         // Dark Sphere — "prevent half that damage, rounded down" from the next
@@ -438,41 +495,6 @@ impl GameState {
                 events,
                 statics,
             );
-        }
-        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
-        // the controller controls can't be prevented. Bypass shields when the
-        // damage source is a creature whose controller has the static.
-        if statics & prevent_static::COMBAT_UNPREVENTABLE != 0
-            && let Some(src_id) = source
-            && let Some(src) = self.battlefield_find(src_id)
-            && self.computed_is_creature(src)
-        {
-            let ctrl = src.controller;
-            let unpreventable = self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::CombatDamageCantBePrevented)
-                        || (c.controller == ctrl
-                            && matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
-                            ))
-                })
-            });
-            if unpreventable {
-                return amount;
-            }
-        }
-        // CR 615.12 (source-scoped) — Excruciator: damage dealt by this
-        // permanent can't be prevented. Keyed on the damage source itself.
-        if statics & prevent_static::SOURCE_UNPREVENTABLE != 0
-            && let Some(src_id) = source
-            && self.battlefield_find(src_id).is_some_and(|src| {
-                src.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::SourceDamageCantBePrevented)
-                })
-            })
-        {
-            return amount;
         }
         // CR 615 — damage from a spell or ability that TARGETS the recipient
         // (Silhouette's turn shield, Bronze Horse's static). The resolution's
@@ -1434,19 +1456,29 @@ impl GameState {
             amount.saturating_add(bonus)
         };
         // CR 614 — Phytohydra: "If damage would be dealt to this creature, put
-        // that many +1/+1 counters on it instead." A replacement (not
-        // prevention), so it fires even when damage can't be prevented; grows
-        // by the full scaled amount. Combat damage is replaced on the combat
-        // path (`ironscale_replace`).
-        if let EntityRef::Permanent(tgt) = ent
-            && let Some(kind) = self.creature_replaces_damage_with_counters(tgt)
+        // that many +1/+1 counters on it instead", grown by the full scaled
+        // amount; the prevention-worded kin (Panther Habit, Vigor) read
+        // unpreventable damage per CR 615.12. Combat damage is replaced on the
+        // combat path (`ironscale_replace`).
+        let amount = if let EntityRef::Permanent(tgt) = ent
+            && let Some((kind, how)) = self.creature_replaces_damage_with_counters(tgt)
         {
-            if let Some(c) = self.battlefield_find_mut(tgt) {
-                c.add_counters(kind, amount);
+            let unpreventable = how != crate::effect::DamageToCounters::Instead
+                && self.damage_is_unpreventable_now(source);
+            let (grow, left) = crate::game::combat::damage_to_counters_split(how, unpreventable, amount);
+            if grow > 0 {
+                if let Some(c) = self.battlefield_find_mut(tgt) {
+                    c.add_counters(kind, grow);
+                }
+                events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: grow, placer: self.resolution_causer });
             }
-            events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: amount, placer: self.resolution_causer });
-            return;
-        }
+            if left == 0 {
+                return;
+            }
+            left
+        } else {
+            amount
+        };
         // CR 614.9 — Treacherous Link: damage bound for the host lands on its
         // controller instead. Applied before shields so the host's own
         // protection can't soak damage it never receives.
@@ -1470,7 +1502,6 @@ impl GameState {
         // the counter count matches the damage that WOULD have been dealt;
         // skipped when prevention is off (CR 615.12).
         if let EntityRef::Permanent(tgt) = ent
-            && !self.damage_cant_be_prevented_this_turn
             && self
                 .battlefield_find(tgt)
                 .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| {
@@ -1479,6 +1510,7 @@ impl GameState {
                         crate::effect::StaticEffect::PreventNoncombatDamageToSelfAddCounters
                     )
                 }))
+            && !self.damage_is_unpreventable_now(source)
         {
             if let Some(c) = self.battlefield_find_mut(tgt) {
                 c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
