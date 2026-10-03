@@ -1973,7 +1973,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
-| 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |

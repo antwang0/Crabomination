@@ -1,10 +1,6 @@
 //! Commander: the cards the **Masters of Evil** precon (WHO, Davros, Dalek
 //! Creator) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_davros.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **The Master, Multiplied** — your triggered abilities can still make you
-//!   sacrifice or exile your creature tokens.
 
 use std::sync::Arc;
 
@@ -1083,14 +1079,20 @@ pub fn the_master_mesmerist() -> CardDefinition {
 }
 
 /// The Master, Multiplied — myriad; the legend rule doesn't apply to your
-/// creature tokens. Residual: your triggered abilities can still make you
-/// sacrifice or exile your creature tokens.
+/// creature tokens, and your triggered abilities can't make you sacrifice or
+/// exile them (so its myriad copies stay).
 pub fn the_master_multiplied() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "The \"legend rule\" doesn't apply to creature tokens you control.",
-            effect: StaticEffect::LegendRuleDoesntApplyToYourMatching(R::Creature.and(R::IsToken)),
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "The \"legend rule\" doesn't apply to creature tokens you control.",
+                effect: StaticEffect::LegendRuleDoesntApplyToYourMatching(R::Creature.and(R::IsToken)),
+            },
+            StaticAbility {
+                description: "Triggered abilities you control can't cause you to sacrifice or exile creature tokens you control.",
+                effect: StaticEffect::YourTriggersCantRemoveYourCreatureTokens,
+            },
+        ],
         triggered_abilities: vec![myriad()],
         ..legend(creature(
             "The Master, Multiplied",

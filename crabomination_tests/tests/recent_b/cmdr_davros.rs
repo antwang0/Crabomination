@@ -684,3 +684,71 @@ fn cr_702_78_rassilon_grants_conspire_from_exile() {
         })
         .is_err());
 }
+
+/// CR 702.116a / 603 — The Master, Multiplied's myriad copies would be exiled
+/// at end of combat by its own trigger; its static keeps them (and the legend
+/// rule doesn't touch them).
+#[test]
+fn the_master_multiplied_keeps_its_myriad_copies() {
+    let mut g = main_phase(3);
+    let master = g.add_card_to_battlefield(0, catalog::the_master_multiplied());
+    g.clear_sickness(master);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: master, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let copies = named(&g, 0, "The Master, Multiplied").len();
+    assert!(copies >= 2, "myriad made a copy attacking the other opponent: {copies}");
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(named(&g, 0, "The Master, Multiplied").len(), copies, "the copies stay past end of combat");
+}
+
+/// The shield is The Master's alone: another myriad creature's copy (no
+/// Master on the battlefield) is exiled at end of combat as usual.
+#[test]
+fn myriad_copies_leave_without_the_master() {
+    let mut g = main_phase(3);
+    let caller = g.add_card_to_battlefield(0, catalog::caller_of_the_pack());
+    g.clear_sickness(caller);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: caller, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(named(&g, 0, "Caller of the Pack").len() >= 2, "myriad made a copy");
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(named(&g, 0, "Caller of the Pack").len(), 1, "the copy is exiled at end of combat");
+}
+
+/// The Master's shield covers a sacrifice too: hasty token copies whose
+/// controller's delayed trigger sacrifices them at the end step stay, while
+/// The Master is out; without it they're sacrificed.
+#[test]
+fn the_master_multiplied_stops_its_controllers_end_step_sacrifice() {
+    for with_master in [true, false] {
+        let mut g = main_phase(2);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if with_master {
+            g.add_card_to_battlefield(0, catalog::the_master_multiplied());
+        }
+        run(
+            &mut g,
+            Effect::CreateTokenCopiesHasteSac {
+                who: crabomination::effect::PlayerRef::You,
+                count: crabomination::card::Value::Const(2),
+                source: Selector::ExactObjects(vec![bear]),
+                exile: false,
+            },
+            bear,
+        );
+        assert_eq!(named(&g, 0, "Grizzly Bears").len(), 3);
+        end_step(&mut g);
+        let left = named(&g, 0, "Grizzly Bears").len();
+        assert_eq!(left, if with_master { 3 } else { 1 }, "with The Master: {with_master}");
+    }
+}
