@@ -162,6 +162,21 @@ fn fear_of_sleep_paralysis_stuns_for_good() {
     g.do_untap();
     let c = g.battlefield_find(bear).unwrap();
     assert!(c.tapped && c.counter_count(CounterType::Stun) == 1, "counter stays, no untap");
+    // Nor does an untap effect or a "remove a counter" effect take it off.
+    use crabomination::effect::{Effect, Selector};
+    let ctx = EffectContext::for_ability(bear, 1, None);
+    g.resolve_effect(&Effect::Untap { what: Selector::ExactObjects(vec![bear]), up_to: None }, &ctx).expect("untap");
+    g.resolve_effect(
+        &Effect::RemoveCounter {
+            what: Selector::ExactObjects(vec![bear]),
+            kind: CounterType::Stun,
+            amount: crabomination::card::Value::ONE,
+        },
+        &ctx,
+    )
+    .expect("remove");
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped && c.counter_count(CounterType::Stun) == 1, "still stunned");
 }
 
 /// Mirrormade enters as a copy of an artifact.

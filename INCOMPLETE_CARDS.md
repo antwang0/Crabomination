@@ -2029,7 +2029,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
-| 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
+| 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | an effect that moves counters still takes an opponent's stun counter (untaps and remove-a-counter effects are stopped). |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |

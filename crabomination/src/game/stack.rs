@@ -614,9 +614,12 @@ impl GameState {
             TurnStep::Untap if self.in_additional_beginning_phase => {
                 self.do_phasing();
                 let ap = self.active_player_idx;
+                let stun_stays = self.stun_counters_stay(ap);
                 for c in self.battlefield.iter_mut().filter(|c| c.controller == ap && c.tapped) {
                     if c.counter_count(crate::card::CounterType::Stun) > 0 {
-                        c.remove_counters(crate::card::CounterType::Stun, 1);
+                        if !stun_stays {
+                            c.remove_counters(crate::card::CounterType::Stun, 1);
+                        }
                     } else {
                         c.tapped = false;
                     }
@@ -3737,6 +3740,17 @@ impl GameState {
             || self.computed_permanent(card_id).is_some_and(|cp| {
                 cp.keywords().has_kw(&crate::card::Keyword::DealsNoCombatDamage)
             })
+    }
+
+    /// Fear of Sleep Paralysis — "stun counters can't be removed from
+    /// permanents your opponents control": true when an opponent of `seat`
+    /// controls the static.
+    pub(crate) fn stun_counters_stay(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            !self.same_team(c.controller, seat)
+                && c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::OpponentsStunCountersStay))
+        })
     }
 
     pub fn untap_prevented_by_static(&self, card_id: crate::card::CardId) -> bool {

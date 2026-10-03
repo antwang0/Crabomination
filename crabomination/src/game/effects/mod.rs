@@ -19109,6 +19109,8 @@ impl GameState {
                 if n == 0 { return Ok(()); }
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
+                        && !(*kind == CounterType::Stun
+                            && self.battlefield_find(cid).is_some_and(|c| self.stun_counters_stay(c.controller)))
                         && let Some(c) = self.battlefield_find_mut(cid) {
                             let ctrl = c.controller;
                             let removed = c.remove_counters(*kind, n);
@@ -40814,10 +40816,16 @@ impl GameState {
         cid: crate::card::CardId,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        let Some(c) = self.battlefield_find_mut(cid) else { return false };
+        let Some(c) = self.battlefield_find(cid) else { return false };
         if !c.tapped {
             return false;
         }
+        // Fear of Sleep Paralysis — the stun counter can't come off, so the
+        // untap it replaces doesn't happen either.
+        if c.counter_count(crate::card::CounterType::Stun) > 0 && self.stun_counters_stay(c.controller) {
+            return true;
+        }
+        let Some(c) = self.battlefield_find_mut(cid) else { return false };
         if c.remove_counters(crate::card::CounterType::Stun, 1) > 0 {
             // The Stun counter is removed instead of untapping; the accessor
             // drops the entry when the last one comes off (CR 122.1).
