@@ -39975,11 +39975,15 @@ impl GameState {
                 copy,
                 reduce_generic,
             } => self.cast_immediate(
-                what, source_zone, exile_after, pay_own_cost, copy, reduce_generic, None, ctx, events,
+                what, source_zone, exile_after, pay_own_cost, copy, reduce_generic, None, false, ctx, events,
             ),
 
+            Effect::CastImmediateForLife { what, source_zone } => {
+                self.cast_immediate(what, source_zone, &false, &false, &false, &0, None, true, ctx, events)
+            }
+
             Effect::CastCopyForCost { what, source_zone, cost } => {
-                self.cast_immediate(what, source_zone, &false, &false, &true, &0, Some(cost), ctx, events)
+                self.cast_immediate(what, source_zone, &false, &false, &true, &0, Some(cost), false, ctx, events)
             }
 
             Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap, total_mana_value } => {

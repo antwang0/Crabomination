@@ -24,6 +24,7 @@ impl GameState {
         copy: &bool,
         reduce_generic: &u32,
         cost_override: Option<&ManaCost>,
+        pay_life: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
@@ -84,6 +85,21 @@ impl GameState {
         }
         use crate::decision::{Decision, DecisionAnswer};
         let source_for_ask = ctx.source.unwrap_or(CardId(0));
+        // "Paying life equal to the spell's mana value" (CR 119.4: only with
+        // at least that much life). A headless seat keeps five life back.
+        let life_cost = if pay_life {
+            let mv = self.find_card_anywhere(card_id).map_or(0, |c| c.definition.cost.cmc());
+            let life = self.players[ctx.controller].life;
+            if life < mv as i32 {
+                return Ok(());
+            }
+            if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) && life - (mv as i32) < 5 && mv > 0 {
+                return Ok(());
+            }
+            mv
+        } else {
+            0
+        };
         // Free cast = pure upside, so every non-scripted seat
         // accepts (the blanket "no" killed every ForEach→
         // CastWithoutPayingImmediate card). No suspension here: this
@@ -95,7 +111,9 @@ impl GameState {
             _ => matches!(
                 self.decider.decide(&Decision::OptionalTrigger {
                     source: source_for_ask,
-                    description: if *pay_own_cost {
+                    description: if pay_life {
+                        format!("Cast it by paying {life_cost} life?")
+                    } else if *pay_own_cost {
                         "Cast the copy for its cost?".to_string()
                     } else if *reduce_generic > 0 {
                         format!("Cast for {{{reduce_generic}}} less?")
@@ -186,6 +204,7 @@ impl GameState {
                 }
             }
         }
+        self.pay_life_cost(ctx.controller, life_cost);
         // Paying can take the card with it — a life payment that
         // drops the controller out of a pod removes every card they
         // own (CR 800.4a; pod seed 25048, Emet-Selch recasting Rite

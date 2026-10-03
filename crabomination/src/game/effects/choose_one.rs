@@ -22,7 +22,8 @@ fn pick_is_gain(e: &Effect) -> bool {
         | Effect::CreateTokenCopyOf { who: PlayerRef::You, .. }
         | Effect::Attach { .. }
         | Effect::AttachAnyNumberTo { .. }
-        | Effect::CastWithoutPayingImmediate { .. } => true,
+        | Effect::CastWithoutPayingImmediate { .. }
+        | Effect::CastImmediateForLife { .. } => true,
         Effect::Move { to, .. } => matches!(
             to,
             ZoneDest::Hand(PlayerRef::You | PlayerRef::OwnerOfMoved)

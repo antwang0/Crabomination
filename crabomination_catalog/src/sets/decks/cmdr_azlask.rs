@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_azlask.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Bismuth Mindrender** — the exiled card may be cast for life until end
-//!   of turn, not only as the trigger resolves.
 //! - **Twins of Discord** — the granted bloodthirst rides colorless creature
 //!   spells you cast (as Bloodlord of Vaasgoth), not every entry.
 
@@ -122,7 +120,7 @@ pub fn benthic_anomaly() -> CardDefinition {
 }
 
 /// Bismuth Mindrender — menace; its hit flips the player's next nonland card
-/// for you to cast for life. Residual: castable until end of turn.
+/// for you to cast for life as the trigger resolves.
 pub fn bismuth_mindrender() -> CardDefinition {
     devoid(CardDefinition {
         keywords: vec![Keyword::Menace],
@@ -130,9 +128,9 @@ pub fn bismuth_mindrender() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::ExileTopUntilNonland { who: PlayerRef::TriggerEventPlayer },
-                Effect::GrantMayPlayForLife {
+                Effect::CastImmediateForLife {
                     what: Selector::ExiledThisResolution { filter: R::Nonland },
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    source_zone: crate::card::Zone::Exile,
                 },
             ]),
         }],

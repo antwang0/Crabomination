@@ -9524,6 +9524,11 @@ pub enum Effect {
         #[serde(default)]
         pay_own_cost: bool,
     },
+    /// "You may cast that card by paying life equal to the spell's mana value
+    /// rather than paying its mana cost", as the effect resolves (Bismuth
+    /// Mindrender — not later in the turn, 2024-06-07 ruling). CR 119.4: only
+    /// with at least that much life.
+    CastImmediateForLife { what: Selector, source_zone: crate::card::Zone },
     /// "You may cast any number of spells from among them without paying
     /// their mana costs" — repeatedly offers the remaining castable cards
     /// (a declined card is re-offered after each accepted cast), so the

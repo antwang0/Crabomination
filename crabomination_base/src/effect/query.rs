@@ -2082,7 +2082,9 @@ impl Effect {
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::LoseCardTypeUntilEot { what, .. } => sel_has_target(what),
-            Effect::CastWithoutPayingImmediate { what, .. } | Effect::CastCopyForCost { what, .. } => {
+            Effect::CastWithoutPayingImmediate { what, .. }
+            | Effect::CastImmediateForLife { what, .. }
+            | Effect::CastCopyForCost { what, .. } => {
                 sel_has_target(what)
             }
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
@@ -2681,6 +2683,7 @@ impl Effect {
             | Effect::CounterUnless { what, .. }
             | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
+            | Effect::CastImmediateForLife { what, .. }
             | Effect::CastCopyForCost { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
@@ -3576,7 +3579,7 @@ impl Effect {
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
             // The Dawning Archaic) wants the graveyard walked for the target.
-            Effect::CastWithoutPayingImmediate { source_zone, .. } => {
+            Effect::CastWithoutPayingImmediate { source_zone, .. } | Effect::CastImmediateForLife { source_zone, .. } => {
                 matches!(source_zone, crate::card::Zone::Graveyard)
             }
             // Granting flashback to a card always targets one in a graveyard
@@ -4365,7 +4368,7 @@ impl Effect {
                 )
             }
             // Targets a card to recast (graveyard/exile), not a player.
-            Effect::CastWithoutPayingImmediate { .. } => false,
+            Effect::CastWithoutPayingImmediate { .. } | Effect::CastImmediateForLife { .. } => false,
             Effect::TapAndHoldWhileSourceTapped { .. }
             | Effect::MoveChosenKeyword { .. }
             | Effect::RedirectNextCombatDamageTo { .. }
@@ -5398,6 +5401,7 @@ impl Effect {
                 | Effect::GrantMayPlay { what, .. }
                 | Effect::GrantMayPlayForLife { what, .. }
                 | Effect::CastWithoutPayingImmediate { what, .. }
+                | Effect::CastImmediateForLife { what, .. }
                 | Effect::CastCopyForCost { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }

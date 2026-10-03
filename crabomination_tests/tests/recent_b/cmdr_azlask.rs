@@ -104,10 +104,11 @@ fn angelic_aberration_upgrades_spawn() {
 }
 
 /// CR 119.4 — Bismuth Mindrender's hit lets you cast the player's next
-/// nonland card for life.
+/// nonland card for life, as the trigger resolves (2024-06-07 ruling).
 #[test]
 fn bismuth_mindrender_steals_a_spell() {
     let mut g = pod();
+    let life = g.players[0].life;
     let mind = g.add_card_to_battlefield(0, catalog::bismuth_mindrender());
     g.add_card_to_library(1, catalog::lightning_bolt());
     g.clear_sickness(mind);
@@ -122,8 +123,9 @@ fn bismuth_mindrender_steals_a_spell() {
         let _ = g.advance_step(Vec::new());
         drain_stack(&mut g);
     }
-    let bolt = g.exile.iter().find(|c| c.definition.name == "Lightning Bolt").expect("exiled");
-    assert!(bolt.may_play_until.is_some_and(|m| m.pay_life && m.player == 0));
+    assert!(!g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "cast, not left playable");
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"));
+    assert_eq!(g.players[0].life, life - 1, "paid its mana value in life");
 }
 
 /// CR 603.6c — Chittering Dispatcher leaves a Spawn behind.
