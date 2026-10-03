@@ -132,24 +132,25 @@ pub fn curse_of_chaos() -> CardDefinition {
 }
 
 /// Fiery Justice — 5 damage divided among any number of targets; target
-/// opponent gains 5 life.
-///
-/// ⚠ Residual: the opponent is chosen on resolution rather than targeted —
-/// the one with the most life, the seat a player would hand 5 life to (the
-/// engine's `HostileOpponent` is the one it is racing, the worst pick).
+/// opponent gains 5 life. Slot 0 is the opponent, slots 1.. the damage
+/// (`Effect::SlotGroups`, CR 601.2c); the gain runs first, which only
+/// matters to the mid-resolution SBA sweep (the totals are the same).
 pub fn fiery_justice() -> CardDefinition {
     CardDefinition {
         name: "Fiery Justice",
         cost: cost(&[r(), g(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::SlotGroups(vec![
+            Effect::GainLife {
+                who: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer },
+                amount: Value::Const(5),
+            },
             Effect::DealDamageDivided {
                 total: Value::Const(5),
                 filter: R::Creature.or(R::Planeswalker).or(R::Player),
                 max_targets: 5,
                 retaliate_to_source: false,
             },
-            Effect::GainLife { who: Selector::Player(PlayerRef::HighestLifeOpponent), amount: Value::Const(5) },
         ]),
         ..Default::default()
     }

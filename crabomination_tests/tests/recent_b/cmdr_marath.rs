@@ -120,22 +120,33 @@ fn fiery_justice_divides_five() {
     let a = g.add_card_to_battlefield(1, catalog::serra_angel());
     let life = g.players[1].life;
     let fj = g.add_card_to_hand(0, catalog::fiery_justice());
-    cast_at(&mut g, fj, &[Target::Permanent(a)]).expect("cast");
+    cast_at(&mut g, fj, &[Target::Player(1), Target::Permanent(a)]).expect("cast");
     assert!(g.battlefield_find(a).is_none(), "all five on the Angel");
     assert_eq!(g.players[1].life, life + 5);
 }
 
-/// Fiery Justice at three seats: "target opponent gains 5 life" goes to the
-/// opponent with the most life, not to the one being burned out.
+/// Fiery Justice at three seats: "target opponent gains 5 life" is a target
+/// (CR 601.2c, slot 0), so the caster hands the life to the seat it isn't
+/// burning; a non-opponent can't be that target.
 #[test]
-fn fiery_justice_gives_the_life_to_the_healthiest_opponent() {
+fn fiery_justice_targets_the_opponent_that_gains_life() {
     let mut g = main_phase(3);
     g.players[1].life = 6;
     g.players[2].life = 30;
     let fj = g.add_card_to_hand(0, catalog::fiery_justice());
-    cast_at(&mut g, fj, &[Target::Player(1)]).expect("cast");
+    cast_at(&mut g, fj, &[Target::Player(2), Target::Player(1)]).expect("cast");
     assert_eq!(g.players[1].life, 1, "five damage, no gain");
-    assert_eq!(g.players[2].life, 35, "the healthiest opponent gains 5");
+    assert_eq!(g.players[2].life, 35, "the targeted opponent gains 5");
+    let fj = g.add_card_to_hand(0, catalog::fiery_justice());
+    assert!(cast_at(&mut g, fj, &[Target::Player(0), Target::Player(1)]).is_err(), "you aren't an opponent");
+    // CR 115.3 — "any number of targets" names each once; the separate
+    // "target opponent" may be one of them.
+    assert!(
+        cast_at(&mut g, fj, &[Target::Player(2), Target::Player(1), Target::Player(1)]).is_err(),
+        "the same player twice among the damage targets"
+    );
+    cast_at(&mut g, fj, &[Target::Player(2), Target::Player(2)]).expect("the gainer may take the damage");
+    assert_eq!(g.players[2].life, 35, "+5 then -5");
 }
 
 /// From the Ashes: nonbasic lands die; each player fetches a basic per land.
@@ -310,7 +321,7 @@ fn cr_119_7_witch_hunt_stops_life_gain() {
     let life = g.players[1].life;
     let fj = g.add_card_to_hand(0, catalog::fiery_justice());
     let a = g.add_card_to_battlefield(1, catalog::serra_angel());
-    cast_at(&mut g, fj, &[Target::Permanent(a)]).expect("cast");
+    cast_at(&mut g, fj, &[Target::Player(1), Target::Permanent(a)]).expect("cast");
     assert_eq!(g.players[1].life, life, "no gain under Witch Hunt");
 }
 
@@ -375,4 +386,42 @@ fn naya_soulbeast_bot_casts_it() {
         }
     }
     assert_eq!(plus(&g, nb), 10, "the bot cast it");
+}
+
+/// The bot's Fiery Justice: slot 0 (the life) goes to an opponent and the
+/// divided damage after it still lands on the enemy side (`SlotGroups` routes
+/// each slot to its own member's hostility).
+#[test]
+fn bot_aims_fiery_justice() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(3);
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].hostile_player_targets = true;
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::plateau());
+    }
+    g.add_card_to_battlefield(0, catalog::forest());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fj = g.add_card_to_hand(0, catalog::fiery_justice());
+    let my_life = g.players[0].life;
+    let theirs_before = g.players[1].life + g.players[2].life;
+    let mut bot = HeuristicBot::new();
+    for _ in 0..20 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let cast = matches!(action, GameAction::CastSpell { card_id, .. } if card_id == fj);
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if cast || pass {
+            break;
+        }
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fj), "the bot cast Fiery Justice");
+    assert_eq!(g.players[0].life, my_life, "no damage or life to its caster");
+    assert!(g.battlefield_find(mine).is_some(), "its own Bears are spared");
+    let theirs_after = g.players[1].life + g.players[2].life;
+    assert!(g.battlefield_find(theirs).is_none() || theirs_after < theirs_before + 5, "the 5 damage hit their side");
+    assert!(theirs_after >= theirs_before, "an opponent gained the 5");
 }
