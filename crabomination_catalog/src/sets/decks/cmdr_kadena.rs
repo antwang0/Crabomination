@@ -131,8 +131,9 @@ pub fn foul_orchard() -> CardDefinition {
 }
 
 /// Gift of Doom — {4}{B} Aura: the enchanted creature has deathtouch and
-/// indestructible. Morph—sacrifice another creature.
-/// Residual: turned face up, it attaches by a trigger, not as it turns.
+/// indestructible. Morph—sacrifice another creature. As it's turned face up it
+/// attaches to a creature of your choice (CR 708.8), before a state-based
+/// action could see an unattached Aura.
 pub fn gift_of_doom() -> CardDefinition {
     let grant = |keyword: Keyword| StaticAbility {
         description: "Enchanted creature has deathtouch and indestructible.",
@@ -149,10 +150,11 @@ pub fn gift_of_doom() -> CardDefinition {
         )))],
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         static_abilities: vec![grant(Keyword::Deathtouch), grant(Keyword::Indestructible)],
-        triggered_abilities: vec![turned_face_up(Effect::Attach {
-            what: Selector::This,
-            to: target_filtered(R::Creature.and(R::OtherThanSource)),
-        })],
+        as_turned_face_up: Some(crate::effect::shortcut::choose_one_then(
+            Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+            PlayerRef::You,
+            Effect::Attach { what: Selector::This, to: crate::effect::shortcut::chosen_one() },
+        )),
         ..Default::default()
     }
 }

@@ -99,6 +99,28 @@ fn kadenas_silencer_silences() {
     assert_eq!(g.players[0].life, g.players[0].starting_life, "the Mauler's toll was countered");
 }
 
+/// Gift of Doom: "As this Aura is turned face up, you may attach it to a
+/// creature." It attaches inside the turn-up special action (CR 708.8,
+/// 702.37e), not by a trigger, so no state-based action sees it unattached
+/// (CR 704.5m) and nothing waits on the stack.
+#[test]
+fn gift_of_doom_attaches_as_it_turns_face_up() {
+    let mut g = pod(2);
+    let gift = g.add_card_to_hand(0, catalog::gift_of_doom());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFaceDown { card_id: gift }).expect("morph");
+    drain_stack(&mut g);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.perform_action(GameAction::TurnFaceUp { card_id: gift }).expect("sacrifice a creature to unmorph");
+    assert!(g.stack.is_empty(), "no trigger");
+    assert_eq!(g.battlefield_find(gift).and_then(|c| c.attached_to), Some(angel));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gift).is_some(), "an attached Aura stays");
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Deathtouch) && cp.keywords().contains(&Keyword::Indestructible));
+}
+
 /// Sudden Substitution swaps an opponent's spell for your creature.
 #[test]
 fn sudden_substitution_swaps() {
