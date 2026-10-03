@@ -300,17 +300,20 @@ pub fn liberated_livestock() -> CardDefinition {
     }
 }
 
-/// Mantle of the Ancients — returns your Aura and Equipment cards attached to
-/// the creature it enchants; +1/+1 per Aura and Equipment on it.
-/// Residual: the cards are picked, not targeted.
+/// Mantle of the Ancients — entering, returns any number of target Aura and/or
+/// Equipment cards from your graveyard attached to the creature it enchants
+/// (`ZoneDest::BattlefieldAttached`, CR 303.4f); +1/+1 per Aura and Equipment
+/// on it.
 pub fn mantle_of_the_ancients() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::PutOntoBattlefieldAttached {
-            zones: vec![Zone::Graveyard],
-            filter: aura_or_equipment(),
-            host: Some(Selector::AttachedTo(Box::new(Selector::This))),
-            max: None,
-            creatures_only: false,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 20,
+            min_targets: 0,
+            filter: aura_or_equipment().and(R::InYourGraveyard),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::BattlefieldAttached { host: Box::new(Selector::AttachedTo(Box::new(Selector::This))) },
+            }),
         })],
         ..aura(
             "Mantle of the Ancients",
@@ -468,27 +471,30 @@ pub fn umbra_mystic() -> CardDefinition {
     }
 }
 
-/// Unfinished Business — a creature card back from your graveyard, then up to
-/// two Aura / Equipment cards attached to it.
-/// Residual: the Aura and Equipment cards are picked, not targeted.
+/// Unfinished Business — return target creature card from your graveyard to
+/// the battlefield, then up to two target Aura and/or Equipment cards from
+/// your graveyard attached to it (`ZoneDest::BattlefieldAttached`; an Aura
+/// that can't enchant it stays, CR 303.4i). Slots 1 and 2 are optional.
 pub fn unfinished_business() -> CardDefinition {
+    let gear = |slot: u8, filter: R| Effect::Move {
+        what: Selector::TargetFiltered { slot, filter: aura_or_equipment().and(R::InYourGraveyard).and(filter) },
+        to: ZoneDest::BattlefieldAttached { host: Box::new(Selector::Target(0)) },
+    };
     CardDefinition {
         name: "Unfinished Business",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-            Effect::PutOntoBattlefieldAttached {
-                zones: vec![Zone::Graveyard],
-                filter: aura_or_equipment(),
-                host: Some(Selector::Target(0)),
-                max: Some(Value::Const(2)),
-                creatures_only: false,
-            },
-        ]),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                gear(1, R::Any),
+                gear(2, R::OtherThanTargetSlot(1)),
+            ])),
+        },
         ..Default::default()
     }
 }

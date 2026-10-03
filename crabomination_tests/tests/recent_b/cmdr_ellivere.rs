@@ -94,17 +94,26 @@ fn mantle_of_the_ancients_rebuilds_the_host() {
     assert_eq!(pt(&g, bear), (9, 5));
 }
 
-/// Unfinished Business returns a creature and two Auras on it; Retether
-/// finds each Aura a creature (CR 303.4i: none without a host).
+/// Unfinished Business returns a creature and the Auras TARGETED with it,
+/// attached to it — an untargeted Aura stays in the graveyard; Retether finds
+/// each Aura a creature (CR 303.4i: none without a host).
 #[test]
 fn unfinished_business_and_retether() {
     let mut g = pod(2);
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::rancor());
-    g.add_card_to_graveyard(0, catalog::spectral_steel());
+    let rancor = g.add_card_to_graveyard(0, catalog::rancor());
+    let steel = g.add_card_to_graveyard(0, catalog::spectral_steel());
     let ub = g.add_card_to_hand(0, catalog::unfinished_business());
-    cast(&mut g, ub, &[Target::Permanent(bear)]);
+    cast(&mut g, ub, &[Target::Permanent(bear), Target::Permanent(rancor), Target::Permanent(steel)]);
     assert_eq!(attached_to(&g, bear).len(), 2);
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let rancor = g.add_card_to_graveyard(0, catalog::rancor());
+    let steel = g.add_card_to_graveyard(0, catalog::spectral_steel());
+    let ub = g.add_card_to_hand(0, catalog::unfinished_business());
+    cast(&mut g, ub, &[Target::Permanent(bear), Target::Permanent(steel)]);
+    assert_eq!(attached_to(&g, bear), vec![steel], "only the targeted Aura");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == rancor), "Rancor wasn't a target");
     let mut g = pod(2);
     let rancor = g.add_card_to_graveyard(0, catalog::rancor());
     let r = g.add_card_to_hand(0, catalog::retether());
@@ -336,4 +345,18 @@ fn verdant_embrace_grows_saprolings() {
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Saproling"));
+}
+
+/// CR 303.4i — a targeted Aura that can't legally enchant "that creature"
+/// stays in the graveyard: Unfinished Business's Wild Growth (enchant land)
+/// doesn't come back with the Bears.
+#[test]
+fn cr_303_4i_unfinished_business_leaves_an_aura_that_cant_enchant() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let growth = g.add_card_to_graveyard(0, catalog::wild_growth());
+    let ub = g.add_card_to_hand(0, catalog::unfinished_business());
+    cast(&mut g, ub, &[Target::Permanent(bear), Target::Permanent(growth)]);
+    assert!(g.battlefield_find(bear).is_some(), "the Bears returned");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == growth), "Wild Growth can't enchant a creature");
 }
