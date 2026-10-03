@@ -89,6 +89,7 @@ pub fn for_the_common_good() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
             Effect::GrantKeyword {
                 what: your_tokens(),

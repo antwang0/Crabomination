@@ -177,6 +177,7 @@ pub fn the_jolly_balloon_man() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![Keyword::Flying, Keyword::Haste],
+                    no_mana_cost: false,
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),

@@ -332,6 +332,7 @@ pub fn will_of_the_temur() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![Keyword::Flying],
+                no_mana_cost: false,
             },
             Effect::Draw {
                 who: target_filtered(R::Player),

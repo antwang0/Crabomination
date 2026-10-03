@@ -75,6 +75,7 @@ fn black_zombie_copy(source: Selector, tapped: bool) -> Effect {
             non_legendary: false,
             legendary: false,
             extra_keywords: vec![],
+            no_mana_cost: false,
         },
         // Per the rulings, a Zombie *instead of* its other creature types
         // (unlike eternalize) — CR 707.9b.

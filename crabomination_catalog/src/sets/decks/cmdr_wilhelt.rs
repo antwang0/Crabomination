@@ -103,6 +103,7 @@ pub fn cleaver_skaab() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
             ..Default::default()
         }],
@@ -374,6 +375,7 @@ pub fn hour_of_eternity() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                        no_mana_cost: false,
                     },
                     Effect::SetCopiableCreatureTypes {
                         what: Selector::LastCreatedToken,

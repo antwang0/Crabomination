@@ -509,6 +509,7 @@ pub fn splitting_slime() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
         )],
         ..creature("Splitting Slime", cost(&[generic(3), g(), g()]), vec![CreatureType::Ooze], 3, 3)
@@ -918,6 +919,7 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 },
                 ..Default::default()
             },

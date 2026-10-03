@@ -106,6 +106,7 @@ pub fn saheeli_radiant_creator() -> CardDefinition {
                                 non_legendary: false,
                                 legendary: false,
                                 extra_keywords: vec![Keyword::Haste],
+                                no_mana_cost: false,
                             },
                             Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedToken },
                         ])),

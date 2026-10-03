@@ -126,6 +126,7 @@ pub fn clone_legion() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             }),
         },
         ..Default::default()

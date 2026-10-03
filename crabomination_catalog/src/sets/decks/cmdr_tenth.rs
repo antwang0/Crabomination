@@ -888,6 +888,7 @@ pub fn the_eleventh_hour() -> CardDefinition {
                         non_legendary: false,
                         legendary: true,
                         extra_keywords: vec![],
+                        no_mana_cost: false,
                     },
                     Effect::SetCopiableNameAndTypes {
                         what: Selector::LastCreatedToken,
@@ -1206,6 +1207,7 @@ pub fn wedding_ring() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                        no_mana_cost: false,
                     },
                 ]),
             },

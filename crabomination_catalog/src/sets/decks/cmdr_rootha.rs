@@ -78,6 +78,7 @@ fn token_copy_of(source: Selector, enters_tapped: bool) -> Effect {
         non_legendary: false,
         legendary: false,
         extra_keywords: vec![],
+        no_mana_cost: false,
     }
 }
 

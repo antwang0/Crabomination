@@ -398,6 +398,7 @@ pub fn twinflame() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![Keyword::Haste],
+                no_mana_cost: false,
             },
             Effect::ExileLastCreatedTokensAtNextEndStep,
         ]),

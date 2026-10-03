@@ -1047,6 +1047,7 @@ pub fn squad_etb() -> TriggeredAbility {
         enters_tapped: false,
         non_legendary: false,
         legendary: false,
+        no_mana_cost: false,
     })
 }
 
@@ -3201,8 +3202,7 @@ pub fn modular_dies() -> TriggeredAbility {
 /// copy of it, except it's a [white/black] Zombie [with no mana cost
 /// / and 4/4]. Activate only as a sorcery." Both ride the
 /// `from_graveyard` + `exile_self_cost` activation path; the token rides
-/// `CreateTokenCopyOf` with a Zombie type added (color/cost overrides are
-/// approximated — the copy keeps the original's color).
+/// `CreateTokenCopyOf` with the Zombie type, the color and no mana cost.
 pub fn embalm(cost: crate::mana::ManaCost) -> ActivatedAbility {
     embalm_like(cost, None)
 }
@@ -3226,10 +3226,11 @@ fn embalm_like(
             extra_creature_types: vec![crate::card::CreatureType::Zombie],
             extra_card_types: Vec::new(),
             override_pt,
-            override_colors: None,
+            override_colors: Some(vec![if override_pt.is_some() { crate::mana::Color::Black } else { crate::mana::Color::White }]),
             enters_tapped: false,
             non_legendary: false,
             legendary: false,
+            no_mana_cost: true,
         },
         ..Default::default()
     }
@@ -3471,6 +3472,7 @@ pub fn token_copy_of(who: PlayerRef, count: Value, source: Selector) -> Effect {
         non_legendary: false,
         legendary: false,
         extra_keywords: vec![],
+        no_mana_cost: false,
     }
 }
 

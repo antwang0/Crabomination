@@ -8853,15 +8853,9 @@ one of its own reasons teaches the next run to ignore the word.**
     (linked-exile with a leave-replacement that mints a token instead of
     returning) — Skyclave Apparition.
 
-- **Embalm/Eternalize token color + cost overrides.** `sets::akh` tokens ride
-  `CreateTokenCopyOf` and gain a Zombie type (+4/4 for Eternalize), but the
-  copy keeps the original's color and printed mana cost rather than becoming
-  "white/black with no mana cost." Add `token_color: Option<Color>` +
-  `strip_cost: bool` to `Effect::CreateTokenCopyOf` to make it faithful.
 - **More AKH/HOU Embalm cards.** Aven Wind Guide ✅ (token-scoped
   `GrantKeyword` anthems), Heart-Piercer Manticore ✅ (`MayDo` →
-  `SacrificeAndRemember` → fling). Remaining: Vizier of Many Faces (embalm
-  clone — needs the embalm-copy-any-creature path); `fanatic_of_rhonas`
+  `SacrificeAndRemember` → fling), Vizier of Many Faces ✅. Remaining: `fanatic_of_rhonas`
   is missing its real Eternalize {2}{G}{G} — upgrade it.
 - **Earthshaker Khenra's "≤ its power" filter is fixed at 2.** The ETB
   can't-block uses `PowerAtMost(2)` (the printed power); the eternalized 4/4

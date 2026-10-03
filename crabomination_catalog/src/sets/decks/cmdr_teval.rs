@@ -535,6 +535,7 @@ pub fn the_scarab_god() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 },
                 Effect::AmendCopiableValues {
                     what: Selector::LastCreatedToken,

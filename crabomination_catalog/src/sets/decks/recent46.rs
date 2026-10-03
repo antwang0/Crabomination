@@ -126,6 +126,7 @@ pub fn bramble_sovereign() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 }),
                 else_: None,
             },

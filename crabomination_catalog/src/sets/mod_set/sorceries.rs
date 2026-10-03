@@ -1477,6 +1477,7 @@ pub fn rite_of_replication() -> CardDefinition {
         enters_tapped: false,
         non_legendary: false,
         legendary: false,
+        no_mana_cost: false,
     };
     CardDefinition {
         name: "Rite of Replication",

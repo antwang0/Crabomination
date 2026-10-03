@@ -3917,6 +3917,7 @@ pub fn dreadfeast_demon() -> CardDefinition {
                         enters_tapped: false,
                         non_legendary: false,
                         legendary: false,
+                        no_mana_cost: false,
                     }),
                     else_: Box::new(Effect::Noop),
                 },

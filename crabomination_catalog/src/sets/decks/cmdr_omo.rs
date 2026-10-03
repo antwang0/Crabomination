@@ -140,6 +140,7 @@ pub fn aggressive_biomancy() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
             Effect::EachPushesTrigger {
                 what: Selector::LastCreatedTokens,

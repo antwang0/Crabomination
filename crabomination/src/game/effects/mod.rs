@@ -4835,6 +4835,7 @@ impl GameState {
                         non_legendary: false,
                         extra_keywords: vec![],
                         legendary: false,
+                        no_mana_cost: false,
                     },
                     ctx,
                     events,
@@ -5662,6 +5663,7 @@ impl GameState {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![crate::card::Keyword::Haste],
+                        no_mana_cost: false,
                     },
                     ctx,
                     events,
@@ -21937,6 +21939,7 @@ impl GameState {
                                 non_legendary: false,
                                 legendary: false,
                                 extra_keywords: vec![],
+                                no_mana_cost: false,
                             },
                             &EffectContext {
                                 controller: p,
@@ -22326,6 +22329,7 @@ impl GameState {
                 non_legendary,
                 legendary,
                 extra_keywords,
+                no_mana_cost,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let base = self.evaluate_value(count, ctx).max(0) as u32;
@@ -22404,6 +22408,9 @@ impl GameState {
                         def.cost.symbols.push(crate::mana::ManaSymbol::Generic(generic));
                     }
                 }
+                if *no_mana_cost {
+                    def.cost = crate::mana::ManaCost::default();
+                }
                 if *non_legendary {
                     def.supertypes.clear();
                 }
@@ -22462,6 +22469,7 @@ impl GameState {
                             enters_tapped: true,
                             non_legendary: false,
                             legendary: false,
+                            no_mana_cost: false,
                         },
                         &sub,
                         events,
@@ -30515,6 +30523,7 @@ impl GameState {
                             non_legendary: false,
                             legendary: false,
                             extra_keywords: vec![],
+                            no_mana_cost: false,
                         },
                         &sub,
                         events,

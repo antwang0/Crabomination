@@ -231,6 +231,7 @@ pub fn echoing_assault() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 },
                 Effect::JoinCombatAttacking { what: Selector::LastCreatedToken },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,

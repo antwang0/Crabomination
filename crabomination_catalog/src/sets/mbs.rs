@@ -1954,6 +1954,7 @@ pub fn mirrorworks() -> CardDefinition {
                     extra_keywords: vec![],
                     legendary: false,
                     non_legendary: false,
+                    no_mana_cost: false,
                 }),
                 else_: None,
             },

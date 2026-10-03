@@ -612,6 +612,7 @@ pub fn zndrsplts_judgment() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
             Effect::ForEachOpponent {
                 body: Box::new(Effect::PlayerReturnsPermanentsToHand {

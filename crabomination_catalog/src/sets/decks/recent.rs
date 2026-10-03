@@ -3002,6 +3002,7 @@ pub fn vaultborn_tyrant() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
             },
         ],
@@ -4619,6 +4620,7 @@ pub fn stormsplitter() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
@@ -5785,6 +5787,7 @@ pub fn coiling_rebirth() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: true,
                     legendary: false,
+                    no_mana_cost: false,
                 },
             ]),
         })),
@@ -11279,6 +11282,7 @@ pub fn croaking_counterpart() -> CardDefinition {
             enters_tapped: false,
             non_legendary: false,
             legendary: false,
+            no_mana_cost: false,
         },
         ..Default::default()
     }
@@ -11715,6 +11719,7 @@ pub fn necroduality() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: false,
                 legendary: false,
+                no_mana_cost: false,
             },
         }],
         ..Default::default()

@@ -352,6 +352,7 @@ pub fn miirym_sentinel_wyrm() -> CardDefinition {
                 non_legendary: true,
                 legendary: false,
                 extra_keywords: Vec::new(),
+                no_mana_cost: false,
             },
         }],
         ..Default::default()

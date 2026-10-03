@@ -86,6 +86,7 @@ pub fn mardu_siegebreaker() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: Vec::new(),
+                    no_mana_cost: false,
                 },
                 Effect::JoinCombatAttacking { what: Selector::LastCreatedTokens },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,

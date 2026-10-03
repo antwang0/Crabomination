@@ -8998,6 +8998,11 @@ pub enum Effect {
         /// copy, Kinzu's toxic 1 copy).
         #[serde(default)]
         extra_keywords: Vec<crate::card::Keyword>,
+        /// "… it has no mana cost" (CR 702.128a embalm, 702.129a eternalize):
+        /// the copy's mana cost is empty, so its colors come only from
+        /// `override_colors`' indicator and its mana value is 0.
+        #[serde(default)]
+        no_mana_cost: bool,
     },
     /// CR 707.9b — a copy exception written into the copiable values of each
     /// permanent `what` names, so a copy of it carries it too: "except its

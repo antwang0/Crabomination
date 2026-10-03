@@ -597,6 +597,7 @@ pub fn romana_ii() -> CardDefinition {
                 enters_tapped: true,
                 non_legendary: false,
                 legendary: false,
+                no_mana_cost: false,
             },
             ..Default::default()
         }],
@@ -893,6 +894,7 @@ pub fn city_of_death() -> CardDefinition {
         enters_tapped: false,
         non_legendary: false,
         legendary: false,
+        no_mana_cost: false,
     };
     let mut chapters = vec![(1, make(treasure_token(), Value::ONE))];
     chapters.extend((2..=6).map(|n| (n, copy())));

@@ -401,6 +401,7 @@ pub fn octomancer() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 },
             },
         ],

@@ -351,6 +351,7 @@ pub fn life_of_the_party() -> CardDefinition {
                             non_legendary: false,
                             legendary: false,
                             extra_keywords: vec![],
+                            no_mana_cost: false,
                         },
                         Effect::GoadForTheGame { what: Selector::LastCreatedToken },
                     ])),

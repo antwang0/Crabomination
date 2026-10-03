@@ -458,6 +458,7 @@ pub fn calix_guided_by_fate() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 }),
             },
         })],

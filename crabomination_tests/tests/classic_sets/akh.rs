@@ -59,6 +59,34 @@ fn embalm_and_eternalize_mint_token_copies() {
     }
 }
 
+/// CR 702.128a / 702.129a — an embalmed token is white and an eternalized one
+/// black, both with no mana cost (mana value 0), whatever the card's color.
+#[test]
+fn cr_702_128a_embalm_and_eternalize_set_color_and_drop_the_cost() {
+    use crabomination::card::CardDefinition;
+    let cases: [(fn() -> CardDefinition, Color); 2] =
+        [(catalog::aven_initiate, Color::White), (catalog::proven_combatant, Color::Black)];
+    for (def, color) in cases {
+        let mut g = two_player_game();
+        let card = g.add_card_to_graveyard(0, def());
+        for c in [Color::Blue, Color::Black, Color::White] {
+            g.players[0].mana_pool.add(c, 4);
+        }
+        g.players[0].mana_pool.add_colorless(6);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: card, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .expect("activate from the graveyard");
+        drain_stack(&mut g);
+        let tok = g.battlefield.iter().find(|c| c.is_token).expect("token minted");
+        assert_eq!(tok.definition.cost.cmc(), 0, "no mana cost");
+        let cp = g.computed_permanent(tok.id).unwrap();
+        assert!(cp.colors.contains(color) && !cp.colors.contains(Color::Blue), "{color:?}, not blue");
+    }
+}
+
 /// Embalm is sorcery-speed only: rejected on the opponent's turn.
 #[test]
 fn embalm_rejected_at_instant_speed() {

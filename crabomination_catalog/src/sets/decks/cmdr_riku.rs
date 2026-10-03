@@ -71,6 +71,7 @@ pub fn riku_of_two_reflections() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                        no_mana_cost: false,
                     }),
                     else_: None,
                 },

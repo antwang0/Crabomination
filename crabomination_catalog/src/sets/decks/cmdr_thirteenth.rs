@@ -725,6 +725,7 @@ pub fn osgood_operation_double() -> CardDefinition {
                 non_legendary: true,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             }),
             paradox(investigate(1)),
         ],

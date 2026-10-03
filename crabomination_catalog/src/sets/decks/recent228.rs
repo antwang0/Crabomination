@@ -293,6 +293,7 @@ pub fn molten_duplication() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![Keyword::Haste],
+                no_mana_cost: false,
             },
             Effect::SacrificeLastCreatedTokensAtNextEndStep,
         ]),

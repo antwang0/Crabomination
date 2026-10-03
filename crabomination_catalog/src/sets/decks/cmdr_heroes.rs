@@ -696,6 +696,7 @@ pub fn tempestra_dame_of_games() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: true,
                     legendary: false,
+                    no_mana_cost: false,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -1152,6 +1153,7 @@ pub fn here_comes_a_new_hero() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
             ])),
         },

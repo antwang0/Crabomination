@@ -3642,6 +3642,7 @@ pub fn relms_sketching() -> CardDefinition {
             enters_tapped: false,
             non_legendary: false,
             legendary: false,
+            no_mana_cost: false,
         },
         ..Default::default()
     }
@@ -6261,6 +6262,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
             ]),
         }],
@@ -9713,6 +9715,7 @@ pub fn firion_wild_rose_warrior() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
                 Effect::ReduceEquipCost {
                     what: Selector::LastCreatedToken,

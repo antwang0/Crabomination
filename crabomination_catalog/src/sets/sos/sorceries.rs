@@ -2087,6 +2087,7 @@ pub fn echocasting_symposium() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: false,
                 legendary: false,
+                no_mana_cost: false,
             },
             Effect::RegisterParadigm,
         ]),
@@ -2266,6 +2267,7 @@ pub fn applied_geometry() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: false,
                 legendary: false,
+                no_mana_cost: false,
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

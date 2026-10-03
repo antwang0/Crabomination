@@ -445,6 +445,7 @@ pub fn theoretical_duplication() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             }),
         },
     )

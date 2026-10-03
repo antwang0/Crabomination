@@ -465,6 +465,7 @@ pub fn nacatl_war_pride() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 extra_keywords: vec![],
+                no_mana_cost: false,
             },
             Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
             Effect::ExileAtNextEndStep { what: Selector::LastCreatedTokens },

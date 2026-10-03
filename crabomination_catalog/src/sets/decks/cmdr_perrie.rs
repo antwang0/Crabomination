@@ -450,6 +450,7 @@ pub fn littjara_mirrorlake() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                        no_mana_cost: false,
                     },
                     counter(Selector::LastCreatedToken, CounterType::PlusOnePlusOne),
                 ]),

@@ -4584,6 +4584,7 @@ pub fn joo_dee_one_of_many() -> CardDefinition {
                     enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
+                    no_mana_cost: false,
                 },
                 Effect::Sacrifice {
                     who: Selector::You,
@@ -5831,6 +5832,7 @@ pub fn ember_island_production() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: true,
                 legendary: false,
+                no_mana_cost: false,
             },
             Effect::CreateTokenCopyOf {
                 extra_keywords: vec![],
@@ -5846,6 +5848,7 @@ pub fn ember_island_production() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: true,
                 legendary: false,
+                no_mana_cost: false,
             },
         ]),
         ..Default::default()

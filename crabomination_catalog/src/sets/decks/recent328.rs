@@ -129,6 +129,7 @@ pub fn season_of_weaving() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                    no_mana_cost: false,
                 },
                 Effect::Move {
                     what: Selector::EachPermanent(R::Nonland.and(R::NotToken)),

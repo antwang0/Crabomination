@@ -156,6 +156,7 @@ fn copy_your_creature(extra_keywords: Vec<Keyword>) -> Effect {
         non_legendary: true,
         legendary: false,
         extra_keywords,
+        no_mana_cost: false,
     }
 }
 

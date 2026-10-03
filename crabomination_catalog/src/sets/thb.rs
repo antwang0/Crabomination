@@ -5881,6 +5881,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                         enters_tapped: false,
                         non_legendary: false,
                         legendary: false,
+                        no_mana_cost: false,
                     },
                     Effect::Exile {
                         what: Selector::TriggerSource,
