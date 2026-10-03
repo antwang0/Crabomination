@@ -1,10 +1,6 @@
 //! Commander: the cards the **Miracle Worker** precon (DSC, Aminatou, Veil
 //! Piercer) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_veilpiercer.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **One with the Multiverse** — the free cast is from hand only, not from
-//!   the top of the library.
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EntersAsCopy, EventKind, EventScope,
@@ -207,7 +203,8 @@ pub fn obscura_storefront() -> CardDefinition {
 }
 
 /// One with the Multiverse — look at and play from the top of your library;
-/// once during each of your turns, a free spell. Residual: From hand only.
+/// once during each of your turns, a free spell from your hand or the top of
+/// your library.
 pub fn one_with_the_multiverse() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![

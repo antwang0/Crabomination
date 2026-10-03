@@ -427,3 +427,42 @@ fn the_master_of_keys_mills_and_escapes_enchantments() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(li).is_some());
 }
+
+/// CR 118.9 / 401.6 — One with the Multiverse's once-a-turn free cast reaches
+/// the top of the library, not only the hand.
+#[test]
+fn cr_118_9_one_with_the_multiverse_casts_free_off_the_top() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::one_with_the_multiverse());
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let pos = g.players[0].library.iter().position(|c| c.id == giant).unwrap();
+    let top = g.players[0].library.remove(pos);
+    g.players[0].library.insert(0, top);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: giant,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast off the top");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "cast without mana");
+    // Once each turn: the next top card can't be cast free.
+    let second = g.add_card_to_library(0, catalog::hill_giant());
+    let pos = g.players[0].library.iter().position(|c| c.id == second).unwrap();
+    let top = g.players[0].library.remove(pos);
+    g.players[0].library.insert(0, top);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: second,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err());
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(second), "back on top");
+}
