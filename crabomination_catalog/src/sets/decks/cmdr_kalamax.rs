@@ -473,6 +473,7 @@ pub fn wort_the_raidmother() -> CardDefinition {
                 filter: R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))
                     .and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
+                from_exile: false,
             },
         }],
         ..creature(

@@ -7248,11 +7248,16 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
         // Spell must have Conspire and at least one color (a colorless spell
-        // can never satisfy "shares a color" — CR 702.79b).
+        // can never satisfy "shares a color" — CR 702.79b). It is cast from
+        // hand, or from exile off a may-play grant (Rassilon's conspire).
+        let in_hand = self.players[p].hand.iter().any(|c| c.id == card_id);
         let spell_colors = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
+            .or_else(|| {
+                self.exile.iter().find(|c| c.id == card_id && c.may_play_until.is_some_and(|m| m.player == p))
+            })
             .filter(|c| self.spell_has_conspire(p, c))
             .map(|c| c.definition.printed_colors())
             .ok_or(GameError::CardNotInHand(card_id))?;
@@ -7276,7 +7281,11 @@ impl GameState {
                 c.tapped = true;
             }
         }
-        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        let mut events = if in_hand {
+            self.cast_spell(card_id, target, additional_targets, mode, x_value)?
+        } else {
+            self.cast_from_zone_without_paying(card_id, target, additional_targets, mode, x_value)?
+        };
         self.copy_stack_spell(card_id, 1, true, &mut events);
         Ok(events)
     }
@@ -9185,14 +9194,16 @@ impl GameState {
     }
 
     /// CR 702.78 — the spell has conspire: printed, or granted by a
-    /// `GrantConspireToSpells` static its caster controls (Wort).
+    /// `GrantConspireToSpells` static its caster controls (Wort; Rassilon's
+    /// for a spell cast from exile).
     pub fn spell_has_conspire(&self, p: usize, card: &CardInstance) -> bool {
+        let in_exile = || self.exile.iter().any(|c| c.id == card.id);
         card.definition.keywords.has_kw(&crate::card::Keyword::Conspire)
             || self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                        crate::effect::StaticEffect::GrantConspireToSpells { filter } => {
-                            crate::game::layers::requirement_matches_card(filter, card, p)
+                        crate::effect::StaticEffect::GrantConspireToSpells { filter, from_exile } => {
+                            (!from_exile || in_exile()) && crate::game::layers::requirement_matches_card(filter, card, p)
                         }
                         _ => false,
                     })

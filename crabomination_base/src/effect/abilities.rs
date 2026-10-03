@@ -693,7 +693,13 @@ pub enum StaticEffect {
     SpellCopiesPlusOne,
     /// "[filter] spells you cast have conspire" (Wort, the Raidmother, CR
     /// 702.78) — consulted with the printed keyword by the conspire cast path.
-    GrantConspireToSpells { filter: SelectionRequirement },
+    /// `from_exile`: only spells cast from exile (Rassilon, the War
+    /// President), which the conspire cast takes off a may-play grant.
+    GrantConspireToSpells {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        from_exile: bool,
+    },
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.

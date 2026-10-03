@@ -1272,12 +1272,17 @@ impl GameState {
 
     /// CR 702.78 — hand cards with Conspire the caster could cast right now,
     /// tapping the first two eligible untapped creatures that share a color
-    /// with the spell. The chosen pair is a probe only; the client re-picks.
+    /// with the spell, and exiled cards a may-play grant lets them cast
+    /// (Rassilon's conspire from exile). The chosen pair is a probe only; the
+    /// client re-picks.
     fn conspirable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         use crate::card::Keyword;
+        let playable_exile =
+            self.exile.iter().filter(|c| c.may_play_until.is_some_and(|m| m.player == caster));
         let hand: Vec<(CardId, Vec<crate::mana::Color>, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
+            .chain(playable_exile)
             .filter(|c| c.definition.keywords.contains(&Keyword::Conspire) || self.spell_has_conspire(caster, c))
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();
