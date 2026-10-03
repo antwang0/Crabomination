@@ -246,6 +246,36 @@ fn kros_goads_the_creature_it_shields() {
     assert!(g.goaders(g.battlefield_find(bear).unwrap()).contains(&0), "goaded by Kros's controller");
 }
 
+/// Kros's goad rides any counters you put on a creature you don't control,
+/// not a counter its controller puts on its own (CR 122.6 — the placer).
+#[test]
+fn kros_goads_any_creature_you_put_counters_on() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::kros_defense_contractor());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    evs.push(crabomination::game::GameEvent::CounterAdded {
+        card_id: bear,
+        counter_type: CounterType::PlusOnePlusOne,
+        count: 1,
+        placer: Some(1),
+    });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "its controller's own counter");
+    evs[0] = crabomination::game::GameEvent::CounterAdded {
+        card_id: bear,
+        counter_type: CounterType::PlusOnePlusOne,
+        count: 1,
+        placer: Some(0),
+    };
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    assert!(g.goaders(g.battlefield_find(bear).unwrap()).contains(&0));
+}
+
 /// Park Heights Maverick proliferates as it dies.
 #[test]
 fn park_heights_maverick_proliferates_on_death() {

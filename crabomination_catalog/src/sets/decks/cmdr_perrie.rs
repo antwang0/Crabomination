@@ -100,16 +100,30 @@ pub fn perrie_the_pulverizer() -> CardDefinition {
 }
 
 /// Kros, Defense Contractor — each upkeep a shield counter on an opposing
-/// creature, which is tapped, goaded and given trample until your next turn.
-/// Residual: only its own counters goad.
+/// creature; whenever you put counters on a creature you don't control, it's
+/// tapped, goaded and given trample until your next turn.
 pub fn kros_defense_contractor() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_upkeep(Effect::Seq(vec![
-            counter(target_filtered(R::Creature.and(R::ControlledByOpponent)), CounterType::Shield),
-            Effect::Tap { what: Selector::Target(0) },
-            Effect::Goad { what: Selector::Target(0) },
-            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::UntilNextTurn },
-        ]))],
+        triggered_abilities: vec![
+            on_upkeep(counter(target_filtered(R::Creature.and(R::ControlledByOpponent)), CounterType::Shield)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::Not(Box::new(R::ControlledByYou))),
+                    })
+                    .once_per_batch(),
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: Selector::TriggerSource },
+                    Effect::Goad { what: Selector::TriggerSource },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Trample,
+                        duration: Duration::UntilNextTurn,
+                    },
+                ]),
+            },
+        ],
         ..legendary(creature(
             "Kros, Defense Contractor",
             gwu(),
