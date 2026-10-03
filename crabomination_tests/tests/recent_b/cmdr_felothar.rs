@@ -143,6 +143,24 @@ fn baldin_hits_by_toughness() {
     assert_eq!(g.players[1].life, 11);
 }
 
+/// Baldin — CR 115.1: "up to one hundred target creatures" lets its
+/// controller pick Baldin itself beside the rest of its board; the bot
+/// takes every creature of its own and none of the opponent's.
+#[test]
+fn baldin_targets_its_own_board_itself_included() {
+    let mut g = pod(2);
+    let b = g.add_card_to_battlefield(0, catalog::baldin_century_herdmaster());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::island());
+    attack(&mut g, &[b]);
+    assert_eq!(pt(&g, b), (0, 8), "Baldin is a legal target of its own trigger");
+    assert_eq!(pt(&g, bears), (2, 3));
+    assert_eq!(pt(&g, giant), (3, 4));
+    assert_eq!(pt(&g, theirs), (2, 2), "the opponent's creature is left out");
+}
+
 /// Behind the Scenes — skulk for your team.
 #[test]
 fn behind_the_scenes_grants_skulk() {

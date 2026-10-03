@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_felothar.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Baldin, Century Herdmaster** — the +0/+X goes on each creature you
-//!   control rather than up to one hundred targets.
 //! - **Betor, Ancestor's Voice** — the counters go on your greatest-power
 //!   other creature and the reanimation picks the greatest-power card; neither
 //!   is targeted.
@@ -152,9 +150,8 @@ pub fn assault_formation() -> CardDefinition {
 }
 
 /// Baldin, Century Herdmaster — on your turn every creature deals combat
-/// damage by toughness; attacking gives +0/+X for your hand size.
-///
-/// Residual: the +0/+X goes on each creature you control.
+/// damage by toughness; attacking gives up to one hundred target creatures
+/// +0/+X for your hand size (the bot takes its own board, Baldin included).
 pub fn baldin_century_herdmaster() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -164,11 +161,16 @@ pub fn baldin_century_herdmaster() -> CardDefinition {
                 inner: Box::new(by_toughness(Selector::EachPermanent(R::Creature))),
             },
         }],
-        triggered_abilities: vec![on_attack(Effect::PumpPT {
-            what: Selector::EachPermanent(yours()),
-            power: Value::ZERO,
-            toughness: Value::HandSizeOf(PlayerRef::You),
-            duration: Duration::EndOfTurn,
+        triggered_abilities: vec![on_attack(Effect::ApplyToTargets {
+            max_targets: 100,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::ZERO,
+                toughness: Value::HandSizeOf(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            }),
         })],
         ..legend(
             "Baldin, Century Herdmaster",
