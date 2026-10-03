@@ -416,6 +416,41 @@ fn verrak_copies_life_paid_abilities() {
     assert_eq!(g.players[0].life, life - 4);
 }
 
+/// CR 119.4 — "if life was paid" counts a variable life cost too: Verrak
+/// copies a "pay X life" draw for X more life (the event carries the life
+/// actually paid, not the printed fixed field, which is 0 here).
+#[test]
+fn verrak_copies_a_pay_x_life_ability() {
+    use crabomination::card::ActivatedAbility;
+    use crabomination::effect::{Effect, Selector, Value};
+    let pay_x_draw = CardDefinition {
+        name: "Test X Life Draw",
+        card_types: vec![crabomination::card::CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            x_life_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::verrak_warped_sengir());
+    let src = g.add_card_to_battlefield(0, pay_x_draw);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: src, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(3), mode: None,
+    })
+    .expect("pay 3 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the ability and its copy");
+    assert_eq!(g.players[0].life, life - 6, "3 for the cost, 3 again for the copy");
+}
+
 /// CR 510.3 — Zeriam makes a Griffin for each Griffin that connects.
 #[test]
 fn zeriam_breeds_griffins() {

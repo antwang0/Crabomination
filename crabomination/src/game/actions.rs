@@ -21659,6 +21659,10 @@ impl GameState {
         // CR 106.6 — per-colour breakdown of what actually funded this
         // activation, threaded to the resolving body (Protective Sphere).
         let mut activation_mana_colors = Vec::new();
+        // CR 118.3 / 119.4 — every point of life paid for this activation
+        // (Phyrexian pips, the printed cost, "pay X life", half your life),
+        // carried on `AbilityActivated` for "if life was paid" (Verrak).
+        let mut life_spent: u32 = 0;
         if let Some(snapshot) = pre_snapshot {
             let forced_only = self.players[p].manual_mana;
             // Restricted mana may fund this only per the source's spend
@@ -21697,6 +21701,7 @@ impl GameState {
             activation_mana_colors =
                 spent_by_color(&receipt.pool_before, &self.players[p].mana_pool).to_vec();
             self.pay_life_cost(p, receipt.side_effects.life_lost);
+            life_spent += receipt.side_effects.life_lost;
             auto_mana_events = receipt.auto_events;
         }
 
@@ -21704,6 +21709,7 @@ impl GameState {
         // payment is now safe (the pre-flight gate above guaranteed
         // sufficient life). Emits a LifeLost event so trigger / replay
         // observers see the cost.
+        life_spent += life_cost;
         if life_cost > 0 && !self.replace_life_payment(p, life_cost, &mut auto_mana_events) {
             let applied = self.adjust_life_applied(p, -(life_cost as i32));
             if applied < 0 {
@@ -21715,6 +21721,7 @@ impl GameState {
         }
         if ability.half_life_cost {
             let half = self.players[p].life.div_euclid(2) + self.players[p].life.rem_euclid(2);
+            life_spent += half.max(0) as u32;
             if !self.replace_life_payment(p, half.max(0) as u32, &mut auto_mana_events) {
                 let applied = self.adjust_life_applied(p, -half);
                 if applied < 0 {
@@ -21722,6 +21729,9 @@ impl GameState {
                         .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
             }
+        }
+        if ability.x_life_cost {
+            life_spent += x_value.unwrap_or(0);
         }
         if ability.x_life_cost
             && !self.replace_life_payment(p, x_value.unwrap_or(0), &mut auto_mana_events)
@@ -21788,7 +21798,7 @@ impl GameState {
                     || ability.sac_other_second.is_some()
                     || ability.sac_all_matching_cost.is_some()
                     || ability.sac_any_number_filter.is_some(),
-                life_paid: ability.life_cost,
+                life_paid: life_spent,
             });
         }
 

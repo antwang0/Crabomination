@@ -598,8 +598,9 @@ pub fn tyrite_sanctum() -> CardDefinition {
 }
 
 /// Verrak, Warped Sengir — flying, deathtouch, lifelink; an ability you paid
-/// life for may be copied by paying that much again. Residual: fixed life
-/// costs only; the copy keeps its targets.
+/// life for (any life: fixed, X, Phyrexian, half — `AbilityActivated`'s
+/// `life_paid`) may be copied by paying that much again; the copy may take
+/// new targets in every slot (CR 707.10c).
 pub fn verrak_warped_sengir() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],

@@ -23033,10 +23033,25 @@ impl GameState {
                         // CR 707.10 — the copier controls the copy and "may
                         // choose new targets" (CR 707.10c); the default keeps
                         // the original's.
-                        if let StackItem::Trigger { effect, target, controller, .. } = &mut copy {
+                        if let StackItem::Trigger { effect, target, additional_targets, controller, .. } = &mut copy {
                             *controller = ctx.controller;
                             if target.is_some() {
                                 *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);
+                            }
+                            // Every declared slot, each against its own filter.
+                            let mut taken: Vec<Target> = target.iter().cloned().collect();
+                            for (i, slot) in additional_targets.iter_mut().enumerate() {
+                                if let Some(pick) = self.repoint_copy_slot(
+                                    effect,
+                                    name,
+                                    ctx.controller,
+                                    (i + 1) as u8,
+                                    &Some(slot.clone()),
+                                    &taken,
+                                ) {
+                                    *slot = pick;
+                                }
+                                taken.push(slot.clone());
                             }
                         }
                         self.push_stack(copy);
