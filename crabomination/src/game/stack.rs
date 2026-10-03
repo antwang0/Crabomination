@@ -5130,6 +5130,7 @@ impl GameState {
         clear_cold!(self.entered_from_graveyard_this_turn);
         clear_cold!(self.graveyard_play_riders);
         clear_cold!(self.entered_from_exile_this_turn);
+        clear_cold!(self.entered_from_hand_this_turn);
         // CR 603.3d — "triggers only once each turn" abilities reset.
         clear_cold!(self.triggered_once_per_turn_used);
         clear_cold!(self.per_subject_trigger_uses);

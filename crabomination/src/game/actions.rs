@@ -4689,6 +4689,11 @@ impl GameState {
             restore(self, card);
             return Err(GameError::NotALand(card_id));
         }
+        // The Lost and the Damned reads "enters from anywhere other than your
+        // hand"; a land drop from hand is the common case.
+        if from_hand {
+            self.entered_from_hand_this_turn.insert(card.id);
+        }
         if from_exile {
             // The permission is consumed by the play (CR 608.2 — a one-shot
             // permission doesn't survive the card changing zones anyway).

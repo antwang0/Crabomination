@@ -1610,6 +1610,12 @@ pub struct ColdState {
     /// you control enters from exile"). Cleared at each turn's untap step.
     #[serde(default)]
     pub(crate) entered_from_exile_this_turn: crate::game::types::IdSet<CardId>,
+    /// Permanents that entered the battlefield from a hand this turn (a land
+    /// drop, or an effect putting a card onto the battlefield from hand).
+    /// Read by `SelectionRequirement::EnteredFromHandThisTurn` (The Lost and
+    /// the Damned). Cleared with `entered_from_exile_this_turn`.
+    #[serde(default)]
+    pub(crate) entered_from_hand_this_turn: crate::game::types::IdSet<CardId>,
     /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
     /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
     /// phase ends (CR 511.3).

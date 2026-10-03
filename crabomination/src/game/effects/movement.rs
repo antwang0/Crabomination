@@ -2405,6 +2405,9 @@ impl GameState {
                 if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
                     self.note_exiled_from_hand_or_by(p);
                 }
+                if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
+                    self.entered_from_hand_this_turn.insert(cid);
+                }
                 self.place_card_in_dest(card, p, &resolved_dest, events);
                 return;
             }

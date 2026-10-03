@@ -5605,6 +5605,7 @@ impl GameState {
                     R::EnteredFromExileThisTurn => {
                         self.entered_from_exile_this_turn.contains(cid)
                     }
+                    R::EnteredFromHandThisTurn => self.entered_from_hand_this_turn.contains(cid),
                     // CR 303 — "enchanted" = an Aura is attached. Equipment also
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
@@ -6633,6 +6634,7 @@ impl GameState {
             R::EnteredFromExileThisTurn => {
                 self.entered_from_exile_this_turn.contains(&card.id)
             }
+            R::EnteredFromHandThisTurn => self.entered_from_hand_this_turn.contains(&card.id),
             R::SameNameAsAPermanent => {
                 self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }

@@ -3098,6 +3098,11 @@ pub enum SelectionRequirement {
     /// this turn (not via a cast). Reads `GameState.entered_from_exile_this_turn`
     /// (Fire Lord Zuko's "whenever a permanent you control enters from exile").
     EnteredFromExileThisTurn,
+    /// True when the candidate entered the battlefield from a hand this turn
+    /// (a land drop or a put-from-hand). Reads
+    /// `GameState.entered_from_hand_this_turn` (The Lost and the Damned's
+    /// "enters from anywhere other than your hand").
+    EnteredFromHandThisTurn,
     /// True when the candidate permanent has an Aura attached to it (CR 303
     /// "enchanted permanent"). Battlefield-only: scans for any enchantment
     /// whose `attached_to` points at the candidate. Powers Kestia's
