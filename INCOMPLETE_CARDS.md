@@ -1998,8 +1998,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
-| 🟡 Weeping Angel | Masters of Evil (WHO) | its combat damage to a creature is dealt, then that creature is shuffled away (not prevented). |
-| 🟡 Zygon Infiltrator | Masters of Evil (WHO) | the copy lasts until end of turn, not while the target stays tapped. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |
 | 🟡 The Day of the Doctor | Timey-Wimey (WHO) | chapter IV keeps your own greatest-power Doctors; you can't keep an opponent's. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |

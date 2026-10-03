@@ -479,3 +479,31 @@ fn vislor_turlough_goaded_only_while_they_control_it() {
     run(&mut g, take(Some(PlayerRef::Seat(them))), v);
     assert!(!g.is_goaded(g.battlefield_find(v).unwrap()), "the goad lapsed for good");
 }
+
+/// CR 615 — Weeping Angel's combat damage to a creature is prevented and the
+/// creature is shuffled into its owner's library instead: a blocking Hill
+/// Giant takes no first-strike damage, is gone before regular damage, and the
+/// 2/2 Angel survives.
+#[test]
+fn cr_615_weeping_angel_shuffles_its_blocker_away() {
+    let mut g = main_phase(2);
+    let angel = g.add_card_to_battlefield(0, catalog::weeping_angel());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(angel);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: angel, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(giant, angel)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(giant).is_none());
+    assert!(g.players[1].library.iter().any(|c| c.id == giant), "shuffled into its owner's library");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != giant), "it didn't die");
+    assert!(g.battlefield_find(angel).is_some_and(|a| a.damage == 0));
+}
+

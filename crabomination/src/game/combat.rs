@@ -4427,6 +4427,9 @@ impl GameState {
         // damage are separate sub-steps): reset the "one or more creatures
         // you control deal combat damage" graveyard-trigger dedupe.
         clear_cold!(self.combat_trigger_fired_this_step);
+        // Weeping Angel's prevented-and-shuffled recipients, moved once every
+        // assignment is dealt.
+        let mut shuffled: Vec<(CardId, CardId)> = Vec::new();
 
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
@@ -4767,6 +4770,12 @@ impl GameState {
                     // (and so the attacker's lifelink scales off 0).
                     let dealt =
                         self.ironscale_replace(blocker_id, redirect_to, dealt, events);
+                    let dealt = if dealt > 0 && self.combat_damage_shuffles_creatures(atk.id) {
+                        shuffled.push((atk.id, blocker_id));
+                        0
+                    } else {
+                        dealt
+                    };
                     // CR 615 — a blocker that prevents all damage to itself
                     // (Wall of Denial) takes none, and grants no lifelink.
                     let dealt = if self_prevented { 0 } else { dealt };
@@ -4956,6 +4965,12 @@ impl GameState {
                         let dmg = self
                             .ironscale_replace(atk.id, redirect_to, dmg as i32, events)
                             as u32;
+                        let dmg = if dmg > 0 && self.combat_damage_shuffles_creatures(bid) {
+                            shuffled.push((bid, atk.id));
+                            0
+                        } else {
+                            dmg
+                        };
                         // CR 615 — an attacker that prevents all damage to itself,
                         // or specifically damage from its blockers (Armored
                         // Transport), takes none from this blocker (no lifelink).
@@ -5048,6 +5063,19 @@ impl GameState {
             {
                 v.cant_regenerate_this_turn = true;
             }
+        }
+        for (source, victim) in shuffled {
+            let Some(owner) = self.find_card_anywhere(victim).filter(|_| self.battlefield_find(victim).is_some()).map(|c| c.owner)
+            else {
+                continue;
+            };
+            let ctrl = self.battlefield_find(source).map_or(owner, |c| c.controller);
+            let ctx = crate::game::effects::EffectContext::for_ability(source, ctrl, None);
+            let dest = crate::effect::ZoneDest::Library {
+                who: crate::effect::PlayerRef::Seat(owner),
+                pos: crate::effect::LibraryPosition::Shuffled,
+            };
+            self.move_card_to(victim, &dest, &ctx, events);
         }
         // Stamp the damaging source's controller on each recipient so a
         // "whenever this is dealt combat damage" trigger can still name the
@@ -5241,6 +5269,17 @@ impl GameState {
             count: grow, placer: self.resolution_causer,
         });
         0
+    }
+
+    /// Weeping Angel — `src` prevents its combat damage to creatures and
+    /// shuffles them away instead.
+    fn combat_damage_shuffles_creatures(&self, src: CardId) -> bool {
+        self.battlefield_find(src).is_some_and(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CombatDamageToCreatureShufflesIt))
+        })
     }
 
     /// Goblin Psychopath — "the next time this would deal combat damage this

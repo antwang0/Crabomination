@@ -2877,6 +2877,11 @@ pub enum StaticEffect {
     /// Ironscale Hydra. A self-only combat-damage replacement consulted at the
     /// creature-vs-creature damage sites.
     PreventCombatDamageToSelfAndGrow,
+    /// CR 615 — "If this creature would deal combat damage to a creature,
+    /// prevent that damage and that creature's owner shuffles it into their
+    /// library" (Weeping Angel). Read at the creature-vs-creature combat
+    /// damage sites; the shuffles follow the damage step's assignments.
+    CombatDamageToCreatureShufflesIt,
     /// CR 614 — "If damage would be dealt to this creature, put that many
     /// +1/+1 counters on it instead." Phytohydra. A true replacement (not
     /// prevention, so it fires even when damage can't be prevented), consulted

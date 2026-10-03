@@ -12,10 +12,6 @@
 //! - **The Master, Multiplied** — your triggered abilities can still make you
 //!   sacrifice or exile your creature tokens.
 //! - **The Toymaker's Trap** — numbers already chosen may be chosen again.
-//! - **Weeping Angel** — its combat damage to a creature is dealt, then the
-//!   creature is shuffled away.
-//! - **Zygon Infiltrator** — the copy lasts until end of turn, not while the
-//!   target stays tapped.
 
 use std::sync::Arc;
 
@@ -1300,19 +1296,11 @@ pub fn vislor_turlough() -> CardDefinition {
 pub fn weeping_angel() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::FirstStrike, Keyword::Vigilance],
-        triggered_abilities: vec![
-            quantum_locked(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: Selector::Target(0),
-                    to: ZoneDest::Library {
-                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                        pos: LibraryPosition::Shuffled,
-                    },
-                },
-            },
-        ],
+        triggered_abilities: vec![quantum_locked()],
+        static_abilities: vec![StaticAbility {
+            description: "If this creature would deal combat damage to a creature, prevent that damage and that creature's owner shuffles it into their library.",
+            effect: StaticEffect::CombatDamageToCreatureShufflesIt,
+        }],
         ..artifact_creature(
             "Weeping Angel",
             cost(&[generic(1), u(), b()]),

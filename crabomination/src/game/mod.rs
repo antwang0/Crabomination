@@ -32162,6 +32162,7 @@ fn static_effect_to_effects(
             // PreventCombatDamageToSelfAndGrow — consulted at the combat damage
             // sites, not a continuous effect.
             | StaticEffect::PreventCombatDamageToSelfAndGrow
+            | StaticEffect::CombatDamageToCreatureShufflesIt
             // ReplaceDamageToSelfWithCounters / CombatDamageToPlayerBecomes… —
             // consulted at the combat + noncombat damage sites, not continuous.
             | StaticEffect::ReplaceDamageToSelfWithCounters { .. }
