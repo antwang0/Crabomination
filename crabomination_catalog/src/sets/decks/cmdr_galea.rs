@@ -188,14 +188,15 @@ pub fn catti_brie_of_mithral_hall() -> CardDefinition {
     }
 }
 
-/// Clay Golem — {6}, roll a d8: monstrosity X; becoming monstrous destroys a
-/// permanent. Residual: The roll happens as the ability resolves.
+/// Clay Golem — {6}, roll a d8: monstrosity X, the roll part of the cost
+/// (CR 602.2b); becoming monstrous destroys a permanent.
 pub fn clay_golem() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(6)]),
-            effect: roll(8, Value::Const(0), vec![(1, 8, Effect::Monstrosity { n: Value::LastDieRoll })]),
+            roll_die_cost: 8,
+            effect: Effect::Monstrosity { n: Value::XFromCost },
             ..Default::default()
         }],
         triggered_abilities: vec![on_becomes_monstrous(Effect::Destroy { what: target_filtered(R::Permanent) })],
@@ -427,16 +428,22 @@ pub fn robe_of_stars() -> CardDefinition {
     }
 }
 
-/// Song of Inspiration — up to two permanent cards from your graveyard to
-/// hand; a d20 plus their total mana value at 15+ gains that much life.
-/// Residual: The cards return before the roll.
+/// Song of Inspiration — up to two target permanent cards in your graveyard:
+/// roll a d20 plus their total mana value, then return them to your hand,
+/// gaining that total in life on a 15+.
 pub fn song_of_inspiration() -> CardDefinition {
-    let total = || Value::TotalManaValueOf(Box::new(Selector::LastMoved));
+    let total = |of: Selector| Value::TotalManaValueOf(Box::new(of));
     spell(
         "Song of Inspiration",
         cost(&[generic(3), g(), g()]),
         CardType::Instant,
         Effect::Seq(vec![
+            // The arm only fixes `LastDieRoll`; both results return the cards.
+            roll(
+                20,
+                Value::Sum(vec![total(Selector::Target(0)), total(Selector::Target(1))]),
+                vec![(1, 255, Effect::Noop)],
+            ),
             Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
@@ -446,11 +453,11 @@ pub fn song_of_inspiration() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
             },
-            roll(
-                20,
-                total(),
-                vec![(15, 255, Effect::GainLife { who: Selector::You, amount: total() })],
-            ),
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::LastDieRoll, Value::Const(15)),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: total(Selector::LastMoved) }),
+                else_: Box::new(Effect::Noop),
+            },
         ]),
     )
 }

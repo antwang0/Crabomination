@@ -189,6 +189,30 @@ fn clay_golem_rolls_into_monstrosity() {
     assert!(g.battlefield_find(ring).is_none());
 }
 
+/// CR 602.2b — Clay Golem's d8 is part of the cost: the result is fixed (and
+/// the dice-roll event fired) before the ability resolves.
+#[test]
+fn cr_602_2b_clay_golem_rolls_as_it_is_activated() {
+    use crabomination::game::types::{GameEvent, StackItem};
+    let mut g = main_phase(2);
+    let cg = g.add_card_to_battlefield(0, catalog::clay_golem());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(6)]));
+    g.players[0].mana_pool.add_colorless(6);
+    let ev = g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: cg,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("{6}, roll");
+    assert!(ev.iter().any(|e| matches!(e, GameEvent::DiceRolled { high: 6, .. })));
+    assert!(matches!(g.stack.last(), Some(StackItem::Trigger { x_value: 6, .. })), "X is on the stack");
+    assert_eq!(pt(&g, cg), (4, 4), "not monstrous yet");
+}
+
 /// Diviner's Portent at 15+ scries then draws X.
 #[test]
 fn diviners_portent_draws_x() {
@@ -272,6 +296,16 @@ fn song_of_inspiration_regrows_and_heals() {
     cast_at(&mut g, si, &[Target::Permanent(a), Target::Permanent(b)]).expect("cast");
     assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b));
     assert_eq!(g.players[0].life, life + 6, "10 + 6 is 15 or more");
+    // 3 + 6 is under 15: the cards still come back, no life.
+    let mut g = main_phase(2);
+    let a = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let si = g.add_card_to_hand(0, catalog::song_of_inspiration());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(3)]));
+    let life = g.players[0].life;
+    cast_at(&mut g, si, &[Target::Permanent(a), Target::Permanent(b)]).expect("cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b));
+    assert_eq!(g.players[0].life, life);
 }
 
 /// Storvald grants ward {3} to your other creatures.

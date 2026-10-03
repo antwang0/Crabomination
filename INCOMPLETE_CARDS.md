@@ -1962,8 +1962,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and an opponent's own Plagiarist is never copied from. |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
-| 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
-| 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
 | 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
