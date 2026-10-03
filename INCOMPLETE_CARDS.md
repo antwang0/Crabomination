@@ -2106,7 +2106,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
 | 🟡 The Red Terror | Tyranid Swarm (40K) | only a permanent source's damage is seen (not a red instant's or sorcery's). |
 | 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |
-| 🟡 Last Night Together | Paradox Power (WHO) | any creature may attack in the extra combat, not only the two chosen. |
 | 🟡 Psychic Paper | Paradox Power (WHO) | no chosen creature name and type (ward 1 and unblockable only). |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |

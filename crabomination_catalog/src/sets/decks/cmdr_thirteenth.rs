@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
-//! - **Last Night Together** — any creature may attack in the extra combat.
 //! - **Psychic Paper** — no chosen name and creature type.
 
 use std::sync::Arc;
@@ -558,8 +557,7 @@ pub fn karvanista_loyal_lupari() -> CardDefinition {
 
 /// Last Night Together — two target creatures untap, get two +1/+1 counters
 /// and vigilance, indestructible and haste; an extra combat after this main
-/// phase.
-/// Residual: any creature may attack in the extra combat.
+/// phase, where only those two can attack.
 pub fn last_night_together() -> CardDefinition {
     let grant = |kw: Keyword| Effect::GrantKeyword { what: Selector::Target(0), keyword: kw, duration: Duration::EndOfTurn };
     spell(
@@ -580,6 +578,7 @@ pub fn last_night_together() -> CardDefinition {
                 ])),
             },
             Effect::AdditionalCombatPhaseAfterMain { count: Value::ONE },
+            Effect::OnlyTargetsCanAttackNextCombat,
         ]),
     )
 }

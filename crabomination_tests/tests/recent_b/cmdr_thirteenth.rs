@@ -547,3 +547,56 @@ fn cr_603_3d_bill_potts_copies_an_ability_once_each_turn() {
     assert_eq!(g.battlefield_find(other).unwrap().damage, 1);
     assert_eq!(g.players[1].life, 20, "not copied");
 }
+
+/// CR 508.1c — only Last Night Together's two creatures can attack in its
+/// extra combat; the restriction ends with that combat.
+#[test]
+fn cr_508_1c_last_night_together_only_the_chosen_attack() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    for id in [a, b, giant] {
+        g.clear_sickness(id);
+    }
+    let spell = g.add_card_to_hand(0, catalog::last_night_together());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, a), 2);
+    assert_eq!(counters(&g, b), 2);
+    for _ in 0..12 {
+        if g.step == TurnStep::DeclareAttackers {
+            break;
+        }
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.step, TurnStep::DeclareAttackers);
+    let at = |id| Attack { attacker: id, target: AttackTarget::Player(1) };
+    let mut probe = g.clone();
+    assert!(probe.perform_action(GameAction::DeclareAttackers(vec![at(giant)])).is_err(), "the giant wasn't chosen");
+    g.perform_action(GameAction::DeclareAttackers(vec![at(a), at(b)])).expect("the chosen attack");
+    drain_stack(&mut g);
+    for _ in 0..20 {
+        if g.step == TurnStep::PostCombatMain {
+            break;
+        }
+        g.priority.player_with_priority = g.active_player_idx;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.step, TurnStep::PostCombatMain);
+    assert!(
+        !g.computed_permanent(giant).unwrap().keywords().contains(&crabomination::card::Keyword::CantAttack),
+        "the restriction ends with that combat"
+    );
+}
