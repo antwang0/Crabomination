@@ -47,21 +47,21 @@ they call a deck 🟡, the table wins.
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 91 | Commodore Guff (URW) | 1: chandra_legacy_of_fire |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 103 | Kathril, Aspect Warper (WBG) | 2: cairn_wanderer, tayam_luminous_enigma |
+| 103 | Kathril, Aspect Warper (WBG) | 1: cairn_wanderer |
 | 107 | Firkraag, Cunning Instigator (UR) | 3: baeloth_barrityl_entertainer, firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
 | 119 | Otrimi, the Ever-Playful (BGU) | 1: capricopian |
 | 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
-| 125 | Henzie "Toolbox" Torre (BRG) | 4: henzie_toolbox_torre, next_of_kin, protection_racket, turf_war |
+| 125 | Henzie "Toolbox" Torre (BRG) | 2: henzie_toolbox_torre, turf_war |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 1: conspiracy_theorist |
-| 133 | Zimone, Mystery Unraveler (GU) | 2: deathmist_raptor, overgrown_zealot |
-| 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
+| 133 | Zimone, Mystery Unraveler (GU) | 1: overgrown_zealot |
+| 135 | Kaust, Eyes of the Glade (RGW) | 2: boltbender, tesak_judiths_hellhound |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 3: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, zndrsplts_judgment |
 | 141 | Prosper, Tome-Bound (BR) | 3: danse_macabre, hellish_rebuke, share_the_spoils |
-| 142 | Kadena, Slinking Sorcerer (BGU) | 4: deathmist_raptor, gift_of_doom, rayami_first_of_the_fallen, vesuvan_shapeshifter |
+| 142 | Kadena, Slinking Sorcerer (BGU) | 3: gift_of_doom, rayami_first_of_the_fallen, vesuvan_shapeshifter |
 | 144 | Satya, Aetherflux Genius (URW) | 5: filigree_racer, hourglass_of_the_lost, overclocked_electromancer, razorfield_ripper, sphinx_of_the_revelation |
 | 145 | Hakbal of the Surging Soul (GU) | 3: bygone_marvels, quandrix_command, xolatoyac_the_smiling_flood |
 | 146 | Perrie, the Pulverizer (GWU) | 5: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, skyship_plunderer |
