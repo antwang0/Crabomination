@@ -388,6 +388,7 @@ fn the_scarab_god_makes_zombie_copies_and_drains() {
     let cp = g.computed_permanent(copy).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Zombie));
+    assert!(!cp.subtypes().creature_types.contains(&CreatureType::Bear), "a Zombie instead (the ruling)");
     assert_eq!(cp.colors.to_vec(), vec![Color::Black]);
 
     stock_libraries(&mut g, 5);

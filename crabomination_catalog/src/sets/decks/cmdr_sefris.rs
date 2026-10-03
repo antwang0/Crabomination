@@ -451,9 +451,8 @@ pub fn obsessive_stitcher() -> CardDefinition {
 
 /// Phantom Steed — flash; exiles another creature of yours while it
 /// stays; attacking brings a token copy of that card in attacking until
-/// end of combat.
-///
-/// Residual: the token isn't an Illusion in addition to its other types.
+/// end of combat, an Illusion in addition to its other types (CR 707.9b),
+/// sacrificed then.
 pub fn phantom_steed() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -462,7 +461,15 @@ pub fn phantom_steed() -> CardDefinition {
                 what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
                 return_to: crate::card::ExileReturnZone::Battlefield,
             }),
-            on_attack(Effect::TokenCopyAttackingUntilEndOfCombat { source: Selector::CardExiledWithSource }),
+            on_attack(Effect::Seq(vec![
+                Effect::TokenCopyAttackingUntilEndOfCombat { source: Selector::CardExiledWithSource, sacrifice: true },
+                Effect::AmendCopiableValues {
+                    what: Selector::LastCreatedToken,
+                    name: None,
+                    set_creature_types: None,
+                    add_creature_types: vec![CreatureType::Illusion],
+                },
+            ])),
         ],
         ..creature(
             "Phantom Steed",

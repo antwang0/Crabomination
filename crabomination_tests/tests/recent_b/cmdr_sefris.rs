@@ -1,7 +1,7 @@
 //! Commander: the Dungeons of Death precon (AFC, Sefris of the Hidden Ways,
 //! `decks::cmdr_sefris`).
 
-use crabomination::card::{CardId, CounterType, Keyword};
+use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, Selector, Value};
@@ -357,6 +357,8 @@ fn phantom_steed_attacks_with_a_copy() {
     let copies = named(&g, 0, "Grizzly Bears");
     assert_eq!(copies.len(), 1, "an attacking copy");
     assert!(g.battlefield_find(copies[0]).unwrap().is_token);
+    let types = g.computed_permanent(copies[0]).unwrap().subtypes().creature_types.clone();
+    assert!(types.contains(&CreatureType::Illusion) && types.contains(&CreatureType::Bear), "an Illusion too");
 }
 
 /// Revivify — a high roll returns this turn's dead creatures to the

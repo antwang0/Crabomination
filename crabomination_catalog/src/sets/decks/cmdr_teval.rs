@@ -494,9 +494,8 @@ pub fn syr_konrad_the_grim() -> CardDefinition {
 /// of Zombies you control. {2}{U}{B}: Exile target creature card from a
 /// graveyard. Create a token that's a copy of it, except it's a 4/4 black
 /// Zombie. When The Scarab God dies, return it to its owner's hand at the
-/// beginning of the next end step.
-///
-/// Approximation: the token is a Zombie in addition to its copied creature types.
+/// beginning of the next end step. The token's creature types are replaced
+/// by Zombie (its ruling), written into its copiable values.
 pub fn the_scarab_god() -> CardDefinition {
     let zombies = || {
         Value::count(Selector::EachPermanent(
@@ -536,6 +535,12 @@ pub fn the_scarab_god() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
+                },
+                Effect::AmendCopiableValues {
+                    what: Selector::LastCreatedToken,
+                    name: None,
+                    set_creature_types: Some(vec![CreatureType::Zombie]),
+                    add_creature_types: vec![],
                 },
             ]),
             ..Default::default()
