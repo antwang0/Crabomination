@@ -12000,20 +12000,47 @@ impl GameState {
                     })
                     .collect();
                 candidates.sort_by_key(|(_, mv)| *mv);
-                let mut spent = 0u32;
-                let picks: Vec<CardId> = candidates
-                    .into_iter()
-                    .filter(|(_, mv)| {
-                        if spent + mv <= budget {
+                let cap_n = max_count.map_or(usize::MAX, |n| n as usize);
+                // Fill `ids` in order while the budget and the count allow.
+                let fit = |ids: &mut dyn Iterator<Item = CardId>, mvs: &[(CardId, u32)]| -> Vec<CardId> {
+                    let mut spent = 0u32;
+                    let mut out = Vec::new();
+                    for id in ids {
+                        let Some(&(_, mv)) = mvs.iter().find(|(c, _)| *c == id) else { continue };
+                        if out.len() < cap_n && spent + mv <= budget && !out.contains(&id) {
                             spent += mv;
-                            true
-                        } else {
-                            false
+                            out.push(id);
                         }
-                    })
-                    .map(|(id, _)| id)
-                    .take(max_count.map_or(usize::MAX, |n| n as usize))
-                    .collect();
+                    }
+                    out
+                };
+                let greedy = fit(&mut candidates.iter().map(|(id, _)| *id), &candidates);
+                // CR 608.2d — which cards is the controller's pick; headless
+                // keeps the cheapest-first fill (the most cards).
+                let mut picks = greedy.clone();
+                if !candidates.is_empty() {
+                    let named: Vec<(CardId, String)> = candidates
+                        .iter()
+                        .filter_map(|(id, _)| self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string())))
+                        .collect();
+                    let max = cap_n.min(named.len()) as u32;
+                    let mut cursor = 0;
+                    let Some(chosen) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        ctx.controller,
+                        format!("Choose cards with total mana value {budget} or less"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        named,
+                        0,
+                        max,
+                        PickValue::Gain,
+                        effect,
+                        greedy,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks = fit(&mut chosen.into_iter(), &candidates);
+                }
                 if !self.scratch.last_moved_cards.is_empty() {
                     self.scratch.last_moved_cards.clear();
                 }
