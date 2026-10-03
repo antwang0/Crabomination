@@ -805,6 +805,54 @@ fn cr_702_103_jump_start_casts_from_graveyard_and_exiles() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"), "drew the card");
 }
 
+/// CR 702.34a / 702.133a — a spell cast with flashback (or jump-start) is
+/// exiled whenever it leaves the stack, countered included; it went to the
+/// graveyard, from where it could be flashed back again.
+#[test]
+fn cr_702_34a_a_countered_flashback_spell_is_exiled() {
+    for spell_def in [catalog::think_twice as fn() -> crabomination::card::CardDefinition, catalog::radical_idea] {
+        let mut g = two_player_game();
+        let spell = g.add_card_to_graveyard(0, spell_def());
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_library(0, catalog::island());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 3);
+        g.players[0].mana_pool.add_colorless(3);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFlashback {
+            card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("graveyard cast");
+        let counter = g.add_card_to_hand(1, catalog::counterspell());
+        g.players[1].mana_pool.add(crabomination::mana::Color::Blue, 2);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: counter, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("counter it");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == spell), "exiled, not countered into the graveyard");
+        assert!(!g.players[0].graveyard.iter().any(|c| c.id == spell));
+    }
+    // Memory Lapse's "on top of its owner's library instead" is overridden too.
+    let mut g = two_player_game();
+    let spell = g.add_card_to_graveyard(0, catalog::think_twice());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback");
+    let lapse = g.add_card_to_hand(1, catalog::memory_lapse());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lapse, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Memory Lapse");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == spell), "not on top of the library");
+}
+
 /// Jump-start is rejected with an empty hand (the discard is unpayable).
 #[test]
 fn cr_702_103_jump_start_requires_a_discard() {

@@ -22732,6 +22732,18 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
                         let owner = card.owner;
+                        // CR 702.34a — a flashbacked spell goes to exile
+                        // wherever else it would go (an exile is left alone).
+                        let exiling = matches!(
+                            zone,
+                            CounteredSpellZone::Exile
+                                | CounteredSpellZone::ExileWithSource
+                                | CounteredSpellZone::ExilePlotted
+                        );
+                        if card.cast_via_flashback && !card.is_token && !exiling {
+                            self.exile.push(*card);
+                            continue;
+                        }
                         match zone {
                             // Index 0 is the top (draw = `library.remove(0)`).
                             CounteredSpellZone::OwnerLibraryTop => {

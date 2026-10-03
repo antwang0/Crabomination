@@ -10655,6 +10655,12 @@ impl GameState {
         if card.is_token {
             return;
         }
+        // CR 702.34a / 702.133a — flashback, jump-start and the "exile it
+        // instead" grants exile the card whenever it leaves the stack.
+        if card.cast_via_flashback {
+            self.exile.push(card);
+            return;
+        }
         self.route_to_graveyard(card, events);
     }
 
