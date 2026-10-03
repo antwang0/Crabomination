@@ -8,10 +8,6 @@
 //!   rather than with it.
 //! - **Nihiloor** — the creature tapped for the steal is always Nihiloor
 //!   itself, and only one opponent's creature is taken.
-//! - **Phantom Steed** — the attacking token copy isn't an Illusion in
-//!   addition to its other types.
-//! - **Rod of Absorption** — every instant or sorcery resolving while it is
-//!   on the battlefield is exiled, including one cast before it arrived.
 
 use std::sync::Arc;
 
@@ -510,12 +506,9 @@ pub fn revivify() -> CardDefinition {
     )
 }
 
-/// Rod of Absorption — resolving instants and sorceries are exiled with
-/// it; {X}, tap, sacrifice: cast any of them with total mana value X or
-/// less for free.
-///
-/// Residual: it exiles every instant or sorcery that resolves while it is
-/// on the battlefield, including one cast before it arrived.
+/// Rod of Absorption — instants and sorceries cast while it is out are
+/// exiled with it as they resolve (`game/absorb.rs`); {X}, tap, sacrifice:
+/// cast any of them with total mana value X or less for free.
 pub fn rod_of_absorption() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

@@ -8146,6 +8146,10 @@ pub struct CardCold {
     /// restored as it leaves the battlefield so the grant ends with the
     /// object. Any wholesale definition swap drops it. In-memory only.
     pub pre_grant_definition: Option<Arc<CardDefinition>>,
+    /// The Rod of Absorption / River Song's Diary on the battlefield as this
+    /// instant or sorcery was cast: it is exiled with that permanent as it
+    /// resolves (`game/absorb.rs`).
+    pub absorbed_by: Option<CardId>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.

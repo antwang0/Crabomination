@@ -171,6 +171,8 @@ mod stack_ability;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
+// Rod of Absorption / River Song's Diary, fixed at cast.
+mod absorb;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -23348,6 +23350,7 @@ impl GameState {
         }
         self.fire_lose_control_delayed(events);
         self.fire_cast_watch_delayed(events);
+        self.stamp_absorbed_spells(events);
         self.fire_offspring_triggers(events);
         self.apply_as_attached_choices(events);
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
@@ -25184,24 +25187,6 @@ impl GameState {
             .flat_map(|c| &c.definition.static_abilities)
             .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DungeonRoomsTriggerTwice))
             .count()
-    }
-
-    /// Rod of Absorption (`StaticEffect::ExileResolvingInstantsAndSorceries`)
-    /// and River Song's Diary (its hand-cast sibling) — the first such
-    /// permanent that takes `spell`, which it is exiled with instead of
-    /// hitting a graveyard.
-    pub(crate) fn resolving_spell_absorber(&self, spell: &crate::card::CardInstance) -> Option<CardId> {
-        use crate::effect::StaticEffect as SE;
-        self.battlefield
-            .iter()
-            .find(|c| {
-                c.definition.static_abilities.iter().any(|sa| match sa.effect {
-                    SE::ExileResolvingInstantsAndSorceries => true,
-                    SE::ExileResolvingHandCastInstantsAndSorceries => spell.cast_from_hand,
-                    _ => false,
-                })
-            })
-            .map(|c| c.id)
     }
 
     pub(crate) fn push_ordered_trigger_candidates(
@@ -29421,14 +29406,14 @@ impl GameState {
             }
         }
         // Rod of Absorption — exiled instead, and linked to the Rod so its
-        // sacrifice ability can cast it.
-        if (card.definition.is_instant() || card.definition.is_sorcery())
-            && !card.is_token
-            && let Some(rod) = self.resolving_spell_absorber(&card)
+        // sacrifice ability can cast it (stamped at cast, `game/absorb.rs`).
+        if card.cold_any(|k| k.absorbed_by.is_some())
+            && let Some(rod) = card.absorbed_by
         {
             let mut card = card;
             let card_id = card.id;
             card.counters.clear();
+            card.absorbed_by = None;
             card.exiled_with = Some(rod);
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id });
@@ -31898,7 +31883,7 @@ fn static_effect_to_effects(
             // Anhelo — read by `casualty_for`; no layer effect.
             | StaticEffect::FirstInstantSorceryHasCasualty(_)
             // Rod of Absorption — read at the end of spell resolution via
-            // `resolving_spell_absorber`; no layer effect.
+            // `game/absorb.rs`; no layer effect.
             | StaticEffect::ExileResolvingInstantsAndSorceries
             | StaticEffect::ExileResolvingHandCastInstantsAndSorceries
             | StaticEffect::DoubleControllerLandEntryTriggers

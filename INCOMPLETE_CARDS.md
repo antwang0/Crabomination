@@ -2015,7 +2015,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
 | 🟡 Grave Endeavor | Dungeons of Death (AFC) | its counters are put on after the creature enters. |
 | 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |
-| 🟡 Rod of Absorption | Dungeons of Death (AFC) | every instant or sorcery resolving while it is on the battlefield is exiled, including one cast before it arrived. |
 | 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |

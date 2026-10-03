@@ -14,8 +14,6 @@
 //! - **Lunar Hatchling** — escape doesn't also exile a land you control.
 //! - **Me, the Immortal** — its counters don't stay with it across zones.
 //! - **Psychic Paper** — no chosen name and creature type.
-//! - **River Song's Diary** — every resolving instant and sorcery is exiled
-//!   (not only those cast from a hand).
 //! - **Ryan Sinclair** — cards with mana value above its power are skipped
 //!   rather than ending the reveal.
 //! - **Strax, Sontaran Nurse** — the creature it fights is picked, not
@@ -817,10 +815,9 @@ pub fn river_song() -> CardDefinition {
     }
 }
 
-/// River Song's Diary — resolving instants and sorceries are exiled with it;
-/// with four or more there at your upkeep, cast one at random for free.
-/// Residual: every resolving instant and sorcery is exiled, not only those
-/// cast from a hand.
+/// River Song's Diary — instants and sorceries cast from a hand while it is
+/// out are exiled with it as they resolve (`game/absorb.rs`); with four or
+/// more there at your upkeep, cast one at random for free.
 pub fn river_songs_diary() -> CardDefinition {
     CardDefinition {
         name: "River Song's Diary",

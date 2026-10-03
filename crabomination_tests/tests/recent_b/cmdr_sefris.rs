@@ -399,6 +399,32 @@ fn rod_of_absorption_exiles_and_recasts() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Rod gone: the Bolt hits a graveyard");
 }
 
+/// Rod of Absorption's exile is fixed as the spell is cast (2021-07-23
+/// rulings: the Rod's trigger on the cast sets it up): a Bolt cast before the
+/// Rod arrived hits the graveyard, and one cast while it was there is exiled
+/// with it though the Rod is gone by the time it resolves.
+#[test]
+fn rod_of_absorption_takes_spells_cast_while_it_is_there() {
+    let mut g = pod(2);
+    let early = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: early, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let rod = g.add_card_to_battlefield(0, catalog::rod_of_absorption());
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == early), "cast before the Rod arrived");
+
+    let late = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: late, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![rod]) }, rod);
+    assert!(g.battlefield_find(rod).is_none());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == late && c.exiled_with == Some(rod)), "cast while the Rod was there");
+}
+
 /// Thorough Investigation — attacking investigates; cracking the Clue
 /// ventures.
 #[test]
