@@ -2077,7 +2077,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |
-| 🟡 Ripples of Potential | Counter Intelligence (EOC) | the phase-out is all or none of your permanents with counters, not a pick among those proliferated. |
 | 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
 | 🟡 Bygone Marvels | Explorers of the Deep (LCC) | the Descend 8 copies' new targets are the decider's; the auto-decider keeps the original's, so that copy returns nothing. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |

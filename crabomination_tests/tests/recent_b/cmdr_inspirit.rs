@@ -393,19 +393,27 @@ fn cr_122_5_resourceful_defense_moves_any_number() {
     assert_eq!(counters(&g, keeper, CounterType::Charge), 0);
 }
 
-/// Ripples of Potential — proliferate, then (on a yes) your permanents with
-/// counters phase out.
+/// Ripples of Potential — proliferate, then any number of your permanents
+/// that got a counter this way phase out (CR 701.34a, 608.2d).
 #[test]
 fn ripples_of_potential_proliferates_and_phases() {
     let mut g = pod(2);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    // A stun counter isn't proliferated onto your own creature, so this one
+    // got nothing "this way" and isn't offered.
+    let stunned = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(stunned).unwrap().add_counters(CounterType::Stun, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear, stunned])]));
     let r = g.add_card_to_hand(0, catalog::ripples_of_potential());
     flood(&mut g, 0);
     cast(&mut g, 0, r, None).expect("cast");
     let c = g.phased_out.iter().find(|c| c.id == bear).expect("phased out");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield_find(other).is_some(), "not chosen, stays");
+    assert!(g.battlefield_find(stunned).is_some(), "not a candidate");
 }
 
 /// Surge Conductor — another nontoken artifact entering proliferates.

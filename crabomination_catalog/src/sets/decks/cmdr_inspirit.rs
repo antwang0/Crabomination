@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Moxite Refinery** — the X counters may come from among several of your
 //!   artifacts and creatures, not from one.
-//! - **Ripples of Potential** — the phase-out is all or none of your
-//!   permanents with counters, not a pick among those proliferated.
 
 use std::sync::Arc;
 
@@ -399,8 +397,8 @@ pub fn resourceful_defense() -> CardDefinition {
     }
 }
 
-/// Ripples of Potential — proliferate, then you may phase out your permanents
-/// with counters. Residual: All or none of them.
+/// Ripples of Potential — proliferate, then phase out any number of your
+/// permanents that proliferate put a counter on (CR 701.34a, 702.26).
 pub fn ripples_of_potential() -> CardDefinition {
     CardDefinition {
         name: "Ripples of Potential",
@@ -408,12 +406,13 @@ pub fn ripples_of_potential() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Proliferate,
-            Effect::MayDo {
-                description: "Phase out your permanents that got a counter?".into(),
-                body: Box::new(Effect::PhaseOut {
-                    what: yours(R::Permanent.and(R::WithAnyCounter)),
-                    until_source_leaves: false,
-                }),
+            Effect::ForEachChosen {
+                from: Selector::MatchingAmong {
+                    inner: Box::new(Selector::ProliferatedThisResolution),
+                    filter: R::ControlledByYou,
+                },
+                body: Box::new(Effect::PhaseOut { what: Selector::TriggerSource, until_source_leaves: false }),
+                headless_takes_all: false,
             },
         ]),
         ..Default::default()
