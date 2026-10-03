@@ -11349,8 +11349,9 @@ fn pick_crack_lander(state: &GameState, seat: usize) -> Option<GameAction> {
 }
 
 /// Find a beneficial energy-only activated ability the bot can pay for: an
-/// `Effect::PayEnergy { amount, .. }` ability with no mana/tap/sac cost,
-/// where the bot controls the source and has at least `amount` energy.
+/// `Effect::PayEnergy { amount, .. }` ability with no mana/sac cost (a `{T}`
+/// is fine), where the bot controls the source and has at least `amount`
+/// energy.
 pub(super) fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.players[seat].energy == 0 {
         return None;
@@ -11369,11 +11370,15 @@ pub(super) fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameA
             } else {
                 continue;
             };
-            let is_pure = !ab.tap_cost
-                && !ab.sac_cost
+            // A `{T}` is no bar (Aetherworks Marvel's "{T}, pay six {E}: cast
+            // one of the top six free" was never activated in a pod census);
+            // a mana ability is the auto-tapper's, not a payoff.
+            let is_pure = !ab.sac_cost
                 && ab.mana_cost.symbols.is_empty()
                 && ab.life_cost == 0
-                && ab.life_cost_value.is_none();
+                && ab.life_cost_value.is_none()
+                && !(ab.tap_cost && card.tapped)
+                && !crate::game::actions::is_mana_ability(&ab.effect);
             if !is_pure || state.players[seat].energy < amount {
                 continue;
             }
@@ -21189,6 +21194,26 @@ mod tests {
         g.priority.player_with_priority = 0;
         // The debug assertion inside `gated_pick!` is the check.
         let _ = main_phase_action(&g, 0);
+    }
+
+    /// A `{T}`-plus-energy payoff is the energy sink's too: Aetherworks
+    /// Marvel with six {E} is activated, not passed on (pod `--card-census`:
+    /// never activated).
+    #[test]
+    fn bot_activates_aetherworks_marvel_with_six_energy() {
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::PostCombatMain;
+        let marvel = g.add_card_to_battlefield(0, catalog::aetherworks_marvel());
+        for _ in 0..6 {
+            g.add_card_to_library(0, catalog::craw_wurm());
+        }
+        g.players[0].energy = 6;
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(action, GameAction::ActivateAbility { card_id, .. } if card_id == marvel),
+            "{action:?}"
+        );
     }
 
     /// The bot pays Offspring (CR 702.175) when it can afford it — the chosen
