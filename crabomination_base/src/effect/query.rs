@@ -384,6 +384,10 @@ impl Effect {
                 f(on_opponent);
                 f(on_you);
             }
+            Effect::FriendOrFoe { friend, foe } => {
+                f(friend);
+                f(foe);
+            }
             Effect::SecretCouncilPlayerVote { per_vote, unvoted } => {
                 f(per_vote);
                 f(unvoted);
@@ -1170,6 +1174,7 @@ impl Effect {
             Effect::EachPlayerVotesForAPlayer { on_opponent, on_you } => {
                 on_opponent.requires_target() || on_you.requires_target()
             }
+            Effect::FriendOrFoe { friend, foe } => friend.requires_target() || foe.requires_target(),
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames
             | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,

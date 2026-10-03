@@ -255,6 +255,50 @@ impl GameState {
         self.run_effect(&body, ctx, events)
     }
 
+    /// `Effect::FriendOrFoe` — the controller calls each living player, itself
+    /// included, friend or foe in turn order; then every friend's body runs,
+    /// then every foe's, each as that player.
+    ///
+    /// Each ballot lists the headless answer first — friend for the
+    /// controller and its team, foe for an opponent — so a bot judging every
+    /// ballot of the source alike weighs exactly that split against its
+    /// reverse, and an `AutoDecider` seat answers it.
+    pub(super) fn friend_or_foe(
+        &mut self,
+        friend: &Effect,
+        foe: &Effect,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0usize;
+        let mut sides: Vec<(usize, bool)> = Vec::new();
+        for q in self.seats_in_turn_order_from(me) {
+            let ally = q == me || self.same_team(me, q);
+            let labels: Vec<String> =
+                if ally { vec!["Friend".into(), "Foe".into()] } else { vec!["Foe".into(), "Friend".into()] };
+            let prompt =
+                if q == me { "You: friend or foe?".to_string() } else { format!("Player {}: friend or foe?", q + 1) };
+            let Some(pick) = self.ask_seat_option(&mut cursor, me, prompt, source, labels, effect) else {
+                return Ok(());
+            };
+            sides.push((q, (pick == 0) == ally));
+        }
+        self.clear_answer_log();
+        let side = |is_friend: bool, body: &Effect| {
+            sides
+                .iter()
+                .filter(move |&&(_, f)| f == is_friend)
+                .map(|&(q, _)| Effect::EachPlayerDoes { who: PlayerRef::Seat(q), body: Box::new(body.clone()) })
+                .collect::<Vec<_>>()
+        };
+        let mut runs = side(true, friend);
+        runs.extend(side(false, foe));
+        self.run_effect(&Effect::seq(runs), ctx, events)
+    }
+
     /// `Effect::EachOpponentChooses` — each living opponent, in turn order,
     /// picks one of `options`; then each pick's body runs in that order with
     /// `PlayerRef::CurrentVoter` bound to its chooser (the same binding a

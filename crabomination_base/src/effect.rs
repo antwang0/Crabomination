@@ -5706,6 +5706,12 @@ pub enum Effect {
     /// player; per vote, `on_opponent` runs with the voted-for opponent bound
     /// as `PlayerRef::Triggerer`, or `on_you` when the controller got it.
     EachPlayerVotesForAPlayer { on_opponent: Box<Effect>, on_you: Box<Effect> },
+    /// "For each player, choose friend or foe. Each friend [friend]. Each foe
+    /// [foe]." (Battlebond: Zndrsplt's Judgment, Pir's Whim). The controller
+    /// chooses for every living player, itself included, in turn order; then
+    /// each friend runs `friend` and each foe runs `foe`, as that player
+    /// (`EachPlayerDoes`). Untargeted.
+    FriendOrFoe { friend: Box<Effect>, foe: Box<Effect> },
     /// CR 701.38 secret council where any player (yourself included) may get
     /// votes and the count matters (Círdan the Shipwright): `per_vote` runs
     /// once per vote a player received, then `unvoted` once for each player

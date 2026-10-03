@@ -35925,6 +35925,8 @@ impl GameState {
                 self.each_player_votes_for_a_player(on_opponent, on_you, effect, ctx, events)
             }
 
+            Effect::FriendOrFoe { friend, foe } => self.friend_or_foe(friend, foe, effect, ctx, events),
+
             Effect::EachOpponentChooses { prompt, options } => {
                 self.each_opponent_chooses(prompt, options, effect, ctx, events)
             }
