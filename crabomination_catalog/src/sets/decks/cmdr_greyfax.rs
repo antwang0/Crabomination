@@ -1,9 +1,6 @@
 //! Commander: the cards the **Forces of the Imperium** Warhammer 40,000
 //! Commander deck (40K, Inquisitor Greyfax) needed beyond what the catalog
 //! had. Tests in `tests/recent_b/cmdr_greyfax.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Inquisitor Eisenhorn** — the first-draw reveal is automatic.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -383,10 +380,11 @@ pub fn grey_knight_paragon() -> CardDefinition {
     }
 }
 
-/// Inquisitor Eisenhorn — an instant or sorcery as your first draw makes
-/// Cherubael; combat damage investigates that many times.
-///
-/// ⚠ Residual: the reveal is automatic.
+/// Inquisitor Eisenhorn — you may reveal your first draw each turn; an
+/// instant or sorcery revealed this way makes Cherubael; combat damage
+/// investigates that many times. The reveal is offered only for an instant
+/// or sorcery (revealing anything else does nothing), as the trigger
+/// resolves.
 pub fn inquisitor_eisenhorn() -> CardDefinition {
     let cherubael = Arc::new(TokenDefinition {
         name: "Cherubael".to_string(),
@@ -408,7 +406,10 @@ pub fn inquisitor_eisenhorn() -> CardDefinition {
                         filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                     },
                 ),
-                effect: make(Value::ONE, cherubael),
+                effect: Effect::MayDo {
+                    description: "Reveal the instant or sorcery you drew to create Cherubael?".into(),
+                    body: Box::new(make(Value::ONE, cherubael)),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),

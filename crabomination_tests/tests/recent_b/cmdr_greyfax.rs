@@ -372,7 +372,7 @@ fn bot_casts_redemptor_dreadnought_exiling_its_biggest_creature_card() {
     );
 }
 
-/// Inquisitor Eisenhorn — only the first card drawn each turn is revealed:
+/// Inquisitor Eisenhorn — only the first card drawn each turn may be revealed:
 /// an instant there makes Cherubael; an instant drawn second does not, and
 /// neither does a land first.
 #[test]
@@ -384,6 +384,9 @@ fn inquisitor_eisenhorn_reveals_only_the_first_draw() {
         g.add_card_to_library(0, if first_is_instant { catalog::lightning_bolt() } else { catalog::island() });
         g.add_card_to_library(0, catalog::lightning_bolt());
         g.players[0].cards_drawn_this_turn = 0;
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         for _ in 0..2 {
             let mut events = Vec::new();
             g.draw_one(0, &mut events);
@@ -394,6 +397,19 @@ fn inquisitor_eisenhorn_reveals_only_the_first_draw() {
     };
     assert_eq!(first_draw_makes_cherubael(true), 1);
     assert_eq!(first_draw_makes_cherubael(false), 0, "the second card isn't revealed");
+    // "You MAY reveal" — declining keeps the instant hidden and makes nothing.
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::inquisitor_eisenhorn());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].cards_drawn_this_turn = 0;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+    ]));
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(count(&g, 0, "Cherubael"), 0, "declined the reveal");
 }
 
 /// Callidus Assassin's granted trigger destroys only a creature with the
