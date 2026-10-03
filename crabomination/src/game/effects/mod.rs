@@ -296,6 +296,9 @@ pub(crate) fn map_effect_duration(
             EffectDuration::WhileSourceOnBattlefield
         }
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
+        // Only a `BecomeCopyOfFor` copy uses it, and `TurnFaceDown` ends that
+        // (`temporary_copies`); as a layer effect it would never end on time.
+        crate::effect::Duration::UntilTurnedFaceDown => EffectDuration::Indefinite,
     }
 }
 
@@ -2390,11 +2393,15 @@ impl GameState {
             Some(Target::Permanent(source)),
             0,
         );
-        let copy = if spec.until_end_of_turn {
+        let copy = if spec.until_end_of_turn || spec.until_turned_face_down {
             Effect::BecomeCopyOfFor {
                 what: crate::effect::Selector::This,
                 source: crate::effect::Selector::Target(0),
-                duration: crate::effect::Duration::EndOfTurn,
+                duration: if spec.until_end_of_turn {
+                    crate::effect::Duration::EndOfTurn
+                } else {
+                    crate::effect::Duration::UntilTurnedFaceDown
+                },
                 non_legendary: false,
             }
         } else {
@@ -10956,6 +10963,14 @@ impl GameState {
                 // CR 708.2a/708.2b — `turn_face_down` stashes the real card and
                 // swaps in the vanilla 2/2 body; it no-ops if already face down.
                 for ent in self.resolve_selector(what, ctx) {
+                    // "Until this creature is turned face down" (Vesuvan
+                    // Shapeshifter) — the copy ends first, so the card the
+                    // turn stashes is the printed one.
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.revert_temporary_copies_where(|tc| {
+                            tc.card == cid && tc.duration == crate::effect::Duration::UntilTurnedFaceDown
+                        });
+                    }
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && !c.face_down
@@ -11033,6 +11048,8 @@ impl GameState {
                     if megamorph {
                         c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     }
+                    let controller = c.controller;
+                    self.run_as_turned_face_up(cid, controller, events);
                     events.push(GameEvent::TurnedFaceUp { card_id: cid });
                 }
                 Ok(())

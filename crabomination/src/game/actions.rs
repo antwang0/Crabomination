@@ -8184,8 +8184,16 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 708.8 — the face-up card's "as this is turned face up" effect.
-    fn run_as_turned_face_up(&mut self, card_id: CardId, controller: usize, events: &mut Vec<GameEvent>) {
+    /// CR 708.8 — the face-up card's "as this is turned face up" effect, and
+    /// an `enters_as_copy` that also applies as it's turned face up.
+    pub(crate) fn run_as_turned_face_up(&mut self, card_id: CardId, controller: usize, events: &mut Vec<GameEvent>) {
+        if self
+            .battlefield
+            .find_by_id(card_id)
+            .is_some_and(|c| c.definition.enters_as_copy.as_ref().is_some_and(|s| s.as_turned_face_up))
+        {
+            self.apply_enters_as_copy(card_id, controller, events);
+        }
         let Some(effect) = self.battlefield.find_by_id(card_id).and_then(|c| c.definition.as_turned_face_up.clone())
         else {
             return;

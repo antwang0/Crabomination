@@ -5470,6 +5470,15 @@ pub struct EntersAsCopy {
     /// cleanup step (`BecomeCopyOfFor`) and the printed card returns.
     #[serde(default)]
     pub until_end_of_turn: bool,
+    /// "…until this creature is turned face down" (Vesuvan Shapeshifter):
+    /// the copy is `Duration::UntilTurnedFaceDown`.
+    #[serde(default)]
+    pub until_turned_face_down: bool,
+    /// "As this creature enters **or is turned face up**" (Vesuvan
+    /// Shapeshifter): the turn-up special action offers the copy too (CR
+    /// 708.8).
+    #[serde(default)]
+    pub as_turned_face_up: bool,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

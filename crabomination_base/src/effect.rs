@@ -2901,6 +2901,10 @@ pub enum Duration {
     UntilEndOfYourNextTurn,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
+    /// CR 708.8 — "until this creature is turned face down" (Vesuvan
+    /// Shapeshifter's copy): ends as `Effect::TurnFaceDown` turns it, so the
+    /// card it stashes is its own.
+    UntilTurnedFaceDown,
 }
 
 // ── Library positions, scry modes, mana ──────────────────────────────────────
