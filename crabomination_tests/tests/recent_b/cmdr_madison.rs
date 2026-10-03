@@ -355,3 +355,24 @@ fn endurance_bobblehead_targets_up_to_x() {
     assert!(cp(bear).keywords().contains(&Keyword::Indestructible));
     assert_eq!(cp(wurm).power, 6, "X = 1: the second target is dropped");
 }
+
+/// Vault 112, chapter III: the energy paid exiles that many cards from the
+/// top (not a reveal: the rest stay in exile, CR 406.3), and one nonland card
+/// among them may be cast free as the chapter resolves (CR 608.2g).
+#[test]
+fn vault_112_chapter_three_exiles_and_casts_one() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(2);
+    let saga = g.add_card_to_battlefield(0, catalog::vault_112_sadistic_simulation());
+    g.players[0].library.clear(); // the chapter shuffles: just these two
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let island = g.add_card_to_library(0, catalog::island());
+    g.players[0].energy = 2;
+    let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[2].1.clone();
+    let events = g.resolve_effect(&chapter, &EffectContext::for_trigger(saga, 0, None, 0)).expect("chapter III");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "both paid");
+    assert!(g.battlefield_find(bear).is_some(), "the creature card cast free");
+    assert!(g.exile.iter().any(|c| c.id == island), "the land stays exiled");
+}

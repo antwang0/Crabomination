@@ -1171,8 +1171,9 @@ pub fn vault_13_dwellers_journey() -> CardDefinition {
 /// then exile that many cards from the top; you may play one of those cards
 /// without paying its mana cost.
 ///
-/// ⚠ Residual: chapter III reveals rather than exiles, and only a spell may be
-/// played from among them.
+/// The cards are exiled; one nonland card among them is chosen and may be
+/// cast free as the chapter resolves.
+/// ⚠ Residual: a land among them can't be played this way.
 pub fn vault_112_sadistic_simulation() -> CardDefinition {
     let stun = || {
         Effect::Seq(vec![
@@ -1198,11 +1199,24 @@ pub fn vault_112_sadistic_simulation() -> CardDefinition {
                     cond: Predicate::ValueAtLeast(Value::EnergyPaidThisEffect, Value::ONE),
                     then: Box::new(Effect::Seq(vec![
                         Effect::ShuffleLibrary { who: PlayerRef::You },
-                        Effect::RevealTopMayCastOneFree {
-                            count: Value::EnergyPaidThisEffect,
-                            max_mv: Value::Const(99),
-                            filter: None,
+                        Effect::ExileTopOfLibrary {
+                            who: Selector::Player(PlayerRef::You),
+                            amount: Value::EnergyPaidThisEffect,
+                            link_to_source: false,
+                            face_down: false,
                         },
+                        crate::effect::shortcut::choose_one_then(
+                            Selector::ExiledThisResolution { filter: R::Nonland },
+                            PlayerRef::You,
+                            Effect::CastWithoutPayingImmediate {
+                                what: crate::effect::shortcut::chosen_one(),
+                                source_zone: crate::card::Zone::Exile,
+                                exile_after: false,
+                                copy: false,
+                                reduce_generic: 0,
+                                pay_own_cost: false,
+                            },
+                        ),
                     ])),
                     else_: Box::new(Effect::Noop),
                 }),
