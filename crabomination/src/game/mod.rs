@@ -30547,7 +30547,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::DiscardedBatch { count, .. } => *count,
         GameEvent::CardsExiledFromHandOrBy { count, .. } => *count,
-        GameEvent::CounterAdded { count, .. } => *count,
+        GameEvent::CounterAdded { count, .. } | GameEvent::KeywordCounterAdded { count, .. } => *count,
         GameEvent::CounterRemoved { count, .. } => *count,
         GameEvent::Discovered { value, .. } => *value,
         GameEvent::Expended { total, .. } => *total,

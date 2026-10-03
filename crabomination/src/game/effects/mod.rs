@@ -19524,6 +19524,7 @@ impl GameState {
                                 card_id: cid,
                                 keyword: keyword.clone(),
                                 count: n,
+                                placer: self.resolution_causer,
                             });
                         }
                     }
@@ -19556,7 +19557,7 @@ impl GameState {
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.keyword_counters.add(kw.clone(), 1);
                         }
-                        events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1 });
+                        events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1, placer: self.resolution_causer });
                     } else if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(CounterType::PlusOnePlusOne, 1);
                         events.push(GameEvent::CounterAdded {
@@ -44397,23 +44398,37 @@ const CROWDED_COPY_BOARD: usize = 150;
 /// `Effect::AddCounterOfTriggerKind` to the kind it put ("the same number and
 /// kind of counters" — Bold Plagiarist). Any other pair is a plain clone.
 pub(crate) fn for_trigger_event(effect: &Effect, ev: &GameEvent) -> Effect {
-    fn fix(e: &mut Effect, kind: crate::card::CounterType) {
+    // The kind a counter event put: a plain counter or a keyword counter.
+    #[derive(Clone)]
+    enum Kind {
+        Plain(crate::card::CounterType),
+        Keyword(crate::card::Keyword),
+    }
+    fn fix(e: &mut Effect, kind: Kind) {
         match e {
             Effect::AddCounterOfTriggerKind { what, amount } => {
-                *e = Effect::AddCounter { what: what.clone(), kind, amount: amount.clone() };
+                *e = match kind {
+                    Kind::Plain(kind) => Effect::AddCounter { what: what.clone(), kind, amount: amount.clone() },
+                    Kind::Keyword(keyword) => {
+                        Effect::AddKeywordCounter { what: what.clone(), keyword, amount: amount.clone() }
+                    }
+                };
             }
-            Effect::Seq(v) => v.iter_mut().for_each(|x| fix(x, kind)),
+            Effect::Seq(v) => v.iter_mut().for_each(|x| fix(x, kind.clone())),
             Effect::MayDo { body, .. } => fix(body, kind),
             Effect::If { then, else_, .. } => {
-                fix(then, kind);
+                fix(then, kind.clone());
                 fix(else_, kind);
             }
             _ => {}
         }
     }
+    let kind = match ev {
+        GameEvent::CounterAdded { counter_type, .. } => Kind::Plain(*counter_type),
+        GameEvent::KeywordCounterAdded { keyword, .. } => Kind::Keyword(keyword.clone()),
+        _ => return effect.clone(),
+    };
     let mut out = effect.clone();
-    if let GameEvent::CounterAdded { counter_type, .. } = ev {
-        fix(&mut out, *counter_type);
-    }
+    fix(&mut out, kind);
     out
 }

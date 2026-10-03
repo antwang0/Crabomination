@@ -110,6 +110,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
             K::CounterAdded(crate::card::CounterType::PlusOnePlusOne),
             K::AnyCounterAdded,
         ),
+        // CR 122.1b — a keyword counter is a counter.
+        E::KeywordCounterAdded { .. } => bits!(K::AnyCounterAdded),
         E::CounterRemoved { .. } => {
             bits!(K::CounterRemoved(crate::card::CounterType::PlusOnePlusOne))
         }
@@ -366,7 +368,7 @@ fn reference_event_kind_matches(
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
         (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => counter_type == k,
-        (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. }) => true,
+        (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. } | GameEvent::KeywordCounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::AbilityActivatedWithSacrifice, GameEvent::AbilityActivated { sacrificed: true, .. }) => true,
         (EventKind::AbilityActivatedWithLifePaid, GameEvent::AbilityActivated { life_paid, .. }) => *life_paid > 0,
@@ -893,7 +895,8 @@ fn event_matches_spec_rest(
                 if matches!(spec.kind, EventKind::AttacksAndIsntBlocked) && *attacker == source.id)
         ) || matches!(
             event,
-            GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
+            GameEvent::CounterAdded { card_id, .. } | GameEvent::KeywordCounterAdded { card_id, .. }
+                if *card_id == source.id
         ) || matches!(
             event,
             GameEvent::CounterRemoved { card_id, .. } if *card_id == source.id
@@ -1303,7 +1306,9 @@ pub(crate) fn actor_for_scope(
 /// [`EventScope::OpponentPutsCountersOnTheirOwn`]: the placer is an opponent
 /// of `controller` and controls the permanent that got the counters.
 fn opponent_put_counters_on_their_own(state: &GameState, event: &GameEvent, controller: usize) -> bool {
-    let GameEvent::CounterAdded { card_id, .. } = event else { return false };
+    let (GameEvent::CounterAdded { card_id, .. } | GameEvent::KeywordCounterAdded { card_id, .. }) = event else {
+        return false;
+    };
     counter_placer(state, event).is_some_and(|p| {
         !state.same_team(p, controller) && state.battlefield_find(*card_id).is_some_and(|c| c.controller == p)
     })
@@ -1314,8 +1319,13 @@ fn opponent_put_counters_on_their_own(state: &GameState, event: &GameEvent, cont
 /// with counters, and every counter placed outside a resolution.
 pub(crate) fn counter_placer(state: &GameState, event: &GameEvent) -> Option<usize> {
     match event {
-        GameEvent::CounterAdded { placer: Some(p), .. } => Some(*p),
-        GameEvent::CounterAdded { card_id, placer: None, .. } => state.battlefield_find(*card_id).map(|c| c.controller),
+        GameEvent::CounterAdded { placer: Some(p), .. } | GameEvent::KeywordCounterAdded { placer: Some(p), .. } => {
+            Some(*p)
+        }
+        GameEvent::CounterAdded { card_id, placer: None, .. }
+        | GameEvent::KeywordCounterAdded { card_id, placer: None, .. } => {
+            state.battlefield_find(*card_id).map(|c| c.controller)
+        }
         _ => None,
     }
 }
@@ -1566,7 +1576,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // counters, so "whenever one or more counters are put on a creature, …"
         // payoffs can introspect it / its controller (Auntie Ool's draw-or-drain
         // off her own Ward—Blight; CR 122 / 603.6).
-        GameEvent::CounterAdded { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CounterAdded { card_id, .. } | GameEvent::KeywordCounterAdded { card_id, .. } => {
+            Some(EntityRef::Permanent(*card_id))
+        }
         GameEvent::CounterRemoved { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         // CR 701.54 — the Ring-bearer chosen this temptation is the subject,
         // so "whenever you choose a Ring-bearer" payoffs can reference it.
@@ -1675,6 +1687,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::Mutated { card_id }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
+        | GameEvent::KeywordCounterAdded { card_id, .. }
         | GameEvent::CounterRemoved { card_id, .. }
         | GameEvent::TurnedFaceUp { card_id }
         | GameEvent::ControlChanged { card_id, .. }
@@ -1896,6 +1909,7 @@ mod tests {
                 card_id: c,
                 keyword: crate::card::Keyword::Vigilance,
                 count: 1,
+                placer: None,
             },
             E::CounterRemoved { card_id: c, counter_type: CounterType::PlusOnePlusOne, count: 1 },
             E::CounterRemoved {

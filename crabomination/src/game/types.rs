@@ -2893,9 +2893,9 @@ pub enum GameEvent {
     /// of the resolving spell or ability, `None` outside a resolution — read
     /// as the permanent's controller then (CR 122.6a). `EventScope::YouPutCounters`.
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32, placer: Option<usize> },
-    /// CR 122.1b — keyword counters are counters; surfaced so the log /
-    /// client see the grant (no `EventKind` listener yet).
-    KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32 },
+    /// CR 122.1b — keyword counters are counters: `EventKind::AnyCounterAdded`
+    /// hears them, with `placer` read as for `CounterAdded`.
+    KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32, placer: Option<usize> },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     /// A permanent became tapped. `actor` is the player who tapped it via a
     /// spell/ability effect (Some), or `None` for game-driven taps (attacking,

@@ -3175,7 +3175,7 @@ impl From<&GameEvent> for GameEventWire {
                     count: *count,
                 }
             }
-            GameEvent::KeywordCounterAdded { card_id, keyword, count } => {
+            GameEvent::KeywordCounterAdded { card_id, keyword, count, .. } => {
                 GameEventWire::KeywordCounterAdded {
                     card_id: *card_id,
                     keyword: format!("{keyword:?}"),
@@ -3543,7 +3543,7 @@ impl GameEventWire {
             E::KeywordCounterAdded {
                 card_id,
                 keyword,
-                count,
+                count, ..
             } => format!("+{count} {keyword} counter on {}", name(*card_id)),
             E::CounterRemoved {
                 card_id,
