@@ -1078,7 +1078,7 @@ impl GameState {
                 .iter()
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
                 .map(|c| c.power().max(0))
-                .sum(),
+                .fold(0i32, i32::saturating_add),
             Value::TurnNumber => self.turn_number as i32,
             // Turn 1 starts without an `advance_turn`, so it is not in the
             // tally: it belongs to `starting_player` (CR 103.5).
