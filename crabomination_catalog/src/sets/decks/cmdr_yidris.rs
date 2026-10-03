@@ -2,10 +2,6 @@
 //! Maelstrom Wielder) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_yidris.rs`.
 //!
-//! Residuals (each also on its card):
-//! - **Aeon Chronicler** — no Suspend X: the engine's suspend takes no X and
-//!   bots suspend only cards with no mana cost, so its time-counter draw never
-//!   comes up.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, DynamicPt, EnchantmentSubtype,
@@ -16,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, x, Color, ManaCost};
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -88,11 +84,18 @@ pub fn yidris_maelstrom_wielder() -> CardDefinition {
     }
 }
 
-/// Aeon Chronicler — power and toughness are the cards in your hand (no
-/// Suspend X: see the module residuals).
+/// Aeon Chronicler — power and toughness are the cards in your hand; Suspend
+/// X—{X}{3}{U}, X can't be 0 (`Keyword::Suspend(0, …)`, `GameAction::
+/// SuspendX`); a time counter coming off it in exile draws a card.
 pub fn aeon_chronicler() -> CardDefinition {
     CardDefinition {
         dynamic_pt: Some(DynamicPt::ControllerHandSize),
+        keywords: vec![Keyword::Suspend(0, cost(&[x(), generic(3), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterRemoved(crate::card::CounterType::Time), EventScope::SelfSource)
+                .while_suspended(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
         ..creature("Aeon Chronicler", cost(&[generic(3), u(), u()]), vec![CreatureType::Avatar], 0, 0)
     }
 }

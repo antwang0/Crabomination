@@ -1742,7 +1742,9 @@ pub enum Keyword {
     /// owner's upkeeps a time counter is removed; when the last is removed
     /// the owner casts it without paying its mana cost (and a creature so
     /// cast has haste). First field = N, second = the suspend cost. Cast
-    /// via `GameAction::Suspend`.
+    /// via `GameAction::Suspend`. **Suspend X** (Aeon Chronicler) is N = 0
+    /// with an {X} in the cost: `GameAction::SuspendX` names X ≥ 1, paid in
+    /// the cost and put on as X time counters (CR 702.62a / 107.3).
     Suspend(u32, crate::mana::ManaCost),
     /// Suspend accelerant (Deep-Sea Kraken): while this card is suspended,
     /// remove a time counter from it whenever an opponent casts a spell.

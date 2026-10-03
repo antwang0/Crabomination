@@ -215,6 +215,31 @@ fn aeon_chronicler_counts_the_hand() {
     assert_eq!(g.computed_permanent(a).unwrap().power, 3);
 }
 
+/// CR 702.62a — Suspend X—{X}{3}{U}: X can't be 0, a plain suspend (no X) is
+/// refused, and X = 2 costs {2}{3}{U} and puts on two time counters; each
+/// counter coming off it in exile draws a card.
+#[test]
+fn cr_702_62a_aeon_chronicler_suspends_for_x() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let aeon = g.add_card_to_hand(0, catalog::aeon_chronicler());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    assert!(g.perform_action(GameAction::Suspend { card_id: aeon }).is_err(), "Suspend X names an X");
+    assert!(g.perform_action(GameAction::SuspendX { card_id: aeon, x_value: 0 }).is_err(), "X can't be 0");
+    g.perform_action(GameAction::SuspendX { card_id: aeon, x_value: 2 }).expect("suspend X = 2");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{2}}{{3}}{{U}} paid");
+    assert_eq!(g.exile.iter().find(|c| c.id == aeon).unwrap().counter_count(CounterType::Time), 2);
+    let hand = g.players[0].hand.len();
+    let evs = g.process_suspend();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a counter came off: draw");
+}
+
 /// Each upkeep everyone bleeds and it grows by the life lost — a seat that
 /// can't lose life adds nothing; a player leaving adds five.
 #[test]

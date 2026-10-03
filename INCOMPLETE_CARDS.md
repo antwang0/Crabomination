@@ -2084,7 +2084,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
-| 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
 | 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |

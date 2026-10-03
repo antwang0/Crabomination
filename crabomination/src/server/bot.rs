@@ -3479,6 +3479,7 @@ impl HeuristicBot {
                 if matches!(action.action, GameAction::PassPriority)
                     && state.stack.is_empty()
                     && let Some(a) = super::foretell::pick_foretell(state, seat)
+                        .or_else(|| super::suspend::pick_suspend_x(state, seat))
                         .or_else(|| super::spell_response::pick_idle_retrieval(state, seat))
                         .or_else(|| super::room::pick_room_door(state, seat))
                         .or_else(|| super::manland::pick_manland(state, seat))

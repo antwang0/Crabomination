@@ -648,6 +648,9 @@ pub enum GameAction {
     /// it with N time counters. Removed one per owner's upkeep; the spell is
     /// cast for free when the last counter comes off.
     Suspend { card_id: CardId },
+    /// CR 702.62a — Suspend X: suspend paying `x_value` for the cost's {X}
+    /// and putting that many time counters on it ("X can't be 0").
+    SuspendX { card_id: CardId, x_value: u32 },
     /// CR 702.143 — Foretell a card from hand: pay {2} and exile it
     /// face-down to cast later for its foretell cost.
     Foretell { card_id: CardId },

@@ -7858,7 +7858,7 @@ impl GameState {
     /// it with N time counters. Timing follows the card's normal cast
     /// timing (sorcery-speed unless the card is instant-speed). Removal +
     /// the free cast happen later in `process_suspend`.
-    pub(crate) fn suspend_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+    pub(crate) fn suspend_card(&mut self, card_id: CardId, x: Option<u32>) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::{CounterType, Keyword};
         let p = self.priority.player_with_priority;
         // Locate the card in the priority player's hand and its Suspend params.
@@ -7881,6 +7881,13 @@ impl GameState {
         if !is_instant && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // Suspend X (N = 0, an {X} in the cost): X names both the cost's X and
+        // the time counters, and can't be 0; a fixed suspend takes no X.
+        let (n, cost) = match (n == 0 && cost.has_x(), x) {
+            (true, Some(x)) if x >= 1 => (x, cost.with_x_value(x)),
+            (false, None) => (n, cost),
+            _ => return Err(GameError::SelectionRequirementViolated),
+        };
         // Pay the suspend cost.
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
