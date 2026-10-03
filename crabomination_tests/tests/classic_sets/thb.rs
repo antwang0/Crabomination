@@ -4011,6 +4011,29 @@ fn athreos_reclaims_coin_countered_creature() {
     assert_eq!(back.unwrap().controller, 0, "returned under Athreos's controller's control");
 }
 
+/// Athreos, Shroud-Veiled: "dies OR IS PUT INTO EXILE" — an exiled
+/// coin-countered creature returns too (its counter read last-known).
+#[test]
+fn athreos_reclaims_an_exiled_coin_countered_creature() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    let athreos = g.add_card_to_battlefield(0, catalog::athreos_shroud_veiled());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().add_counters(CounterType::Coin, 1);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(athreos, 1, None);
+    let events = g.resolve_effect(&Effect::Exile { what: Selector::ExactObjects(vec![victim]) }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned from exile");
+    assert_eq!(back.controller, 0);
+    // An exiled creature without a coin counter stays exiled.
+    let plain = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let events = g.resolve_effect(&Effect::Exile { what: Selector::ExactObjects(vec![plain]) }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == plain));
+}
+
 /// Ashiok's Erasure: counter+exile a spell, lock opponents off that name while
 /// it's on the battlefield, then return the card to its owner's hand on leave.
 #[test]

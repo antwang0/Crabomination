@@ -7222,10 +7222,8 @@ pub fn dreamshaper_shaman() -> CardDefinition {
 /// Athreos, Shroud-Veiled — {4}{W}{B} Legendary Enchantment Creature — God.
 /// Indestructible; not a creature while devotion to W/B < 7. At your end
 /// step, put a coin counter on another target creature. When a coin-countered
-/// creature dies, return it to the battlefield under your control.
-/// (The "or is put into exile" half of the return trigger is approximated —
-/// the engine clears counters on the exile zone-change before it can read
-/// them, so only the death case fires.)
+/// creature dies or is put into exile, return it to the battlefield under
+/// your control.
 pub fn athreos_shroud_veiled() -> CardDefinition {
     use crate::card::{StaticAbility, Supertype};
     use crate::effect::StaticEffect;
@@ -7267,6 +7265,25 @@ pub fn athreos_shroud_veiled() -> CardDefinition {
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::WithCounter(CounterType::Coin),
+                    },
+                ),
+                effect: Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+            },
+            // "… or is put into exile": the counter is read off the
+            // last-known snapshot `note_left_without_dying` keeps.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::WithCounter(CounterType::Coin))
+                            .and(SelectionRequirement::InExile),
                     },
                 ),
                 effect: Effect::Move {
