@@ -128,11 +128,10 @@ reaches it. The next two by `scripts/precon_scan.py` became seats 15 and
 read Keen Engineering (FDC, 12, seat 18) and then 13 (Reap the Tides,
 Corrupting Influence, Sliver Swarm).
 
-🟡 **Residuals in the list** (each also on its card's doc): Colossal
-Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
+🟡 **Residuals in the list** (each also on its card's doc): Lethal
 Scheme (convokers don't connive), Cephalid Coliseum (the sacrifice is folded into resolution).
-(Steward of the Harvest, Shigeki's Channel and Life from the Loam target since
-`01BaSouG`.)
+(Steward of the Harvest, Shigeki's Channel and Life from the Loam target, and
+Colossal Grave-Reaver picks from its batch, since `01BaSouG`.)
 
 The **twelfth** is the second official precon, **Mind Flayarrrs** (Commander
 Legends: Battle for Baldur's Gate, 2022), MTGJSON's `MindFlayarrrs_CLB` card

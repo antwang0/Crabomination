@@ -14,8 +14,6 @@
 //!   optionally your-turn-only Underworld Breach (Kotis, Sibsig Champion).
 //!
 //! Residuals (approximated or omitted clauses — each also on its card):
-//! * Colossal Grave-Reaver — "put one of them onto the battlefield" puts the
-//!   first creature card of the milled batch, not one of the controller's choice.
 //! * Syr Konrad — "from anywhere other than the battlefield" reads as "not put
 //!   into a graveyard from the battlefield earlier this turn".
 //! * The Scarab God — the token is a Zombie *in addition to* its copied
@@ -23,8 +21,6 @@
 //! * Shigeki — the "rest into your graveyard" is modelled as milling all four and
 //!   then moving the land, so the land briefly passes through the graveyard
 //!   (a "cards leave your graveyard" payoff sees it).
-//! * Steward of the Harvest — the exile is a resolution-time pick rather than a
-//!   target.
 //! * River Kelpie — "casts a spell from a graveyard" also fires on exile casts
 //!   (`SpellNotCastFromHand`).
 //! * Lost Monarch of Ifnir — the second-main trigger reads "a Zombie *you
@@ -299,10 +295,8 @@ pub fn thranduil_sindarin_liege() -> CardDefinition {
 /// this creature enters or attacks, mill three cards. Whenever one or more
 /// creature cards are put into your graveyard from your library, put one of
 /// them onto the battlefield.
-///
-/// Approximation: "one of them" is the priciest creature card put into your
-/// graveyard from your library this turn (an earlier batch this turn counts
-/// too), not the controller's pick.
+/// "One of them" is the controller's pick among this batch's creature cards
+/// (`OverTriggerBatch`).
 pub fn colossal_grave_reaver() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -311,13 +305,13 @@ pub fn colossal_grave_reaver() -> CardDefinition {
             on_attack(mill(3)),
             TriggeredAbility {
                 event: creature_cards_milled(),
-                effect: Effect::Move {
-                    what: Selector::best_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: R::Creature.and(R::PutIntoGraveyardFromLibraryThisTurn),
-                    }),
-                    to: to_battlefield(false),
+                effect: Effect::OverTriggerBatch {
+                    ids: vec![],
+                    body: Box::new(crate::effect::shortcut::choose_one_then(
+                        Selector::TriggerBatch,
+                        PlayerRef::You,
+                        Effect::Move { what: crate::effect::shortcut::chosen_one(), to: to_battlefield(false) },
+                    )),
                 },
             },
         ],

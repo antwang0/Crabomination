@@ -1461,10 +1461,9 @@ pub fn professor_onyx() -> CardDefinition {
 /// them from your graveyard. If you do, you may cast it this turn."
 ///
 /// "Pay {1} and discard a card" is one compound payment: offered only with a
-/// card in hand, and paying the {1} commits to the discard.
-/// Approximation, minor: the discard trigger fires once per batch (CR
-/// 603.2c) and offers the batch's first nonland card as "one of them" — the
-/// player doesn't pick which.
+/// card in hand, and paying the {1} commits to the discard. The discard
+/// trigger fires once per batch (CR 603.2c) and "one of them" is your pick
+/// among the batch's nonland cards (`OverTriggerBatch`).
 /// The exile + cast permission is Move→Exile + `GrantMayPlay`
 /// (pay-own-cost, this turn) on the just-moved card.
 pub fn conspiracy_theorist() -> CardDefinition {
@@ -1507,22 +1506,30 @@ pub fn conspiracy_theorist() -> CardDefinition {
                     })
                     // CR 603.2c — one trigger for the discard.
                     .once_per_batch(),
-                effect: Effect::MayDo {
-                    description: "Exile the discarded card? You may cast it this turn.".into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Move {
-                            what: Selector::TriggerSource,
-                            to: crate::effect::ZoneDest::Exile,
-                        },
-                        Effect::GrantMayPlay {
-                            what: Selector::LastMoved,
-                            duration: MayPlayDuration::EndOfThisTurn,
-                            to_owner: false,
-                            exile_after: false,
-                            pay_own_cost: true,
-                            any_color: false,
-                        },
-                    ])),
+                // "One of them": the batch's nonland discards, your pick.
+                effect: Effect::OverTriggerBatch {
+                    ids: vec![],
+                    body: Box::new(Effect::MayDo {
+                        description: "Exile one of the discarded cards? You may cast it this turn.".into(),
+                        body: Box::new(crate::effect::shortcut::choose_one_then(
+                            Selector::TriggerBatch,
+                            crate::effect::PlayerRef::You,
+                            Effect::Seq(vec![
+                                Effect::Move {
+                                    what: crate::effect::shortcut::chosen_one(),
+                                    to: crate::effect::ZoneDest::Exile,
+                                },
+                                Effect::GrantMayPlay {
+                                    what: Selector::LastMoved,
+                                    duration: MayPlayDuration::EndOfThisTurn,
+                                    to_owner: false,
+                                    exile_after: false,
+                                    pay_own_cost: true,
+                                    any_color: false,
+                                },
+                            ]),
+                        )),
+                    }),
                 },
             },
         ],

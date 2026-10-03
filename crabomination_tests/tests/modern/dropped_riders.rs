@@ -2503,6 +2503,24 @@ fn cr_603_2c_conspiracy_theorist_exiles_one_of_them() {
     assert_eq!(g.stack.len(), 1, "one trigger for the batch, not one per card");
 }
 
+/// …and "one of them" is the controller's pick among THAT batch's nonland
+/// cards: the second Bear chosen is the one exiled and castable.
+#[test]
+fn cr_603_2c_conspiracy_theorist_lets_you_pick_which() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(0, catalog::llanowar_elves());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(ct, 0, None);
+    let events = g.resolve_effect(&discard_two(), &ctx).expect("resolves");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![b])]));
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == b && c.may_play_until.is_some()), "the picked one");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == a));
+}
+
 /// Camellia, the Seedmiser: two Foods sacrificed at once make one Squirrel.
 #[test]
 fn cr_603_2c_camellia_makes_one_squirrel_per_food_batch() {

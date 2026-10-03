@@ -1523,3 +1523,19 @@ fn syphon_flesh_counts_what_was_sacrificed() {
     assert_eq!(zombies(&g, 0).len(), 2, "seat 3 had nothing to sacrifice");
     assert!(on_battlefield(&g, mine), "each OTHER player");
 }
+
+/// CR 603.2c — "one of them" is this batch: a bigger creature card milled
+/// earlier in the turn is not among them (the approximation read every
+/// creature milled this turn).
+#[test]
+fn grave_reaver_picks_from_this_batch_only() {
+    let mut g = main_phase();
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.players[0].milled_ids_this_turn.insert(wurm);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    etb(&mut g, catalog::colossal_grave_reaver());
+    assert!(on_battlefield(&g, bear), "the batch's creature");
+    assert!(!on_battlefield(&g, wurm), "not an earlier mill");
+}
