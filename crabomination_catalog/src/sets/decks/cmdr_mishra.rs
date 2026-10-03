@@ -351,8 +351,8 @@ pub fn herald_of_anguish() -> CardDefinition {
 }
 
 /// Lithoform Engine — copy an ability, an instant or sorcery, or a permanent
-/// spell (a token) you control. Residual: the ability copy is Strionic
-/// Resonator's.
+/// spell (a token) you control. The ability is targeted by its own id
+/// (CR 115.1), as Strionic Resonator's.
 pub fn lithoform_engine() -> CardDefinition {
     let spell = |filter: R| target_filtered(R::IsSpellOnStack.and(R::ControlledByYou).and(filter));
     CardDefinition {

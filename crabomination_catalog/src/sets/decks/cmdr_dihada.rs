@@ -533,8 +533,8 @@ pub fn the_circle_of_loyalty() -> CardDefinition {
 }
 
 /// The Peregrine Dynamo — haste; {1}, {T}: copy an ability of another
-/// non-commander legendary source you control. Residual: Strionic Resonator's
-/// copy.
+/// non-commander legendary source you control (the ability by its own id,
+/// the source read for "legendary" / "another").
 pub fn the_peregrine_dynamo() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],

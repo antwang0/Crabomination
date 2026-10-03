@@ -376,8 +376,8 @@ pub fn saheelis_directive() -> CardDefinition {
 }
 
 /// Tawnos, Urza's Apprentice — haste; {U}{R}, {T}: copy an activated or
-/// triggered ability you control from an artifact source. Residual: as
-/// Strionic Resonator, the target is the source permanent.
+/// triggered ability you control from an artifact source (the ability by its
+/// own id, CR 115.1; "artifact" is read off its source).
 pub fn tawnos_urzas_apprentice() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

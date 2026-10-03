@@ -58,7 +58,7 @@ pub fn zhulodok_void_gorger() -> CardDefinition {
 }
 
 /// Abstruse Archaic — vigilance; {1}, {T}: copy an ability of a colorless
-/// source you control. Residual: targets the source permanent.
+/// source you control (the ability by its own id, CR 115.1).
 pub fn abstruse_archaic() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],

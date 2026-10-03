@@ -2293,9 +2293,9 @@ pub fn invasion_of_ikoria() -> CardDefinition {
 
 /// Strionic Resonator — {2} Artifact. {2}, {T}: Copy target triggered ability
 /// you control. You may choose new targets for the copy.
-/// Gogo's `CopyAbility`: the target names the ability by its source (a dies
-/// trigger's source in the graveyard too), and new targets are offered.
-/// Residual: of two abilities from one source on the stack, the topmost is copied.
+/// Gogo's `CopyAbility`: the target is the ability itself (CR 115.1 — its own
+/// stack id, so either of two abilities of one source), and new targets are
+/// offered.
 pub fn strionic_resonator() -> CardDefinition {
     CardDefinition {
         name: "Strionic Resonator",
