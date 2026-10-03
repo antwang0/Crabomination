@@ -2011,7 +2011,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 
-| 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |

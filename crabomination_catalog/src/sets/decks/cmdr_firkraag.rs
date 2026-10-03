@@ -143,9 +143,8 @@ pub fn astral_dragon() -> CardDefinition {
 }
 
 /// Baeloth Barrityl, Entertainer — opposing creatures with less power are
-/// goaded; a goaded attacking or blocking creature dying makes you a
-/// Treasure. Choose a Background. Residual: the powers compared are each
-/// creature's own, not static anthems.
+/// goaded (current powers, anthems included); a goaded attacking or blocking
+/// creature dying makes you a Treasure. Choose a Background.
 pub fn baeloth_barrityl_entertainer() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

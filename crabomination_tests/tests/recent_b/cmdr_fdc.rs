@@ -5964,6 +5964,11 @@ fn cr_701_15_baeloth_goads_lesser_power_opponents() {
     assert!(!goaded(&g, bear), "not less");
     assert!(!goaded(&g, mine), "yours");
     assert!(g.any_goad_present());
+
+    // CR 613.4c — current powers: an anthem lifts Baeloth to 3, so the 2/2
+    // bear's power is now less.
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    assert!(goaded(&g, bear), "2 < 3 under the anthem");
 }
 
 /// CR 701.15 / 509.1b — Bothersome Quasit: a noncreature spell goads an

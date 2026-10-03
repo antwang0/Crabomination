@@ -47,9 +47,11 @@ impl GameState {
     fn board_goads(&self, a: &CardInstance, c: &CardInstance) -> bool {
         a.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, a) {
             Some(StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded) => {
+                // CR 613.4c — the powers compared are the current ones,
+                // anthems included (the layer pass reads printed here).
                 self.computed_is_creature(c)
                     && !self.same_team(a.controller, c.controller)
-                    && c.power() < a.power()
+                    && self.effective_power_on(c) < self.effective_power_on(a)
             }
             Some(StaticEffect::OthersNamedLikeThisAreGoaded) => {
                 c.id != a.id && self.computed_is_creature(c) && c.definition.name == a.definition.name
