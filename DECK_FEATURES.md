@@ -91,7 +91,7 @@ they call a deck 🟡, the table wins.
 | 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
 | 181 | Davros, Dalek Creator (UBR) | 2: rassilon_the_war_president, the_master_multiplied |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
-| 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+| 183 | The Tenth Doctor + Rose Tyler (URW) | 1: psychic_paper |
 
 127 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
