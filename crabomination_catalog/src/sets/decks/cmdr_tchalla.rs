@@ -166,7 +166,7 @@ pub fn tchalla_the_black_panther() -> CardDefinition {
 }
 
 /// Ancestral Communion — regrow a permanent card; copied while you control
-/// your commander. Residual: the copy keeps its target on auto seats.
+/// your commander (the copy defaults to another card, `repoint_copy_slot`).
 pub fn ancestral_communion() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {

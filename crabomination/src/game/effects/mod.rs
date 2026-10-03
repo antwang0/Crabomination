@@ -2185,7 +2185,15 @@ impl GameState {
                 crate::game::types::Target::Permanent(_) => own && effect.permanent_slot_is_hostile(slot, None),
                 crate::game::types::Target::Player(p) => *p == caster && effect.player_slot_is_hostile(slot, None),
             };
-            if hostile_at_self && !legal.is_empty() {
+            // Two objects naming one graveyard card: whichever resolves first
+            // moves it and the other has no legal target (CR 400.7, 608.2b),
+            // so a copy of a regrowth (Ancestral Communion) defaults to
+            // another card.
+            let yard_card = matches!(orig, crate::game::types::Target::Permanent(id)
+                if self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == *id)));
+            if yard_card && !legal.is_empty() {
+                legal.push(orig.clone());
+            } else if hostile_at_self && !legal.is_empty() {
                 let mine = |t: &crate::game::types::Target| match t {
                     crate::game::types::Target::Permanent(id) => {
                         self.battlefield_find(*id).is_some_and(|c| self.same_team(c.controller, caster))

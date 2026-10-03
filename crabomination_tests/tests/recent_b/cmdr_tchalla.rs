@@ -159,6 +159,24 @@ fn panther_habit_counts_unpreventable_damage_too() {
     assert_eq!(c.damage, 3);
 }
 
+/// Ancestral Communion while you control your commander: the copy defaults to
+/// a different card, so both return (one card named twice would leave the
+/// later resolver with no legal target, CR 608.2b).
+#[test]
+fn ancestral_communion_copy_takes_another_card() {
+    let mut g = main_phase(2);
+    let tchalla = g.add_card_to_battlefield(0, catalog::tchalla_the_black_panther());
+    g.players[0].commanders.push(tchalla);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let spell = g.add_card_to_hand(0, catalog::ancestral_communion());
+    flood(&mut g, 0);
+    cast(&mut g, spell, &[Target::Permanent(bear)], None).expect("cast");
+    for id in [bear, wurm] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == id));
+    }
+}
+
 /// Kimoyo Beads: three end steps, three different beads.
 #[test]
 fn kimoyo_beads_uses_each_bead_once() {
