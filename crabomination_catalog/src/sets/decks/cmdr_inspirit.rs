@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_inspirit.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Cloud Key** — the card-type choice also offers land and planeswalker.
 //! - **Moxite Refinery** — the X counters may come from among several of your
 //!   artifacts and creatures, not from one.
 //! - **Ripples of Potential** — the phase-out is all or none of your
@@ -135,11 +134,19 @@ pub fn chrome_host_seedshark() -> CardDefinition {
     }
 }
 
-/// Cloud Key — as it enters, choose a card type; your spells of it cost {1}
-/// less. Residual: The choice also offers land and planeswalker.
+/// Cloud Key — as it enters, choose artifact, creature, enchantment, instant
+/// or sorcery; your spells of that type cost {1} less.
 pub fn cloud_key() -> CardDefinition {
     CardDefinition {
-        as_enters_effect: Some(Effect::ChooseCardTypeForSource),
+        as_enters_effect: Some(Effect::ChooseCardTypeFromForSource {
+            options: vec![
+                CardType::Artifact,
+                CardType::Creature,
+                CardType::Enchantment,
+                CardType::Instant,
+                CardType::Sorcery,
+            ],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Spells you cast of the chosen type cost {1} less to cast.",
             effect: StaticEffect::CostReduction { filter: R::IsSourceChosenCardType, amount: 1 },

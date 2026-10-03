@@ -134,12 +134,14 @@ fn seedshark_incubates_mana_value() {
     assert_eq!(counters(&g, inc[0], CounterType::PlusOnePlusOne), 3);
 }
 
-/// Cloud Key — the chosen type costs {1} less.
+/// Cloud Key — the chosen type costs {1} less; the choice is the printed five
+/// types (CR 205.2a), in printed order.
 #[test]
 fn cloud_key_discounts_the_chosen_type() {
     let mut g = pod(2);
-    // The choice order: creature, instant, sorcery, artifact, …
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(3)]));
+    // The printed choices, in order: artifact, creature, enchantment,
+    // instant, sorcery — no land or planeswalker.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
     g.add_card_to_battlefield_entering(0, catalog::cloud_key());
     let ring = g.add_card_to_hand(0, catalog::sol_ring());
     cast(&mut g, 0, ring, None).expect("Sol Ring for {0}");
