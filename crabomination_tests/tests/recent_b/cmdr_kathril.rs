@@ -134,6 +134,23 @@ fn archon_bars_the_chosen_type() {
     assert!(cast_by(&mut g, 1, bear, &[]).is_ok());
 }
 
+/// Archon of Valor's Reach names the type its opponents show most and its own
+/// hand needs least: sorceries in an opponent's graveyard, instants in hand.
+#[test]
+fn archon_of_valors_reach_reads_the_board() {
+    let mut g = pod(3);
+    g.add_card_to_graveyard(1, catalog::divination());
+    g.add_card_to_graveyard(2, catalog::divination());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let a = g.add_card_to_hand(0, catalog::archon_of_valors_reach());
+    cast(&mut g, a, &[]);
+    let div = g.add_card_to_hand(1, catalog::divination());
+    g.active_player_idx = 1;
+    assert!(cast_by(&mut g, 1, div, &[]).is_err(), "sorcery named");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    assert!(cast_by(&mut g, 1, bolt, &[Target::Player(0)]).is_ok(), "instants still cast");
+}
+
 /// Nikara draws when another creature of yours leaves with counters.
 #[test]
 fn nikara_draws_on_counters_leaving() {

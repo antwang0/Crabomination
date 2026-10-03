@@ -2347,7 +2347,7 @@ Wanderer is one `PumpTeamIf` per keyword. ⚠ **An "up to N target cards"
 slot named one graveyard card twice** (CR 115.3): Ever After was never cast
 until the graveyard sweep skipped cards an earlier slot took. Residuals:
 **Cairn Wanderer**, **Slippery Bogbonder**, **Tayam**, **Vitality Hunter**,
-**Archon of Valor's Reach** (INCOMPLETE_CARDS; Yannik since fixed). Release pods
+(INCOMPLETE_CARDS; Yannik and Archon of Valor's Reach since fixed). Release pods
 beside Kasla / Ellivere / Zinnia (seed 10302, 1,000 games): 1,000 decided,
 Kathril 21.8 %, and the census leaves no card of the four lists unplayed;
 strict debug pods (seeds 10303/10304, 120 games) decided 120/120. Suite

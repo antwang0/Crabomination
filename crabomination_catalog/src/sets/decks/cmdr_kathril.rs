@@ -183,8 +183,8 @@ pub fn ajani_unyielding() -> CardDefinition {
 
 /// Archon of Valor's Reach — flying, vigilance, trample; as it enters,
 /// choose artifact, enchantment, instant, sorcery or planeswalker: no player
-/// casts spells of that type.
-/// Residual: the bot's pick is the first offered (instant).
+/// casts spells of that type (offered most-damaging first from the public
+/// board and the chooser's own hand).
 pub fn archon_of_valors_reach() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Trample],

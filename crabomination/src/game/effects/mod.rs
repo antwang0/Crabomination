@@ -38277,12 +38277,41 @@ impl GameState {
                 if options.is_empty() {
                     return Ok(());
                 }
-                let texts = options.iter().map(|t| format!("{t:?}")).collect();
+                // "No player casts spells of the chosen type" (Archon of
+                // Valor's Reach): offered most-damaging first, so a seat that
+                // takes the first offer — a headless one, or a bot whose
+                // outcome read ties — names the type its opponents show most
+                // (graveyards and battlefield, public) less what its own hand
+                // holds. Stable on ties, and a pure read of the board, so a
+                // suspended ask re-offers the same order.
+                let me = ctx.controller;
+                let shown = |t: &crate::card::CardType| -> i64 {
+                    let mut n = 0i64;
+                    for (seat, pl) in self.players.iter().enumerate() {
+                        let has = |c: &CardInstance| c.definition.card_types.contains(t);
+                        let gy = pl.graveyard.iter().filter(|c| has(c)).count() as i64;
+                        if seat == me {
+                            n -= 2 * pl.hand.iter().filter(|c| has(c)).count() as i64 + gy;
+                        } else if pl.is_alive() {
+                            n += gy;
+                        }
+                    }
+                    n + self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.definition.card_types.contains(t))
+                        .map(|c| if c.controller == me { -1 } else { 1 })
+                        .sum::<i64>()
+                };
+                let mut order: Vec<usize> = (0..options.len()).collect();
+                order.sort_by_key(|&i| std::cmp::Reverse(shown(&options[i])));
+                let texts = order.iter().map(|&i| format!("{:?}", options[i])).collect();
                 let Some(n) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
                     return Ok(());
                 };
+                let pick = order[n.min(order.len() - 1)];
                 if let Some(c) = self.battlefield_find_mut(source) {
-                    c.chosen_card_type = Some(options[n.min(options.len() - 1)].clone());
+                    c.chosen_card_type = Some(options[pick].clone());
                 }
                 Ok(())
             }
