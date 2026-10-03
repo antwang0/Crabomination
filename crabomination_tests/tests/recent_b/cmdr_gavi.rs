@@ -436,7 +436,8 @@ fn crystalline_resonance_copies_on_a_cycle() {
     let mut g = main_phase(2);
     let cr = g.add_card_to_battlefield(0, catalog::crystalline_resonance());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    library(&mut g, 0, 1);
+    library(&mut g, 0, 5);
+    library(&mut g, 1, 5);
     let d = g.add_card_to_hand(0, catalog::desert_of_the_true());
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
@@ -445,4 +446,16 @@ fn crystalline_resonance_copies_on_a_cycle() {
     cycle(&mut g, d, true).expect("cycle");
     assert_eq!(pt(&g, cr), (2, 2));
     assert_eq!(g.battlefield_find(cr).unwrap().definition.name, "Grizzly Bears");
+    assert_eq!(g.battlefield_find(cr).unwrap().definition.triggered_abilities.len(), 1, "keeps its cycle trigger");
+    // "Until your next turn" (2020-04-17 ruling): it wears off as that begins.
+    let start = g.turn_number;
+    for _ in 0..200 {
+        if g.turn_number >= start + 2 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.active_player_idx, 0);
+    assert_eq!(g.battlefield_find(cr).unwrap().definition.name, "Crystalline Resonance");
 }

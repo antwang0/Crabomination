@@ -6,8 +6,6 @@
 //! Residuals (each also on its card):
 //! - **Akim, the Soaring Wind** — "the first time each turn" counts from when
 //!   Akim is on the battlefield: tokens made earlier that turn don't use it up.
-//! - **Crystalline Resonance** — the copy lasts until it copies again, not
-//!   until your next turn.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
@@ -433,20 +431,29 @@ pub fn astral_drift() -> CardDefinition {
 }
 
 /// Crystalline Resonance — whenever you cycle, it may become a copy of another
-/// target permanent, keeping this ability.
-/// Residual: the copy lasts until it copies again, not until your next turn.
+/// target permanent until your next turn, keeping this ability.
 pub fn crystalline_resonance() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_you_cycle(Effect::MayDo {
             description: "Have Crystalline Resonance become a copy of another target permanent?".into(),
-            body: Box::new(Effect::BecomeCopyOf {
-                what: Selector::This,
-                source: target_filtered(R::Permanent.and(R::OtherThanSource)),
-                extra_creature_types: vec![],
-                keep_own_triggered: true,
-                keep_own_activated: false,
-                keep_name: false,
-            }),
+            body: Box::new(Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(R::Permanent.and(R::OtherThanSource)),
+                    duration: Duration::UntilNextTurn,
+                    non_legendary: false,
+                },
+                Effect::AmendCopy {
+                    what: Selector::This,
+                    keep_activated: vec![],
+                    keep_triggered: vec![0],
+                    pt: None,
+                    keep_name: false,
+                    legendary: false,
+                    keywords: vec![],
+                    card_types: vec![],
+                },
+            ])),
         })],
         ..permanent("Crystalline Resonance", cost(&[generic(2), u()]), CardType::Enchantment)
     }
