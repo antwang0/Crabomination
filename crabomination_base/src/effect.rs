@@ -1684,8 +1684,6 @@ impl Value {
 /// object is about to get as it enters" value.
 pub const UNBOUND_OBJECT_STAMP: u64 = u64::MAX;
 
-/// A boolean game-state condition (for `Effect::If` / cast-time checks).
-
 /// The event batches [`Predicate::FirstBatchThisTurn`] counts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FirstBatchKind {
@@ -1693,6 +1691,7 @@ pub enum FirstBatchKind {
     Surveiled,
 }
 
+/// A boolean game-state condition (for `Effect::If` / cast-time checks).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Predicate {
     #[default]
