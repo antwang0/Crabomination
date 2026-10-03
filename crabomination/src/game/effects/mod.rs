@@ -35922,7 +35922,7 @@ impl GameState {
                 Ok(())
             }
             Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => {
-                self.grant_loyalty_copies_of_chosen_type(ctx.controller);
+                self.grant_loyalty_copies_of_chosen_type(ctx.controller, effect, ctx);
                 Ok(())
             }
             Effect::ShuffleInThenCastFromTopFree { what } => {

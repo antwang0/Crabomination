@@ -33,9 +33,11 @@ impl GameState {
         self.players[p].loyalty_copy_grants.push(LoyaltyCopyGrant { copies, subtype, once, linked: None });
     }
 
-    /// Leori — the planeswalker type most common among `p`'s planeswalkers
-    /// on the battlefield and in hand (ties to the first seen).
-    pub(crate) fn grant_loyalty_copies_of_chosen_type(&mut self, p: usize) {
+    /// Leori — "choose a planeswalker type": `p` picks among the types of
+    /// their planeswalkers on the battlefield and in hand, offered most
+    /// common first (ties to the first seen), so a seat taking the first
+    /// offer copies the type it can use most.
+    pub(crate) fn grant_loyalty_copies_of_chosen_type(&mut self, p: usize, effect: &crate::effect::Effect, ctx: &EffectContext) {
         let mut tally: Vec<(PlaneswalkerSubtype, u32)> = Vec::new();
         let hand = self.players[p].hand.iter().map(|c| &c.definition);
         let board = self.battlefield.iter().filter(|c| c.controller == p).map(|c| &c.definition);
@@ -47,8 +49,15 @@ impl GameState {
                 }
             }
         }
-        let Some(best) = tally.iter().max_by_key(|(_, n)| *n).map(|(t, _)| *t) else { return };
-        self.grant_loyalty_copies(p, 1, Some(best), false);
+        if tally.is_empty() {
+            return;
+        }
+        tally.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+        let texts = tally.iter().map(|(t, _)| format!("{t:?}")).collect();
+        let source = ctx.source.unwrap_or(CardId(0));
+        let Some(i) = self.ask_controller_mode(p, source, texts, effect) else { return };
+        let pick = tally[i.min(tally.len() - 1)].0;
+        self.grant_loyalty_copies(p, 1, Some(pick), false);
     }
 
     /// Called as `source`'s loyalty ability goes on the stack: push the

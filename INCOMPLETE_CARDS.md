@@ -2050,7 +2050,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
 | 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
-| 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | the new creature enters before the old one is destroyed. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |

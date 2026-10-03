@@ -235,6 +235,25 @@ fn leori_copies_a_planeswalker_type() {
     assert_eq!(g.players[0].hand.len(), hand + 2, "Teyo's draw and its copy");
 }
 
+/// "Choose a planeswalker type" is Leori's controller's choice: offered most
+/// common first, a chooser may name the other one (Chandra over Teyo here).
+#[test]
+fn leori_lets_its_controller_choose_the_type() {
+    let mut g = pod(2);
+    let leori = g.add_card_to_battlefield(0, catalog::leori_sparktouched_hunter());
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
+    g.add_card_to_hand(0, catalog::teyo_geometric_tactician());
+    g.add_card_to_hand(0, catalog::chandra_legacy_of_fire());
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    // Teyo (two) is offered first, Chandra second.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    connect(&mut g, leori, 1);
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, teyo, 0, Some(Target::Player(1)), None).expect("+1");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a Teyo ability isn't copied once Chandra is named");
+}
+
 /// CR 606 — Narset of the Ancient Way's +1 and −2.
 #[test]
 fn narset_of_the_ancient_way_gains_and_loots() {

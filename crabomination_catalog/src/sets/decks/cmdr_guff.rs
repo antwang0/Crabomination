@@ -375,8 +375,8 @@ pub fn jayas_phoenix() -> CardDefinition {
 }
 
 /// Leori, Sparktouched Hunter — flying, vigilance; connecting copies this
-/// turn's abilities of one planeswalker type. Residual: the type isn't a free
-/// choice.
+/// turn's abilities of one planeswalker type, its controller's choice among
+/// the types of their walkers (on the battlefield or in hand).
 pub fn leori_sparktouched_hunter() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
