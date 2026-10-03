@@ -264,10 +264,8 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 /// max 2, no repeats): `GameAction::CastSpellSpree` carries the chosen
 /// modes, each target-bearing mode consuming its own target slot. A
 /// plain `CastSpell { mode }` still works as a single-mode fallback
-/// (bot / back-compat path).
-///
-/// Approximation: mode 0's printed mandatory "you return a land card"
-/// is modeled as `MayDo` (decline = the empty-graveyard no-op case).
+/// (bot / back-compat path). Mode 0's return is mandatory and the caster
+/// picks the land card (CR 608.2d).
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
@@ -278,23 +276,23 @@ pub fn witherbloom_command() -> CardDefinition {
             max: 2,
             allow_repeats: false,
             modes: vec![
-                // Mode 0: target player mills 3, then you may return a
-                // land card from your graveyard to your hand.
+                // Mode 0: target player mills 3, then you return a land
+                // card from your graveyard to your hand.
                 Effect::Seq(vec![
                     Effect::Mill {
                         who: target_filtered(SelectionRequirement::Player),
                         amount: Value::Const(3),
                     },
-                    Effect::MayDo {
-                        description: "Return a land card from your graveyard to your hand".into(),
-                        body: Box::new(Effect::Move {
-                            what: Selector::one_of(Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: SelectionRequirement::Land,
-                            }),
-                            to: ZoneDest::Hand(PlayerRef::You),
-                        }),
+                    Effect::MoveChosen {
+                        from: Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Land,
+                        },
+                        filter: None,
+                        count: Value::ONE,
+                        up_to: false,
+                        to: ZoneDest::Hand(PlayerRef::You),
                     },
                 ]),
                 // Mode 1: destroy target noncreature, nonland permanent

@@ -152,21 +152,22 @@ fn witherbloom_command_choose_two_mill_and_drain() {
         "P1 -2 from drain");
 }
 
-/// Mode 0's "you may return a land card from your graveyard to your
-/// hand" rider fires when the controller accepts, and mode 2's -3/-1
+/// Mode 0's "then you return a land card from your graveyard to your hand"
+/// is mandatory and the caster picks the land (CR 608.2d); mode 2's -3/-1
 /// shrinks a target creature.
 #[test]
 fn witherbloom_command_mill_returns_land_and_shrinks() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
     let swamp = g.add_card_to_graveyard(0, catalog::swamp());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::witherbloom_command());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
-    // Accept the "return a land card" offer.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Pick the Swamp over the Forest.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![swamp])]));
     g.perform_action(GameAction::CastSpellSpree {
         card_id: id,
         spree_modes: vec![0, 2],
@@ -178,6 +179,7 @@ fn witherbloom_command_mill_returns_land_and_shrinks() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == swamp),
         "milled-mode rider returned the Swamp to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest), "only the chosen land");
     let b = g.battlefield.iter().find(|c| c.id == bear).expect("bear survives at 2/1");
     assert_eq!((b.power(), b.toughness()), (-1, 1), "bear at -1/1 from -3/-1");
 }
