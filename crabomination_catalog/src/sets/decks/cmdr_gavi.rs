@@ -275,13 +275,13 @@ pub fn herald_of_the_forgotten() -> CardDefinition {
 }
 
 /// Nimble Obstructionist — flash, flying; cycling {2}{U}; cycled, it
-/// counters target activated or triggered ability you don't control.
-/// Residual: "you don't control" reads the ability's source permanent.
+/// counters target activated or triggered ability you don't control (the
+/// ability's own controller — `evaluate_requirement_on_ability`, CR 115.1).
 pub fn nimble_obstructionist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Cycling(cost(&[generic(2), u()]))],
         triggered_abilities: vec![on_cycle_this(Effect::CounterAbility {
-            what: target_filtered(R::HasAbilityOnStack.and(R::ControlledByOpponent)),
+            what: target_filtered(R::HasAbilityOnStack.and(R::Not(Box::new(R::ControlledByYou)))),
         })],
         ..creature(
             "Nimble Obstructionist",

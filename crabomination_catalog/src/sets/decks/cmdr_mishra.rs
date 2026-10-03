@@ -106,8 +106,8 @@ pub fn mishra_eminent_one() -> CardDefinition {
 }
 
 /// Ashnod the Uncaring — deathtouch; activating a non-mana ability of an
-/// artifact or creature with a sacrifice in its cost may copy it. Residual: an
-/// ability whose source was the thing sacrificed can't be found to copy.
+/// artifact or creature with a sacrifice in its cost may copy it (a source
+/// that sacrificed itself is found from its graveyard).
 pub fn ashnod_the_uncaring() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

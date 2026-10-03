@@ -108,6 +108,35 @@ fn ashnod_copies_a_sacrifice_ability() {
     assert_eq!(named(&g, 0, "Inkling").len(), 2, "the ability and its copy");
 }
 
+/// Ashnod copies an ability whose source was the thing sacrificed: the
+/// source is a graveyard card by the time the trigger resolves, and the
+/// ability is still found on the stack.
+#[test]
+fn ashnod_copies_a_self_sacrifice_ability() {
+    use crabomination::card::{ActivatedAbility, CardDefinition, CardType};
+    use crabomination::effect::{Effect, Selector, Value};
+    let sac_draw = CardDefinition {
+        name: "Test Sac Draw",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::ashnod_the_uncaring());
+    let src = g.add_card_to_battlefield(0, sac_draw);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    activate(&mut g, src, 0, None).expect("sacrifice it");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the ability and its copy");
+}
+
 /// CR 702.4a — creatures attacking an opponent under Blast-Furnace Hellkite
 /// have double strike.
 #[test]

@@ -422,7 +422,9 @@ fn nimble_obstructionist_counters_an_opponents_trigger() {
     g.perform_action(GameAction::Cycle { card_id: tc, x_value: None }).expect("their cycle");
     assert!(!g.stack.is_empty(), "Drake Haven's trigger waits");
     let ob = g.add_card_to_hand(0, catalog::nimble_obstructionist());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(theirs))]));
+    // CR 115.1 — the target is the trigger itself, not Drake Haven.
+    let trigger = g.top_ability_of(theirs).expect("Drake Haven's trigger");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(trigger))]));
     cycle(&mut g, ob, true).expect("cycle");
     assert_eq!(count_named(&g, 1, "Drake"), 0, "countered");
 }

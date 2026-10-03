@@ -22962,7 +22962,7 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
-                    if let Some(pos) = t.as_permanent_id().and_then(|cid| self.stack_ability_pos(cid, None)) {
+                    if let Some(pos) = t.as_card_id().and_then(|cid| self.stack_ability_pos(cid, None)) {
                         to_remove.push(pos);
                     }
                 }
@@ -23021,7 +23021,9 @@ impl GameState {
                 let n = self.evaluate_value(times, ctx).max(0);
                 let targets = self.resolve_selector(what, ctx);
                 for t in &targets {
-                    let Some(cid) = t.as_permanent_id() else { continue };
+                    // A card id too: a source sacrificed for the cost is in a
+                    // graveyard by now (Ashnod copying a self-sacrifice).
+                    let Some(cid) = t.as_card_id() else { continue };
                     // The targeted ability (CR 115.1); a bare source id names
                     // its topmost one, the copier's first.
                     let Some(pos) = self.stack_ability_pos(cid, Some(ctx.controller)) else { continue };
