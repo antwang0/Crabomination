@@ -448,7 +448,16 @@ fn shelob_weaves_the_dead() {
     assert_eq!(controller_of(&g, giant), Some(0));
     assert!(g.battlefield_find(giant).unwrap().tapped);
     let hand = g.players[0].hand.len();
-    activate_x(&mut g, 0, shelob, 0, None).expect("feed");
+    // The exiled card goes to the graveyard as a cost (CR 602.2b): it's there
+    // while the ability waits on the stack.
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shelob, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("feed");
+    assert!(!g.stack.is_empty() && g.players[1].graveyard.iter().any(|c| c.id == bears));
+    drain_stack(&mut g);
     assert_eq!(pt(&g, shelob), (5, 5));
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bears));

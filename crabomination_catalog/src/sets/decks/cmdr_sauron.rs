@@ -586,9 +586,9 @@ pub fn saruman_the_white_hand() -> CardDefinition {
 /// +1/+1 counters and a card; {X}{1}{B}: put one with mana value X onto the
 /// battlefield tapped under your control.
 ///
-/// Residual: the graveyard half of the first ability is paid on resolution
-/// (the ability needs such a card to activate), and the X ability's card is
-/// the engine's pick, not a target.
+/// The first ability's "put a creature card exiled with Shelob into its
+/// owner's graveyard" is a cost (`exiled_with_self_to_graveyard_cost`).
+/// Residual: the X ability's card is the engine's pick, not a target.
 pub fn shelob_dread_weaver() -> CardDefinition {
     let exiled_creatures = |filter: R| Selector::MatchingAmong {
         inner: Box::new(Selector::CardExiledWithSource),
@@ -603,12 +603,8 @@ pub fn shelob_dread_weaver() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), b()]),
-                condition: Some(Predicate::SelectorExists(exiled_creatures(R::Any))),
+                exiled_with_self_to_graveyard_cost: Some(R::Creature),
                 effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::Take { inner: Box::new(exiled_creatures(R::Any)), count: Box::new(Value::ONE) },
-                        to: ZoneDest::Graveyard,
-                    },
                     Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::PlusOnePlusOne,
