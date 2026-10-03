@@ -1453,6 +1453,16 @@ pub struct Player {
 }
 
 impl Player {
+
+    /// A card left this player's graveyard (CR 400.7): one more for
+    /// `cards_left_graveyard_this_turn`, and for the creature-card count when
+    /// it's a creature card — a card's printed type, as it's no permanent.
+    pub fn note_card_left_graveyard(&mut self, card: &crate::card::CardInstance) {
+        self.cards_left_graveyard_this_turn = self.cards_left_graveyard_this_turn.saturating_add(1);
+        if card.definition.is_creature() {
+            self.creature_cards_left_graveyard_this_turn += 1;
+        }
+    }
     /// CR 702.16 — this player has protection from seat `q` (either mask).
     pub fn protected_from_seat(&self, q: usize) -> bool {
         let bit = 1u64.checked_shl(q as u32).unwrap_or(0);
