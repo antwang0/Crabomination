@@ -177,6 +177,8 @@ mod absorb;
 mod granted_entry;
 // "For the first time each turn" batch tallies.
 mod first_each_turn;
+// CR 702.138 — escape's "exile a permanent you control".
+mod escape_extra;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).

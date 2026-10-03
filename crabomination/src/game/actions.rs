@@ -12931,6 +12931,8 @@ impl GameState {
         let (escape_cost, exile_count, once_grant) = self
             .effective_escape_grant(&card, p)
             .ok_or(GameError::SorcerySpeedOnly)?;
+        let (exile_cards, escape_permanent) = self.split_escape_permanent(p, &card, exile_cards)?;
+        let exile_cards = exile_cards.as_slice();
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
@@ -12995,6 +12997,9 @@ impl GameState {
             .saturating_sub(self.players[p].mana_pool.total());
         // Pay the additional cost: exile the chosen graveyard cards.
         let mut events = Vec::new();
+        if let Some(id) = escape_permanent {
+            self.exile_escape_permanent(p, id, &mut events);
+        }
         for cid in exile_cards {
             if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: *cid });

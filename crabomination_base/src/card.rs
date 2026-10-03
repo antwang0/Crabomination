@@ -4859,6 +4859,13 @@ pub struct CardDefinition {
     /// `None`: any other graveyard card.
     #[serde(default)]
     pub escape_exile_filter: Option<SelectionRequirement>,
+    /// CR 702.138 — escape that also exiles a permanent you control
+    /// ("Escape—{4}{G}{U}, Exile a land you control, Exile five other cards
+    /// from your graveyard", Lunar Hatchling). The pick rides in
+    /// `CastEscape::exile_cards` beside the graveyard cards; without one the
+    /// cheapest match is taken. `None`: no permanent.
+    #[serde(default)]
+    pub escape_exile_permanent: Option<SelectionRequirement>,
     /// "This spell costs `{per}` less to cast for each [`Value`]" — the
     /// scaled sibling of `self_cost_reduction_if` (Domain: Draco's `{2}` and
     /// Stratadon's `{1}` per basic land type among lands you control).
