@@ -487,6 +487,27 @@ fn summons_of_saruman_casts_from_the_mill() {
     assert_eq!(army_power(&g), Some(2));
     assert_eq!(g.players[0].hand.len(), hand, "Summons left, Consider (mana value 1) drew one");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == consider), "cast, then to the graveyard");
+
+    // Flashback—{3}{U}{R}, exile X cards from your graveyard: X = 2 exiles two
+    // graveyard cards and costs no more mana (CR 702.34a, 107.3).
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let s = g.add_card_to_graveyard(0, catalog::summons_of_saruman());
+    let fodder = [g.add_card_to_graveyard(0, catalog::island()), g.add_card_to_graveyard(0, catalog::forest())];
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("flashback for X = 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    assert!(fodder.iter().all(|id| g.exile.iter().any(|c| c.id == *id)), "two graveyard cards exiled");
+    assert_eq!(army_power(&g), Some(2));
 }
 
 /// The Balrog of Moria — its death exiles itself and a creature per

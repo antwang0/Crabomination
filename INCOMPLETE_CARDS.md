@@ -438,7 +438,6 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 | Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
 | Invasion of Amonkhet | Lazotep Convert doesn't enter as a copy of a graveyard creature card | a transformed battle's back face has no enters-as-copy path |
 | Sunscourge Champion | eternalize's "Discard a card" additional cost isn't paid | the `eternalize` shortcut carries a mana cost only |
-| Summons of Saruman | the flashback X is paid in mana, not by exiling X cards from your graveyard | a flashback cost can't carry a variable exile |
 | Towering-Wave Mystic | mills only on combat damage, and mills the damaged player rather than a chosen target player | `DealsDamage*` binds slot 0 to the damaged object, so "target player" has no free slot |
 | Enter the Infinite | "until your next turn, you have no maximum hand size" lasts the rest of the game | no timed no-max-hand-size effect |
 
@@ -1984,7 +1983,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
-| 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |

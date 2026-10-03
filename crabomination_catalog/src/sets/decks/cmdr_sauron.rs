@@ -659,11 +659,14 @@ pub fn subjugate_the_hobbits() -> CardDefinition {
 
 /// Summons of Saruman — amass Orcs X, mill X, then you may cast an instant or
 /// sorcery with mana value X or less from among the milled cards free.
-///
-/// Residual: flashback pays X in mana instead of exiling X graveyard cards.
+/// Flashback—{3}{U}{R}, exile X cards from your graveyard: the X is the
+/// cast's declared X (CR 107.3, 702.34a).
 pub fn summons_of_saruman() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Flashback(cost(&[x(), generic(3), u(), r()]))],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u(), r()]))],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::ExileFromGraveyardXFromCost {
+            filter: R::Any,
+        }],
         ..spell(
             "Summons of Saruman",
             cost(&[x(), u(), r()]),
