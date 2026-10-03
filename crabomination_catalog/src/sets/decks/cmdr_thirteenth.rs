@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_thirteenth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Bill Potts** — only spells are copied, not activated abilities.
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
 //! - **Last Night Together** — any creature may attack in the extra combat.
@@ -183,17 +182,29 @@ pub fn bigger_on_the_inside() -> CardDefinition {
     )
 }
 
-/// Bill Potts — an instant or sorcery of yours targeting only Bill is copied
-/// (once each turn).
-/// Residual: an activated ability targeting only Bill isn't copied.
+/// Bill Potts — an instant or sorcery of yours, or an ability you activate,
+/// targeting only Bill is copied; the two halves share one "once each turn"
+/// (CR 603.3d).
 pub fn bill_potts() -> CardDefinition {
+    let unused = |other: u8| Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(other)));
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(trigger_is(R::SpellTargetsOnlySource.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))))
-                .once_per_turn(),
-            effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![
+                        trigger_is(R::SpellTargetsOnlySource.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+                        unused(1),
+                    ]))
+                    .once_per_turn(),
+                effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![trigger_is(R::ActivatedAbilityTargetsOnlySource), unused(0)]))
+                    .once_per_turn(),
+                effect: Effect::CopyActivatedAbilityMayChooseTargets,
+            },
+        ],
         ..companion(creature("Bill Potts", cost(&[generic(3), r()]), vec![CreatureType::Human], 2, 4))
     }
 }

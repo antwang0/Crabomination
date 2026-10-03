@@ -490,3 +490,60 @@ fn me_the_immortal_keeps_its_counters_across_zones() {
     assert_eq!(counters(&g, me), 2, "it comes back with them");
     assert!(g.players[0].hand.is_empty(), "two cards discarded");
 }
+
+fn ping(g: &mut GameState, id: CardId, target: Target) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: Some(target),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(g);
+}
+
+/// CR 603.3d / 707.10 — Bill Potts copies an ability you activate that targets
+/// only it, and its spell and ability halves share one "once each turn".
+#[test]
+fn cr_603_3d_bill_potts_copies_an_ability_once_each_turn() {
+    // An ability first: copied (2 damage), then a spell isn't (+3/+3 once).
+    let mut g = pod(2);
+    let bill = g.add_card_to_battlefield(0, catalog::bill_potts());
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    ping(&mut g, pinger, Target::Permanent(bill));
+    // The copy may take new targets, and the auto-decider aims it at the
+    // opponent.
+    let dealt = g.battlefield_find(bill).unwrap().damage + (20 - g.players[1].life) as u32;
+    assert_eq!(dealt, 2, "the ping is copied");
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    flood(&mut g, 0);
+    cast(&mut g, 0, growth, Some(Target::Permanent(bill))).expect("growth");
+    assert_eq!(g.computed_permanent(bill).unwrap().power, 5, "the spell isn't copied the same turn");
+
+    // A spell first: copied; then the ability isn't.
+    let mut g = pod(2);
+    let bill = g.add_card_to_battlefield(0, catalog::bill_potts());
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    flood(&mut g, 0);
+    cast(&mut g, 0, growth, Some(Target::Permanent(bill))).expect("growth");
+    assert_eq!(g.computed_permanent(bill).unwrap().power, 8, "the spell is copied");
+    ping(&mut g, pinger, Target::Permanent(bill));
+    assert_eq!(g.battlefield_find(bill).unwrap().damage, 1, "the ping isn't copied the same turn");
+    assert_eq!(g.players[1].life, 20);
+
+    // An ability aimed elsewhere isn't copied.
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::bill_potts());
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let other = g.add_card_to_battlefield(1, catalog::hill_giant());
+    ping(&mut g, pinger, Target::Permanent(other));
+    assert_eq!(g.battlefield_find(other).unwrap().damage, 1);
+    assert_eq!(g.players[1].life, 20, "not copied");
+}
