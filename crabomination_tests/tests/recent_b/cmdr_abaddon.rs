@@ -245,6 +245,34 @@ fn cr_601_2_the_ruinous_powers_casts_their_card_against_them() {
     .expect("castable with colorless mana");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3 - 1, "Bolt's 3 plus its mana value");
+    // A card of theirs exiled and granted by something else isn't "this way".
+    let shock = g.add_card_to_library(1, catalog::shock());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    run(&mut g, Effect::Move { what: Selector::ExactObjects(vec![shock]), to: crabomination::effect::ZoneDest::Exile }, other);
+    run(
+        &mut g,
+        Effect::GrantMayPlay {
+            what: Selector::ExactObjects(vec![shock]),
+            duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: false,
+            pay_own_cost: true,
+            any_color: true,
+        },
+        other,
+    );
+    let life = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: shock,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable through the other grant");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "Shock only");
 }
 
 /// CR 305.4 — The Lost and the Damned: a land put onto the battlefield (not

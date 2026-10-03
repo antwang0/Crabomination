@@ -899,9 +899,9 @@ pub fn the_lost_and_the_damned() -> CardDefinition {
 }
 
 /// The Ruinous Powers — your upkeep exiles the top card of a random
-/// opponent's library; you may cast it this turn with mana of any type, and
-/// its owner loses life equal to its mana value. Residual: the rider reads
-/// any spell you cast from exile that you don't own.
+/// opponent's library; you may play it this turn with mana of any type, and
+/// casting it this way costs its owner life equal to its mana value. The
+/// exile is stamped with this source, which is what "this way" reads.
 pub fn the_ruinous_powers() -> CardDefinition {
     CardDefinition {
         name: "The Ruinous Powers",
@@ -910,19 +910,24 @@ pub fn the_ruinous_powers() -> CardDefinition {
         triggered_abilities: vec![
             step(
                 TurnStep::Upkeep,
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::RandomOpponent,
-                    count: Value::ONE,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TopOfLibrary { who: PlayerRef::RandomOpponent, count: Value::ONE },
+                        to: ZoneDest::ExileWithSourceStamp,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: true,
+                    },
+                ]),
             ),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                    .with_filter(Predicate::All(vec![Predicate::CastSpellFromExile, Predicate::CastSpellNotOwnedByYou])),
+                    .with_filter(Predicate::All(vec![Predicate::CastSpellFromExile, Predicate::TriggerCardExiledWithSource])),
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
                     amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),

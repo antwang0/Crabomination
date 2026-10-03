@@ -1989,7 +1989,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
-| 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own. |
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |

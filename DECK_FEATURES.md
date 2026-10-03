@@ -2614,8 +2614,8 @@ now drops it) and **the bot sacrificed to draw from an empty library** (Trazyn
 the Infinite borrowing Commander's Sphere beside Out of the Tombs: 5,736
 activations, 3 of 1,000 six-seat pods action-capped — `pick_sacrifice_value`
 skips it now). Residuals: **Bloodthirster**, **Chaos Mutation**, **Khârn the
-Betrayer**, **The Horus Heresy**, **The Lost and the Damned**, **The Ruinous
-Powers** (INCOMPLETE_CARDS). Four seats beside Paradox Power / Necron Dynasties
+Betrayer**, **The Horus Heresy**, **The Lost and the Damned**, ~~**The Ruinous
+Powers**~~ (`01QFHGia`: the exile is stamped) (INCOMPLETE_CARDS). Four seats beside Paradox Power / Necron Dynasties
 / Doom Prevails (seed 10540, 1,000, `--card-census`: nothing unplayed): all
 decided, Abaddon 20.6 %; six seats beside those three, Tyranid Swarm and
 Avengers Assemble (10541, 1,000): all decided after the two fixes, 12.0 %;
