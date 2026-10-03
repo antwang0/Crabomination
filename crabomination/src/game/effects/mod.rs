@@ -19349,9 +19349,17 @@ impl GameState {
                 // its own trigger; targets are picked now (603.7d).
                 let Some(src) = ctx.source else { return Ok(()) };
                 // Sourced: a slot filter can read the source ("power less than
-                // Auron's" — `PowerLessThanSource`).
-                let (slot0, additional) =
-                    self.auto_targets_for_effect_all_slots_sourced(body, ctx.controller, None, Some(src));
+                // Auron's" — `PowerLessThanSource`). An X carried in ("up to
+                // that many" — Loamcrafter Faun's discard count) caps the slots.
+                let x = (ctx.x_value > 0).then_some(ctx.x_value);
+                let (mut slot0, mut additional) =
+                    self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
+                if body.slot_past_x_cap(0, ctx.x_value) {
+                    slot0 = None;
+                    additional.clear();
+                } else if let Some(cap) = (1..=additional.len()).find(|&s| body.slot_past_x_cap(s as u8, ctx.x_value)) {
+                    additional.truncate(cap - 1);
+                }
                 self.push_stack(
                     crate::game::TriggerPush::new(src, ctx.controller, (**body).clone())
                         .target(slot0)
