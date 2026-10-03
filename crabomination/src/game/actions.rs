@@ -8155,9 +8155,10 @@ impl GameState {
             events.push(GameEvent::TurnedFaceUp { card_id });
             return Ok(events);
         }
-        let cost = self
+        let mut cost = self
             .turn_up_mana_cost(p, card_id, x_value)
             .ok_or(GameError::InvalidTarget)?;
+        self.phyrexianize_for_payer(p, &mut cost);
         // CR 702.36e — Megamorph turns the permanent up with a +1/+1 counter.
         let megamorph = self
             .battlefield
@@ -8182,6 +8183,23 @@ impl GameState {
         // internal dispatch here double-fired turn-up triggers (CR 603.2).
         events.push(GameEvent::TurnedFaceUp { card_id });
         Ok(events)
+    }
+
+    /// K'rrik, Son of Yawgmoth — "for each {B} in a cost, you may pay 2 life
+    /// rather than pay that mana" covers every cost `seat` pays, activation
+    /// and special-action costs too (2024-06-07 ruling); spells take it in
+    /// `apply_colored_cost_statics`. Walks only for a cost with a coloured pip.
+    pub(crate) fn phyrexianize_for_payer(&self, seat: usize, cost: &mut crate::mana::ManaCost) {
+        if !cost.symbols.iter().any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))) {
+            return;
+        }
+        for src in self.battlefield.iter().filter(|c| c.controller == seat) {
+            for sa in &src.definition.static_abilities {
+                if let crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } = sa.effect {
+                    while cost.phyrexianize_one(color) {}
+                }
+            }
+        }
     }
 
     /// CR 708.8 — the face-up card's "as this is turned face up" effect, and
@@ -21625,6 +21643,7 @@ impl GameState {
         if let Some(color) = ability.spend_color_as_any {
             effective_mana_cost = effective_mana_cost.colored_payable_by(color);
         }
+        self.phyrexianize_for_payer(p, &mut effective_mana_cost);
 
         // CR 601.2g — float-spend confirmation. Before tapping anything, if the
         // activator has pre-existing floating mana the mana cost could either
