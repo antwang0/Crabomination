@@ -8665,6 +8665,12 @@ pub enum Effect {
         filter: SelectionRequirement,
         effect: Box<Effect>,
     },
+    /// A trigger its source GRANTS to the object it fired on ("Other
+    /// creatures have 'Whenever this creature attacks, …'" — Grothama): as it
+    /// goes on the stack it becomes that object's ability — the subject is its
+    /// source and its controller controls it, and the granter is its
+    /// `TriggerSource` — and runs `0` (CR 113.10: the creature has the ability).
+    AsSubjectsAbility(Box<Effect>),
     /// CR 601.2c — a sequence whose members own **consecutive** target slots:
     /// each member's slot 0 is the slot after the previous targeting member's
     /// last ([`Effect::target_slot_count`]), and at resolution each runs with

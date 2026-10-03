@@ -246,6 +246,31 @@ fn grothama_trades_fights_for_cards() {
     assert_eq!(g.players[1].hand.len(), hand + 2, "their bears dealt 2");
 }
 
+/// CR 113.10 — Grothama GRANTS the fight trigger: on the stack it is the
+/// attacking creature's ability, controlled by the attacker's controller.
+#[test]
+fn grothama_fight_trigger_is_the_attackers_ability() {
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase();
+    let grothama = g.add_card_to_battlefield(0, catalog::grothama_all_devouring());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    let fight = g.stack.iter().find_map(|si| match si {
+        StackItem::Trigger { source, controller, .. } if *source == bears => Some(*controller),
+        _ => None,
+    });
+    assert_eq!(fight, Some(1), "the Bears' own trigger, controlled by their controller");
+    assert!(
+        !g.stack.iter().any(|si| matches!(si, StackItem::Trigger { source, .. } if *source == grothama)),
+        "not Grothama's"
+    );
+}
+
 /// Other non-Humans enter with a +1/+1 counter; a Human doesn't.
 #[test]
 fn grumgully_counters_non_humans() {

@@ -282,11 +282,10 @@ pub fn evercoat_ursine() -> CardDefinition {
     }
 }
 
-/// Grothama, All-Devouring — any other attacker may fight it; when it
+/// Grothama, All-Devouring — other creatures have "whenever this creature
+/// attacks, you may have it fight Grothama" (`Effect::AsSubjectsAbility`: the
+/// attacker's own ability, its controller's choice and APNAP place); when it
 /// leaves, each player draws the damage their sources dealt it this turn.
-/// Residual: The fight offer is Grothama's trigger asking the attacker's controller
-/// (`MayDoBy`), not an ability granted to each creature, so its controller
-/// is Grothama's for APNAP ordering.
 pub fn grothama_all_devouring() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -295,11 +294,10 @@ pub fn grothama_all_devouring() -> CardDefinition {
                 event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource },
                 ),
-                effect: Effect::MayDoBy {
-                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
-                    description: "Have the attacking creature fight Grothama?".into(),
-                    body: Box::new(Effect::Fight { attacker: Selector::TriggerSource, defender: Selector::This }),
-                },
+                effect: Effect::AsSubjectsAbility(Box::new(Effect::MayDo {
+                    description: "Have this creature fight Grothama?".into(),
+                    body: Box::new(Effect::Fight { attacker: Selector::This, defender: Selector::TriggerSource }),
+                })),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),

@@ -25835,6 +25835,24 @@ impl GameState {
         if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
             return;
         }
+        // A granted trigger (Grothama) becomes the subject's own ability as it
+        // goes on the stack: its source and controller, the granter as the
+        // trigger source.
+        let (source, controller, effect, subject) = match effect {
+            crate::effect::Effect::AsSubjectsAbility(inner) => {
+                let Some(crate::game::effects::EntityRef::Permanent(id) | crate::game::effects::EntityRef::Card(id)) =
+                    subject
+                else {
+                    return;
+                };
+                let Some(owner) = self.battlefield_find(id).map(|c| c.controller) else { return };
+                if !self.players.get(owner).is_some_and(|p| p.is_alive()) {
+                    return;
+                }
+                (id, owner, *inner, Some(crate::game::effects::EntityRef::Permanent(source)))
+            }
+            other => (source, controller, other, subject),
+        };
         // Aboleth Spawn — its trigger is bound to the entering creature's fire
         // it sits on (`probing_telepathy.rs`); with none left, it isn't put on.
         let target = if Self::is_probing_telepathy(&effect) {

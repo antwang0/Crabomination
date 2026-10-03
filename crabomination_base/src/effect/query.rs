@@ -390,6 +390,7 @@ impl Effect {
             }
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
+            Effect::AsSubjectsAbility(e) => f(e),
             Effect::LookPickToHand(lp) => {
                 if let Some(e) = lp.then_if_picked.as_deref() {
                     f(e);
@@ -1427,6 +1428,7 @@ impl Effect {
             Effect::DigForLandToBattlefield { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),
             Effect::Seq(v) | Effect::SlotGroups(v) => v.iter().any(|e| e.requires_target()),
+            Effect::AsSubjectsAbility(e) => e.requires_target(),
             Effect::If { cond, then, else_ } => {
                 pred_has_target(cond) || then.requires_target() || else_.requires_target()
             }

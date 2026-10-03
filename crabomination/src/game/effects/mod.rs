@@ -7301,6 +7301,10 @@ impl GameState {
                 Ok(())
             }
 
+            // Re-homed as the trigger goes on the stack (`push_pending_trigger`);
+            // run anywhere else, it is just its body.
+            Effect::AsSubjectsAbility(inner) => self.run_effect(inner, ctx, events),
+
             // CR 601.2c — each targeting member owns its consecutive slots
             // (`Effect::slot_group_owner`): run it on that slice, as an
             // entwined `ChooseModesCast` runs its modes.
