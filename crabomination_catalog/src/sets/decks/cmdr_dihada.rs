@@ -1,12 +1,6 @@
 //! Commander: the cards the **Legends' Legacy** precon (DMC, Dihada, Binder of
 //! Wills) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_dihada.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Bell Borca** — the noted mana values are every card exiled this turn,
-//!   including before Bell Borca entered.
-//! - **Verrak** — only a fixed life cost counts as "life paid" (not X or half
-//!   your life), and the copy keeps its targets.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,

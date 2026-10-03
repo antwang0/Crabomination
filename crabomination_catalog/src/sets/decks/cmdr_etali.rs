@@ -45,8 +45,6 @@
 //!   trigger) and the Hamster draw precedes the damage; no Minsc subtype.
 //! - Invasion of Ikoria: always searches library and graveyard together;
 //!   Zilortha's "you may" is always taken.
-//! - Strionic Resonator: targets the trigger's source permanent (so not a
-//!   trigger whose source has left), and the copy keeps its targets.
 //!
 //! New primitives: `Value::InstantsOrSorceriesCastThisTurn` (Rionya),
 //! `Value::TotalManaValueOfOtherSpellsCastThisTurn` (Call Forth the Tempest),

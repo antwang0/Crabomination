@@ -4,9 +4,7 @@
 //! `tests/recent_b/cmdr_windgrace.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Emissary of Grudges** — the choice isn't secret, and its reveal
-//!   redirects any spell that targets you or your permanents, not only the
-//!   chosen player's.
+//! - **Emissary of Grudges** — the opponent is chosen openly, not secretly.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,

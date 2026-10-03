@@ -1,9 +1,6 @@
 //! Commander: the cards the **Witherbloom Witchcraft** precon (C21,
 //! Willowdusk, Essence Seer) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_willowdusk.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Suffer the Past** — the cards are chosen as it resolves, not targeted.
 
 use std::sync::Arc;
 

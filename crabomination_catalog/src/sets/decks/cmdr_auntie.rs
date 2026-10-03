@@ -1,10 +1,6 @@
 //! Commander: the cards the **Blight Curse** precon (ECC, Auntie Ool,
 //! Cursewretch) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_auntie.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Puca's Covenant** — the returned card is chosen on resolution (not
-//!   targeted), and the dying creature's own card is among the choices.
 
 use std::sync::Arc;
 

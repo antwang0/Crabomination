@@ -22,9 +22,6 @@
 //! Residuals (approximations, each also on the card's doc comment):
 //! - "Put there from their library this turn" (The Weaver King, Captain
 //!   N'ghathrod) counts mills; a surveil isn't recorded.
-//! - Aboleth Spawn's Probing Telepathy puts the copy on the stack with the
-//!   original (no Aboleth trigger of its own to respond to), and its "you may"
-//!   is asked as the copy resolves rather than as it is made.
 //! - Grell Philosopher: the blue-mana-as-any-colour rider is omitted.
 //! - Arvinox exiles face up (the look/face-down part is informational only).
 //! - Panharmonicon doubles ETB-caused triggers from any permanent entering,

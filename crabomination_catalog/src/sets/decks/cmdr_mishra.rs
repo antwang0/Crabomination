@@ -6,8 +6,6 @@
 //! - **Mishra, Eminent One** — the Warform keeps the copied artifact's name;
 //!   it isn't legendary, so the legend rule leaves it alone as the printed
 //!   rename would.
-//! - **Ashnod the Uncaring** — the copy is found through the ability's source,
-//!   so an ability whose source was itself sacrificed can't be copied.
 //! - **Smelting Vat** — each card is capped at the sacrificed artifact's mana
 //!   value, not the pair's total.
 

@@ -1,11 +1,6 @@
 //! Commander: the cards the **Virtue and Valor** precon (WOC, Ellivere of the
 //! Wild Court) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_ellivere.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Mantle of the Ancients**, **Unfinished Business** — the returned Aura
-//!   and Equipment cards are picked (greatest mana value first), not
-//!   targeted.
 
 use super::woe_roles::{monster_role, royal_role, sorcerer_role, virtuous_role};
 use crate::card::{

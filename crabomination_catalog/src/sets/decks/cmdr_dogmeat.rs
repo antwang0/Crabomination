@@ -7,8 +7,6 @@
 //!   than targeted.
 //! - **Vault 101: Birthday Party** — an Aura only goes on a creature, and an
 //!   Equipment is always attached (to any creature, not only yours).
-//! - **Perception Bobblehead** — the rest go to the bottom in the cascade
-//!   order, not a random one.
 
 use std::sync::Arc;
 

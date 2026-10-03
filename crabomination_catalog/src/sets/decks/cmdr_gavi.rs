@@ -8,8 +8,6 @@
 //!   Akim is on the battlefield: tokens made earlier that turn don't use it up.
 //! - **Crystalline Resonance** — the copy lasts until it copies again, not
 //!   until your next turn.
-//! - **Nimble Obstructionist** — "you don't control" reads the ability's
-//!   source permanent's controller.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
