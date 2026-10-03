@@ -151,9 +151,8 @@ pub fn bucknards_everfull_purse() -> CardDefinition {
 }
 
 /// Grave Endeavor — two d10: reanimate a creature card with one result in
-/// +1/+1 counters, then drain each opponent by the other.
-///
-/// Residual: the counters are put on after it enters rather than with it.
+/// +1/+1 counters (it enters with them), then drain each opponent by the
+/// other.
 pub fn grave_endeavor() -> CardDefinition {
     spell(
         "Grave Endeavor",
@@ -168,14 +167,14 @@ pub fn grave_endeavor() -> CardDefinition {
                 what: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
                 chooser: PlayerRef::You,
                 chosen: Box::new(Effect::Seq(vec![
+                    Effect::SpellEntersWithCounters {
+                        what: Selector::SeparatedPile { chosen: true },
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::LastDieRoll,
+                    },
                     Effect::Move {
                         what: Selector::SeparatedPile { chosen: true },
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastMoved,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::LastDieRoll,
                     },
                 ])),
                 other: Box::new(Effect::Noop),
