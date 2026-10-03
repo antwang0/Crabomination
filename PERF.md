@@ -3015,6 +3015,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01HA5hiK`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `SpellCast` scan per trigger
+dispatch (`stamp_absorbed_spells`), one token/surveil batch tally per
+dispatch (`tally_first_each_turn_batches`, two `u8`s on `PlayerData`), a
+granted-bloodthirst battlefield walk per creature entry, a static check per
+creature-vs-creature combat damage assignment (Weeping Angel), and the
+copy-lapse sweep now also reading `WhileSourceTapped`. No `GameState` field.
+4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip dc0e92489); games_per_s 302.3; determinism ok; rss 35.7
+two-player pools cube / sos / sealed x 300, seed 75001: 7,500 games, all decided
+pod              every deck 1-183 in six-seat blocks x 150 (seeds 73001+):
+                 4,650, all decided, zero panics; 3 / 4 / 8 seats x 500 (seeds
+                 74003/4/8): all decided, turns/game 32.30 / 45.63 / 97.29
+suite            23,825 / 1 / 5 at the Dusty Parlor tip (the 1: a structural-
+                 audit `.sum()`, fixed upstream in 3694b069b); clippy 0
+```
+
 ### 2026-10-03 (Commander session `01YCsdtK`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `ControlChanged` scan per
