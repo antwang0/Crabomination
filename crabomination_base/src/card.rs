@@ -981,6 +981,8 @@ pub enum CounterType {
     Ritual,
     /// Midnight Clock's hour counters — its twelfth wheels your hand.
     Hour,
+    /// Pako, Arcane Retriever's mark on the cards it exiles (Haldan plays them).
+    Fetch,
 }
 
 /// Every zone a card can occupy.

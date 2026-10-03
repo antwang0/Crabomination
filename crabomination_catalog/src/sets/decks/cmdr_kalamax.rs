@@ -5,8 +5,7 @@
 //! Residuals (each also on its card):
 //! - **Haldan, Avid Arcanist** / **Pako, Arcane Retriever** — the play
 //!   permission is granted as Pako exiles the cards while you control
-//!   Haldan (not re-read if Haldan comes or goes later), and creature cards
-//!   are playable too.
+//!   Haldan (not re-read if Haldan comes or goes later).
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
@@ -203,8 +202,8 @@ pub fn glademuse() -> CardDefinition {
     }
 }
 
-/// Haldan, Avid Arcanist — partner with Pako; the cards Pako exiles are yours
-/// to play, with mana of any color.
+/// Haldan, Avid Arcanist — partner with Pako; the lands and noncreature cards
+/// Pako exiles with fetch counters are yours to play, with mana of any color.
 /// Residual: see the module note — the permission is stamped as Pako exiles.
 pub fn haldan_avid_arcanist() -> CardDefinition {
     CardDefinition {
@@ -220,23 +219,19 @@ pub fn haldan_avid_arcanist() -> CardDefinition {
     }
 }
 
-/// Pako, Arcane Retriever — partner with Haldan; haste; attacking, the top
-/// card of each library is exiled with a fetch counter (playable while you
-/// control Haldan), and Pako grows per noncreature card.
+/// Pako, Arcane Retriever — partner with Haldan; haste; attacking, it exiles
+/// the top card of each library with a fetch counter on each, and grows a
+/// +1/+1 counter per noncreature card exiled this way. While you control
+/// Haldan the lands and noncreature cards among them are yours to play
+/// (stamped as they are exiled — the module residual).
 pub fn pako_arcane_retriever() -> CardDefinition {
-    let exile = |pay_any_color: bool| Effect::ExileTopAndGrantMayPlay {
-        who: PlayerRef::EachPlayer,
-        count: Value::ONE,
-        duration: MayPlayDuration::WhileExiled,
-        pay_any_color,
-        max_mana_value: None,
-        pay_own_cost: true,
-        uncast_penalty: None,
-    };
+    let exiled = |filter: R| Selector::ExiledThisResolution { filter };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::PartnerWith("Haldan, Avid Arcanist".into()), Keyword::Haste],
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::ExileLinked { what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE } },
+            Effect::AddCounter { what: exiled(R::Any), kind: CounterType::Fetch, amount: Value::ONE },
             Effect::If {
                 cond: Predicate::ValueAtLeast(
                     Value::CountOf(Box::new(Selector::EachPermanent(
@@ -244,15 +239,20 @@ pub fn pako_arcane_retriever() -> CardDefinition {
                     ))),
                     Value::ONE,
                 ),
-                then: Box::new(exile(true)),
-                else_: Box::new(Effect::ExileLinked {
-                    what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE },
+                then: Box::new(Effect::GrantMayPlay {
+                    what: exiled(R::Not(Box::new(R::Creature))),
+                    duration: MayPlayDuration::WhileExiled,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: true,
                 }),
+                else_: Box::new(Effect::Noop),
             },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::CountOf(Box::new(Selector::LastMoved)),
+                amount: Value::CountOf(Box::new(exiled(R::Not(Box::new(R::Creature))))),
             },
         ]))],
         ..creature(

@@ -263,3 +263,28 @@ fn deflecting_swat_redirects_an_ability() {
     assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the Bear was spared");
     assert_eq!(g.players[1].life, life - 1, "the ping hit its controller");
 }
+
+/// Pako, Arcane Retriever: attacking, it exiles the top card of each library
+/// WITH A FETCH COUNTER on each and grows per NONCREATURE card; with Haldan
+/// out the noncreature one is yours to cast, the creature card isn't.
+#[test]
+fn pako_exiles_with_fetch_counters_and_grows_per_noncreature() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let pako = g.add_card_to_battlefield(0, catalog::pako_arcane_retriever());
+    g.add_card_to_battlefield(0, catalog::haldan_avid_arcanist());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.clear_sickness(pako);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: pako, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    for id in [bolt, bear] {
+        let c = g.exile.iter().find(|c| c.id == id).expect("exiled");
+        assert_eq!(c.counter_count(CounterType::Fetch), 1, "a fetch counter on each");
+    }
+    assert_eq!(g.battlefield_find(pako).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "one noncreature card");
+    assert!(g.exile.iter().find(|c| c.id == bolt).unwrap().may_play_until.is_some(), "the Bolt is castable");
+    assert!(g.exile.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "the creature card isn't");
+}

@@ -2045,8 +2045,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Spirit-Sister's Call | Miracle Worker (DSC) | the sacrifice must share the chosen card's first card type (creature, artifact, enchantment, land, planeswalker, battle). |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
-| 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later); creature cards are playable too. |
-| 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |
+| 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |
 | 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
 | 🟡 Vastwood Hydra | Enhanced Evolution (C20) | the counters go among up to three target creatures you control, not "any number" chosen on resolution. |
