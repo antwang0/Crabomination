@@ -175,17 +175,34 @@ pub fn eumidian_hatchery() -> CardDefinition {
 }
 
 /// Eumidian Wastewaker — whenever it attacks, you and the defending player
-/// each discard; you draw per land card discarded. Encore {6}{B}{B}.
-///
-/// ⚠ Residual: nobody may sacrifice a permanent instead of discarding.
+/// each discard a card or sacrifice a permanent (each player's choice,
+/// `PlayerChoosesOne`); you draw per land card put into a graveyard either
+/// way. Encore {6}{B}{B}.
 pub fn eumidian_wastewaker() -> CardDefinition {
+    // Run as the choosing player, so "you" is them.
+    let discard_or_sacrifice = |who: PlayerRef| Effect::PlayerChoosesOne {
+        who,
+        options: vec![
+            crate::effect::VoteOption::new(
+                "Discard a card",
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ),
+            crate::effect::VoteOption::new(
+                "Sacrifice a permanent",
+                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Permanent },
+            ),
+        ],
+    };
     CardDefinition {
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-            Effect::Discard { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE, random: false },
+            discard_or_sacrifice(PlayerRef::You),
+            discard_or_sacrifice(PlayerRef::DefendingPlayer),
             Effect::Draw {
                 who: Selector::You,
-                amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution { filter: R::Land })),
+                amount: Value::Sum(vec![
+                    Value::CountOf(Box::new(Selector::DiscardedThisResolution { filter: R::Land })),
+                    Value::CountOf(Box::new(Selector::SacrificedThisResolution { filter: R::Land })),
+                ]),
             },
         ]))],
         activated_abilities: vec![encore(cost(&[generic(6), b(), b()]))],

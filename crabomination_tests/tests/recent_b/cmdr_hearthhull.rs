@@ -153,6 +153,27 @@ fn eumidian_wastewaker_discards_both_sides() {
     attack_with(&mut g, &[w], 1);
     assert!(g.players[1].hand.is_empty());
     assert_eq!(g.players[0].hand.len(), 2, "two lands discarded, two drawn");
+
+    // "Discard a card or sacrifice a permanent", each player's choice: the
+    // defending player sacrifices a land instead, and that land card put into
+    // a graveyard draws too (CR 701.21).
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    let kept = g.add_card_to_hand(1, catalog::island());
+    let land = g.add_card_to_battlefield(1, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(0), // you discard…
+        DecisionAnswer::Discard(vec![forest]),
+        DecisionAnswer::Amount(1), // …they sacrifice
+    ]));
+    let w = g.add_card_to_battlefield(0, catalog::eumidian_wastewaker());
+    attack_with(&mut g, &[w], 1);
+    assert!(g.players[1].hand.iter().any(|c| c.id == kept), "their hand is kept");
+    assert!(g.battlefield_find(land).is_none(), "the land is sacrificed");
+    assert_eq!(g.players[0].hand.len(), 2, "two land cards to graveyards, two drawn");
 }
 
 /// Festering Thicket is a Swamp Forest tapland with cycling; Horizon
