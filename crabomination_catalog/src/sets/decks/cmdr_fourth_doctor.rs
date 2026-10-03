@@ -7,8 +7,6 @@
 //!   modelled.
 //! - **Displaced Dinosaurs** — the historic permanent becomes a 7/7 Dinosaur
 //!   as a trigger resolves, not as it enters.
-//! - **Nyssa of Traken** — the creatures are tapped up to the count on
-//!   resolution, not targeted.
 //! - **Peri Brown** — every historic spell has convoke, not only the first
 //!   each turn.
 //! - **Reverse the Polarity** — "can't be blocked" reaches only the
@@ -544,9 +542,8 @@ pub fn leela_sevateem_warrior() -> CardDefinition {
 
 /// Nyssa of Traken — no maximum hand size; attacking, sacrifices artifacts to
 /// draw and tap that many.
-///
-/// ⚠ Residual: the creatures are tapped up to the count on resolution, not
-/// targeted.
+/// The tap is the reflexive "when you do" trigger, targeting up to that many
+/// creatures (CR 603.12, `CapTargetsAtX`).
 pub fn nyssa_of_traken() -> CardDefinition {
     companion(CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -559,7 +556,23 @@ pub fn nyssa_of_traken() -> CardDefinition {
                 filter: yours(R::Artifact),
                 per_each: Box::new(draw(Value::ONE)),
             },
-            Effect::TapUpToValue { count: Value::SacrificedCount, filter: R::Creature, skip_untap: false, exact: false },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::SacrificedCount, Value::ONE),
+                then: Box::new(Effect::WithX {
+                    x: Value::SacrificedCount,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::CapTargetsAtX {
+                            body: Box::new(Effect::ApplyToTargets {
+                                max_targets: 8,
+                                min_targets: 0,
+                                filter: R::Creature,
+                                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                            }),
+                        }),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
         ]))],
         ..creature("Nyssa of Traken", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Scientist], 3, 4)
     })

@@ -2074,7 +2074,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
 | 🟡 Displaced Dinosaurs | Blast from the Past (WHO) | the historic permanent becomes a 7/7 Dinosaur as a trigger resolves, not as it enters. |
-| 🟡 Nyssa of Traken | Blast from the Past (WHO) | the creatures are tapped up to the count on resolution, not targeted. |
 | 🟡 Peri Brown | Blast from the Past (WHO) | every historic spell has convoke, not only the first each turn. |
 | 🟡 Reverse the Polarity | Blast from the Past (WHO) | "can't be blocked" reaches only the creatures on the battlefield as it resolves. |
 | 🟡 Susan Foreman | Blast from the Past (WHO) | the planeswalk replacement does nothing (no Planechase). |

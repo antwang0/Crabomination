@@ -297,3 +297,22 @@ fn crisis_of_conscience_destroys_tokens() {
     assert!(g.battlefield_find(bear).is_some());
     let _ = Selector::This;
 }
+
+/// Nyssa of Traken — sacrifice any number of artifacts; WHEN YOU DO (CR
+/// 603.12), tap up to that many target creatures: the reflexive trigger
+/// targets as it goes on the stack, capped at the count, and you draw that many.
+#[test]
+fn nyssa_of_traken_taps_up_to_that_many_targets() {
+    let mut g = pod(2);
+    let nyssa = g.add_card_to_battlefield(0, catalog::nyssa_of_traken());
+    let a = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let b = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let bears: Vec<CardId> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    let hand = g.players[0].hand.len();
+    fire(&mut g, nyssa, 0);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    let tapped = bears.iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count();
+    assert_eq!(tapped, 2, "up to two targets: no more than were sacrificed");
+}
