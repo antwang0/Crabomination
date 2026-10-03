@@ -1871,8 +1871,8 @@ Maddening Hex with no other opponent fell off; it now stays (CR 701.3b).
 Residuals: **Berserker's Frenzy**'s 1–14 creatures are every opposing one;
 **Component Pouch**'s two colors may match; **Dragonborn Champion** ignores
 damage to you; **Druid of Purification** has no "may" and starts with the next
-player; **Klauth**'s mana isn't spell-only; **Sword of Hours** rolls per
-recipient. Pods (release, seed 10311, 1,000 games beside Kitt / Go-Shintai /
+player; **Klauth**'s mana isn't spell-only; ~~**Sword of Hours**~~ (`01QFHGia`,
+CR 510.2: one roll per dealer). Pods (release, seed 10311, 1,000 games beside Kitt / Go-Shintai /
 Jeleva): 1,000/1,000 decided, no card of the four lists unplayed, Vrondiss
 35.8 %; 8 seats (seed 10312) 500/500 decided. `--bench` byte-identical.
 

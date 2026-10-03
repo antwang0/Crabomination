@@ -413,7 +413,7 @@ pub fn skyship_stalker() -> CardDefinition {
 
 /// Sword of Hours — equipped creature attacking gets a +1/+1 counter; dealing
 /// combat damage, roll a d12 and double its +1/+1 counters on a 12 or a
-/// result above the damage. Equip {2}. Residual: one roll per recipient.
+/// result above the damage. Equip {2}.
 pub fn sword_of_hours() -> CardDefinition {
     let double = || Effect::DoubleCountersOnEach { what: Selector::This, kind: CounterType::PlusOnePlusOne };
     CardDefinition {

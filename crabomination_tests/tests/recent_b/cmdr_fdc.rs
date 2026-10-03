@@ -5611,6 +5611,39 @@ fn to_begin_combat(g: &mut GameState) {
     drain_stack(g);
 }
 
+/// CR 510.2 — "whenever equipped creature deals combat damage" is one event
+/// for all the damage it deals at once: a trampling 7/7 that deals 2 to its
+/// blocker and 5 to the player rolls ONE d12, compared with the 7 total (a 6
+/// doubles nothing). It rolled per recipient: 6 > 2, then 6 > 5, four counters.
+#[test]
+fn cr_510_2_sword_of_hours_rolls_once_for_a_trampler() {
+    let mut g = main_phase();
+    let maw = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_hours());
+    g.battlefield.find_by_id_mut(sword).unwrap().attached_to = Some(maw);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = rolls(&[6, 6]);
+    g.clear_sickness(maw);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: maw, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, maw)])).expect("block");
+    let life = g.players[1].life;
+    let mut rolled = 0;
+    while g.step != TurnStep::EndCombat {
+        let ev = g.advance_step(Vec::new()).unwrap_or_default();
+        rolled += ev.iter().filter(|e| matches!(e, GameEvent::DiceRolled { .. })).count();
+        rolled += drain_stack(&mut g).iter().filter(|e| matches!(e, GameEvent::DiceRolled { .. })).count();
+    }
+    assert_eq!(g.players[1].life, life - 5, "trampled over");
+    assert_eq!(rolled, 1);
+    assert_eq!(g.battlefield_find(maw).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// CR 706.6 — Berserker's Frenzy rolls two d20 and ignores the lower: a 3 and
 /// a 17 is a 17 (you choose the blocks); a 2 and a 9 is a 9 (their creatures
 /// must block). Illegal once combat is past the Declare Attackers step.

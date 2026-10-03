@@ -2071,7 +2071,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
 
-| 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
