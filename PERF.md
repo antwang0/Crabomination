@@ -3058,6 +3058,16 @@ pod              every deck 1-183 in six-seat blocks x 200 (31 blocks, seeds
                  caps; zero panics
 suite            23,768 / 0 / 5 at 65b9e6977; clippy 0 (one too_many_arguments,
                  allowed)
+later tip        the Desert / Dune Chanter / auto-tapper / Cosmic Intervention batch
+                 (new per-activation reads: a Desert check through
+                 `permanent_has_land_type`, the filter-ability cost read per
+                 coloured-pip candidate): --bench 196,176 byte-identical; paired
+                 callgrind vs 7c1a23969 (6 games, seed 7): fixed 145,076,582 ->
+                 145,383,152 Ir (+0.21 %), cube +0.27 %, sealed +0.23 %; the ABBA
+                 wall-clock read -3.5 % on a restarted host (calib 72 -> 47 ms),
+                 inside its own spread; pod table re-blessed for the auto-tapper
+                 (aggregate 3/4/6 seats x 2,000 at seed 9991: 32.36/32.43,
+                 45.66/45.60, 68.34/68.20 turns, all decided); suite 23,779 / 0 / 5
 ```
 
 ### 2026-10-02 (Commander session `01NqgJKc`) — guardrail, no perf work

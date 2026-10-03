@@ -45,7 +45,6 @@ they call a deck 🟡, the table wins.
 | 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
 | 66 | Inalla, Archmage Ritualist (UBR) | 4: magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
-| 70 | Ranar the Ever-Watchful (WU) | 1: cosmic_intervention |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 4: aurora_phoenix, delayed_blast_fireball, durnan_of_the_yawning_portal, nalfeshnee |
 | 74 | Bright-Palm, Soul Awakener (RGW) | 1: strionic_resonator |
 | 75 | Hazel of the Rootbloom (BG) | 4: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, sword_of_the_squeak |
@@ -76,7 +75,6 @@ they call a deck 🟡, the table wins.
 | 118 | Aminatou, Veil Piercer (WUB) | 9: aminatous_augury, athreos_shroud_veiled, fear_of_sleep_paralysis, mirrormade, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
 | 119 | Otrimi, the Ever-Playful (BGU) | 3: capricopian, mindleecher, vastwood_hydra |
 | 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
-| 123 | Yuma, Proud Protector (RGW) | 2: cataclysmic_prospecting, dune_chanter |
 | 125 | Henzie "Toolbox" Torre (BRG) | 7: first_responder, henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 3: ao_the_dawn_sky, conspiracy_theorist, quintorius_loremaster |
@@ -121,6 +119,8 @@ they call a deck 🟡, the table wins.
 | 181 | Davros, Dalek Creator (UBR) | 10: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, time_reaper, vislor_turlough, weeping_angel, zygon_infiltrator |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 | 183 | The Tenth Doctor + Rose Tyler (URW) | 3: clockspinning, psychic_paper, the_day_of_the_doctor |
+
+100 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 98 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
