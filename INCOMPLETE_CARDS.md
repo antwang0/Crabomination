@@ -2002,7 +2002,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
-| 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
 | 🟡 Grave Endeavor | Dungeons of Death (AFC) | its counters are put on after the creature enters. |

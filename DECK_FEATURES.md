@@ -82,7 +82,6 @@ they call a deck 🟡, the table wins.
 | 154 | Sauron, Lord of the Rings (UBR) | 3: moria_scavenger, shelob_dread_weaver, summons_of_saruman |
 | 159 | Mirko, Obsessive Theorist (UB) | 2: marvo_deep_operative, vizier_of_many_faces |
 | 160 | Terra, Herald of Hope (RWB) | 5: edgar_master_machinist, espers_to_magicite, gogo_mysterious_mime, the_warring_triad, umaro_raging_yeti |
-| 162 | Frodo + Sam (WBG) | 1: gollum_obsessed_stalker |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 166 | The Wise Mothman (BGU) | 3: rampaging_yao_guai, struggle_for_project_purity, winding_constrictor |
 | 167 | T'Challa, the Black Panther (GW) | 3: ancestral_communion, conduit_of_worlds, panther_habit |
@@ -3005,8 +3004,8 @@ creature a mass reanimation returns (Feasting Hobbit's devour under Living
 Death) parked inside a resolution that never replays it — the answer leaked
 and nothing was devoured. `resolve_as_enters_driven` now answers every
 as-enters ask where the permanent enters (CR 614.12), a prompting seat's
-through the bot's policy. Residuals: **Gollum** (reads this Gollum's damage
-of any kind), **Motivated Pony** (any artifact entering, not a Food),
+through the bot's policy. Residuals: ~~**Gollum**~~ (`01QFHGia`: any
+Gollum's combat damage, by name), **Motivated Pony** (any artifact entering, not a Food),
 **Field-Tested Frying Pan** (the pump is the Equipment's trigger). Pods
 beside Admiral Brass / Lathril / Sevinne (seed 9220, census: nothing
 unplayed), the first three seats (9221), six seats (9222): 3,000 / 3,000

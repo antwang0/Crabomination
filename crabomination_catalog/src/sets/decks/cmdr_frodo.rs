@@ -353,18 +353,16 @@ pub fn field_tested_frying_pan() -> CardDefinition {
     }
 }
 
-/// Gollum, Obsessed Stalker — skulk; your end step drains the opponents Gollum
-/// has hit by the life you gained this turn.
-///
-/// ⚠ Residual: "dealt combat damage this game by a creature named Gollum"
-/// reads the players this Gollum has dealt any damage this game.
+/// Gollum, Obsessed Stalker — skulk; your end step drains each opponent any
+/// creature named Gollum has dealt combat damage this game by the life you
+/// gained this turn.
 pub fn gollum_obsessed_stalker() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Skulk],
         triggered_abilities: vec![TriggeredAbility {
             event: step(TurnStep::End, EventScope::YourControl),
             effect: Effect::LoseLife {
-                who: Selector::DamagedBySourceThisGame,
+                who: Selector::OpponentsCombatDamagedByOwnName,
                 amount: Value::LifeGainedThisTurn(PlayerRef::You),
             },
         }],

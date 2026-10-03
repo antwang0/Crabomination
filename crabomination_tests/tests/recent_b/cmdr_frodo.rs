@@ -381,3 +381,35 @@ fn frying_pan_pump_is_the_creatures_trigger() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5));
 }
+
+/// Gollum, Obsessed Stalker reads combat damage dealt by ANY creature named
+/// Gollum this game: a hit by an earlier Gollum still counts once that object
+/// is gone, and a player hit only by another creature doesn't.
+#[test]
+fn gollum_drains_every_player_a_gollum_has_hit() {
+    let mut g = main_phase(4);
+    let first = g.add_card_to_battlefield(0, catalog::gollum_obsessed_stalker());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [first, bear] {
+        g.clear_sickness(id);
+    }
+    let l = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: first, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(3) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!((g.players[1].life, g.players[3].life), (l - 1, l - 2), "both hits landed");
+    g.battlefield.retain(|c| c.id != first);
+    g.add_card_to_battlefield(0, catalog::gollum_obsessed_stalker());
+    g.players[0].life_gained_this_turn = 3;
+    fire(&mut g, TurnStep::End);
+    let life: Vec<i32> = (1..4).map(|s| g.players[s].life).collect();
+    assert_eq!(life, vec![l - 4, l, l - 2]);
+}
