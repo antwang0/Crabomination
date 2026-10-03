@@ -7,8 +7,6 @@
 //!   then reselect which player it's attacking" isn't offered.
 //! - **Mindleecher** — the exiled cards may be cast with mana of any type
 //!   (the face-down exile primitive's Gonti spend).
-//! - **Vastwood Hydra** — the counters are distributed among up to three
-//!   target creatures you control, not "any number".
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,
@@ -358,17 +356,15 @@ pub fn tidal_barracuda() -> CardDefinition {
 
 /// Vastwood Hydra — {X}{G}{G} 0/0 with X +1/+1 counters. Dying, you may
 /// distribute its +1/+1 counters (last known, CR 603.10) among creatures you
-/// control.
-/// Residual: among up to three target creatures, not "any number".
+/// control — any number of them, untargeted.
 pub fn vastwood_hydra() -> CardDefinition {
     x_hydra(CardDefinition {
         triggered_abilities: vec![on_dies(Effect::MayDo {
             description: "Distribute its +1/+1 counters among creatures you control?".into(),
-            body: Box::new(Effect::DistributeCounters {
+            body: Box::new(Effect::DistributeCountersAmong {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 total: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
                 counter: CounterType::PlusOnePlusOne,
-                filter: R::Creature.and(R::ControlledByYou),
-                max_targets: 3,
             }),
         })],
         ..creature("Vastwood Hydra", cost(&[x(), g(), g()]), vec![CreatureType::Hydra], 0, 0)

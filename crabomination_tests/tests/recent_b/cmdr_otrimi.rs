@@ -321,3 +321,33 @@ fn bot_mutates_onto_a_ready_host() {
         "{act:?}"
     );
 }
+
+/// CR 603.10 — Vastwood Hydra's dying counters (last known) are distributed
+/// among any number of creatures you control, untargeted: four Bears get one
+/// each.
+#[test]
+fn cr_603_10_vastwood_hydra_spreads_over_any_number() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hydra = g.add_card_to_battlefield(0, catalog::vastwood_hydra());
+    g.battlefield_find_mut(hydra).unwrap().add_counters(CounterType::PlusOnePlusOne, 4);
+    let bears: Vec<CardId> = (0..4).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(hydra)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("doom blade");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hydra).is_none());
+    for b in bears {
+        assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+}
