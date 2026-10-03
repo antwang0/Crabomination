@@ -8944,6 +8944,14 @@ pub enum Effect {
         #[serde(default)]
         extra_keywords: Vec<crate::card::Keyword>,
     },
+    /// CR 707.9b — "except its name is `name`": the copy exception rewrites
+    /// the copiable name of each permanent `what` names (Mishra's Warform),
+    /// so a copy of it is named that too.
+    SetCopiedName {
+        what: Selector,
+        #[serde(with = "crate::static_str_serde")]
+        name: crate::static_str_serde::StaticStr,
+    },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and
     /// sacrificed at the beginning of the next end step. Devastating Onslaught

@@ -1903,7 +1903,7 @@ impl Effect {
             | Effect::BecomeCreatureLosingTypes { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
-            Effect::SetCardTypesTo { what, .. } => sel_has_target(what),
+            Effect::SetCardTypesTo { what, .. } | Effect::SetCopiedName { what, .. } => sel_has_target(what),
             Effect::GrantKeyword { what, .. }
             | Effect::GrantKeywordThroughControllersNextCombat { what, .. } => sel_has_target(what),
             Effect::GrantKeywords { what, .. } => sel_has_target(what),
@@ -2778,7 +2778,8 @@ impl Effect {
             }
             Effect::BecomeCreature { what, .. }
             | Effect::BecomeCreatureLosingTypes { what, .. }
-            | Effect::SetCardTypesTo { what, .. } => sel_filter(what),
+            | Effect::SetCardTypesTo { what, .. }
+            | Effect::SetCopiedName { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             // Riptide Mangler: the target hides in the power value ("base
             // power becomes target creature's power"), not in `what`.
@@ -4409,6 +4410,7 @@ impl Effect {
             | Effect::BecomeCreature { .. }
             | Effect::BecomeCreatureLosingTypes { .. }
             | Effect::SetCardTypesTo { .. }
+            | Effect::SetCopiedName { .. }
             | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
@@ -5292,7 +5294,8 @@ impl Effect {
                 // not, so their filters were never checked at cast (Soltari
                 // Guerrillas, Soul Sculptor, Excavator).
                 | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
-                | Effect::SetCardTypesTo { what, .. } => sel_find(what, slot),
+                | Effect::SetCardTypesTo { what, .. }
+                | Effect::SetCopiedName { what, .. } => sel_find(what, slot),
                 Effect::RedirectNextCombatDamageTo { what, to }
                 | Effect::MayDealPowerThenNoCombatDamage { dealer: what, to } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))

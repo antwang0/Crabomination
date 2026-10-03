@@ -12607,6 +12607,17 @@ impl GameState {
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
             }
+            Effect::SetCopiedName { what, name } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let mut def = (*c.definition.arc()).clone();
+                        def.name = name;
+                        c.set_copiable_definition(std::sync::Arc::new(def));
+                    }
+                }
+                Ok(())
+            }
             Effect::CopySpellForEachOtherLegalTarget { what } => {
                 self.copy_spell_for_each_other_legal_target(what, ctx, events)
             }
