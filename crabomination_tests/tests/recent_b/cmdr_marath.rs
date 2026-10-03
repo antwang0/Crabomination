@@ -211,6 +211,30 @@ fn naya_soulbeast_counts_the_top_cards() {
     assert_eq!(plus(&g, nb), 7, "5 + 2");
 }
 
+/// CR 603.2 — Naya Soulbeast's reveal is a cast trigger: the count is fixed
+/// as it resolves, so a top card that changes before the spell resolves
+/// doesn't move it.
+#[test]
+fn cr_603_2_naya_soulbeast_counts_on_cast() {
+    let mut g = main_phase(2);
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let nb = g.add_card_to_hand(0, catalog::naya_soulbeast());
+    for c in [Color::Green, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell { card_id: nb, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    assert_eq!(g.stack.len(), 2, "the spell and its cast trigger");
+    g.resolve_top_of_stack().expect("the reveal");
+    // The Angel leaves the top before the Soulbeast resolves.
+    let top = g.players[0].library.remove(0);
+    g.players[0].graveyard.push(top);
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, nb), 7, "still 5 + 2");
+}
+
 /// Rain of Thorns picks any of its three modes.
 #[test]
 fn rain_of_thorns_hits_three_kinds() {

@@ -7,15 +7,13 @@
 //!   engine's pick of "target opponent").
 //! - **Magus of the Arena** — you pick the opponent's creature; the
 //!   opponent should.
-//! - **Naya Soulbeast** — the top cards are read as it enters, not revealed
-//!   as it is cast.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{on_attack, on_cast, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LookPick, PlayerRef, PlayerStaticTarget, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, r, w, x};
@@ -282,17 +280,23 @@ pub fn mystic_barrier() -> CardDefinition {
     }
 }
 
-/// Naya Soulbeast — trample; enters with a +1/+1 counter per mana value of
-/// each player's top card.
-///
-/// ⚠ Residual: the top cards are read as it enters, not revealed on cast.
+/// Naya Soulbeast — trample; casting it reveals each player's top card, and
+/// it enters with a +1/+1 counter per total mana value revealed (fixed as the
+/// cast trigger resolves, CR 603.2).
 pub fn naya_soulbeast() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
-        enters_with_counters: Some((
-            CounterType::PlusOnePlusOne,
-            Value::TotalManaValueOf(Box::new(Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE })),
-        )),
+        triggered_abilities: vec![on_cast(Effect::Seq(vec![
+            Effect::RevealTopOfLibrary { who: PlayerRef::EachPlayer },
+            Effect::SpellEntersWithCounters {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::TotalManaValueOf(Box::new(Selector::TopOfLibrary {
+                    who: PlayerRef::EachPlayer,
+                    count: Value::ONE,
+                })),
+            },
+        ]))],
         ..creature("Naya Soulbeast", cost(&[generic(6), g(), g()]), vec![CreatureType::Beast], 0, 0)
     }
 }
