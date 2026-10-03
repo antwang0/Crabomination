@@ -62,8 +62,7 @@ they call a deck 🟡, the table wins.
 | 145 | Hakbal of the Surging Soul (GU) | 3: bygone_marvels, quandrix_command, xolatoyac_the_smiling_flood |
 | 146 | Perrie, the Pulverizer (GWU) | 5: agents_toolkit, aven_mimeomancer, kros_defense_contractor, littjara_mirrorlake, skyship_plunderer |
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
-| 149 | Felothar the Steadfast (WBG) | 3: baldin_century_herdmaster, betor_ancestors_voice, tip_the_scales |
-| 150 | Galadriel, Elven-Queen (GU) | 2: elrond_of_the_white_council, sail_into_the_west |
+| 149 | Felothar the Steadfast (WBG) | 1: betor_ancestors_voice |
 | 152 | Anje Falkenrath (BR) | 3: chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 3: moria_scavenger, shelob_dread_weaver, summons_of_saruman |
@@ -78,7 +77,7 @@ they call a deck 🟡, the table wins.
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 9: aces_baseball_bat, displaced_dinosaurs, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
-142 / 183 pod decks carry no residual in their card docs; the rest are listed.
+143 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
