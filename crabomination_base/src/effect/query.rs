@@ -5891,6 +5891,24 @@ impl Effect {
         }
     }
 
+    /// The slots `(first, len)` of the effect's one multi-target instance
+    /// (CR 115.3: they name distinct objects): [`Self::distinct_target_count`]
+    /// placed among an [`Effect::SlotGroups`]' consecutive groups, so Fiery
+    /// Justice's divided damage may still hit the opponent its slot 0 named.
+    pub fn distinct_target_range(&self, mode: Option<usize>) -> Option<(u8, u8)> {
+        let Effect::SlotGroups(v) = self else {
+            return self.distinct_target_count(mode).map(|n| (0, n));
+        };
+        let mut first = 0u8;
+        for m in v.iter().filter(|m| m.requires_target()) {
+            if let Some(n) = m.distinct_target_count(None) {
+                return Some((first, n));
+            }
+            first = first.saturating_add(m.target_slot_count().max(1) as u8);
+        }
+        None
+    }
+
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }

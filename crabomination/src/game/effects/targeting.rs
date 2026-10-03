@@ -1003,9 +1003,15 @@ impl GameState {
                 // targets": a player already named can't be named again, and
                 // Forked Bolt / Avacyn's Judgment aimed both halves at the same
                 // face, which the cast rejects — no divider was ever cast.
-                let distinct = slot > 0 && eff.distinct_target_count(mode).is_some();
+                let distinct = eff
+                    .distinct_target_range(mode)
+                    .filter(|&(first, _)| slot > first)
+                    .map(|(first, _)| first);
                 let taken = |t: &Target| {
-                    distinct && (slot_0.as_ref() == Some(t) || additional.contains(t))
+                    distinct.is_some_and(|first| {
+                        (first == 0 && slot_0.as_ref() == Some(t))
+                            || additional.iter().skip(usize::from(first.saturating_sub(1))).any(|a| a == t)
+                    })
                 };
                 if is_legal(&player_first) && !taken(&player_first) {
                     found = Some(player_first);

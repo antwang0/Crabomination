@@ -5941,10 +5941,13 @@ impl GameState {
                                 ),
                                 // CR 601.4d — the slots of one multi-target
                                 // instance must name distinct objects.
+                                // `Some(first)`: distinct from the picks at
+                                // slots `first..`.
                                 card.definition
                                     .effect
-                                    .distinct_target_count(mode)
-                                    .is_some_and(|n| slot < n),
+                                    .distinct_target_range(mode)
+                                    .filter(|&(first, n)| slot >= first && slot < first.saturating_add(n))
+                                    .map(|(first, _)| usize::from(first)),
                             )
                         })
                 })
@@ -5980,7 +5983,7 @@ impl GameState {
                         .map(|c| Target::Permanent(c.id))
                         .chain((0..s.players.len()).map(Target::Player))
                         .filter(|t| {
-                            (!distinct || !chosen.contains(&t))
+                            distinct.is_none_or(|first| !chosen.iter().skip(first).any(|c| *c == t))
                                 && (named_controllers.is_empty()
                                     || s.target_controller_key(t).is_none_or(|k| !named_controllers.contains(&k)))
                                 && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
@@ -9876,13 +9879,14 @@ impl GameState {
         // number of / N target …"), the same object can't be chosen twice.
         // Separate "target" clauses (a Seq of single-target effects) may share
         // a target, so this only fires for the divide/support-style effects.
-        if let Some(n) = card.definition.effect.distinct_target_count(mode) {
+        if let Some((first, n)) = card.definition.effect.distinct_target_range(mode) {
             let mut chosen: Vec<&Target> = Vec::with_capacity(1 + additional_targets.len());
             if let Some(t) = target.as_ref() {
                 chosen.push(t);
             }
             chosen.extend(additional_targets.iter());
-            chosen.truncate(n as usize);
+            chosen.truncate(usize::from(first) + usize::from(n));
+            chosen.drain(..usize::from(first).min(chosen.len()));
             for i in 0..chosen.len() {
                 for j in (i + 1)..chosen.len() {
                     if chosen[i] == chosen[j] {
