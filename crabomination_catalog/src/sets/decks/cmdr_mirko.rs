@@ -214,9 +214,6 @@ pub fn final_word_phantom() -> CardDefinition {
 /// Watcher of Hours — {5}{U} Creature — Sphinx 6/6. Flying, ward {3}.
 /// Whenever you remove a time counter from this card while it's exiled,
 /// surveil 1. Suspend 6—{1}{U}.
-///
-/// ⚠ Residual: removing the last time counter casts it at once, so that
-/// removal doesn't surveil.
 pub fn watcher_of_hours() -> CardDefinition {
     CardDefinition {
         keywords: vec![

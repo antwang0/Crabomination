@@ -569,9 +569,7 @@ pub fn waste_management() -> CardDefinition {
 }
 
 /// Xander's Pact — casualty 2; each opponent exiles their top card, and you
-/// may cast those this turn paying life instead of mana.
-///
-/// Residual: a land exiled this way may be played too.
+/// may cast those this turn paying life instead of mana (a land can't be played).
 pub fn xanders_pact() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Casualty(2)],

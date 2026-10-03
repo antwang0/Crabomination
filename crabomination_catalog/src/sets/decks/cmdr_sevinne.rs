@@ -203,8 +203,8 @@ pub fn clever_impersonator() -> CardDefinition {
 /// Wall of Stolen Identity — enters as a copy of a creature that is also a
 /// Wall with defender; the copied creature is tapped and stays tapped.
 ///
-/// ⚠ Residual: the lock is installed as it enters (not a reflexive trigger)
-/// and holds while the Wall is on the battlefield, not while you control it.
+/// ⚠ Residual: the lock is installed as it enters, not by a reflexive "when
+/// you do" trigger.
 pub fn wall_of_stolen_identity() -> CardDefinition {
     CardDefinition {
         enters_as_copy: Some(EntersAsCopy {

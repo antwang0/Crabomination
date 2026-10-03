@@ -161,8 +161,7 @@ pub fn fear_of_sleep_paralysis() -> CardDefinition {
     }
 }
 
-/// Mirrormade — enters as a copy of an artifact or enchantment. Residual: The copy
-/// isn't optional.
+/// Mirrormade — may enter as a copy of an artifact or enchantment.
 pub fn mirrormade() -> CardDefinition {
     CardDefinition {
         enters_as_copy: Some(EntersAsCopy { filter: R::Artifact.or(R::Enchantment), ..Default::default() }),

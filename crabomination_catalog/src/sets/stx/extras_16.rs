@@ -1096,9 +1096,9 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 /// planeswalker of their choice. If you sacrificed a permanent this way, you
 /// may return **another** permanent card from your graveyard to your hand."
 /// The "another" exclusion rides
-/// `SelectionRequirement::NotSacrificedThisResolution`. The "of your choice"
-/// pick is still the engine-wide `Selector::take` approximation (first
-/// matching card in graveyard order), not a prompted choice.
+/// `SelectionRequirement::NotSacrificedThisResolution`. Approximation: the
+/// "of your choice" return is the highest-mana-value card
+/// (`Selector::take_priciest`), not a prompted choice.
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",

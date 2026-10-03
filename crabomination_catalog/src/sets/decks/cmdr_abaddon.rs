@@ -903,7 +903,7 @@ pub fn the_lost_and_the_damned() -> CardDefinition {
 /// The Ruinous Powers — your upkeep exiles the top card of a random
 /// opponent's library; you may cast it this turn with mana of any type, and
 /// its owner loses life equal to its mana value. Residual: the rider reads
-/// any spell you cast from exile that you don't own; lands can't be played.
+/// any spell you cast from exile that you don't own.
 pub fn the_ruinous_powers() -> CardDefinition {
     CardDefinition {
         name: "The Ruinous Powers",

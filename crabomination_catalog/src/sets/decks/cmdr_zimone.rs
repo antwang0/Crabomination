@@ -144,9 +144,6 @@ pub fn deathmist_raptor() -> CardDefinition {
 /// Disorienting Choice — per opponent, up to one of their artifacts or
 /// enchantments; its controller may exile it; for each one still there, you
 /// fetch a land onto the battlefield tapped.
-///
-/// ⚠ Residual: the controllers decide through the engine's may-prompt, and
-/// the lands found are the engine's pick.
 pub fn disorienting_choice() -> CardDefinition {
     CardDefinition {
         name: "Disorienting Choice",

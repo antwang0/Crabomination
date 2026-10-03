@@ -276,8 +276,8 @@ pub fn klauths_will() -> CardDefinition {
 }
 
 /// Klauth, Unrivaled Ancient — flying, haste; attacking, add mana in any
-/// colors equal to the attackers' total power, kept until end of turn.
-/// Residual: the "only to cast spells" restriction isn't enforced.
+/// colors equal to the attackers' total power, kept until end of turn and
+/// spendable only on spells.
 pub fn klauth_unrivaled_ancient() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

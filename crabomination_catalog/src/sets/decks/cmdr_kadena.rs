@@ -316,7 +316,6 @@ pub fn rayami_first_of_the_fallen() -> CardDefinition {
 
 /// Road of Return — {G}{G} sorcery, entwine {2}: return a permanent card
 /// from your graveyard to hand, and/or put your commander into your hand.
-/// Residual: an unentwined cast's mode is the engine's pick.
 pub fn road_of_return() -> CardDefinition {
     CardDefinition {
         name: "Road of Return",

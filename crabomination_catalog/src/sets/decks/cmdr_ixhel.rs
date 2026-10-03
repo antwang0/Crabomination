@@ -65,9 +65,8 @@ pub fn carrion_call() -> CardDefinition {
 }
 
 /// Glistening Sphere — a tapped mana rock that proliferates, and makes three
-/// of one color while an opponent is corrupted. Residual: The corrupted ability is a
-/// conditional mana ability, which auto-payment does not tap; it is
-/// activated directly.
+/// of one color while an opponent is corrupted (a conditional mana ability
+/// the auto-tapper uses once the condition holds).
 pub fn glistening_sphere() -> CardDefinition {
     CardDefinition {
         name: "Glistening Sphere",
