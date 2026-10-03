@@ -2108,7 +2108,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bill Potts | Paradox Power (WHO) | only instants and sorceries that target only it are copied, not activated abilities. |
 | 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |
 | 🟡 Last Night Together | Paradox Power (WHO) | any creature may attack in the extra combat, not only the two chosen. |
-| 🟡 Lunar Hatchling | Paradox Power (WHO) | its escape doesn't also exile a land you control. |
 | 🟡 Me, the Immortal | Paradox Power (WHO) | its counters don't stay with it as it changes zones. |
 | 🟡 Psychic Paper | Paradox Power (WHO) | no chosen creature name and type (ward 1 and unblockable only). |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |

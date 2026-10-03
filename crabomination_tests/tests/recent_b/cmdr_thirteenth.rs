@@ -390,3 +390,82 @@ fn cr_605_1a_bigger_on_the_inside_gives_target_player_the_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
     assert!(g.delayed_triggers.iter().any(|d| d.controller == 1));
 }
+
+fn escape(g: &mut GameState, id: CardId, exile_cards: Vec<CardId>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastEscape {
+        card_id: id,
+        exile_cards,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map(|_| ())
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 702.138 — Lunar Hatchling's escape also exiles a land you control: the
+/// named land when one is given, the cheapest otherwise, and none means no
+/// cast.
+#[test]
+fn cr_702_138_lunar_hatchling_escape_exiles_a_land() {
+    for named in [false, true] {
+        let mut g = pod(2);
+        let hatchling = g.add_card_to_graveyard(0, catalog::lunar_hatchling());
+        let fodder: Vec<CardId> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+        let land = g.add_card_to_battlefield(0, catalog::forest());
+        flood(&mut g, 0);
+        let mut picks = fodder.clone();
+        if named {
+            picks.push(land);
+        }
+        escape(&mut g, hatchling, picks).expect("escape");
+        assert!(g.battlefield_find(hatchling).is_some());
+        assert!(g.battlefield_find(land).is_none(), "the land is exiled");
+        assert!(g.exile.iter().any(|c| c.id == land));
+        assert!(fodder.iter().all(|id| g.exile.iter().any(|c| c.id == *id)));
+    }
+    // No land you control: the cost can't be paid.
+    let mut g = pod(2);
+    let hatchling = g.add_card_to_graveyard(0, catalog::lunar_hatchling());
+    let fodder: Vec<CardId> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    flood(&mut g, 0);
+    let mut picks = fodder.clone();
+    picks.push(theirs);
+    assert!(escape(&mut g, hatchling, picks).is_err(), "an opponent's land isn't yours");
+    assert!(escape(&mut g, hatchling, fodder).is_err(), "no land to exile");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == hatchling));
+}
+
+/// The bot escapes Lunar Hatchling, paying the land half.
+#[test]
+fn lunar_hatchling_bot_escapes() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    let hatchling = g.add_card_to_graveyard(0, catalog::lunar_hatchling());
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let mut bot = HeuristicBot::new();
+    for _ in 0..20 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if g.battlefield_find(hatchling).is_some() || pass {
+            break;
+        }
+    }
+    assert!(g.battlefield_find(hatchling).is_some(), "the bot escaped it");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 7);
+}

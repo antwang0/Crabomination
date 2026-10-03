@@ -7,7 +7,6 @@
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
 //! - **Last Night Together** — any creature may attack in the extra combat.
-//! - **Lunar Hatchling** — escape doesn't also exile a land you control.
 //! - **Me, the Immortal** — its counters don't stay with it across zones.
 //! - **Psychic Paper** — no chosen name and creature type.
 
@@ -575,8 +574,8 @@ pub fn last_night_together() -> CardDefinition {
     )
 }
 
-/// Lunar Hatchling — flying, trample; basic landcycling {2}; escape.
-/// Residual: escape doesn't also exile a land you control.
+/// Lunar Hatchling — flying, trample; basic landcycling {2}; escape, which
+/// also exiles a land you control.
 pub fn lunar_hatchling() -> CardDefinition {
     CardDefinition {
         keywords: vec![
@@ -585,6 +584,7 @@ pub fn lunar_hatchling() -> CardDefinition {
             Keyword::Typecycling(Box::new((cost(&[generic(2)]), R::IsBasicLand))),
             Keyword::Escape(cost(&[generic(4), g(), u()]), 5),
         ],
+        escape_exile_permanent: Some(R::Land),
         ..creature(
             "Lunar Hatchling",
             cost(&[generic(4), g(), u()]),
