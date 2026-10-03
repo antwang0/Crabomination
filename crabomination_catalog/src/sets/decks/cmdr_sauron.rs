@@ -426,30 +426,20 @@ pub fn monstrosity_of_the_lake() -> CardDefinition {
 }
 
 /// Moria Scavenger — deathtouch, haste; {T}, discard a card: draw a card, and
-/// amass Orcs 1 if the discarded card was a creature card.
-///
-/// Residual: the one ability is two — a creature discarded through the plain
-/// one amasses nothing.
+/// amass Orcs 1 if the discarded card was a creature card
+/// (`IfDiscardedForCost`).
 pub fn moria_scavenger() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Deathtouch, Keyword::Haste],
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                discard_cost: Some((R::Creature, 1)),
-                effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    amass(Value::ONE),
-                ]),
-                ..Default::default()
-            },
-            ActivatedAbility {
-                tap_cost: true,
-                discard_cost: Some((R::Any, 1)),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-                ..Default::default()
-            },
-        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::IfDiscardedForCost { filter: R::Creature, then: Box::new(amass(Value::ONE)) },
+            ]),
+            ..Default::default()
+        }],
         ..creature(
             "Moria Scavenger",
             cost(&[generic(1), b(), r()]),

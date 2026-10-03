@@ -1983,7 +1983,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
-| 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
 | 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |

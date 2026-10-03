@@ -338,8 +338,8 @@ fn monstrosity_of_the_lake_stuns() {
     assert_eq!(b.counter_count(CounterType::Stun), 1);
 }
 
-/// Moria Scavenger — discarding a creature draws and amasses; anything else
-/// just draws.
+/// Moria Scavenger — one ability: discarding a creature card draws and
+/// amasses; anything else just draws (the cost's card, CR 602.2b).
 #[test]
 fn moria_scavenger_loots_orcs() {
     let mut g = pod(2);
@@ -353,8 +353,9 @@ fn moria_scavenger_loots_orcs() {
     assert_eq!(army_power(&g), Some(1));
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
     g.battlefield_find_mut(m).unwrap().tapped = false;
-    activate_x(&mut g, 0, m, 1, None).expect("plain discard");
-    assert_eq!(army_power(&g), Some(1));
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Island"));
+    activate_x(&mut g, 0, m, 0, None).expect("the drawn Island");
+    assert_eq!(army_power(&g), Some(1), "a land amasses nothing");
 }
 
 /// Orcish Siegemaster — tramples its Orcs and attacks for the biggest power.
