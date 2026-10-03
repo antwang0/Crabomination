@@ -1096,9 +1096,8 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 /// planeswalker of their choice. If you sacrificed a permanent this way, you
 /// may return **another** permanent card from your graveyard to your hand."
 /// The "another" exclusion rides
-/// `SelectionRequirement::NotSacrificedThisResolution`. Approximation: the
-/// "of your choice" return is the highest-mana-value card
-/// (`Selector::take_priciest`), not a prompted choice.
+/// `SelectionRequirement::NotSacrificedThisResolution`; the return is the
+/// caster's pick (`MoveChosen`, offered priciest first).
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",
@@ -1112,20 +1111,20 @@ pub fn deadly_brew() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
-                then: Box::new(Effect::MayDo {
-                    description: "Return a permanent card from your graveyard to your hand?".into(),
-                    body: Box::new(Effect::Move {
-                        what: Selector::take_priciest(
-                            Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: SelectionRequirement::Permanent
-                                    .and(SelectionRequirement::NotSacrificedThisResolution),
-                            },
-                            Value::Const(1),
-                        ),
-                        to: ZoneDest::Hand(PlayerRef::You),
-                    }),
+                then: Box::new(Effect::MoveChosen {
+                    from: Selector::take_priciest(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Permanent
+                                .and(SelectionRequirement::NotSacrificedThisResolution),
+                        },
+                        Value::Const(i32::MAX),
+                    ),
+                    filter: None,
+                    count: Value::ONE,
+                    up_to: true,
+                    to: ZoneDest::Hand(PlayerRef::You),
                 }),
                 else_: Box::new(Effect::Noop),
             },

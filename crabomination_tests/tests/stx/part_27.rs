@@ -609,18 +609,21 @@ fn dramatic_finale_anthems_tokens_and_mints_on_nontoken_death() {
     assert_eq!(after2, after, "second death in the same turn mints no Inkling");
 }
 
+/// CR 608.2d — the "may return another permanent card" pick is the caster's,
+/// made as the spell resolves.
 #[test]
 fn deadly_brew_each_player_sacrifices() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::mind_stone()); // a permanent to return
+    let stone = g.add_card_to_graveyard(0, catalog::mind_stone()); // a permanent to return
+    g.add_card_to_graveyard(0, catalog::serra_angel()); // the priciest, not picked
     let id = g.add_card_to_hand(0, catalog::deadly_brew());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
-    // Accept the optional "return a permanent" rider.
+    // The return is the caster's pick, not the priciest card.
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![stone])]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
@@ -629,7 +632,8 @@ fn deadly_brew_each_player_sacrifices() {
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrifices a creature");
     // You sacrificed, so the gated return fires and pulls the permanent back.
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mind Stone"),
-        "returned a permanent from graveyard");
+        "returned the chosen permanent from graveyard");
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name != "Serra Angel"));
 }
 
 /// The printed "another permanent card" excludes the creature this very
@@ -642,8 +646,6 @@ fn deadly_brew_cannot_return_what_it_just_sacrificed() {
     let id = g.add_card_to_hand(0, catalog::deadly_brew());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
