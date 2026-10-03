@@ -18,6 +18,8 @@
 #![allow(clippy::large_enum_variant)]
 
 pub mod card;
+/// Debug-build memo audits that nest: see the module.
+pub mod memo_audit;
 pub mod copyvec;
 pub mod cow;
 pub mod dungeons;

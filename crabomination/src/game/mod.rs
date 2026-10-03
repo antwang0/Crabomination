@@ -11663,7 +11663,9 @@ impl GameState {
         #[cfg(debug_assertions)]
         if !hit {
             debug_assert!(
-                !self.compute_battlefield().iter().any(|c| c.keywords().iter().any(&pred)),
+                !crabomination_base::memo_audit::board_audit(|| {
+                    self.compute_battlefield().iter().any(|c| c.keywords().iter().any(&pred))
+                }),
                 "board_keyword_matching said no, but the computed board has a match"
             );
         }

@@ -6,6 +6,7 @@
 //! so the invalidation is a property of the type rather than an enumeration
 //! of write sites that has to stay right.
 
+use crabomination_base::memo_audit::board_audit;
 use crate::card::CardInstance;
 use crate::cow::CowBox;
 use std::ops::{Deref, DerefMut};
@@ -148,7 +149,8 @@ impl Graveyard {
     fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
         let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
         debug_assert!(
-            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
+            cur == UNKNOWN
+                || board_audit(|| (cur == PRESENT) == self.cards.iter().any(walk)),
             "graveyard {what} memo is stale: a write reached the cards without clearing it",
         );
         match cur {
@@ -294,7 +296,8 @@ impl CardPile {
     fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
         let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
         debug_assert!(
-            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
+            cur == UNKNOWN
+                || board_audit(|| (cur == PRESENT) == self.cards.iter().any(walk)),
             "card-pile {what} memo is stale: a write reached the cards without clearing it",
         );
         match cur {
@@ -1818,7 +1821,8 @@ impl Battlefield {
             (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
         };
         debug_assert!(
-            cur == UNKNOWN as u64 || (cur == PRESENT as u64) == self.cards.iter().any(walk),
+            cur == UNKNOWN as u64
+                || board_audit(|| (cur == PRESENT as u64) == self.cards.iter().any(walk)),
             "battlefield type-gate memo is stale: a write reached the cards without clearing it",
         );
         match cur {
@@ -1991,7 +1995,8 @@ impl Battlefield {
             (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
         };
         debug_assert!(
-            cur == UNKNOWN as u64 || (cur == PRESENT as u64) == self.cards.iter().any(audit),
+            cur == UNKNOWN as u64
+                || board_audit(|| (cur == PRESENT as u64) == self.cards.iter().any(audit)),
             "battlefield {what} memo is stale: a write reached the cards without clearing it",
         );
         match cur {
@@ -2033,7 +2038,7 @@ impl Battlefield {
         }
         let bits = self.dispatch_members.load(Ordering::Relaxed);
         debug_assert!(
-            bits == dispatch_bits(&self.cards),
+            board_audit(|| bits == dispatch_bits(&self.cards)),
             "battlefield dispatch memo is stale: a write reached the cards without clearing it",
         );
         Ok(bits)
@@ -2074,7 +2079,7 @@ impl Battlefield {
         }
         let bits = self.grant_members.load(Ordering::Relaxed);
         debug_assert!(
-            bits == grant_bits(&self.cards),
+            board_audit(|| bits == grant_bits(&self.cards)),
             "battlefield grant memo is stale: a write reached the cards without clearing it",
         );
         Ok(bits)
@@ -2172,7 +2177,7 @@ impl Battlefield {
         }
         let bits = self.trig_members.load(Ordering::Relaxed);
         debug_assert!(
-            bits == triggerer_bits(&self.cards),
+            board_audit(|| bits == triggerer_bits(&self.cards)),
             "battlefield triggerer memo is stale: a write reached the cards without clearing it",
         );
         Ok(bits)

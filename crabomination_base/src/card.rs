@@ -9629,7 +9629,7 @@ impl CardData {
     #[inline]
     pub fn printed_color_set(&self) -> crate::mana::ColorSet {
         if let Some(cs) = self.definition.memo.get() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 cs,
                 self.definition.printed_color_set(),
                 "printed-colour memo is stale: a definition rewrite did not clear it",
@@ -9646,7 +9646,7 @@ impl CardData {
     #[inline]
     pub fn sba_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_sba() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.sba_scan_bits(),
                 "SBA scan memo is stale: a definition rewrite did not clear it",
@@ -9717,7 +9717,7 @@ impl CardData {
     #[inline]
     pub fn gather_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_gather() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.gather_scan_bits(),
                 "gather scan memo is stale: a definition rewrite did not clear it",
@@ -9734,7 +9734,7 @@ impl CardData {
     #[inline]
     pub fn grant_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_grant() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.grant_scan_bits(),
                 "keyword-grant memo is stale: a definition rewrite did not clear it",
@@ -9751,7 +9751,7 @@ impl CardData {
     #[inline]
     pub fn type_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_type() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.type_scan_bits(),
                 "card-type-change memo is stale: a definition rewrite did not clear it",
@@ -9768,7 +9768,7 @@ impl CardData {
     #[inline]
     pub fn layer4_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_layer4() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.layer4_scan_bits(),
                 "layer-4 type-change memo is stale: a definition rewrite did not clear it",
@@ -9794,7 +9794,7 @@ impl CardData {
     #[inline]
     pub fn vocab_index(&self, compute: impl Fn(&CardDefinition) -> u16) -> u16 {
         if let Some(i) = self.definition.memo.get_vocab() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 i,
                 compute(&self.definition),
                 "vocab-index memo is stale: a definition rewrite did not clear it, \
@@ -9824,7 +9824,7 @@ impl CardData {
     #[inline]
     pub fn printed_cmc(&self) -> u32 {
         if let Some(mv) = self.definition.memo.get_cmc() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 mv,
                 self.definition.cost.cmc(),
                 "printed-cmc memo is stale: a definition rewrite did not clear it",
@@ -9843,7 +9843,7 @@ impl CardData {
     #[inline]
     pub fn dispatch_scan_bits(&self) -> u64 {
         if let Some(bits) = self.definition.memo.get_dispatch() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 bits,
                 self.definition.dispatch_scan_bits(),
                 "dispatch scan memo is stale: a definition rewrite did not clear it",
@@ -9864,7 +9864,7 @@ impl CardData {
     #[inline]
     pub fn mana_summary(&self, compute: impl Fn(&CardDefinition) -> Option<u64>) -> Option<u64> {
         if let Some(w) = self.definition.memo.get_mana() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 Some(w),
                 compute(&self.definition),
                 "mana-summary memo is stale: a definition rewrite did not clear it",
@@ -9884,7 +9884,7 @@ impl CardData {
     #[inline]
     pub fn printed_encoding(&self, compute: impl Fn(&CardDefinition) -> u64) -> u64 {
         if let Some(w) = self.definition.memo.get_enc() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 w,
                 compute(&self.definition),
                 "printed-encoding memo is stale: a definition rewrite did not clear it",
@@ -9903,7 +9903,7 @@ impl CardData {
     #[inline]
     pub fn trigger_kind_fold(&self) -> u64 {
         if let Some(fold) = self.definition.memo.get_kinds() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 fold & !CardMemo::KINDS_VALID,
                 self.definition.trigger_kind_fold() & !CardMemo::KINDS_VALID,
                 "trigger-kind memo is stale: a definition rewrite did not clear it",
@@ -9920,7 +9920,7 @@ impl CardData {
     #[inline]
     pub fn has_self_cost_reduction(&self) -> bool {
         if let Some(v) = self.definition.memo.get_costred() {
-            debug_assert_eq!(
+            crate::memo_audit_eq!(
                 v,
                 self.definition.has_self_cost_reduction(),
                 "self-cost-reduction memo is stale: a definition rewrite did not clear it",

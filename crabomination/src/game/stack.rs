@@ -6134,7 +6134,7 @@ impl GameState {
             Some(hit) => {
                 debug_assert_eq!(
                     hit,
-                    self.sba_board_walk(),
+                    crabomination_base::memo_audit::board_audit(|| self.sba_board_walk()),
                     "the SBA board fold is stale: a write reached the zone without bumping it",
                 );
                 hit

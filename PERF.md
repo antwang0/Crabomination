@@ -2343,6 +2343,48 @@ reading eight of the 185 found the first three, and reading three of the
 fourteen in one file found the fourth. **Read the file with the most hits
 first: a filter's false positives cluster, because they share a helper.**
 
+## Suite wall clock — nested memo audits, measured 2026-10-02
+
+The suite's wall clock is one test: `cr_903_5a_the_official_precon_seats_play_pod_games`
+(222 four-seat pod games on the opt-level-0 engine, 24 workers) ran 164 s of
+a 164 s suite. `gdb`-driven stack sampling of the single-threaded
+`cr_903_a_pod_run_is_independent_of_how_it_is_chunked` (100 samples; `perf`
+is not installed and Yama `ptrace_scope=1` stops `eu-stack` attaching, so
+gdb launches the test and is fed `interrupt` / `thread apply all bt` /
+`continue &` through a FIFO) put **34 % of all samples on one line,
+`card.rs:9729`** — the mana-summary memo's hit audit re-deriving the summary
+— and 24 of those 34 under `zone.rs`'s mana-static lane audit, which walks
+the whole battlefield on every lane read. **Nested audits:** the lane audit
+read each permanent's memo, each memo hit re-derived itself, and the
+re-derivation (`plain_tap_mana`) clones every mana ability to compare it with
+the default.
+
+`crabomination_base::memo_audit` adds one thread-local flag: a board-wide
+audit (the seven battlefield/pile lane audits, the SBA board fold,
+`board_keyword_matching`'s no-match check) runs its walk under
+`board_audit(..)`, and the thirteen `CardData` memo audits
+(`memo_audit_eq!`) skip themselves while it is set. **Every top-level memo
+read is still re-derived on every hit** — unlike the sampled gather-memo
+audit (`gather_memo_agrees`, 1 in 1,024), nothing is sampled: the per-card
+checks dropped are the ones re-checking memos inside a check of something
+else. Release reads nothing (`cfg!(debug_assertions) &&` first; the board
+audits sit inside `debug_assert!`).
+
+```text
+standalone, ABBA, the same test binary before / after (debug)
+  chunking test     31.9 / 31.0 s  ->  21.9 / 21.8 s     -31 %
+  precon test       132.7 s        ->  97.9 s            -26 %  (one run each)
+full suite (nextest, 23,687 tests)   164.1 s  ->  128.6 s  -22 %
+```
+
+**What the next sample says is left** (69 samples after the change):
+`board_keyword_matching`'s no-match audit recomputes the whole battlefield
+through the layers on every `false` it returns — ~16 % of a debug pod game.
+That one is a *gate* audit, not a nested memo one, so cheapening it means
+sampling it (the gather memo's precedent) and that trades audit strength for
+suite time; not taken. The flag read itself is 5.8 % innermost — an
+unoptimized `LocalKey::with` per memo hit.
+
 ## Build time — MERGING the eight integration-test binaries buys nothing either, measured 2026-09-13
 
 The suite convention says "the cost is compile + link, so optimize for fewer
