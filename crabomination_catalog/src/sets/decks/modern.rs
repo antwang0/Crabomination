@@ -59735,8 +59735,8 @@ pub fn spined_sliver() -> CardDefinition {
 }
 
 /// Vizier of Many Faces — {2}{U}{U} 0/0 Shapeshifter Cleric. May enter as a
-/// copy of any creature; Embalm {3}{U}{U} — the token clone-enters too
-/// (it's also a Zombie; the white/no-cost rider is approximated).
+/// copy of any creature; Embalm {3}{U}{U} — the token clone-enters too, and
+/// stays white, costless and a Zombie (the mint re-layers embalm's riders).
 pub fn vizier_of_many_faces() -> CardDefinition {
     use crate::card::EntersAsCopy;
     CardDefinition {

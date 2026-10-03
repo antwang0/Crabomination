@@ -436,7 +436,6 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 | Rootwater Matriarch | the steal is permanent, not "for as long as that creature is enchanted" | no `GainControlWhile` keyed to the target's auras |
 | Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
 | Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
-| Vizier of Many Faces | an embalmed Vizier's copy isn't white and keeps a mana cost | `EntersAsCopy` has no embalm-conditional rider |
 | Invasion of Amonkhet | Lazotep Convert doesn't enter as a copy of a graveyard creature card | a transformed battle's back face has no enters-as-copy path |
 | Sunscourge Champion | eternalize's "Discard a card" additional cost isn't paid | the `eternalize` shortcut carries a mana cost only |
 | Summons of Saruman | the flashback X is paid in mana, not by exiling X cards from your graveyard | a flashback cost can't carry a variable exile |

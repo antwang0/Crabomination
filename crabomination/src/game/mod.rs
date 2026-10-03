@@ -10325,26 +10325,29 @@ impl GameState {
         // CR 707.2 — a token minted from a clone-y definition (Vizier of
         // Many Faces' embalm token) applies its `enters_as_copy` replacement
         // as it enters, before ETB triggers fire off the copied identity.
-        // Mint-time type riders (embalm's "it's a Zombie in addition") are
-        // re-layered on the copy: the delta vs the printed card survives.
-        let minted_extra_types: Vec<crate::card::CreatureType> = {
+        // Mint-time riders (embalm's "white, no mana cost, a Zombie in
+        // addition") are re-layered on the copy: Vizier's own "except if this
+        // creature was embalmed" text, read as the delta vs the printed card.
+        let minted: Option<(Vec<crate::card::CreatureType>, Option<Vec<crate::mana::Color>>, bool)> = {
             let c = self.battlefield.find_by_id(id).unwrap();
-            if c.definition.enters_as_copy.is_some() {
+            c.definition.enters_as_copy.as_ref().map(|_| {
                 let printed = crabomination_base::registry::resolve_card(c.definition.name);
-                c.definition
+                let types = c
+                    .definition
                     .subtypes
                     .creature_types
                     .iter()
-                    .filter(|t| {
-                        printed
-                            .as_ref()
-                            .is_none_or(|p| !p.subtypes.creature_types.contains(t))
-                    })
+                    .filter(|t| printed.as_ref().is_none_or(|p| !p.subtypes.creature_types.contains(t)))
                     .copied()
-                    .collect()
-            } else {
-                vec![]
-            }
+                    .collect();
+                let colors = printed
+                    .as_ref()
+                    .is_some_and(|p| p.color_indicator != c.definition.color_indicator)
+                    .then(|| c.definition.color_indicator.clone());
+                let no_cost = c.definition.cost.symbols.is_empty()
+                    && printed.as_ref().is_some_and(|p| !p.cost.symbols.is_empty());
+                (types, colors, no_cost)
+            })
         };
         let copied = self.apply_enters_as_copy(id, ctrl, events);
         if copied {
@@ -10353,14 +10356,22 @@ impl GameState {
             // seeded off the *copied* line; see the cast path in `stack.rs`.
             self.reseed_entering_counters_after_copy(id);
         }
-        if copied && !minted_extra_types.is_empty()
+        if copied
+            && let Some((types, colors, no_cost)) = minted
+            && (!types.is_empty() || colors.is_some() || no_cost)
             && let Some(c) = self.battlefield.find_by_id_mut(id)
         {
             let mut def = (**c.definition).clone();
-            for t in minted_extra_types {
+            for t in types {
                 if !def.subtypes.creature_types.contains(&t) {
                     def.subtypes.creature_types.push(t);
                 }
+            }
+            if let Some(colors) = colors {
+                def.color_indicator = colors;
+            }
+            if no_cost {
+                def.cost = crate::mana::ManaCost::default();
             }
             c.set_definition(std::sync::Arc::new(def));
         }

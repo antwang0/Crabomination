@@ -1124,7 +1124,8 @@ fn spined_sliver_grows_per_blocker() {
     assert!(c.power >= 6, "two blockers fed +2/+2 (got {}/{})", c.power, c.toughness);
 }
 
-/// Vizier of Many Faces clone-enters, and its embalm token clone-enters too.
+/// Vizier of Many Faces clone-enters, and its embalm token clone-enters too —
+/// white, with no mana cost, and a Zombie (its printed exception).
 #[test]
 fn vizier_of_many_faces_embalm_token_clones() {
     let mut g = two_player_game();
@@ -1150,6 +1151,10 @@ fn vizier_of_many_faces_embalm_token_clones() {
     assert_eq!(token.definition.name, "Might Sliver", "token clone-entered");
     assert!(token.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Zombie),
         "embalm token is also a Zombie");
+    // Vizier's "if this creature was embalmed" rider survives the copy.
+    assert_eq!(token.definition.cost.cmc(), 0, "no mana cost");
+    let cp = g.computed_permanent(token.id).unwrap();
+    assert!(cp.colors.contains(Color::White) && !cp.colors.contains(Color::Green), "white, not the Sliver's green");
     assert!(g.exile.iter().any(|c| c.id == viz), "Vizier exiled by embalm");
 }
 
