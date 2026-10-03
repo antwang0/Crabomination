@@ -1117,6 +1117,11 @@ fn event_matches_spec_rest(
                 if state.same_team(*fc, source.controller)
                     && !state.same_team(*p, source.controller)
         ),
+        EventScope::YourSourceDamagedAnyPlayer => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(_), from_controller: Some(fc), .. }
+                if state.same_team(*fc, source.controller)
+        ),
         EventScope::OpponentSourceDamagedYou => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
@@ -1616,6 +1621,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourCreatureTargeted
         | EventScope::EnchantedBySource
         | EventScope::YourSourceDamagedOpponent
+        | EventScope::YourSourceDamagedAnyPlayer
         | EventScope::OpponentSourceDamagedYou
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent

@@ -478,6 +478,7 @@ fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
                 | EventScope::YourPermanentTargetedByOpponent
                 | EventScope::YourCreatureTargeted
                 | EventScope::YourSourceDamagedOpponent
+                | EventScope::YourSourceDamagedAnyPlayer
                 | EventScope::OpponentSourceDamagedYou
                 | EventScope::YourOtherSourceDamagedOpponent
                 | EventScope::YouTapped
@@ -502,6 +503,7 @@ fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
                     ta.event.kind == EventKind::BecameTarget
                 }
                 EventScope::YourSourceDamagedOpponent
+                | EventScope::YourSourceDamagedAnyPlayer
                 | EventScope::OpponentSourceDamagedYou
                 | EventScope::YourOtherSourceDamagedOpponent => name.contains("Damage"),
                 EventScope::YouTapped => ta.event.kind == EventKind::Tapped,

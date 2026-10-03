@@ -3877,6 +3877,10 @@ pub enum EventScope {
     /// planeswalker you control" wording; same dispatcher, gated on the
     /// attack target.
     ControllerAttackedDirectlyByOpponent,
+    /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) with
+    /// ANY damaged player, its controller included ("whenever a source you
+    /// control deals 5 or more damage to a player" — Dragonborn Champion).
+    YourSourceDamagedAnyPlayer,
 }
 
 impl EventScope {
