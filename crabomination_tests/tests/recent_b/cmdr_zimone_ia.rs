@@ -369,6 +369,28 @@ fn unbound_flourishing_doubles_and_copies() {
     assert_eq!(counters(&g, ph), 8, "the copy proliferated too");
 }
 
+/// Unbound Flourishing — CR 602.1a / 107.3: an activated ability with {X}
+/// in its activation cost is copied with the same X.
+#[test]
+fn unbound_flourishing_copies_x_activations() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::unbound_flourishing());
+    let hp = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hp,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("pinnacle");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hp).unwrap().counter_count(CounterType::Charge), 6, "3 + a copied 3");
+}
+
 /// Yavimaya Bloomsage — its end step grows a creature and prepares Channel
 /// once that creature reaches power 7.
 #[test]

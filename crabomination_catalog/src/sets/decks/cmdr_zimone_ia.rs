@@ -7,7 +7,8 @@
 //!   other creature you control rather than on the targets you choose.
 //! - **Primo, the Unbounded** — the Fractal's counters are the batch's first
 //!   damage event's amount when several base-power-0 creatures connect.
-//! - **Unbound Flourishing** — activated abilities with {X} aren't copied.
+//! - **Unbound Flourishing** — an {X} activated ability countered before the
+//!   copy trigger resolves isn't copied (the 2019-06-14 ruling copies it).
 
 use std::sync::Arc;
 
@@ -505,9 +506,11 @@ pub fn striding_shotcaller() -> CardDefinition {
 }
 
 /// Unbound Flourishing — your {X} permanent spells get double X; your {X}
-/// instants and sorceries are copied.
+/// instants, sorceries and activated abilities with {X} in their activation
+/// cost are copied (`ActivationCostHasX`; a −X loyalty cost isn't {X}).
 ///
-/// Residual: activated abilities with {X} aren't copied.
+/// Residual: an {X} activated ability countered before the copy trigger
+/// resolves isn't copied (2019-06-14: the copy is created anyway).
 pub fn unbound_flourishing() -> CardDefinition {
     // `CastSpellHasX`, not `HasXInCost` inside `CastSpellMatches`: on the
     // stack a spell's cost reads with its X filled in (CR 202.3e).
@@ -526,6 +529,11 @@ pub fn unbound_flourishing() -> CardDefinition {
                 instant_or_sorcery(),
                 Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
             ),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                    .with_filter(Predicate::ActivationCostHasX),
+                effect: Effect::CopyActivatedAbilityMayChooseTargets,
+            },
         ],
         ..Default::default()
     }
