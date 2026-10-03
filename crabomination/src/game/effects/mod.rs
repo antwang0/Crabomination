@@ -3794,6 +3794,7 @@ impl GameState {
                     exile_after: false,
                     miracle: false,
                     pay_life: false,
+                    bottom_after: false,
                 });
                 card.exiled_with = ctx.source;
                 events.push(GameEvent::PermanentExiled { card_id: card.id });
@@ -5814,6 +5815,7 @@ impl GameState {
                         exile_after: false,
                         miracle: false,
                         pay_life: false,
+                        bottom_after: false,
                     });
                     // Pay-own-cost cast, not free.
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
@@ -14372,6 +14374,7 @@ impl GameState {
                             exile_after: false,
                             miracle: true,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost);
                         self.step_bounded_may_play = true;
@@ -18819,6 +18822,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         card.granted_alt_cast_cost_eot =
                             Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
@@ -26676,6 +26680,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                     }
                     // Gonti's "spend mana as though it were mana of any type"
@@ -28664,6 +28669,7 @@ impl GameState {
                         exile_after: false,
                         miracle: false,
                         pay_life: false,
+                        bottom_after: false,
                     });
                     card.exiled_with = Some(source);
                     self.exile.push(card);
@@ -29705,6 +29711,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                     }
                 }
@@ -30066,6 +30073,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         self.exile.push(*card);
                         events.push(GameEvent::PermanentExiled { card_id });
@@ -33528,6 +33536,7 @@ impl GameState {
                         exile_after: false,
                         miracle: false,
                         pay_life: false,
+                        bottom_after: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
                     self.exile.push(card);
@@ -38393,6 +38402,7 @@ impl GameState {
                                 exile_after: false,
                                 miracle: false,
                                 pay_life: false,
+                                bottom_after: false,
                             });
                             // Pay-to-cast rider (CR 609.4b any-type spend):
                             // the cast costs the card's MV as generic.
@@ -38467,6 +38477,7 @@ impl GameState {
                         exile_after: false,
                         miracle: false,
                         pay_life: false,
+                        bottom_after: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                 }
@@ -38493,6 +38504,7 @@ impl GameState {
                     exile_after: false,
                     miracle: false,
                     pay_life: false,
+                    bottom_after: false,
                 });
                 // CR 609.4b — "mana of any type can be spent": paying the
                 // mana value as generic is the same set of payments.
@@ -39137,6 +39149,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                     }
                 }
@@ -39415,6 +39428,7 @@ impl GameState {
                             exile_after: *exile_after,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         if *pay_own_cost {
                             // "Spend mana as though it were mana of any type"
@@ -39450,6 +39464,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: true,
+                            bottom_after: false,
                         });
                     }
                 }
@@ -39479,6 +39494,18 @@ impl GameState {
                         && let Some(perm) = card.may_play_until.as_mut()
                     {
                         perm.locks_further_casts = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::BottomInsteadAfterGrantedCast { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && let Some(perm) = card.may_play_until.as_mut()
+                    {
+                        perm.bottom_after = true;
                     }
                 }
                 Ok(())
@@ -39854,6 +39881,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         if !*free {
                             card.granted_alt_cast_cost_eot = Some(real_cost);

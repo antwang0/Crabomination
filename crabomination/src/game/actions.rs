@@ -13280,6 +13280,10 @@ impl GameState {
         // Clear any outstanding may-play permission — once the card is
         // cast, the grant (and its miracle alt-cost) is consumed.
         let locks_further_casts = card.may_play_until.is_some_and(|m| m.locks_further_casts);
+        let bottom_after = card.may_play_until.is_some_and(|m| m.bottom_after);
+        if bottom_after != card.bottom_on_leave_stack {
+            card.bottom_on_leave_stack = bottom_after;
+        }
         if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
             self.clear_one_cast_group(group);
         }
@@ -15292,6 +15296,7 @@ impl GameState {
             exile_after: false,
             miracle: false,
             pay_life: false,
+            bottom_after: false,
         });
         card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
             crate::mana::generic(card.definition.cost.cmc()),

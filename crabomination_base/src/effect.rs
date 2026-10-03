@@ -9530,6 +9530,11 @@ pub enum Effect {
     /// its caster unable to cast further spells this turn — Conduit of
     /// Worlds' "if you do, you can't cast additional spells this turn".
     LockSpellsAfterGrantedCast { what: Selector },
+    /// Mark the may-play permission on each card `what` resolves to (chain
+    /// after `GrantMayPlay`): "if that spell would be put into a graveyard,
+    /// put it on the bottom of its owner's library instead" (Quintorius,
+    /// Loremaster).
+    BottomInsteadAfterGrantedCast { what: Selector },
     /// Mark the may-play permissions on each card `what` resolves to as one
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.

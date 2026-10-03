@@ -8659,6 +8659,7 @@ impl GameState {
                 exile_after: false,
                 miracle: false,
                 pay_life: false,
+                bottom_after: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
         }
@@ -10661,7 +10662,24 @@ impl GameState {
             self.exile.push(card);
             return;
         }
+        let Some(card) = self.bottom_instead_of_graveyard(card) else { return };
         self.route_to_graveyard(card, events);
+    }
+
+    /// Quintorius, Loremaster's "if that spell would be put into a graveyard,
+    /// put it on the bottom of its owner's library instead": `None` when the
+    /// replacement took `card` (it is at the bottom now).
+    pub(crate) fn bottom_instead_of_graveyard(
+        &mut self,
+        mut card: crate::card::CardInstance,
+    ) -> Option<crate::card::CardInstance> {
+        if !card.bottom_on_leave_stack || card.is_token {
+            return Some(card);
+        }
+        card.bottom_on_leave_stack = false;
+        let owner = card.owner;
+        self.players[owner].library.push(card);
+        None
     }
 
     /// Place `card` into its owner's graveyard, or exile it instead when a
@@ -21253,6 +21271,7 @@ impl GameState {
                 exile_after: false,
                 miracle: false,
                 pay_life: false,
+                bottom_after: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -21274,6 +21293,7 @@ impl GameState {
                 exile_after: false,
                 miracle: false,
                 pay_life: false,
+                bottom_after: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -21869,6 +21889,7 @@ impl GameState {
                 exile_after: false,
                 miracle: true,
                 pay_life: false,
+                bottom_after: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
             self.step_bounded_may_play = true;
@@ -27661,6 +27682,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: true,
+                            bottom_after: false,
                         });
                     }
                 }
@@ -28286,6 +28308,7 @@ impl GameState {
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
+                            bottom_after: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(taxed);
                         self.exile.push(card);
@@ -28934,7 +28957,7 @@ impl GameState {
                 if !card.is_token {
                     if card.cast_via_flashback {
                         self.exile.push(card);
-                    } else {
+                    } else if let Some(card) = self.bottom_instead_of_graveyard(card) {
                         self.route_to_graveyard(card, &mut events);
                     }
                 }
@@ -28985,7 +29008,7 @@ impl GameState {
                 if !card.is_token {
                     if card.cast_via_flashback {
                         self.exile.push(card); // CR 702.34a
-                    } else {
+                    } else if let Some(card) = self.bottom_instead_of_graveyard(card) {
                         self.route_to_graveyard(card, &mut events);
                     }
                 }
@@ -29486,6 +29509,8 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id });
             return Ok(events);
         }
+        // Quintorius, Loremaster's "bottom of its owner's library instead".
+        let Some(card) = self.bottom_instead_of_graveyard(card) else { return Ok(events) };
         // CR 614.6 — an instant/sorcery bound for the graveyard is exiled
         // instead under Rest in Peace / Leyline of the Void.
         self.route_to_graveyard(card, &mut events);

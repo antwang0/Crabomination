@@ -1267,6 +1267,11 @@ pub struct MayPlayPermission {
     /// clears the rest. Set by `Effect::OneCastAmongGranted`.
     #[serde(default)]
     pub one_cast_group: Option<CardId>,
+    /// "If that spell would be put into a graveyard, put it on the bottom of
+    /// its owner's library instead" (Quintorius, Loremaster). Set by
+    /// `Effect::BottomInsteadAfterGrantedCast`.
+    #[serde(default)]
+    pub bottom_after: bool,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.
@@ -9327,6 +9332,11 @@ pub struct CardData {
     /// resolver exiles it plotted (CR 702.170) instead of routing it to the
     /// graveyard. Not serialized; cleared off the stack.
     pub plot_on_resolve: bool,
+    /// Quintorius, Loremaster — "if that spell would be put into a graveyard,
+    /// put it on the bottom of its owner's library instead": set by a cast
+    /// through a `MayPlayPermission::bottom_after` grant, read wherever the
+    /// spell leaves the stack for a graveyard. Not serialized.
+    pub bottom_on_leave_stack: bool,
     /// Forger's Foundry — the permanent whose rider mana funded this stacked
     /// instant/sorcery; as it resolves it is exiled "with" that permanent
     /// instead of going to the graveyard. Not serialized; taken on resolution.
@@ -10317,6 +10327,7 @@ impl CardInstance {
             cast_via_flashback: false,
             feather_exile_return: false,
             plot_on_resolve: false,
+            bottom_on_leave_stack: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
             cast_artifact_mana: 0,

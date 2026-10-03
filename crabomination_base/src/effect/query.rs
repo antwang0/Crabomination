@@ -2082,6 +2082,7 @@ impl Effect {
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
+            | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
@@ -3108,6 +3109,7 @@ impl Effect {
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
+            | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }

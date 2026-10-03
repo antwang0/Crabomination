@@ -1298,6 +1298,7 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
         exile_after: false,
         miracle: false,
         pay_life: false,
+        bottom_after: false,
     });
     g.exile.push(pox);
 
@@ -1560,6 +1561,7 @@ fn may_play_granted_on_your_own_turn_survives_until_your_next_turn_ends() {
                 exile_after: false,
                 miracle: false,
                 pay_life: false,
+                bottom_after: false,
             });
         }
         (g, card)
@@ -1605,6 +1607,7 @@ fn may_play_land_is_a_land_drop_not_a_cast() {
             exile_after: false,
             miracle: false,
             pay_life: false,
+            bottom_after: false,
         });
     }
     let aff = g.compute_hand_affordances(0);
@@ -2281,6 +2284,7 @@ fn nita_trigger_fans_counters_when_casting_unowned_spell() {
         exile_after: false,
         miracle: false,
         pay_life: false,
+        bottom_after: false,
     });
     let bolt_id = bolt.id;
     g.exile.push(bolt);

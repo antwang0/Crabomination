@@ -3079,8 +3079,10 @@ impl GameState {
                 || c.cast_from_escape
                 || c.cast_via_madness
                 || c.put_onto_battlefield_by.is_some()
+                || c.bottom_on_leave_stack
             {
                 let c = &mut **c;
+                c.bottom_on_leave_stack = false;
                 c.cast_from_hand = false;
                 c.cast_from_exile = false;
                 c.cast_from_library = false;

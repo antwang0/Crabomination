@@ -28475,6 +28475,7 @@ mod stack_response_tests {
                     exile_after: false,
                     miracle: false,
                     pay_life: false,
+                    bottom_after: false,
                 });
             }
         };

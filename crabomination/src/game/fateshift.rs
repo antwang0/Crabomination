@@ -248,6 +248,7 @@ impl GameState {
                     exile_after: false,
                     miracle: false,
                     pay_life: false,
+                    bottom_after: false,
                 });
                 c.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
             }
