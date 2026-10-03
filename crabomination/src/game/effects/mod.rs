@@ -41389,6 +41389,17 @@ impl GameState {
                 );
                 out
             }
+            Selector::OpponentsCombatDamagedByOwnName => {
+                let Some(name) = ctx.source.and_then(|s| self.find_card_anywhere(s)).map(|c| c.definition.name.to_string())
+                else {
+                    return vec![];
+                };
+                self.living_seats()
+                    .filter(|&q| q != ctx.controller)
+                    .filter(|&q| self.combat_victims_by_name.iter().any(|(n, v)| *n == name && *v == q))
+                    .map(EntityRef::Player)
+                    .collect()
+            }
             Selector::SacrificedThisResolution { filter } => self
                 .scratch
                 .cards_sacrificed_this_resolution

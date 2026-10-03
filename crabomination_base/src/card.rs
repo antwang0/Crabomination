@@ -6586,6 +6586,10 @@ pub(crate) mod debug_flag {
     /// protection grant, a cast lock, a damage prevention or redirect, a P/T
     /// counting their permanents of the colour.
     pub const CHOSEN_COLOR_HOSTILE: u8 = 1 << 4;
+    /// The card asks which players creatures **sharing its name** have dealt
+    /// combat damage this game (`Selector::OpponentsCombatDamagedByOwnName` —
+    /// Gollum, Obsessed Stalker).
+    pub const COMBAT_VICTIMS_BY_NAME: u8 = 1 << 5;
 }
 
 impl CardDefinition {
@@ -7197,6 +7201,13 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::DAMAGE_VICTIMS != 0
     }
 
+    /// Whether combat damage this card deals is remembered **by its name**
+    /// (`Selector::OpponentsCombatDamagedByOwnName`, Gollum). Gates the combat
+    /// path's write into `combat_victims_by_name`.
+    pub fn remembers_combat_victims_by_name(&self) -> bool {
+        self.debug_flags() & debug_flag::COMBAT_VICTIMS_BY_NAME != 0
+    }
+
     /// Whether this card asks how much damage sources sharing its name have
     /// dealt it this turn (`Value::DamageToSourceThisTurnFromOthersNamedSame`,
     /// which is Blazing Effigy and nothing else). Gates
@@ -7272,6 +7283,9 @@ impl CardDefinition {
                 }
                 if dbg.contains("DamageToSourceThisTurnFromOthersNamedSame") {
                     v |= debug_flag::DAMAGE_BY_NAME;
+                }
+                if dbg.contains("OpponentsCombatDamagedByOwnName") {
+                    v |= debug_flag::COMBAT_VICTIMS_BY_NAME;
                 }
                 // `HasChosenColorOfSource` carries the whole prevention /
                 // prohibition family in one string (Story Circle, Prismatic

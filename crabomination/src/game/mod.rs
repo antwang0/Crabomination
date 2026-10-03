@@ -1554,6 +1554,11 @@ pub struct ColdState {
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
+    /// `(creature name, player)`: that player was dealt combat damage this
+    /// game by a creature with that name. Only names whose card asks are
+    /// written (`remembers_combat_victims_by_name`, Gollum).
+    #[serde(default)]
+    pub combat_victims_by_name: Vec<(String, usize)>,
     /// Teyo, Geometric Tactician's −2: `(step, seat)` — the Mystic Barrier
     /// attack direction (+1 left, -1 right) until `seat`'s next turn.
     #[serde(default)]

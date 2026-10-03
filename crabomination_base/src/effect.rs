@@ -390,6 +390,10 @@ pub enum Selector {
     /// Every player and planeswalker the source has dealt damage to this
     /// game (The Fallen).
     DamagedBySourceThisGame,
+    /// Each opponent dealt combat damage this game by a creature with the
+    /// source's name — any such creature, not only this object (Gollum,
+    /// Obsessed Stalker).
+    OpponentsCombatDamagedByOwnName,
 
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching

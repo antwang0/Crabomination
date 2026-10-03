@@ -5736,10 +5736,12 @@ impl GameState {
                     // site in the engine (PERF `(-355)`: 7,038 a six-game
                     // `cube` run).
                     let mut remembers = false;
+                    let mut by_name: Option<String> = None;
                     let battlefield = &self.battlefield;
                     if let Some(c) = battlefield.find_by_id(atk.id) {
                         let ctrl = c.controller;
                         remembers = c.definition.remembers_damage_victims();
+                        by_name = c.definition.remembers_combat_victims_by_name().then(|| c.definition.name.to_string());
                         let players = &mut self.players;
                         if c.definition.keywords.has_kw(&Keyword::Changeling) {
                             players[ctrl].prowl_any_type_this_turn = true;
@@ -5765,6 +5767,13 @@ impl GameState {
                         && !c.damaged_players_this_game.contains(&p)
                     {
                         c.damaged_players_this_game.push(p);
+                    }
+                    // Gollum — "dealt combat damage this game by a creature
+                    // named ...", keyed by name so another Gollum's hits count.
+                    if let Some(name) = by_name
+                        && !self.combat_victims_by_name.iter().any(|(n, q)| *n == name && *q == p)
+                    {
+                        self.combat_victims_by_name.push((name, p));
                     }
                 }
                 // CR 702.180c — Toxic N adds N poison on combat damage to a
