@@ -345,3 +345,34 @@ fn bot_spends_maraths_counters() {
     }
     assert!(used, "the bot never spent Marath's counters");
 }
+
+/// The bot still casts Naya Soulbeast, a 0/0 whose counters come from its
+/// cast trigger.
+#[test]
+fn naya_soulbeast_bot_casts_it() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    // After combat, so the summon-sick hold doesn't defer the body.
+    g.step = TurnStep::PostCombatMain;
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::serra_angel());
+        }
+    }
+    let nb = g.add_card_to_hand(0, catalog::naya_soulbeast());
+    for _ in 0..8 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let mut bot = HeuristicBot::new();
+    for _ in 0..10 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if pass || g.battlefield_find(nb).is_some() {
+            break;
+        }
+    }
+    assert_eq!(plus(&g, nb), 10, "the bot cast it");
+}
