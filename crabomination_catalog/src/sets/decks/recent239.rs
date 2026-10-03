@@ -56,8 +56,8 @@ pub fn betrayers_bargain() -> CardDefinition {
 }
 
 /// Untimely Malfunction — {1}{R} Instant. Choose one — destroy target artifact;
-/// choose new targets for target spell; or one or two target creatures can't
-/// block this turn.
+/// change the target of target spell or ability with a single target; or one
+/// or two target creatures can't block this turn.
 pub fn untimely_malfunction() -> CardDefinition {
     CardDefinition {
         name: "Untimely Malfunction",
@@ -68,7 +68,7 @@ pub fn untimely_malfunction() -> CardDefinition {
                 what: target_filtered(R::Artifact),
             },
             Effect::ChooseNewTargetsForSpell {
-                what: target_filtered(R::IsSpellOnStack),
+                what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack).and(R::SpellWithSingleTarget)),
             },
             Effect::ApplyToTargets {
                 max_targets: 2,

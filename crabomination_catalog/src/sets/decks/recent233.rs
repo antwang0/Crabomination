@@ -71,7 +71,7 @@ pub fn return_the_favor() -> CardDefinition {
             mode(
                 cost(&[generic(1)]),
                 Effect::ChooseNewTargetsForSpell {
-                    what: target_filtered(R::IsSpellOnStack),
+                    what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack).and(R::SpellWithSingleTarget)),
                 },
             ),
         ]),

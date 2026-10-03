@@ -5964,8 +5964,8 @@ pub fn appa_steadfast_guardian() -> CardDefinition {
 }
 
 /// Redirect Lightning — {R} Instant — Lesson. Change the target of target
-/// spell. (The printed "pay 5 life or {2}" alternative additional cost is
-/// collapsed into a flat {2}; the "or ability" half is approximated to spells.)
+/// spell or ability with a single target. (The printed "pay 5 life or {2}"
+/// alternative additional cost is collapsed into a flat {2}.)
 pub fn redirect_lightning() -> CardDefinition {
     CardDefinition {
         name: "Redirect Lightning",
@@ -5973,7 +5973,7 @@ pub fn redirect_lightning() -> CardDefinition {
         card_types: vec![CardType::Instant],
         subtypes: lesson(),
         effect: Effect::ChooseNewTargetsForSpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            what: target_filtered(SelectionRequirement::IsSpellOnStack.or(SelectionRequirement::HasAbilityOnStack).and(SelectionRequirement::SpellWithSingleTarget)),
         },
         ..Default::default()
     }

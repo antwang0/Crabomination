@@ -169,7 +169,7 @@ pub fn bolt_bend() -> CardDefinition {
             },
         }],
         effect: Effect::ChooseNewTargetsForSpell {
-            what: target_filtered(R::IsSpellOnStack),
+            what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack).and(R::SpellWithSingleTarget)),
         },
         ..Default::default()
     }

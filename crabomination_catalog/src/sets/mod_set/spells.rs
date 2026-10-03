@@ -486,9 +486,8 @@ pub fn fierce_guardianship() -> CardDefinition {
 /// ⚠ **The card counters nothing**, and the comment that used to stand here
 /// said it did — it quoted a "Counter target spell" the print does not carry
 /// and then described the retarget as a *rider* on it. Both the body and the
-/// doc were a different card. CR 115.7d is the whole effect; only the "or
-/// ability" half is approximated to spells, which is the same documented
-/// approximation Redirect Lightning carries.
+/// doc were a different card. CR 115.7d is the whole effect, on a spell or
+/// an ability (named by its own stack id, CR 115.1).
 pub fn deflecting_swat() -> CardDefinition {
     CardDefinition {
         name: "Deflecting Swat",
@@ -508,11 +507,10 @@ pub fn deflecting_swat() -> CardDefinition {
         // `Effect::CounterSpell`, which is the whole of its printed body
         // replaced by a different one. `ChooseNewTargetsForSpell` is the
         // primitive Redirect, Bolt Bend, Divert, Goblin Flectomancer and
-        // Redirect Lightning already use. ⚠ The "or ability" half is
-        // approximated to spells, the same documented approximation Redirect
-        // Lightning carries; `scripts/audit_retarget.py` is the ratchet.
+        // Redirect Lightning already use; an ability is named by its stack id
+        // (`choose_new_targets_for_ability`).
         effect: Effect::ChooseNewTargetsForSpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            what: target_filtered(SelectionRequirement::IsSpellOnStack.or(SelectionRequirement::HasAbilityOnStack)),
         },
         ..Default::default()
     }

@@ -233,3 +233,33 @@ fn lavabrink_floodgates_doom_counter_either_way() {
     assert!(g.battlefield_find(gates).is_none(), "the third counter sacrifices it");
     assert!(g.battlefield_find(bear).is_none(), "6 damage to each creature");
 }
+
+/// Deflecting Swat — CR 115.7d "target spell or ability": an opponent's
+/// Prodigal Sorcerer ping at our Bear, named by its stack id (CR 115.1),
+/// goes back at the pinger's controller.
+#[test]
+fn deflecting_swat_redirects_an_ability() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(4);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pinger = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("ping the bear");
+    let ping = g.top_ability_of(pinger).expect("the ping is on the stack");
+    let swat = g.add_card_to_hand(0, catalog::deflecting_swat());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: swat, target: Some(Target::Permanent(ping)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("swat the ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the Bear was spared");
+    assert_eq!(g.players[1].life, life - 1, "the ping hit its controller");
+}
