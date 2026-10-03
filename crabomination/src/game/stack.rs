@@ -5243,6 +5243,7 @@ impl GameState {
         clear_cold!(self.combat_damage_prevented_by_this_turn);
         clear_cold!(self.all_damage_prevented_by_this_turn);
         clear_cold!(self.all_damage_prevented_by_matching_this_turn);
+        clear_cold!(self.combat_damage_prevented_to_matching_this_turn);
         self.life_gain_punish_this_turn = 0;
         clear_cold!(self.draws_redirected_this_turn);
         self.damage_becomes_this_turn = None;

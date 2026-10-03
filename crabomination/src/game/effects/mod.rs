@@ -36317,6 +36317,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventCombatDamageToMatchingThisTurn { filter } => {
+                if !self
+                    .combat_damage_prevented_to_matching_this_turn
+                    .iter()
+                    .any(|(seat, f)| *seat == ctx.controller && f == filter)
+                {
+                    self.combat_damage_prevented_to_matching_this_turn.push((ctx.controller, filter.clone()));
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter, gain_life_from_colors } => {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());

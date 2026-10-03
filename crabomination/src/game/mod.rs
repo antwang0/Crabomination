@@ -1752,6 +1752,12 @@ pub struct ColdState {
     #[serde(default)]
     pub(crate) all_damage_prevented_by_matching_this_turn:
         Vec<(usize, crate::card::SelectionRequirement)>,
+    /// CR 615.1 — the incoming combat-damage twin of the list above (Pack
+    /// Leader: "to Dogs you control"), `(resolving seat, filter)`. Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_matching_this_turn:
+        Vec<(usize, crate::card::SelectionRequirement)>,
     /// CR 614 — "if `from` would draw a card, that player skips that draw and
     /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
     /// cleanup.
@@ -9225,6 +9231,16 @@ impl GameState {
         }
         if self.combat_damage_prevented_to_this_turn.contains(&tgt) {
             return true;
+        }
+        if !self.combat_damage_prevented_to_matching_this_turn.is_empty() {
+            let t = crate::game::types::Target::Permanent(tgt);
+            if self
+                .combat_damage_prevented_to_matching_this_turn
+                .iter()
+                .any(|(seat, f)| self.evaluate_requirement_static(f, &t, *seat, None))
+            {
+                return true;
+            }
         }
         let me = self.battlefield_find(tgt);
         if let Some(c) = me

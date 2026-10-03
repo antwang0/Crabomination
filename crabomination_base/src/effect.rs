@@ -11911,6 +11911,11 @@ pub enum Effect {
     /// not by its state then. The controller-relative atoms
     /// (`ControlledByOpponent`) are evaluated from the seat that resolved it.
     PreventAllDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
+    /// CR 615.1 — "prevent all combat damage that would be dealt this turn to
+    /// [filter]" (Pack Leader's Dogs you control). A filter judged when the
+    /// damage would be dealt, from the resolving seat, so a Dog that arrives
+    /// later is covered and one that changes controller isn't.
+    PreventCombatDamageToMatchingThisTurn { filter: crate::card::SelectionRequirement },
 
     /// "You may have `dealer` deal damage equal to its power to `to`. If you
     /// do, `dealer` assigns no combat damage this turn." The Laccolith cycle's
