@@ -2005,7 +2005,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
-| 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |

@@ -61053,6 +61053,7 @@ pub fn sword_point_diplomacy() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::RevealTopPayOrTake {
+            payer: None,
             count: Value::Const(3),
             life: Value::Const(3),
         },

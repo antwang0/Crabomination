@@ -295,3 +295,29 @@ fn next_of_kin_can_bring_the_commander_from_the_command_zone() {
     end_step(&mut g);
     assert!(g.battlefield_find(kin).is_some_and(|c| c.attached_to == Some(henzie)), "returns attached");
 }
+
+/// Protection Racket — per opponent in turn order, reveal your top card and
+/// THAT player may pay life equal to its mana value to exile it (else it's
+/// yours). Each card is offered to one opponent only.
+#[test]
+fn protection_racket_asks_each_opponent_once() {
+    use crabomination::decision::{DecisionAnswer, DeciderKind, ScriptedDecider};
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::protection_racket());
+    let a = g.add_card_to_library(0, catalog::serra_angel());
+    let b = g.add_card_to_library(0, catalog::grizzly_bears());
+    // Seat 1 is asked about the first card and declines; seat 2 pays for the second.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
+    let life2 = g.players[2].life;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let (kept, lost) = if g.players[0].hand.iter().any(|c| c.id == a) { (a, b) } else { (b, a) };
+    assert!(g.players[0].hand.iter().any(|c| c.id == kept), "the first card is yours");
+    assert!(g.exile.iter().any(|c| c.id == lost), "seat 2 paid for the second");
+    let mv = if lost == a { 5 } else { 2 };
+    assert_eq!(g.players[2].life, life2 - mv);
+    if let DeciderKind::Scripted { asked, .. } = g.decider.kind() {
+        assert_eq!(asked.len(), 2, "one ask per revealed card");
+    }
+}

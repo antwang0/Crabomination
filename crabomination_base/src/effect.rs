@@ -11707,8 +11707,15 @@ pub enum Effect {
     /// "Reveal the top `count` cards of your library. For each of those
     /// cards, put that card into your hand unless any opponent pays
     /// `life` life. Then exile the rest." (Sword-Point Diplomacy.)
-    /// Opponents are asked in turn order per card via `ask_seat_bool`.
-    RevealTopPayOrTake { count: Value, life: Value },
+    /// Opponents are asked in turn order per card via `ask_seat_bool`;
+    /// `payer` asks that one player only ("that player may pay" — Protection
+    /// Racket's per-opponent pass).
+    RevealTopPayOrTake {
+        count: Value,
+        life: Value,
+        #[serde(default)]
+        payer: Option<PlayerRef>,
+    },
     /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
     /// battlefield transformed under your control." The return is a new
     /// object: lore counters clear and the back face's ETB fires. Fable of

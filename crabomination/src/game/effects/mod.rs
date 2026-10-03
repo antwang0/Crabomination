@@ -26237,7 +26237,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopPayOrTake { count, life } => {
+            Effect::RevealTopPayOrTake { count, life, payer } => {
                 // Sword-Point Diplomacy: per revealed card, opponents (turn
                 // order) may pay `life` to deny it; unpaid cards go to hand
                 // (not drawn, CR 121.5), denied cards are exiled.
@@ -26247,10 +26247,21 @@ impl GameState {
                 let top: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
                 if top.is_empty() { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let me = Effect::RevealTopPayOrTake { count: count.clone(), life: life.clone() };
+                // A named payer is bound to its seat so a suspended ask
+                // re-runs against the same one.
+                let only = payer.as_ref().and_then(|w| self.resolve_player(w, ctx));
+                if payer.is_some() && only.is_none() {
+                    return Ok(());
+                }
+                let me = Effect::RevealTopPayOrTake {
+                    count: count.clone(),
+                    life: life.clone(),
+                    payer: only.map(PlayerRef::Seat),
+                };
                 let opponents: Vec<usize> = self.apnap_sort(
                     (0..self.players.len())
                         .filter(|&q| q != p && !self.players[q].eliminated && !self.same_team(q, p))
+                        .filter(|&q| only.is_none_or(|o| o == q))
                         .collect(),
                 );
                 let mut cursor = 0usize;

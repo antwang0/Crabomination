@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Henzie** — a spell with its own blitz uses its printed blitz cost, not
 //!   a choice between that and Henzie's.
-//! - **Protection Racket** — every opponent is offered each revealed card,
-//!   not only the one whose pass of the process it is.
 //! - **Turf War** — the contested lands are chosen, not targeted; the
 //!   stolen land is the engine's pick.
 
@@ -369,14 +367,14 @@ pub fn next_of_kin() -> CardDefinition {
 
 /// Protection Racket — {2}{B} enchantment. At your upkeep, for each opponent:
 /// reveal your top card; they may pay life equal to its mana value to exile
-/// it, else it goes to your hand.
-/// Residual: every opponent is offered each card.
+/// it, else it goes to your hand. Only that opponent is asked.
 pub fn protection_racket() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
             effect: Effect::ForEachOpponent {
                 body: Box::new(Effect::RevealTopPayOrTake {
+                    payer: Some(PlayerRef::Triggerer),
                     count: Value::ONE,
                     life: Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
                         who: PlayerRef::You,
