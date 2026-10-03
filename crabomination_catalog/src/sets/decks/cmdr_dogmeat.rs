@@ -1,10 +1,6 @@
 //! Commander: the cards the **Scrappy Survivors** precon (PIP, Dogmeat, Ever
 //! Loyal) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_dogmeat.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Brotherhood Outcast** — the Aura or Equipment card is picked rather
-//!   than targeted.
 
 use std::sync::Arc;
 
@@ -166,14 +162,15 @@ fn regrow_attachment() -> Effect {
 }
 
 /// "An Aura or Equipment card from your graveyard (or hand) onto the
-/// battlefield" — the card and its host are the engine's pick.
+/// battlefield" — the card is the engine's pick; an Aura goes on anything it
+/// can enchant (CR 303.4f), an Equipment enters unattached.
 fn put_attachment_from(zones: Vec<Zone>, filter: R) -> Effect {
     Effect::PutOntoBattlefieldAttached {
         zones,
         filter,
         host: None,
         max: Some(Value::ONE),
-        creatures_only: true,
+        creatures_only: false,
         equipment_unattached: true,
     }
 }
@@ -345,13 +342,17 @@ pub fn brass_knuckles() -> CardDefinition {
     }
 }
 
-/// Brotherhood Outcast — entering: an Aura or Equipment card (mana value 3 or
-/// less) back from your graveyard, or a shield counter on target creature.
-/// Residual: the card is picked rather than targeted.
+/// Brotherhood Outcast — entering: return target Aura or Equipment card (mana
+/// value 3 or less) from your graveyard to the battlefield, or a shield
+/// counter on target creature. The Equipment enters unattached; the Aura on
+/// anything it can enchant (CR 303.4f).
 pub fn brotherhood_outcast() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            put_attachment_from(vec![Zone::Graveyard], aura_or_equipment().and(R::ManaValueAtMost(3))),
+            Effect::Move {
+                what: target_filtered(aura_or_equipment().and(R::ManaValueAtMost(3)).and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
             Effect::AddCounter {
                 what: target_filtered(R::Creature),
                 kind: CounterType::Shield,
@@ -913,8 +914,8 @@ pub fn three_dog_galaxy_news_dj() -> CardDefinition {
 
 /// Vault 101: Birthday Party — I: a 1/1 Human Soldier and a Food; II, III: an
 /// Aura or Equipment card of your choice from your hand or graveyard onto the
-/// battlefield — an Aura on a creature you choose, an Equipment unattached
-/// unless you attach it to a creature of yours.
+/// battlefield — an Aura on anything it can enchant (CR 303.4f), an
+/// Equipment unattached unless you attach it to a creature of yours.
 pub fn vault_101_birthday_party() -> CardDefinition {
     let soldier = TokenDefinition {
         name: "Human Soldier".into(),

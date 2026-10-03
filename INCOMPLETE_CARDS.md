@@ -2117,7 +2117,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
-| 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted. |
 | 🟡 Ghyrson Starn, Kelermorph | Tyranid Swarm (40K) | only a permanent source's 1 damage is seen (not an instant's or sorcery's). |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 Magus Lucea Kane | Tyranid Swarm (40K) | only the next spell with {X} is copied, not an ability with {X}. |
