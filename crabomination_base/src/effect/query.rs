@@ -1963,6 +1963,8 @@ impl Effect {
             | Effect::ChooseCombatThisTurn
             | Effect::ChooseBlocksThisTurn
             | Effect::ChooseBlocksThisCombat
+            | Effect::OnlyTargetsCanAttackNextCombat
+            | Effect::CantAttackThisCombatExcept { .. }
             | Effect::SearchAndCastFree { .. }
             | Effect::FlickerHostWithAuras
             | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }

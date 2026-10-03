@@ -11667,6 +11667,15 @@ pub enum Effect {
     /// the following main phase comes from the normal EndCombat → PostMain
     /// flow. Relentless Assault.
     AdditionalCombatPhaseAfterMain { count: Value },
+    /// "Only the chosen creatures can attack during that combat phase" (Last
+    /// Night Together, after its `AdditionalCombatPhaseAfterMain`): at the
+    /// beginning of this turn's next combat, every creature you control other
+    /// than the resolving spell's target creatures can't attack until end of
+    /// combat (CR 508.1c). The targets are read at resolution.
+    OnlyTargetsCanAttackNextCombat,
+    /// **Runtime-only** — the delayed half of `OnlyTargetsCanAttackNextCombat`:
+    /// each creature you control not in `except` can't attack this combat.
+    CantAttackThisCombatExcept { except: Vec<crate::card::CardId> },
     /// CR 500.7 — "there is an additional end step after this step." Banks
     /// `count` extra end steps; when the active player leaves the End step with
     /// one banked, the turn loops back to another End step (Y'shtola Rhul).
