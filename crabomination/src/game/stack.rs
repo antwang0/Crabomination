@@ -1103,7 +1103,8 @@ impl GameState {
             | EventScope::OpponentSourceDamagedYou
             | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped
-            | EventScope::YouPutCounters => false, // event-based
+            | EventScope::YouPutCounters
+            | EventScope::OpponentPutsCountersOnTheirOwn => false, // event-based
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent
             | EventScope::ControllerAttackedDirectlyByOpponent

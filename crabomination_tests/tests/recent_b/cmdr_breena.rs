@@ -396,6 +396,30 @@ fn bold_plagiarist_copies_counters() {
     assert_eq!(g.battlefield_find(bp).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+/// CR 122.6 — "an opponent PUTS counters on a creature they control": +1/+1
+/// counters YOU put on an opponent's creature are not copied.
+#[test]
+fn bold_plagiarist_reads_who_put_the_counters() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let bp = g.add_card_to_battlefield(0, catalog::bold_plagiarist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(bp, 0, None);
+    let evs = g
+        .resolve_effect(
+            &Effect::AddCounter {
+                what: Selector::ExactObjects(vec![bear]),
+                kind: CounterType::PlusOnePlusOne,
+                amount: crabomination::card::Value::Const(2),
+            },
+            &ctx,
+        )
+        .expect("my counters on their bear");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bp).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
 /// Deathbringer Liege taps with a white spell and kills the tapped with a
 /// black one.
 #[test]

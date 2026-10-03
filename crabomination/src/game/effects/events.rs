@@ -1247,6 +1247,7 @@ fn event_matches_spec_rest(
             GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, source.controller)
         ),
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == source.controller),
+        EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, source.controller),
     };
 
     if !scope_ok {
@@ -1294,6 +1295,15 @@ pub(crate) fn actor_for_scope(
         return state.battlefield_find(cid).map(|c| c.controller);
     }
     event_actor(state, event)
+}
+
+/// [`EventScope::OpponentPutsCountersOnTheirOwn`]: the placer is an opponent
+/// of `controller` and controls the permanent that got the counters.
+fn opponent_put_counters_on_their_own(state: &GameState, event: &GameEvent, controller: usize) -> bool {
+    let GameEvent::CounterAdded { card_id, .. } = event else { return false };
+    counter_placer(state, event).is_some_and(|p| {
+        !state.same_team(p, controller) && state.battlefield_find(*card_id).is_some_and(|c| c.controller == p)
+    })
 }
 
 /// Who put a `CounterAdded`'s counters (CR 122.6): its recorded placer, else
@@ -1615,6 +1625,7 @@ pub(crate) fn emblem_event_matches(
             GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, controller)
         ),
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == controller),
+        EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, controller),
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::YourPermanentTargetedByOpponent

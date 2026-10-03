@@ -138,16 +138,19 @@ pub fn bold_plagiarist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
-            // The event carries no actor, so "an opponent puts … on a creature
-            // they control" is read off the recipient's controller. The
-            // counters a Plagiarist is given are put by the opponent on a
-            // creature they *don't* control, so another Plagiarist must not see
-            // them — two of them fed each other to a million-action cap.
-            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::OpponentControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Creature.and(R::HasName("Bold Plagiarist".into()).negate()),
-                }),
+            // The placer (CR 122.6) is the opponent and controls the creature.
+            // The counters a Plagiarist is then given are the opponent's to
+            // put, but the engine records this trigger's controller as their
+            // placer — so another Plagiarist is excluded by name, or two of
+            // them feed each other to a million-action cap.
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::OpponentPutsCountersOnTheirOwn,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::HasName("Bold Plagiarist".into()).negate()),
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

@@ -3870,6 +3870,10 @@ pub enum EventScope {
     /// placer (CR 122.6) is the trigger's controller, whoever controls the
     /// permanent; a `.with_filter` on `TriggerSource` restricts the subject.
     YouPutCounters,
+    /// "Whenever an opponent puts one or more counters on a creature they
+    /// control" (Bold Plagiarist): a `CounterAdded` whose placer (CR 122.6) is
+    /// an opponent of the trigger's controller and controls the permanent.
+    OpponentPutsCountersOnTheirOwn,
     /// CR 506.3 — a creature an opponent controls attacks the source's
     /// controller **directly** ("whenever a creature attacks you" — Hissing
     /// Miasma, Orim's Prayer): an attack on a planeswalker they control is
