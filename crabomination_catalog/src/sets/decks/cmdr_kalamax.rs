@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kalamax.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Eon Frolicker** — the protection from that player until your next
-//!   turn isn't granted.
 //! - **Haldan, Avid Arcanist** / **Pako, Arcane Retriever** — the play
 //!   permission is granted as Pako exiles the cards while you control
 //!   Haldan (not re-read if Haldan comes or goes later), and creature cards
