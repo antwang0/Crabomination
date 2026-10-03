@@ -150,6 +150,8 @@ impl GameState {
                 Target::Permanent(id) => self.battlefield_find(*id).is_some_and(|o| o.controller == controller),
             }),
             R::ControlledByOpponent => !self.same_team(*owner, controller),
+            // CR 115.7 — "spell or ability with a single target".
+            R::SpellWithSingleTarget => target.is_some() && additional_targets.is_empty(),
             R::AbilityTargetsMatching(inner) => target
                 .iter()
                 .chain(additional_targets.iter())
