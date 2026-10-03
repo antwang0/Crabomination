@@ -8497,8 +8497,15 @@ pub enum Effect {
     /// "Put the same number and kind of counters on …" — `amount` counters of
     /// the kind the triggering `CounterAdded` event put (Bold Plagiarist,
     /// Captain Marvel). Rewritten to an `AddCounter` as the trigger is
-    /// created (`for_trigger_event`); a no-op anywhere else.
-    AddCounterOfTriggerKind { what: Selector, amount: Value },
+    /// created (`for_trigger_event`); a no-op anywhere else. `event_placer`:
+    /// the event's placer puts them ("they put …" — CR 122.6), not the
+    /// trigger's controller.
+    AddCounterOfTriggerKind {
+        what: Selector,
+        amount: Value,
+        #[serde(default)]
+        event_placer: bool,
+    },
     /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
     /// players that have a counter, then give each another counter of a
     /// kind already there." The auto-decider implements a strategic
@@ -12718,6 +12725,10 @@ pub enum ScratchBinding {
     /// The amount a body reads as `Value::TriggerEventAmount` (what
     /// `MayPayGenericUpTo` was paid): the context's `event_amount`.
     EventAmount(u32),
+    /// CR 122.6 — the player who puts the body's counters (the event's
+    /// placer for "THEY put the same counters on this" — Bold Plagiarist),
+    /// read back as each `CounterAdded`'s `placer`.
+    Causer(usize),
 }
 
 impl Default for Effect {

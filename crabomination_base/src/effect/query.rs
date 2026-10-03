@@ -1984,7 +1984,7 @@ impl Effect {
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
-            | Effect::AddCounterOfTriggerKind { what, amount }
+            | Effect::AddCounterOfTriggerKind { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. }
             | Effect::AddKeywordCounter { what, amount, .. }
             | Effect::RemoveKeywordCounter { what, amount, .. } => {

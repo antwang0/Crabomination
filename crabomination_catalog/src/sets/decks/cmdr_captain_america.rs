@@ -210,7 +210,7 @@ pub fn captain_marvel_apex_avenger() -> CardDefinition {
             ),
             effect: may(
                 "Put the same counters on Captain Marvel?",
-                Effect::AddCounterOfTriggerKind { what: Selector::This, amount: Value::TriggerEventAmount },
+                Effect::AddCounterOfTriggerKind { what: Selector::This, amount: Value::TriggerEventAmount, event_placer: false },
             ),
         }],
         ..creature(

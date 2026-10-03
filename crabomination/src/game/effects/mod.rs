@@ -126,6 +126,7 @@ enum ScratchSave {
     CurrentVoter(Option<usize>),
     LastDieRoll(u8),
     ChosenOpponent(Option<usize>),
+    Causer(Option<usize>),
     /// A context pin (`Controller`, `EventAmount`): nothing on `GameState`.
     Nothing,
 }
@@ -1756,6 +1757,7 @@ impl GameState {
             ScratchBinding::ChosenOpponent(seat) => {
                 ScratchSave::ChosenOpponent(self.scratch.chosen_opponent_scratch.replace(*seat))
             }
+            ScratchBinding::Causer(seat) => ScratchSave::Causer(self.resolution_causer.replace(*seat)),
             ScratchBinding::Controller(_) | ScratchBinding::EventAmount(_) => ScratchSave::Nothing,
         }
     }
@@ -1766,6 +1768,7 @@ impl GameState {
             ScratchSave::CurrentVoter(prev) => self.current_voter = prev,
             ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
             ScratchSave::ChosenOpponent(prev) => self.scratch.chosen_opponent_scratch = prev,
+            ScratchSave::Causer(prev) => self.resolution_causer = prev,
             ScratchSave::Nothing => {}
         }
     }
@@ -44474,28 +44477,32 @@ const CROWDED_COPY_BOARD: usize = 150;
 /// `effect` as the trigger it becomes for `ev`: a `CounterAdded` event fixes
 /// `Effect::AddCounterOfTriggerKind` to the kind it put ("the same number and
 /// kind of counters" — Bold Plagiarist). Any other pair is a plain clone.
-pub(crate) fn for_trigger_event(effect: &Effect, ev: &GameEvent) -> Effect {
+pub(crate) fn for_trigger_event(state: &GameState, effect: &Effect, ev: &GameEvent) -> Effect {
     // The kind a counter event put: a plain counter or a keyword counter.
     #[derive(Clone)]
     enum Kind {
         Plain(crate::card::CounterType),
         Keyword(crate::card::Keyword),
     }
-    fn fix(e: &mut Effect, kind: Kind) {
+    fn fix(e: &mut Effect, kind: Kind, placer: Option<usize>) {
         match e {
-            Effect::AddCounterOfTriggerKind { what, amount } => {
-                *e = match kind {
+            Effect::AddCounterOfTriggerKind { what, amount, event_placer } => {
+                let add = match kind {
                     Kind::Plain(kind) => Effect::AddCounter { what: what.clone(), kind, amount: amount.clone() },
                     Kind::Keyword(keyword) => {
                         Effect::AddKeywordCounter { what: what.clone(), keyword, amount: amount.clone() }
                     }
                 };
+                *e = match placer.filter(|_| *event_placer) {
+                    Some(p) => Effect::BindScratch { scratch: ScratchBinding::Causer(p), body: Box::new(add) },
+                    None => add,
+                };
             }
-            Effect::Seq(v) => v.iter_mut().for_each(|x| fix(x, kind.clone())),
-            Effect::MayDo { body, .. } => fix(body, kind),
+            Effect::Seq(v) => v.iter_mut().for_each(|x| fix(x, kind.clone(), placer)),
+            Effect::MayDo { body, .. } => fix(body, kind, placer),
             Effect::If { then, else_, .. } => {
-                fix(then, kind.clone());
-                fix(else_, kind);
+                fix(then, kind.clone(), placer);
+                fix(else_, kind, placer);
             }
             _ => {}
         }
@@ -44506,6 +44513,6 @@ pub(crate) fn for_trigger_event(effect: &Effect, ev: &GameEvent) -> Effect {
         _ => return effect.clone(),
     };
     let mut out = effect.clone();
-    fix(&mut out, kind);
+    fix(&mut out, kind, crate::game::effects::events::counter_placer(state, ev));
     out
 }
