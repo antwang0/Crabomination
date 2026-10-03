@@ -23083,7 +23083,21 @@ impl GameState {
                         // CR 707.10 — the copier controls the copy and "may
                         // choose new targets" (CR 707.10c); the default keeps
                         // the original's.
-                        if let StackItem::Trigger { effect, target, additional_targets, controller, .. } = &mut copy {
+                        if let StackItem::Trigger { effect, target, additional_targets, controller, source, x_value, .. } =
+                            &mut copy
+                        {
+                            // A copy for an opponent of the original's
+                            // controller (Aboleth Spawn) starts from targets
+                            // picked for the copier, not the original's.
+                            if *controller != ctx.controller && target.is_some() {
+                                let picked =
+                                    self.auto_target_for_effect_avoiding_set_x(effect, ctx.controller, &[*source], *x_value);
+                                if picked.is_some() {
+                                    *additional_targets =
+                                        self.auto_extra_targets_for(effect, *source, ctx.controller, picked.clone());
+                                    *target = picked;
+                                }
+                            }
                             *controller = ctx.controller;
                             if target.is_some() {
                                 *target = self.repoint_copy_slot(effect, name, ctx.controller, 0, target, &[]);

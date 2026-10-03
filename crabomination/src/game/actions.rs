@@ -3112,14 +3112,13 @@ pub fn etb_trigger_multiplier(
 /// in the `LANE_ETB_STATIC` predicate, the lane every entering permanent
 /// already reads for `etb_trigger_multiplier`.
 ///
-/// Callers push one `probing_telepathy_copy` per seat per fire, controlled
-/// by that seat (CR 707.10: "you" in the copy is its controller) with
-/// targets picked for that seat (the "may choose new targets").
+/// Callers push one Probing Telepathy trigger (`probing_telepathy.rs`) per
+/// (seat, Aboleth) per fire, on top of the fire it copies.
 pub(crate) fn entering_trigger_copiers(
     state: &crate::game::GameState,
     controller: usize,
     entering: CardId,
-) -> Vec<usize> {
+) -> Vec<(usize, CardId)> {
     use crate::effect::StaticEffect;
     if !state.battlefield.has_etb_static() {
         return Vec::new();
@@ -3141,22 +3140,13 @@ pub(crate) fn entering_trigger_copiers(
                 state.active_static(&sa.effect, c),
                 Some(StaticEffect::CopyOpponentsEnteringCreatureTriggers)
             ) {
-                seats.push(c.controller);
+                seats.push((c.controller, c.id));
             }
         }
     }
     seats
 }
 
-/// The copy Probing Telepathy puts on the stack: the entering creature's
-/// triggered ability, with the copier's "you may copy that ability" as a
-/// yes/no asked of the copy's controller when it resolves.
-pub(crate) fn probing_telepathy_copy(effect: &Effect) -> Effect {
-    Effect::MayDo {
-        description: "Probing Telepathy — copy that triggered ability?".into(),
-        body: Box::new(effect.clone()),
-    }
-}
 
 /// True when any battlefield permanent carries a
 /// `SuppressCreatureEtbTriggers` static (Torpor Orb, Tocatli Honor Guard,
@@ -5352,6 +5342,9 @@ impl GameState {
             // (Gavony Silversmith) by filling slots 1.. with distinct picks.
             let additional =
                 self.auto_extra_targets_for(view, card_id, controller, auto_target.clone());
+            // Aboleth Spawn — an opponent's Probing Telepathy trigger goes on
+            // top of each fire it may copy (2022-06-10 ruling), bound to it.
+            let copiers = if multiplier > 0 { entering_trigger_copiers(self, controller, card_id) } else { Vec::new() };
             for _ in 0..multiplier {
                 self.push_stack(
                     TriggerPush::new(card_id, controller, effect.clone())
@@ -5361,44 +5354,13 @@ impl GameState {
                         .x_value(cast_x)
                         .build(),
                 );
-            }
-            // Aboleth Spawn — each fire can be copied by an opponent's
-            // Probing Telepathy, the copy controlled by (and targeted for)
-            // that opponent. A copy keeps the original's mode (CR 707.10).
-            if multiplier > 0 {
-                for copier in entering_trigger_copiers(self, controller, card_id) {
-                    let copy = probing_telepathy_copy(&effect);
-                    let copy_target =
-                        self.auto_target_for_effect_avoiding_set_x(&copy, copier, &[card_id], cast_x);
-                    let copy_additional =
-                        self.auto_extra_targets_for(&copy, card_id, copier, copy_target.clone());
-                    for _ in 0..multiplier {
-                        self.push_stack(
-                            TriggerPush::new(card_id, copier, copy.clone())
-                                .target(copy_target.clone())
-                                .additional_targets(copy_additional.clone())
-                                .mode(mode)
-                                .x_value(cast_x)
-                                .build(),
-                        );
-                    }
-                    if copy.requires_target() {
-                        let mut became =
-                            vec![GameEvent::ChoseTargets { chooser: copier, object: card_id }];
-                        became.extend(copy_target.iter().chain(copy_additional.iter()).filter_map(
-                            |t| match t {
-                                Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
-                                    Some(GameEvent::BecameTarget {
-                                        target: *id,
-                                        caster: copier,
-                                        by: Some(card_id),
-                                    })
-                                }
-                                _ => None,
-                            },
-                        ));
-                        self.dispatch_triggers_for_events(&became);
-                    }
+                for &(copier, aboleth) in &copiers {
+                    let fire = self.probing_telepathy_target(card_id);
+                    self.push_stack(
+                        TriggerPush::new(aboleth, copier, crate::game::probing_telepathy::probing_telepathy_trigger())
+                            .target(fire)
+                            .build(),
+                    );
                 }
             }
             // CR 603 — a triggered ability choosing targets fires

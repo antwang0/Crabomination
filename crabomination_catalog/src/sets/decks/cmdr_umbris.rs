@@ -809,11 +809,10 @@ pub fn nemesis_of_reason() -> CardDefinition {
 /// copy that ability. You may choose new targets for the copy."
 ///
 /// Probing Telepathy is `StaticEffect::CopyOpponentsEnteringCreatureTriggers`,
-/// read where an entering creature's own ETB-caused triggers are pushed: each
-/// fire gets a copy controlled by Aboleth's controller, targets picked for
-/// them. Residual: the copy goes on the stack alongside the original rather
-/// than via an Aboleth trigger resolving, and the "you may" is asked as the
-/// copy resolves.
+/// read where an entering creature's own ETB-caused triggers are pushed: on
+/// top of each fire goes Aboleth's own trigger, bound to that ability's stack
+/// id, which may copy it as it resolves (`game/probing_telepathy.rs`; the
+/// 2022-06-10 rulings) — new targets picked for Aboleth's controller.
 pub fn aboleth_spawn() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

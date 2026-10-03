@@ -169,6 +169,7 @@ mod vow;
 mod lose_control;
 mod stack_ability;
 mod trigger_time;
+mod probing_telepathy;
 mod cast_watch;
 mod live_pt;
 mod offspring;
@@ -25298,8 +25299,6 @@ impl GameState {
                     }
                     _ => Vec::new(),
                 };
-                let copy = (!copiers.is_empty())
-                    .then(|| crate::game::actions::probing_telepathy_copy(&effect));
                 // `repeat_n` clones `mult - 1` times and yields the original
                 // last, so the ordinary board — no doubler, `mult == 1` —
                 // pays no clone at all (PERF `(-361)`).
@@ -25327,24 +25326,24 @@ impl GameState {
                         mana_spent: 0,
                     });
                 }
-                if let Some(copy) = copy {
-                    for &copier in &copiers {
-                        for _ in 0..fired {
-                            queue.push(PendingTriggerPush {
-                                actor,
-                                source,
-                                controller: copier,
-                                effect: copy.clone(),
-                                subject,
-                                event_amount,
-                                mode,
-                                intervening_if: None,
-                                from_mana_ability,
-                                x_value: 0,
-                                converged_value: 0,
-                                mana_spent: 0,
-                            });
-                        }
+                // Each copier's trigger is bound to its fire as the drain
+                // pushes it (`push_pending_trigger` → `probing_telepathy_target`).
+                for &(copier, aboleth) in &copiers {
+                    for _ in 0..fired {
+                        queue.push(PendingTriggerPush {
+                            actor,
+                            source: aboleth,
+                            controller: copier,
+                            effect: crate::game::probing_telepathy::probing_telepathy_trigger(),
+                            subject,
+                            event_amount,
+                            mode: None,
+                            intervening_if: None,
+                            from_mana_ability,
+                            x_value: 0,
+                            converged_value: 0,
+                            mana_spent: 0,
+                        });
                     }
                 }
             } else {
@@ -25566,7 +25565,9 @@ impl GameState {
                 Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
                 _ => pending.actor,
             };
-            let needs = pending.effect.targeting_view(pending.mode).requires_target();
+            // A Probing Telepathy trigger's slot is bound, not chosen.
+            let needs = pending.effect.targeting_view(pending.mode).requires_target()
+                && !Self::is_probing_telepathy(&pending.effect);
             if needs {
                 self.stamp_trigger_subject(
                     pending.effect.targeting_view(pending.mode).primary_target_filter(),
@@ -25834,6 +25835,20 @@ impl GameState {
         if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
             return;
         }
+        // Aboleth Spawn — its trigger is bound to the entering creature's fire
+        // it sits on (`probing_telepathy.rs`); with none left, it isn't put on.
+        let target = if Self::is_probing_telepathy(&effect) {
+            let entering = match subject {
+                Some(crate::game::effects::EntityRef::Permanent(id) | crate::game::effects::EntityRef::Card(id)) => id,
+                _ => return,
+            };
+            match self.probing_telepathy_target(entering) {
+                Some(t) => Some(t),
+                None => return,
+            }
+        } else {
+            target
+        };
         // CR 603.10 — if this trigger's source just left the battlefield
         // (it's in the die-snapshot cache), stash its last-known instance
         // so a "deals damage equal to its power" body reads the

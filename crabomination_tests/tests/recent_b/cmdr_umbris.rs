@@ -1290,3 +1290,41 @@ fn cmdr_umbris_aboleth_spawn_copies_opponents_etb() {
     assert!(g.battlefield_find(kavu).is_none(), "Aboleth's copy of the ETB kills the Kavu");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == kavu));
 }
+
+/// Aboleth Spawn (2022-06-10 rulings): its trigger goes on the stack on top of
+/// the entering creature's triggered ability and copies THAT ability as it
+/// resolves — so if the ability is countered first (Stifle), nothing is
+/// copied. The trigger names the ability by its stack id (CR 115.1).
+#[test]
+fn aboleth_spawn_copies_the_ability_it_sits_on_or_nothing() {
+    use crabomination::game::types::StackItem;
+    let mut g = game(2);
+    let aboleth = g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let visionary = g.add_card_to_battlefield(0, catalog::elvish_visionary());
+    g.fire_self_etb_triggers(visionary, 0);
+    let draw = g.top_ability_of(visionary).expect("the Visionary's draw is on the stack");
+    match g.stack.last() {
+        Some(StackItem::Trigger { source, controller, target, .. }) => {
+            assert_eq!((*source, *controller), (aboleth, 1), "Aboleth's trigger is on top");
+            assert_eq!(*target, Some(Target::Permanent(draw)), "bound to the draw it copies");
+        }
+        other => panic!("expected Aboleth's trigger on top, got {other:?}"),
+    }
+    // Stifle the draw before Aboleth's trigger resolves: nothing to copy.
+    let stifle = g.add_card_to_hand(0, catalog::stifle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stifle, target: Some(Target::Permanent(draw)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Stifle the draw");
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (h0, h1), "countered, and no copy");
+}
