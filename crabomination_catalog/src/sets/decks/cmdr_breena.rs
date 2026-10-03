@@ -132,8 +132,8 @@ pub fn author_of_shadows() -> CardDefinition {
 }
 
 /// Bold Plagiarist — flash; an opponent putting counters on a creature they
-/// control puts as many of that kind on this. Residual: keyword counters
-/// aren't copied, and an opponent's own Bold Plagiarist never counts.
+/// control (keyword counters included) puts as many of that kind on this.
+/// Residual: an opponent's own Bold Plagiarist never counts.
 pub fn bold_plagiarist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],

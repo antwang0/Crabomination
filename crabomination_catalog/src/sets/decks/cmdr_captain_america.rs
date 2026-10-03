@@ -203,9 +203,8 @@ pub fn captain_mar_vell_space_born() -> CardDefinition {
 }
 
 /// Captain Marvel, Apex Avenger — flying, double strike, indestructible;
-/// counters you put on another non-Kree creature may be copied onto her.
-///
-/// ⚠ Residual: keyword counters aren't copied.
+/// counters you put on another non-Kree creature (any kind, keyword counters
+/// included) may be copied onto her.
 pub fn captain_marvel_apex_avenger() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike, Keyword::Indestructible],

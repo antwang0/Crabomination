@@ -443,6 +443,21 @@ fn bold_plagiarist_copies_the_counter_kind() {
     drain_stack(&mut g);
     let c = g.battlefield_find(bp).unwrap();
     assert_eq!((c.counter_count(CounterType::Shield), c.counter_count(CounterType::PlusOnePlusOne)), (1, 0));
+    // CR 122.1b — a keyword counter is a counter: a flying counter is copied.
+    let evs = g
+        .resolve_effect(
+            &Effect::AddKeywordCounter {
+                what: Selector::ExactObjects(vec![bear]),
+                keyword: crabomination::card::Keyword::Flying,
+                amount: crabomination::card::Value::Const(1),
+            },
+            &ctx,
+        )
+        .expect("their flying counter on their bear");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bp).unwrap();
+    assert_eq!(c.keyword_counters.get(&crabomination::card::Keyword::Flying).copied(), Some(1));
 }
 
 /// Deathbringer Liege taps with a white spell and kills the tapped with a
