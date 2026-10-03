@@ -20518,6 +20518,19 @@ impl GameState {
         })
     }
 
+    /// CR 602.2b / 605.3a — pay a hand / special-action cost (cycling,
+    /// landcycling, reinforce, a discard ability, reconfigure) the way an
+    /// activated ability pays: mana abilities may be activated while paying,
+    /// so it auto-taps. Paying out of the floated pool alone made every one of
+    /// them unreachable for a seat that doesn't pre-float — no bot ever cycled
+    /// Decree of Pain in a 9,300-game census. Returns the auto-tap's events.
+    fn pay_action_mana(&mut self, seat: usize, cost: &crate::mana::ManaCost) -> Result<Vec<GameEvent>, GameError> {
+        let forced_only = self.players[seat].manual_mana;
+        let receipt = self.try_pay_with_auto_tap_mode(seat, cost, forced_only)?;
+        self.pay_life_cost(seat, receipt.side_effects.life_lost);
+        Ok(receipt.auto_events)
+    }
+
     fn cycle_card(
         &mut self,
         card_id: crate::card::CardId,
@@ -20562,6 +20575,7 @@ impl GameState {
         // "you may pay {0} rather than pay the cycling cost".
         let free = self.cycling_is_free(seat);
         let (cycling_cost, life_cost) = if free { (None, 0) } else { (cycling_cost, life_cost) };
+        let mut paid = Vec::new();
         if let Some(mc) = &cycling_cost {
             let mut mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
             // "Cycling abilities you activate cost {N} less" (Fluctuator).
@@ -20569,7 +20583,7 @@ impl GameState {
             if discount > 0 {
                 mc.reduce_generic(discount);
             }
-            self.players[seat].mana_pool.pay(&mc).map_err(GameError::Mana)?;
+            paid = self.pay_action_mana(seat, &mc)?;
         }
         if life_cost > 0 {
             self.adjust_life(seat, -(life_cost as i32));
@@ -20577,7 +20591,7 @@ impl GameState {
         // Discard the card from hand via the centralized path (handles the
         // graveyard move, CardDiscarded, discard-matters counters, and the
         // Madness replacement, CR 702.35).
-        let mut events = vec![];
+        let mut events = paid;
         let cycled_name = self.find_card_anywhere(card_id).map(|c| c.definition.name);
         self.players[seat].cycling_card = Some(card_id);
         let discarded = self.discard_card(seat, card_id, &mut events);
@@ -20636,8 +20650,7 @@ impl GameState {
         {
             return Err(GameError::InvalidTarget);
         }
-        self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
-        let mut events = vec![];
+        let mut events = self.pay_action_mana(seat, &cost)?;
         self.discard_card(seat, card_id, &mut events);
         if let Some(c) = self.battlefield.find_by_id_mut(tid) {
             c.add_counters(CounterType::PlusOnePlusOne, n);
@@ -20663,8 +20676,7 @@ impl GameState {
                     .map(|d| (d.cost.clone(), d.effect.clone()))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
-        self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
-        let mut events = vec![];
+        let mut events = self.pay_action_mana(seat, &cost)?;
         self.discard_card(seat, card_id, &mut events);
         self.continue_ability_resolution_x_into(card_id, seat, &effect, None, 0, false, &mut events)?;
         Ok(events)
@@ -20785,8 +20797,7 @@ impl GameState {
             }));
             return Ok(vec![]);
         }
-        self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
-        let mut events = vec![];
+        let mut events = self.pay_action_mana(seat, &cycling_cost)?;
         if self.discard_card(seat, card_id, &mut events) {
             events.push(GameEvent::CardCycled { player: seat, card_id, x: 0 });
             events.push(GameEvent::DiscardedBatch { player: seat, count: 1 });
@@ -22235,24 +22246,22 @@ impl GameState {
                 if self.is_protected_from(equipment, t) {
                     return Err(GameError::TargetHasProtection(t));
                 }
-                self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+                let mut events = self.pay_action_mana(p, &cost)?;
+                let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = Some(t);
-                Ok(vec![GameEvent::AttachmentMoved {
-                    attachment: equipment,
-                    attached_to: Some(t),
-                }])
+                events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: Some(t) });
+                Ok(events)
             }
             None => {
                 // Unattach: only meaningful if currently attached.
                 if self.battlefield[pos].attached_to.is_none() {
                     return Err(GameError::InvalidTarget);
                 }
-                self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+                let mut events = self.pay_action_mana(p, &cost)?;
+                let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = None;
-                Ok(vec![GameEvent::AttachmentMoved {
-                    attachment: equipment,
-                    attached_to: None,
-                }])
+                events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: None });
+                Ok(events)
             }
         }
     }

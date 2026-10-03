@@ -295,6 +295,23 @@ fn decree_of_pain_cycle_trigger_is_not_optional() {
     assert!(g.battlefield_find(knight).is_none(), "-2/-2 killed the 2/2");
 }
 
+/// CR 602.2b — a cycling cost auto-taps like an activated ability's. It was
+/// paid from the floated pool alone, so no seat that doesn't pre-float (every
+/// bot) could cycle Decree of Pain off untapped Swamps.
+#[test]
+fn cycling_taps_lands_for_its_cost() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.add_card_to_library(0, catalog::silver_knight());
+    let decree = g.add_card_to_hand(0, catalog::decree_of_pain());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Cycle { card_id: decree, x_value: None }).expect("five Swamps pay {3}{B}{B}");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == decree));
+    assert_eq!(g.battlefield.iter().filter(|c| c.tapped).count(), 5);
+}
+
 /// Decree of Savagery's cycling rider puts four counters on one creature.
 #[test]
 fn decree_of_savagery_cycles_into_four_counters() {

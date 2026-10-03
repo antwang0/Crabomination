@@ -125,7 +125,7 @@ mod tests {
         }
         let cmd = g.add_card_to_battlefield(0, crate::catalog::hill_giant());
         g.players[0].commanders.push(cmd);
-        g.players[0].mana_pool.add(Color::Black, 5);
+        // Untapped Swamps, nothing floating: the cycle cost auto-taps.
         let w = EvalWeights::default();
         assert_eq!(pick_cycle(&g, 0, &w), None, "nothing of theirs dies");
         for _ in 0..3 {
