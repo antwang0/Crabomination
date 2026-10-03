@@ -1433,7 +1433,7 @@ impl Effect {
             Effect::If { cond, then, else_ } => {
                 pred_has_target(cond) || then.requires_target() || else_.requires_target()
             }
-            Effect::ForEach { selector, body } => {
+            Effect::ForEach { selector, body } | Effect::ForEachChosen { from: selector, body, .. } => {
                 sel_has_target(selector) || body.requires_target()
             }
             Effect::Repeat { count, body } => value_has_target(count) || body.requires_target(),
@@ -4727,7 +4727,7 @@ impl Effect {
                 {
                     Some(&SelectionRequirement::Creature)
                 }
-                Effect::ForEach { selector, body } => {
+                Effect::ForEach { selector, body } | Effect::ForEachChosen { from: selector, body, .. } => {
                     sel_find(selector, slot).or_else(|| eff_find(body, slot, mode, kicked))
                 }
                 Effect::Repeat { body, .. } => eff_find(body, slot, mode, kicked),

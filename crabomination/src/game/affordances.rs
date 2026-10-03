@@ -111,6 +111,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.target_slots_scratch);
         let _ = write!(s, "{:?}|", self.scratch.last_created_tokens);
         let _ = write!(s, "{:?}|", self.scratch.last_moved_cards);
+        let _ = write!(s, "{:?}|", self.scratch.proliferated_this_resolution);
         let _ = write!(s, "{:?}|", self.scratch.discarded_card_ids_this_resolution);
         let _ = write!(s, "{:?}|", self.scratch.exiled_card_ids_this_resolution);
         let _ = write!(s, "{:?}|", self.scratch.destroyed_this_resolution);

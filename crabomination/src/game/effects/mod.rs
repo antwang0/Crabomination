@@ -3016,6 +3016,7 @@ impl GameState {
             // Scrollsmith's ETB chains Move → GrantMayPlay on the same
             // moved card via this scratch).
             clear_scratch!(self.last_moved_cards);
+            clear_scratch!(self.proliferated_this_resolution);
             // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
             // only counts discards from *this* resolution (Borrowed Knowledge
             // mode 1's "draw cards equal to the number discarded this way").
@@ -5469,6 +5470,9 @@ impl GameState {
                 }
             }
 
+            Effect::ForEachChosen { from, body, headless_takes_all } => {
+                self.for_each_chosen(from, body, *headless_takes_all, effect, ctx, events)
+            }
             Effect::ForEach { selector, body } => {
                 let entities = self.resolve_selector(selector, ctx);
                 for (i, ent) in entities.iter().copied().enumerate() {
@@ -41393,6 +41397,13 @@ impl GameState {
                     .map(EntityRef::Permanent)
                     .collect()
             }
+            Selector::ProliferatedThisResolution => self
+                .scratch.proliferated_this_resolution
+                .iter()
+                .copied()
+                .filter(|id| self.battlefield.find_by_id(*id).is_some())
+                .map(EntityRef::Permanent)
+                .collect(),
             Selector::LastCreatedTokens => self
                 .scratch.last_created_tokens
                 .iter()
@@ -42843,6 +42854,9 @@ impl GameState {
                     before = c.counter_count(k);
                     c.add_counters(k, n);
                     events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: n, placer: self.resolution_causer });
+                    if !self.scratch.proliferated_this_resolution.contains(&cid) {
+                        self.scratch.proliferated_this_resolution.push(cid);
+                    }
                 }
                 // CR 714.2b — a proliferated lore counter fires the chapter it
                 // crosses (Sagas advance twice in a turn with a proliferator).

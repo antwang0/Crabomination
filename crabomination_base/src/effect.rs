@@ -347,6 +347,10 @@ pub enum Selector {
     /// `Effect::Seq`, every CreateToken from the current resolution
     /// is included. Push: modern_decks batch 28.
     LastCreatedTokens,
+    /// The permanents a proliferate in this resolution put a counter on
+    /// (CR 701.34a — Ripples of Potential's "permanents you control that had
+    /// a counter put on them this way"). Resets between resolution roots.
+    ProliferatedThisResolution,
     /// CR 702.51 — the creatures that convoked the effect's source as it was
     /// cast this turn (Venerated Loxodon).
     CreaturesThatConvokedSource,
@@ -4283,6 +4287,17 @@ pub enum Effect {
     ForEach { selector: Selector, body: Box<Effect> },
     /// Execute `body` `count` times.
     Repeat { count: Value, body: Box<Effect> },
+    /// "Choose any number of [from]. [body for each]" — the controller picks
+    /// a subset (CR 608.2d), then `body` runs once per pick with it bound as
+    /// `Selector::TriggerSource`, like `ForEach` (Ripples of Potential's
+    /// phase-out). A headless seat takes every candidate when
+    /// `headless_takes_all`, none otherwise.
+    ForEachChosen {
+        from: Selector,
+        body: Box<Effect>,
+        #[serde(default)]
+        headless_takes_all: bool,
+    },
     /// Run `body` once per player `who` resolves to, each time with that player
     /// as the effect's controller, in APNAP order (CR 101.4). The general form
     /// of the "each opponent does X of their choice" clauses (Rottenmouth

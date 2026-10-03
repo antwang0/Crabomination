@@ -181,6 +181,8 @@ mod first_each_turn;
 mod escape_extra;
 // CR 508.1c — "only the chosen creatures can attack during that combat".
 mod attack_only_chosen;
+// CR 608.2d — "choose any number of them", then each.
+mod for_each_chosen;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -2162,6 +2164,11 @@ pub struct ResolutionScratch {
     /// Cleared between resolutions.
     #[serde(skip)]
     pub(crate) last_moved_cards: Vec<CardId>,
+    /// Transient: the permanents a proliferate in the current resolution put
+    /// a counter on, read by `Selector::ProliferatedThisResolution` (Ripples
+    /// of Potential). Cleared between resolutions.
+    #[serde(skip)]
+    pub(crate) proliferated_this_resolution: Vec<CardId>,
     /// Transient: per-player count of cards discarded within the current
     /// effect resolution, indexed by player seat. Bumped alongside the
     /// flat `cards_discarded_this_resolution` whenever a discard event
