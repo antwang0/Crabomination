@@ -3182,7 +3182,8 @@ the CR 803 attack-left/right walk so the declaration gate and the bot's
 `Selector::TopOfLibrary` fanning out over "each player" (Naya Soulbeast).
 ⚠ **No bot path spent Marath's counters**: "{X}, remove X counters" had no X
 chooser; `server/x_counter_sink.rs` dry-runs every mode at every payable X.
-Residuals: **Magus of the Arena**, **Naya Soulbeast**.
+Residuals: none since `01BaSouG` (Magus of the Arena's opponent picks; Naya
+Soulbeast's counters were fixed earlier).
 A 200-game census beside Ms. Bumbleflower / Hearthhull / Bright-Palm (seed
 9561) decided 200/200 with zero panics; Marath won 4-6 %, and **Fireball
 went uncast** — the bot's any-target burn goes face-first and fires only for

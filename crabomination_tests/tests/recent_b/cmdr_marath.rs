@@ -173,7 +173,9 @@ fn gahiji_pumps_attacks_on_your_opponents() {
     assert_eq!(pt(&g, theirs), (4, 2), "attacking seat 2, an opponent of Gahiji's");
 }
 
-/// Magus of the Arena taps both and makes them fight.
+/// Magus of the Arena taps both and makes them fight: the opponent picks
+/// which of their creatures (rulings 2007-02-01), and a headless one gives up
+/// its cheapest.
 #[test]
 fn magus_of_the_arena_forces_a_fight() {
     let mut g = main_phase(2);
@@ -181,9 +183,35 @@ fn magus_of_the_arena_forces_a_fight() {
     g.clear_sickness(magus);
     let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    activate(&mut g, magus, 0, &[Target::Permanent(angel), Target::Permanent(bear)], None, None).expect("activate");
-    assert!(g.battlefield_find(bear).is_none());
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    activate(&mut g, magus, 0, &[Target::Permanent(angel)], None, None).expect("activate");
+    assert!(g.battlefield_find(bear).is_none(), "the opponent's cheapest fought");
+    assert!(g.battlefield_find(wurm).is_some_and(|c| !c.tapped));
     assert!(g.battlefield_find(angel).unwrap().tapped);
+}
+
+/// The opponent's pick is theirs: a prompting opponent sends the Wurm, which
+/// trades with the Angel. A hexproof creature can't be the pick (it's a target).
+#[test]
+fn magus_of_the_arena_lets_the_opponent_choose() {
+    let mut g = main_phase(2);
+    let magus = g.add_card_to_battlefield(0, catalog::magus_of_the_arena());
+    g.clear_sickness(magus);
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let scout = g.add_card_to_battlefield(1, catalog::gladecover_scout());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![wurm])]));
+    activate(&mut g, magus, 0, &[Target::Permanent(angel)], None, None).expect("activate");
+    assert!(g.battlefield_find(angel).is_none() && g.battlefield_find(wurm).is_none(), "the Wurm fought (4 back kills it)");
+    let asked = g.decider.kind();
+    if let crabomination::decision::DeciderKind::Scripted { asked, .. } = asked {
+        let offered = asked.iter().find_map(|d| match d {
+            crabomination::decision::Decision::ChooseCards { candidates, .. } => Some(candidates.clone()),
+            _ => None,
+        });
+        assert!(offered.is_some_and(|c| c.iter().all(|(id, _)| *id != scout)), "hexproof isn't offered");
+    }
 }
 
 /// Mayael puts a power-5 creature from the top five onto the battlefield.

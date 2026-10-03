@@ -1927,7 +1927,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
-| 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |

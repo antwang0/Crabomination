@@ -1,12 +1,6 @@
 //! Commander: the cards the **Nature of the Beast** precon (C13, Marath,
 //! Will of the Wild) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_marath.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Fiery Justice** — the 5 life goes to the most hostile opponent (the
-//!   engine's pick of "target opponent").
-//! - **Magus of the Arena** — you pick the opponent's creature; the
-//!   opponent should.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -205,10 +199,10 @@ pub fn gahiji_honored_one() -> CardDefinition {
     }
 }
 
-/// Magus of the Arena — {3}, {T}: tap a creature you control and an
-/// opponent's creature; they fight.
-///
-/// ⚠ Residual: you pick the opponent's creature.
+/// Magus of the Arena — {3}, {T}: tap target creature you control and target
+/// creature of an opponent's choice they control; they fight. You name the
+/// opponent, who picks among their creatures you could target, at
+/// resolution (`OpponentChoosesPermanentThen`, `theirs`).
 pub fn magus_of_the_arena() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
@@ -216,10 +210,16 @@ pub fn magus_of_the_arena() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) } },
-                Effect::Tap {
-                    what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                Effect::OpponentChoosesPermanentThen {
+                    filter: R::Creature,
+                    // The pick is `Target(0)` here, your creature `Target(1)`.
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::Fight { attacker: Selector::Target(1), defender: Selector::Target(0) },
+                    ])),
+                    chooser: None,
+                    theirs: true,
                 },
-                Effect::Fight { attacker: Selector::Target(0), defender: Selector::Target(1) },
             ]),
             ..Default::default()
         }],
