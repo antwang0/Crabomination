@@ -26404,13 +26404,23 @@ impl GameState {
                 .filter(|t| !matches!(t, Target::Player(pl) if used_players.contains(pl)))
                 .find(|t| is_legal(t))
                 .or_else(|| if reuse_ok { order.into_iter().find(|t| is_legal(t)) } else { None });
-            // Then a not-yet-claimed permanent, your own preferred.
+            // Then a not-yet-claimed permanent, your own preferred. A friendly
+            // slot (a pump, a +1/+1 counter, doubling counters) stops at your
+            // board: Kinetic Ooze doubled the opponent's counters once yours
+            // ran out.
+            let friendly_slot = !eff.permanent_slot_is_hostile(slot, None)
+                && eff.slot_owner(slot, None).is_some_and(|o| {
+                    o.any_nested(&|e| {
+                        e.prefers_friendly_target()
+                            || matches!(e, Effect::DoubleCountersOnEach { .. } | Effect::DoubleAllCountersOn { .. })
+                    })
+                });
             if pick.is_none() {
                 pick = self
                     .battlefield
                     .iter()
                     .filter(|c| !avoid.contains(&c.id) && c.controller == controller)
-                    .chain(self.battlefield.iter().filter(|c| !avoid.contains(&c.id)))
+                    .chain(self.battlefield.iter().filter(|c| !friendly_slot && !avoid.contains(&c.id)))
                     .map(|c| Target::Permanent(c.id))
                     .find(|t| is_legal(t));
             }
