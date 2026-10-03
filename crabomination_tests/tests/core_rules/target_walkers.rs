@@ -49,7 +49,11 @@ fn is_nested_ability(map: &serde_json::Map<String, Value>) -> bool {
 /// and hid how many real gaps are left.
 /// `ChooseModeAtRandom` (Umaro) joins them: its mode is only known as it
 /// resolves, and `choose_mode_at_random` auto-targets the chosen mode then.
-const RESOLUTION_TIME_TARGETING: &[&str] = &["Reflexive", "ReflexiveTrigger", "ChooseModeAtRandom"];
+/// `OpponentChoosesPermanentThen` binds its body's list as it resolves: the
+/// opponent's pick, then the spell's own permanent targets (Magus of the
+/// Arena's `Target(1)` is its slot 0).
+const RESOLUTION_TIME_TARGETING: &[&str] =
+    &["Reflexive", "ReflexiveTrigger", "ChooseModeAtRandom", "OpponentChoosesPermanentThen"];
 
 /// Every `slot` mentioned by a `Selector::TargetFiltered` in `v`, not
 /// descending into nested ability definitions or resolution-time bodies.

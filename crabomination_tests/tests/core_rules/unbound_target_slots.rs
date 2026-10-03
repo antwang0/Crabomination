@@ -94,6 +94,9 @@ const REBINDS_TARGETS: &[&str] = &[
     "MayCastPermanentFromHandFree",
     "OathCatchUp",
     "OpponentChoosesTargetForDamage",
+    // The pick is `Target(0)` and the spell's own targets follow it
+    // (`BindTargetObjects`, Magus of the Arena's `Target(1)`).
+    "OpponentChoosesPermanentThen",
     "PlayersMayAccept",
     "PutIntoLibraryBeneathTop",
     "Reflexive",
