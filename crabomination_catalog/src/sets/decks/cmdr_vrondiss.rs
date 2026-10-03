@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Berserker's Frenzy** — the 1–14 result's "any number of creatures" is
 //!   every creature your opponents control.
-//! - **Dragonborn Champion** — damage to its controller doesn't draw.
 //! - **Klauth** — "spend this mana only to cast spells" isn't enforced.
 //! - **Sword of Hours** — "the damage dealt" is the damage to each recipient,
 //!   one roll per recipient.
@@ -178,12 +177,12 @@ pub fn component_pouch() -> CardDefinition {
 }
 
 /// Dragonborn Champion — trample; whenever a source you control deals 5 or
-/// more damage to a player, draw a card. Residual: damage to you doesn't draw.
+/// more damage to a player (you included), draw a card.
 pub fn dragonborn_champion() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourSourceDamagedOpponent)
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourSourceDamagedAnyPlayer)
                 .with_filter(Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(5))),
             effect: draw(1),
         }],

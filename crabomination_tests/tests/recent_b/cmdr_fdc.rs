@@ -5877,6 +5877,11 @@ fn draconic_rage_batch() {
     let axe = g.add_card_to_hand(0, catalog::lava_axe());
     cast(&mut g, axe, &[Target::Player(1)]);
     assert_eq!(g.players[0].hand.len(), 1, "five damage");
+    // "to a player" — its own controller too.
+    g.add_card_to_library(0, catalog::island());
+    let own = g.add_card_to_hand(0, catalog::lava_axe());
+    cast(&mut g, own, &[Target::Player(0)]);
+    assert_eq!(g.players[0].hand.len(), 2, "five damage to yourself draws too");
 
     // Druid of Purification: the opponent's artifact goes.
     let mut g = main_phase();

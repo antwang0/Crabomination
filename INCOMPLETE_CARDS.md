@@ -2074,7 +2074,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
-| 🟡 Dragonborn Champion | Draconic Rage (AFC) | damage a source you control deals to you doesn't draw. |
 
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
