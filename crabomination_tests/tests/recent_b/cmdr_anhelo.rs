@@ -298,6 +298,21 @@ fn parnesse_taxes_targeting() {
         .keywords()
         .iter()
         .any(|k| matches!(k, Keyword::Ward(_))));
+
+    // "Whenever YOU … become the target": a Bolt at Parnesse's controller is
+    // countered unless its caster pays 4 life — with 3, they can't (CR
+    // 702.21a, 119.4).
+    let b = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].life = 3;
+    g.priority.player_with_priority = 1;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: b, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "countered");
 }
 
 /// Rekindling Phoenix — dies into an Elemental that brings it back.

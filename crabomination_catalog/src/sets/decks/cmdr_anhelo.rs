@@ -318,21 +318,29 @@ pub fn make_an_example() -> CardDefinition {
     )
 }
 
-/// Parnesse, the Subtle Brush — your permanents tax an opponent's targeting
-/// 4 life.
+/// Parnesse, the Subtle Brush — you and your permanents tax an opponent's
+/// targeting 4 life (ward-shaped, CR 702.21a: `ControllerHasWard` for you).
 ///
-/// Residual: you aren't protected yourself, and copying a spell doesn't
-/// offer an opponent a copy.
+/// Residual: copying a spell doesn't offer an opponent a copy (an "up to
+/// one target opponent" the trigger picker would always fill, so a bot would
+/// hand the table copies — priced and left).
 pub fn parnesse_the_subtle_brush() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "Whenever a permanent you control becomes the target of a spell or ability an opponent \
-                          controls, counter that spell or ability unless that player pays 4 life.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::ControlledByYou),
-                keyword: Keyword::Ward(WardCost::Life(4)),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Whenever a permanent you control becomes the target of a spell or ability an \
+                              opponent controls, counter that spell or ability unless that player pays 4 life.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::ControlledByYou),
+                    keyword: Keyword::Ward(WardCost::Life(4)),
+                },
             },
-        }],
+            StaticAbility {
+                description: "Whenever you become the target of a spell or ability an opponent controls, counter \
+                              that spell or ability unless that player pays 4 life.",
+                effect: StaticEffect::ControllerHasWard(WardCost::Life(4)),
+            },
+        ],
         ..legend(
             "Parnesse, the Subtle Brush",
             cost(&[generic(2), u(), b(), r()]),

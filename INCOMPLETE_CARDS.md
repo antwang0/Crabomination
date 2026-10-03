@@ -1978,7 +1978,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
-| 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
+| 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |
