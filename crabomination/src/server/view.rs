@@ -2649,6 +2649,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some(n) = ability.process_cost {
         parts.push(format!("Put {n} card(s) an opponent owns from exile into their graveyard"));
     }
+    if let Some(req) = ability.exiled_with_self_to_graveyard_cost.as_ref() {
+        parts.push(format!("Put a {} exiled with this into its owner's graveyard", requirement_noun(req)));
+    }
     let mut label = if parts.is_empty() { "0".into() } else { parts.join(", ") };
     // Zone and once-per-game riders.
     if ability.from_graveyard {

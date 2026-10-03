@@ -4194,6 +4194,11 @@ pub struct ActivatedAbility {
     /// Cryptic Cruiser, Oracle of Dust, Void Attendant.
     #[serde(default)]
     pub process_cost: Option<u32>,
+    /// "Put a [filter] card exiled with [this] into its owner's graveyard:"
+    /// as an activation cost (Shelob, Dread Weaver, CR 602.2b): with no such
+    /// card the ability can't be activated. The least valuable one goes.
+    #[serde(default)]
+    pub exiled_with_self_to_graveyard_cost: Option<crate::card::SelectionRequirement>,
     /// "{N} less to activate for each `counter_type` counter on permanents
     /// matching the filter" (Deepwood Denizen — {1} less per +1/+1 counter
     /// on creatures you control). Generic-only reduction.

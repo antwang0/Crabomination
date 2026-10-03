@@ -21118,6 +21118,23 @@ impl GameState {
             }
             None => Vec::new(),
         };
+        // "Put a [filter] card exiled with this into its owner's graveyard:"
+        // (Shelob) — a real cost, so no such card means no activation.
+        let exiled_with_pick: Option<CardId> = match &ability.exiled_with_self_to_graveyard_cost {
+            Some(filter) => {
+                let pick = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(card_id) && self.evaluate_requirement_on_card(filter, c, p))
+                    .min_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                match pick {
+                    Some(id) => Some(id),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            }
+            None => None,
+        };
 
         // Pre-flight exile-a-spell-you-control gate (CR 602.5b "Exile [a
         // spell] you control:"). Find the top-most matching spell the
@@ -22580,7 +22597,7 @@ impl GameState {
 
         // Process-as-cost: the pre-flight-picked exile cards go to their
         // owners' graveyards (CR 614.6 hate redirects still apply).
-        for cid in process_picks {
+        for cid in process_picks.into_iter().chain(exiled_with_pick) {
             if let Some(card) = Self::take_card(&mut self.exile, cid) {
                 self.route_to_graveyard(card, events);
             }
