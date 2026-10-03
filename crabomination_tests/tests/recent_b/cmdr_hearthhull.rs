@@ -205,25 +205,24 @@ fn juri_grows_on_sacrifice_and_burns_on_death() {
     assert_eq!(g.players[1].life, life - 2);
 }
 
-/// Loamcrafter Faun trades discarded lands for as many permanent cards back.
+/// Loamcrafter Faun: CR 603.7 — "when you do" is a reflexive trigger, so its
+/// targets are chosen after the discard and capped at the cards discarded.
 #[test]
 fn loamcrafter_faun_trades_lands_for_permanents() {
-    use crabomination::game::effects::EffectContext;
-    let mut g = main_phase(2);
-    let f1 = g.add_card_to_hand(0, catalog::forest());
-    g.add_card_to_hand(0, catalog::forest());
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![f1])]));
-    let etb = catalog::loamcrafter_faun().triggered_abilities[0].effect.clone();
-    let ctx = EffectContext {
-        targets: vec![Target::Permanent(bear), Target::Permanent(angel)],
-        ..EffectContext::for_spell(0, None, 0, 0)
-    };
-    g.resolve_effect(&etb, &ctx).unwrap();
-    assert!(in_graveyard(&g, 0, f1));
-    let back = [bear, angel].iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count();
-    assert_eq!(back, 1, "one land discarded, one card back");
+    for discards in [0usize, 1, 2] {
+        let mut g = main_phase(2);
+        let lands: Vec<CardId> = (0..2).map(|_| g.add_card_to_hand(0, catalog::forest())).collect();
+        let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+        let murder = g.add_card_to_graveyard(0, catalog::murder());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(lands[..discards].to_vec())]));
+        let faun = g.add_card_to_hand(0, catalog::loamcrafter_faun());
+        cast_at(&mut g, faun, &[]).expect("cast");
+        let in_hand = |id: CardId| g.players[0].hand.iter().any(|c| c.id == id);
+        assert_eq!(lands.iter().filter(|&&l| !in_hand(l)).count(), discards);
+        assert_eq!([bear, angel].iter().filter(|&&c| in_hand(c)).count(), discards, "{discards} discarded");
+        assert!(!in_hand(murder), "an instant is not a permanent card");
+    }
 }
 
 /// Moraug: landfall in your main phase adds a combat; an attacker gets +1/+0.

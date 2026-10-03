@@ -261,24 +261,32 @@ pub fn juri_master_of_the_revue() -> CardDefinition {
     }
 }
 
-/// Loamcrafter Faun — on entry you may discard land cards; then return up to
-/// that many nonland permanent cards from your graveyard to hand.
-///
-/// ⚠ Residual: the cards are targeted as the trigger goes on the stack and
-/// capped at the discard count as it resolves (Miasma Demon's shape), not
-/// chosen after the discard.
+/// Loamcrafter Faun — on entry you may discard land cards; when you do, a
+/// reflexive trigger (CR 603.7) targets up to that many nonland permanent
+/// cards in your graveyard and returns them to hand.
 pub fn loamcrafter_faun() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DiscardAnyNumber { who: Selector::You, filter: R::Land, max: None },
-            Effect::CapTargetsAt {
-                amount: Value::CardsDiscardedThisEffect,
-                body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 8,
-                    min_targets: 0,
-                    filter: R::PermanentCard.and(R::Nonland).and(R::InYourGraveyard),
-                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::CardsDiscardedThisEffect, Value::ONE),
+                then: Box::new(Effect::WithX {
+                    x: Value::CardsDiscardedThisEffect,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::CapTargetsAtX {
+                            body: Box::new(Effect::ApplyToTargets {
+                                max_targets: 8,
+                                min_targets: 0,
+                                filter: R::PermanentCard.and(R::Nonland).and(R::InYourGraveyard),
+                                effect: Box::new(Effect::Move {
+                                    what: Selector::Target(0),
+                                    to: ZoneDest::Hand(PlayerRef::You),
+                                }),
+                            }),
+                        }),
+                    }),
                 }),
+                else_: Box::new(Effect::Noop),
             },
         ]))],
         ..creature(
