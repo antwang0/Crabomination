@@ -9526,7 +9526,7 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     if super::transform_sink::ability_transforms_self(&ab.effect) {
         m |= sink::AB_TRANSFORM;
     }
-    if ab.remove_counter_x.is_some() {
+    if ab.remove_counter_x.is_some() || ab.remove_counter_among_x.is_some() {
         m |= sink::AB_X_COUNTERS;
     }
     m

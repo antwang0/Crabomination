@@ -1,4 +1,5 @@
-//! The bot's sink for "{X}, Remove X [kind] counters from this" activations
+//! The bot's sink for "{X}, Remove X [kind] counters from this / from among
+//! your permanents" activations
 //! (Marath, Will of the Wild; Arcbound Javelineer). No generator chose an X
 //! for one, so Marath's counters sat unspent and its seat won 6 % of four-seat
 //! pods. Every mode at every payable X is dry-run and scored against passing;
@@ -17,8 +18,26 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
     let mut best: Option<(i32, GameAction)> = None;
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            let Some(kind) = ab.remove_counter_x else { continue };
-            let have = card.counter_count(kind);
+            // "Remove X [kind] counters from this", or from among / from one
+            // of the matching permanents you control (Ooze Flux, Moxite
+            // Refinery) — capped, each X is a dry run.
+            let have = if let Some(kind) = ab.remove_counter_x {
+                card.counter_count(kind)
+            } else if let Some((kind, filter)) = &ab.remove_counter_among_x {
+                let counts = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat)
+                    .filter(|c| state.evaluate_requirement_static_on(filter, c, seat, Some(card.id)))
+                    .map(|c| match kind {
+                        Some(k) => c.counter_count(*k),
+                        None => c.counters.values().sum(),
+                    });
+                let n: u32 = if ab.remove_counter_among_x_one { counts.max().unwrap_or(0) } else { counts.sum() };
+                n.min(12)
+            } else {
+                continue;
+            };
             if have == 0 || ab.sac_cost || ab.exhaust {
                 continue;
             }
@@ -56,4 +75,32 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
         }
     }
     best.map(|(_, a)| a)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::card::CounterType;
+    use crate::game::types::{Target, TurnStep};
+
+    /// Moxite Refinery's X comes from among your permanents' counters; no
+    /// generator sized it, so the census never saw it activated. The sink
+    /// finds an X that turns an artifact's charge into a creature's +1/+1s.
+    #[test]
+    fn a_pod_bot_sizes_moxite_refinerys_x() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let mr = g.add_card_to_battlefield(0, crate::catalog::moxite_refinery());
+        let eng = g.add_card_to_battlefield(0, crate::catalog::insight_engine());
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.battlefield_find_mut(eng).unwrap().add_counters(CounterType::Charge, 3);
+        g.players[0].mana_pool.add_colorless(2);
+        let pick = pick_x_counter_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(pick, Some(GameAction::ActivateAbility { card_id, x_value: Some(x), target: Some(Target::Permanent(_)), .. }) if card_id == mr && x > 0),
+            "{pick:?}"
+        );
+    }
 }
