@@ -36,20 +36,18 @@ they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
-| 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
-| 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
-| 66 | Inalla, Archmage Ritualist (UBR) | 4: magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
+| 11 | Teval (BGU) | 2: colossal_grave_reaver, conduit_of_worlds |
+| 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
+| 66 | Inalla, Archmage Ritualist (UBR) | 2: shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 3: aurora_phoenix, durnan_of_the_yawning_portal, nalfeshnee |
 | 75 | Hazel of the Rootbloom (BG) | 3: cache_grab, hazel_of_the_rootbloom, sword_of_the_squeak |
 | 77 | Winter, Cynical Opportunist (BG) | 5: cemetery_tampering, into_the_pit, old_stickfingers, polluted_cistern_dim_oubliette, winter_cynical_opportunist |
 | 79 | Hearthhull, the Worldseed (BRG) | 3: eumidian_wastewaker, evendo_brushrazer, moraug_fury_of_akoum |
-| 88 | Marath, Will of the Wild (RGW) | 2: fiery_justice, magus_of_the_arena |
-| 90 | Breena, the Demagogue (WB) | 2: bold_plagiarist, victory_chimes |
-| 91 | Commodore Guff (URW) | 5: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation, sparkshaper_visionary, vronos_masked_inquisitor |
+| 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
+| 91 | Commodore Guff (URW) | 3: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 103 | Kathril, Aspect Warper (WBG) | 4: archon_of_valors_reach, cairn_wanderer, tayam_luminous_enigma, yannik_scavenging_sentinel |
-| 106 | Galea, Kindler of Hope (GWU) | 2: clay_golem, song_of_inspiration |
+| 103 | Kathril, Aspect Warper (WBG) | 2: cairn_wanderer, tayam_luminous_enigma |
 | 107 | Firkraag, Cunning Instigator (UR) | 3: baeloth_barrityl_entertainer, firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 114 | Aminatou, the Fateshifter (WUB) | 2: aminatous_augury, primordial_mist |
@@ -59,12 +57,10 @@ they call a deck 🟡, the table wins.
 | 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
 | 125 | Henzie "Toolbox" Torre (BRG) | 6: henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
-| 127 | Quintorius, History Chaser (RW) | 2: conspiracy_theorist, quintorius_loremaster |
-| 132 | Sefris of the Hidden Ways (WUB) | 3: clay_golem, grave_endeavor, nihiloor |
-| 133 | Zimone, Mystery Unraveler (GU) | 4: deathmist_raptor, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
+| 127 | Quintorius, History Chaser (RW) | 1: conspiracy_theorist |
+| 133 | Zimone, Mystery Unraveler (GU) | 3: deathmist_raptor, overgrown_zealot, primordial_mist |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
-| 139 | Inspirit, Flagship Vessel (URW) | 1: moxite_refinery |
 | 140 | Anhelo, the Painter (UBR) | 3: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, zndrsplts_judgment |
 | 141 | Prosper, Tome-Bound (BR) | 3: danse_macabre, hellish_rebuke, share_the_spoils |
 | 142 | Kadena, Slinking Sorcerer (BGU) | 4: deathmist_raptor, gift_of_doom, rayami_first_of_the_fallen, vesuvan_shapeshifter |
@@ -83,16 +79,13 @@ they call a deck 🟡, the table wins.
 | 167 | T'Challa, the Black Panther (GW) | 3: ancestral_communion, conduit_of_worlds, panther_habit |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
-| 174 | Captain America, Team Leader (URW) | 3: captain_marvel_apex_avenger, heroic_return, winter_soldier_reborn_avenger |
 | 175 | The Swarmlord (GUR) | 5: ghyrson_starn_kelermorph, hierophant_bio_titan, magus_lucea_kane, the_first_tyrannic_war, the_red_terror |
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
-| 179 | Abaddon the Despoiler (UBR) | 1: the_lost_and_the_damned |
 | 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
-| 181 | Davros, Dalek Creator (UBR) | 2: rassilon_the_war_president, the_master_multiplied |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
-128 / 183 pod decks carry no residual in their card docs; the rest are listed.
+135 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not

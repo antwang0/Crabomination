@@ -3194,6 +3194,26 @@ strict debug     ~3,000 pod games at 3-8 seats (CRAB_ANSWER_LOG=strict): one
 suite            23,868 / 0 / 5
 ```
 
+### 2026-10-03 (Commander session `01HA5hiK`, second half) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: `LandPlayed` carries `from_hand`
+(the event amount is 0 / 1 / 2); proliferate pushes onto a resolution-scratch
+list; each trigger resolution asks `has_token_shield` (a battlefield static
+walk) before stamping the scratch, so an ordinary trigger never writes it;
+`SacrificeSource` goes through `can_be_sacrificed`. No `GameState` field.
+4-core container, release-fast; the full suite ran without the Bevy client
+(its test build doesn't fit the disk allowance beside the rest).
+
+```text
+--bench          decisions 166,406 / 27.64 / 613.0 / 0 stalls — turns and
+                 decisions identical; determinism ok (decisions/s is box noise)
+two-player pools cube / sos / sealed x 300, seed 31010: 7,500 games, all decided
+pod              4 seats x 600 (31001: 181/174/179/178; 31002: 183/182/180/177),
+                 4 x 400 (31003: 86/88/122/139), 6 x 300, 8 x 200: 2,100 games,
+                 all decided, zero panics
+suite            23,859 / 0 / 5 without the client (strict answer log)
+```
+
 ### 2026-10-03 (Commander session `01HA5hiK`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `SpellCast` scan per trigger
