@@ -347,14 +347,17 @@ pub fn mnemonic_wall() -> CardDefinition {
         },
         toughness: 4,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::InYourGraveyard.and(
-                    SelectionRequirement::HasCardType(Ct::Instant)
-                        .or(SelectionRequirement::HasCardType(Ct::Sorcery)),
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return an instant or sorcery card from your graveyard to your hand?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard.and(
+                        SelectionRequirement::HasCardType(Ct::Instant)
+                            .or(SelectionRequirement::HasCardType(Ct::Sorcery)),
+                    ),
                 ),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
         })],
         ..Default::default()
     }

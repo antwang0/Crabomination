@@ -1397,14 +1397,12 @@ pub fn artisan_of_kozilek() -> CardDefinition {
     use crate::effect::{PlayerRef, ZoneDest};
     CardDefinition {
         keywords: vec![Keyword::Annihilator(2)],
-        triggered_abilities: vec![on_cast(Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Creature.from_your_graveyard(),
-            ),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
-            },
+        triggered_abilities: vec![on_cast(Effect::MayDo {
+            description: "Return a creature card from your graveyard to the battlefield?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
         })],
         ..colossus("Artisan of Kozilek", cost(&[generic(9)]), 10, 9)
     }

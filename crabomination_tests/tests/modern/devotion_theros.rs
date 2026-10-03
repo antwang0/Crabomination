@@ -516,6 +516,7 @@ fn mnemonic_wall_returns_an_instant_from_graveyard() {
     let id = g.add_card_to_hand(0, catalog::mnemonic_wall());
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mnemonic Wall castable");

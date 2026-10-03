@@ -6089,9 +6089,12 @@ pub fn gravedigger() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
-            to: ZoneDest::Hand(PlayerRef::You),
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return a creature card from your graveyard to your hand?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
         })],
         ..Default::default()
     }
@@ -6666,15 +6669,18 @@ pub fn rotting_regisaur() -> CardDefinition {
 /// enters or attacks, return target permanent card with mana value 3 or less
 /// from your graveyard to the battlefield." (M11)
 pub fn sun_titan() -> CardDefinition {
-    let recur = || Effect::Move {
-        what: target_filtered(
-            SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3))
-                .from_your_graveyard(),
-        ),
-        to: ZoneDest::Battlefield {
-            controller: PlayerRef::You,
-            tapped: false,
-        },
+    let recur = || Effect::MayDo {
+        description: "Return a permanent card with mana value 3 or less from your graveyard?".into(),
+        body: Box::new(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3))
+                    .from_your_graveyard(),
+            ),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        }),
     };
     CardDefinition {
         name: "Sun Titan",

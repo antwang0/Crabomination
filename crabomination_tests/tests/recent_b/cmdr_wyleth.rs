@@ -140,6 +140,7 @@ fn ironclad_slayer_returns_an_equipment_card() {
     let mut g = main_phase(2);
     let cloak = g.add_card_to_graveyard(0, catalog::haunted_cloak());
     let s = g.add_card_to_hand(0, catalog::ironclad_slayer());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     cast(&mut g, s, &[]);
     assert!(g.players[0].hand.iter().any(|c| c.id == cloak));
 }

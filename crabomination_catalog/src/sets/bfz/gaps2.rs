@@ -213,13 +213,17 @@ pub fn guul_draz_overseer() -> CardDefinition {
     }
 }
 
-/// Emeria Shepherd — {5}{W}{W} 4/4 Angel with flying. Landfall: return a
-/// nonland permanent card from your graveyard to hand — to the battlefield off
-/// a Plains.
+/// Emeria Shepherd — {5}{W}{W} 4/4 Angel with flying. Landfall: you may
+/// return a nonland permanent card from your graveyard to hand — off a Plains,
+/// you may put it onto the battlefield instead.
 pub fn emeria_shepherd() -> CardDefinition {
     let target = || Selector::TargetFiltered {
         slot: 0,
         filter: R::InYourGraveyard.and(R::PermanentCard).and(R::Nonland),
+    };
+    let to_hand = || Effect::MayDo {
+        description: "Return a nonland permanent card from your graveyard to your hand?".into(),
+        body: Box::new(Effect::Move { what: target(), to: ZoneDest::Hand(PlayerRef::You) }),
     };
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -228,14 +232,15 @@ pub fn emeria_shepherd() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: R::HasLandType(LandType::Plains),
             },
-            then: Box::new(Effect::Move {
-                what: target(),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            then: Box::new(Effect::MayDoElse {
+                description: "Return it to the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: target(),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+                else_: Box::new(to_hand()),
             }),
-            else_: Box::new(Effect::Move {
-                what: target(),
-                to: ZoneDest::Hand(PlayerRef::You),
-            }),
+            else_: Box::new(to_hand()),
         })],
         ..creature(
             "Emeria Shepherd",

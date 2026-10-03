@@ -1164,14 +1164,19 @@ fn prodigal_pyromancer_pings_for_one() {
 /// Gravedigger returns a creature card from your graveyard on ETB.
 #[test]
 fn gravedigger_returns_creature_from_graveyard() {
-    let mut g = two_player_game();
-    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::gravedigger());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
-    assert!(g.players[0].hand.iter().any(|c| c.id == dead),
-        "the dead bear returned to hand");
+    // "You MAY return": declining (the AutoDecider's no) leaves the card.
+    for take in [true, false] {
+        let mut g = two_player_game();
+        let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::gravedigger());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        if take {
+            g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+        }
+        cast(&mut g, id);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == dead), take);
+    }
 }
 
 #[test]

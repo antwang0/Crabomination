@@ -178,13 +178,16 @@ pub fn ironclad_slayer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered(
-                    R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
-                        .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
-                        .from_your_graveyard(),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
+            effect: Effect::MayDo {
+                description: "Return an Aura or Equipment card from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                            .from_your_graveyard(),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
             },
         }],
         ..creature(

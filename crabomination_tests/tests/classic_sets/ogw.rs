@@ -591,6 +591,7 @@ fn artisan_cast_reanimates_from_graveyard() {
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::artisan_of_kozilek());
     g.players[0].mana_pool.add_colorless(9);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     crabomination::game::cast_at(&mut g, id, Target::Permanent(bear));
     assert!(g.battlefield.iter().any(|c| c.id == bear), "the bear is reanimated");
 }

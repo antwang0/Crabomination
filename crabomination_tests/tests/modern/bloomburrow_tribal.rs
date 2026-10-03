@@ -1119,6 +1119,7 @@ fn sun_titan_etb_reanimates_cheap_permanent() {
     let titan = g.add_card_to_hand(0, catalog::sun_titan());
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: titan, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Sun Titan castable");
