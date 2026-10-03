@@ -3015,6 +3015,26 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01HLca3f`, third cycle) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: an investigate is one wrapper frame
+around the Clue `CreateToken` plus one `Investigated` event and a guarded
+`investigated_this_turn` store; one more plain bool cleared at the turn
+boundary; the CR 704.5j keep reads `deferred_legend_choices` only when a seat
+prompts. 4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip fd95415ff); games_per_s 395.2; determinism ok
+two-player pools cube / sos / sealed x 300, seed 32201: 7,500 games, all decided
+pod              3 / 4 / 6 / 8 seats x 1,000 (seeds 25003-25008): 4,000, all
+                 decided; turns/game 31.66 / 46.08 / 68.23 / 96.50
+pod              every deck 1-183 in six-seat blocks x 100 (seeds 26001+): 3,100,
+                 all decided; strict debug four-seat sweep x 10 (27001+): 460,
+                 all decided; zero panics
+suite            23,775 / 0 / 5 at fd95415ff; clippy 0
+```
+
 ### 2026-10-02 (Commander session `015MggrL`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `delayed_triggers` scan per
