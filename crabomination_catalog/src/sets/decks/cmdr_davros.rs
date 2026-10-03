@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_davros.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Rassilon, the War President** — noncreature spells cast from exile
-//!   don't have conspire.
 //! - **The Master, Multiplied** — your triggered abilities can still make you
 //!   sacrifice or exile your creature tokens.
 
@@ -736,8 +734,8 @@ pub fn missy() -> CardDefinition {
 }
 
 /// Rassilon, the War President — your upkeep loses 2 life and exiles your
-/// top card, playable while it stays exiled. Residual: noncreature spells
-/// cast from exile don't have conspire.
+/// top card, playable while it stays exiled; each noncreature spell you cast
+/// from exile has conspire (CR 702.78).
 pub fn rassilon_the_war_president() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![step(
@@ -755,6 +753,10 @@ pub fn rassilon_the_war_president() -> CardDefinition {
                 },
             ]),
         )],
+        static_abilities: vec![StaticAbility {
+            description: "Each noncreature spell you cast from exile has conspire.",
+            effect: StaticEffect::GrantConspireToSpells { filter: R::Noncreature, from_exile: true },
+        }],
         ..legend(creature(
             "Rassilon, the War President",
             cost(&[generic(3), u(), b()]),

@@ -635,3 +635,52 @@ fn doomsday_confluence_chooses_x_modes_as_it_is_cast() {
     drain_stack(&mut g);
     assert_eq!(named(&g, 0, "Dalek").len(), 2);
 }
+
+/// CR 702.78 — a noncreature spell cast from exile under Rassilon has
+/// conspire: tapping two creatures that share its color copies it.
+#[test]
+fn cr_702_78_rassilon_grants_conspire_from_exile() {
+    let mut g = main_phase(2);
+    let rassilon = g.add_card_to_battlefield(0, catalog::rassilon_the_war_president());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let pos = g.players[0].library.iter().position(|c| c.id == bolt).unwrap();
+    let top = g.players[0].library.remove(pos);
+    g.players[0].library.insert(0, top);
+    run(
+        &mut g,
+        catalog::rassilon_the_war_president().triggered_abilities[0].effect.clone(),
+        rassilon,
+    );
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the upkeep exiled the Bolt");
+    let a = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: bolt,
+        conspire_creatures: [a, b],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("conspired Bolt from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "the Bolt and its copy");
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    // From hand, the same Bolt has no conspire.
+    let hand_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let (c, d) = (g.add_card_to_battlefield(0, catalog::hill_giant()), g.add_card_to_battlefield(0, catalog::hill_giant()));
+    flood(&mut g, 0);
+    assert!(g
+        .perform_action(GameAction::CastSpellConspire {
+            card_id: hand_bolt,
+            conspire_creatures: [c, d],
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err());
+}
