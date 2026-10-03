@@ -6326,6 +6326,24 @@ fn decide_choose_cards(
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return fill_to_min(chosen);
     }
+    // Library-source pick ("you may put a creature card from among them onto
+    // the battlefield" — Summoning Trap, Elvish Rejuvenator): a `Gain` pick
+    // over our own library takes the biggest up to the cap. Without it the
+    // owner lookups below miss a library card and the answer was empty.
+    let all_in_library = !candidates.is_empty()
+        && candidates.iter().all(|(id, _)| state.players[seat].library.iter().any(|c| c.id == *id));
+    if all_in_library && gain {
+        let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.players[seat].library.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
+            })
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+        let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
+        return fill_to_min(chosen);
+    }
     // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
     // and similar resolution-time multi-target taps): the AutoDecider declines,
     // so the bot would tap nothing. Prefer opponents' untapped creatures — the
@@ -26246,6 +26264,22 @@ mod tests {
         match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// The same pick over the bot's own LIBRARY ("you may put a creature card
+    /// from among them onto the battlefield", Summoning Trap): it used to fall
+    /// through the graveyard owner lookups and answer nothing.
+    #[test]
+    fn bot_choose_cards_deploys_biggest_from_library() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let small = g.add_card_to_library(0, catalog::grizzly_bears());
+        let big = g.add_card_to_library(0, catalog::shivan_dragon());
+        let candidates = vec![(small, "Grizzly Bears".to_string()), (big, "Shivan Dragon".to_string())];
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![big]),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
