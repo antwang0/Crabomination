@@ -600,3 +600,89 @@ fn cr_508_1c_last_night_together_only_the_chosen_attack() {
         "the restriction ends with that combat"
     );
 }
+
+/// CR 707.9b / 611.2c — Psychic Paper: as it becomes attached, the chosen
+/// creature card name and creature type become the equipped creature's; it
+/// keeps them only while the Paper stays attached.
+#[test]
+fn cr_707_9b_psychic_paper_renames_while_attached() {
+    use crabomination::card::CreatureType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let paper = g.add_card_to_battlefield(0, catalog::psychic_paper());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Serra Angel".into()),
+        DecisionAnswer::CreatureType(CreatureType::Doctor),
+    ]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: paper, target: bear })
+    .expect("equip");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.definition.name, "Serra Angel");
+    assert_eq!(b.definition.subtypes.creature_types, vec![CreatureType::Doctor]);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
+    // Moving it to the Giant restores the Bears and renames the Giant.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Grizzly Bears".into()),
+        DecisionAnswer::CreatureType(CreatureType::Human),
+    ]));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: paper, target: giant })
+    .expect("re-equip");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.definition.name, "Grizzly Bears");
+    assert_eq!(b.definition.subtypes.creature_types, vec![CreatureType::Bear]);
+    let h = g.battlefield_find(giant).unwrap();
+    assert_eq!(h.definition.name, "Grizzly Bears");
+    assert_eq!(h.definition.subtypes.creature_types, vec![CreatureType::Human]);
+}
+
+/// A headless seat equipping Psychic Paper keeps the host's name and takes
+/// its own deck's most common creature type.
+#[test]
+fn psychic_paper_headless_pick_is_the_decks_tribe() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let paper = g.add_card_to_battlefield(0, catalog::psychic_paper());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: paper, target: giant }).expect("equip");
+    drain_stack(&mut g);
+    let h = g.battlefield_find(giant).unwrap();
+    assert_eq!(h.definition.name, "Hill Giant");
+    assert_eq!(h.definition.subtypes.creature_types, vec![CreatureType::Bear]);
+}
+
+/// CR 400.7 — a host renamed by Psychic Paper reaches the graveyard as its
+/// printed self.
+#[test]
+fn cr_400_7_psychic_paper_host_dies_as_printed() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let paper = g.add_card_to_battlefield(0, catalog::psychic_paper());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Serra Angel".into()),
+        DecisionAnswer::CreatureType(crabomination::card::CreatureType::Doctor),
+    ]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: paper, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().definition.name, "Serra Angel");
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    cast(&mut g, 0, blade, Some(Target::Permanent(bear))).expect("doom blade");
+    let dead = g.players[0].graveyard.iter().find(|c| c.id == bear).expect("in the graveyard");
+    assert_eq!(dead.definition.name, "Grizzly Bears");
+}

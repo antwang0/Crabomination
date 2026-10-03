@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
-//! - **Psychic Paper** — no chosen name and creature type.
 
 use std::sync::Arc;
 
@@ -757,8 +756,9 @@ pub fn osgood_operation_double() -> CardDefinition {
     }
 }
 
-/// Psychic Paper — equipped creature has ward {1} and can't be blocked.
-/// Residual: no chosen name and creature type.
+/// Psychic Paper — as it becomes attached, choose a creature card name and a
+/// creature type; the equipped creature has ward {1}, can't be blocked, and
+/// takes the last chosen name and type.
 pub fn psychic_paper() -> CardDefinition {
     CardDefinition {
         name: "Psychic Paper",
@@ -770,6 +770,10 @@ pub fn psychic_paper() -> CardDefinition {
             keywords: vec![Keyword::Ward(WardCost::generic(1)), Keyword::Unblockable],
             ..Default::default()
         }),
+        static_abilities: vec![StaticAbility {
+            description: "As this Equipment becomes attached to a creature, choose a creature card name and a creature type. Its name and creature type are the last chosen name and creature type.",
+            effect: StaticEffect::AttachedTakesChosenNameAndType,
+        }],
         ..Default::default()
     }
 }
