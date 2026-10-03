@@ -63,9 +63,8 @@ fn construct_token() -> TokenDefinition {
 }
 
 /// Mishra, Eminent One — each combat on your turn, a hasty 4/4 Construct copy
-/// of your noncreature artifact, sacrificed at the next end step. Residual:
-/// the Warform keeps the artifact's name (non-legendary, so the legend rule
-/// stays out of it as the rename would keep it out).
+/// of your noncreature artifact named Mishra's Warform (CR 707.9b), sacrificed
+/// at the next end step.
 pub fn mishra_eminent_one() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -83,10 +82,11 @@ pub fn mishra_eminent_one() -> CardDefinition {
                     override_pt: Some((4, 4)),
                     override_colors: None,
                     enters_tapped: false,
-                    non_legendary: true,
+                    non_legendary: false,
                     legendary: false,
                     extra_keywords: vec![],
                 },
+                Effect::SetCopiedName { what: Selector::LastCreatedToken, name: "Mishra's Warform" },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
                     keyword: Keyword::Haste,

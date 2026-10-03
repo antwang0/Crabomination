@@ -2108,7 +2108,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Repeated Reverberation | Planeswalker Party (CMM) | the instant, sorcery and loyalty-ability halves are three separate "next" riders; each can fire. |
 | 🟡 Sparkshaper Visionary | Planeswalker Party (CMM) | all or none of your planeswalkers become Birds; they keep their colours and lack the scry trigger. |
 | 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
-| 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | the cage takes the highest-mana-value artifact or creature card. |
 | 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |

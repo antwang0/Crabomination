@@ -77,17 +77,18 @@ fn ready(g: &mut GameState, seat: usize, def: crabomination::card::CardDefinitio
 }
 
 /// CR 707.9a — Mishra's token copies the noncreature artifact and is also a
-/// hasty 4/4 artifact creature; CR 603.7 — it's sacrificed at the next end step.
+/// hasty 4/4 artifact creature; CR 707.9b — named Mishra's Warform; CR 603.7 —
+/// it's sacrificed at the next end step.
 #[test]
 fn mishra_makes_a_hasty_warform_that_dies_at_end_step() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::mishra_eminent_one());
     g.add_card_to_battlefield(0, catalog::mind_stone());
     step(&mut g, TurnStep::BeginCombat);
-    let stones = named(&g, 0, "Mind Stone");
-    assert_eq!(stones.len(), 2, "the Stone and its Warform");
-    let warform = *stones.iter().find(|&&id| g.battlefield_find(id).unwrap().is_token).expect("a token");
+    assert_eq!(named(&g, 0, "Mind Stone").len(), 1, "the Stone keeps its name");
+    let warform = named(&g, 0, "Mishra's Warform")[0];
     let card = g.battlefield_find(warform).unwrap();
+    assert!(card.is_token);
     assert!(card.definition.card_types.contains(&CardType::Creature));
     assert_eq!(pt(&g, warform), (4, 4));
     assert!(g.permanent_has_keyword(warform, &Keyword::Haste));
