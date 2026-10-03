@@ -752,9 +752,11 @@ pub fn winter_soldier_reborn_avenger() -> CardDefinition {
 fn reanimate_hero_bonus(filter: R, n: i32) -> Effect {
     Effect::Seq(vec![
         Effect::If {
-            cond: Predicate::EntityMatches { what: target_filtered(filter), filter: hero() },
+            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: hero() },
+            // The slot's filter rides here, where the cast-time slot walk
+            // reads it (a predicate's selector isn't walked).
             then: Box::new(Effect::SpellEntersWithCounters {
-                what: Selector::Target(0),
+                what: target_filtered(filter),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(n),
             }),
