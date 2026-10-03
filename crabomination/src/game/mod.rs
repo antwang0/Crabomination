@@ -26407,8 +26407,10 @@ impl GameState {
             // Then a not-yet-claimed permanent, your own preferred. A friendly
             // slot (a pump, a +1/+1 counter, doubling counters) stops at your
             // board: Kinetic Ooze doubled the opponent's counters once yours
-            // ran out.
-            let friendly_slot = !eff.permanent_slot_is_hostile(slot, None)
+            // ran out. A mandatory slot still takes what is legal
+            // (Evolutionary Escalation's counters on an opponent's creature).
+            let friendly_slot = eff.target_slot_optional(slot, None)
+                && !eff.permanent_slot_is_hostile(slot, None)
                 && eff.slot_owner(slot, None).is_some_and(|o| {
                     o.any_nested(&|e| {
                         e.prefers_friendly_target()
