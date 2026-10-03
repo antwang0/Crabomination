@@ -2253,8 +2253,9 @@ death trigger never saw its hit — it reads the death snapshot now (CR
 603.10). Two base-branch ratchets were red from another seat and fixed here:
 `for_each_inner` didn't recurse `EachPushesTrigger`, and the reanimation
 audit read a `DelayUntilWithCapture` return as an unzoned target. Residuals:
-**Henzie**, **First Responder**, **Next of Kin**,
-**Protection Racket**, **Turf War** (The Beamtown Bullies targets since `01BaSouG`)
+**Henzie**, **First Responder**,
+**Protection Racket**, **Turf War** (The Beamtown Bullies targets and Next of
+Kin reaches the command zone since `01BaSouG`)
 (INCOMPLETE_CARDS). Release pods beside Millicent / Yuma / Otrimi (seed
 13001, 1,000 games): 999 decided (the one board cap is Yuma's Scute Swarm
 runaway, already open), Henzie 18.2 %, no card of the four lists unplayed.

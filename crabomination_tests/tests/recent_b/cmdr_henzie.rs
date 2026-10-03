@@ -274,3 +274,24 @@ fn first_responder_returns_a_chosen_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
     assert_eq!(g.battlefield_find(fr).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// Next of Kin — "from your hand or from the command zone": a commander of
+/// lesser mana value comes in when the enchanted creature dies, and it's not
+/// a cast (CR 903.8 — no tax is owed for it).
+#[test]
+fn next_of_kin_can_bring_the_commander_from_the_command_zone() {
+    let mut g = pod(2);
+    let ids = g.seat_commanders(0, vec![catalog::henzie_toolbox_torre()]);
+    let henzie = ids[0];
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let kin = g.add_card_to_hand(0, catalog::next_of_kin());
+    cast(&mut g, kin, &[Target::Permanent(wurm)]);
+    let mut events = Vec::new();
+    g.destroy_permanent(wurm, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(henzie).is_some(), "Henzie (3) under the Wurm's 6");
+    assert_eq!(g.commander_cast_count.get(&henzie).copied().unwrap_or(0), 0, "not a cast");
+    end_step(&mut g);
+    assert!(g.battlefield_find(kin).is_some_and(|c| c.attached_to == Some(henzie)), "returns attached");
+}

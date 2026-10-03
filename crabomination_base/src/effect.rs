@@ -10259,6 +10259,13 @@ pub enum Effect {
     /// haste until end of turn; with `sacrifice_eot`, each is sacrificed at the
     /// beginning of the next end step (Sneak Attack, Through the Breach). Plain
     /// form (no haste / no sac) ships Elvish Piper / Quicksilver Amulet.
+    /// "You may put a [filter] card you own from your hand or from the command
+    /// zone onto the battlefield. If you do, [then]" (Next of Kin). Not a cast:
+    /// a commander put in this way pays no tax (CR 903.8).
+    PutFromHandOrCommandZoneOntoBattlefield {
+        filter: SelectionRequirement,
+        then: Option<Box<Effect>>,
+    },
     PutFromHandOntoBattlefield {
         who: PlayerRef,
         filter: SelectionRequirement,

@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Henzie** — a spell with its own blitz uses its printed blitz cost, not
 //!   a choice between that and Henzie's.
-//! - **Next of Kin** — the creature card comes from your hand only (not the
-//!   command zone).
 //! - **Protection Racket** — every opponent is offered each revealed card,
 //!   not only the one whose pass of the process it is.
 //! - **Turf War** — the contested lands are chosen, not targeted; the
@@ -344,9 +342,9 @@ pub fn mezzio_mugger() -> CardDefinition {
 }
 
 /// Next of Kin — {2}{G} Aura. Enchanted creature dying, you may put a
-/// creature card with lesser mana value from your hand onto the battlefield;
-/// if you do, this returns attached to it at the next end step.
-/// Residual: the command zone isn't offered.
+/// creature card you own with lesser mana value from your hand or the command
+/// zone onto the battlefield; if you do, this returns attached to it at the
+/// next end step.
 pub fn next_of_kin() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes {
@@ -356,14 +354,8 @@ pub fn next_of_kin() -> CardDefinition {
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
-            effect: Effect::PutFromHandOntoBattlefield {
-                who: PlayerRef::You,
+            effect: Effect::PutFromHandOrCommandZoneOntoBattlefield {
                 filter: R::Creature.and(R::ManaValueLessThanEventAmount),
-                count: Value::ONE,
-                tapped: false,
-                haste: false,
-                sacrifice_eot: false,
-                return_eot: false,
                 then: Some(Box::new(Effect::DelayUntilWithCapture {
                     kind: DelayedTriggerKind::NextEndStep,
                     capture: Selector::LastMoved,

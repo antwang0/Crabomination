@@ -637,7 +637,8 @@ impl Effect {
                 f(on_match);
             }
             Effect::LookTopPutMatchingOntoBattlefield { then, .. }
-            | Effect::PutFromHandOntoBattlefield { then, .. } => {
+            | Effect::PutFromHandOntoBattlefield { then, .. }
+            | Effect::PutFromHandOrCommandZoneOntoBattlefield { then, .. } => {
                 if let Some(e) = then {
                     f(e);
                 }
@@ -1303,7 +1304,8 @@ impl Effect {
             Effect::ExileTopWithCounters { .. } => false,
             Effect::GrantPlayFromTopThisTurn => false,
             Effect::HoneFromHand { .. } => false,
-            Effect::PutFromHandOntoBattlefield { .. } => false,
+            Effect::PutFromHandOntoBattlefield { .. }
+            | Effect::PutFromHandOrCommandZoneOntoBattlefield { .. } => false,
             Effect::DeployCreatureFromHandAttacking { .. } => false,
             Effect::LockCreatureAndPlaneswalkerCasts => false,
             Effect::ExileTopFaceDownTokenReturns { .. } => false,

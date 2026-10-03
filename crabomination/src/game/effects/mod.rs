@@ -54,6 +54,7 @@ mod revival;
 mod wakanda;
 mod chosen_color_damage;
 mod fight_each;
+mod hand_or_command;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
@@ -24539,6 +24540,10 @@ impl GameState {
                     self.run_effect(then, ctx, events)?;
                 }
                 Ok(())
+            }
+
+            Effect::PutFromHandOrCommandZoneOntoBattlefield { filter, then } => {
+                self.put_from_hand_or_command_zone(filter, then.as_deref(), effect, ctx, events)
             }
 
             Effect::LockCreatureAndPlaneswalkerCasts => {
