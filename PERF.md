@@ -3153,6 +3153,21 @@ pod              4 seats x 1,000 (31001) and 6 seats x 600 (31002), all decided;
 suite            23,847 / 0 / 5; workspace clippy 0
 ```
 
+Second reading, after the clash / CR 510.2 dealer batching / flashback-exile /
+CR 111.8 graveyard-token / bottom-after-cast / keyword-counter work
+(`AddCounterOfTriggerKind` rewrite at the nine trigger sites):
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical
+two-player pools cube / sos / sealed x 300, seed 75001: 7,500 games, all decided
+pod              4 seats x 2,000 (36004) and 6 seats x 1,000 (36006), all decided;
+                 every deck in four-seat blocks x 100 (36100+, 4,600 games) and
+                 eight-seat blocks x 60 (36800+, 1,380 games), all decided
+strict debug     ~3,000 pod games at 3-8 seats (CRAB_ANSWER_LOG=strict): one
+                 find (CR 111.8, Infernal Offering), fixed; the rest clean
+suite            23,868 / 0 / 5
+```
+
 ### 2026-10-03 (Commander session `01HA5hiK`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one `SpellCast` scan per trigger
