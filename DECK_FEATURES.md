@@ -45,20 +45,18 @@ they call a deck 🟡, the table wins.
 | 77 | Winter, Cynical Opportunist (BG) | 5: cemetery_tampering, into_the_pit, old_stickfingers, polluted_cistern_dim_oubliette, winter_cynical_opportunist |
 | 79 | Hearthhull, the Worldseed (BRG) | 3: eumidian_wastewaker, evendo_brushrazer, moraug_fury_of_akoum |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
-| 91 | Commodore Guff (URW) | 3: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation |
+| 91 | Commodore Guff (URW) | 1: chandra_legacy_of_fire |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
 | 103 | Kathril, Aspect Warper (WBG) | 2: cairn_wanderer, tayam_luminous_enigma |
 | 107 | Firkraag, Cunning Instigator (UR) | 3: baeloth_barrityl_entertainer, firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
-| 114 | Aminatou, the Fateshifter (WUB) | 2: aminatous_augury, primordial_mist |
 | 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
-| 118 | Aminatou, Veil Piercer (WUB) | 3: aminatous_augury, fear_of_sleep_paralysis, one_with_the_multiverse |
-| 119 | Otrimi, the Ever-Playful (BGU) | 2: capricopian, mindleecher |
+| 119 | Otrimi, the Ever-Playful (BGU) | 1: capricopian |
 | 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
-| 125 | Henzie "Toolbox" Torre (BRG) | 6: henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
+| 125 | Henzie "Toolbox" Torre (BRG) | 4: henzie_toolbox_torre, next_of_kin, protection_racket, turf_war |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 1: conspiracy_theorist |
-| 133 | Zimone, Mystery Unraveler (GU) | 3: deathmist_raptor, overgrown_zealot, primordial_mist |
+| 133 | Zimone, Mystery Unraveler (GU) | 2: deathmist_raptor, overgrown_zealot |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 3: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, zndrsplts_judgment |
@@ -83,9 +81,9 @@ they call a deck 🟡, the table wins.
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
 | 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
-| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 10: aces_baseball_bat, displaced_dinosaurs, nyssa_of_traken, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
+| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 9: aces_baseball_bat, displaced_dinosaurs, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
-135 / 183 pod decks carry no residual in their card docs; the rest are listed.
+137 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
