@@ -966,8 +966,6 @@ pub fn nuka_cola_vending_machine() -> CardDefinition {
 /// Whenever it attacks, you get {E}{E}. Pay {E}{E}: Choose target creature
 /// blocking equipped creature; flip a coin: win, exile it; lose, 1 damage to
 /// it. Equip {2}.
-///
-/// ⚠ Residual: the target may be any blocking creature.
 pub fn plasma_caster() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },

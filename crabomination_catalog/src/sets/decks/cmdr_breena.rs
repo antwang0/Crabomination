@@ -306,7 +306,7 @@ pub fn deathbringer_regent() -> CardDefinition {
 
 /// Guardian Archon — flying; as it enters, secretly choose an opponent; once:
 /// you and target permanent you control gain protection from them this turn.
-/// Residual: the choice isn't secret.
+/// The pick is secret: no seat's view or observation shows `chosen_player`.
 pub fn guardian_archon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -377,10 +377,9 @@ pub fn keen_duelist() -> CardDefinition {
     }
 }
 
-/// Nils, Discipline Enforcer — your end step puts a +1/+1 counter on a
-/// creature of each player's; creatures with counters can't attack you or your
-/// planeswalkers unless their controller pays {X}, X their counters.
-/// Residual: each player's first creature, chosen rather than targeted.
+/// Nils, Discipline Enforcer — your end step puts a +1/+1 counter on up to one
+/// target creature of each player's; creatures with counters can't attack you
+/// or your planeswalkers unless their controller pays {X}, X their counters.
 pub fn nils_discipline_enforcer() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

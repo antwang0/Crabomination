@@ -580,8 +580,6 @@ pub fn pippin_warden_of_isengard() -> CardDefinition {
 
 /// Motivated Pony — trample, haste; attacking pumps the attackers +1/+1, and
 /// after a Food entered this turn untaps them with +2/+2 more.
-///
-/// ⚠ Residual: the rider checks for any artifact entering this turn.
 pub fn motivated_pony() -> CardDefinition {
     let attackers = || yours(R::Creature.and(R::IsAttacking));
     let pump = |n: i32| Effect::PumpPT {

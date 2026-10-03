@@ -274,7 +274,8 @@ pub fn edgar_master_machinist() -> CardDefinition {
 
 /// Espers to Magicite — exile each opponent's graveyard and copy a creature
 /// card from it as a noncreature artifact token.
-/// Residual: the copied card is the first creature card exiled.
+/// Residual: the copied card is the greatest-power creature card exiled,
+/// picked rather than targeted by a reflexive trigger.
 pub fn espers_to_magicite() -> CardDefinition {
     spell(
         "Espers to Magicite",

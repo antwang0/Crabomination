@@ -242,7 +242,6 @@ pub fn bone_miser() -> CardDefinition {
 
 /// Boneyard Parley — exile up to five creature cards from graveyards; an
 /// opponent splits them and the pile you pick comes back under your control.
-/// Residual: the five are an untargeted pick.
 pub fn boneyard_parley() -> CardDefinition {
     spell(
         "Boneyard Parley",

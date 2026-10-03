@@ -188,8 +188,8 @@ pub fn crash_of_rhino_beetles() -> CardDefinition {
 /// Emissary of Grudges — {5}{R} 6/5 flying haste Efreet. Choose an opponent
 /// as it enters; once, choose new targets for a spell or ability (CR 115.7d,
 /// the ability by its own stack id) that targets you or a permanent you
-/// control, if the chosen opponent controls it. (Residual: the choice isn't
-/// secret.)
+/// control, if the chosen opponent controls it. The pick is secret: it lives
+/// on the instance's `chosen_player`, which no seat's view or observation shows.
 pub fn emissary_of_grudges() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],

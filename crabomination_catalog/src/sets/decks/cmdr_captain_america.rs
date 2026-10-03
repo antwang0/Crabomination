@@ -965,9 +965,8 @@ pub fn heroic_return() -> CardDefinition {
 
 /// Heroic Sacrifice — until end of turn one of your creatures takes the
 /// damage meant for you and yours; when it dies this turn, its counters go
-/// to another creature of yours and you draw.
-///
-/// ⚠ Residual: damage to your noncreature permanents is redirected too.
+/// to another creature of yours and you draw. Damage to your noncreature
+/// permanents stays put (`creatures_only`).
 pub fn heroic_sacrifice() -> CardDefinition {
     spell(
         "Heroic Sacrifice",
