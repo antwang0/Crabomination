@@ -5563,7 +5563,6 @@ impl Effect {
                 | Effect::ChooseCreatureTypeThen { then, .. }
                 | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
                 | Effect::ChooseOpponentThen { then }
-                | Effect::AsPlayer { body: then, .. }
                 | Effect::RevealDrawnCardThenIf { then, .. }
                 | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
                 | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {
@@ -5576,6 +5575,10 @@ impl Effect {
                 Effect::EscalatingThisTurn { modes } => modes
                     .iter()
                     .find_map(|e| eff_find(e, slot, mode, kicked)),
+                // "Target player [does body]": `who` declares the slot.
+                Effect::AsPlayer { who, body } => {
+                    pref_find(who, slot).or_else(|| eff_find(body, slot, mode, kicked))
+                }
                 Effect::DiscardUnlessPutCardOnTop { who, then } => {
                     pref_find(who, slot)
                         .or_else(|| eff_find(then, slot, mode, kicked))

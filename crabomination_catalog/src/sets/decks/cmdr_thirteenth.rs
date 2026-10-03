@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_thirteenth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Bigger on the Inside** — the mana and the cascade are yours (no
-//!   target player).
 //! - **Bill Potts** — only spells are copied, not activated abilities.
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
@@ -163,8 +161,8 @@ pub fn become_the_pilot() -> CardDefinition {
 }
 
 /// Bigger on the Inside — enchant artifact or land; it has "{T}: two mana of
-/// any one color; the next spell this turn has cascade".
-/// Residual: the mana and the cascade are yours (no target player).
+/// any one color; the next spell this turn has cascade" for target player.
+/// Targeted, so it isn't a mana ability (CR 605.1a) and uses the stack.
 pub fn bigger_on_the_inside() -> CardDefinition {
     aura(
         "Bigger on the Inside",
@@ -173,10 +171,13 @@ pub fn bigger_on_the_inside() -> CardDefinition {
         EquipBonus {
             activated_abilities: vec![ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Seq(vec![
-                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(2)) },
-                    cascade_next_spell(),
-                ]),
+                effect: Effect::AsPlayer {
+                    who: PlayerRef::Target(0),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(2)) },
+                        cascade_next_spell(),
+                    ])),
+                },
                 ..Default::default()
             }],
             ..Default::default()

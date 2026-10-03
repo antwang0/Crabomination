@@ -364,3 +364,29 @@ fn become_the_pilot_can_be_blocked_only_by_its_owner() {
         assert_eq!(r.is_ok(), blockable, "defender {defender}");
     }
 }
+
+/// CR 605.1a — Bigger on the Inside's granted ability targets a player, so
+/// it isn't a mana ability: that player adds the mana and their next spell
+/// gets cascade.
+#[test]
+fn cr_605_1a_bigger_on_the_inside_gives_target_player_the_mana() {
+    let mut g = pod(3);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_battlefield(0, catalog::bigger_on_the_inside());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "the ability uses the stack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.total(), 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    assert!(g.delayed_triggers.iter().any(|d| d.controller == 1));
+}
