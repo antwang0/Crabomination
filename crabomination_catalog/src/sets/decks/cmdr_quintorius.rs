@@ -245,7 +245,7 @@ pub fn advanced_reconstruction() -> CardDefinition {
 
 /// Ao, the Dawn Sky — flying, vigilance; dying picks: nonland permanents of
 /// total mana value 4 or less from the top seven, or two +1/+1 counters on
-/// each creature and Vehicle of yours. Residual: the rest stay on top.
+/// each creature and Vehicle of yours.
 pub fn ao_the_dawn_sky() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -261,9 +261,8 @@ pub fn ao_the_dawn_sky() -> CardDefinition {
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                         max_count: None,
                     },
-                    // "Put the rest on the bottom of your library" — they
-                    // used to stay on top, a free look at the next draws.
-                    Effect::Move {
+                    // "Put the rest on the bottom of your library in a random order."
+                    Effect::BottomInRandomOrder {
                         what: Selector::TopOfLibrary {
                             who: PlayerRef::You,
                             count: Value::Diff(
@@ -271,7 +270,6 @@ pub fn ao_the_dawn_sky() -> CardDefinition {
                                 Box::new(Value::CountOf(Box::new(Selector::LastMoved))),
                             ),
                         },
-                        to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
                     },
                 ]),
                 Effect::AddCounter {

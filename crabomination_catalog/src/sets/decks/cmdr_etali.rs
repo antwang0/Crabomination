@@ -844,9 +844,6 @@ pub fn etali_primal_conqueror() -> CardDefinition {
 /// `CopySpellMayChooseTargets`.
 /// Approximation: a permanent spell's copy keeps the original's target (the
 /// riders copy path doesn't offer a retarget). That only matters for Auras.
-/// Approximation: the engine sets `cast_from_exile` only on the generic
-/// may-play/free cast-from-zone path, so a foretold (`CastForetold`) or plotted
-/// spell doesn't trigger it.
 pub fn nalfeshnee() -> CardDefinition {
     CardDefinition {
         name: "Nalfeshnee",
@@ -1103,11 +1100,6 @@ pub fn tibalts_trickery() -> CardDefinition {
 /// and each creature they control. If this spell was cast from exile, it deals
 /// 5 damage to each opponent and each creature they control instead. Foretell
 /// {4}{R}{R}.
-///
-/// Approximation: "cast from exile" reads "not cast from hand"
-/// (`Not(Predicate::CastFromHand)`, as Antiquities on the Loose). The printed exile
-/// casts (foretold, impulse, free cast from exile) all qualify. A cast from a
-/// graveyard or library, or a copy, also gets the 5-damage branch.
 pub fn delayed_blast_fireball() -> CardDefinition {
     let blast = |n: i32| {
         Effect::Seq(vec![
@@ -1121,7 +1113,7 @@ pub fn delayed_blast_fireball() -> CardDefinition {
         card_types: vec![CardType::Instant],
         foretell_cost: Some(cost(&[generic(4), r(), r()])),
         effect: Effect::If {
-            cond: Predicate::Not(Box::new(Predicate::CastFromHand)),
+            cond: Predicate::SpellWasCastFromExile,
             then: Box::new(blast(5)),
             else_: Box::new(blast(2)),
         },

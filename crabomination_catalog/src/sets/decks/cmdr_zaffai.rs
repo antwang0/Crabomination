@@ -67,8 +67,7 @@ fn cast_free(what: Selector, copy: bool) -> Effect {
 }
 
 /// Apex of Power — exile your top seven, cast spells from among them this
-/// turn; cast from hand, add ten mana of one color. Residual: the exiled
-/// cards may also be played as lands.
+/// turn; cast from hand, add ten mana of one color.
 pub fn apex_of_power() -> CardDefinition {
     spell(
         "Apex of Power",
@@ -363,7 +362,7 @@ pub fn living_lore() -> CardDefinition {
 
 /// Muse Vortex — exile your top X; you may cast an instant or sorcery with
 /// mana value X or less free; the other instants and sorceries to hand, the
-/// rest to the bottom. Residual: the bottom order isn't random.
+/// rest to the bottom in a random order.
 pub fn muse_vortex() -> CardDefinition {
     let exiled = |filter: R| Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource.and(filter) };
     spell(
@@ -382,10 +381,7 @@ pub fn muse_vortex() -> CardDefinition {
                 total_mana_value: None,
             },
             Effect::Move { what: exiled(instant_or_sorcery()), to: ZoneDest::Hand(PlayerRef::You) },
-            Effect::Move {
-                what: exiled(R::Any),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },
-            },
+            Effect::BottomInRandomOrder { what: exiled(R::Any) },
         ]),
     )
 }
@@ -494,8 +490,7 @@ pub fn traumatic_visions() -> CardDefinition {
 }
 
 /// Zaffai, Thunder Conductor — magecraft: scry 1; mana value 5+, a 4/4
-/// Elemental; 10+, 10 damage to a random opponent. Residual: one trigger per
-/// copy event, however many copies it made.
+/// Elemental; 10+, 10 damage to a random opponent. Copies trigger it too.
 pub fn zaffai_thunder_conductor() -> CardDefinition {
     let elemental = Arc::new(TokenDefinition {
         name: "Elemental".into(),
