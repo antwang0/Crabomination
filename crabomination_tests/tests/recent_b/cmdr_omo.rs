@@ -391,3 +391,27 @@ fn the_bot_holds_a_land_that_would_double_a_scute_swarm_board() {
     let action = HeuristicBot::new().next_action(&g, 0);
     assert!(!matches!(action, Some(GameAction::PlayLand(_))), "{action:?}");
 }
+
+/// CR 608.2d — Rampant Frogantua puts any number of the milled lands onto
+/// the battlefield: the controller picks which.
+#[test]
+fn cr_608_2d_rampant_frogantua_picks_the_milled_lands() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(2);
+    let f = g.add_card_to_battlefield(0, catalog::rampant_frogantua());
+    g.clear_sickness(f);
+    let island = g.add_card_to_library(0, catalog::island());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![island])]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: f, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(island).is_some_and(|c| c.tapped), "the chosen land, tapped");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest), "the other land stays milled");
+}

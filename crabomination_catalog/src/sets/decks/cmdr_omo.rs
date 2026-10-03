@@ -10,7 +10,6 @@
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
 //!   or library" only by a discard or a mill here.
 //! - **Sunken Palace** — its rider copies a spell, not an activated ability.
-//! - **Rampant Frogantua** — every milled land goes onto the battlefield.
 //! - **March from Velis Vel** — the land type is chosen as a mode.
 
 use crate::card::{
@@ -392,8 +391,8 @@ pub fn march_from_velis_vel() -> CardDefinition {
 }
 
 /// Rampant Frogantua — +10/+10 per player who has lost; on combat damage,
-/// may mill that many and put the lands onto the battlefield. Residual: every
-/// milled land is put onto the battlefield.
+/// may mill that many and put any number of the milled lands onto the
+/// battlefield tapped (the controller's pick, CR 608.2d).
 pub fn rampant_frogantua() -> CardDefinition {
     let lost = |n| {
         static_ab(
@@ -410,8 +409,11 @@ pub fn rampant_frogantua() -> CardDefinition {
                 description: "Mill that many cards and put the lands onto the battlefield?".into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Mill { who: Selector::You, amount: Value::TriggerEventAmount },
-                    Effect::Move {
-                        what: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: R::Land },
+                    Effect::MoveChosen {
+                        from: Selector::LastMoved,
+                        filter: Some(R::Land),
+                        count: Value::TriggerEventAmount,
+                        up_to: true,
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                     },
                 ])),
