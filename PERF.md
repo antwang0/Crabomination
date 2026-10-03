@@ -3092,6 +3092,12 @@ later tip        the Desert / Dune Chanter / auto-tapper / Cosmic Intervention b
                  inside its own spread; pod table re-blessed for the auto-tapper
                  (aggregate 3/4/6 seats x 2,000 at seed 9991: 32.36/32.43,
                  45.66/45.60, 68.34/68.20 turns, all decided); suite 23,779 / 0 / 5
+second firing    the look-and-deploy pick, the bot's library branch, the dropped-may
+                 wraps and the ability retargeters: --bench 196,176 / 27.64 / 613.0
+                 / 0 stalls byte-identical; every deck in six-seat blocks x 150
+                 (seeds 32001+) plus 3/4 seats x 1,000: 6,649 decided, 1
+                 undecided, zero panics; seeded pod table unmoved; suite 23,787 /
+                 0 / 5; clippy 0
 ```
 
 ### 2026-10-02 (Commander session `01NqgJKc`) — guardrail, no perf work
