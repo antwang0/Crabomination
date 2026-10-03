@@ -340,3 +340,27 @@ fn ryan_sinclair_stops_at_the_first_nonland_card() {
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bears), "the Bears was never reached");
     assert!(g.players[0].library.iter().rev().take(2).any(|c| c.id == giant), "the Giant went to the bottom");
 }
+
+/// CR 509.1b — Become the Pilot's creature can't be blocked unless it's
+/// attacking its owner: a third player can't block it, its owner can.
+#[test]
+fn become_the_pilot_can_be_blocked_only_by_its_owner() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for (defender, blockable) in [(2usize, false), (1, true)] {
+        let mut g = pod(3);
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().controller = 0;
+        g.clear_sickness(bear);
+        let pilot = g.add_card_to_battlefield(0, catalog::become_the_pilot());
+        g.battlefield_find_mut(pilot).unwrap().attached_to = Some(bear);
+        let wall = g.add_card_to_battlefield(defender, catalog::hill_giant());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(defender) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = defender;
+        let r = g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)]));
+        assert_eq!(r.is_ok(), blockable, "defender {defender}");
+    }
+}

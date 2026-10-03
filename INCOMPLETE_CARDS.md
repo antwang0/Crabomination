@@ -2109,7 +2109,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus Lucea Kane | Tyranid Swarm (40K) | only the next spell with {X} is copied, not an ability with {X}. |
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
 | 🟡 The Red Terror | Tyranid Swarm (40K) | only a permanent source's damage is seen (not a red instant's or sorcery's). |
-| 🟡 Become the Pilot | Paradox Power (WHO) | no "can't be blocked unless it's attacking its owner or a permanent its owner controls" clause. |
 | 🟡 Bigger on the Inside | Paradox Power (WHO) | the mana and the next spell's cascade are yours; no target player. |
 | 🟡 Bill Potts | Paradox Power (WHO) | only instants and sorceries that target only it are copied, not activated abilities. |
 | 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |

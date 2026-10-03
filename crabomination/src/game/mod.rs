@@ -19143,6 +19143,8 @@ impl GameState {
                 Keyword::CantBeBlockedUnlessDefenderSharedType(n) => {
                     self.greatest_shared_type_count(defender) < *n as usize
                 }
+                // CR 509.1b — Become the Pilot: only its owner may block it.
+                Keyword::CantBeBlockedUnlessAttackingOwner => defender != attacker.owner,
                 // CR 509.1b — Champion of Lambholt.
                 Keyword::CantBeBlockedByPowerLessThanGreatestAmong(f) => {
                     let most = self
@@ -33127,6 +33129,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::DomainLandwalk
             | Keyword::CantBeBlockedIfControllerCastSpells(_)
             | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
+            | Keyword::CantBeBlockedUnlessAttackingOwner
             | Keyword::CantBeBlockedByPowerLessThanCount(_)
             | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
             | Keyword::UnblockableWhilePowerOrToughnessAtMost(_)

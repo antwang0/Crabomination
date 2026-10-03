@@ -2432,6 +2432,9 @@ pub enum Keyword {
     /// CR 509.1b — "can't be blocked unless defending player controls N or
     /// more creatures that share a creature type" (Graxiplon).
     CantBeBlockedUnlessDefenderSharedType(u32),
+    /// CR 509.1b — "can't be blocked unless it's attacking its owner or a
+    /// permanent its owner controls" (Become the Pilot's stolen creature).
+    CantBeBlockedUnlessAttackingOwner,
     /// CR 702.6c — "This creature can't be equipped" (Goblin Brawler). The
     /// equip ability may not target it.
     CantBeEquipped,

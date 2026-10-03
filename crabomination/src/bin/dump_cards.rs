@@ -274,6 +274,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedIfDefenderHasMostCreatures
         | Keyword::SplitSecondIfKicked
         | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
+        | Keyword::CantBeBlockedUnlessAttackingOwner
         | Keyword::CantBeEquipped
         | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)

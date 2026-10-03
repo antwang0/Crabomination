@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_thirteenth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Become the Pilot** — no "can't be blocked unless it's attacking its
-//!   owner" clause.
 //! - **Bigger on the Inside** — the mana and the cascade are yours (no
 //!   target player).
 //! - **Bill Potts** — only spells are copied, not activated abilities.
@@ -143,8 +141,8 @@ fn doctors() -> R {
     R::HasCreatureType(CreatureType::Doctor)
 }
 
-/// Become the Pilot — enchant noncommander creature; you control it; +2/+2.
-/// Residual: no "can't be blocked unless attacking its owner" clause.
+/// Become the Pilot — enchant noncommander creature; you control it; +2/+2,
+/// and it can't be blocked unless it's attacking its owner.
 pub fn become_the_pilot() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
@@ -154,7 +152,12 @@ pub fn become_the_pilot() -> CardDefinition {
             "Become the Pilot",
             cost(&[generic(3), u(), u()]),
             R::Creature.and(R::Not(Box::new(R::IsCommander))),
-            EquipBonus { power: 2, toughness: 2, ..Default::default() },
+            EquipBonus {
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::CantBeBlockedUnlessAttackingOwner],
+                ..Default::default()
+            },
         )
     }
 }
