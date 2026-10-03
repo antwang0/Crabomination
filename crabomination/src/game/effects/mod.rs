@@ -31720,24 +31720,27 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ClashWithOpponent { on_win } => {
+            Effect::ClashWithOpponent { on_win, with } => {
                 // CR 701.30 — both reveal the top card; each may bottom it
                 // (seat-routed yes/no, so a networked human gets the prompt;
-                // AutoDecider keeps it on top). The controller wins on a
-                // strictly higher mana value of the *revealed* cards. All
-                // asks precede the zone moves / reveal events so the suspend
-                // re-run is idempotent.
+                // AutoDecider keeps it on top), deciding in APNAP order
+                // (701.30c). A player wins on a strictly higher mana value of
+                // the *revealed* cards (701.30d). All asks precede the zone
+                // moves / reveal events so the suspend re-run is idempotent.
                 let me = ctx.controller;
-                let Some(opp) = self.default_hostile_opponent(me) else {
-                    return Ok(());
+                let opp = match with {
+                    Some(r) => self.resolve_player(r, ctx).filter(|&q| q != me && !self.players[q].eliminated),
+                    None => self.default_hostile_opponent(me),
                 };
+                let Some(opp) = opp else { return Ok(()) };
                 let source = ctx.source.unwrap_or(CardId(0));
+                let seats = if opp == self.active_player_idx { [opp, me] } else { [me, opp] };
                 let mut cursor = 0;
-                let mut mv = [0i64; 2];
+                let mut mv: [Option<u32>; 2] = [None; 2];
                 let mut bottoms = [false; 2];
-                for (i, p) in [me, opp].into_iter().enumerate() {
+                for (i, p) in seats.into_iter().enumerate() {
                     let Some(top) = self.players[p].library.first() else { continue };
-                    mv[i] = top.definition.cost.cmc() as i64;
+                    mv[i] = Some(top.definition.cost.cmc());
                     let prompt = format!(
                         "Clash: you revealed {}. Put it on the bottom?",
                         top.definition.name
@@ -31756,7 +31759,7 @@ impl GameState {
                     bottoms[i] = b;
                 }
                 self.clear_answer_log();
-                for (i, p) in [me, opp].into_iter().enumerate() {
+                for (i, p) in seats.into_iter().enumerate() {
                     let Some(top) = self.players[p].library.first() else { continue };
                     events.push(GameEvent::TopCardRevealed {
                         player: p,
@@ -31768,7 +31771,15 @@ impl GameState {
                         self.players[p].library.push(card);
                     }
                 }
-                if mv[0] > mv[1] {
+                let winner = match (mv[0], mv[1]) {
+                    (Some(a), b) if b.is_none_or(|b| a > b) => Some(seats[0]),
+                    (a, Some(b)) if a.is_none_or(|a| b > a) => Some(seats[1]),
+                    _ => None,
+                };
+                if let Some(w) = winner {
+                    events.push(GameEvent::ClashWon { player: w });
+                }
+                if winner == Some(me) {
                     // "That player" in the payoff is the clashed opponent.
                     let prev = self.scratch.chosen_opponent_scratch.replace(opp);
                     let r = self.run_effect(on_win, ctx, events);
@@ -33228,7 +33239,7 @@ impl GameState {
                 // clash that suspends resumes at that clash, not at `body`.
                 let step = Effect::Seq(vec![
                     (**body).clone(),
-                    Effect::ClashWithOpponent { on_win: Box::new(effect.clone()) },
+                    Effect::ClashWithOpponent { on_win: Box::new(effect.clone()), with: None },
                 ]);
                 self.run_effect(&step, ctx, events)
             }

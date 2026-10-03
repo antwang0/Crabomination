@@ -276,7 +276,7 @@ fn flip_at_combat() -> TriggeredAbility {
 
 /// "Whenever a player wins a coin flip, …" — CR 705.1, any player's flip.
 fn on_any_flip_won(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility { event: EventSpec::new(EventKind::WonCoinFlip, EventScope::AnyPlayer), effect }
+    TriggeredAbility { event: EventSpec::new(EventKind::WonContest { clash: false }, EventScope::AnyPlayer), effect }
 }
 
 fn eye(name: &'static str, partner: &str, mana: crate::mana::ManaCost) -> CardDefinition {

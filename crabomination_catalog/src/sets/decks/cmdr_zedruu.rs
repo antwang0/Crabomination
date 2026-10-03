@@ -252,6 +252,7 @@ pub fn pollen_lullaby() -> CardDefinition {
                 on_win: Box::new(Effect::CreaturesDontUntapNextUntapStep {
                     who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                 }),
+                with: None,
             },
         ]),
     )
@@ -336,6 +337,7 @@ pub fn scattering_stroke() -> CardDefinition {
                     any_color: false,
                     first_main: false,
                 }),
+                with: None,
             },
         ]),
     )
@@ -375,6 +377,7 @@ pub fn whirlpool_whelm() -> CardDefinition {
                     what: target_n(0),
                     to: crate::effect::ZoneDest::Library { who: owner(), pos: crate::effect::LibraryPosition::Top },
                 }),
+                with: None,
             },
             // The target slot is declared here: a clash payoff is not walked
             // for cast-time targets.

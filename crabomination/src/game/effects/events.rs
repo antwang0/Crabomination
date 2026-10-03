@@ -161,7 +161,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::PlayerSearchedLibrary { .. } => bits!(K::PlayerSearchedLibrary),
         E::LibraryShuffled { .. } => bits!(K::LibraryShuffled),
         E::TappedForMana { .. } => bits!(K::TappedForMana),
-        E::CoinFlipWon { .. } => bits!(K::WonCoinFlip),
+        E::CoinFlipWon { .. } | E::ClashWon { .. } => bits!(K::WonContest { clash: false }),
         E::VotingFinished => bits!(K::VotingFinished),
         E::CoinFlipLost { .. } => bits!(K::LostCoinFlip),
         E::DiceRolled { .. } => bits!(K::RolledDice),
@@ -256,6 +256,8 @@ fn event_payload_matches(
         (EventKind::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
             !first_only || *first_this_turn
         }
+        (EventKind::WonContest { clash }, GameEvent::CoinFlipWon { .. }) => !clash,
+        (EventKind::WonContest { clash }, GameEvent::ClashWon { .. }) => *clash,
         _ => true,
     }
 }
@@ -439,7 +441,8 @@ fn reference_event_kind_matches(
         (EventKind::PlayerSearchedLibrary, GameEvent::PlayerSearchedLibrary { .. }) => true,
         (EventKind::LibraryShuffled, GameEvent::LibraryShuffled { .. }) => true,
         (EventKind::TappedForMana, GameEvent::TappedForMana { .. }) => true,
-        (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
+        (EventKind::WonContest { clash: false }, GameEvent::CoinFlipWon { .. }) => true,
+        (EventKind::WonContest { clash: true }, GameEvent::ClashWon { .. }) => true,
         (EventKind::VotingFinished, GameEvent::VotingFinished) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
@@ -551,7 +554,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::LifeLost
             | EventKind::DamageToPlayerPrevented
             | EventKind::EnergyGained
-            | EventKind::WonCoinFlip
+            | EventKind::WonContest { .. }
             | EventKind::LostCoinFlip
             | EventKind::RolledDice
             | EventKind::BecameTarget
@@ -1384,6 +1387,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Discovered { player, .. }
         | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
+        | GameEvent::ClashWon { player }
         | GameEvent::PermanentReturnedToHand { player, .. }
         | GameEvent::SpellCountered { player, .. }
         | GameEvent::CoinFlipLost { player }
@@ -1544,6 +1548,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::EnergyGained { player, .. }
         | GameEvent::Discovered { player, .. }
         | GameEvent::CoinFlipWon { player }
+        | GameEvent::ClashWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::RolledNaturalMax { player }
@@ -1871,6 +1876,7 @@ mod tests {
             E::Voted { player: 0, choice: "x".into() },
             E::VotingFinished,
             E::CoinFlipWon { player: 0 },
+            E::ClashWon { player: 0 },
             E::DungeonRoomEntered { player: 0, dungeon: "d".into(), room: "r".into() },
             E::DungeonCompleted { player: 0 },
             E::CoinFlipLost { player: 0 },
@@ -2061,7 +2067,8 @@ mod tests {
             K::Discovered,
             K::BecameMonstrous,
             K::EnergyGained,
-            K::WonCoinFlip,
+            K::WonContest { clash: false },
+            K::WonContest { clash: true },
             K::LostCoinFlip,
             K::VotingFinished,
             K::RolledDice,

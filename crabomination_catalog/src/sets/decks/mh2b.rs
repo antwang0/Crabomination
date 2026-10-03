@@ -947,7 +947,7 @@ pub fn tavern_scoundrel() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+            event: EventSpec::new(EventKind::WonContest { clash: false }, EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),

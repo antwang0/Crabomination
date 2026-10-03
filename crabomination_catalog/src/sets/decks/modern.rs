@@ -24616,7 +24616,7 @@ pub fn chance_encounter() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+                event: EventSpec::new(EventKind::WonContest { clash: false }, EventScope::YourControl),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::Luck,
@@ -54195,6 +54195,7 @@ pub fn recross_the_paths() -> CardDefinition {
             },
             Effect::ClashWithOpponent {
                 on_win: Box::new(Effect::ReturnResolvingSpellToHand),
+                with: None,
             },
         ]),
         ..Default::default()
@@ -54998,7 +54999,7 @@ pub fn karplusan_minotaur() -> CardDefinition {
         )],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+                event: EventSpec::new(EventKind::WonContest { clash: false }, EventScope::YourControl),
                 effect: Effect::DealDamage {
                     to: target_any(),
                     amount: Value::Const(1),
@@ -58498,6 +58499,7 @@ pub fn lash_out() -> CardDefinition {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(3),
                 }),
+                with: None,
             },
         ]),
         ..Default::default()

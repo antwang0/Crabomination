@@ -634,7 +634,7 @@ pub fn setzer_wandering_gambler() -> CardDefinition {
                 effect: Effect::FlipCoin { count: Value::ONE, on_heads: Box::new(Effect::Noop), on_tails: Box::new(Effect::Noop) },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+                event: EventSpec::new(EventKind::WonContest { clash: false }, EventScope::YourControl),
                 effect: treasures(2, true),
             },
         ],

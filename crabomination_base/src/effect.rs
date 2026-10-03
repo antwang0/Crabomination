@@ -3553,9 +3553,11 @@ pub enum EventKind {
     /// event subject is the player; matched to `GameEvent::EnergyGained`.
     EnergyGained,
     /// CR 705.1 — the player won a coin flip ("Whenever you win a coin
-    /// flip"). Fires once per won flip; the player is the event subject;
-    /// matched to `GameEvent::CoinFlipWon`. Chance Encounter listens here.
-    WonCoinFlip,
+    /// flip"), matched to `GameEvent::CoinFlipWon`; with `clash`, CR 701.30d
+    /// — the player won a clash ("Whenever you win a clash", Marvo), matched
+    /// to `GameEvent::ClashWon`. One event per win; the player is the
+    /// subject. One kind with a payload because the `u128` mask is full.
+    WonContest { clash: bool },
     /// CR 705.1 — the player lost a coin flip ("Whenever you lose a coin
     /// flip"). Fires once per lost flip; matched to `GameEvent::CoinFlipLost`.
     LostCoinFlip,
@@ -9898,11 +9900,16 @@ pub enum Effect {
     /// (AutoDecider pays 0). Necrodominance's end step.
     PayLifeDraw { who: PlayerRef },
     /// CR 701.30 — "Clash with an opponent": you and the most hostile
-    /// opponent each reveal your library's top card and may bottom it
-    /// (synchronous decider); if yours had the higher mana value, `on_win`
-    /// runs with that opponent as `PlayerRef::ChosenPlayerOfSource` ("that
-    /// player" — Pollen Lullaby). Recross the Paths.
-    ClashWithOpponent { on_win: Box<Effect> },
+    /// opponent (or `with`, "clash with defending player" — Marvo) each
+    /// reveal your library's top card and may bottom it, deciding in APNAP
+    /// order; the winner gets a `GameEvent::ClashWon`, and if it's you,
+    /// `on_win` runs with that opponent as `PlayerRef::ChosenPlayerOfSource`
+    /// ("that player" — Pollen Lullaby). Recross the Paths.
+    ClashWithOpponent {
+        on_win: Box<Effect>,
+        #[serde(default)]
+        with: Option<PlayerRef>,
+    },
     /// Goblin Charbelcher: reveal from the top until a land; deal damage
     /// equal to the nonland reveals to `to` (doubled when the land has
     /// `double_if`'s subtype); all reveals go to the bottom.

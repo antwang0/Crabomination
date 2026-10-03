@@ -2865,6 +2865,8 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::VotingFinished` — closes a ballot in the log.
     VotingFinished,
     CoinFlipWon { player: usize },
+    /// Wire mirror of `GameEvent::ClashWon` (CR 701.30d).
+    ClashWon { player: usize },
     /// Wire mirror of `GameEvent::DungeonRoomEntered` (CR 701.49).
     DungeonRoomEntered { player: usize, dungeon: String, room: String },
     /// Wire mirror of `GameEvent::DungeonCompleted` (CR 701.49d).
@@ -3127,6 +3129,7 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::VotingFinished => GameEventWire::VotingFinished,
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
+            GameEvent::ClashWon { player } => GameEventWire::ClashWon { player: *player },
             GameEvent::DungeonRoomEntered { player, dungeon, room } => {
                 GameEventWire::DungeonRoomEntered {
                     player: *player,
@@ -3497,6 +3500,7 @@ impl GameEventWire {
             E::Voted { player, choice } => format!("{} voted for {choice}", pn(*player)),
             E::VotingFinished => "voting ends".to_string(),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
+            E::ClashWon { player } => format!("{} won a clash", pn(*player)),
             E::DungeonRoomEntered { player, dungeon, room } => {
                 format!("{} ventures into {room} ({dungeon})", pn(*player))
             }

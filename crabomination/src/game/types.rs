@@ -2833,6 +2833,8 @@ pub enum GameEvent {
     /// Keeper). Fired once per `Effect::Vote`, after the tally is known.
     VotingFinished,
     CoinFlipWon { player: usize },
+    /// CR 701.30d — `player` won a clash.
+    ClashWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.
     DungeonRoomEntered { player: usize, dungeon: String, room: String },
     /// CR 701.49d — `player` completed a dungeon.
