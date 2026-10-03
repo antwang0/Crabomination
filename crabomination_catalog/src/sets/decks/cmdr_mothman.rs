@@ -857,9 +857,6 @@ pub fn strength_bobblehead() -> CardDefinition {
 /// opponent draws a card; you draw a card for each card drawn this way.
 /// Enclave — whenever a player attacks you with one or more creatures, that
 /// player gets twice that many rad counters.
-///
-/// ⚠ Residual: Brotherhood draws you one card per opponent, not per card they
-/// actually drew.
 pub fn struggle_for_project_purity() -> CardDefinition {
     CardDefinition {
         name: "Struggle for Project Purity",
@@ -872,7 +869,9 @@ pub fn struggle_for_project_purity() -> CardDefinition {
                     event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
                     effect: Effect::Seq(vec![
                         Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
-                        draw(Value::CountOf(Box::new(Selector::Player(PlayerRef::EachOpponent)))),
+                        // "for each card drawn this way": an opponent whose
+                        // draw was replaced or who had no card drew none.
+                        draw(Value::CardsDrawnThisEffect),
                     ]),
                 }],
                 ..Default::default()

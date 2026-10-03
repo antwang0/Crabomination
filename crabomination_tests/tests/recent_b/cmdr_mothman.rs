@@ -314,6 +314,27 @@ fn the_master_reanimates_milled_creature() {
     assert_eq!(g.battlefield_find(wurm).unwrap().controller, 0);
 }
 
+/// Struggle for Project Purity's Brotherhood — you draw one card per card the
+/// opponents actually drew: one with an empty library draws none.
+#[test]
+fn struggle_brotherhood_draws_per_card_drawn() {
+    let mut g = pod(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    flood(&mut g, 0);
+    let s = g.add_card_to_hand(0, catalog::struggle_for_project_purity());
+    cast(&mut g, 0, s, None).expect("Struggle");
+    g.add_card_to_library(1, catalog::island());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[2].library.clear();
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
 /// Struggle for Project Purity's Enclave — two rad counters per creature that
 /// attacks you.
 #[test]
