@@ -1937,7 +1937,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
-| 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |

@@ -301,3 +301,21 @@ fn chatterfang_rides_each_resumed_segment_once() {
     assert_eq!(named(&g, 0, "Food").len(), 4);
     assert_eq!(named(&g, 0, "Squirrel").len(), 4);
 }
+
+/// Hazel's Brewmaster — Foods borrow the activated abilities of the
+/// *creature* cards exiled with it; an exiled land lends nothing.
+#[test]
+fn hazels_brewmaster_lends_only_creature_card_abilities() {
+    let mut g = pod(2);
+    let brewmaster = g.add_card_to_battlefield(0, catalog::hazels_brewmaster());
+    let food = g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    for def in [catalog::prodigal_sorcerer(), catalog::nephalia_drownyard()] {
+        let id = g.add_card_to_graveyard(0, def);
+        let pos = g.players[0].graveyard.iter().position(|c| c.id == id).unwrap();
+        let mut card = g.players[0].graveyard.remove(pos);
+        card.exiled_with = Some(brewmaster);
+        g.exile.push(card);
+    }
+    let granted = g.granted_abilities_for(food);
+    assert_eq!(granted.len(), 1, "the Sorcerer's ping, not Drownyard's two");
+}

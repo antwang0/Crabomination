@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Hazel of the Rootbloom** — "tap X untapped tokens" taps every other
 //!   untapped token you control (X is all of them); the mana is any colors.
-//! - **Hazel's Brewmaster** — your Foods gain the activated abilities of every
-//!   card exiled with it, not only the creature cards.
 //! - **Sword of the Squeak** — "base power or toughness 1" reads the printed
 //!   power and toughness.
 
@@ -296,8 +294,7 @@ pub fn hazel_of_the_rootbloom() -> CardDefinition {
 
 /// Hazel's Brewmaster — menace; entering or attacking, exile up to one target
 /// card from a graveyard and make a Food; your Foods have the activated
-/// abilities of the cards exiled with it.
-/// Residual: every exiled card lends its abilities, not only creature cards.
+/// abilities of the creature cards exiled with it.
 pub fn hazels_brewmaster() -> CardDefinition {
     let body = || Effect::OptionalTargets {
         min: 0,
@@ -313,6 +310,7 @@ pub fn hazels_brewmaster() -> CardDefinition {
             "Foods you control have all activated abilities of all creature cards exiled with Hazel's Brewmaster.",
             StaticEffect::ControlledHaveAbilitiesOfExiledWithSource {
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Food),
+                lenders: Some(CardType::Creature),
             },
         )],
         ..creature("Hazel's Brewmaster", cost(&[generic(3), b()]), vec![CreatureType::Squirrel, CreatureType::Warlock], 3, 4)
