@@ -3364,7 +3364,13 @@ impl TriggerPush {
         self.mana_spent_by_color = m;
         self
     }
-    pub fn build(self) -> StackItem {
+    pub fn build(mut self) -> StackItem {
+        crate::game::target_hole::pad_empty_slot_zero(
+            &self.effect,
+            self.mode,
+            &mut self.target,
+            &self.additional_targets,
+        );
         StackItem::Trigger {
             source: self.source,
             controller: self.controller,

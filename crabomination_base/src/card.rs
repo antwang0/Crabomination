@@ -3287,6 +3287,9 @@ pub enum SelectionRequirement {
     /// gained this turn" (Moseo, Vein's New Dean's Infusion). Evaluated
     /// against the requirement CONTROLLER's `life_gained_this_turn`.
     ManaValueAtMostLifeGainedThisTurn,
+    /// Mana value at most the life the requirement's controller lost this
+    /// turn (Betor, Ancestor's Voice's returned creature card).
+    ManaValueAtMostLifeLostThisTurn,
     /// Mana value ≤ the source permanent's power, read last-known-information
     /// aware (battlefield power first, then the `leaves_bf_lki` snapshot of a
     /// dying source). Sandbender Scavengers' "return a creature with mana value

@@ -183,6 +183,7 @@ mod escape_extra;
 // CR 508.1c — "only the chosen creatures can attack during that combat".
 mod attack_only_chosen;
 mod activation_x;
+pub mod target_hole;
 // CR 608.2d — "choose any number of them", then each.
 mod for_each_chosen;
 // Psychic Paper's chosen name and creature type on the equipped creature.
@@ -26408,6 +26409,22 @@ impl GameState {
                     .map(|c| Target::Permanent(c.id))
                     .find(|t| is_legal(t));
             }
+            // A graveyard slot ("return up to one target creature card from
+            // your graveyard" beside a battlefield slot — Betor): your own
+            // graveyard first, the priciest card first.
+            if pick.is_none() && req.mentions_offboard_zone() {
+                let mut seats: Vec<usize> = vec![controller];
+                seats.extend(opps.iter().copied());
+                pick = seats.into_iter().find_map(|p| {
+                    let mut cards: Vec<&crate::card::CardInstance> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id)))
+                        .collect();
+                    cards.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
+                    cards.first().map(|c| Target::Permanent(c.id))
+                });
+            }
             match pick {
                 Some(t) => {
                     match t {
@@ -29736,6 +29753,9 @@ impl GameState {
             return Ok(());
         }
         let resolved_target = match target.as_ref() {
+            // An unfilled optional slot 0 holds its place; it has no object
+            // to be illegal (`target_hole`).
+            Some(t) if crate::game::target_hole::is_hole(t) => Some(t.clone()),
             // The chosen mode's filter (CR 700.2a): a later mode's target
             // checked against mode 0's filter fizzled every such trigger.
             Some(t) => match effect.target_filter_for_slot_in_mode(0, Some(mode)).map(|f| {
