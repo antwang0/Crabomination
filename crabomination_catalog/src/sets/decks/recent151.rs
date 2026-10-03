@@ -56,9 +56,8 @@ pub fn resurrected_cultist() -> CardDefinition {
 }
 
 /// Overgrown Zealot — {1}{G} 0/4. {T}: add one mana of any color. {T}: add two
-/// mana of any one color, spend only to turn permanents face up.
-/// Approximation: the spend gate (`FaceDownSpellsOrTurnFaceUp`) also admits
-/// casting face-down spells.
+/// mana of any one color, spend only to turn permanents face up
+/// (`SpendRestriction::TurnFaceUpOnly`).
 pub fn overgrown_zealot() -> CardDefinition {
     CardDefinition {
         name: "Overgrown Zealot",
@@ -88,7 +87,7 @@ pub fn overgrown_zealot() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
-                        crate::mana::SpendRestriction::FaceDownSpellsOrTurnFaceUp,
+                        crate::mana::SpendRestriction::TurnFaceUpOnly,
                     ),
                 },
                 ..Default::default()
