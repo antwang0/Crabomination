@@ -28091,6 +28091,7 @@ impl GameState {
                 tapped,
                 exile_rest,
                 rest_to_graveyard,
+                mandatory,
             } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -28113,8 +28114,35 @@ impl GameState {
                             .is_some_and(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     })
                     .collect();
-                if let Some(m) = max {
-                    picks.truncate(*m as usize);
+                // CR 608.2d — which matches (and, unless `mandatory`, whether
+                // any) is the controller's pick; headless takes the first.
+                if let Some(m) = *max
+                    && !picks.is_empty()
+                {
+                    let named: Vec<(CardId, String)> = picks
+                        .iter()
+                        .filter_map(|id| self.players[p].library.iter().find(|c| c.id == *id))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let auto: Vec<CardId> = picks.iter().copied().take(m as usize).collect();
+                    let min = if *mandatory { m.min(picks.len() as u32) } else { 0 };
+                    let mut cursor = 0;
+                    let Some(chosen) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Put cards from among them onto the battlefield".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        named,
+                        min,
+                        m,
+                        PickValue::Gain,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    picks = chosen.into_iter().take(m as usize).collect();
                 }
                 let dest = ZoneDest::Battlefield {
                     controller: crate::effect::PlayerRef::Seat(p),

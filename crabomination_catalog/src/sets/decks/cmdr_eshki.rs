@@ -303,7 +303,7 @@ pub fn ureni_of_the_unwritten() -> CardDefinition {
         max: Some(1),
         tapped: false,
         exile_rest: false,
-        rest_to_graveyard: false,
+        rest_to_graveyard: false, mandatory: false,
     };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

@@ -1248,7 +1248,7 @@ pub fn wilfred_mott() -> CardDefinition {
                     max: Some(1),
                     tapped: false,
                     exile_rest: false,
-                    rest_to_graveyard: false,
+                    rest_to_graveyard: false, mandatory: false,
                 },
             ]),
         )],

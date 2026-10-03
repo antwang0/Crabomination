@@ -140,6 +140,27 @@ fn elvish_rejuvenator_puts_a_land_from_the_top_five() {
     assert!(land.tapped);
 }
 
+/// CR 608.2d — "you may put a land card from among them": the controller
+/// picks which land (the Plains under the Forest), or none at all.
+#[test]
+fn elvish_rejuvenator_lets_its_controller_pick_or_decline() {
+    for pick in [true, false] {
+        let mut g = main_phase(2);
+        g.add_card_to_library(0, catalog::forest());
+        let plains = g.add_card_to_library(0, catalog::plains());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let answer = if pick { vec![plains] } else { vec![] };
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(answer)]));
+        let e = g.add_card_to_hand(0, catalog::elvish_rejuvenator());
+        flood(&mut g, 0);
+        cast(&mut g, e, &[]);
+        let lands: Vec<_> = g.battlefield.iter().filter(|c| c.definition.is_land()).map(|c| c.id).collect();
+        assert_eq!(lands, if pick { vec![plains] } else { vec![] });
+    }
+}
+
 /// With ten nonland permanents out it costs {3} less.
 #[test]
 fn hour_of_revelation_gets_cheap_and_wipes_nonlands() {

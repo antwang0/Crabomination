@@ -581,9 +581,7 @@ fn summoning_trap_free_after_a_countered_creature() {
 
     let fatty = g.add_card_to_library(0, catalog::serra_angel());
     g.priority.player_with_priority = 0;
-    g.decider = Box::new(ScriptedDecider::new(
-        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
-    ));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![fatty])]));
     assert!(cast_alt(&mut g, trap, None), "free now");
     assert!(g.battlefield_find(fatty).is_some(), "dug out a creature");
 }

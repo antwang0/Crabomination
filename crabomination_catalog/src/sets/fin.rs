@@ -9494,7 +9494,7 @@ pub fn gilgamesh_master_at_arms() -> CardDefinition {
         count: Value::Const(6),
         max: None,
         tapped: false,
-        exile_rest: false, rest_to_graveyard: false,
+        exile_rest: false, rest_to_graveyard: false, mandatory: false,
         filter: SelectionRequirement::HasCardType(CardType::Artifact).and(
             SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
         ),

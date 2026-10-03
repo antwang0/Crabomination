@@ -731,7 +731,7 @@ pub fn summoning_trap() -> CardDefinition {
             then: None,
             max: Some(1),
             tapped: false,
-            exile_rest: false, rest_to_graveyard: false,
+            exile_rest: false, rest_to_graveyard: false, mandatory: false,
         },
         ..Default::default()
     }

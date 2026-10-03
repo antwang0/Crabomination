@@ -369,7 +369,7 @@ pub fn saheelis_directive() -> CardDefinition {
             max: None,
             tapped: false,
             exile_rest: false,
-            rest_to_graveyard: true,
+            rest_to_graveyard: true, mandatory: false,
         },
         ..Default::default()
     }

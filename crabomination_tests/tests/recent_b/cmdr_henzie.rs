@@ -249,6 +249,7 @@ fn industrial_advancement_digs() {
     g.add_card_to_library(0, catalog::island());
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Cards(vec![wurm]),
     ]));
     end_step(&mut g);
     assert!(g.battlefield_find(wurm).is_some());

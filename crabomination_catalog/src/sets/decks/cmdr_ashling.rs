@@ -204,7 +204,7 @@ pub fn cavalier_of_thorns() -> CardDefinition {
                 max: Some(1),
                 tapped: false,
                 exile_rest: false,
-                rest_to_graveyard: true,
+                rest_to_graveyard: true, mandatory: true,
             }),
             on_dies(Effect::MayExileSelfThen {
                 body: Box::new(Effect::Move {

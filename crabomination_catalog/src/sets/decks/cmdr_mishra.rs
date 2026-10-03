@@ -489,7 +489,7 @@ pub fn smelting_vat() -> CardDefinition {
                     max: Some(2),
                     tapped: false,
                     exile_rest: false,
-                    rest_to_graveyard: false,
+                    rest_to_graveyard: false, mandatory: false,
                 }),
             },
             ..Default::default()

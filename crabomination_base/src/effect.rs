@@ -6448,6 +6448,10 @@ pub enum Effect {
         /// graveyard" (Saheeli's Directive).
         #[serde(default)]
         rest_to_graveyard: bool,
+        /// With `max`, the controller picks which matches (CR 608.2d) and may
+        /// take none; `mandatory` makes it "put a [card]" (Cavalier of Thorns).
+        #[serde(default)]
+        mandatory: bool,
     },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the

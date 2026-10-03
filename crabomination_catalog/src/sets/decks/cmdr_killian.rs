@@ -136,7 +136,7 @@ pub fn armored_skyhunter() -> CardDefinition {
             max: Some(1),
             tapped: false,
             exile_rest: false,
-            rest_to_graveyard: false,
+            rest_to_graveyard: false, mandatory: false,
         })],
         ..creature("Armored Skyhunter", cost(&[generic(3), w()]), vec![CreatureType::Cat, CreatureType::Knight], 3, 3)
     }

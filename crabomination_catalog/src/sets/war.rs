@@ -3818,7 +3818,7 @@ pub fn viviens_arkbow() -> CardDefinition {
                 then: None,
                 max: Some(1),
                 tapped: false,
-                exile_rest: false, rest_to_graveyard: false,
+                exile_rest: false, rest_to_graveyard: false, mandatory: false,
             },
             ..Default::default()
         }],
@@ -5641,7 +5641,7 @@ pub fn tezzeret_master_of_the_bridge() -> CardDefinition {
                     then: None,
                     max: None,
                     tapped: false,
-                    exile_rest: true, rest_to_graveyard: false,
+                    exile_rest: true, rest_to_graveyard: false, mandatory: false,
                 },
                 ..Default::default()
             },
