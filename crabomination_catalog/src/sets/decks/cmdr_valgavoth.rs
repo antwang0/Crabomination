@@ -1,10 +1,6 @@
 //! Commander: the cards the **Endless Punishment** precon (DSC, Valgavoth,
 //! Harrower of Souls) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_valgavoth.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Torture Pit** — its +2 also reaches permanents opponents control
-//!   (the shared `NoncombatDamageToOpponentsBonus`).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
@@ -254,7 +250,7 @@ pub fn sadistic_shell_game() -> CardDefinition {
 
 /// Spiked Corridor // Torture Pit — unlocking the Corridor makes three
 /// Devils that ping when they die; the Pit adds 2 to your noncombat damage
-/// to opponents. Residual: the +2 also reaches permanents opponents control.
+/// to opponents (players only).
 pub fn spiked_corridor_torture_pit() -> CardDefinition {
     let devil = TokenDefinition {
         name: "Devil".into(),
@@ -293,7 +289,7 @@ pub fn spiked_corridor_torture_pit() -> CardDefinition {
                 static_abilities: vec![StaticAbility {
                     description: "If a source you control would deal noncombat damage to an opponent, it deals that \
                                   much damage plus 2 instead.",
-                    effect: StaticEffect::NoncombatDamageToOpponentsBonus { amount: 2, while_revolt: false },
+                    effect: StaticEffect::NoncombatDamageToOpponentsBonus { amount: 2, while_revolt: false, players_only: true },
                 }],
                 ..Default::default()
             },

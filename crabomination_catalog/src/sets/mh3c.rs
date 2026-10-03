@@ -1012,6 +1012,7 @@ pub fn aether_revolt() -> CardDefinition {
             effect: StaticEffect::NoncombatDamageToOpponentsBonus {
                 amount: 2,
                 while_revolt: true,
+                players_only: false,
             },
         }],
         triggered_abilities: vec![crate::card::TriggeredAbility {

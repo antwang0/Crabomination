@@ -292,6 +292,11 @@ fn spiked_corridor_torture_pit_both_doors() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     fcast(&mut g, 0, bolt, Some(Target::Player(1))).expect("bolt");
     assert_eq!(g.players[1].life, life - 5);
+    // "To an opponent" only: an opponent's 4/4 survives a Bolt.
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    fcast(&mut g, 0, bolt, Some(Target::Permanent(angel))).expect("bolt");
+    assert!(g.battlefield_find(angel).is_some(), "no +2 to a permanent");
 }
 
 /// Attacking: the permanent's controller sacrifices it or takes 5.

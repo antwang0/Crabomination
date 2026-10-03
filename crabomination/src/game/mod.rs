@@ -8996,8 +8996,9 @@ impl GameState {
                     .static_abilities
                     .iter()
                     .filter_map(|sa| match sa.effect {
-                        StaticEffect::NoncombatDamageToOpponentsBonus { amount, while_revolt } => {
-                            if while_revolt
+                        StaticEffect::NoncombatDamageToOpponentsBonus { amount, while_revolt, players_only } => {
+                            if (players_only && !matches!(ent, EntityRef::Player(_)))
+                                || while_revolt
                                 && !self.players[src_ctrl].permanent_left_battlefield_this_turn
                             {
                                 None
