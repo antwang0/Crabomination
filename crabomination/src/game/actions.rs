@@ -8151,6 +8151,7 @@ impl GameState {
                 c.turn_face_up();
                 c.cast_x_value = x_value;
             }
+            self.run_as_turned_face_up(card_id, p, &mut events);
             events.push(GameEvent::TurnedFaceUp { card_id });
             return Ok(events);
         }
@@ -8176,10 +8177,23 @@ impl GameState {
                 c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
             }
         }
+        self.run_as_turned_face_up(card_id, p, &mut events);
         // The returned events are dispatched once by `perform_action`; an extra
         // internal dispatch here double-fired turn-up triggers (CR 603.2).
         events.push(GameEvent::TurnedFaceUp { card_id });
         Ok(events)
+    }
+
+    /// CR 708.8 — the face-up card's "as this is turned face up" effect.
+    fn run_as_turned_face_up(&mut self, card_id: CardId, controller: usize, events: &mut Vec<GameEvent>) {
+        let Some(effect) = self.battlefield.find_by_id(card_id).and_then(|c| c.definition.as_turned_face_up.clone())
+        else {
+            return;
+        };
+        let ctx = crate::game::effects::EffectContext::for_ability(card_id, controller, None);
+        if let Ok(evs) = self.resolve_effect_driven(&effect, &ctx) {
+            events.extend(evs);
+        }
     }
 
     /// CR 702.143c — cast a foretold card from exile for its foretell cost.

@@ -4534,6 +4534,12 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub enters_as_copy: Option<EntersAsCopy>,
+    /// CR 708.8 — "As this is turned face up, …" (Gift of Doom's "you may
+    /// attach it to a creature"): run inside the turn-up special action, not
+    /// as a trigger, so it happens before any player gets priority or a state-
+    /// based action sees the permanent. Read off the face-up definition.
+    #[serde(default)]
+    pub as_turned_face_up: Option<crate::effect::Effect>,
     /// CR 614 — "As this enters, it becomes your choice of [modes]." An
     /// as-enters replacement that sets base P/T and grants keywords before the
     /// first SBA sweep, so a printed `*/*` (0/0) body never dies before the
