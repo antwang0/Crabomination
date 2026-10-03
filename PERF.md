@@ -3064,6 +3064,18 @@ suite            23,804 / 0 / 5; strict debug four-seat sweep (CRAB_ANSWER_LOG=s
 two-player pools cube / sos / sealed x 300 at seed 32201 (the base's): 7,500,
                  all decided; at 56001 cube has 7 CR 104.4 draws — the base
                  binary (2ae83329c) has the same 7
+later, after Pako's fetch counters (tip cfd4f0a7e):
+--bench          196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+pod              3 / 4 / 6 / 8 seats x 300 (seeds 27103-27108): 1,200, all decided;
+                 turns/game 32.06 / 45.08 / 69.25 / 96.65
+pod              every deck in six-seat blocks x 60 (seed 27200): 1,860, all
+                 decided, zero panics; --card-census x 120 (seed 27400, 3,720
+                 games): no unplayed card; the never-activated rows sampled
+                 (Gilded Goose, Bloodline Keeper) are situational — isolated
+                 probes activate them at two and four seats
+later, after CR 303.4f / Outcast / Eisenhorn / Shifting Shadow (tip 02c65e0bf):
+suite            23,810 / 0 / 5 (strict answer log, before Eisenhorn); 23,817 / 0 / 5 at
+                 the closing tip (d74cecffc + trackers); clippy 0
 ```
 
 ### 2026-10-03 (Commander session `01HLca3f`, third cycle) — guardrail, no perf work

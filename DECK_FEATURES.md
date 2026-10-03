@@ -37,36 +37,34 @@ they call a deck 🟡, the table wins.
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 11 | Teval (BGU) | 4: colossal_grave_reaver, conduit_of_worlds, shigeki_jukai_visionary, steward_of_the_harvest |
-| 28 | Bello (RG) | 1: grothama_all_devouring |
 | 50 | Temmet, Naktamun's Will (WUB) | 2: lost_monarch_of_ifnir, vizier_of_many_faces |
+| 55 | Zedruu the Greathearted (URW) | 1: jotun_grunt |
 | 63 | Rin and Seri, Inseparable (RGW) | 4: highcliff_felidar, jinnie_fay_jetmirs_second, pack_leader, showdown_of_the_skalds |
 | 66 | Inalla, Archmage Ritualist (UBR) | 4: magus_of_the_abyss, mairsil_the_pretender, shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 3: aurora_phoenix, durnan_of_the_yawning_portal, nalfeshnee |
 | 75 | Hazel of the Rootbloom (BG) | 4: cache_grab, hazel_of_the_rootbloom, hazels_brewmaster, sword_of_the_squeak |
-| 77 | Winter, Cynical Opportunist (BG) | 4: cemetery_tampering, into_the_pit, old_stickfingers, winter_cynical_opportunist |
+| 77 | Winter, Cynical Opportunist (BG) | 5: cemetery_tampering, into_the_pit, old_stickfingers, polluted_cistern_dim_oubliette, winter_cynical_opportunist |
 | 79 | Hearthhull, the Worldseed (BRG) | 3: eumidian_wastewaker, evendo_brushrazer, moraug_fury_of_akoum |
 | 86 | Dina, Essence Brewer (BG) | 4: deadly_brew, gorma_the_gullet, stensian_sanguinist, witherbloom_command |
 | 88 | Marath, Will of the Wild (RGW) | 3: fiery_justice, magus_of_the_arena, naya_soulbeast |
 | 90 | Breena, the Demagogue (WB) | 2: bold_plagiarist, victory_chimes |
 | 91 | Commodore Guff (URW) | 5: chandra_legacy_of_fire, leori_sparktouched_hunter, repeated_reverberation, sparkshaper_visionary, vronos_masked_inquisitor |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 100 | Ulalek, Fused Atrocity (WUBRG) | 2: bismuth_mindrender, twins_of_discord |
 | 103 | Kathril, Aspect Warper (WBG) | 4: archon_of_valors_reach, cairn_wanderer, tayam_luminous_enigma, yannik_scavenging_sentinel |
 | 104 | Vrondiss, Rage of Ancients (RG) | 3: berserkers_frenzy, dragonborn_champion, sword_of_hours |
 | 106 | Galea, Kindler of Hope (GWU) | 3: clay_golem, song_of_inspiration, sword_of_hours |
 | 107 | Firkraag, Cunning Instigator (UR) | 3: baeloth_barrityl_entertainer, firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 114 | Aminatou, the Fateshifter (WUB) | 3: aminatous_augury, portent, primordial_mist |
-| 117 | Kalamax, the Stormsire (GUR) | 1: haldan_avid_arcanist |
+| 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
 | 118 | Aminatou, Veil Piercer (WUB) | 8: aminatous_augury, athreos_shroud_veiled, fear_of_sleep_paralysis, one_with_the_multiverse, phenomenon_investigators, portent, secret_arcade_dusty_parlor, spirit_sisters_call |
 | 119 | Otrimi, the Ever-Playful (BGU) | 3: capricopian, mindleecher, vastwood_hydra |
 | 122 | Omo, Queen of Vesuva (GU) | 7: desert_warfare, horizon_of_progress, magus_of_the_candelabra, march_from_velis_vel, omo_queen_of_vesuva, rampant_frogantua, sunken_palace |
-| 125 | Henzie "Toolbox" Torre (BRG) | 7: first_responder, henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
+| 125 | Henzie "Toolbox" Torre (BRG) | 6: henzie_toolbox_torre, mezzio_mugger, next_of_kin, protection_racket, the_beamtown_bullies, turf_war |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 127 | Quintorius, History Chaser (RW) | 2: conspiracy_theorist, quintorius_loremaster |
-| 128 | Gavi, Nest Warden (URW) | 2: akim_the_soaring_wind, crystalline_resonance |
-| 132 | Sefris of the Hidden Ways (WUB) | 4: clay_golem, grave_endeavor, nihiloor, rod_of_absorption |
+| 132 | Sefris of the Hidden Ways (WUB) | 3: clay_golem, grave_endeavor, nihiloor |
 | 133 | Zimone, Mystery Unraveler (GU) | 4: deathmist_raptor, overgrown_zealot, primordial_mist, shigeki_jukai_visionary |
 | 135 | Kaust, Eyes of the Glade (RGW) | 4: boltbender, deathmist_raptor, tesak_judiths_hellhound, veiled_ascension |
 | 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
@@ -83,21 +81,18 @@ they call a deck 🟡, the table wins.
 | 152 | Anje Falkenrath (BR) | 3: chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 3: moria_scavenger, shelob_dread_weaver, summons_of_saruman |
-| 159 | Mirko, Obsessive Theorist (UB) | 3: marvo_deep_operative, vizier_of_many_faces, whispering_snitch |
-| 160 | Terra, Herald of Hope (RWB) | 6: edgar_master_machinist, espers_to_magicite, gogo_mysterious_mime, legions_to_ashes, the_warring_triad, umaro_raging_yeti |
-| 162 | Frodo + Sam (WBG) | 2: field_tested_frying_pan, gollum_obsessed_stalker |
+| 159 | Mirko, Obsessive Theorist (UB) | 2: marvo_deep_operative, vizier_of_many_faces |
+| 160 | Terra, Herald of Hope (RWB) | 5: edgar_master_machinist, espers_to_magicite, gogo_mysterious_mime, the_warring_triad, umaro_raging_yeti |
+| 162 | Frodo + Sam (WBG) | 1: gollum_obsessed_stalker |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 166 | The Wise Mothman (BGU) | 3: rampaging_yao_guai, struggle_for_project_purity, winding_constrictor |
 | 167 | T'Challa, the Black Panther (GW) | 3: ancestral_communion, conduit_of_worlds, panther_habit |
-| 168 | Esika, God of the Tree (WUBRG) | 1: ludevic_necrogenius |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
-| 172 | Inquisitor Greyfax (WUB) | 2: callidus_assassin, inquisitor_eisenhorn |
-| 173 | Dogmeat, Ever Loyal (RGW) | 2: brotherhood_outcast, vault_101_birthday_party |
 | 174 | Captain America, Team Leader (URW) | 3: captain_marvel_apex_avenger, heroic_return, winter_soldier_reborn_avenger |
 | 175 | The Swarmlord (GUR) | 5: ghyrson_starn_kelermorph, hierophant_bio_titan, magus_lucea_kane, the_first_tyrannic_war, the_red_terror |
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
-| 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 13: become_the_pilot, bigger_on_the_inside, bill_potts, clara_oswald, last_night_together, lunar_hatchling, me_the_immortal, psychic_paper, river_songs_diary, ryan_sinclair, strax_sontaran_nurse, the_fugitive_doctor, truth_or_consequences |
+| 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 12: become_the_pilot, bigger_on_the_inside, bill_potts, clara_oswald, last_night_together, lunar_hatchling, me_the_immortal, psychic_paper, ryan_sinclair, strax_sontaran_nurse, the_fugitive_doctor, truth_or_consequences |
 | 179 | Abaddon the Despoiler (UBR) | 2: the_lost_and_the_damned, the_ruinous_powers |
 | 180 | Heroes in a Half Shell (WUBRG) | 3: coin_of_mastery, heroes_in_a_half_shell, vigor |
 | 181 | Davros, Dalek Creator (UBR) | 8: day_of_the_moon, doomsday_confluence, genesis_of_the_daleks, rassilon_the_war_president, the_master_multiplied, the_toymakers_trap, weeping_angel, zygon_infiltrator |
