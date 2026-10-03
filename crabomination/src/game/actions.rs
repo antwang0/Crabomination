@@ -19315,6 +19315,7 @@ impl GameState {
         let chosen_tap_other = self.pending_ability_tap_other.take();
         let chosen_exile_other = take_opt_scratch!(self.pending_ability_exile_other);
         let chosen_sac_any = take_opt_scratch!(self.pending_ability_sac_any);
+        let chosen_exile_permanent = take_opt_scratch!(self.pending_ability_exile_permanent);
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
@@ -20554,7 +20555,37 @@ impl GameState {
             if candidates.len() < *count as usize {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            self.auto_pick_lowest_power(&candidates, *count as usize)
+            // CR 602.5b — the activator picks a single exile: a UI seat with
+            // a real choice is asked (and the activation replays with the
+            // pick); everyone else gets the lowest-power auto-pick.
+            if let Some(chosen) = chosen_exile_permanent.filter(|c| candidates.contains(c)) {
+                vec![chosen]
+            } else if *count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
+                let source_name =
+                    self.battlefield_find(card_id).map(|c| c.definition.name.to_string()).unwrap_or_default();
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseTarget {
+                        optional: false,
+                        source: card_id,
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name,
+                        description: "choose a permanent to exile (cost)".into(),
+                        extra_cast_slot: false,
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target,
+                        additional_targets: additional_targets.clone(),
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::ExilePermanent,
+                    },
+                }));
+                return Ok(());
+            } else {
+                self.auto_pick_lowest_power(&candidates, *count as usize)
+            }
         } else {
             Vec::new()
         };

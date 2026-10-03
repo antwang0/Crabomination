@@ -1672,6 +1672,9 @@ pub enum AbilityCostChoice {
     /// ({X}, {T}: … — Berta, Imbraham). Answered via a `ChooseAmount`
     /// modal; the resume replays with the chosen X.
     XValue,
+    /// `exile_permanent_cost` — "Exile a [filter] you control:" (Primordial
+    /// Mist's face-down permanent). Answered as a battlefield `Target`.
+    ExilePermanent,
 }
 
 impl ResumeContext {

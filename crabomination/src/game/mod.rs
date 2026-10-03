@@ -2374,6 +2374,10 @@ pub struct ResolutionScratch {
     /// subset, which may legally be empty.
     #[serde(skip, default)]
     pub(crate) pending_ability_sac_any: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "Exile a [filter] you control" cost (`exile_permanent_cost`).
+    #[serde(skip, default)]
+    pub(crate) pending_ability_exile_permanent: Option<CardId>,
     /// One-shot validated answer for a resolution-time choice whose suspend
     /// re-queues the originating effect as its continuation (`ChooseN`,
     /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
@@ -27400,6 +27404,15 @@ impl GameState {
                             self.pending_ability_tap_other = Some(id);
                         }
                     }
+                    K::ExilePermanent => {
+                        let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        if self.battlefield_find(id).is_none_or(|c| c.controller != activator) {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        }
+                        self.scratch.pending_ability_exile_permanent = Some(id);
+                    }
                     K::ExileOther => {
                         let DecisionAnswer::Cards(ids) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
@@ -27478,6 +27491,9 @@ impl GameState {
         }
         if self.scratch.pending_ability_sac_any.is_some() {
             self.scratch.pending_ability_sac_any = None;
+        }
+        if self.scratch.pending_ability_exile_permanent.is_some() {
+            self.scratch.pending_ability_exile_permanent = None;
         }
         r
     }
