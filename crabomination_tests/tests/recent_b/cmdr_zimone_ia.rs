@@ -174,6 +174,27 @@ fn kinetic_ooze_breaks_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand, "−1 cast, +1 drawn");
 }
 
+/// Kinetic Ooze — CR 601.2c / 115.1: at X 10 the doubling goes on the
+/// chosen other target creatures. With no artifact or enchantment to
+/// destroy, slot 0 stays empty and holds its place; the bot doubles its own
+/// creature and leaves the opponent's (and the Ooze, "other") alone.
+#[test]
+fn kinetic_ooze_doubles_on_its_targets() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let ko = g.add_card_to_hand(0, catalog::kinetic_ooze());
+    cast_x(&mut g, 0, ko, None, Some(10)).expect("ooze");
+    assert_eq!(counters(&g, ko), 10, "the Ooze is not an \"other\" creature");
+    assert_eq!(counters(&g, mine), 4);
+    assert_eq!(counters(&g, theirs), 2);
+}
+
 /// Lattice Library — a Fractal on entering and on the first {X} spell, sized
 /// by its study counters.
 #[test]

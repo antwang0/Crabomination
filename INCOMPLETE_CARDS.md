@@ -1977,7 +1977,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
-| 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |

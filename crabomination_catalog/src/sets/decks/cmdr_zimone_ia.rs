@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_zimone_ia.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Kinetic Ooze** — at X 10 or more it doubles the counters on each
-//!   other creature you control rather than on the targets you choose.
 //! - **Primo, the Unbounded** — the Fractal's counters are the batch's first
 //!   damage event's amount when several base-power-0 creatures connect.
 //! - **Unbound Flourishing** — an {X} activated ability countered before the
@@ -217,14 +215,13 @@ pub fn expansion_algorithm() -> CardDefinition {
 
 /// Kinetic Ooze — X counters; on entering, destroys an artifact or
 /// enchantment with mana value X or less, draws at X 5+, doubles counters
-/// at X 10+.
-///
-/// Residual: the doubling hits each other creature you control rather than
-/// targets you choose.
+/// at X 10+ on any number of other target creatures (`SlotGroups`: slot 0
+/// the artifact or enchantment, an empty one holding its place —
+/// `game/target_hole.rs`; slots 1.. the creatures).
 pub fn kinetic_ooze() -> CardDefinition {
     CardDefinition {
         enters_with_counters: x_counters(),
-        triggered_abilities: vec![etb(Effect::Seq(vec![
+        triggered_abilities: vec![etb(Effect::SlotGroups(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
@@ -236,13 +233,20 @@ pub fn kinetic_ooze() -> CardDefinition {
                 then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::If {
-                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
-                then: Box::new(Effect::DoubleCountersOnEach {
-                    what: Selector::EachPermanent(yours().and(R::OtherThanSource)),
-                    kind: CounterType::PlusOnePlusOne,
+            // "Any number of other target creatures": the targets are chosen
+            // whatever X is; only X 10 or more doubles them.
+            Effect::ApplyToTargets {
+                max_targets: 100,
+                min_targets: 0,
+                filter: R::Creature.and(R::OtherThanSource),
+                effect: Box::new(Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
+                    then: Box::new(Effect::DoubleCountersOnEach {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                    }),
+                    else_: Box::new(Effect::Noop),
                 }),
-                else_: Box::new(Effect::Noop),
             },
         ]))],
         ..creature("Kinetic Ooze", cost(&[x(), g()]), vec![CreatureType::Ooze], 0, 0)
