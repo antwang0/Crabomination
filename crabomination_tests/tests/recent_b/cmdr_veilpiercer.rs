@@ -177,6 +177,22 @@ fn fear_of_sleep_paralysis_stuns_for_good() {
     .expect("remove");
     let c = g.battlefield_find(bear).unwrap();
     assert!(c.tapped && c.counter_count(CounterType::Stun) == 1, "still stunned");
+    // CR 122.5 — nor does an effect that MOVES counters (moving takes the
+    // counter off the first permanent).
+    let other = g.add_card_to_battlefield(1, catalog::hill_giant());
+    for e in [
+        Effect::MoveCounter {
+            from: Selector::ExactObjects(vec![bear]),
+            to: Selector::ExactObjects(vec![other]),
+            kind: CounterType::Stun,
+            amount: crabomination::card::Value::ONE,
+        },
+        Effect::MoveAllCounters { from: Selector::ExactObjects(vec![bear]), to: Selector::ExactObjects(vec![other]) },
+    ] {
+        g.resolve_effect(&e, &ctx).expect("move");
+    }
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 1, "the stun counter stays");
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::Stun), 0);
 }
 
 /// Mirrormade enters as a copy of an artifact.

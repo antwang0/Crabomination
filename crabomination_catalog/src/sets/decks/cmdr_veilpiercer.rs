@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_veilpiercer.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Fear of Sleep Paralysis** — an effect that moves counters still takes
-//!   an opponent's stun counter.
 //! - **One with the Multiverse** — the free cast is from hand only, not from
 //!   the top of the library.
 
@@ -131,8 +129,7 @@ pub fn diabolic_vision() -> CardDefinition {
 
 /// Fear of Sleep Paralysis — flying; eerie taps and stuns up to one creature;
 /// opponents' stun counters don't come off — not by an untap (step or
-/// effect) nor a "remove a counter" effect. Residual: an effect that MOVES
-/// counters still takes one.
+/// effect), a "remove a counter" effect, or an effect that moves counters.
 pub fn fear_of_sleep_paralysis() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
