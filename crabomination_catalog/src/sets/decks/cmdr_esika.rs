@@ -1,10 +1,6 @@
 //! Commander: the cards the **From Cute to Brute** Secret Lair Commander
 //! deck (SLD, Esika, God of the Tree) needed beyond what the catalog had —
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
-//!   creature card; Olag is a plain 4/4 with counters, not a copy.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -981,25 +977,46 @@ pub fn liliana_heretical_healer() -> CardDefinition {
     })
 }
 
-/// Ludevic, Necrogenius // Olag, Ludevic's Hubris.
-///
-/// ⚠ Residual: transforms for {U}{U}{B}{B} exiling one creature card; Olag
-/// is a 4/4 with counters, not a copy.
+/// Ludevic, Necrogenius // Olag, Ludevic's Hubris — transforms exiling X
+/// creature cards; Olag copies the priciest of them.
 pub fn ludevic_necrogenius() -> CardDefinition {
+    // CR 712.14 / 707.9b — "as this transforms", it becomes a copy of a
+    // creature card the cost exiled, then gets one +1/+1 counter per such card.
     let olag = CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
-            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
-        }],
+        as_transforms_effect: Some(Effect::Seq(vec![
+            Effect::BecomeCopyOfExiledCard {
+                what: Selector::take_priciest(
+                    Selector::MatchingAmong { inner: Box::new(Selector::CardExiledWithSource), filter: R::Creature },
+                    Value::ONE,
+                ),
+                base_pt: Some((4, 4)),
+            },
+            Effect::AmendCopiableValues {
+                what: Selector::This,
+                name: Some("Olag, Ludevic's Hubris"),
+                set_creature_types: None,
+                add_creature_types: vec![CreatureType::Zombie],
+                legendary: true,
+                add_colors: vec![Color::Blue, Color::Black],
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CardsExiledWithSourceMatching(R::Creature),
+            },
+        ])),
         ..legendary(creature("Olag, Ludevic's Hubris", ManaCost::default(), vec![CreatureType::Zombie], 4, 4))
     };
     let mill = || Effect::Mill { who: Selector::You, amount: Value::ONE };
     legendary(CardDefinition {
         triggered_abilities: vec![etb(mill()), on_attack(mill())],
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[u(), u(), b(), b()]),
+            mana_cost: cost(&[x(), u(), u(), b(), b()]),
             sorcery_speed: true,
             exile_other_filter: Some((R::Creature.and(R::InYourGraveyard), 1)),
+            exile_other_x: true,
+            exile_other_linked: true,
+            x_nonzero: true,
             effect: transform_self(),
             ..Default::default()
         }],

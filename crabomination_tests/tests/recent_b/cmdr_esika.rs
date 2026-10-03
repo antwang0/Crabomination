@@ -667,3 +667,44 @@ fn valki_exiles_the_chosen_creature_card() {
     assert!(g.exile.iter().any(|c| c.id == bear));
     assert!(g.players[1].hand.iter().any(|c| c.id == angel));
 }
+
+/// Ludevic exiles X creature cards (X can't be 0) and, as it transforms
+/// (CR 712.14), Olag becomes a copy of one of them except it's named Olag,
+/// 4/4, a legendary blue and black Zombie (CR 707.9b), with X +1/+1 counters.
+/// The exiled cards are "exiled with" Ludevic (CR 607.2a); an Island stays.
+#[test]
+fn ludevic_becomes_olag_as_a_copy() {
+    use crabomination::card::{CreatureType, Supertype};
+    let mut g = main_phase();
+    let ludevic = g.add_card_to_battlefield(0, catalog::ludevic_necrogenius());
+    for def in [catalog::serra_angel(), catalog::grizzly_bears(), catalog::llanowar_elves(), catalog::island()] {
+        g.add_card_to_graveyard(0, def);
+    }
+    let x = |g: &mut GameState, x: u32| {
+        flood(g);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ludevic,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: Some(x),
+            mode: None,
+        })
+    };
+    assert!(x(&mut g, 0).is_err(), "X can't be 0");
+    assert!(x(&mut g, 4).is_err(), "only three creature cards to exile");
+    x(&mut g, 3).expect("exile all three");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 1, "the Island stays");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(ludevic)).count(), 3);
+    let olag = g.computed_permanent(ludevic).expect("still on the battlefield");
+    assert_eq!(olag.def.name, "Olag, Ludevic's Hubris");
+    assert_eq!((olag.power, olag.toughness), (7, 7), "4/4 plus three counters");
+    assert!(olag.keywords().contains(&Keyword::Flying), "a copy of Serra Angel");
+    assert!(olag.subtypes().creature_types.contains(&CreatureType::Angel));
+    assert!(olag.subtypes().creature_types.contains(&CreatureType::Zombie));
+    assert!(olag.supertypes().contains(&Supertype::Legendary));
+    for c in [Color::White, Color::Blue, Color::Black] {
+        assert!(olag.colors.contains(c), "{c:?}");
+    }
+}

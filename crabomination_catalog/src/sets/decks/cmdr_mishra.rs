@@ -89,6 +89,8 @@ pub fn mishra_eminent_one() -> CardDefinition {
                     name: Some("Mishra's Warform"),
                     set_creature_types: None,
                     add_creature_types: vec![],
+                    legendary: false,
+                    add_colors: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,

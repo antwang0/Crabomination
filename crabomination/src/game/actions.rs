@@ -20297,6 +20297,9 @@ impl GameState {
         if ability.energy_x_cost && self.players[p].energy < x_value.unwrap_or(0) {
             return Err(GameError::InsufficientEnergy);
         }
+        if ability.x_nonzero && x_value.unwrap_or(0) == 0 {
+            return Err(GameError::SelectionRequirementViolated);
+        }
 
         // Pre-flight collect-evidence gate (CR 701.59): reject cleanly when the
         // graveyard can't supply the required total mana value, so tap/mana
@@ -22575,7 +22578,10 @@ impl GameState {
                     None => continue,
                 }
             };
-            if let Some(card) = Self::take_card(&mut self.players[owner].graveyard, other_cid) {
+            if let Some(mut card) = Self::take_card(&mut self.players[owner].graveyard, other_cid) {
+                if ability.exile_other_linked {
+                    card.exiled_with = Some(card_id);
+                }
                 self.exile.push(card);
                 self.cost_exiled_cards.push(other_cid);
                 self.players[p].cards_exiled_this_turn = self.players[p]

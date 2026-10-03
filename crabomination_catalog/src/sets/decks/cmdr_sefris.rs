@@ -468,6 +468,8 @@ pub fn phantom_steed() -> CardDefinition {
                     name: None,
                     set_creature_types: None,
                     add_creature_types: vec![CreatureType::Illusion],
+                    legendary: false,
+                    add_colors: vec![],
                 },
             ])),
         ],

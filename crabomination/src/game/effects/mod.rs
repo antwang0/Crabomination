@@ -12612,7 +12612,7 @@ impl GameState {
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
             }
-            Effect::AmendCopiableValues { what, name, set_creature_types, add_creature_types } => {
+            Effect::AmendCopiableValues { what, name, set_creature_types, add_creature_types, legendary, add_colors } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
@@ -12627,6 +12627,14 @@ impl GameState {
                         for t in add_creature_types {
                             if !types.contains(t) {
                                 types.push(*t);
+                            }
+                        }
+                        if *legendary && !def.supertypes.contains(&crate::card::Supertype::Legendary) {
+                            def.supertypes.push(crate::card::Supertype::Legendary);
+                        }
+                        for col in add_colors {
+                            if !def.color_indicator.contains(col) {
+                                def.color_indicator.push(*col);
                             }
                         }
                         c.set_copiable_definition(std::sync::Arc::new(def));

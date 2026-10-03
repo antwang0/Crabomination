@@ -8960,7 +8960,7 @@ pub enum Effect {
     /// permanent `what` names, so a copy of it carries it too: "except its
     /// name is …" (Mishra's Warform), "except it's a … Zombie" (creature types
     /// replaced — The Scarab God), "… an Illusion in addition to its other
-    /// types" (Phantom Steed).
+    /// types" (Phantom Steed), "… a legendary blue and black Zombie" (Olag).
     AmendCopiableValues {
         what: Selector,
         #[serde(default, with = "crate::static_str_serde::opt")]
@@ -8969,6 +8969,12 @@ pub enum Effect {
         set_creature_types: Option<Vec<crate::card::CreatureType>>,
         #[serde(default)]
         add_creature_types: Vec<crate::card::CreatureType>,
+        /// "… it's legendary … in addition to its other types" (Olag).
+        #[serde(default)]
+        legendary: bool,
+        /// "… blue and black … in addition to its other colors" (Olag).
+        #[serde(default)]
+        add_colors: Vec<crate::mana::Color>,
     },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and

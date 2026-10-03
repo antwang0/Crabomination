@@ -541,6 +541,8 @@ pub fn the_scarab_god() -> CardDefinition {
                     name: None,
                     set_creature_types: Some(vec![CreatureType::Zombie]),
                     add_creature_types: vec![],
+                    legendary: false,
+                    add_colors: vec![],
                 },
             ]),
             ..Default::default()

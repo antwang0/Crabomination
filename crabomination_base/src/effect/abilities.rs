@@ -3884,6 +3884,14 @@ pub struct ActivatedAbility {
     /// creature cards from a single graveyard:" — Night Soil).
     #[serde(default)]
     pub exile_other_any_graveyard: bool,
+    /// `exile_other_filter`'s cards are "exiled with" the source, stamped
+    /// `exiled_with` so its effects can read them back (CR 607.2a — Ludevic).
+    #[serde(default)]
+    pub exile_other_linked: bool,
+    /// "X can't be 0" (Ludevic, Necrogenius): an activation at X = 0 is
+    /// rejected.
+    #[serde(default)]
+    pub x_nonzero: bool,
     /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
     /// activation's generic mana cost is reduced by one for each counter
     /// of `kind` on the source permanent (clamped at the printed generic

@@ -3064,7 +3064,7 @@ Map). ⚠ Found on the way: **CR 712.2 — a transforming DFC's back face was
 castable** — `CastSpellBack` swapped in any back and cast it for its
 (empty) cost, so Insectile Aberration or Jace, Telepath Unbound came down
 from hand for nothing; a back that prints no mana cost is now refused.
-Residuals: **Ludevic** (Cosima's voyage shipped 2026-09-26: `TriggerZone::WhileSelfExiled` + `Effect::Voyage`). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
+Residual-free since 2026-10-03 (`01HA5hiK`: Ludevic exiles X, Olag copies — `exile_other_linked`, `x_nonzero`, `AmendCopiableValues` legendary/colors; Cosima's voyage shipped 2026-09-26). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 
 The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &
