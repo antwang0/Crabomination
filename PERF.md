@@ -3015,6 +3015,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01B4jiWU`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `is_stack_ability_id` range
+check at the top of `evaluate_requirement_static` (CR 115.1 — stack abilities
+have their own ids); `push_stack` stamps a trigger by one pass over the stack
+(no new `GameState` field — the stamp is stateless, the 1,680-byte gate
+holds); one `mentions_stack_ability` walk per enumerated filter; the
+activation event sums the life actually paid. Everything else is behind
+effect variants only Commander cards carry. 4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (tip 06b370af2); games_per_s 281.1; determinism ok
+pod              3 / 4 / 6 / 8 seats x 500 (seeds 53003-53008): 2,000, all
+                 decided; turns/game 32.91 / 45.96 / 67.51 / 95.92
+pod              every deck 1-183 in six-seat blocks x 150 (seeds 54001+):
+                 4,650, all decided, zero panics; card census over the ten
+                 touched decks (seed 55001, 600 games): one board cap — a real
+                 990-token board (Everlasting Torment's wither on Chain
+                 Reaction, Flourishing Defenses' Elf per counter), not a loop
+suite            23,791 at 06b370af2 after two fixes it found; clippy 0
+```
+
 ### 2026-10-03 (Commander session `01HLca3f`, third cycle) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: an investigate is one wrapper frame
