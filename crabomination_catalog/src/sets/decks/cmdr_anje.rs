@@ -284,28 +284,32 @@ pub fn call_to_the_netherworld() -> CardDefinition {
 }
 
 /// Chainer, Nightmare Adept — discard to cast a creature from your graveyard
-/// this turn; creatures you didn't cast from hand get haste.
-/// Residual: the permission names one card as it resolves.
+/// this turn; creatures you didn't cast from hand get haste. The permission
+/// covers every creature card there, one cast among them
+/// (`OneCastAmongGranted`).
+/// Residual: a creature card put into your graveyard after the activation
+/// isn't covered.
 pub fn chainer_nightmare_adept() -> CardDefinition {
+    let yard = || Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: Zone::Graveyard,
+        filter: R::Creature.and(R::Nonland),
+    };
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Any, 1)),
             once_per_turn: true,
-            effect: Effect::GrantMayPlay {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: R::Creature,
-                    }),
-                    count: Box::new(Value::ONE),
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: yard(),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: true,
-                any_color: false,
-            },
+                Effect::OneCastAmongGranted { what: yard() },
+            ]),
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

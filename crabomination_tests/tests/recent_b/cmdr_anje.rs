@@ -217,6 +217,20 @@ fn chainer_hastes_what_you_did_not_cast_from_hand() {
     let fresh = g.add_card_to_hand(0, catalog::grizzly_bears());
     cast(&mut g, fresh, &[]).expect("cast from hand");
     assert!(!g.computed_permanent(fresh).unwrap().keywords().contains(&Keyword::Haste));
+
+    // "A creature spell": any one of them, the player's pick when it's cast
+    // (CR 601.2) — the later one here — and then no second.
+    let mut g = main_phase(2);
+    let chainer = g.add_card_to_battlefield(0, catalog::chainer_nightmare_adept());
+    let first = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let second = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.add_card_to_hand(0, catalog::swamp());
+    activate(&mut g, chainer, 0).expect("discard");
+    flood(&mut g, 0);
+    cast_granted(&mut g, second).expect("the angel");
+    assert!(g.battlefield_find(second).is_some());
+    flood(&mut g, 0);
+    assert!(cast_granted(&mut g, first).is_err(), "one creature spell");
 }
 
 /// Hedonist's Trove exiles an opponent's graveyard, and you may cast from it.
