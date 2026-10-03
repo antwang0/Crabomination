@@ -377,9 +377,35 @@ fn cr_800_4_for_any_player_asks_every_opponent() {
     assert!(g.evaluate_predicate(&pred, &ctx), "the second opponent counts");
 }
 
+/// A per-opponent resolution-time pick (the shape Geth's Summons had before
+/// it took targets) parks and resumes bound to its own opponent.
 #[test]
 fn cr_608_2_a_parked_per_opponent_body_resumes_bound_to_its_opponent() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R, Value, Zone};
     use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    let one_from = |who: PlayerRef| Effect::MoveChosen {
+        from: Selector::CardsInZone { who, zone: Zone::Graveyard, filter: R::Creature },
+        filter: None,
+        count: Value::ONE,
+        up_to: true,
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    let summons = CardDefinition {
+        name: "Parked Summons",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            one_from(PlayerRef::You),
+            Effect::ForEachOpponent {
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::PoisonCountersOf(PlayerRef::Triggerer), Value::Const(3)),
+                    then: Box::new(one_from(PlayerRef::Triggerer)),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        ]),
+        ..Default::default()
+    };
     let mut g = two_player_game();
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -387,9 +413,7 @@ fn cr_608_2_a_parked_per_opponent_body_resumes_bound_to_its_opponent() {
     g.players[1].poison_counters = 3;
     let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_graveyard(1, catalog::serra_angel());
-    let spell = g.add_card_to_hand(0, catalog::geths_summons());
-    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(2);
+    let spell = g.add_card_to_hand(0, summons);
     g.players[0].wants_ui = true;
     g.perform_action(GameAction::CastSpell {
         card_id: spell,

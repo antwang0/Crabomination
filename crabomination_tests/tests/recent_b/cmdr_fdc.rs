@@ -719,8 +719,9 @@ fn cr_603_2c_contaminant_grafter_proliferates_once_across_players() {
     assert_eq!((g.players[1].poison_counters, g.players[2].poison_counters), (2, 2), "one proliferate");
 }
 
-/// CR 702.166 — corrupted: one creature from your graveyard, plus one from
-/// each opponent at three or more poison (the other opponent's is left).
+/// CR 702.166 / 601.2c — corrupted: up to one target creature card from your
+/// graveyard plus one from each opponent at three or more poison as it is
+/// cast; an uncorrupted opponent's graveyard can't be targeted.
 #[test]
 fn cr_702_166_geths_summons_takes_from_each_corrupted_opponent() {
     let mut g = multi_player_game(3);
@@ -732,7 +733,9 @@ fn cr_702_166_geths_summons_takes_from_each_corrupted_opponent() {
     let safe = g.add_card_to_graveyard(2, catalog::hill_giant());
     g.players[1].poison_counters = 3;
     let spell = g.add_card_to_hand(0, catalog::geths_summons());
-    cast(&mut g, spell, &[]);
+    assert!(try_cast(&mut g, 0, spell, &[Target::Permanent(safe)]).is_err(), "seat 2 isn't corrupted");
+    let spell = g.add_card_to_hand(0, catalog::geths_summons());
+    cast(&mut g, spell, &[Target::Permanent(mine), Target::Permanent(theirs)]);
     assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0));
     assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
     assert!(g.battlefield_find(safe).is_none());
@@ -757,6 +760,23 @@ fn cr_702_166_glissas_retriever_rebuys_per_corrupted_opponent() {
     cast(&mut g, murder, &[Target::Permanent(r)]);
     assert!(g.exile.iter().any(|c| c.id == r), "exiled, not in the graveyard");
     assert_eq!(g.players[0].hand.len(), hand + 2, "two corrupted opponents");
+}
+
+/// Glissa's Retriever exiles itself on death whether or not anyone is
+/// corrupted ("exile it" has no condition); with X = 0 nothing comes back.
+#[test]
+fn glissas_retriever_exiles_itself_even_with_no_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.add_card_to_battlefield(0, catalog::glissas_retriever());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, &[Target::Permanent(r)]);
+    assert!(g.exile.iter().any(|c| c.id == r));
+    assert_eq!(g.players[0].hand.len(), hand);
 }
 
 /// X is the mana spent; each corrupted opponent adds another Wurm.

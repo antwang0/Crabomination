@@ -3,7 +3,7 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, Zone, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
@@ -257,59 +257,62 @@ pub fn contaminant_grafter() -> CardDefinition {
     }
 }
 
-/// Geth's Summons — a creature back from your graveyard, and one from each
-/// corrupted opponent's. Residual: Both picks are made at resolution rather than
-/// targeted, and "three or more poison as you cast" is read then too.
+/// Geth's Summons — up to one target creature card from your graveyard and,
+/// for each opponent corrupted as you cast it, up to one from theirs onto the
+/// battlefield under your control (CR 601.2c: one target per graveyard).
 pub fn geths_summons() -> CardDefinition {
-    let to_you = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false };
-    let one_from = |who: PlayerRef| Effect::MoveChosen {
-        from: Selector::CardsInZone { who, zone: Zone::Graveyard, filter: R::Creature },
-        filter: None,
-        count: Value::ONE,
-        up_to: true,
-        to: to_you(),
-    };
     CardDefinition {
         name: "Geth's Summons",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            one_from(PlayerRef::You),
-            Effect::ForEachOpponent {
-                body: Box::new(Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::PoisonCountersOf(PlayerRef::Triggerer),
-                        Value::Const(3),
-                    ),
-                    then: Box::new(one_from(PlayerRef::Triggerer)),
-                    else_: Box::new(Effect::Noop),
+        effect: Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature
+                    .and(R::InYourGraveyard.or(R::InOpponentGraveyard.and(R::ControllerCorrupted))),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),
-            },
-        ]),
+            }),
+        },
         ..Default::default()
     }
 }
 
-/// Glissa's Retriever — haste, toxic 3, evasion, and a corrupted death that
-/// exiles it to rebuy a card per corrupted opponent. Residual: The rebuy is picked
-/// at resolution of the one trigger, not targeted by a reflexive one.
+/// Glissa's Retriever — haste, toxic 3, evasion; when it dies it exiles
+/// itself, and when it does a reflexive trigger (CR 603.7) returns up to X
+/// target cards from your graveyard to hand, X the corrupted opponents.
 pub fn glissas_retriever() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Haste, Keyword::Toxic(3), Keyword::CantBeBlockedByPowerAtMost(2)],
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::If {
-            cond: corrupted(),
-            then: Box::new(Effect::Seq(vec![
-                Effect::Move { what: Selector::This, to: ZoneDest::Exile },
-                Effect::MoveChosen {
-                    from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Any },
-                    filter: None,
-                    count: corrupted_opponents(),
-                    up_to: true,
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            ])),
-            else_: Box::new(Effect::Noop),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::SelectorExists(Selector::LastMoved),
+                    Predicate::ValueAtLeast(corrupted_opponents(), Value::ONE),
+                ]),
+                then: Box::new(Effect::WithX {
+                    x: corrupted_opponents(),
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::CapTargetsAtX {
+                            body: Box::new(Effect::ApplyToTargets {
+                                max_targets: 8,
+                                min_targets: 0,
+                                filter: R::InYourGraveyard,
+                                effect: Box::new(Effect::Move {
+                                    what: Selector::Target(0),
+                                    to: ZoneDest::Hand(PlayerRef::You),
+                                }),
+                            }),
+                        }),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..creature(
             "Glissa's Retriever",
             cost(&[generic(5), g()]),

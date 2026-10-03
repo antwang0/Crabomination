@@ -5045,10 +5045,14 @@ impl GameState {
                 self.active_player_idx == owner
             }
             R::ControllerCorrupted => {
+                // Off the battlefield (a graveyard card — Geth's Summons) the
+                // card's owner is the player asked about.
                 let owner = match target {
-                    Target::Permanent(cid) => {
-                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
-                    }
+                    Target::Permanent(cid) => self
+                        .bf_hint_or_find(*cid, hint)
+                        .map(|c| c.controller)
+                        .or_else(|| self.find_card_anywhere(*cid).map(|c| c.owner))
+                        .unwrap_or(controller),
                     Target::Player(p) => *p,
                 };
                 self.players[owner].poison_counters >= 3
