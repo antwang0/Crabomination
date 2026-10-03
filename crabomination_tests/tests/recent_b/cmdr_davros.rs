@@ -459,3 +459,23 @@ fn the_sound_of_drums_doubles_combat_damage() {
     assert_eq!(life1 - g.players[1].life, 4, "the enchanted bear hits for double");
     assert_eq!(life2 - g.players[2].life, 2, "the other bear doesn't");
 }
+
+/// Vislor Turlough handed to an opponent is goaded for as long as they control
+/// it; CR 611.2b — once control moves the goad is over, even if it comes back.
+#[test]
+fn vislor_turlough_goaded_only_while_they_control_it() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Duration, PlayerRef};
+    let mut g = main_phase(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let v = g.add_card_to_hand(0, catalog::vislor_turlough());
+    cast(&mut g, v, None).expect("cast");
+    let them = g.battlefield_find(v).expect("on the battlefield").controller;
+    assert_ne!(them, 0, "given away");
+    assert!(g.goaded_by_player(g.battlefield_find(v).unwrap(), 0));
+    let take = |to: Option<PlayerRef>| Effect::GainControl { what: Selector::This, to, duration: Duration::Permanent };
+    run(&mut g, take(None), v);
+    assert!(!g.is_goaded(g.battlefield_find(v).unwrap()), "back with us");
+    run(&mut g, take(Some(PlayerRef::Seat(them))), v);
+    assert!(!g.is_goaded(g.battlefield_find(v).unwrap()), "the goad lapsed for good");
+}

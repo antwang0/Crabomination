@@ -1251,8 +1251,8 @@ pub fn this_is_how_it_ends() -> CardDefinition {
 }
 
 /// Time Reaper — flying, haste; its combat damage puts a target face-up card
-/// that player owns in exile on the bottom of their library, and you gain 3.
-/// Residual: the life is gained whether or not a card moved.
+/// that player owns in exile on the bottom of their library; if it does, you
+/// gain 3.
 pub fn time_reaper() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
@@ -1276,8 +1276,8 @@ pub fn time_reaper() -> CardDefinition {
 }
 
 /// Vislor Turlough — Doctor's companion; entering, you may give it to an
-/// opponent, goaded; your end step draws one, then you lose life equal to
-/// your hand. Residual: goaded for the rest of the game.
+/// opponent, goaded for as long as they control it; your end step draws one,
+/// then you lose life equal to your hand.
 pub fn vislor_turlough() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -1285,7 +1285,7 @@ pub fn vislor_turlough() -> CardDefinition {
                 description: "Have an opponent gain control of Vislor Turlough?".into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::GainControl { what: Selector::This, to: Some(PlayerRef::HostileOpponent), duration: Duration::Permanent },
-                    Effect::GoadForTheGame { what: Selector::This },
+                    Effect::GoadWhile { what: Selector::This, hold: crate::effect::GoadLasts::WhileControllerKeepsIt },
                 ])),
             }),
             step(
