@@ -2454,10 +2454,14 @@ impl GameState {
     pub(super) fn resolve_zonedest_player(&self, dest: &ZoneDest, ctx: &EffectContext) -> ZoneDest {
         let flatten = |who: &PlayerRef| -> PlayerRef {
             match who {
-                // `Target(n)` reads the caster's target list, which the bare
-                // placement context doesn't have (The Beamtown Bullies'
-                // "target opponent … under their control").
-                PlayerRef::OwnerOf(_) | PlayerRef::ControllerOf(_) | PlayerRef::Target(_) => {
+                // `Target(n)` and `Triggerer` read the caster's targets and the
+                // trigger's subject, which the bare placement context doesn't
+                // have (The Beamtown Bullies' "target opponent … under their
+                // control").
+                PlayerRef::OwnerOf(_)
+                | PlayerRef::ControllerOf(_)
+                | PlayerRef::Target(_)
+                | PlayerRef::Triggerer => {
                     if let Some(p) = self.resolve_player(who, ctx) {
                         PlayerRef::Seat(p)
                     } else {
