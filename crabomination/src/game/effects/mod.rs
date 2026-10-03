@@ -41976,6 +41976,13 @@ impl GameState {
                                 if !on_bf && exclude_source && ctx.source == Some(c.id) {
                                     return false;
                                 }
+                                // CR 111.7 / 111.8 — a token off the
+                                // battlefield is not a card and is about to
+                                // cease to exist (SBA 704.5d); mid-resolution
+                                // it sat in the graveyard as "a creature card".
+                                if !on_bf && c.is_token {
+                                    return false;
+                                }
                                 if on_bf {
                                     self.evaluate_requirement_static(
                                         filter, &Target::Permanent(c.id), ctx.controller, ctx.source,

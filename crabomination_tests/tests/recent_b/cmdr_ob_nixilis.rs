@@ -342,6 +342,32 @@ fn infernal_offering_trades_with_an_opponent() {
     assert_eq!((1..3).map(|s| named(&g, s, "Grizzly Bears").len()).sum::<usize>(), 2);
 }
 
+/// CR 111.7 / 111.8 — a token sacrificed to Infernal Offering's first half is
+/// not "a creature card" in its owner's graveyard for the second: the strict
+/// pods offered it, and the ask went stale when the token ceased to exist.
+#[test]
+fn cr_111_8_infernal_offering_never_returns_a_sacrificed_token() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let zombie = crabomination::card::TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    };
+    g.add_token_to_battlefield(1, &zombie);
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::swamp());
+        }
+    }
+    let offering = g.add_card_to_hand(0, catalog::infernal_offering());
+    cast(&mut g, offering, None, vec![], None).expect("cast");
+    assert!(!g.battlefield.iter().any(|c| c.controller == 1), "the token stays gone");
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1, "your Bear card comes back");
+}
+
 /// Morbid — the cast trigger copies it (CR 707.10), so two creatures die.
 #[test]
 fn malicious_affliction_copies_itself_with_morbid() {
