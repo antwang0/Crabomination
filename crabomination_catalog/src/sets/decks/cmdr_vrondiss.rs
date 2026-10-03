@@ -16,7 +16,7 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, Selector, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{cast_is_noncreature, draw, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{cast_is_noncreature, choose_some_then, chosen_one, draw, etb, on_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate,
     StaticAbility, StaticEffect, ZoneDest,
@@ -99,9 +99,8 @@ pub fn bag_of_tricks() -> CardDefinition {
 }
 
 /// Berserker's Frenzy — before blockers: roll two d20, keep the higher. 1–14:
-/// creatures block this turn if able; 15–20: you choose this turn's blocks.
-/// Residual: the 1–14 "any number of creatures" is every creature your
-/// opponents control.
+/// any number of creatures you choose block this turn if able; 15–20: you
+/// choose this turn's blocks.
 pub fn berserkers_frenzy() -> CardDefinition {
     CardDefinition {
         cast_only_before_blockers_step: true,
@@ -119,11 +118,17 @@ pub fn berserkers_frenzy() -> CardDefinition {
                     (
                         1,
                         14,
-                        Effect::GrantKeyword {
-                            what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-                            keyword: Keyword::MustBlock,
-                            duration: Duration::EndOfTurn,
-                        },
+                        choose_some_then(
+                            Selector::EachPermanent(R::Creature),
+                            PlayerRef::You,
+                            Value::count(Selector::EachPermanent(R::Creature)),
+                            true,
+                            Effect::GrantKeyword {
+                                what: chosen_one(),
+                                keyword: Keyword::MustBlock,
+                                duration: Duration::EndOfTurn,
+                            },
+                        ),
                     ),
                     (15, 20, Effect::ChooseBlocksThisTurn),
                 ],

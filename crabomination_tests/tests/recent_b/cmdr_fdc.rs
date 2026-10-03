@@ -5645,8 +5645,8 @@ fn cr_510_2_sword_of_hours_rolls_once_for_a_trampler() {
 }
 
 /// CR 706.6 — Berserker's Frenzy rolls two d20 and ignores the lower: a 3 and
-/// a 17 is a 17 (you choose the blocks); a 2 and a 9 is a 9 (their creatures
-/// must block). Illegal once combat is past the Declare Attackers step.
+/// a 17 is a 17 (you choose the blocks); a 2 and a 9 is a 9 (the creatures
+/// you choose must block). Illegal once combat is past the Declare Attackers step.
 #[test]
 fn cr_706_6_berserkers_frenzy_keeps_the_higher_d20() {
     let mut g = main_phase();
@@ -5657,13 +5657,20 @@ fn cr_706_6_berserkers_frenzy_keeps_the_higher_d20() {
     assert_eq!(g.block_chooser(), Some(0), "15-20: you choose the blocks");
     assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustBlock));
 
+    // 1-14: the caster chooses which creatures (any number) must block.
     let mut g = main_phase();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spared = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let f = g.add_card_to_hand(0, catalog::berserkers_frenzy());
-    g.decider = rolls(&[2, 9]);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DieRoll(2),
+        DecisionAnswer::DieRoll(9),
+        DecisionAnswer::Cards(vec![bear]),
+    ]));
     cast(&mut g, f, &[]);
     assert_eq!(g.block_chooser(), None);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustBlock));
+    assert!(!g.computed_permanent(spared).unwrap().keywords().contains(&Keyword::MustBlock));
 
     let mut g = main_phase();
     g.step = TurnStep::PostCombatMain;
