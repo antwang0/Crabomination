@@ -1,10 +1,6 @@
 //! Commander: the cards the **Subjective Reality** precon (C18, Aminatou,
 //! the Fateshifter) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_aminatou.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Primordial Mist** — exiling the face-down permanent is the ability's
-//!   target, not its cost.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
@@ -308,8 +304,8 @@ pub fn portent() -> CardDefinition {
     )
 }
 
-/// Primordial Mist — manifest each end step; a face-down permanent may be
-/// exiled to play it this turn. Residual: the exile is the ability's target.
+/// Primordial Mist — manifest each end step; exiling a face-down permanent
+/// you control face up (a cost, CR 602.5b) lets you play it this turn.
 pub fn primordial_mist() -> CardDefinition {
     CardDefinition {
         name: "Primordial Mist",
@@ -323,10 +319,10 @@ pub fn primordial_mist() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            exile_permanent_cost: Some((R::FaceDown, 1)),
             effect: Effect::Seq(vec![
-                Effect::Move { what: target_filtered(R::FaceDown.and(R::ControlledByYou)), to: ZoneDest::Exile },
                 Effect::GrantMayPlay {
-                    what: Selector::LastMoved,
+                    what: Selector::ExiledForCost,
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,

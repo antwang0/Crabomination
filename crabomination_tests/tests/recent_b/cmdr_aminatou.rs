@@ -341,8 +341,43 @@ fn primordial_mist_manifests() {
     drain_stack(&mut g);
     let fd = g.battlefield.iter().find(|c| c.face_down).expect("manifested").id;
     g.step = TurnStep::PreCombatMain;
-    activate(&mut g, pm, 0, Some(Target::Permanent(fd))).expect("exile it");
+    activate(&mut g, pm, 0, None).expect("exile it as the cost");
     assert!(g.exile.iter().any(|c| c.id == fd && c.may_play_until.is_some()));
+}
+
+/// CR 602.5b — Primordial Mist's exile is a cost the activator picks: a UI
+/// seat with two face-down permanents is asked which, and that one goes.
+#[test]
+fn cr_602_5b_primordial_mist_asks_which_face_down_permanent() {
+    let mut g = pod();
+    library(&mut g, 0, 2);
+    let pm = g.add_card_to_battlefield(0, catalog::primordial_mist());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    for _ in 0..2 {
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+    }
+    let fds: Vec<CardId> = g.battlefield.iter().filter(|c| c.face_down).map(|c| c.id).collect();
+    assert_eq!(fds.len(), 2);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].manual_mana = true;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pm,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("suspends for the pick");
+    assert!(g.pending_decision.is_some(), "asked which to exile");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(fds[1]))))
+        .expect("answer");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fds[1] && c.may_play_until.is_some()), "the chosen one");
+    assert!(g.battlefield_find(fds[0]).is_some_and(|c| c.face_down), "the other stays");
 }
 
 /// CR 702.49 — Silent-Blade Oni casts from the defender's hand.
