@@ -24193,12 +24193,27 @@ impl GameState {
                 Ok(())
             }
             Effect::Move { what, to } => {
-                for ent in self.resolve_selector(what, ctx) {
+                let ents = self.resolve_selector(what, ctx);
+                let aura_hosts = if matches!(to, ZoneDest::Battlefield { .. }) {
+                    let ids: Vec<CardId> = ents.iter().filter_map(|e| e.as_card_id()).collect();
+                    let Some(hosts) = self.aura_hosts_for_move(&ids, to, ctx, effect) else { return Ok(()) };
+                    hosts
+                } else {
+                    Vec::new()
+                };
+                for ent in ents {
                     let cid = match ent {
                         EntityRef::Permanent(c) | EntityRef::Card(c) => c,
                         _ => continue,
                     };
+                    let aura = aura_hosts.iter().find(|(id, _)| *id == cid).map(|&(_, h)| h);
+                    if aura == Some(None) {
+                        continue;
+                    }
                     self.move_card_to(cid, to, ctx, events);
+                    if let Some(Some(host)) = aura {
+                        self.attach_moved_aura(cid, host, events);
+                    }
                     // Stash the moved id so a downstream
                     // `Selector::LastMoved` in the same Seq can target
                     // it (Practiced Scrollsmith's Move → GrantMayPlay

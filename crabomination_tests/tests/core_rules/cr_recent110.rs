@@ -267,3 +267,25 @@ fn cr_707_10_a_copied_ability_gets_its_own_id() {
     uniq.dedup();
     assert_eq!(uniq.len(), 3, "every ability on the stack has its own id");
 }
+
+/// CR 303.4f — an Aura card a plain "return it to the battlefield" puts there
+/// enters attached to something it can enchant (its controller's choice), not
+/// unattached for the state-based check to bin (CR 704.5m). Rise to Glory's
+/// Aura mode returns Wild Growth onto a land; with nothing to enchant it
+/// stays in the graveyard (CR 303.4i).
+#[test]
+fn cr_303_4f_an_aura_returned_to_the_battlefield_enters_attached() {
+    let mut g = main_phase();
+    let growth = g.add_card_to_graveyard(0, catalog::wild_growth());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(growth)), 0, 0);
+    let mode = match &catalog::rise_to_glory().effect {
+        crabomination::effect::Effect::ChooseModesCast { modes, .. } => modes[1].clone(),
+        other => panic!("{other:?}"),
+    };
+    g.resolve_effect(&mode, &ctx).expect("no land: stays");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == growth), "nothing to enchant: it stays put");
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.resolve_effect(&mode, &ctx).expect("return");
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(growth).and_then(|c| c.attached_to), Some(forest));
+}

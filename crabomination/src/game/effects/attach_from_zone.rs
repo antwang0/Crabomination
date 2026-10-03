@@ -78,6 +78,48 @@ impl GameState {
         }
     }
 
+    /// CR 303.4f — an Aura card a plain `Move` puts onto the battlefield
+    /// (Rise to Glory, Brotherhood Outcast) enters attached to something it
+    /// can enchant, chosen by the player who will control it; with nothing
+    /// to enchant it stays where it is (CR 303.4i). Every host is chosen
+    /// before anything moves (a re-run replays). `None` is a suspend; a card
+    /// with an inner `None` stays put. Off-battlefield Auras only.
+    pub(super) fn aura_hosts_for_move(
+        &mut self,
+        ids: &[CardId],
+        to: &ZoneDest,
+        ctx: &EffectContext,
+        effect: &Effect,
+    ) -> Option<Vec<(CardId, Option<CardId>)>> {
+        let ZoneDest::Battlefield { controller, .. } = to else { return Some(Vec::new()) };
+        let auras: Vec<CardId> = ids
+            .iter()
+            .copied()
+            .filter(|&id| self.battlefield_find(id).is_none())
+            .filter(|&id| self.find_card_anywhere(id).is_some_and(|c| !c.face_down && c.definition.is_aura()))
+            .collect();
+        if auras.is_empty() {
+            return Some(Vec::new());
+        }
+        let p = self.resolve_player(controller, ctx).unwrap_or(ctx.controller);
+        let mut cursor = 0;
+        let mut out = Vec::with_capacity(auras.len());
+        for id in auras {
+            out.push((id, self.choose_attach_host(&mut cursor, id, None, false, p, effect, false)?));
+        }
+        self.clear_answer_log();
+        Some(out)
+    }
+
+    /// Attach the Aura a `Move` just put onto the battlefield (see
+    /// [`aura_hosts_for_move`](Self::aura_hosts_for_move)).
+    pub(super) fn attach_moved_aura(&mut self, card: CardId, host: CardId, events: &mut Vec<GameEvent>) {
+        if let Some(c) = self.battlefield_find_mut(card) {
+            c.attached_to = Some(host);
+            events.push(GameEvent::AttachmentMoved { attachment: card, attached_to: Some(host) });
+        }
+    }
+
     /// `Move { to: ZoneDest::BattlefieldAttached }` — each moved card enters
     /// attached to `host` if it legally can (CR 303.4f); one that can't stays
     /// where it is (CR 303.4i), as does every card once the host is gone.
