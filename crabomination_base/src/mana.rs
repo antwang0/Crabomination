@@ -735,6 +735,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast face-down spells or to turn creatures
     /// face up." (Tin Street Gossip.)
     FaceDownSpellsOrTurnFaceUp,
+    /// "Spend this mana only to turn permanents face up." (Overgrown Zealot.)
+    /// `FaceDownSpellsOrTurnFaceUp` without the face-down cast.
+    TurnFaceUpOnly,
     /// "If that mana is spent on a creature spell, it gains haste until end of
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
@@ -864,6 +867,7 @@ impl SpendRestriction {
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 "only face-down casts or turning face up"
             }
+            SpendRestriction::TurnFaceUpOnly => "only turning permanents face up",
             SpendRestriction::SpellFromGraveyard => "only spells cast from your graveyard",
             SpendRestriction::MonocoloredSpellOf(_) => "only monocolored spells of the chosen color",
             // Riders, not restrictions — the mana spends freely.
@@ -992,6 +996,7 @@ impl SpendRestriction {
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 kind.face_down || kind.turning_face_up
             }
+            SpendRestriction::TurnFaceUpOnly => kind.turning_face_up,
             SpendRestriction::SpellFromGraveyard => kind.from_graveyard,
             SpendRestriction::MonocoloredSpellOf(c) => {
                 !kind.activating_ability && kind.colors == ColorSet::single(c)

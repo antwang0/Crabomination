@@ -96,6 +96,11 @@ fn cr_106_6_restricted_mana_only_funds_its_clause() {
     assert!(SpendRestriction::FaceDownSpellsOrTurnFaceUp.allows(&face_down));
     assert!(SpendRestriction::FaceDownSpellsOrTurnFaceUp.allows(&flip_up));
     assert!(!SpendRestriction::FaceDownSpellsOrTurnFaceUp.allows(&creature_spell));
+    // Overgrown Zealot's narrower clause: turning face up only, not a
+    // face-down cast.
+    assert!(SpendRestriction::TurnFaceUpOnly.allows(&flip_up));
+    assert!(!SpendRestriction::TurnFaceUpOnly.allows(&face_down));
+    assert!(!SpendRestriction::TurnFaceUpOnly.allows(&creature_spell));
 
     // And the pool keeps it out of the freely-spendable total.
     let mut g = two_player_game();
