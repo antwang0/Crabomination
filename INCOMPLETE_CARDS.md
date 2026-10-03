@@ -1913,26 +1913,21 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Gap |
 |---|---|
 | 🟡 Loaming Shaman | "any number of target cards from target player's graveyard" shuffles the **whole** graveyard back; no pick. Needs a multi-target any-number graveyard selector. |
-| 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
 
 ### Seats 33, 34, 36, 37 and 40 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15, Call the Spirits C15) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Angel of Destiny | Angels (SLD) | "each player this creature attacked this turn" is the last player it attacked. |
-| 🟡 Dawnbreak Reclaimer | Angels (SLD) | both graveyard picks are the engine's (the cheapest creature card each way). |
 | 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
-| 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | a madness cast names one target (the auto-pick), so its X isn't divided. |
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
-| 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
 | 🟡 Highcliff Felidar | Raining Cats and Dogs (SLD) | the destructions run one opponent at a time, not simultaneously; the engine picks among tied creatures. |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
 | 🟡 Pack Leader | Raining Cats and Dogs (SLD) | the shield covers the Dogs you control as the trigger resolves, not one that arrives later that turn. |
 | 🟡 Showdown of the Skalds | Raining Cats and Dogs (SLD) | chapters II and III choose the counter's target as each trigger resolves. |
-| 🟡 Cataclysmic Gearhulk | Growing Threat (MOC) | each player keeps their highest-mana-value permanent of each type rather than choosing. |
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
@@ -1941,34 +1936,22 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, not secretly. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
-| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | any power-4-or-greater creature cast from your library gets the haste, even one another permission cast. |
-| 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
-| 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
-| 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
-| 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
-| 🟡 Ray of Command | Mirror Mastery (CMD) | the tap rides the next cleanup step; a control loss before then (a second steal) doesn't tap it. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
-| 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacker aims (`trigger_target_chooser`), but the direction is always the flip (untap a tapped permanent, tap an untapped one). |
-| 🟡 Knight of New Alara | Painbow (DMC) | counts printed colors, so a creature painted all colors by a static isn't pumped for it. |
-| 🟡 Unite the Coalition | Painbow (DMC) | a repeated mode needs a different target the bot doesn't always find. |
 | 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Tayam, Luminous Enigma | Symbiotic Swarm (C20) | the vigilance counter arrives by trigger, not as the creature enters. |
 | 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | X reads the exiled card's printed power, not its last power on the battlefield. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
-| 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
 | 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |
 | 🟡 Unfinished Business | Virtue and Valor (WOC) | the two Aura / Equipment cards are picked, not targeted. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
-| 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |
-| 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
 
@@ -1976,7 +1959,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
-| 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
 | 🟡 Jötun Grunt | Political Puppets (CMD) | the graveyard and the two cards of each installment are the engine's pick (an opponent's fullest, highest mana values). |
@@ -1993,17 +1975,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
 | 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
-| 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
-| 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
-| 🟡 Agitator Ant | Blame Game (MKC) | each taker's two counters go on their greatest-power creature, not one they choose. |
-| 🟡 Feather, Radiant Arbiter | Blame Game (MKC) | a headless caster only copies onto its own creatures (a person is offered every legal one). |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
 | 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |
-| 🟡 Sanctuary Blade | Ruthless Regiment (C20) | the colour is chosen by a trigger as it becomes attached (not a replacement), so protection starts once that trigger resolves. |
-| 🟡 Odric, Master Tactician | Ruthless Regiment (C20) | you choose blocks for the rest of the turn, not only this combat (differs only with an extra combat). |
-| 🟡 Dire Fleet Ravager | Most Wanted (OTC) | the players lose their thirds one after another (each reads only its own life, so the totals match). |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
 | 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
@@ -2013,8 +1988,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |
 | 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
-| 🟡 Moritte of the Frost | Everyone's Invited! (SLD) | the two +1/+1 counters come from an entry trigger, not "enters with"; a noncreature copy has changeling too. |
-| 🟡 Unsettled Mariner | Everyone's Invited! (SLD) | modelled as ward {1} on your permanents: you aren't protected, and it doesn't stack with a printed ward. |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
@@ -2022,14 +1995,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
 | 🟡 Horde of Notions | Dance of the Elements (ECC) | casts the Elemental card; an Elemental land card can't be played this way. |
-| 🟡 Dack Fayden, Helping Hand | Multiverse Reforged (FRC) | the revealed creatures go to the opponents in turn order, not by your choice. |
-| 🟡 Tamiyo, Upriser Crowned | Multiverse Reforged (FRC) | "one or more creatures" fires once per creature (same taps and stun counters). |
 | 🟡 Aradesh, the Founder | Hail, Caesar (PIP) | only its own enlist earns the double strike and draw; another creature of yours that enlists doesn't. |
 | 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
-| 🟡 Kang Dynasty | Doom Prevails (MSC) | the draw rider reads any goaded creature an opponent controls dealing combat damage off your turn, not only the ones this Saga goaded. |
-| 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
 | 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
@@ -2052,7 +2021,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
 | 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
-| 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
@@ -2090,7 +2058,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Phenomenon Investigators | Miracle Worker (DSC) | Doubt's "return a nonland permanent you own" targets it. |
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Spirit-Sister's Call | Miracle Worker (DSC) | the sacrifice must share the chosen card's first card type (creature, artifact, enchantment, land, planeswalker, battle). |
-| 🟡 Curse of Conformity | Coven Counters (MIC) | a changeling keeps every creature type (Changeling is read as a type wildcard, not a layer-4 CDA the curse can override). |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later); creature cards are playable too. |
 | 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |
@@ -2104,19 +2071,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
 | 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
-| 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
 | 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
 | 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |
 | 🟡 Road of Return | Faceless Menace (C19) | an unentwined cast's mode is the engine's pick. |
 | 🟡 Vesuvan Shapeshifter | Faceless Menace (C19) | copies only as it enters, not as it's turned face up; no upkeep turn-face-down. |
-| 🟡 Volrath, the Shapestealer | Faceless Menace (C19) | the copy isn't 7/5 and doesn't keep the {1} copy ability. |
-| 🟡 Path of the Enigma | Cavalry Charge (MOC) | the Will of the Planeswalkers vote isn't held (no planar deck, so planeswalk and chaos do nothing). |
-| 🟡 Syr Elenora, the Discerning | Cavalry Charge (MOC) | her hand-size power is a battlefield static, not a CDA read in every zone. |
-| 🟡 Aryel, Knight of Windgrace | Cavalry Charge (MOC) | X for "tap X untapped Knights" is the target's power (the least that works), not a free choice. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
-| 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
-| 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Ancestral Communion | Wakanda Forever (MSC) | its copy keeps the original's target on auto seats (a second return of a card already moved does nothing). |
 | 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
@@ -2126,7 +2086,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
-| 🟡 Professor Hojo | Limit Break (FIC) | the draw fires for any permanent's ability targeting your creature. |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells only, not activation or other costs. |
@@ -2137,31 +2096,22 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Skyship Plunderer | Bedecked Brokers (NCC) | a player target gets one more energy, experience or poison counter each; other player counters aren't read. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
-| 🟡 Saheeli, Radiant Creator | Living Energy (DRC) | the copied permanent is chosen as the trigger goes on the stack, not in a reflexive trigger after paying. |
-| 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
-| 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
-| 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
-| 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
-| 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
 | 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
-| 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
-| 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |
 | 🟡 Dragonborn Champion | Draconic Rage (AFC) | damage a source you control deals to you doesn't draw. |
 
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
-| 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
 | 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
 | 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
 | 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
@@ -2170,7 +2120,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bismuth Mindrender | Eldrazi Incursion (M3C) | the exiled card may be cast for life until end of turn, not only as the trigger resolves. |
 | 🟡 Twins of Discord | Eldrazi Incursion (M3C) | the granted bloodthirst rides colorless creature spells you cast, not every entry. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
-| 🟡 Guff Rewrites History | Planeswalker Party (CMM) | the exiled lands go to the bottom in exile order. |
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Repeated Reverberation | Planeswalker Party (CMM) | the instant, sorcery and loyalty-ability halves are three separate "next" riders; each can fire. |
@@ -2178,19 +2127,14 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
 | 🟡 Verrak, Warped Sengir | Legends' Legacy (DMC) | only a fixed life cost counts as life paid (not X or half your life); the copy keeps its targets. |
-| 🟡 Path of the Animist | Tinker Time (MOC) | Will of the Planeswalkers is not voted: outside Planechase planeswalking and chaos do nothing, but "whenever players vote" triggers don't see it. |
-| 🟡 Gimbal, Gremlin Prodigy | Tinker Time (MOC) | the trample grant matches printed card types, so an animated artifact doesn't get it (CR 613.8; ENGINE_BACKLOG). |
 | 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
 | 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |
 | 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
-| 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the rest go to the bottom in exile order, not a random one. |
-| 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | the cage takes the highest-mana-value artifact or creature card. |
 | 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
-| 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |
 | 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |
@@ -2246,7 +2190,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
-| 🟡 Mister Fantastic | The Fantastic Four (MSC) | the target names the ability by its source permanent (the topmost of two from one source is copied). |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
