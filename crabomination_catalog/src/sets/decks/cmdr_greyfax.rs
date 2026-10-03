@@ -3,9 +3,6 @@
 //! had. Tests in `tests/recent_b/cmdr_greyfax.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Callidus Assassin** — enters untapped; its granted trigger destroys a
-//!   creature that shares a name with another permanent, not only the copy's.
-//! - **Cybernetica Datasmith** — the two target players may be the same.
 //! - **Inquisitor Eisenhorn** — the first-draw reveal is automatic.
 
 use crate::card::{
@@ -149,9 +146,7 @@ pub fn birth_of_the_imperium() -> CardDefinition {
 }
 
 /// Callidus Assassin — flash; may enter as a copy of any creature, with
-/// "destroy up to one other creature with this name".
-///
-/// ⚠ Residual: the trigger reads "shares a name with another permanent".
+/// "destroy up to one other target creature with the same name as this".
 pub fn callidus_assassin() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -163,7 +158,7 @@ pub fn callidus_assassin() -> CardDefinition {
             extra_triggered: vec![etb(Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
-                filter: R::Creature.and(R::OtherThanSource).and(R::SharesNameWithAnotherPermanent),
+                filter: R::Creature.and(R::OtherThanSource).and(R::SharesNameWithSource),
                 effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
             })],
             ..Default::default()

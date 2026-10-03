@@ -3397,6 +3397,10 @@ pub enum SelectionRequirement {
     /// Another permanent on the battlefield shares this permanent's name
     /// (Winnow). Never matches when the object is the only copy out.
     SharesNameWithAnotherPermanent,
+    /// Has the same name as the ability's source (Callidus Assassin's "other
+    /// target creature with the same name as this creature"). The source-less
+    /// card walker reads it as false.
+    SharesNameWithSource,
     /// No permanent the evaluating player controls shares this card's name
     /// (Central Elevator's "a Room card that doesn't have the same name as a
     /// Room you control").
@@ -3978,6 +3982,7 @@ impl SelectionRequirement {
             | Self::HasChosenLandTypeOfSource
             | Self::SharesColorWithExiledBySource
             | Self::SameNameAsExiledWithSource
+            | Self::SharesNameWithSource
             | Self::SharesColorWithAttachedHost
             | Self::SharesCreatureTypeWithAttachedHost
             | Self::SharesCreatureTypeWithSource => true,

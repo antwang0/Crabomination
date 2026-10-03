@@ -6221,6 +6221,9 @@ impl GameState {
                     // Either link is "exiled with": `exiled_with` (imprint,
                     // `ExileWithSource`) or the until-leaves `exiled_by`
                     // (Circle of Confinement's Vampire name check).
+                    R::SharesNameWithSource => source
+                        .and_then(|sid| self.battlefield_find(sid).or_else(|| self.lki_snapshot(sid)))
+                        .is_some_and(|s| s.definition.name == card.definition.name),
                     R::SameNameAsExiledWithSource => source.is_some_and(|sid| {
                         self.exile
                             .iter()
@@ -6604,6 +6607,7 @@ impl GameState {
             | R::HasChosenLandTypeOfSource
             | R::SharesColorWithExiledBySource
             | R::SameNameAsExiledWithSource
+            | R::SharesNameWithSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost
             | R::SharesCreatureTypeWithSource => false,

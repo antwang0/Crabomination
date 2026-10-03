@@ -395,3 +395,20 @@ fn inquisitor_eisenhorn_reveals_only_the_first_draw() {
     assert_eq!(first_draw_makes_cherubael(true), 1);
     assert_eq!(first_draw_makes_cherubael(false), 0, "the second card isn't revealed");
 }
+
+/// Callidus Assassin's granted trigger destroys only a creature with the
+/// same name as the copy (Polymorphine's oracle) — two same-named Bears of an
+/// opponent's are not targets when it copied a Serra Angel.
+#[test]
+fn callidus_assassin_destroys_only_its_own_name() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let bears = [g.add_card_to_battlefield(1, catalog::grizzly_bears()), g.add_card_to_battlefield(1, catalog::grizzly_bears())];
+    let assassin = g.add_card_to_hand(0, catalog::callidus_assassin());
+    cast(&mut g, assassin, None).expect("cast");
+    assert_eq!(g.battlefield_find(assassin).map(|c| c.definition.name), Some("Serra Angel"));
+    assert!(g.battlefield_find(assassin).is_some_and(|c| c.tapped), "enters tapped");
+    for b in bears {
+        assert!(g.battlefield_find(b).is_some(), "a Bear isn't named Serra Angel");
+    }
+}
