@@ -314,23 +314,36 @@ fn scavenged_brawler_upgrades_a_creature_from_the_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == brawler));
 }
 
-/// CR 701.20 — Smelting Vat puts noncreature artifacts no bigger than the
-/// sacrificed one from the top eight onto the battlefield.
+/// CR 701.20 / 608.2d — Smelting Vat puts up to two noncreature artifacts
+/// from the top eight onto the battlefield with TOTAL mana value at most the
+/// sacrificed one's (Mind Stone, 2): Sol Ring + Mind Stone (3) don't both fit.
+/// Headless takes the cheapest fill; a player may take the Mind Stone instead.
 #[test]
 fn smelting_vat_digs_for_artifacts() {
-    let mut g = pod(2);
-    let vat = g.add_card_to_battlefield(0, catalog::smelting_vat());
-    g.add_card_to_battlefield(0, catalog::mind_stone());
-    for _ in 0..4 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    g.add_card_to_library(0, catalog::sol_ring());
-    g.add_card_to_library(0, catalog::lithoform_engine());
-    g.add_card_to_library(0, catalog::mind_stone());
+    let setup = || {
+        let mut g = pod(2);
+        let vat = g.add_card_to_battlefield(0, catalog::smelting_vat());
+        g.add_card_to_battlefield(0, catalog::mind_stone());
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.add_card_to_library(0, catalog::sol_ring());
+        g.add_card_to_library(0, catalog::lithoform_engine());
+        let stone = g.add_card_to_library(0, catalog::mind_stone());
+        (g, vat, stone)
+    };
+    let (mut g, vat, _) = setup();
     activate(&mut g, vat, 0, None).expect("sacrifice the Stone");
     assert_eq!(named(&g, 0, "Sol Ring").len(), 1);
-    assert_eq!(named(&g, 0, "Mind Stone").len(), 1, "the new one");
+    assert!(named(&g, 0, "Mind Stone").is_empty(), "1 + 2 is over the budget of 2");
     assert!(named(&g, 0, "Lithoform Engine").is_empty(), "mana value 4 is too big");
+    assert_eq!(g.players[0].library.len(), 6, "the rest go to the bottom");
+
+    let (mut g, vat, stone) = setup();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![stone])]));
+    activate(&mut g, vat, 0, None).expect("sacrifice the Stone");
+    assert!(g.battlefield_find(stone).is_some(), "the chosen Mind Stone");
+    assert!(named(&g, 0, "Sol Ring").is_empty());
 }
 
 /// CR 107.3 — Terisiare's Devastation makes X tapped Powerstones first, then

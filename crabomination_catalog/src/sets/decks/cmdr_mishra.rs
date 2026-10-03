@@ -464,8 +464,8 @@ pub fn scavenged_brawler() -> CardDefinition {
 }
 
 /// Smelting Vat — {1}, {T}, sacrifice another artifact: up to two noncreature
-/// artifact cards from the top eight onto the battlefield. Residual: each is
-/// capped at the sacrificed artifact's mana value, not their total.
+/// artifact cards from the top eight with total mana value at most the
+/// sacrificed artifact's onto the battlefield, the rest to the bottom at random.
 pub fn smelting_vat() -> CardDefinition {
     CardDefinition {
         name: "Smelting Vat",
@@ -475,18 +475,24 @@ pub fn smelting_vat() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             sac_other_filter: Some((R::Artifact.and(R::OtherThanSource), 1)),
-            effect: Effect::WithX {
-                x: Value::SacrificedManaValue,
-                body: Box::new(Effect::LookTopPutMatchingOntoBattlefield {
-                    count: Value::Const(8),
-                    filter: R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMostXFromCost),
-                    then: None,
-                    max: Some(2),
-                    tapped: false,
-                    exile_rest: false,
-                    rest_to_graveyard: false, mandatory: false,
-                }),
-            },
+            effect: Effect::Seq(vec![
+                Effect::MoveWithinTotalManaValue {
+                    from: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(8) },
+                    filter: R::Artifact.and(R::Not(Box::new(R::Creature))),
+                    cap: Value::SacrificedManaValue,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    max_count: Some(2),
+                },
+                Effect::BottomInRandomOrder {
+                    what: Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::Diff(
+                            Box::new(Value::Const(8)),
+                            Box::new(Value::CountOf(Box::new(Selector::LastMoved))),
+                        ),
+                    },
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
