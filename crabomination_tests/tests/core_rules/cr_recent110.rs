@@ -289,3 +289,26 @@ fn cr_303_4f_an_aura_returned_to_the_battlefield_enters_attached() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(growth).and_then(|c| c.attached_to), Some(forest));
 }
+
+/// CR 110.2 — a permanent enters under the control the effect names: a
+/// `ZoneDest` naming a TARGETED player puts it under that player even though
+/// the placement runs in a context without the caster's targets. It used to
+/// pass `PlayerRef::Target(0)` through unresolved, so the card landed under
+/// whoever the bare context read as slot 0 (The Beamtown Bullies at three
+/// seats gave the creature to its own controller).
+#[test]
+fn cr_110_2_a_zone_dest_naming_a_target_player_resolves_it() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    ctx.targets = vec![Target::Player(2), Target::Permanent(wurm)];
+    let effect = Effect::Move {
+        what: Selector::Target(1),
+        to: ZoneDest::Battlefield { controller: PlayerRef::Target(0), tapped: false },
+    };
+    g.resolve_effect(&effect, &ctx).expect("move");
+    assert_eq!(g.battlefield_find(wurm).map(|c| c.controller), Some(2));
+}
