@@ -268,6 +268,29 @@ fn twins_of_discord_stops_blockers() {
     );
 }
 
+/// CR 614.12 / 702.54a — Twins of Discord's granted bloodthirst is read as a
+/// colorless creature enters from anywhere, not only off a cast: a Memnite
+/// returned from the graveyard after an opponent was dealt damage gets two
+/// counters; a Grizzly Bears (green) doesn't.
+#[test]
+fn twins_of_discord_grants_bloodthirst_to_any_entry() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
+    let mut g = pod();
+    let twins = g.add_card_to_battlefield(0, catalog::twins_of_discord());
+    let ctx = EffectContext::for_ability(twins, 0, None);
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Player(PlayerRef::Seat(1)), amount: Value::ONE }, &ctx)
+        .expect("ping");
+    let memnite = g.add_card_to_graveyard(0, catalog::memnite());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut events = Vec::new();
+    let onto = ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false };
+    g.move_card_to(memnite, &onto, &ctx, &mut events);
+    g.move_card_to(bear, &onto, &ctx, &mut events);
+    assert_eq!(g.battlefield_find(memnite).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.battlefield_find(twins).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "\"other\"");
+}
+
 /// CR 707.10 — Ulalek copies every spell you control for {C}{C}.
 #[test]
 fn ulalek_copies_everything() {

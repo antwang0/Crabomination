@@ -173,6 +173,8 @@ mod probing_telepathy;
 mod cast_watch;
 // Rod of Absorption / River Song's Diary, fixed at cast.
 mod absorb;
+// CR 614.12 — static grants read as a permanent enters.
+mod granted_entry;
 mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -8024,6 +8026,9 @@ impl GameState {
                 Keyword::Bloodthirst(n) => bloodthirst += *n,
                 _ => {}
             }
+        }
+        if self.computed_is_creature(card) {
+            bloodthirst += self.granted_bloodthirst(cid);
         }
         if bloodthirst > 0 {
             self.apply_bloodthirst_etb(cid, bloodthirst, events);

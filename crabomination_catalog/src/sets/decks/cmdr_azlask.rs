@@ -1,10 +1,6 @@
 //! Commander: the cards the **Eldrazi Incursion** precon (M3C, Azlask, the
 //! Swelling Scourge) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_azlask.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Twins of Discord** — the granted bloodthirst rides colorless creature
-//!   spells you cast (as Bloodlord of Vaasgoth), not every entry.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -368,9 +364,8 @@ pub fn tomb_of_the_spirit_dragon() -> CardDefinition {
 }
 
 /// Twins of Discord — attacking shuts down blockers of one mana-value
-/// parity; other colorless creatures of yours have bloodthirst 2. Residual:
-/// the bloodthirst is granted to colorless creature SPELLS you cast (read as
-/// each enters, CR 702.54a), so one put onto the battlefield doesn't have it.
+/// parity; other colorless creatures of yours have bloodthirst 2, read as
+/// each enters from anywhere (CR 614.12, `game/granted_entry.rs`).
 pub fn twins_of_discord() -> CardDefinition {
     let cant_block = |odd: bool| Effect::MatchingCantBlockThisTurn { filter: R::Creature.and(R::ManaValueParity { odd }) };
     CardDefinition {
@@ -379,13 +374,16 @@ pub fn twins_of_discord() -> CardDefinition {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
                 effect: Effect::ChooseMode(vec![cant_block(true), cant_block(false)]),
             },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(colorless_obj()) },
-                ),
-                effect: Effect::SpellGainsKeyword { what: Selector::TriggerSource, keyword: Keyword::Bloodthirst(2) },
-            },
         ],
+        static_abilities: vec![StaticAbility {
+            description: "Each other colorless creature you control has bloodthirst 2.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(colorless_obj()).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                keyword: Keyword::Bloodthirst(2),
+            },
+        }],
         ..eldrazi("Twins of Discord", cost(&[generic(7)]), 8, 6)
     }
 }
