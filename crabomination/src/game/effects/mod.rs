@@ -7888,6 +7888,13 @@ impl GameState {
                 // through a derived context, mirroring the descend/forage path.
                 // A payoff behind "pay {X}" reads that X in its target filter
                 // (Halo Forager's "mana value X").
+                // A player the enclosing loop bound ("for each opponent, …
+                // that player" — Nihiloor) is the `ControlledByTriggerPlayer`
+                // seat, as it is for a trigger whose subject is a player.
+                let saved_seat = self.trigger_event_player_scratch;
+                if let Some(EntityRef::Player(p)) = ctx.trigger_source {
+                    self.trigger_event_player_scratch = Some(p);
+                }
                 let (slot0, additional) = self.auto_targets_for_effect_all_slots_x(
                     body,
                     ctx.controller,
@@ -7898,7 +7905,9 @@ impl GameState {
                 );
                 let mut body_ctx = ctx.clone();
                 body_ctx.targets = slot0.into_iter().chain(additional).collect();
-                self.run_effect(body, &body_ctx, events)?;
+                let ran = self.run_effect(body, &body_ctx, events);
+                self.trigger_event_player_scratch = saved_seat;
+                ran?;
                 // A parked payoff resumes under the stack item's targets, not
                 // the ones picked here (Numa's distribution found no Elves).
                 self.pin_parked_targets(&body_ctx.targets);

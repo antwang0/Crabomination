@@ -32,7 +32,30 @@ fn pick_is_gain(e: &Effect) -> bool {
                 | ZoneDest::ExileWithSourceStamp
         ),
         Effect::Seq(v) => v.iter().any(pick_is_gain),
+        // "Tap it; when you do, gain control of …" (Nihiloor): the pick buys
+        // a steal. X pinned off the pick (Yannik) reads through.
+        Effect::WithX { body, .. } => pick_is_gain(body),
+        Effect::Reflexive { body } | Effect::ReflexiveTrigger { body } => {
+            matches!(
+                **body,
+                Effect::GainControl { .. }
+                    | Effect::GainControlWhileYouControlSource { .. }
+                    | Effect::GainControlWhileSourceRemains { .. }
+            ) || pick_is_gain(body)
+        }
         other => other.prefers_friendly_target(),
+    }
+}
+
+/// The step a pick body starts with, through an X pinned off the pick
+/// (Yannik's `WithX` around its exile).
+fn pick_head(e: &Effect) -> &Effect {
+    match e {
+        Effect::WithX { body, .. } => match &**body {
+            Effect::Seq(v) => v.first().unwrap_or(body),
+            b => b,
+        },
+        other => other,
     }
 }
 
@@ -79,7 +102,10 @@ impl GameState {
     /// artifact) banks the best one.
     fn pick_cuts_as_gain(&self, ids: &[CardId], seat: usize, chosen: &Effect) -> (bool, bool) {
         let keeps = matches!(chosen, Effect::Noop);
-        let imprint = matches!(chosen, Effect::ExileTaggedWithSource { .. } | Effect::ExileUntilSourceLeaves { .. })
+        let imprint = matches!(
+            pick_head(chosen),
+            Effect::ExileTaggedWithSource { .. } | Effect::ExileUntilSourceLeaves { .. }
+        )
             && ids.iter().all(|id| match self.battlefield_find(*id) {
                 Some(c) => c.controller == seat,
                 None => true,
