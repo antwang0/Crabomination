@@ -6345,6 +6345,23 @@ fn decide_choose_cards(
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return fill_to_min(chosen);
     }
+    // Our own hand AND graveyard at once (Mairsil's cage): a `Gain` pick takes
+    // the engine's offer order, which ranks it best-first — neither single-zone
+    // branch above owns a mixed list, and the graveyard sweep below answered
+    // it with nothing.
+    let own_card = |id: crate::card::CardId| {
+        let p = &state.players[seat];
+        p.hand.iter().any(|c| c.id == id) || p.graveyard.iter().any(|c| c.id == id)
+    };
+    let in_own_graveyard = |id: crate::card::CardId| state.players[seat].graveyard.iter().any(|c| c.id == id);
+    if gain
+        && candidates.iter().all(|(id, _)| own_card(*id))
+        && candidates.iter().any(|(id, _)| in_own_graveyard(*id))
+        && candidates.iter().any(|(id, _)| !in_own_graveyard(*id))
+    {
+        let chosen: Vec<_> = candidates.iter().take(max.max(1) as usize).map(|(id, _)| *id).collect();
+        return fill_to_min(chosen);
+    }
     // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
     // and similar resolution-time multi-target taps): the AutoDecider declines,
     // so the bot would tap nothing. Prefer opponents' untapped creatures — the
@@ -26271,6 +26288,22 @@ mod tests {
         match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// A `Gain` pick over the bot's own hand AND graveyard at once (Mairsil's
+    /// cage) takes the engine's best-first offer; every single-zone branch
+    /// missed the mixed list and answered nothing.
+    #[test]
+    fn bot_choose_cards_takes_the_offer_over_hand_and_graveyard() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let sorcerer = g.add_card_to_graveyard(0, catalog::prodigal_sorcerer());
+        let angel = g.add_card_to_hand(0, catalog::serra_angel());
+        let candidates = vec![(sorcerer, "Prodigal Sorcerer".to_string()), (angel, "Serra Angel".to_string())];
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![sorcerer]),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
