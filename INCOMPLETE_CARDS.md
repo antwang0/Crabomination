@@ -2117,10 +2117,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lunar Hatchling | Paradox Power (WHO) | its escape doesn't also exile a land you control. |
 | 🟡 Me, the Immortal | Paradox Power (WHO) | its counters don't stay with it as it changes zones. |
 | 🟡 Psychic Paper | Paradox Power (WHO) | no chosen creature name and type (ward 1 and unblockable only). |
-| 🟡 Ryan Sinclair | Paradox Power (WHO) | cards with mana value above its power are skipped (discover) rather than ending the reveal. |
-| 🟡 Strax, Sontaran Nurse | Paradox Power (WHO) | the creature it fights is picked from the random player's, not targeted. |
-| 🟡 The Fugitive Doctor | Paradox Power (WHO) | the granted flashback costs the card's mana cost, not {2}{R}{G}. |
-| 🟡 Truth or Consequences | Paradox Power (WHO) | each consequences vote picks its own random opponent. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |

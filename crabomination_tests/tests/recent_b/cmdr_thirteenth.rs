@@ -251,3 +251,92 @@ fn heaven_sent_recurs_itself() {
     assert!(g.battlefield_find(hs).is_some());
     assert_eq!(g.players[0].mana_pool.total(), 0, "its own cost was paid");
 }
+
+/// Truth or Consequences chooses ONE opponent at random for every
+/// consequences vote's 3 damage.
+#[test]
+fn truth_or_consequences_hits_one_random_opponent() {
+    for seed in 0..6u64 {
+        let mut g = pod(4);
+        g.rng = crabomination::game::rng::GameRng::seeded(seed);
+        let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+        let spell = g.add_card_to_hand(0, catalog::truth_or_consequences());
+        flood(&mut g, 0);
+        cast(&mut g, 0, spell, None).expect("cast");
+        let hit: Vec<usize> = (1..4).filter(|&p| g.players[p].life < before[p]).collect();
+        assert!(hit.len() <= 1, "seed {seed}: {hit:?}");
+        for p in hit {
+            assert_eq!((before[p] - g.players[p].life) % 3, 0);
+        }
+    }
+}
+
+/// The Fugitive Doctor's granted flashback costs {2}{R}{G}, not the card's
+/// own mana cost.
+#[test]
+fn the_fugitive_doctor_grants_flashback_for_2rg() {
+    let mut g = pod(2);
+    let doc = g.add_card_to_battlefield(0, catalog::the_fugitive_doctor());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let Effect::MaySacrifice { then, .. } = g.battlefield_find(doc).unwrap().definition.triggered_abilities[1].effect.clone()
+    else {
+        panic!("attack trigger")
+    };
+    let ctx = EffectContext::for_trigger(doc, 0, Some(Target::Permanent(bolt)), 0);
+    g.resolve_effect(&then, &ctx).expect("grant");
+    flood(&mut g, 0);
+    let (total, green) = (g.players[0].mana_pool.total(), g.players[0].mana_pool.amount(Color::Green));
+    flashback(&mut g, 0, bolt, Some(Target::Player(1))).expect("flashback");
+    assert_eq!(total - g.players[0].mana_pool.total(), 4, "{{2}}{{R}}{{G}}");
+    assert_eq!(green - g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// Strax's Grenades: the player is chosen at random, then a reflexive
+/// trigger TARGETS another creature that player controls — with nothing of
+/// the chosen player's to target, nothing fights.
+#[test]
+fn strax_grenades_target_the_random_players_creature() {
+    let mut killed = 0;
+    for seed in 0..10u64 {
+        let mut g = pod(2);
+        g.rng = crabomination::game::rng::GameRng::seeded(seed);
+        let strax = g.add_card_to_battlefield(0, catalog::strax_sontaran_nurse());
+        g.clear_sickness(strax);
+        g.add_card_to_battlefield(0, catalog::sol_ring());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        flood(&mut g, 0);
+        activate(&mut g, 0, strax, 0).expect("grenades");
+        if g.battlefield_find(bear).is_none() {
+            killed += 1;
+            assert_eq!(counters(&g, strax), 1, "Glory of Battle");
+        } else {
+            assert_eq!(counters(&g, strax), 0, "no creature of seat 0's to fight");
+        }
+    }
+    assert!(killed > 0 && killed < 10, "the random pick lands on both seats ({killed}/10)");
+}
+
+/// Ryan Sinclair stops at the FIRST nonland card: a Hill Giant above his
+/// power ends the reveal (no cast) and a Grizzly Bears under it isn't reached.
+#[test]
+fn ryan_sinclair_stops_at_the_first_nonland_card() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let ryan = g.add_card_to_battlefield(0, catalog::ryan_sinclair());
+    g.clear_sickness(ryan);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let island = g.add_card_to_library(0, catalog::island());
+    for id in [bears, giant, island] {
+        let i = g.players[0].library.iter().position(|c| c.id == id).unwrap();
+        let c = g.players[0].library.remove(i);
+        g.players[0].library.insert(0, c);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ryan, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(bears).is_none());
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bears), "the Bears was never reached");
+    assert!(g.players[0].library.iter().rev().take(2).any(|c| c.id == giant), "the Giant went to the bottom");
+}

@@ -445,6 +445,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
+            | Effect::WithRandomOpponent { body }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
             | Effect::OathCatchUp { body, .. }
@@ -1506,7 +1507,8 @@ impl Effect {
             | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
-            | Effect::BindScratch { body, .. } => body.requires_target(),
+            | Effect::BindScratch { body, .. }
+            | Effect::WithRandomOpponent { body } => body.requires_target(),
             Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithX { body, .. } => body.requires_target(),
@@ -1819,6 +1821,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantFlashbackWithCostThisTurn { what, .. }
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
@@ -2640,6 +2643,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantFlashbackWithCostThisTurn { what, .. }
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
@@ -3586,6 +3590,7 @@ impl Effect {
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
             Effect::GrantFlashbackThisTurn { .. }
+            | Effect::GrantFlashbackWithCostThisTurn { .. }
             | Effect::GrantEscapeThisTurn { .. }
             | Effect::GrantEscapeWithCostThisTurn { .. }
             | Effect::GrantEmbalmThisTurn { .. }
@@ -4493,6 +4498,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
+            | Effect::WithRandomOpponent { body }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
@@ -5148,6 +5154,7 @@ impl Effect {
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
+                | Effect::GrantFlashbackWithCostThisTurn { what, .. }
                 | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
                 | Effect::GrantEmbalmThisTurn { what }

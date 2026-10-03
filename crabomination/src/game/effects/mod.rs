@@ -14291,6 +14291,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantFlashbackWithCostThisTurn { what, cost } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        card.granted_flashback_eot = Some(cost.clone());
+                    }
+                }
+                Ok(())
+            }
             Effect::GrantFlashbackThisTurn { what } => {
                 // Grant until-end-of-turn flashback (cost = the card's own
                 // mana cost) to each resolved graveyard card, so it can be
@@ -32111,6 +32121,15 @@ impl GameState {
             Effect::AsPlayer { who, body } => self.run_as_player(who, body, ctx, events),
 
             Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, effect, ctx, events),
+
+            Effect::WithRandomOpponent { body } => {
+                let Some(opp) = self.resolve_player(&PlayerRef::RandomOpponent, ctx) else { return Ok(()) };
+                let bound = Effect::BindScratch {
+                    scratch: crate::effect::ScratchBinding::ChosenOpponent(opp),
+                    body: body.clone(),
+                };
+                self.run_effect(&bound, ctx, events)
+            }
 
             Effect::MarkDoneThisTurn => {
                 if let Some(src) = ctx.source {

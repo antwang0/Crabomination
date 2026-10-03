@@ -14,14 +14,6 @@
 //! - **Lunar Hatchling** — escape doesn't also exile a land you control.
 //! - **Me, the Immortal** — its counters don't stay with it across zones.
 //! - **Psychic Paper** — no chosen name and creature type.
-//! - **Ryan Sinclair** — cards with mana value above its power are skipped
-//!   rather than ending the reveal.
-//! - **Strax, Sontaran Nurse** — the creature it fights is picked, not
-//!   targeted.
-//! - **The Fugitive Doctor** — the flashback cost is the card's mana cost,
-//!   not {2}{R}{G}.
-//! - **Truth or Consequences** — each consequences vote picks its own random
-//!   opponent.
 
 use std::sync::Arc;
 
@@ -29,7 +21,7 @@ use crate::card::{
     ActivatedAbility, AdditionalCastCost, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration,
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value, WardCost,
+    TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{battle_cry, choose_one_then, chosen_one, etb, investigate, mentor, on_attack, on_cast, on_dies, target_any, target_filtered, training};
 use crate::effect::{
@@ -851,16 +843,32 @@ pub fn river_songs_diary() -> CardDefinition {
     }
 }
 
-/// Ryan Sinclair — attacking, reveal to a nonland card of mana value up to
-/// its power and cast it free.
-/// Residual: higher-mana-value cards are skipped rather than ending the
-/// reveal.
+/// Ryan Sinclair — attacking, exile to the first nonland card and cast it free
+/// if its mana value is at most Ryan's power; the rest go to the bottom.
 pub fn ryan_sinclair() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::Discover {
-            n: Value::PowerOf(Box::new(Selector::This)),
-            filter: None,
-        })],
+        // Reveal until the first nonland card, whatever its mana value; cast
+        // it free only if it fits under Ryan's power. Not discover: a pricier
+        // card ends the reveal rather than being skipped.
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::ExileTopUntilNonland { who: PlayerRef::You },
+            Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(Selector::ExiledThisResolution { filter: R::Nonland })),
+                    Value::PowerOf(Box::new(Selector::This)),
+                ),
+                then: Box::new(Effect::CastWithoutPayingImmediate {
+                    what: Selector::ExiledThisResolution { filter: R::Nonland },
+                    source_zone: Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::BottomInRandomOrder { what: Selector::ExiledThisResolution { filter: R::Any } },
+        ]))],
         ..companion(creature("Ryan Sinclair", cost(&[generic(2), r()]), vec![CreatureType::Human], 2, 2))
     }
 }
@@ -922,8 +930,7 @@ pub fn start_the_tardis() -> CardDefinition {
 
 /// Strax, Sontaran Nurse — vigilance, trample; {2}, {T}, sacrifice an
 /// artifact: a random player's creature fights it; damaging a creature grows
-/// it.
-/// Residual: the creature it fights is picked, not targeted.
+/// it. The fight's creature is targeted by a reflexive trigger.
 pub fn strax_sontaran_nurse() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
@@ -931,17 +938,18 @@ pub fn strax_sontaran_nurse() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_other_filter: Some((R::Artifact, 1)),
+            // "Choose a player at random. When you do, Strax fights another
+            // target creature that player controls" — the reflexive trigger
+            // targets as it is put on the stack (CR 603.7d).
             effect: Effect::Seq(vec![
                 Effect::RememberPlayerOnSource { who: PlayerRef::RandomPlayer },
-                Effect::Fight {
-                    attacker: Selector::This,
-                    defender: Selector::Take {
-                        inner: Box::new(Selector::ControlledBy {
-                            who: PlayerRef::ChosenPlayerOfSource,
-                            filter: R::Creature.and(R::OtherThanSource),
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Fight {
+                        attacker: Selector::This,
+                        defender: target_filtered(
+                            R::Creature.and(R::OtherThanSource).and(R::ControlledByChosenPlayerOfSource),
+                        ),
+                    }),
                 },
             ]),
             ..Default::default()
@@ -1038,8 +1046,7 @@ pub fn the_foretold_soldier() -> CardDefinition {
 }
 
 /// The Fugitive Doctor — entering, investigate; attacking, you may sacrifice
-/// a Clue so an instant or sorcery in your graveyard gains flashback.
-/// Residual: the flashback cost is the card's mana cost, not {2}{R}{G}.
+/// a Clue so an instant or sorcery in your graveyard gains flashback {2}{R}{G}.
 pub fn the_fugitive_doctor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -1048,8 +1055,9 @@ pub fn the_fugitive_doctor() -> CardDefinition {
                 description: "Sacrifice a Clue to give an instant or sorcery flashback?".into(),
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
                 count: Value::ONE,
-                then: Box::new(Effect::GrantFlashbackThisTurn {
+                then: Box::new(Effect::GrantFlashbackWithCostThisTurn {
                     what: target_filtered(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard)),
+                    cost: cost(&[generic(2), r(), g()]),
                 }),
                 else_: None,
             }),
@@ -1137,22 +1145,27 @@ pub fn thijarian_witness() -> CardDefinition {
 }
 
 /// Truth or Consequences — secret council: a card per truth vote, 3 damage
-/// to a random opponent per consequences vote.
-/// Residual: each consequences vote picks its own random opponent.
+/// per consequences vote to one opponent chosen at random.
 pub fn truth_or_consequences() -> CardDefinition {
     spell(
         "Truth or Consequences",
         cost(&[generic(2), u(), r()]),
         CardType::Sorcery,
-        Effect::Vote {
-            tally: VoteTally::PerVote,
-            options: vec![
-                VoteOption::new("truth", draw(Value::ONE)),
-                VoteOption::new(
-                    "consequences",
-                    Effect::DealDamage { to: Selector::Player(PlayerRef::RandomOpponent), amount: Value::Const(3) },
-                ),
-            ],
+        // One opponent, chosen at random once, takes every consequences vote.
+        Effect::WithRandomOpponent {
+            body: Box::new(Effect::Vote {
+                tally: VoteTally::PerVote,
+                options: vec![
+                    VoteOption::new("truth", draw(Value::ONE)),
+                    VoteOption::new(
+                        "consequences",
+                        Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                            amount: Value::Const(3),
+                        },
+                    ),
+                ],
+            }),
         },
     )
 }

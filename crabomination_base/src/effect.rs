@@ -7017,6 +7017,9 @@ pub enum Effect {
     /// normal flashback path (pay the cost, exile on resolve). Used by the
     /// SOS "Flashback" instant.
     GrantFlashbackThisTurn { what: Selector },
+    /// `GrantFlashbackThisTurn` at a printed flashback cost ("gains flashback
+    /// {2}{R}{G} until end of turn" — The Fugitive Doctor).
+    GrantFlashbackWithCostThisTurn { what: Selector, cost: crate::mana::ManaCost },
     /// "Target card in your graveyard gains escape until end of turn. The
     /// escape cost is equal to its mana cost plus exile `exile_count` other
     /// cards from your graveyard" (Desdemona, Freedom's Edge — CR 702.138).
@@ -9953,6 +9956,10 @@ pub enum Effect {
     /// fewest creatures (the gift goes where it helps least), turn order
     /// breaking ties. Sylvan Offering.
     ChooseOpponentThen { then: Box<Effect> },
+    /// "Choose an opponent at random. [body]" with one pick for the whole
+    /// body (Truth or Consequences: one opponent takes every consequences
+    /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.
+    WithRandomOpponent { body: Box<Effect> },
     /// "You may cast it from your graveyard as an Adventure until the end of
     /// your next turn" — the source card, now in its owner's graveyard, on a
     /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard
