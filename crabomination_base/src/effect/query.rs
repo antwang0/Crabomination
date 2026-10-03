@@ -412,6 +412,7 @@ impl Effect {
                 f(else_);
             }
             Effect::ForEach { body, .. }
+            | Effect::ForEachChosen { body, .. }
             | Effect::WatchCombatDamageUntilYourNextTurn { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::RepeatWhileClashWon { body }
