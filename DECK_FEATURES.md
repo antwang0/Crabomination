@@ -1868,7 +1868,7 @@ controller's pick, so a suspended choice replays them),
 `PlayerRef::RandomOtherOpponentThanEnchanted` and `CounterType::Component`.
 ⚠ **`Effect::Attach` to an empty selection detached the attachment** — a
 Maddening Hex with no other opponent fell off; it now stays (CR 701.3b).
-Residuals: **Berserker's Frenzy**'s 1–14 creatures are every opposing one;
+Residuals: ~~**Berserker's Frenzy**~~ (`01QFHGia`: the caster chooses);
 **Component Pouch**'s two colors may match; **Dragonborn Champion** ignores
 damage to you; **Druid of Purification** has no "may" and starts with the next
 player; **Klauth**'s mana isn't spell-only; ~~**Sword of Hours**~~ (`01QFHGia`,
