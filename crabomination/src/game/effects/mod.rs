@@ -6578,7 +6578,7 @@ impl GameState {
                 self.grant_suspend(what, *time_counters, ctx, events);
                 Ok(())
             }
-            Effect::Clockspin { what } => self.clockspin(what, ctx, events),
+            Effect::Clockspin { what } => self.clockspin(what, effect, ctx, events),
             Effect::RestrictMayPlayToCasting { what } => {
                 for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()) {
                     if let Some(perm) = self.exile.iter_mut().find(|c| c.id == id).and_then(|c| c.may_play_until.as_mut())

@@ -359,6 +359,23 @@ fn cr_702_62b_clockspinning_turns_a_suspended_cards_clock() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// Clockspinning's counter is the caster's choice, keyword counters included:
+/// a second flying counter on a creature that has one.
+#[test]
+fn clockspinning_may_choose_a_keyword_counter() {
+    use crabomination::card::Keyword;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::clockspinning());
+    run(&mut g, Effect::AddKeywordCounter { what: Selector::ExactObjects(vec![bear]), keyword: Keyword::Flying, amount: Value::ONE }, src);
+    // Options: [remove a Flying counter, add a Flying counter].
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    run(&mut g, Effect::Clockspin { what: Selector::ExactObjects(vec![bear]) }, src);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.keyword_counters.get(&Keyword::Flying).copied(), Some(2));
+}
+
 /// Everybody Lives! — players gain hexproof and can't lose life this turn
 /// (they can still gain it).
 #[test]

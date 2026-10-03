@@ -100,32 +100,44 @@ impl GameState {
     }
 
     /// `Effect::Clockspin` — one counter on each selected permanent or
-    /// suspended card: removed or doubled up. The controller helps what they
-    /// own (a suspended card of theirs loses a time counter, a permanent of
-    /// theirs sheds a harmful counter or gains a helpful one) and hurts an
-    /// opponent's (the reverse).
+    /// suspended card: removed or doubled up. A deciding seat picks the
+    /// counter (keyword counters included) and the direction; headless, the
+    /// controller helps what they own (a suspended card of theirs loses a time
+    /// counter, a permanent of theirs sheds a harmful counter or gains a
+    /// helpful one) and hurts an opponent's (the reverse).
     pub(super) fn clockspin(
         &mut self,
         what: &Selector,
+        effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
+        let asks = self.seat_prompts(me) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        // Every pick first (the re-run after a suspend replays them), then
+        // the counters move.
+        let mut plan: Vec<Effect> = Vec::new();
         for ent in self.resolve_selector(what, ctx) {
             let Some(id) = ent.as_card_id() else { continue };
-            if let Some(card) = self.exile.iter_mut().find(|c| c.id == id && c.is_suspended()) {
-                if card.owner == me {
-                    let mut evs = self.remove_suspend_time_counter(id);
-                    events.append(&mut evs);
+            if let Some(card) = self.exile.iter().find(|c| c.id == id && c.is_suspended()) {
+                let remove = card.owner == me;
+                let pick = if asks {
+                    let options = vec!["Remove a time counter".to_string(), "Add a time counter".to_string()];
+                    let Some(i) = self.ask_seat_option(&mut cursor, me, "Clockspinning".into(), source, options, effect)
+                    else {
+                        return Ok(());
+                    };
+                    i == 0
                 } else {
-                    card.add_counters(CounterType::Time, 1);
-                    events.push(GameEvent::CounterAdded {
-                        card_id: id,
-                        counter_type: CounterType::Time,
-                        count: 1,
-                        placer: self.resolution_causer,
-                    });
-                }
+                    remove
+                };
+                plan.push(if pick {
+                    Effect::RemoveCounter { what: Selector::ExactObjects(vec![id]), kind: CounterType::Time, amount: Value::ONE }
+                } else {
+                    Effect::AddCounter { what: Selector::ExactObjects(vec![id]), kind: CounterType::Time, amount: Value::ONE }
+                });
                 continue;
             }
             let Some(c) = self.battlefield_find(id) else { continue };
@@ -134,22 +146,81 @@ impl GameState {
                 matches!(k, CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne | CounterType::Stun)
             };
             let removal_rewarded = time_removal_rewarded(&c.definition);
-            let kinds: Vec<CounterType> = c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
-            // Remove when the kind is bad for the owner-side we're serving.
-            let choice = kinds.iter().map(|&k| {
-                let good_for_holder = !(harmful(k) || k == CounterType::Time && removal_rewarded);
-                (k, good_for_holder != mine)
-            });
-            let Some((kind, remove)) = choice.clone().find(|&(_, remove)| !remove).or_else(|| choice.clone().next()) else {
+            // (label, effect, remove?, good for the permanent's controller)
+            let target = || Selector::ExactObjects(vec![id]);
+            let mut options: Vec<(String, Effect, bool, bool)> = Vec::new();
+            for (&k, &n) in c.counters.iter() {
+                if n == 0 {
+                    continue;
+                }
+                let good = !(harmful(k) || k == CounterType::Time && removal_rewarded);
+                options.push((format!("Remove a {k:?} counter"), Effect::RemoveCounter { what: target(), kind: k, amount: Value::ONE }, true, good));
+                options.push((format!("Add a {k:?} counter"), Effect::AddCounter { what: target(), kind: k, amount: Value::ONE }, false, good));
+            }
+            for (kw, n) in &c.keyword_counters {
+                if *n == 0 {
+                    continue;
+                }
+                let kw = kw.clone();
+                options.push((
+                    format!("Remove a {kw:?} counter"),
+                    Effect::RemoveKeywordCounter { what: target(), keyword: kw.clone(), amount: Value::ONE },
+                    true,
+                    true,
+                ));
+                options.push((
+                    format!("Add a {kw:?} counter"),
+                    Effect::AddKeywordCounter { what: target(), keyword: kw, amount: Value::ONE },
+                    false,
+                    true,
+                ));
+            }
+            if options.is_empty() {
                 continue;
-            };
-            let what = Selector::ExactObjects(vec![id]);
-            let effect = if remove {
-                Effect::RemoveCounter { what, kind, amount: Value::ONE }
+            }
+            // Headless: the first counter whose right move for this side is
+            // an addition, else the first removal.
+            let right = |o: &(String, Effect, bool, bool)| o.2 == (o.3 != mine);
+            let auto = options
+                .iter()
+                .position(|o| right(o) && !o.2)
+                .or_else(|| options.iter().position(right))
+                .unwrap_or(0);
+            let pick = if asks {
+                let labels = options.iter().map(|o| o.0.clone()).collect();
+                let Some(i) = self.ask_seat_option(&mut cursor, me, "Clockspinning".into(), source, labels, effect) else {
+                    return Ok(());
+                };
+                i.min(options.len() - 1)
             } else {
-                Effect::AddCounter { what, kind, amount: Value::ONE }
+                auto
             };
-            self.run_effect(&effect, ctx, events)?;
+            plan.push(options.swap_remove(pick).1);
+        }
+        self.clear_answer_log();
+        for e in plan {
+            if let Effect::RemoveCounter { what: Selector::ExactObjects(ids), kind: CounterType::Time, .. } = &e
+                && let Some(&id) = ids.first()
+                && self.exile.iter().any(|c| c.id == id && c.is_suspended())
+            {
+                let mut evs = self.remove_suspend_time_counter(id);
+                events.append(&mut evs);
+                continue;
+            }
+            if let Effect::AddCounter { what: Selector::ExactObjects(ids), kind: CounterType::Time, .. } = &e
+                && let Some(&id) = ids.first()
+                && let Some(card) = self.exile.iter_mut().find(|c| c.id == id && c.is_suspended())
+            {
+                card.add_counters(CounterType::Time, 1);
+                events.push(GameEvent::CounterAdded {
+                    card_id: id,
+                    counter_type: CounterType::Time,
+                    count: 1,
+                    placer: self.resolution_causer,
+                });
+                continue;
+            }
+            self.run_effect(&e, ctx, events)?;
         }
         Ok(())
     }

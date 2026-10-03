@@ -224,8 +224,8 @@ pub fn atraxi_warden() -> CardDefinition {
 }
 
 /// Clockspinning — buyback {3}; a counter on target permanent or suspended
-/// card is removed or doubled up (the caster helps its own, hurts an
-/// opponent's). Residual: keyword counters can't be chosen.
+/// card, keyword counters included, is removed or doubled up — the caster's
+/// pick (headless: it helps its own, hurts an opponent's).
 pub fn clockspinning() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Buyback(cost(&[generic(3)]))],
