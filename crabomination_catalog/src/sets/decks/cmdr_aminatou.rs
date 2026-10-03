@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_aminatou.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Aminatou's Augury** — the one free spell per card type is picked at
-//!   resolution (greatest mana value first), not as each is cast.
 //! - **Primordial Mist** — exiling the face-down permanent is the ability's
 //!   target, not its cost.
 
@@ -69,8 +67,8 @@ pub fn aminatou_the_fateshifter() -> CardDefinition {
     }
 }
 
-/// Aminatou's Augury — exile eight, maybe a land, then one free spell per
-/// nonland card type. Residual: the picks are made at resolution.
+/// Aminatou's Augury — exile eight, maybe a land, then this turn one free
+/// spell per nonland card type from among them, picked as they're cast.
 pub fn aminatous_augury() -> CardDefinition {
     spell(
         "Aminatou's Augury",

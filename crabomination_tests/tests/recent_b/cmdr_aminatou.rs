@@ -101,7 +101,8 @@ fn aminatou_filters_and_blinks() {
     assert!(!back.tapped && back.controller == 0);
 }
 
-/// CR 701.34 — Aminatou's Augury: a land and one free spell per card type.
+/// CR 118.9 — Aminatou's Augury: a land, then this turn one free spell per
+/// nonland card type, picked as they're cast.
 #[test]
 fn aminatous_augury_offers_one_per_type() {
     let mut g = pod();
@@ -113,8 +114,31 @@ fn aminatous_augury_offers_one_per_type() {
     let aug = g.add_card_to_hand(0, catalog::aminatous_augury());
     cast(&mut g, aug, None).expect("cast");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest"));
-    let free = g.exile.iter().filter(|c| c.may_play_until.is_some()).count();
-    assert_eq!(free, 2, "one creature, one artifact");
+    let offered = |g: &GameState, name: &str| {
+        g.exile.iter().find(|c| c.definition.name == name).is_some_and(|c| c.may_play_until.is_some())
+    };
+    // The picks are the caster's, made as they cast this turn: every nonland
+    // card is offered until its type is spent.
+    assert!(offered(&g, "Grizzly Bears") && offered(&g, "Hill Giant") && offered(&g, "Sol Ring"));
+    let free_cast = |g: &mut GameState, name: &str| {
+        let id = g.exile.iter().find(|c| c.definition.name == name).map(|c| c.id).expect("exiled");
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .map(|_| drain_stack(g))
+    };
+    g.players[0].mana_pool = Default::default();
+    free_cast(&mut g, "Hill Giant").expect("the creature");
+    assert!(!offered(&g, "Grizzly Bears"), "creature is spent");
+    assert!(offered(&g, "Sol Ring"));
+    free_cast(&mut g, "Sol Ring").expect("the artifact");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Hill Giant"));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sol Ring"));
 }
 
 /// CR 702.94 — Banishing Stroke bottoms a creature.
