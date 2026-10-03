@@ -335,15 +335,16 @@ pub fn lux_cannon() -> CardDefinition {
     }
 }
 
-/// Moxite Refinery — {2}, {T}, remove X counters from your artifacts and
-/// creatures: X charge counters on target artifact, or X +1/+1 counters on
-/// target creature (sorcery speed). Residual: The X may come from several permanents.
+/// Moxite Refinery — {2}, {T}, remove X counters from an artifact or creature
+/// you control: X charge counters on target artifact, or X +1/+1 counters on
+/// target creature (sorcery speed).
 pub fn moxite_refinery() -> CardDefinition {
     let mode = |filter: R, kind| ActivatedAbility {
         mana_cost: cost(&[generic(2)]),
         tap_cost: true,
         sorcery_speed: true,
         remove_counter_among_x: Some((None, artifact_card().or(R::Creature))),
+        remove_counter_among_x_one: true,
         effect: Effect::AddCounter { what: target_filtered(filter), kind, amount: Value::XFromCost },
         ..Default::default()
     };

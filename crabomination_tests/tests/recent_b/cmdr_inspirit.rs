@@ -323,6 +323,19 @@ fn moxite_refinery_converts_counters() {
     activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(3)).expect("X = 3");
     assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 3);
     assert_eq!(counters(&g, eng, CounterType::Charge), 0);
+    // "From an artifact or creature": X can't be pooled across two of them.
+    let mut g = pod(2);
+    let mr = g.add_card_to_battlefield(0, catalog::moxite_refinery());
+    let a = g.add_card_to_battlefield(0, catalog::insight_engine());
+    let b = g.add_card_to_battlefield(0, catalog::insight_engine());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::Charge, 2);
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::Charge, 2);
+    flood(&mut g, 0);
+    assert!(activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(3)).is_err(), "2 + 2 is not one source of 3");
+    activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(2)).expect("X = 2 off one");
+    assert_eq!(counters(&g, a, CounterType::Charge) + counters(&g, b, CounterType::Charge), 2);
+    assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 2);
 }
 
 /// Patrolling Peacemaker — enters with two counters; an opponent's crime
