@@ -86,7 +86,12 @@ pub fn mishra_eminent_one() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                 },
-                Effect::SetCopiedName { what: Selector::LastCreatedToken, name: "Mishra's Warform" },
+                Effect::AmendCopiableValues {
+                    what: Selector::LastCreatedToken,
+                    name: Some("Mishra's Warform"),
+                    set_creature_types: None,
+                    add_creature_types: vec![],
+                },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
                     keyword: Keyword::Haste,

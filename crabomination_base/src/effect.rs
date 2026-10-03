@@ -8607,8 +8607,14 @@ pub enum Effect {
     /// (CR 707.2 — its copiable values). The token attacks the defender the
     /// effect's source is attacking (CR 508.4 — it was never declared, so no
     /// "whenever ~ attacks" trigger), else the controller's first opponent.
-    /// No-op outside combat.
-    TokenCopyAttackingUntilEndOfCombat { source: Selector },
+    /// No-op outside combat. `sacrifice`: "Sacrifice that token at end of
+    /// combat" (Phantom Steed) rather than exile it. The token is
+    /// `LastCreatedToken` for a chained copy exception.
+    TokenCopyAttackingUntilEndOfCombat {
+        source: Selector,
+        #[serde(default)]
+        sacrifice: bool,
+    },
     /// "Create a tapped and attacking token that's a copy of [source]" with
     /// no end-of-combat cleanup; the token is `Selector::LastCreatedToken`
     /// for a chained rider (Satya, Aetherflux Genius's end-step "sacrifice
@@ -8944,13 +8950,19 @@ pub enum Effect {
         #[serde(default)]
         extra_keywords: Vec<crate::card::Keyword>,
     },
-    /// CR 707.9b — "except its name is `name`": the copy exception rewrites
-    /// the copiable name of each permanent `what` names (Mishra's Warform),
-    /// so a copy of it is named that too.
-    SetCopiedName {
+    /// CR 707.9b — a copy exception written into the copiable values of each
+    /// permanent `what` names, so a copy of it carries it too: "except its
+    /// name is …" (Mishra's Warform), "except it's a … Zombie" (creature types
+    /// replaced — The Scarab God), "… an Illusion in addition to its other
+    /// types" (Phantom Steed).
+    AmendCopiableValues {
         what: Selector,
-        #[serde(with = "crate::static_str_serde")]
-        name: crate::static_str_serde::StaticStr,
+        #[serde(default, with = "crate::static_str_serde::opt")]
+        name: Option<crate::static_str_serde::StaticStr>,
+        #[serde(default)]
+        set_creature_types: Option<Vec<crate::card::CreatureType>>,
+        #[serde(default)]
+        add_creature_types: Vec<crate::card::CreatureType>,
     },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and

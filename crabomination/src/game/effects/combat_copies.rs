@@ -42,13 +42,16 @@ impl GameState {
 
     /// Gyrus's copy: a token copy of the card `source` names, put into the
     /// current combat tapped and attacking (CR 508.4 — never declared), and
-    /// exiled at end of combat.
+    /// exiled (or, `sacrifice`, sacrificed — Phantom Steed) at end of combat.
     pub(super) fn token_copy_attacking_until_end_of_combat(
         &mut self,
         source: &Selector,
+        sacrifice: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        // A chained copy exception must not reach an older token.
+        self.last_created_token = None;
         if self.attacking.is_empty() {
             return Ok(());
         }
@@ -69,8 +72,14 @@ impl GameState {
             .or_else(|| self.default_hostile_opponent(me).map(AttackTarget::Player));
         let Some(target) = target else { return Ok(()) };
         let token = self.mint_token_onto_battlefield(def, me, true, events);
+        self.last_created_token = Some(token);
         if self.put_into_combat_attacking(token, target) {
-            self.attacking_token_cleanup.push((token, AttackingTokenCleanup::ExileAtEndOfCombat));
+            let cleanup = if sacrifice {
+                AttackingTokenCleanup::SacrificeAtEndOfCombat
+            } else {
+                AttackingTokenCleanup::ExileAtEndOfCombat
+            };
+            self.attacking_token_cleanup.push((token, cleanup));
         }
         Ok(())
     }

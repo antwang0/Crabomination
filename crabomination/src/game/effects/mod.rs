@@ -12607,12 +12607,23 @@ impl GameState {
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
             }
-            Effect::SetCopiedName { what, name } => {
+            Effect::AmendCopiableValues { what, name, set_creature_types, add_creature_types } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
                         let mut def = (*c.definition.arc()).clone();
-                        def.name = name;
+                        if let Some(name) = name {
+                            def.name = name;
+                        }
+                        let types = &mut def.subtypes.creature_types;
+                        if let Some(set) = set_creature_types {
+                            types.clone_from(set);
+                        }
+                        for t in add_creature_types {
+                            if !types.contains(t) {
+                                types.push(*t);
+                            }
+                        }
                         c.set_copiable_definition(std::sync::Arc::new(def));
                     }
                 }
@@ -22121,8 +22132,8 @@ impl GameState {
                 self.join_combat_attacking_chosen(what, *cleanup, ctx, effect)
             }
 
-            Effect::TokenCopyAttackingUntilEndOfCombat { source } => {
-                self.token_copy_attacking_until_end_of_combat(source, ctx, events)
+            Effect::TokenCopyAttackingUntilEndOfCombat { source, sacrifice } => {
+                self.token_copy_attacking_until_end_of_combat(source, *sacrifice, ctx, events)
             }
             Effect::TokenCopyTappedAttacking { source } => self.token_copy_tapped_attacking(source, ctx, events),
             Effect::Myriad => {

@@ -270,7 +270,7 @@ pub fn gyrus_waker_of_corpses() -> CardDefinition {
                         what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::PowerLessThanSource)),
                         to: ZoneDest::Exile,
                     },
-                    Effect::TokenCopyAttackingUntilEndOfCombat { source: Selector::LastMoved },
+                    Effect::TokenCopyAttackingUntilEndOfCombat { source: Selector::LastMoved, sacrifice: false },
                 ])),
             },
         }],
