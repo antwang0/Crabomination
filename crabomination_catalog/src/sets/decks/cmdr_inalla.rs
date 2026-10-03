@@ -385,7 +385,7 @@ pub fn portal_mage() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
                 .with_filter(Predicate::CurrentStepIs(TurnStep::DeclareAttackers)),
-            effect: Effect::ReselectAttackTarget { what: target_filtered(R::IsAttacking) },
+            effect: Effect::ReselectAttackTarget { what: target_filtered(R::IsAttacking), players_only: false },
         }],
         ..creature(
             "Portal Mage",

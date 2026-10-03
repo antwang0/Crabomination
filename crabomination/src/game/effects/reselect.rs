@@ -16,7 +16,7 @@ impl GameState {
     /// seat takes the first option, so the list opens with the targets it
     /// would rather see hit (its ranked hostile opponent first, never
     /// itself), then "keep", then its own player and planeswalkers.
-    pub(crate) fn reselect_attack_target(&mut self, what: &Selector, ctx: &EffectContext, effect: &Effect) {
+    pub(crate) fn reselect_attack_target(&mut self, what: &Selector, players_only: bool, ctx: &EffectContext, effect: &Effect) {
         let Some(attacker) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id())
         else {
             return;
@@ -35,7 +35,9 @@ impl GameState {
         for s in seats {
             let bucket = if s == chooser { &mut mine } else { &mut theirs };
             bucket.push((AttackTarget::Player(s), format!("Player {}", s + 1)));
-            for pw in self.battlefield.iter().filter(|c| c.controller == s && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)) {
+            for pw in self.battlefield.iter().filter(|c| {
+                !players_only && c.controller == s && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
+            }) {
                 bucket.push((AttackTarget::Planeswalker(pw.id), pw.definition.name.to_string()));
             }
         }

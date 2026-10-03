@@ -6231,7 +6231,12 @@ pub enum Effect {
     /// "You may reselect which player or permanent [what] is attacking"
     /// (Misleading Signpost). Ignores attack restrictions and costs, and is
     /// not a new attack (no "whenever … attacks" trigger) — the rulings.
-    ReselectAttackTarget { what: Selector },
+    /// `players_only`: "which player" — no planeswalker (Capricopian).
+    ReselectAttackTarget {
+        what: Selector,
+        #[serde(default)]
+        players_only: bool,
+    },
     /// Look at the top `count` cards of `who`'s library, exile one (auto-pick:
     /// highest MV) and bottom the rest randomly; `grant` says what the exiled
     /// card may then do (Gonti, Vivien's −2, Florian, The Key to the Vault).
