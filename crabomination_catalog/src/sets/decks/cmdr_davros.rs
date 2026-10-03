@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_davros.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Doomsday Confluence** — each of the X modes is chosen as it resolves.
 //! - **Rassilon, the War President** — noncreature spells cast from exile
 //!   don't have conspire.
 //! - **The Master, Multiplied** — your triggered abilities can still make you
@@ -470,16 +469,17 @@ pub fn dont_blink() -> CardDefinition {
 }
 
 /// Doomsday Confluence — choose X, repeats allowed: each player sacrifices a
-/// nonartifact creature; a Dalek; each opponent discards. Residual: each
-/// mode is chosen as it resolves.
+/// nonartifact creature; a Dalek; each opponent discards. The modes are
+/// chosen as it is cast.
 pub fn doomsday_confluence() -> CardDefinition {
     spell(
         "Doomsday Confluence",
         cost(&[x(), x(), b()]),
         CardType::Sorcery,
-        Effect::Repeat {
-            count: Value::XFromCost,
-            body: Box::new(Effect::ChooseMode(vec![
+        // "Choose X. You may choose the same mode more than once." — the
+        // modes are picked as it is cast (`max: 0` is "exactly X").
+        Effect::ChooseModesCast {
+            modes: vec![
                 Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::EachPlayer),
                     count: Value::ONE,
@@ -487,7 +487,10 @@ pub fn doomsday_confluence() -> CardDefinition {
                 },
                 make_dalek(PlayerRef::You, Value::ONE),
                 Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false },
-            ])),
+            ],
+            min: 0,
+            max: 0,
+            allow_repeats: true,
         },
     )
 }

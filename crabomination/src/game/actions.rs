@@ -7587,6 +7587,11 @@ impl GameState {
                     Some((modes.len(), 1usize, modes.len(), false, None))
                 }
                 crate::effect::Effect::Tiered { modes } => Some((modes.len(), 1, 1, false, None)),
+                // "Choose X" — exactly the cast's X picks.
+                crate::effect::Effect::ChooseModesCast { modes, max: 0, allow_repeats, .. } => {
+                    let x = x_value.unwrap_or(0) as usize;
+                    Some((modes.len(), x, x, *allow_repeats, None))
+                }
                 crate::effect::Effect::ChooseModesCast { modes, min, max, allow_repeats } => {
                     Some((modes.len(), *min as usize, *max as usize, *allow_repeats, None))
                 }

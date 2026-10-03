@@ -8041,6 +8041,12 @@ pub(super) fn cast_candidates<'a>(
         {
             candidates = mode_combinations(modes.len() as u8, *min as usize, *allow_repeats);
         }
+        // "Choose X" (Doomsday Confluence): every pick of exactly the X the
+        // pool affords (capped at five, 21 picks of three modes).
+        if let Effect::ChooseModesCast { max: 0, allow_repeats, .. } = &c.definition.effect {
+            let x = max_affordable_x(state, seat, c, w).min(5) as usize;
+            candidates = if x == 0 { Vec::new() } else { mode_combinations(modes.len() as u8, x, *allow_repeats) };
+        }
         // "Choose one or both" / "one or more" (Saheeli's Artistry, Sublime
         // Epiphany): every pick of two or more modes too (at most 26, for
         // five modes), so the sim can take bounce + draw rather than all or

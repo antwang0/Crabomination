@@ -4446,6 +4446,8 @@ pub enum Effect {
     /// target-bearing instance consuming the next target slot (slot 0 =
     /// `target`, then `additional_targets`). A plain `CastSpell { mode }`
     /// falls back to running that single mode (bot / back-compat path).
+    /// `max: 0` is "Choose X" (Doomsday Confluence): exactly the cast's X
+    /// picks.
     ChooseModesCast { modes: Vec<Effect>, min: u8, max: u8, allow_repeats: bool },
     /// BLB "Choose up to `budget` {P} worth of modes. You may choose the same
     /// mode more than once." — the Season cycle. Each mode has a point price

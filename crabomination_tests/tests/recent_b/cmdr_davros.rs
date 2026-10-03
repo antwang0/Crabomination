@@ -612,3 +612,26 @@ fn genesis_of_the_daleks_counts_every_dalek_that_died_this_turn() {
     g.resolve_effect(&option_a, &EffectContext::for_ability(saga, 1, None)).expect("IV, option A");
     assert_eq!(g.players[1].life, life - 6, "the earlier Dalek's 3 and this one's 3");
 }
+
+/// CR 700.2 — Doomsday Confluence's X modes are chosen as it is cast, the
+/// same mode as often as wanted, and there must be exactly X of them.
+#[test]
+fn doomsday_confluence_chooses_x_modes_as_it_is_cast() {
+    let mut g = main_phase(2);
+    let spell = g.add_card_to_hand(0, catalog::doomsday_confluence());
+    flood(&mut g, 0);
+    let cast = |g: &mut GameState, picks: Vec<u8>| {
+        g.perform_action(GameAction::CastSpellSpree {
+            card_id: spell,
+            spree_modes: picks,
+            target: None,
+            additional_targets: vec![],
+            x_value: Some(2),
+        })
+    };
+    assert!(cast(&mut g, vec![1]).is_err(), "X is 2: one mode is too few");
+    assert!(cast(&mut g, vec![1, 1, 1]).is_err(), "and three too many");
+    cast(&mut g, vec![1, 1]).expect("two Daleks");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Dalek").len(), 2);
+}

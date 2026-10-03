@@ -1992,7 +1992,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own. |
-| 🟡 Doomsday Confluence | Masters of Evil (WHO) | each of the X modes is chosen as it resolves, not all on cast. |
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |
