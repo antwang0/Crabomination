@@ -448,13 +448,23 @@ pub fn thousand_winds() -> CardDefinition {
 }
 
 /// Vesuvan Shapeshifter — {3}{U}{U} 0/0 Shapeshifter, morph {1}{U}. As it
-/// enters it may become a copy of another creature (CR 707.2).
-/// Residual: no copy as it's turned face up, and no upkeep turn-face-down.
+/// enters or is turned face up it may become a copy of another creature
+/// until it's turned face down (CR 707.2, 708.8), with "at the beginning of
+/// your upkeep, you may turn this creature face down".
 pub fn vesuvan_shapeshifter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Morph(cost(&[generic(1), u()]))],
         enters_as_copy: Some(EntersAsCopy {
             filter: R::Creature.and(R::OtherThanSource),
+            until_turned_face_down: true,
+            as_turned_face_up: true,
+            extra_triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+                effect: Effect::MayDo {
+                    description: "Turn this creature face down?".into(),
+                    body: Box::new(Effect::TurnFaceDown { what: Selector::This }),
+                },
+            }],
             ..Default::default()
         }),
         ..creature(

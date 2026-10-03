@@ -121,6 +121,36 @@ fn gift_of_doom_attaches_as_it_turns_face_up() {
     assert!(cp.keywords().contains(&Keyword::Deathtouch) && cp.keywords().contains(&Keyword::Indestructible));
 }
 
+/// Vesuvan Shapeshifter copies a creature as it enters, and the copy has "at
+/// the beginning of your upkeep, you may turn this creature face down".
+/// Turning it down ends the copy (the face-down card is the Shapeshifter, CR
+/// 708.2), and as it's turned face up it copies again (CR 708.8).
+#[test]
+fn vesuvan_shapeshifter_recopies_as_it_turns_face_up() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let vs = g.add_card_to_hand(0, catalog::vesuvan_shapeshifter());
+    flood(&mut g, 0);
+    cast_by(&mut g, 0, vs, &[]);
+    let name = |g: &GameState| g.battlefield_find(vs).map(|c| c.definition.name);
+    assert_eq!(name(&g), Some("Serra Angel"));
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(vs).unwrap();
+    assert!(c.face_down);
+    assert_eq!(c.face_up_def.as_ref().map(|d| d.name), Some("Vesuvan Shapeshifter"), "the copy ended");
+    g.decider = Box::new(crabomination::decision::AutoDecider);
+    g.add_card_to_battlefield(1, catalog::craw_wurm());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUp { card_id: vs }).expect("unmorph");
+    assert_eq!(name(&g), Some("Craw Wurm"), "copies as it turns face up");
+}
+
 /// Sudden Substitution swaps an opponent's spell for your creature.
 #[test]
 fn sudden_substitution_swaps() {
