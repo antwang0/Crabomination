@@ -359,21 +359,34 @@ pub fn murder_of_crows() -> CardDefinition {
     }
 }
 
-/// Nihiloor — on entering, steals an opponent's creature no stronger than
-/// the creature it taps while you control Nihiloor; attacking with a
-/// creature an opponent owns drains its owner for 2.
-///
-/// Residual: the tapped creature is always Nihiloor, and only one
-/// opponent's creature is taken.
+/// Nihiloor — on entering, for each opponent, tap up to one untapped creature
+/// you control; when you do, gain control of a creature that player controls
+/// with power at most the tapped one's while you control Nihiloor. Attacking
+/// with a creature an opponent owns drains its owner for 2. The "when you do"
+/// resolves inline (`Effect::Reflexive`), so "that player" stays bound.
 pub fn nihiloor() -> CardDefinition {
+    let tap_then_steal = crate::effect::shortcut::choose_some_then(
+        Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::Untapped)),
+        PlayerRef::You,
+        Value::ONE,
+        true,
+        Effect::WithX {
+            x: Value::PowerOf(Box::new(crate::effect::shortcut::chosen_one())),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: crate::effect::shortcut::chosen_one() },
+                Effect::Reflexive {
+                    body: Box::new(Effect::GainControlWhileYouControlSource {
+                        what: target_filtered(
+                            R::Creature.and(R::ControlledByTriggerPlayer).and(R::PowerAtMostXFromCost),
+                        ),
+                    }),
+                },
+            ])),
+        },
+    );
     CardDefinition {
         triggered_abilities: vec![
-            etb(Effect::Seq(vec![
-                Effect::GainControlWhileYouControlSource {
-                    what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::PowerAtMostSourcePower)),
-                },
-                Effect::Tap { what: Selector::This },
-            ])),
+            etb(Effect::ForEachOpponent { body: Box::new(tap_then_steal) }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches {

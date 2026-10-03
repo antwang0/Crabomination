@@ -1987,7 +1987,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
-| 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |
 | 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
@@ -2139,7 +2138,6 @@ library-exile event.
 | Weftwalking | "the first spell each player casts during each of their turns may be cast without paying its mana cost" is absent | no once-per-turn-per-player free-cast static |
 | Coveted Jewel, Flame Sweep, The One Ring, Amped Raptor, Chandra ToD, Ragavan, Robber of the Rich, Gonti, Reckoner Bankbuster | a bare "attack you" fires on planeswalker attacks; "except creatures you control with flying" spares every flyer; the protection rider ignores "if you cast it"; the Raptor's exile ignores "if you cast it from your hand", takes the top card only and costs a flat {E}×4; the impulse "you may cast" of Chandra / Ragavan / Robber / Gonti lets an exiled land be played; Bankbuster's Pilot lacks the +2 crew bonus | cube pool — frozen |
 | Choreographed Sparks, Render Speechless, Cost of Brilliance, Homesickness, Vibrant Outburst, Burrog Barrage, Chelonian Tackle, Dissection Practice, Impractical Joke | copy any-controller spell / "up to" slots still mandatory | SOS pool — frozen; this also blocks the CR 601.2c later-slot gate (TODO) |
-| Nihiloor | one steal, tapping Nihiloor, not one per opponent per tapped creature | the steal's power cap reads the creature tapped for it |
 | Turf War | the contested land per player is the engine's pick | `ContestOneLandPerPlayer` has no per-player target slot |
 | Chainer, Nightmare Adept | the graveyard-cast permission names one creature card (the first) | the priciest pick can be one it can't afford; wants a one-cast group over every creature card |
 | Scaretiller | the graveyard land is untargeted | a target inside the hand-or-graveyard branch would drop the trigger when no land card is there |

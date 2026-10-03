@@ -305,6 +305,30 @@ fn nihiloor_steals_and_drains_the_owner() {
     assert_eq!(g.players[1].life, 18);
 }
 
+/// Nihiloor at three seats: one tap per opponent, each stealing a creature of
+/// THAT player's no stronger than the creature tapped for it; all of them go
+/// home when Nihiloor leaves.
+#[test]
+fn nihiloor_taps_once_per_opponent() {
+    let mut g = pod(3);
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let n = g.add_card_to_hand(0, catalog::nihiloor());
+    cast(&mut g, 0, n, None).expect("nihiloor");
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 0, "the Wurm's 6 power takes the Angel");
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "Nihiloor's 3 takes the Bears");
+    // The second tap may be Nihiloor or the Angel just taken — both are
+    // untapped creatures you control by then.
+    let tapped = [wurm, n, angel].iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count();
+    assert!(g.battlefield_find(wurm).unwrap().tapped && tapped == 2, "one tap per opponent");
+    let mut events = Vec::new();
+    g.destroy_permanent(n, false, &mut events);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 2);
+}
+
 /// Nimbus Maze — each colored ability needs the other basic type.
 #[test]
 fn nimbus_maze_gates_its_colors() {
