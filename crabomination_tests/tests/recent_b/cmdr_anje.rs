@@ -167,6 +167,14 @@ fn krrik_pays_black_with_life() {
     assert_eq!(g.players[0].life, life - 4);
     let k = named(&g, 0, "K'rrik, Son of Yawgmoth")[0];
     assert_eq!(g.battlefield_find(k).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "a black spell");
+
+    // "For each {B} in a cost" covers an activation cost too (2024-06-07
+    // ruling, CR 107.4f): Nantuko Shade's {B} pump for 2 life, no mana.
+    let shade = g.add_card_to_battlefield(0, catalog::nantuko_shade());
+    let life = g.players[0].life;
+    activate(&mut g, shade, 0).expect("pump with life");
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(g.computed_permanent(shade).unwrap().power, 3);
 }
 
 /// Bone Miser: a discarded creature makes a 2/2 Zombie.
