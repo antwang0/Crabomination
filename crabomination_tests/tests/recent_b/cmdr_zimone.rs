@@ -129,6 +129,25 @@ fn deathmist_raptor_returns_on_a_turn_up() {
     assert!(g.battlefield_find(raptor).is_some());
 }
 
+/// "Face up or face down": returned face down it's a 2/2, and turning it up
+/// for its megamorph cost gives the +1/+1 counter (CR 702.37b).
+#[test]
+fn deathmist_raptor_may_return_face_down() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 3);
+    let raptor = g.add_card_to_graveyard(0, catalog::deathmist_raptor());
+    let s = g.add_card_to_battlefield(0, catalog::scroll_of_fate());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    activate(&mut g, s, 0, &[]).expect("manifest from hand");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Mode(1)]));
+    act(&mut g, GameAction::TurnFaceUp { card_id: bear }).expect("face up");
+    let r = g.battlefield_find(raptor).expect("returned");
+    assert!(r.face_down, "the face-down mode");
+    assert_eq!(pt(&g, raptor), (2, 2));
+    act(&mut g, GameAction::TurnFaceUp { card_id: raptor }).expect("megamorph");
+    assert_eq!(pt(&g, raptor), (4, 4), "3/3 plus the megamorph counter");
+}
+
 /// Disorienting Choice: a kept permanent pays you a land.
 #[test]
 fn disorienting_choice_ramps_off_a_kept_permanent() {

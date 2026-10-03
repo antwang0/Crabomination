@@ -3129,8 +3129,8 @@ trigger read an `Any` filter and took the first permanent (it and three
 sibling counter variants now also refuse a player); and ⚠ **a card cast
 from the graveyard skipped its own additional costs** (CR 601.2f — Skaab
 Ruinator came back without exiling three creature cards; only flashback
-riders were paid). Residuals: **Ashaya, Soul of the Wild**, **Deathmist
-Raptor**, **Disorienting Choice**, **Zimone, Mystery Unraveler**, **Zimone's
+riders were paid). Residuals: **Ashaya, Soul of the Wild** (Deathmist Raptor's face-down return
+since `01BaSouG`), **Disorienting Choice**, **Zimone, Mystery Unraveler**, **Zimone's
 Hypothesis**. A 200-game census beside Millicent / Lathliss / Bright-Palm
 (seed 133) decided 200/200 with zero panics and no card of the list
 unplayed, Zimone winning 18.0 %. `--bench` byte-identical.

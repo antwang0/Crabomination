@@ -1,10 +1,6 @@
 //! Commander: the cards the **Jump Scare!** precon (DSC, Zimone, Mystery
 //! Unraveler) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_zimone.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Deathmist Raptor** — it returns face up; the face-down option isn't
-//!   offered.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
@@ -113,20 +109,23 @@ pub fn curator_beastie() -> CardDefinition {
 }
 
 /// Deathmist Raptor — deathtouch; megamorph {4}{G}; a permanent of yours
-/// turned face up, you may return it from your graveyard.
-///
-/// ⚠ Residual: it returns face up; the face-down option isn't offered.
+/// turned face up, you may return it from your graveyard face up or face down
+/// (a mode: face down it is a 2/2 that can be turned up for its megamorph).
 pub fn deathmist_raptor() -> CardDefinition {
+    let back = || Effect::Move {
+        what: Selector::This,
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
     CardDefinition {
         keywords: vec![Keyword::Deathtouch, Keyword::Megamorph(cost(&[generic(4), g()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::FromYourGraveyard),
             effect: Effect::MayDo {
                 description: "Return Deathmist Raptor from your graveyard to the battlefield?".into(),
-                body: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                }),
+                body: Box::new(Effect::ChooseMode(vec![
+                    back(),
+                    Effect::Seq(vec![back(), Effect::TurnFaceDown { what: Selector::This }]),
+                ])),
             },
         }],
         ..creature(
