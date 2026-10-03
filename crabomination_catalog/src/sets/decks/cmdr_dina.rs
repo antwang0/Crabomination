@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_dina.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Gorma, the Gullet** — the extra counters reach creatures you *cast*;
-//!   a nontoken creature put onto the battlefield another way enters without
-//!   them.
 //! - **Stensian Sanguinist** — "this combat" is read as "this turn".
 
 use std::sync::Arc;
@@ -221,15 +218,16 @@ pub fn feral_appetite() -> CardDefinition {
 }
 
 /// Gorma, the Gullet — lifelink; another creature of yours dying grows it;
-/// nontoken creatures you cast enter with a +1/+1 counter per creature that
-/// died under your control this turn. Residual: cast creatures only.
+/// nontoken creatures you control enter with a +1/+1 counter per creature
+/// that died under your control this turn, however they enter.
 pub fn gorma_the_gullet() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Lifelink],
         static_abilities: vec![StaticAbility {
             description: "Nontoken creatures you control enter with an additional +1/+1 counter for each creature that died under your control this turn.",
-            effect: StaticEffect::ExtraEtbCountersForCreatureCasts {
+            effect: StaticEffect::MatchingEntersWithCountersPer {
+                filter: R::Creature.and(R::NotToken),
                 kind: CounterType::PlusOnePlusOne,
                 value: Value::ControllerCreaturesDiedThisTurn,
             },

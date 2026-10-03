@@ -151,8 +151,8 @@ fn feral_appetite_pests_only_creature_cards() {
     assert!(g.exile.iter().any(|c| c.id == bear));
 }
 
-/// Gorma grows on each other death, and a creature cast after deaths enters
-/// with that many counters.
+/// Gorma grows on each other death, and a nontoken creature entering after
+/// deaths — cast or reanimated — enters with that many counters (CR 614.1c).
 #[test]
 fn gorma_feeds_on_deaths() {
     let mut g = pod(2);
@@ -165,6 +165,18 @@ fn gorma_feeds_on_deaths() {
     let giant = g.add_card_to_hand(0, catalog::hill_giant());
     cast(&mut g, 0, giant, None).expect("cast");
     assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    // Reanimated rather than cast: the rider still applies; a token doesn't.
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &crabomination::effect::Effect::Move {
+            what: crabomination::effect::Selector::ExactObjects(vec![dead]),
+            to: crabomination::effect::ZoneDest::Battlefield { controller: crabomination::effect::PlayerRef::You, tapped: false },
+        },
+        &ctx,
+    )
+    .expect("reanimate");
+    assert_eq!(g.battlefield_find(dead).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
 /// Immoral Bargain sacrifices X creatures and destroys X targets.
