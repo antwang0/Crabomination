@@ -162,6 +162,23 @@ fn elrond_gathers_aid() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "both aid");
 }
 
+/// Elrond's fellowship votes: each voter chooses a creature of theirs (its
+/// least valuable, headless) and you gain control of it; it can't attack its
+/// owner.
+#[test]
+fn elrond_fellowship_takes_the_voters_choice() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1), DecisionAnswer::Amount(1)]));
+    let e = g.add_card_to_hand(0, catalog::elrond_of_the_white_council());
+    cast_at(&mut g, e, &[]).expect("cast");
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 1);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords().contains(&Keyword::CantAttackOwner));
+}
+
 /// Erestor: after a vote, agreeing opponents make Treasures and you draw.
 #[test]
 fn erestor_rewards_agreement() {
@@ -365,6 +382,59 @@ fn sail_into_the_west_returns() {
     cast_at(&mut g, s, &[]).expect("cast");
     assert_eq!(g.players[1].hand.len(), 1);
     assert!(g.exile.iter().any(|c| c.id == s), "and it's exiled");
+}
+
+/// Sail into the West: on embark each player MAY wheel — a "no" keeps its hand.
+#[test]
+fn sail_into_the_west_embark_is_optional() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 10);
+    stock(&mut g, 1, 10);
+    let kept = g.add_card_to_hand(1, catalog::craw_wurm());
+    let tossed = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(1),
+        DecisionAnswer::Amount(1),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![tossed]),
+        DecisionAnswer::Bool(false),
+    ]));
+    let s = g.add_card_to_hand(0, catalog::sail_into_the_west());
+    cast_at(&mut g, s, &[]).expect("cast");
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 1);
+    assert!(g.players[1].hand.iter().any(|c| c.id == kept));
+}
+
+/// Sail into the West with both seats at a UI: the votes and each player's
+/// "may" suspend and resume without replaying one another's answers.
+#[test]
+fn sail_into_the_west_embark_resumes_for_ui_seats() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 10);
+    stock(&mut g, 1, 10);
+    let kept = g.add_card_to_hand(1, catalog::craw_wurm());
+    g.add_card_to_hand(0, catalog::craw_wurm());
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let s = g.add_card_to_hand(0, catalog::sail_into_the_west());
+    cast_at(&mut g, s, &[]).expect("cast");
+    for _ in 0..20 {
+        let Some(p) = g.pending_decision.as_ref() else { break };
+        let seat = p.acting_player();
+        let answer = match &p.decision {
+            Decision::ChooseOption { .. } => DecisionAnswer::Amount(1),
+            Decision::Discard { .. } => DecisionAnswer::Discard(g.players[seat].hand.iter().map(|c| c.id).collect()),
+            _ => DecisionAnswer::Bool(seat == 0),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 1);
+    assert!(g.players[1].hand.iter().any(|c| c.id == kept));
 }
 
 /// Song of Eärendil's first chapter scries and draws two.

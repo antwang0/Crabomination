@@ -217,11 +217,8 @@ pub fn cirdan_the_shipwright() -> CardDefinition {
 }
 
 /// Elrond of the White Council — secret council: each aid vote puts a +1/+1
-/// counter on each creature you control; each fellowship vote hands you one
-/// of the voter's creatures.
-///
-/// ⚠ Residual: the voter's creature is the engine's pick, and it may attack
-/// its owner.
+/// counter on each creature you control; each fellowship vote hands you a
+/// creature its voter chooses (not targeted), which can't attack its owner.
 pub fn elrond_of_the_white_council() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![etb(Effect::Vote {
@@ -233,13 +230,18 @@ pub fn elrond_of_the_white_council() -> CardDefinition {
                 ),
                 VoteOption::new(
                     "fellowship",
-                    Effect::GainControl {
-                        what: Selector::Take {
-                            inner: Box::new(Selector::ControlledBy { who: PlayerRef::CurrentVoter, filter: R::Creature }),
-                            count: Box::new(Value::ONE),
-                        },
-                        to: None,
-                        duration: Duration::Permanent,
+                    Effect::ChooseOneAmong {
+                        what: Selector::ControlledBy { who: PlayerRef::CurrentVoter, filter: R::Creature },
+                        chooser: PlayerRef::CurrentVoter,
+                        chosen: Box::new(Effect::Seq(vec![
+                            Effect::GainControl { what: Selector::SeparatedPile { chosen: true }, to: None, duration: Duration::Permanent },
+                            Effect::GrantKeyword {
+                                what: Selector::SeparatedPile { chosen: true },
+                                keyword: Keyword::CantAttackOwner,
+                                duration: Duration::Permanent,
+                            },
+                        ])),
+                        other: Box::new(Effect::Noop),
                     },
                 ),
             ],
@@ -583,8 +585,6 @@ pub fn radagast_wizard_of_wilds() -> CardDefinition {
 /// Sail into the West — will of the council: return (each player takes back
 /// up to two cards, and this is exiled) or embark (a tie too: each player may
 /// wheel for seven).
-///
-/// ⚠ Residual: on embark every player wheels; the "may" isn't offered.
 pub fn sail_into_the_west() -> CardDefinition {
     spell(
         "Sail into the West",
@@ -613,16 +613,18 @@ pub fn sail_into_the_west() -> CardDefinition {
                     "embark",
                     Effect::ForEach {
                         selector: Selector::Player(PlayerRef::EachPlayer),
-                        // Unconditional: a `MayDoBy` inside the ballot would
-                        // replay the vote's answers (one answer-log channel).
-                        body: Box::new(Effect::Seq(vec![
-                            Effect::Discard {
-                                who: Selector::Player(PlayerRef::Triggerer),
-                                amount: Value::HandSizeOf(PlayerRef::Triggerer),
-                                random: false,
-                            },
-                            draw(PlayerRef::Triggerer, 7),
-                        ])),
+                        body: Box::new(Effect::MayDoBy {
+                            who: PlayerRef::Triggerer,
+                            description: "Discard your hand and draw seven cards?".into(),
+                            body: Box::new(Effect::Seq(vec![
+                                Effect::Discard {
+                                    who: Selector::Player(PlayerRef::You),
+                                    amount: Value::HandSizeOf(PlayerRef::You),
+                                    random: false,
+                                },
+                                draw(PlayerRef::You, 7),
+                            ])),
+                        }),
                     },
                 ),
             ],

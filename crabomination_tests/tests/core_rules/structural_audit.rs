@@ -797,8 +797,10 @@ fn no_shipped_card_nests_two_answer_log_arms() {
             flagged.push(format!("{}: {h}", def.name));
         }
     }
-    // The six shipped nestings (Conspiracy Theorist left when its "pay {1}
-    // and discard" became one payment). Each is safe for the reason in this test's
+    // The seven shipped nestings (Conspiracy Theorist left when its "pay {1}
+    // and discard" became one payment; Sail into the West's majority vote
+    // clears the log before the winning option, which is its last act —
+    // `cmdr_galadriel::sail_into_the_west_embark_resumes_for_ui_seats`). Each is safe for the reason in this test's
     // doc comment — the outer arm clears before its body and has nothing left
     // to do after it — and not one of them is safe by construction, which is
     // why they are listed one by one rather than waved through by shape. This
@@ -809,6 +811,7 @@ fn no_shipped_card_nests_two_answer_log_arms() {
         "Forbidden Ritual: MaySacrifice > UnlessPlayerPays",
         "Giant Albatross: MayPay > DestroyEachUnlessPaysLife",
         "Rottenmouth Viper: MaySacrifice > MayDiscard",
+        "Sail into the West: Vote > MayDoBy",
         "Skirk Drill Sergeant: MayPay > RevealTopMayPutOntoBattlefield",
         "Worms of the Earth: AnyPlayerMayAccept > AnyPlayerMayAccept",
     ];
