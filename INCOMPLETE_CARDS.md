@@ -1977,7 +1977,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
-| 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |

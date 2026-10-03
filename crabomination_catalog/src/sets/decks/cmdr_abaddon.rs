@@ -1,12 +1,6 @@
 //! Commander: the cards the **The Ruinous Powers** precon (40K, Abaddon the
 //! Despoiler) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_abaddon.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **The Lost and the Damned** — a land played from outside your hand
-//!   (graveyard, exile) doesn't count.
-//! - **The Ruinous Powers** — the life-loss rider reads any spell you cast
-//!   from exile that you don't own, and only nonland cards can be played.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
@@ -873,9 +867,10 @@ pub fn the_horus_heresy() -> CardDefinition {
     )
 }
 
-/// The Lost and the Damned — a land of yours entering without being played,
-/// or a spell you cast from anywhere but your hand, makes a 3/3 Spawn.
-/// Residual: a land played from graveyard or exile doesn't count.
+/// The Lost and the Damned — a land of yours entering from anywhere but your
+/// hand (put onto the battlefield, or played from a graveyard, exile or a
+/// library), or a spell you cast from anywhere but your hand, makes a 3/3
+/// Spawn.
 pub fn the_lost_and_the_damned() -> CardDefinition {
     CardDefinition {
         name: "The Lost and the Damned",
@@ -884,7 +879,12 @@ pub fn the_lost_and_the_damned() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl)
-                    .with_filter(Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(0))),
+                    // Event amount: 0 put onto the battlefield, 1 played from
+                    // hand, 2 played from anywhere else.
+                    .with_filter(Predicate::Any(vec![
+                        Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(0)),
+                        Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(2)),
+                    ])),
                 effect: make(spawn(), Value::ONE),
             },
             TriggeredAbility {

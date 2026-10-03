@@ -298,6 +298,14 @@ fn cr_305_4_the_lost_and_the_damned_rewards_lands_from_elsewhere() {
         other,
     );
     assert_eq!(named(&g, 0, "Spawn").len(), 1);
+    // A land *played* from the graveyard enters from outside your hand too.
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::the_lost_and_the_damned());
+    g.add_card_to_battlefield(0, catalog::crucible_of_worlds());
+    let gy_land = g.add_card_to_graveyard(0, catalog::forest());
+    g.perform_action(GameAction::PlayLandFromGraveyard(gy_land)).expect("Crucible land drop");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Spawn").len(), 1);
 }
 
 /// CR 122.1 — Venomcrawler grows with each other creature's death.
