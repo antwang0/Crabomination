@@ -12507,6 +12507,9 @@ pub enum GoadLasts {
     /// goaded, can't attack you or a permanent you control, and can't block
     /// creatures you control" (Immortal Obligation).
     Obligation(crate::card::CounterType),
+    /// "It's goaded for as long as they control it" (Vislor Turlough): held
+    /// while the creature stays with the controller it had as this resolved.
+    WhileControllerKeepsIt,
 }
 
 /// The one piece of resolver scratch an [`Effect::BindScratch`] pins.

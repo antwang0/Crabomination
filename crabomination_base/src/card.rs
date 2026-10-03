@@ -7915,6 +7915,9 @@ pub enum GoadHold {
     /// attack the goader or their permanents, nor block the goader's
     /// creatures (Immortal Obligation's duty counter).
     Obligation(CounterType),
+    /// While the goaded creature's controller is still this seat (Vislor
+    /// Turlough's "for as long as they control it").
+    WhileControlledBy(u8),
 }
 
 #[derive(Debug, Clone, Default)]

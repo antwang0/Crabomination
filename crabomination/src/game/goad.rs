@@ -111,6 +111,28 @@ impl GameState {
         match hold {
             GoadHold::WhileOnBattlefield(src) => self.battlefield_find(src).is_some(),
             GoadHold::Obligation(kind) => c.counter_count(kind) > 0,
+            GoadHold::WhileControlledBy(seat) => c.controller == usize::from(seat),
+        }
+    }
+
+    /// CR 611.2b — "for as long as they control it" ends for good once
+    /// control moves: drop the hold, so getting the creature back doesn't
+    /// re-arm it (Vislor Turlough).
+    pub(crate) fn release_lapsed_control_goads(&mut self, events: &[GameEvent]) {
+        for ev in events {
+            let GameEvent::ControlChanged { card_id, .. } = ev else { continue };
+            let lapsed = |c: &CardInstance| {
+                c.cold_any(|k| {
+                    k.goad_holds.iter().any(|&(_, h)| matches!(h, GoadHold::WhileControlledBy(s) if usize::from(s) != c.controller))
+                })
+            };
+            if !self.battlefield_find(*card_id).is_some_and(lapsed) {
+                continue;
+            }
+            if let Some(c) = self.battlefield_find_mut(*card_id) {
+                let now = c.controller;
+                c.goad_holds.retain(|&(_, h)| !matches!(h, GoadHold::WhileControlledBy(s) if usize::from(s) != now));
+            }
         }
     }
 

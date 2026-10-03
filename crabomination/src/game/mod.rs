@@ -23587,6 +23587,9 @@ impl GameState {
         if events.iter().any(|e| matches!(e, GameEvent::CounterRemoved { counter_type: crate::card::CounterType::Duty, .. })) {
             self.release_spent_obligations(events);
         }
+        if events.iter().any(|e| matches!(e, GameEvent::ControlChanged { .. })) {
+            self.release_lapsed_control_goads(events);
+        }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by

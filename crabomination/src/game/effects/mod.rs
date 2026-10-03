@@ -12191,13 +12191,23 @@ impl GameState {
                         crate::card::GoadHold::WhileOnBattlefield(src)
                     }
                     crate::effect::GoadLasts::Obligation(kind) => crate::card::GoadHold::Obligation(*kind),
+                    // Re-stamped per creature below with its controller now.
+                    crate::effect::GoadLasts::WhileControllerKeepsIt => crate::card::GoadHold::WhileControlledBy(0),
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(cid)
                         && c.definition.is_creature()
-                        && !c.goad_holds.contains(&(goader, hold))
                     {
+                        let hold = match hold {
+                            crate::card::GoadHold::WhileControlledBy(_) => {
+                                crate::card::GoadHold::WhileControlledBy(c.controller as u8)
+                            }
+                            h => h,
+                        };
+                        if c.goad_holds.contains(&(goader, hold)) {
+                            continue;
+                        }
                         c.goad_holds.push((goader, hold));
                     }
                 }
