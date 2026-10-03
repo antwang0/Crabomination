@@ -1414,7 +1414,7 @@ fn graveyard_entry(
             .has_flashback()
             .cloned()
             .or_else(|| {
-                (card.definition.keywords.contains(&crate::card::Keyword::JumpStart)
+                (card.has_jump_start()
                     || card.definition.keywords.contains(&crate::card::Keyword::GraveyardCast))
                 .then(|| card.definition.cost.clone())
             })

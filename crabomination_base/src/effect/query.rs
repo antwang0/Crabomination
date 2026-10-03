@@ -1825,6 +1825,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantJumpStartThisTurn { what }
             | Effect::GrantFlashbackWithCostThisTurn { what, .. }
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
@@ -2653,6 +2654,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantJumpStartThisTurn { what }
             | Effect::GrantFlashbackWithCostThisTurn { what, .. }
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
@@ -3602,6 +3604,7 @@ impl Effect {
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
             Effect::GrantFlashbackThisTurn { .. }
+            | Effect::GrantJumpStartThisTurn { .. }
             | Effect::GrantFlashbackWithCostThisTurn { .. }
             | Effect::GrantEscapeThisTurn { .. }
             | Effect::GrantEscapeWithCostThisTurn { .. }
@@ -5168,6 +5171,7 @@ impl Effect {
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
+                | Effect::GrantJumpStartThisTurn { what }
                 | Effect::GrantFlashbackWithCostThisTurn { what, .. }
                 | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }

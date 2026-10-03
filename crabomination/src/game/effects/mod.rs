@@ -14435,6 +14435,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantJumpStartThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        card.granted_jumpstart_eot = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantEscapeThisTurn { what, exile_count } => {
                 self.grant_escape_this_turn(what, *exile_count, None, ctx);
                 Ok(())

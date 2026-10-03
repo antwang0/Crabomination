@@ -7929,6 +7929,7 @@ macro_rules! eot_wear_off_cold {
         $m!(empty removed_keywords_eot);
         $m!(none granted_flashback_eot);
         $m!(none granted_harmonize_eot);
+        $m!(scalar granted_jumpstart_eot, false);
         $m!(none granted_alt_cast_cost_eot);
         $m!(none granted_cast_surcharge_eot);
         $m!(empty saddled_by);
@@ -8152,6 +8153,12 @@ pub struct CardCold {
     /// cost" (Songcrafter Mage). Read by `cast_harmonize` via
     /// [`effective_harmonize`]; cleared at cleanup.
     pub granted_harmonize_eot: Option<crate::mana::ManaCost>,
+    /// Until-end-of-turn jump-start (CR 702.133) granted to this card in a
+    /// graveyard (Filigree Racer). Read by [`has_jump_start`]; cleared at
+    /// cleanup.
+    ///
+    /// [`has_jump_start`]: CardInstance::has_jump_start
+    pub granted_jumpstart_eot: bool,
     /// Alternative cost the controller may pay to cast this card via its
     /// `may_play_until` permission instead of casting it for free — the
     /// "miracle {N}" cost granted by Lorehold, the Historian. Read by
@@ -11483,6 +11490,11 @@ impl CardInstance {
             .harmonize_cost()
             .or(self.granted_harmonize_eot.as_ref())
     }
+
+    /// CR 702.133 — jump-start, printed or granted until end of turn.
+    pub fn has_jump_start(&self) -> bool {
+        self.definition.keywords.has_kw(&Keyword::JumpStart) || self.granted_jumpstart_eot
+    }
 }
 
 // ── CardInstance serde: round-trip the definition by name ────────────────────
@@ -11715,6 +11727,8 @@ struct CardInstanceWire {
     granted_flashback_eot: Option<crate::mana::ManaCost>,
     #[serde(default)]
     granted_harmonize_eot: Option<crate::mana::ManaCost>,
+    #[serde(default)]
+    granted_jumpstart_eot: bool,
     /// Until-end-of-turn alternative cast cost (Lorehold's miracle {N}).
     /// Shares `may_play_until`'s lifetime. `#[serde(default)]` for
     /// back-compat.
@@ -11957,6 +11971,7 @@ impl serde::Serialize for CardInstance {
             removed_keywords: self.removed_keywords.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_harmonize_eot: self.granted_harmonize_eot.clone(),
+            granted_jumpstart_eot: self.granted_jumpstart_eot,
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             granted_cast_surcharge_eot: self.granted_cast_surcharge_eot.clone(),
             named_card: self.named_card.clone(),
@@ -12129,6 +12144,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.removed_keywords = wire.removed_keywords;
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_harmonize_eot = wire.granted_harmonize_eot;
+        c.granted_jumpstart_eot = wire.granted_jumpstart_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.granted_cast_surcharge_eot = wire.granted_cast_surcharge_eot;
         c.named_card = wire.named_card;

@@ -7090,6 +7090,10 @@ pub enum Effect {
     /// `GrantFlashbackThisTurn` at a printed flashback cost ("gains flashback
     /// {2}{R}{G} until end of turn" — The Fugitive Doctor).
     GrantFlashbackWithCostThisTurn { what: Selector, cost: crate::mana::ManaCost },
+    /// "Target instant or sorcery card in your graveyard gains jump-start
+    /// until end of turn" (Filigree Racer, CR 702.133): stamps
+    /// `granted_jumpstart_eot`, cleared at cleanup.
+    GrantJumpStartThisTurn { what: Selector },
     /// "Target card in your graveyard gains escape until end of turn. The
     /// escape cost is equal to its mana cost plus exile `exile_count` other
     /// cards from your graveyard" (Desdemona, Freedom's Edge — CR 702.138).

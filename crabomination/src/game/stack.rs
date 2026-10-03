@@ -5090,7 +5090,7 @@ impl GameState {
             let player = &self.players[pi];
             let stale_grants = player.graveyard.iter().any(|c| {
                 c.cold_any(|k| {
-                    k.granted_flashback_eot.is_some() || k.granted_harmonize_eot.is_some()
+                    k.granted_flashback_eot.is_some() || k.granted_harmonize_eot.is_some() || k.granted_jumpstart_eot
                 })
             });
             let stale_scalars = !player.turn_spell_discounts.is_empty()
@@ -5112,6 +5112,9 @@ impl GameState {
                     }
                     if card.cold_any(|k| k.granted_harmonize_eot.is_some()) {
                         card.granted_harmonize_eot = None;
+                    }
+                    if card.cold_any(|k| k.granted_jumpstart_eot) {
+                        card.granted_jumpstart_eot = false;
                     }
                 }
             }

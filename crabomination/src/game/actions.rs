@@ -12455,8 +12455,7 @@ impl GameState {
         // turn (the SOS "Flashback" instant) — or Jump-start (CR 702.103:
         // cast for its own mana cost, discarding a card as an additional
         // cost; same exile-after tail as flashback).
-        let jumpstart = card.effective_flashback().is_none()
-            && card.definition.keywords.has_kw(&Keyword::JumpStart);
+        let jumpstart = card.effective_flashback().is_none() && card.has_jump_start();
         // CR 702.187 — Mayhem: when the card has no flashback/jump-start but a
         // Mayhem cost, it may be cast from the graveyard for that cost only if
         // its owner discarded it this turn. Same exile-after tail as flashback.
