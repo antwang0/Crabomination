@@ -1,9 +1,6 @@
 //! Commander: the cards the **Witherbloom Pestilence** precon (SOC, Dina,
 //! Essence Brewer) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_dina.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Stensian Sanguinist** — "this combat" is read as "this turn".
 
 use std::sync::Arc;
 
@@ -357,8 +354,7 @@ pub fn ribtruss_roaster() -> CardDefinition {
 
 /// Stensian Sanguinist // Exsanguinate — whenever you attack, target creature
 /// gains deathtouch, and its combat damage to a player prepares this.
-/// Exsanguinate drains each opponent for X. Residual: "this combat" is read
-/// as "this turn".
+/// Exsanguinate drains each opponent for X.
 pub fn stensian_sanguinist() -> CardDefinition {
     let exsanguinate = sorcery(
         "Exsanguinate",
@@ -376,7 +372,11 @@ pub fn stensian_sanguinist() -> CardDefinition {
                 keyword: Keyword::Deathtouch,
                 duration: Duration::EndOfTurn,
             },
-            Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { slot: 0, body: Box::new(become_prepared()) },
+            Effect::WhenTargetDealsCombatDamageToPlayerThisTurn {
+                slot: 0,
+                body: Box::new(become_prepared()),
+                this_combat: true,
+            },
         ]))],
         prepare_spell: Some(Arc::new(exsanguinate)),
         ..creature(

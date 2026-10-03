@@ -332,3 +332,27 @@ fn bot_casts_immoral_bargain_feeding_it_tokens() {
         "{a:?}"
     );
 }
+
+/// CR 506.1 — Stensian Sanguinist's watch lasts "this combat": damage the
+/// creature deals in a later combat phase of the turn doesn't prepare it.
+#[test]
+fn cr_506_1_stensian_sanguinist_watches_only_this_combat() {
+    let mut g = pod(3);
+    let ss = g.add_card_to_battlefield(0, catalog::stensian_sanguinist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.combat_phases_this_turn = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    // As though this damage came in the turn's second combat.
+    g.combat_phases_this_turn = 2;
+    let before = g.players[1].life;
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, before - 2, "the bear connected");
+    assert_eq!(g.battlefield_find(ss).unwrap().counter_count(CounterType::Prepared), 0);
+}
