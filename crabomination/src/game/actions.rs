@@ -156,7 +156,7 @@ pub(crate) struct GrantScan<'a> {
     /// controller, source id)` — the recipients are the controller's
     /// permanents matching `filter`, the abilities those of the cards exiled
     /// with the source.
-    exiled_with: Vec<(&'a crate::card::SelectionRequirement, usize, CardId)>,
+    exiled_with: Vec<(&'a crate::card::SelectionRequirement, usize, CardId, Option<&'a CardType>)>,
     /// Live `GrantActivatedAbilityFromGraveyard`: `(filter, ability, owning
     /// seat, source id)` — and an emblem's `GrantActivatedAbility`, whose
     /// source id is the `CardId(u32::MAX)` no card carries.
@@ -18014,8 +18014,8 @@ impl GameState {
                 // wrapper ("Threshold — this creature has '…'"); unwrap it
                 // and honour the gate.
                 let Some(inner) = self.active_static(&sa.effect, src) else { continue };
-                if let StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { filter } = inner {
-                    scan.exiled_with.push((filter, src.controller, src.id));
+                if let StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { filter, lenders } = inner {
+                    scan.exiled_with.push((filter, src.controller, src.id, lenders.as_ref()));
                     continue;
                 }
                 let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
@@ -18436,7 +18436,7 @@ impl GameState {
                 return false;
             }
         }
-        if scan.exiled_with.iter().any(|(_, ctrl, _)| *ctrl == me.controller) {
+        if scan.exiled_with.iter().any(|(_, ctrl, _, _)| *ctrl == me.controller) {
             return false;
         }
         for (src, partner, _) in &scan.soulbond {
@@ -18791,13 +18791,15 @@ impl GameState {
         }
         // Steward of the Harvest — the source's controller's matching
         // permanents have the activated abilities of the cards exiled with it.
-        for (filter, ctrl, src) in &scan.exiled_with {
+        for (filter, ctrl, src, lenders) in &scan.exiled_with {
             if me.controller != *ctrl
                 || !self.evaluate_requirement_static_on(filter, me, *ctrl, Some(*src))
             {
                 continue;
             }
-            for exiled in self.exile.iter().filter(|e| e.exiled_with == Some(*src)) {
+            for exiled in self.exile.iter().filter(|e| {
+                e.exiled_with == Some(*src) && lenders.is_none_or(|t| e.definition.card_types.contains(t))
+            }) {
                 out.extend(exiled.definition.activated_abilities.iter());
             }
         }

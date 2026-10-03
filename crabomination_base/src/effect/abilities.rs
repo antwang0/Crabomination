@@ -1897,10 +1897,16 @@ pub enum StaticEffect {
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
     /// `HasActivatedAbilitiesOfGraveyardCreatures`.
     CounteredCreaturesHaveAbilitiesOfExiledWithSource,
-    /// "[Permanents] you control have all activated abilities of all cards
-    /// exiled with [the source]" (Steward of the Harvest, `filter` =
-    /// creatures). Collected by `grant_scan`; rides the activated-grant lane.
-    ControlledHaveAbilitiesOfExiledWithSource { filter: crate::card::SelectionRequirement },
+    /// "[Permanents] you control have all activated abilities of all
+    /// [`lenders`] cards exiled with [the source]" (Steward of the Harvest,
+    /// `filter` = creatures, `lenders` = lands; Hazel's Brewmaster, Foods and
+    /// creature cards). `None` lends from every exiled card. Collected by
+    /// `grant_scan`; rides the activated-grant lane.
+    ControlledHaveAbilitiesOfExiledWithSource {
+        filter: crate::card::SelectionRequirement,
+        #[serde(default)]
+        lenders: Option<crate::card::CardType>,
+    },
     /// "As long as the top card of your library is a [filter] card, this
     /// creature has all activated abilities of that card" (Conspicuous
     /// Snoop). A self-only grant surfaced by `granted_abilities_for`,

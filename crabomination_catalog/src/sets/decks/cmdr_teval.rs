@@ -658,7 +658,10 @@ pub fn steward_of_the_harvest() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control have all activated abilities of all land \
                           cards exiled with this creature.",
-            effect: StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { filter: R::Creature },
+            effect: StaticEffect::ControlledHaveAbilitiesOfExiledWithSource {
+                filter: R::Creature,
+                lenders: Some(CardType::Land),
+            },
         }],
         ..creature(
             "Steward of the Harvest",
