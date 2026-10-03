@@ -4217,6 +4217,11 @@ pub struct ActivatedAbility {
     /// available; the auto-picker drains lowest-value permanents first.
     #[serde(default)]
     pub remove_counter_among_x: Option<(Option<crate::card::CounterType>, SelectionRequirement)>,
+    /// With `remove_counter_among_x`: all X come off ONE matching permanent
+    /// ("Remove X counters from an artifact or creature you control" — Moxite
+    /// Refinery), not from among several.
+    #[serde(default)]
+    pub remove_counter_among_x_one: bool,
     /// Kind-restricted sibling of `remove_counter_among_filter`: remove `count`
     /// counters of any of the listed kinds from among matching permanents you
     /// control ("Remove a +1/+1 counter or a charge counter from a permanent

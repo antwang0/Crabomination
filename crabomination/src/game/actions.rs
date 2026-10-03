@@ -21109,7 +21109,7 @@ impl GameState {
         // matching permanents must together carry at least X (and X ≥ 1).
         if let Some((kind, filter)) = ability.remove_counter_among_x.as_ref() {
             let want = x_value.unwrap_or(0);
-            let have: u32 = self
+            let counts = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
@@ -21117,8 +21117,8 @@ impl GameState {
                 .map(|c| match kind {
                     Some(k) => c.counter_count(*k),
                     None => c.counters.values().sum(),
-                })
-                .sum();
+                });
+            let have: u32 = if ability.remove_counter_among_x_one { counts.max().unwrap_or(0) } else { counts.sum() };
             if want == 0 || have < want {
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -22402,6 +22402,17 @@ impl GameState {
                 .collect();
             picks.sort_by_key(|(cid, pw)| (*cid == card_id, *pw));
             let mut left = x_value.unwrap_or(0);
+            // "From an artifact or creature": the first that can pay it all.
+            if ability.remove_counter_among_x_one {
+                let total = |g: &Self, cid: CardId| {
+                    g.battlefield.find_by_id(cid).map_or(0, |c| match kind {
+                        Some(k) => c.counter_count(k),
+                        None => c.counters.values().sum(),
+                    })
+                };
+                picks.retain(|(cid, _)| total(self, *cid) >= left);
+                picks.truncate(1);
+            }
             for (cid, _) in picks {
                 if left == 0 { break; }
                 // `None` drains any kinds, in the map's (deterministic) order.
