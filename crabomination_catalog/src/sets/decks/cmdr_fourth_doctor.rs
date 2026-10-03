@@ -310,6 +310,7 @@ pub fn the_eighth_doctor() -> CardDefinition {
                     filter: historic().and(R::PermanentCard),
                     exile_after: true,
                     mv_at_most_counters: None,
+                    enters_tapped: false,
                 },
             },
             StaticAbility {

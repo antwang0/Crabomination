@@ -1997,7 +1997,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
-| 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is auto-picked (greatest power), not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |

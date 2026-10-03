@@ -2670,6 +2670,12 @@ impl GameState {
                         let (_, life) = self.graveyard_play_riders.remove(i);
                         self.bake_graveyard_play_rider(card_id, life);
                     }
+                    if self.graveyard_cast_enters_tapped.contains(&card_id) {
+                        self.graveyard_cast_enters_tapped.remove(&card_id);
+                        if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
+                            c.tapped = true;
+                        }
+                    }
                     // CR 707.5 — an as-enters copy (The Mimeoplasm) enters with
                     // the copied card's "when this enters" abilities, not its own.
                     if let (Some(before), Some(c)) = (name_before, self.battlefield.find_by_id(card_id))
@@ -5152,6 +5158,7 @@ impl GameState {
         clear_cold!(self.plotted_this_turn);
         clear_cold!(self.entered_from_graveyard_this_turn);
         clear_cold!(self.graveyard_play_riders);
+        clear_cold!(self.graveyard_cast_enters_tapped);
         clear_cold!(self.entered_from_exile_this_turn);
         clear_cold!(self.entered_from_hand_this_turn);
         // CR 603.3d — "triggers only once each turn" abilities reset.

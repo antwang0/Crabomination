@@ -2306,6 +2306,10 @@ pub enum StaticEffect {
         /// counters on [this]" (Arcade Gannon's quest counters).
         #[serde(default)]
         mv_at_most_counters: Option<crate::card::CounterType>,
+        /// "If you cast a spell this way, that artifact enters tapped"
+        /// (Edgar, Master Machinist).
+        #[serde(default)]
+        enters_tapped: bool,
     },
     GraveyardCastBySacrificingOncePerTurn {
         filter: SelectionRequirement,

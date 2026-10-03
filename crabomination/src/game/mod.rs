@@ -1611,6 +1611,10 @@ pub struct ColdState {
     /// as it enters (`bake_graveyard_play_rider`). Cleared at each untap.
     #[serde(default)]
     pub(crate) graveyard_play_riders: Vec<(CardId, u32)>,
+    /// Edgar, Master Machinist — spells cast this turn through a grant whose
+    /// permanent "enters tapped". Read as it enters; cleared at each untap.
+    #[serde(default)]
+    pub(crate) graveyard_cast_enters_tapped: crate::game::types::IdSet<CardId>,
     /// Permanents that entered the battlefield directly from exile (not via a
     /// cast) this turn. Set in the exile→battlefield move path; read by
     /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent

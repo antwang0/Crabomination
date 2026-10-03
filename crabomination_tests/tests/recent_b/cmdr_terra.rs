@@ -387,3 +387,19 @@ fn cr_707_9b_gogo_keeps_its_name() {
     assert_eq!((cp.power, cp.toughness), (2, 7), "Baldin's 0/7 plus +2/+0");
     assert!(g.battlefield_find(legend).is_some(), "no legend-rule clash");
 }
+
+/// Edgar, Master Machinist: once a turn an artifact spell from your
+/// graveyard, and the artifact cast that way enters tapped; one from hand
+/// doesn't.
+#[test]
+fn edgar_recasts_an_artifact_that_enters_tapped() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::edgar_master_machinist());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let other = g.add_card_to_hand(0, catalog::sol_ring());
+    flood(&mut g, 0);
+    cast(&mut g, ring, &[]).expect("cast from the graveyard");
+    assert!(g.battlefield_find(ring).expect("on the battlefield").tapped);
+    cast(&mut g, other, &[]).expect("cast from hand");
+    assert!(!g.battlefield_find(other).unwrap().tapped);
+}

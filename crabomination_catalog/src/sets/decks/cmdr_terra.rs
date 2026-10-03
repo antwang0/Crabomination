@@ -128,6 +128,7 @@ pub fn banon_the_returners_leader() -> CardDefinition {
                     .and(R::PutIntoGraveyardThisTurn)
                     .and(R::Not(Box::new(R::PutIntoGraveyardFromBattlefieldThisTurn))),
                 exile_after: false,
+                enters_tapped: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -242,13 +243,18 @@ pub fn cyan_vengeful_samurai() -> CardDefinition {
 }
 
 /// Edgar, Master Machinist — an artifact from your graveyard each turn;
-/// attacks with +X/+0 for your biggest artifact.
-/// Residual: the recast artifact enters untapped.
+/// attacks with +X/+0 for your biggest artifact. The recast artifact enters
+/// tapped.
 pub fn edgar_master_machinist() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Once during each of your turns, you may cast an artifact spell from your graveyard.",
-            effect: StaticEffect::GraveyardCastOncePerTurn { mv_at_most_counters: None, filter: R::Artifact, exile_after: false },
+            description: "Once during each of your turns, you may cast an artifact spell from your graveyard. If you cast a spell this way, that artifact enters tapped.",
+            effect: StaticEffect::GraveyardCastOncePerTurn {
+                mv_at_most_counters: None,
+                filter: R::Artifact,
+                exile_after: false,
+                enters_tapped: true,
+            },
         }],
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: Selector::This,

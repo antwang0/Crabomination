@@ -6173,6 +6173,9 @@ impl GameState {
                         if self.graveyard_grant_exiles(grant) {
                             self.mark_spell_exiles_on_resolve(card_id);
                         }
+                        if self.graveyard_grant_enters_tapped(grant) {
+                            self.graveyard_cast_enters_tapped.insert(card_id);
+                        }
                         if let Some(life) = self.graveyard_play_rider_of(grant) {
                             self.graveyard_play_riders.push((card_id, life));
                         }
@@ -6431,6 +6434,19 @@ impl GameState {
                 matches!(
                     sa.effect,
                     crate::effect::StaticEffect::GraveyardCastOncePerTurn { exile_after: true, .. }
+                )
+            })
+        })
+    }
+
+    /// Edgar, Master Machinist — does the graveyard-cast grant on `grant` put
+    /// the permanent it lets you cast onto the battlefield tapped?
+    fn graveyard_grant_enters_tapped(&self, grant: CardId) -> bool {
+        self.battlefield.find_by_id(grant).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::GraveyardCastOncePerTurn { enters_tapped: true, .. }
                 )
             })
         })
