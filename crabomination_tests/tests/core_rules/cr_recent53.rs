@@ -620,8 +620,8 @@ fn cr_603_2c_landfall_fans_out_per_land() {
     let a = g.add_card_to_battlefield(0, catalog::forest());
     let b = g.add_card_to_battlefield(0, catalog::forest());
     g.dispatch_triggers_for_events(&[
-        GameEvent::LandPlayed { player: 0, card_id: a, played: false },
-        GameEvent::LandPlayed { player: 0, card_id: b, played: false },
+        GameEvent::LandPlayed { player: 0, card_id: a, played: false, from_hand: false },
+        GameEvent::LandPlayed { player: 0, card_id: b, played: false, from_hand: false },
     ]);
     let from_kudzu = g
         .stack

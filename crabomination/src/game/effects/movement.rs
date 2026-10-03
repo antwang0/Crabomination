@@ -2958,6 +2958,7 @@ impl GameState {
                         player: land.controller,
                         card_id: cid,
                         played: false,
+                        from_hand: false,
                     });
                 }
                 // Fire self-source ETB triggers so reanimate / flicker /

@@ -327,7 +327,7 @@ impl GameState {
             self.players[p].lands_played_this_turn += 1;
             let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
             self.move_card_to(id, &dest, ctx, events);
-            events.push(GameEvent::LandPlayed { player: p, card_id: id, played: true });
+            events.push(GameEvent::LandPlayed { player: p, card_id: id, played: true, from_hand: false });
         }
         Ok(())
     }

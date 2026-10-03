@@ -30551,9 +30551,14 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
 /// a scalar amount (CreatureDied, PermanentEntered, …).
 fn event_amount(event: &GameEvent) -> u32 {
     match event {
-        // CR 305.1 — 1 for an actual land play, 0 for a land put onto the
+        // CR 305.1 — 1 for a land played from hand, 2 for one played from
+        // anywhere else (The Lost and the Damned), 0 for a land put onto the
         // battlefield (Deep Gnome Terramancer's "without being played").
-        GameEvent::LandPlayed { played, .. } => u32::from(*played),
+        GameEvent::LandPlayed { played, from_hand, .. } => match (*played, *from_hand) {
+            (false, _) => 0,
+            (true, true) => 1,
+            (true, false) => 2,
+        },
         GameEvent::LifeGained { amount, .. }
         | GameEvent::LifeLost { amount, .. }
         | GameEvent::PaidLife { amount, .. }

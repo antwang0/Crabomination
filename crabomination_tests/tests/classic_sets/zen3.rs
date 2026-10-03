@@ -44,7 +44,7 @@ fn always_yes(g: &mut GameState) {
 /// Play a land for seat 0 and drain the landfall triggers it fires.
 fn landfall(g: &mut GameState) -> CardId {
     let land = g.add_card_to_battlefield(0, catalog::forest());
-    g.dispatch_triggers_for_events(&[GameEvent::LandPlayed { card_id: land, player: 0, played: true }]);
+    g.dispatch_triggers_for_events(&[GameEvent::LandPlayed { card_id: land, player: 0, played: true, from_hand: true }]);
     drain_stack(g);
     land
 }

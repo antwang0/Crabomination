@@ -3023,7 +3023,7 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
-            GameEvent::LandPlayed { player, card_id, played } => GameEventWire::LandPlayed {
+            GameEvent::LandPlayed { player, card_id, played, .. } => GameEventWire::LandPlayed {
                 player: *player,
                 card_id: *card_id,
                 played: *played,
@@ -3434,7 +3434,7 @@ impl GameEventWire {
             E::CardDiscarded { player, card_id } => {
                 format!("{} discarded {}", pn(*player), name(*card_id))
             }
-            E::LandPlayed { player, card_id, played } => {
+            E::LandPlayed { player, card_id, played, .. } => {
                 let verb = if *played { "played" } else { "put" };
                 format!("{} {verb} {}", pn(*player), name(*card_id))
             }

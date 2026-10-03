@@ -1811,7 +1811,7 @@ mod tests {
             E::CardDiscarded { player: 0, card_id: c },
             E::OpponentCausedYouToDiscard { player: 0, card_id: c },
             E::DiscardedBatch { player: 0, count: 2 },
-            E::LandPlayed { player: 0, card_id: c, played: true },
+            E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
             E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0 },

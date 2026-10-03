@@ -110,7 +110,7 @@ impl GameState {
         let card = Self::take_card(&mut self.players[owner].graveyard, card_id)?;
         self.players[p].milled_land_played_this_turn = true;
         self.entered_from_graveyard_this_turn.insert(card_id);
-        let mut r = self.place_land_card(p, card);
+        let mut r = self.place_land_card(p, card, false);
         if let Ok(evs) = &mut r {
             self.note_left_graveyard(owner, card_id, evs);
         }

@@ -4644,6 +4644,7 @@ impl GameState {
         let from_exile = !from_top
             && !self.players[p].has_in_hand(card_id)
             && (from_adventure || self.may_play_grant_for(p, card_id));
+        let from_hand = !from_top && self.players[p].has_in_hand(card_id);
         let mut card = if from_top {
             self.players[p].library.remove(0)
         } else if self.players[p].has_in_hand(card_id) {
@@ -4713,7 +4714,7 @@ impl GameState {
         if from_top_capped {
             self.players[p].cast_from_library_top_this_turn = true;
         }
-        self.place_land_card(p, card)
+        self.place_land_card(p, card, from_hand)
     }
 
     /// CR 305 — Play a land from the controller's graveyard, legal only while
@@ -4807,7 +4808,7 @@ impl GameState {
         let card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::NotALand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
-        let mut events = self.place_land_card(p, card)?;
+        let mut events = self.place_land_card(p, card, false)?;
         self.note_left_graveyard(p, card_id, &mut events);
         if let Some(grant) = once_grant {
             self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
@@ -4826,6 +4827,7 @@ impl GameState {
         &mut self,
         p: usize,
         mut card: crate::card::CardInstance,
+        from_hand: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let card_id = card.id;
         // Damping Sphere: if any battlefield permanent grants
@@ -4910,9 +4912,9 @@ impl GameState {
                     remaining,
                 },
             }));
-            return Ok(vec![GameEvent::LandPlayed { player: p, card_id, played: true }]);
+            return Ok(vec![GameEvent::LandPlayed { player: p, card_id, played: true, from_hand }]);
         }
-        let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true }];
+        let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true, from_hand }];
         out.append(&mut copy_events);
         out.append(&mut self.finish_land_entry(card_id, p));
         Ok(out)

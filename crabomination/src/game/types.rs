@@ -2699,8 +2699,11 @@ pub enum GameEvent {
     /// A land entered the battlefield under `player`'s control. `played` is
     /// true only for an actual land play (CR 305.1); a fetched / reanimated /
     /// put-onto-the-battlefield land enters with `played: false`. Landfall
-    /// ("whenever a land you control enters") fires on both.
-    LandPlayed { player: usize, card_id: CardId, played: bool },
+    /// ("whenever a land you control enters") fires on both. `from_hand` is
+    /// true for a land played from its player's hand, false for one played
+    /// from a graveyard, exile or a library (The Lost and the Damned's "enters
+    /// from anywhere other than your hand") and for every unplayed entry.
+    LandPlayed { player: usize, card_id: CardId, played: bool, from_hand: bool },
     /// `face` distinguishes front-face / back-face / flashback casts.
     /// Defaults to `Front` for the typical hand cast; back-face MDFC
     /// casts and flashback graveyard replays carry the right tag so
