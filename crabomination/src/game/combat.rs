@@ -7435,6 +7435,9 @@ impl GameState {
                     let key = (trig_source, i, subject);
                     if self.combat_trigger_fired_this_step.contains(&key) {
                         self.add_to_batched_damage(trig_source, i, &default_target, damage_amount);
+                        if matches!(effect, Effect::OverTriggerBatch { .. }) {
+                            self.add_dealer_to_trigger_batch(trig_source, &default_target, source);
+                        }
                         continue;
                     }
                     self.combat_trigger_fired_this_step.push(key);
@@ -7444,6 +7447,13 @@ impl GameState {
                     }
                 }
             }
+            // CR 603.2c — "each of those creatures": the batch's dealers,
+            // this one first; later dealers join through
+            // `add_dealer_to_trigger_batch` (Heroes in a Half Shell).
+            let effect = match effect {
+                Effect::OverTriggerBatch { body, .. } => Effect::OverTriggerBatch { body, ids: vec![source] },
+                e => e,
+            };
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some
             // target a *graveyard* card (Efreet Flamepainter, Venerable
@@ -7567,6 +7577,19 @@ impl GameState {
     /// `EventSpec::batch_sums_damage` — a later dealer in an already-fired
     /// batch adds its damage to the fire on the stack, so the one trigger
     /// reads the batch's total. A no-op for every other batched trigger.
+    /// A later dealer of a damage batch whose trigger is already on the stack
+    /// joins its `Effect::OverTriggerBatch` ("each of those creatures").
+    fn add_dealer_to_trigger_batch(&mut self, src: CardId, to: &Target, dealer: CardId) {
+        let Target::Player(p) = *to else { return };
+        if let Some(StackItem::Trigger { effect, .. }) = self.stack.iter_mut().rev().find(|si| {
+            matches!(si, StackItem::Trigger { source, trigger_player, .. } if *source == src && *trigger_player == Some(p))
+        }) && let Effect::OverTriggerBatch { ids, .. } = effect.as_mut()
+            && !ids.contains(&dealer)
+        {
+            ids.push(dealer);
+        }
+    }
+
     fn add_to_batched_damage(&mut self, src: CardId, idx: usize, to: &Target, amount: u32) {
         let Some(event) = self
             .battlefield_find(src)

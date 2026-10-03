@@ -30355,7 +30355,17 @@ impl GameState {
                 continue;
             }
             let subject = crate::game::effects::event_subject(ev, &spec.kind);
-            let id = match subject {
+            // A dealer-side damage kind binds the damaged player as its
+            // subject ("that player"), but "those creatures" are the dealers
+            // (Heroes in a Half Shell).
+            let member = match (ev, &spec.kind) {
+                (
+                    GameEvent::DamageDealt { from_card: Some(dealer), to_player: Some(_), .. },
+                    crate::effect::EventKind::DealsCombatDamageToPlayer | crate::effect::EventKind::DealsDamageToPlayer,
+                ) => Some(crate::game::effects::EntityRef::Permanent(*dealer)),
+                _ => subject,
+            };
+            let id = match member {
                 Some(crate::game::effects::EntityRef::Card(id))
                 | Some(crate::game::effects::EntityRef::Permanent(id)) => id,
                 _ => continue,
