@@ -5769,8 +5769,8 @@ pub enum Effect {
     RotateNonlandPermanents,
     /// Aminatou's Augury — "for each nonland card type, you may cast a spell
     /// of that type from among [what] without paying its mana cost" this
-    /// turn. One card per type is picked at resolution (greatest mana value
-    /// first, a card counting for one type), and those get the free cast.
+    /// turn. Every nonland card is offered; each cast spends one of its types
+    /// from the group's budget (`Player::free_type_cast_budgets`).
     GrantFreeCastOnePerCardType { what: Selector },
     /// Yennett — "reveal the top card of your library. You may cast it
     /// without paying its mana cost if it matches `filter`. If you don't

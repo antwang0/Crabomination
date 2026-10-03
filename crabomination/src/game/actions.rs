@@ -13311,6 +13311,10 @@ impl GameState {
         if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
             self.clear_one_cast_group(group);
         }
+        // Aminatou's Augury — the cast spends one of the group's card types.
+        if card.may_play_until.is_some() && !self.players[p].free_type_cast_budgets.is_empty() {
+            self.spend_free_type_cast(p, &card);
+        }
         card.may_play_until = None;
         card.granted_alt_cast_cost_eot = None;
         // Stamp the cast-zone flag for "cast a spell from exile" payoffs.

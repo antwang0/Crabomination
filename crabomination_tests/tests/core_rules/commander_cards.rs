@@ -2027,8 +2027,8 @@ fn sower_of_discord_pair_is_the_controllers_choice() {
 }
 
 /// CR 601.2 — "for each nonland card type, you may cast a spell of that type
-/// from among them without paying its mana cost": one card per type, and a
-/// card of two types spends only one.
+/// from among them without paying its mana cost": every card is offered, a
+/// cast spends one type, and the cards left with no unspent type drop out.
 #[test]
 fn one_free_cast_per_card_type() {
     use crabomination::effect::{Effect, Selector};
@@ -2041,8 +2041,23 @@ fn one_free_cast_per_card_type() {
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     g.resolve_effect(&Effect::GrantFreeCastOnePerCardType { what: Selector::ExactObjects(ids.clone()) }, &ctx)
         .expect("grant");
-    let free: Vec<bool> = ids.iter().map(|id| g.exile.iter().find(|c| c.id == *id).unwrap().may_play_until.is_some()).collect();
-    assert_eq!(free, vec![false, true, true, true], "the bigger creature, the instant, the artifact");
+    let free = |g: &GameState| -> Vec<bool> {
+        ids.iter().map(|id| g.exile.iter().find(|c| c.id == *id).is_some_and(|c| c.may_play_until.is_some())).collect()
+    };
+    assert_eq!(free(&g), vec![true, true, true, true], "all offered until a type is spent");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: ids[1],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the Giant, free");
+    drain_stack(&mut g);
+    assert_eq!(free(&g), vec![false, false, true, true], "the creature type is spent; the Bolt and Sol Ring stay");
 }
 
 /// Regression: a base-P/T-setting Equipment (Belt of Giant Strength, 10/10)

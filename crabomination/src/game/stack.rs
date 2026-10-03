@@ -4808,6 +4808,9 @@ impl GameState {
             pl.free_exile_cast_used_this_turn = false;
             pl.life_alt_cast_used_this_turn = false;
             pl.zero_alt_cast_used_this_turn = false;
+            if !pl.free_type_cast_budgets.is_empty() {
+                pl.free_type_cast_budgets.clear();
+            }
             pl.life_alt_next_spell_this_turn = false;
             pl.next_spell_convoke_this_turn = false;
             pl.next_spell_improvise_this_turn = false;

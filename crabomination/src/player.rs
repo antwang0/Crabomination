@@ -812,6 +812,12 @@ pub struct PlayerData {
     /// cast. Reset at the turn boundary.
     #[serde(default)]
     pub zero_alt_cast_used_this_turn: bool,
+    /// Aminatou's Augury — per exiled group (keyed by the `exiled_with`
+    /// stamp), the card types this player may still cast a free spell of
+    /// this turn, as a bitmask (`fateshift::TYPE_BITS`). Cleared at the turn
+    /// boundary.
+    #[serde(default)]
+    pub free_type_cast_budgets: Vec<(crate::card::CardId, u8)>,
     /// Marshland Bloodcaster — the next spell this player casts this turn may
     /// be paid for with life equal to its mana value. Spent by that cast;
     /// reset at the turn boundary.
@@ -1614,6 +1620,7 @@ impl Player {
             free_exile_cast_used_this_turn: false,
             life_alt_cast_used_this_turn: false,
             zero_alt_cast_used_this_turn: false,
+            free_type_cast_budgets: Vec::new(),
             life_alt_next_spell_this_turn: false,
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,

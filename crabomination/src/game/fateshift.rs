@@ -9,6 +9,21 @@ use crate::game::effects::EffectContext;
 use crate::game::types::{GameEvent, PendingEffectState};
 use crate::game::{GameError, GameState};
 
+/// The nonland card types Aminatou's Augury counts, one bit each.
+const TYPE_BITS: [(CardType, u8); 6] = [
+    (CardType::Creature, 1),
+    (CardType::Artifact, 2),
+    (CardType::Enchantment, 4),
+    (CardType::Planeswalker, 8),
+    (CardType::Instant, 16),
+    (CardType::Sorcery, 32),
+];
+const ALL_TYPE_BITS: u8 = 63;
+
+fn type_bits(types: &[CardType]) -> u8 {
+    TYPE_BITS.iter().filter(|(t, _)| types.contains(t)).map(|(_, b)| *b).fold(0, |a, b| a | b)
+}
+
 impl GameState {
     pub(crate) fn manifest_top_attach_source(
         &mut self,
@@ -216,41 +231,77 @@ impl GameState {
         Ok(())
     }
 
+    /// Aminatou's Augury — "until end of turn, for each nonland card type,
+    /// you may cast a spell of that type from among the exiled cards without
+    /// paying its mana cost." Every nonland card among `ids` gets the free
+    /// cast, stamped `exiled_with` the resolving source; the controller holds
+    /// the group's type budget, which each cast spends one type of
+    /// (`spend_free_type_cast`), and a card none of whose types is left loses
+    /// its permission.
     pub(crate) fn grant_free_cast_one_per_card_type(&mut self, ids: &[CardId], ctx: &EffectContext) {
-        const TYPES: [CardType; 6] = [
-            CardType::Creature,
-            CardType::Artifact,
-            CardType::Enchantment,
-            CardType::Planeswalker,
-            CardType::Instant,
-            CardType::Sorcery,
-        ];
-        let mut cards: Vec<(CardId, u32, Vec<CardType>)> = ids
-            .iter()
-            .filter_map(|id| self.exile.iter().find(|c| c.id == *id))
-            .filter(|c| !c.definition.is_land())
-            .map(|c| (c.id, c.definition.cost.cmc(), c.definition.card_types.clone()))
-            .collect();
-        cards.sort_by_key(|(id, mv, _)| (std::cmp::Reverse(*mv), *id));
-        let mut picked: Vec<CardId> = Vec::new();
-        for t in TYPES {
-            if let Some((id, ..)) = cards.iter().find(|(id, _, ts)| ts.contains(&t) && !picked.contains(id)) {
-                picked.push(*id);
-            }
-        }
+        // The group key is the resolving source, else the first card.
+        let Some(group) = ctx.source.or_else(|| ids.first().copied()) else { return };
         let turn = self.turn_number;
-        for id in picked {
-            if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
-                c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
-                    player: ctx.controller,
-                    granted_turn: turn,
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    exile_after: false,
-                    miracle: false,
-                    pay_life: false,
-                    bottom_after: false,
-                });
-                c.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
+        let mut any = false;
+        for id in ids {
+            let Some(c) = self.exile.iter_mut().find(|c| c.id == *id) else { continue };
+            if c.definition.is_land() || type_bits(&c.definition.card_types) == 0 {
+                continue;
+            }
+            c.exiled_with = Some(group);
+            c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: true, locks_further_casts: false, one_cast_group: None,
+                player: ctx.controller,
+                granted_turn: turn,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                exile_after: false,
+                miracle: false,
+                pay_life: false,
+                bottom_after: false,
+            });
+            c.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
+            any = true;
+        }
+        if any {
+            let budgets = &mut self.players[ctx.controller].free_type_cast_budgets;
+            budgets.retain(|(g, _)| *g != group);
+            budgets.push((group, ALL_TYPE_BITS));
+        }
+    }
+
+    /// A card cast off an Augury grant spends one of its types from the
+    /// group's budget — the type fewest other offered cards need — and the
+    /// cards left with no unspent type lose their free cast.
+    pub(crate) fn spend_free_type_cast(&mut self, p: usize, card: &crate::card::CardInstance) {
+        let Some(group) = card.exiled_with else { return };
+        let Some(pos) = self.players[p].free_type_cast_budgets.iter().position(|(g, _)| *g == group) else { return };
+        let remaining = self.players[p].free_type_cast_budgets[pos].1;
+        let offered: Vec<u8> = self
+            .exile
+            .iter()
+            .filter(|c| c.exiled_with == Some(group) && c.may_play_until.is_some_and(|m| m.player == p))
+            .map(|c| type_bits(&c.definition.card_types))
+            .collect();
+        let mine = type_bits(&card.definition.card_types) & remaining;
+        let Some(spent) = (0..8u8)
+            .map(|i| 1u8 << i)
+            .filter(|b| mine & b != 0)
+            .min_by_key(|b| offered.iter().filter(|o| *o & b != 0).count())
+        else {
+            return;
+        };
+        let left = remaining & !spent;
+        if left == 0 {
+            self.players[p].free_type_cast_budgets.remove(pos);
+        } else {
+            self.players[p].free_type_cast_budgets[pos].1 = left;
+        }
+        for c in self.exile.iter_mut() {
+            if c.exiled_with == Some(group)
+                && c.may_play_until.is_some_and(|m| m.player == p)
+                && type_bits(&c.definition.card_types) & left == 0
+            {
+                c.may_play_until = None;
+                c.granted_alt_cast_cost_eot = None;
             }
         }
     }
