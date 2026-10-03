@@ -10028,6 +10028,11 @@ impl GameState {
                 self.target_out_of_zone(target_effect, filter.as_ref(), tgt)
                     || filter.is_some_and(|filter| {
                         !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
+                            // CR 601.2c — a cross-slot atom on a card off the
+                            // battlefield ("cards from target player's
+                            // graveyard") is answered against the chosen slots.
+                            || (filter.mentions_cross_slot()
+                                && !self.cross_slot_targets_ok(&filter, tgt, &self.target_slots_scratch))
                     })
             };
             target.as_ref().is_some_and(|tgt| slot_bad(0, tgt))

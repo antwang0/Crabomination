@@ -7283,6 +7283,36 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 601.2c — each targeting member owns its consecutive slots
+            // (`Effect::slot_group_owner`): run it on that slice, as an
+            // entwined `ChooseModesCast` runs its modes.
+            Effect::SlotGroups(members) => {
+                let mut next_slot = 0usize;
+                for (k, m) in members.iter().enumerate() {
+                    if m.requires_target() {
+                        let n = mode_slot_count(m);
+                        let from = next_slot.min(ctx.targets.len());
+                        let to = (next_slot + n).min(ctx.targets.len());
+                        let sub_ctx = EffectContext { targets: ctx.targets[from..to].to_vec(), ..ctx.clone() };
+                        next_slot += n;
+                        self.run_effect(m, &sub_ctx, events)?;
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                            slot: from as u8,
+                            count: n as u8,
+                            body: Box::new(carried),
+                        });
+                    } else {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation_by_mode_slots(members[k + 1..].iter(), next_slot)
+                    }) {
+                        return Ok(());
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseUnchosenMode { modes }
             | Effect::ChooseUnchosenModeThisTurn { modes } => {
                 // CR 700.2 — the controller picks at resolution, restricted to

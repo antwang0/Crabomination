@@ -372,6 +372,7 @@ impl Effect {
     pub fn for_each_inner<'a>(&'a self, f: &mut impl FnMut(&'a Effect)) {
         match self {
             Effect::Seq(v)
+            | Effect::SlotGroups(v)
             | Effect::ChooseMode(v)
             | Effect::ChooseModeAtRandom(v)
             | Effect::AsEntersChooseMode(v) => {
@@ -1425,7 +1426,7 @@ impl Effect {
             Effect::RevealTopPayOrTake { .. } => false,
             Effect::DigForLandToBattlefield { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),
-            Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
+            Effect::Seq(v) | Effect::SlotGroups(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
                 pred_has_target(cond) || then.requires_target() || else_.requires_target()
             }
@@ -2966,6 +2967,8 @@ impl Effect {
             // `Seq` alongside a delayed exile trigger; the primary target
             // is still the Move's target.
             Effect::Seq(v) => v.iter().find_map(|e| e.primary_target_filter()),
+            // Slot 0 is the first targeting member's own slot 0.
+            Effect::SlotGroups(v) => v.iter().find(|e| e.requires_target()).and_then(|e| e.primary_target_filter()),
             Effect::If { then, else_, cond } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter())
@@ -3225,6 +3228,7 @@ impl Effect {
     pub fn slot_owner(&self, slot: u8, mode: Option<usize>) -> Option<&Effect> {
         match self {
             Effect::Seq(v) => v.iter().find_map(|c| c.slot_owner(slot, None)),
+            Effect::SlotGroups(v) => Self::slot_group_owner(v, slot).and_then(|(m, rel)| m.slot_owner(rel, None)),
             Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.slot_owner(slot, None)),
                 None => modes.iter().find_map(|e| e.slot_owner(slot, None)),
@@ -3406,6 +3410,7 @@ impl Effect {
             // damage to any target") at its own controller. With no targeting
             // child, fall back to the whole batch's flavor.
             Effect::Seq(v) => Self::friendliness_of_targeting_children(v),
+            Effect::SlotGroups(v) => Self::slot_group_owner(v, 0).is_some_and(|(m, _)| m.prefers_friendly_target()),
             Effect::If { then, else_, .. } => Self::friendliness_of_targeting_children(
                 std::slice::from_ref(then.as_ref())
                     .iter()
@@ -3521,6 +3526,9 @@ impl Effect {
                     | ZoneDest::ExileWithSourceStamp
             ),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_graveyard_target()),
+            Effect::SlotGroups(v) => {
+                Self::slot_group_owner(v, 0).is_some_and(|(m, _)| m.prefers_graveyard_target())
+            }
             Effect::If { then, else_, .. } => {
                 then.prefers_graveyard_target() || else_.prefers_graveyard_target()
             }
@@ -3624,7 +3632,7 @@ impl Effect {
         }
         match self {
             Effect::Move { .. } => true,
-            Effect::Seq(v) => v.iter().any(|e| e.may_target_offboard_card()),
+            Effect::Seq(v) | Effect::SlotGroups(v) => v.iter().any(|e| e.may_target_offboard_card()),
             // The modal bodies, the same `any` shape `requires_target`,
             // `primary_target_filter` and `accepts_player_target` use.
             Effect::ChooseMode(modes)
@@ -3724,6 +3732,9 @@ impl Effect {
         // recurse first and only describe `self` as the leaf case.
         let children: &[Effect] = match self {
             Effect::Seq(v) => v,
+            Effect::SlotGroups(v) => {
+                return Self::slot_group_owner(v, slot).and_then(|(m, rel)| m.target_slot_text(rel, None));
+            }
             Effect::ChooseMode(modes) => match mode.and_then(|m| modes.get(m)) {
                 Some(m) => return m.target_slot_text(slot, mode),
                 // No mode chosen yet: any mode declaring the slot will do.
@@ -4088,7 +4099,7 @@ impl Effect {
                     _ => format!("{t} has a new base power and toughness"),
                 }
             }
-            Effect::Seq(v) => {
+            Effect::Seq(v) | Effect::SlotGroups(v) => {
                 let parts: Vec<String> = v
                     .iter()
                     .map(|e| e.effect_short_text())
@@ -4433,6 +4444,9 @@ impl Effect {
             // clickable-target list came back empty once
             // `primary_target_filter` started answering with slot 0's own
             // filter. Same class as that deferral, one level up.
+            Effect::SlotGroups(v) => {
+                Self::slot_group_owner(v, 0).is_some_and(|(m, _)| m.accepts_player_target_by_body())
+            }
             Effect::Seq(v) => v
                 .iter()
                 .find(|e| e.target_filter_for_slot(0).is_some())
@@ -4660,6 +4674,9 @@ impl Effect {
         ) -> Option<&SelectionRequirement> {
             match e {
                 Effect::Seq(v) => v.iter().find_map(|x| eff_find(x, slot, mode, kicked)),
+                Effect::SlotGroups(v) => {
+                    Effect::slot_group_owner(v, slot).and_then(|(m, rel)| eff_find(m, rel, None, kicked))
+                }
                 // `If(SpellWasKicked, …)` chooses the branch that will
                 // actually resolve so cast-time target legality matches it.
                 Effect::If {
@@ -5585,6 +5602,21 @@ impl Effect {
         (0..32u8).take_while(|&s| self.target_filter_for_slot(s).is_some()).count()
     }
 
+    /// The member of an [`Effect::SlotGroups`] owning absolute `slot`, with
+    /// the slot's index inside that member (each targeting member owns
+    /// `target_slot_count` consecutive slots, at least one).
+    pub fn slot_group_owner(groups: &[Effect], slot: u8) -> Option<(&Effect, u8)> {
+        let mut first = 0u8;
+        for m in groups.iter().filter(|m| m.requires_target()) {
+            let k = m.target_slot_count().max(1) as u8;
+            if slot < first.saturating_add(k) {
+                return Some((m, slot - first));
+            }
+            first = first.saturating_add(k);
+        }
+        None
+    }
+
     /// The number of targets the effect's multi-target instance *requires*
     /// (`ApplyToTargets.min_targets`), or `None` when the slot-bearing
     /// effect is not an `ApplyToTargets` (conventional effects keep their
@@ -5609,6 +5641,19 @@ impl Effect {
             | Effect::DistributeCounters { .. }
             | Effect::SupportCounters { .. } => Some(1),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
+            // The required slots run up to the first member with an optional
+            // one; a member with no minimum of its own requires all its slots.
+            Effect::SlotGroups(v) => {
+                let mut min = 0u8;
+                for m in v.iter().filter(|m| m.requires_target()) {
+                    let k = m.target_slot_count().max(1) as u8;
+                    match m.min_targets_in_mode(None) {
+                        Some(n) if n < k => return Some(min.saturating_add(n)),
+                        _ => min = min.saturating_add(k),
+                    }
+                }
+                Some(min)
+            }
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.min_targets_in_mode(None)),
                 None => modes.iter().find_map(|e| e.min_targets_in_mode(None)),
@@ -5671,6 +5716,8 @@ impl Effect {
             // (Klauth's Will): no slot prompt past the X-th.
             Effect::CapTargetsAt { amount: crate::effect::Value::XFromCost, .. } => u32::from(slot) >= x,
             Effect::Seq(steps) => steps.iter().any(|e| e.slot_past_x_cap(slot, x)),
+            // Past every member's slots is past the cap too.
+            Effect::SlotGroups(v) => Self::slot_group_owner(v, slot).is_none_or(|(m, rel)| m.slot_past_x_cap(rel, x)),
             // Modal and conditional wrappers answer for the bodies they may
             // run — Klauth's Will's commander `If` over `ChooseN` / `ChooseMode`.
             Effect::If { then, else_, .. } => then.slot_past_x_cap(slot, x) || else_.slot_past_x_cap(slot, x),
@@ -5720,12 +5767,20 @@ impl Effect {
                 then.target_slot_optional_x(slot, mode, x) || else_.target_slot_optional_x(slot, mode, x)
             }
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.target_slot_optional_x(slot, None, x)),
+            Effect::SlotGroups(v) => {
+                Self::slot_group_owner(v, slot).is_none_or(|(m, rel)| m.target_slot_optional_x(rel, None, x))
+            }
             // The step that declares the slot decides (Waste Management's
             // `Seq[If { kicked, …, up to two }, tokens]`).
-            Effect::Seq(steps) if self.min_targets_in_mode(mode).is_none() => steps
-                .iter()
-                .find(|e| e.target_filter_for_slot_in_mode_kicked(slot, None, false).is_some())
-                .is_some_and(|e| e.target_slot_optional_x(slot, None, x)),
+            Effect::Seq(steps)
+                if self.min_targets_in_mode(mode).is_none()
+                    || steps.iter().any(|e| matches!(e, Effect::SlotGroups(_))) =>
+            {
+                steps
+                    .iter()
+                    .find(|e| e.target_filter_for_slot_in_mode_kicked(slot, None, false).is_some())
+                    .is_some_and(|e| e.target_slot_optional_x(slot, None, x))
+            }
             _ => self
                 .min_targets_in_mode(mode)
                 .is_some_and(|min| slot >= min),
@@ -5755,7 +5810,7 @@ impl Effect {
             // Deliberately **not** `for_each_inner`: the cast path asks this of
             // every spell, and a whole-tree walk per cast is a hot-path cost
             // for a question eight cards ask.
-            Effect::Seq(parts) => parts.iter().any(|e| e.per_opponent_targets(mode)),
+            Effect::Seq(parts) | Effect::SlotGroups(parts) => parts.iter().any(|e| e.per_opponent_targets(mode)),
             Effect::MayDo { body, .. }
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
@@ -5785,7 +5840,7 @@ impl Effect {
                 Some(m) => modes.get(m).is_some_and(|e| e.per_player_targets(None)),
                 None => modes.iter().any(|e| e.per_player_targets(None)),
             },
-            Effect::Seq(parts) => parts.iter().any(|e| e.per_player_targets(mode)),
+            Effect::Seq(parts) | Effect::SlotGroups(parts) => parts.iter().any(|e| e.per_player_targets(mode)),
             Effect::MayDo { body, .. }
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }

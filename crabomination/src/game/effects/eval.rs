@@ -4168,11 +4168,13 @@ impl GameState {
         }
     }
 
-    /// The seat whose graveyard holds a targeted card; `None` off the graveyards.
+    /// The seat whose graveyard holds a targeted card, or a targeted player's
+    /// own ("X target cards from **target player's** graveyard" — Suffer the
+    /// Past); `None` for a card off the graveyards.
     fn graveyard_holding(&self, t: &Target) -> Option<usize> {
         match t {
             Target::Permanent(cid) => self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == *cid)),
-            Target::Player(_) => None,
+            Target::Player(p) => Some(*p),
         }
     }
 

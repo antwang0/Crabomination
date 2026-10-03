@@ -8659,6 +8659,14 @@ pub enum Effect {
         filter: SelectionRequirement,
         effect: Box<Effect>,
     },
+    /// CR 601.2c — a sequence whose members own **consecutive** target slots:
+    /// each member's slot 0 is the slot after the previous targeting member's
+    /// last ([`Effect::target_slot_count`]), and at resolution each runs with
+    /// its own slice of the targets. "Exile X target cards from target
+    /// player's graveyard" (Suffer the Past) is `[player step, CapTargetsAtX
+    /// over an ApplyToTargets]` — the entwined-`ChooseModesCast` shape without
+    /// a mode choice. A member that targets nothing reads the whole list.
+    SlotGroups(Vec<Effect>),
     /// "Up to X targets" wrapper (Crackle with Power): truncates the
     /// supplied cast-time target list to the cast's `x_value` before
     /// running `body` (usually an `ApplyToTargets` whose `max_targets` is
