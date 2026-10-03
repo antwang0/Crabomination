@@ -4873,6 +4873,7 @@ impl GameState {
             // Lorehold "if a card left your graveyard this turn" payoffs
             // (Living History, Primary Research, Wilt in the Heat) per turn.
             me.cards_left_graveyard_this_turn = 0;
+            me.creature_cards_left_graveyard_this_turn = 0;
             // Reset the "creatures died under your control this turn" tally;
             // powers Witherbloom "if a creature died under your control this
             // turn" end-step payoffs (Essenceknit Scholar).

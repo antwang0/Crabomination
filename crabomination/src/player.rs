@@ -607,6 +607,11 @@ pub struct PlayerData {
     /// `move_card_to`. Defaults to 0 for snapshot back-compat.
     #[serde(default)]
     pub cards_left_graveyard_this_turn: u32,
+    /// The creature cards among `cards_left_graveyard_this_turn` ("if a
+    /// creature card left your graveyard this turn" — Syrix, Carrier of the
+    /// Flame). Bumped beside it, reset with it.
+    #[serde(default)]
+    pub creature_cards_left_graveyard_this_turn: u32,
     /// Number of creatures controlled by this player that died this turn.
     /// Reset to 0 in `do_untap`. Powers Witherbloom "if a creature died
     /// under your control this turn, …" end-step payoffs (Essenceknit
@@ -1572,6 +1577,7 @@ impl Player {
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,
+            creature_cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             zuberas_died_this_turn: 0,
             creatures_entered_this_turn: Default::default(),

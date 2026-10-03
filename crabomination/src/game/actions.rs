@@ -12465,6 +12465,9 @@ impl GameState {
         card.cast_from_graveyard = true;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        if card.definition.is_creature() {
+            self.players[p].creature_cards_left_graveyard_this_turn += 1;
+        }
         self.entered_from_graveyard_this_turn.insert(card_id);
         // Flip to the back face — the transformed spell goes on the stack
         // (CR 702.146a) and resolves as the back-face permanent; presence was
@@ -12977,6 +12980,9 @@ impl GameState {
         card.cast_from_graveyard = true;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        if card.definition.is_creature() {
+            self.players[p].creature_cards_left_graveyard_this_turn += 1;
+        }
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(

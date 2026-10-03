@@ -2165,6 +2165,11 @@ pub enum Predicate {
     /// payoffs — Living History's combat trigger, Primary Research's
     /// end-step draw rider, Wilt in the Heat's cost reduction rider.
     CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// [`Predicate::CardsLeftGraveyardThisTurnAtLeast`] counting creature
+    /// cards only ("if a creature card left your graveyard this turn" —
+    /// Syrix, Carrier of the Flame). Backed by
+    /// `Player.creature_cards_left_graveyard_this_turn`.
+    CreatureCardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// True if an opponent of `who` has cast a spell since `who`'s last turn
     /// ended (I Bask in Your Silent Awe's abandon check). Reads the
     /// `GameState.opponent_cast_since_your_turn` seat mask, cleared at `who`'s

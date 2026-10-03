@@ -2385,6 +2385,9 @@ impl GameState {
                 let card = self.players[p].graveyard.remove(pos);
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+                if card.definition.is_creature() {
+                    self.players[p].creature_cards_left_graveyard_this_turn += 1;
+                }
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: cid });
                 // CR 400.7 — "put into exile from a graveyard" (Ketramose).
                 if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {

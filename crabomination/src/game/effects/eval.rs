@@ -2946,6 +2946,12 @@ impl GameState {
                     .map(|p| self.players[p].cards_left_graveyard_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::CreatureCardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].creature_cards_left_graveyard_this_turn >= n)
+                    .unwrap_or(false)
+            }
             Predicate::OpponentCastSpellSinceYourTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()
