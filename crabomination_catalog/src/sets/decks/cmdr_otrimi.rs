@@ -1,10 +1,6 @@
 //! Commander: the cards the **Enhanced Evolution** precon (C20, Otrimi, the
 //! Ever-Playful) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_otrimi.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Capricopian** — the attacked player's "{2}: put a +1/+1 counter on it,
-//!   then reselect which player it's attacking" isn't offered.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind, EventScope,
@@ -111,11 +107,28 @@ pub fn boneyard_mycodrax() -> CardDefinition {
     }
 }
 
-/// Capricopian — {X}{G} 0/0 Goat Hydra with X +1/+1 counters.
-/// Residual: the attacked player's "{2}: put a +1/+1 counter on it, then
-/// reselect which player it's attacking" isn't offered.
+/// Capricopian — {X}{G} 0/0 Goat Hydra with X +1/+1 counters; the player
+/// it's attacking may pay {2}, during declare attackers, to grow it and then
+/// reselect which player it attacks (CR 602.5: only that player may).
 pub fn capricopian() -> CardDefinition {
-    x_hydra(creature("Capricopian", cost(&[x(), g()]), vec![CreatureType::Goat, CreatureType::Hydra], 0, 0))
+    x_hydra(CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            opponents_only: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::CurrentStepIs(crate::game::types::TurnStep::DeclareAttackers),
+                // Read with the activator as "you": it's attacking them, not a
+                // planeswalker of theirs (the 2020-04-17 ruling).
+                Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingYou },
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::ReselectAttackTarget { what: Selector::This, players_only: true },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Capricopian", cost(&[x(), g()]), vec![CreatureType::Goat, CreatureType::Hydra], 0, 0)
+    })
 }
 
 /// Cazur, Ruthless Stalker — {3}{G} 3/3. Partner with Ukkima; a creature you

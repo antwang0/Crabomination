@@ -414,3 +414,41 @@ fn any_color_impulse_keeps_colorless_pips() {
         assert_eq!(r.is_ok(), castable, "any_color {any_color} own {own}: {r:?}");
     }
 }
+
+/// CR 602.5 — only the player Capricopian is attacking may pay {2} (during
+/// declare attackers) to grow it and reselect which player it attacks.
+#[test]
+fn cr_602_5_capricopian_the_attacked_player_redirects_it() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(3);
+    let cap = g.add_card_to_battlefield(0, catalog::capricopian());
+    g.battlefield_find_mut(cap).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(cap);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cap, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let activate = |g: &mut GameState, seat: usize| {
+        flood(g, seat);
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: cap,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .map(|_| ())
+    };
+    assert!(activate(&mut g, 0).is_err(), "its controller can't");
+    assert!(activate(&mut g, 2).is_err(), "nor a player it isn't attacking");
+    // The attacked player sends it at the third seat (option 0: the first
+    // other opponent of its controller).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    activate(&mut g, 1).expect("the attacked player may");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cap).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    let target = g.attacking.iter().find(|a| a.attacker == cap).map(|a| a.target);
+    assert_eq!(target, Some(AttackTarget::Player(2)), "now attacking the third seat");
+}
