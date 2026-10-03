@@ -53,9 +53,9 @@ they call a deck 🟡, the table wins.
 | 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
-| 135 | Kaust, Eyes of the Glade (RGW) | 2: boltbender, tesak_judiths_hellhound |
+| 135 | Kaust, Eyes of the Glade (RGW) | 1: tesak_judiths_hellhound |
 | 137 | Zimone, Infinite Analyst (GU) | 3: primo_the_unbounded, quandrix_command, unbound_flourishing |
-| 140 | Anhelo, the Painter (UBR) | 3: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, zndrsplts_judgment |
+| 140 | Anhelo, the Painter (UBR) | 2: parnesse_the_subtle_brush, syrix_carrier_of_the_flame |
 | 141 | Prosper, Tome-Bound (BR) | 3: danse_macabre, hellish_rebuke, share_the_spoils |
 | 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
 | 144 | Satya, Aetherflux Genius (URW) | 2: overclocked_electromancer, razorfield_ripper |
@@ -64,8 +64,8 @@ they call a deck 🟡, the table wins.
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
 | 152 | Anje Falkenrath (BR) | 3: chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
-| 154 | Sauron, Lord of the Rings (UBR) | 3: moria_scavenger, shelob_dread_weaver, summons_of_saruman |
-| 160 | Terra, Herald of Hope (RWB) | 4: edgar_master_machinist, espers_to_magicite, the_warring_triad, umaro_raging_yeti |
+| 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
+| 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 166 | The Wise Mothman (BGU) | 2: rampaging_yao_guai, winding_constrictor |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
@@ -75,6 +75,8 @@ they call a deck 🟡, the table wins.
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 9: aces_baseball_bat, displaced_dinosaurs, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
+
+144 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 143 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

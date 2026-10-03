@@ -3134,6 +3134,35 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-03 (Commander session `01Q3oUQ5`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: `damage_is_unpreventable` (the
+shield funnel's four unpreventable legs, one predicate, now checked before
+Dark Sphere's half-shield), a `how` field on the three damage-to-counters
+statics, `repoint_copy_slot`'s graveyard-card default, one `IdSet` probe per
+cast permanent's entry (`graveyard_cast_enters_tapped`, cold), the bot sink
+gate reading only printed abilities' pips. 4-core container, release-fast,
+tip 3ba061277.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 games_per_s 396.2 (box); determinism ok; thread_determinism ok
+                 (3 vs 1); rss 36.2
+two-player pools cube / sos / sealed x 300, seed 75301: 7,500 games, 7,500
+                 decided
+pod (release)    every deck seated: 46 four-seat groups x 120 (seeds 53001+)
+                 and x 200 with --card-census (59001+) = 14,720 games, all
+                 decided, zero panics; 4 / 6 / 3 / 8 seats x 1,000 / 500 / 600
+                 / 200 (52003-52006) all decided
+pod (strict      CRAB_ANSWER_LOG=strict debug builds over every deck: 4 seats
+  debug)         x 30 (54001+), 6 x 20 (55001+), 3 x 25 (56001+), 4 x 30
+                 shifted groups (57001+), 5 x 20 with CRAB_POD_CONCEDE=5
+                 (58001+) = 5,645 games; two finds, both fixed with tests
+                 (Psychic Paper's stranded as-attached ask, the sink gate's
+                 colour read of Drana and Linvala's granted abilities)
+suite            23,922 / 0 / 5 (CRAB_ANSWER_LOG=strict); workspace clippy 0
+```
+
 ### 2026-10-03 (Commander session `01BaSouG`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: `distinct_target_range` (one
