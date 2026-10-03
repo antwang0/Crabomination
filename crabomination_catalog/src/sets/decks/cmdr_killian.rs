@@ -12,10 +12,10 @@ use std::sync::Arc;
 use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{attach_moved_equipment_to_your_creature, etb, on_attack, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
+use crate::effect::shortcut::{attach_moved_equipment_to_your_creature, choose_some_then, chosen_one, etb, on_attack, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, w, Color, ManaCost};
 
@@ -315,18 +315,33 @@ pub fn forum_filibuster() -> CardDefinition {
     }
 }
 
-/// Herald of Amity — flying; entering may cast an Aura from the top eight
-/// free; attacking pumps it by your Aura count. Residual: revealed, not exiled.
+/// Herald of Amity — flying; entering exiles the top eight, you may cast an
+/// Aura among them free, the rest go to the bottom at random; attacking pumps
+/// it by your Aura count.
 pub fn herald_of_amity() -> CardDefinition {
     let auras = Value::CountOf(Box::new(your_auras()));
+    let exiled = |filter: R| Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource.and(filter) };
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            etb(Effect::RevealTopMayCastOneFree {
-                count: Value::Const(8),
-                max_mv: Value::Const(99),
-                filter: Some(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
-            }),
+            etb(Effect::Seq(vec![
+                Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::Const(8), link_to_source: true, face_down: false },
+                choose_some_then(
+                    exiled(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                    PlayerRef::You,
+                    Value::ONE,
+                    true,
+                    Effect::CastWithoutPayingImmediate {
+                        what: chosen_one(),
+                        source_zone: Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    },
+                ),
+                Effect::BottomInRandomOrder { what: exiled(R::Any) },
+            ])),
             on_attack(Effect::PumpPT {
                 what: Selector::This,
                 power: auras.clone(),

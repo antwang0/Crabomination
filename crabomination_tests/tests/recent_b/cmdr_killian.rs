@@ -385,3 +385,20 @@ fn armored_skyhunter_attaches_the_equipment_it_deploys() {
     let host = g.battlefield_find(blade).expect("deployed").attached_to.expect("attached");
     assert_eq!(g.battlefield_find(host).unwrap().controller, 0);
 }
+
+/// Herald of Amity exiles the top eight, casts an Aura among them free and
+/// bottoms the other seven — exiled, not revealed, so nothing stays on top.
+#[test]
+fn herald_of_amity_casts_an_exiled_aura_and_bottoms_the_rest() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_library(0, catalog::ethereal_armor());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let herald = g.add_card_to_hand(0, catalog::herald_of_amity());
+    cast(&mut g, 0, herald, None).expect("cast");
+    assert!(g.battlefield_find(armor).is_some_and(|c| c.attached_to.is_some()), "cast free onto a creature");
+    assert_eq!(g.players[0].library.len(), 7, "the rest are back in the library");
+    assert!(g.exile.is_empty());
+}
