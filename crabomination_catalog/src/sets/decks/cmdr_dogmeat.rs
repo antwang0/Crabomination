@@ -715,8 +715,8 @@ pub fn moira_brown_guide_author() -> CardDefinition {
 }
 
 /// Perception Bobblehead — mana of any color; {3}, {T}: look at the top X
-/// (X = your Bobbleheads) and cast one with mana value 3 or less free.
-/// Residual: the rest go to the bottom in the cascade order.
+/// (X = your Bobbleheads) and cast one with mana value 3 or less free; the
+/// rest go to the bottom in a random order.
 pub fn perception_bobblehead() -> CardDefinition {
     bobblehead(
         "Perception Bobblehead",

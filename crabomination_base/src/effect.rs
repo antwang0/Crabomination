@@ -9601,8 +9601,8 @@ pub enum Effect {
     RevealTopMayCastOneFree {
         count: Value,
         max_mv: Value,
-        /// Only cards matching this may be cast ("an Aura spell" — Herald of
-        /// Amity). `None` allows any nonland card.
+        /// Only cards matching this may be cast. `None` allows any nonland
+        /// card.
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },

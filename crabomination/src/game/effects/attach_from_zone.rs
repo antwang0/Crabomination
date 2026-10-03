@@ -292,7 +292,7 @@ impl GameState {
 
     /// CR 401.4 — the `ids` still in `p`'s library go to its bottom in a
     /// random order.
-    fn bottom_in_random_order(&mut self, p: usize, ids: &[CardId]) {
+    pub(super) fn bottom_in_random_order(&mut self, p: usize, ids: &[CardId]) {
         use rand::seq::SliceRandom;
         let mut rest: Vec<CardId> =
             ids.iter().copied().filter(|id| self.players[p].library.iter().any(|c| c.id == *id)).collect();

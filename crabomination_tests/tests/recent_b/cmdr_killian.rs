@@ -216,6 +216,24 @@ fn herald_of_amity_casts_an_aura_free() {
     assert!(host == bear || host == herald);
 }
 
+/// Herald of Amity EXILES the top eight (an exile watcher sees them — Bell
+/// Borca notes the Craw Wurm's 6), and the rest go back to the bottom.
+#[test]
+fn herald_of_amity_exiles_the_top_eight() {
+    let mut g = pod(2);
+    let bell = g.add_card_to_battlefield(0, catalog::bell_borca_spectral_sergeant());
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let herald = g.add_card_to_hand(0, catalog::herald_of_amity());
+    cast(&mut g, 0, herald, None).expect("cast");
+    assert_eq!(g.computed_permanent(bell).unwrap().power, 6, "the Wurm passed through exile");
+    assert_eq!(g.players[0].library.len(), 8, "all eight back in the library");
+    assert!(g.players[0].library.iter().any(|c| c.id == wurm));
+    assert!(g.exile.iter().all(|c| c.id != wurm));
+}
+
 /// Defacing Duskmage prepares on an opponent's second draw of a turn; Vandal's
 /// Edit draws two and costs each player 2 life.
 #[test]

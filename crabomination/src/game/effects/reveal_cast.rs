@@ -4,7 +4,7 @@
 
 use super::{EffectContext, PickValue};
 use crate::card::{CardId, Zone};
-use crate::effect::{Effect, LibraryPosition, PlayerRef, Value, ZoneDest};
+use crate::effect::{Effect, Value};
 use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
@@ -68,20 +68,9 @@ impl GameState {
                 events.extend(self.cast_card_for_free(p, pick, Zone::Library, target, vec![], None, None, false)?);
             }
         }
-        // CR 401.4 — the rest go to the bottom; the engine's bottom order is
-        // the same hidden-order approximation cascade uses.
-        for cid in revealed {
-            if cid != picked.first().copied().unwrap_or(CardId(u32::MAX))
-                && self.players[p].library.iter().any(|c| c.id == cid)
-            {
-                self.move_card_to(
-                    cid,
-                    &ZoneDest::Library { who: PlayerRef::Seat(p), pos: LibraryPosition::Bottom },
-                    ctx,
-                    events,
-                );
-            }
-        }
+        // CR 401.4 — the rest go to the bottom in a random order.
+        let rest: Vec<CardId> = revealed.into_iter().filter(|&cid| picked.first() != Some(&cid)).collect();
+        self.bottom_in_random_order(p, &rest);
         Ok(())
     }
 }

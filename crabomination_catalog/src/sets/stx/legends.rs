@@ -146,8 +146,8 @@ pub fn beledros_witherbloom() -> CardDefinition {
 /// cost. Put the rest on the bottom of your library in a random order."
 ///
 /// `RevealTopMayCastOneFree`: the controller picks among the qualifying
-/// cards and casts it as the trigger resolves. The seven are revealed rather
-/// than looked at, and the rest keep their order on the bottom.
+/// cards and casts it as the trigger resolves; the rest go to the bottom in a
+/// random order. The seven are revealed rather than looked at.
 pub fn velomachus_lorehold() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::Selector;
