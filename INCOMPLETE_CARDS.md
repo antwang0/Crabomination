@@ -360,8 +360,8 @@ Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
 Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
 `Effect::PayLifeOrPutBackDrawnThisTurn`); Master Biomancer's Mutant rider; Compulsive Research's target player;
 Ajani's Chosen's Aura move (offered for an Aura on your own creature only);
-Comeuppance's reflection; Conduit of Worlds' {T} cast (residual: a spell cast
-between the activation and that cast isn't refused); Deep Analysis' target
+Comeuppance's reflection; Conduit of Worlds' {T} cast (cast as it resolves, per
+its ruling, since `01BaSouG`); Deep Analysis' target
 player; Mishra's Factory's pump; Astrologian's Planisphere's third draw;
 Fiery Justice's life (a targeted opponent since `SlotGroups`).
 

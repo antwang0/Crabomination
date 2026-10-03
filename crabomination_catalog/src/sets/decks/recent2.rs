@@ -165,12 +165,10 @@ pub fn scrabbling_skullcrab() -> CardDefinition {
 /// you haven't cast a spell this turn, you may cast that card. If you do, you
 /// can't cast additional spells this turn. Activate only as a sorcery.
 ///
-/// The cast is a `GrantMayPlay` paying the card's own cost for the rest of the
-/// step (the main phase it was activated in) and `LockSpellsAfterGrantedCast`
-/// shuts spells off once it is cast. Residual: another spell cast between the
-/// activation and that cast isn't refused.
+/// The card is cast as the ability resolves, for its own cost (2023-02-04
+/// ruling: "You can't wait and cast that card later in the turn"); a spell
+/// cast then shuts further spells off for the turn.
 pub fn conduit_of_worlds() -> CardDefinition {
-    use crate::card::MayPlayDuration;
     use crate::effect::ActivatedAbility;
     CardDefinition {
         name: "Conduit of Worlds",
@@ -186,19 +184,29 @@ pub fn conduit_of_worlds() -> CardDefinition {
             effect: Effect::If {
                 cond: Predicate::ValueAtMost(Value::SpellsCastThisTurn(PlayerRef::You), Value::Const(0)),
                 then: Box::new(Effect::Seq(vec![
-                    Effect::GrantMayPlay {
+                    Effect::CastWithoutPayingImmediate {
                         what: target_filtered(
                             SelectionRequirement::PermanentCard
                                 .and(SelectionRequirement::Nonland)
                                 .from_your_graveyard(),
                         ),
-                        duration: MayPlayDuration::EndOfThisStep,
-                        to_owner: false,
+                        source_zone: crate::card::Zone::Graveyard,
                         exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
                         pay_own_cost: true,
-                        any_color: false,
                     },
-                    Effect::LockSpellsAfterGrantedCast { what: Selector::Target(0) },
+                    Effect::If {
+                        cond: Predicate::SpellsCastThisTurnAtLeast {
+                            who: PlayerRef::You,
+                            at_least: Value::Const(1),
+                        },
+                        then: Box::new(Effect::PlayerCantCastMatchingThisTurn {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Any,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },

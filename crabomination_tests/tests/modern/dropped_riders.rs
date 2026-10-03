@@ -843,30 +843,28 @@ fn astrologians_planisphere_counts_the_third_draw() {
 /// Conduit of Worlds — "{T}: Choose target nonland permanent card in your
 /// graveyard. If you haven't cast a spell this turn, you may cast that card.
 /// If you do, you can't cast additional spells this turn." The bear is cast
-/// from the graveyard for its cost; after it, a Bolt from hand is refused.
-/// With a spell already cast this turn, the activation grants nothing.
+/// as the ability resolves (CR 608.2g; 2023-02-04 ruling: "You can't wait and
+/// cast that card later in the turn"), for its cost; after it, a Bolt from
+/// hand is refused (CR 101.2). With a spell already cast this turn, the
+/// activation does nothing.
 #[test]
 fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
+    let act = |g: &mut GameState, conduit, bear| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: conduit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .expect("activate");
+        drain_stack(g);
+    };
     let mut g = main_phase();
     let conduit = g.add_card_to_battlefield(0, catalog::conduit_of_worlds());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let act = |g: &mut GameState, target| {
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: conduit, ability_index: 0, target, additional_targets: Vec::new(), x_value: None, mode: None,
-        })
-    };
-    act(&mut g, Some(Target::Permanent(bear))).expect("activate");
-    drain_stack(&mut g);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastFromZoneWithoutPaying {
-        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("cast the bear from the graveyard");
+    act(&mut g, conduit, bear);
     assert_eq!(g.players[0].mana_pool.total(), 0, "its cost was paid");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.battlefield_find(bear).is_some(), "cast as the ability resolved");
     g.players[0].mana_pool.add(Color::Red, 1);
     assert!(cast(&mut g, bolt, Some(Target::Player(1))).is_err(), "no additional spells this turn");
 
@@ -878,27 +876,21 @@ fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt first");
     drain_stack(&mut g);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: conduit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
-    })
-    .expect("activate");
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "no permission");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    act(&mut g, conduit, bear);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "not cast");
 
-    // Bug fix: the window is this step's only — the grant arms the step
-    // sweep (it used to skip it, and the permission outlived the step).
+    // Unable to pay as it resolves: no cast, no later window, and no lock.
     let mut g = main_phase();
     let conduit = g.add_card_to_battlefield(0, catalog::conduit_of_worlds());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: conduit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
-    })
-    .expect("activate");
-    drain_stack(&mut g);
-    let granted = |g: &GameState| g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_some();
-    assert!(granted(&g));
-    let _ = g.advance_step(Vec::new());
-    assert!(!granted(&g), "the next step closes the window");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    act(&mut g, conduit, bear);
+    let card = g.players[0].graveyard.iter().find(|c| c.id == bear).expect("still in the graveyard");
+    assert!(card.may_play_until.is_none(), "nothing to cast later");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("spells stay open");
 }
 
 /// Mishra's Factory, Blinkmoth Nexus, Mishra's Foundry — each "becomes a …

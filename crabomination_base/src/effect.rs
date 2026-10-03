@@ -9589,8 +9589,10 @@ pub enum Effect {
     },
     /// Mark the may-play permission on each card `what` resolves to (chain
     /// after `GrantMayPlay` in a `Seq`): casting the card through it leaves
-    /// its caster unable to cast further spells this turn — Conduit of
-    /// Worlds' "if you do, you can't cast additional spells this turn".
+    /// its caster unable to cast further spells this turn — "if you do, you
+    /// can't cast additional spells this turn" on a later-in-the-turn grant.
+    /// (Conduit of Worlds casts as it resolves instead, per its 2023-02-04
+    /// ruling, so no shipped card uses this today.)
     LockSpellsAfterGrantedCast { what: Selector },
     /// Mark the may-play permission on each card `what` resolves to (chain
     /// after `GrantMayPlay`): "if that spell would be put into a graveyard,
