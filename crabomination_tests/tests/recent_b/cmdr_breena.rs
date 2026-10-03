@@ -476,8 +476,9 @@ fn deathbringer_liege_taps_then_kills() {
     assert!(g.battlefield_find(angel).is_none(), "destroyed while tapped");
 }
 
-/// Two Bold Plagiarists across the table don't feed each other: the counters a
-/// Plagiarist is given are put on a creature the opponent doesn't control.
+/// CR 122.6 — two Bold Plagiarists across the table don't feed each other:
+/// the counters a Plagiarist is given are put by the opponent, on a creature
+/// that opponent doesn't control.
 #[test]
 fn bold_plagiarists_do_not_loop() {
     let mut g = pod(2);
@@ -491,6 +492,18 @@ fn bold_plagiarists_do_not_loop() {
     activate(&mut g, 1, wd, 0, Some(Target::Permanent(bear)), None).expect("a counter");
     assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // CR 122.6 — and an opponent's counters on their OWN Plagiarist are copied
+    // too (it was excluded by name): "they" put the copy, so nothing loops.
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::bold_plagiarist());
+    let b = g.add_card_to_battlefield(1, catalog::bold_plagiarist());
+    let wd = g.add_card_to_battlefield(1, catalog::willowdusk_essence_seer());
+    g.clear_sickness(wd);
+    g.players[1].life_gained_this_turn = 1;
+    g.active_player_idx = 1;
+    activate(&mut g, 1, wd, 0, Some(Target::Permanent(b)), None).expect("a counter on their Plagiarist");
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
 /// CR 702.16b/e — Guardian Archon's reveal: you and the target permanent gain

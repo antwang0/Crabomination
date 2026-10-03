@@ -1128,8 +1128,8 @@ opponent as `Triggerer` (Breena, Combat Calligrapher) — plus
 reads its attacker (Nils). Its pods found a bot bug: ⚠ **3,512 Aetherflux
 Reservoir shots into an indestructible Zetalpa** — the pinger called damage
 lethal to an indestructible creature and never aimed a paid repeat shot at a
-60-life face. Residuals (seven now — the Blade and Parasitic Impetus goad by static since seat 93 — all on the card docs): Breena's counters and
-Nils's targets are engine picks; Bold Plagiarist copies +1/+1 counters only; Guardian Archon's
+60-life face. Residuals (the Blade and Parasitic Impetus goad by static since seat 93 — all on the card docs): Breena's counters and
+Nils's targets are engine picks; Guardian Archon's
 protection from a player is hexproof + indestructible; Inkshield counts
 unblocked power; Author of Shadows takes the first nonland card; Tragic
 Arrogance keeps each player's best; Victory Chimes's mana is yours. Four-seat

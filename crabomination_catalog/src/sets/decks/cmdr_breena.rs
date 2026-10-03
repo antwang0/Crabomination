@@ -133,22 +133,21 @@ pub fn author_of_shadows() -> CardDefinition {
 
 /// Bold Plagiarist — flash; an opponent putting counters on a creature they
 /// control (keyword counters included) puts as many of that kind on this.
-/// Residual: an opponent's own Bold Plagiarist never counts.
 pub fn bold_plagiarist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
-            // The placer (CR 122.6) is the opponent and controls the creature.
-            // The counters a Plagiarist is then given are the opponent's to
-            // put, but the engine records this trigger's controller as their
-            // placer — so another Plagiarist is excluded by name, or two of
-            // them feed each other to a million-action cap.
+            // CR 122.6 — "THEY put the same … on this": the opponent is the
+            // placer of the copied counters too, so an opponent's own
+            // Plagiarist sees counters a player put on a creature that player
+            // doesn't control, and two Plagiarists can't feed each other.
             event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::OpponentPutsCountersOnTheirOwn)
-            .with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: R::Creature.and(R::HasName("Bold Plagiarist".into()).negate()),
-            }),
-            effect: Effect::AddCounterOfTriggerKind { what: Selector::This, amount: Value::TriggerEventAmount },
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::AddCounterOfTriggerKind {
+                what: Selector::This,
+                amount: Value::TriggerEventAmount,
+                event_placer: true,
+            },
         }],
         ..creature(
             "Bold Plagiarist",
