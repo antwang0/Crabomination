@@ -1,13 +1,6 @@
 //! Commander: the cards the **Abzan Armor** precon (TDC, Felothar the
 //! Steadfast) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_felothar.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Betor, Ancestor's Voice** — the counters go on your greatest-power
-//!   other creature and the reanimation picks the greatest-power card; neither
-//!   is targeted.
-//! - **Tip the Scales** — the -X/-X resolves with the spell, not as a
-//!   reflexive "when you do" trigger.
 
 use std::sync::Arc;
 
@@ -200,41 +193,31 @@ pub fn behind_the_scenes() -> CardDefinition {
 
 /// Betor, Ancestor's Voice — flying, lifelink; your end step grows up to one
 /// other target creature of yours by the life you gained and reanimates up to
-/// one target creature card no bigger than the life you lost (X read as it
-/// triggers and again as it resolves, `game/trigger_time.rs`).
-///
-/// Residual: the two halves are two triggers — a target list can't hold an
-/// empty slot 0 before a filled slot 1.
+/// one target creature card no bigger than the life you lost — one trigger,
+/// two optional slots (an empty slot 0 holds its place, `game/target_hole.rs`).
 pub fn betor_ancestors_voice() -> CardDefinition {
-    let end_step = || EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer);
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: end_step(),
-                effect: Effect::OptionalTargets {
-                    min: 0,
-                    body: Box::new(Effect::AddCounter {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
                         what: target_filtered(yours().and(R::OtherThanSource)),
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::LifeGainedThisTurn(PlayerRef::You),
-                    }),
-                },
+                    },
+                    Effect::Move {
+                        what: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMostLifeLostThisTurn),
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ])),
             },
-            TriggeredAbility {
-                event: end_step(),
-                effect: Effect::WithX {
-                    x: Value::LifeLostThisTurn(PlayerRef::You),
-                    body: Box::new(Effect::OptionalTargets {
-                        min: 0,
-                        body: Box::new(Effect::Move {
-                            what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMostXFromCost)),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                        }),
-                    }),
-                },
-            },
-        ],
+        }],
         ..legend(
             "Betor, Ancestor's Voice",
             cost(&[generic(2), w(), b(), g()]),

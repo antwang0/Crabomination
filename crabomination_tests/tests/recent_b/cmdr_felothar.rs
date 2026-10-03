@@ -199,6 +199,22 @@ fn betor_targets_by_life_lost_at_trigger() {
     assert!(g.battlefield_find(giant).is_none());
 }
 
+/// Betor — CR 115.1 / 601.2c: with no other creature of yours, slot 0
+/// ("up to one other target creature you control") stays empty and holds
+/// its place, so the returned card is slot 1's pick and gets no counters.
+#[test]
+fn betor_empty_counter_slot_keeps_the_reanimation_slot() {
+    let mut g = pod(2);
+    let b = g.add_card_to_battlefield(0, catalog::betor_ancestors_voice());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 3;
+    g.players[0].life_lost_this_turn = 2;
+    step(&mut g, TurnStep::End);
+    let back = g.battlefield_find(bears).expect("mana value 2 ≤ 2 life lost");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 0, "slot 0's counters had no target");
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
 /// Blight Pile — drains per defender.
 #[test]
 fn blight_pile_drains_per_defender() {
