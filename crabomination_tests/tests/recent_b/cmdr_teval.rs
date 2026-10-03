@@ -501,6 +501,26 @@ fn lost_monarch_afflicts_and_grants_afflict() {
     assert_eq!(g.players[1].life, 14, "afflict 3 twice");
 }
 
+/// Lost Monarch's second-main trigger needs a Zombie's combat damage to a
+/// player this turn: a Bear's hit doesn't mill, a Walking Corpse's does.
+#[test]
+fn lost_monarch_mills_after_a_zombie_connects() {
+    for (zombie, milled) in [(false, 0), (true, 3)] {
+        let mut g = main_phase();
+        stock_libraries(&mut g, 6);
+        g.add_card_to_battlefield(0, catalog::lost_monarch_of_ifnir());
+        let def = if zombie { catalog::walking_corpse() } else { catalog::grizzly_bears() };
+        let hitter = g.add_card_to_battlefield(0, def);
+        let lib = g.players[0].library.len();
+        swing(&mut g, hitter);
+        while g.step != TurnStep::PostCombatMain {
+            let _ = g.advance_step(Vec::new());
+        }
+        drain_stack(&mut g);
+        assert_eq!(lib - g.players[0].library.len(), milled, "zombie: {zombie}");
+    }
+}
+
 /// Lord of Extinction counts every card in every graveyard.
 #[test]
 fn lord_of_extinction_counts_all_graveyards() {

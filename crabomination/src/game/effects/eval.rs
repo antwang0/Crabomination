@@ -2959,6 +2959,9 @@ impl GameState {
                 pl.prowl_any_type_this_turn
                     || types.iter().any(|t| pl.prowl_types_this_turn.contains(t))
             }
+            Predicate::TypeDealtCombatDamageByAnyone { types } => self.players.iter().any(|pl| {
+                pl.prowl_any_type_this_turn || types.iter().any(|t| pl.prowl_types_this_turn.contains(t))
+            }),
             Predicate::CreatureCardsToGraveyardThisTurnAtLeast(n) => {
                 self.players.iter().map(|p| p.creature_cards_to_graveyard_this_turn).sum::<u32>()
                     >= *n

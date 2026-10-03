@@ -2158,6 +2158,10 @@ pub enum Predicate {
     /// this turn (`Player.prowl_types_this_turn`; Changeling damage
     /// satisfies any type).
     ProwlTypeDealtCombatDamage { types: Vec<crate::card::CreatureType> },
+    /// [`ProwlTypeDealtCombatDamage`](Self::ProwlTypeDealtCombatDamage) under
+    /// ANY player's control: "if a player was dealt combat damage by a Zombie
+    /// this turn" (Lost Monarch of Ifnir).
+    TypeDealtCombatDamageByAnyone { types: Vec<crate::card::CreatureType> },
     /// True if any player matching `who` had at least `at_least` cards put
     /// into their graveyard from anywhere this turn (CR 700.4 tally —
     /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free

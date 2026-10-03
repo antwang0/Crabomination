@@ -702,8 +702,8 @@ pub fn diviner_of_mist() -> CardDefinition {
 ///
 /// Afflict is its printed trigger ("whenever this creature becomes blocked,
 /// defending player loses 3 life"), granted to the other Zombies via
-/// `GrantTriggeredAbility`. Approximation: the main-phase gate reads a Zombie
-/// *you control* dealing the damage.
+/// `GrantTriggeredAbility`. The main-phase gate reads a Zombie under anyone's
+/// control dealing the damage.
 pub fn lost_monarch_of_ifnir() -> CardDefinition {
     let afflict = || TriggeredAbility {
         event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
@@ -720,7 +720,7 @@ pub fn lost_monarch_of_ifnir() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::PostCombatMain),
                     EventScope::YourControl,
                 )
-                .with_filter(Predicate::ProwlTypeDealtCombatDamage {
+                .with_filter(Predicate::TypeDealtCombatDamageByAnyone {
                     types: vec![CreatureType::Zombie],
                 }),
                 effect: Effect::Seq(vec![
