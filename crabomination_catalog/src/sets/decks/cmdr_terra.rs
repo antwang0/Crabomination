@@ -9,8 +9,6 @@
 //!   exiled, not a chosen target; the artifact-only type is a layer-4 set,
 //!   not a copiable value.
 //! - **Gogo, Mysterious Mime** — the copy takes the copied creature's name.
-//! - **Legions to Ashes** — same-name tokens of every player are exiled, not
-//!   only the target's controller's.
 //! - **The Warring Triad** — the mill is part of the effect, not a cost, and
 //!   you are always the player who adds the mana.
 //! - **Umaro, Raging Yeti** — the random mode is picked, and a damage target
@@ -461,8 +459,8 @@ pub fn kefka_dancing_mad() -> CardDefinition {
     }
 }
 
-/// Legions to Ashes — exile an opposing nonland permanent and its same-named
-/// tokens. Residual: every player's same-named tokens go.
+/// Legions to Ashes — exile an opposing nonland permanent and the tokens
+/// that player controls with the same name.
 pub fn legions_to_ashes() -> CardDefinition {
     spell(
         "Legions to Ashes",
@@ -471,6 +469,7 @@ pub fn legions_to_ashes() -> CardDefinition {
         Effect::Seq(vec![
             Effect::ExileTokensSharingNameWith {
                 what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
+                same_controller: true,
             },
             Effect::Exile { what: Selector::Target(0) },
         ]),

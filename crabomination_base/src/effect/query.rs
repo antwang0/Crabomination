@@ -2412,7 +2412,7 @@ impl Effect {
             Effect::RestartGame { .. } => false,
             Effect::SwapTappedState { what } => sel_has_target(what),
             Effect::ExileAllCopiesOfTargetName { what }
-            | Effect::ExileTokensSharingNameWith { what }
+            | Effect::ExileTokensSharingNameWith { what, .. }
             | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),
             Effect::RedirectNextDamageBackAtSource { what, to } => {
                 sel_has_target(what) || sel_has_target(to)
@@ -4883,7 +4883,7 @@ impl Effect {
                     sel_find(aura, slot).or_else(|| sel_find(host, slot))
                 }
                 Effect::ExileAllCopiesOfTargetName { what }
-                | Effect::ExileTokensSharingNameWith { what }
+                | Effect::ExileTokensSharingNameWith { what, .. }
                 | Effect::DestroyAllSharingNameWith { what }
                 | Effect::ExileAndReturnToOwner { what }
                 | Effect::ReselectAttackTarget { what } => sel_find(what, slot),

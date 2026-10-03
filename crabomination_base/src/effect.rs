@@ -11499,7 +11499,13 @@ pub enum Effect {
     /// "Exile all tokens with the same name as `what`" (Dual Nature's leave
     /// trigger). Nontoken permanents sharing the name are untouched; `what`
     /// resolves off the death/leave LKI snapshot when it has already gone.
-    ExileTokensSharingNameWith { what: Selector },
+    /// `same_controller`: only tokens `what`'s controller controls ("all tokens
+    /// that player controls with the same name" — Legions to Ashes).
+    ExileTokensSharingNameWith {
+        what: Selector,
+        #[serde(default)]
+        same_controller: bool,
+    },
     /// "Exile `what`, then return it to the battlefield under its owner's
     /// control" — an immediate blink (Flicker, Ghostly Flicker, Conjurer's
     /// Closet, Displacer Kitten, Teleportation Circle). Tokens cease to exist

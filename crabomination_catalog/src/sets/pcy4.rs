@@ -813,7 +813,7 @@ pub fn dual_nature() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: nontoken_creature,
                 }),
-                effect: Effect::ExileTokensSharingNameWith { what: Selector::TriggerSource },
+                effect: Effect::ExileTokensSharingNameWith { what: Selector::TriggerSource, same_controller: false },
             },
             TriggeredAbility {
                 event: EventSpec::new(

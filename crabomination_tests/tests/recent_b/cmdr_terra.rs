@@ -235,6 +235,22 @@ fn legions_to_ashes_takes_the_namesakes() {
     assert!(g.battlefield_find(s).is_none());
 }
 
+/// Legions to Ashes takes "all tokens THAT PLAYER controls with the same
+/// name": another opponent's (and your own) same-named tokens stay.
+#[test]
+fn legions_to_ashes_spares_other_players_namesakes() {
+    let mut g = main_phase(3);
+    let t = crabomination_base::tokens::treasure_token();
+    let target = g.add_token_to_battlefield(1, &t);
+    let twin = g.add_token_to_battlefield(1, &t);
+    let others = [g.add_token_to_battlefield(2, &t), g.add_token_to_battlefield(0, &t)];
+    let spell = g.add_card_to_hand(0, catalog::legions_to_ashes());
+    flood(&mut g, 0);
+    cast(&mut g, spell, &[Target::Permanent(target)]).expect("cast");
+    assert!(g.battlefield_find(target).is_none() && g.battlefield_find(twin).is_none());
+    assert!(others.iter().all(|o| g.battlefield_find(*o).is_some()));
+}
+
 /// Espers to Magicite: an opponent's creature card comes back as a
 /// noncreature artifact token copy.
 #[test]

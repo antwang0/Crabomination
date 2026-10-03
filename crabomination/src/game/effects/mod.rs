@@ -36297,7 +36297,7 @@ impl GameState {
                 self.run_effect(then, ctx, events)
             }
 
-            Effect::ExileTokensSharingNameWith { what } => {
+            Effect::ExileTokensSharingNameWith { what, same_controller } => {
                 // Dual Nature — the copies made off a creature die with it.
                 let Some(cid) = self.resolve_selector(what, ctx).iter().find_map(|e| match e {
                     EntityRef::Permanent(c) | EntityRef::Card(c) => Some(*c),
@@ -36305,10 +36305,10 @@ impl GameState {
                 }) else {
                     return Ok(());
                 };
-                let Some(name) = self
+                let Some((name, owner_seat)) = self
                     .find_card_anywhere(cid)
                     .or_else(|| self.died_card_snapshots.get(&cid))
-                    .map(|c| c.definition.name)
+                    .map(|c| (c.definition.name, c.controller))
                 else {
                     return Ok(());
                 };
@@ -36316,6 +36316,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.is_token && c.definition.name == name)
+                    .filter(|c| !*same_controller || c.controller == owner_seat)
                     .map(|c| c.id)
                     .collect();
                 for id in doomed {
