@@ -7,7 +7,6 @@
 //! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
 //!   not modeled.
 //! - **Last Night Together** — any creature may attack in the extra combat.
-//! - **Me, the Immortal** — its counters don't stay with it across zones.
 //! - **Psychic Paper** — no chosen name and creature type.
 
 use std::sync::Arc;
@@ -620,13 +619,13 @@ pub fn madame_vastra() -> CardDefinition {
 
 /// Me, the Immortal — each combat on your turn, a +1/+1, first strike,
 /// vigilance or menace counter; castable from your graveyard by discarding
-/// two cards.
-/// Residual: its counters don't stay with it across zones.
+/// two cards; its counters stay on it outside a hand or library.
 pub fn me_the_immortal() -> CardDefinition {
     let kw = |k: Keyword| Effect::AddKeywordCounter { what: Selector::This, keyword: k, amount: Value::ONE };
     CardDefinition {
         keywords: vec![Keyword::GraveyardCast],
         flashback_additional_cost: vec![AdditionalCastCost::Discard { count: 2, filter: None }],
+        keeps_counters_off_battlefield: true,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
             effect: Effect::ChooseMode(vec![

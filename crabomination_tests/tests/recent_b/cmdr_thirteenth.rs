@@ -469,3 +469,24 @@ fn lunar_hatchling_bot_escapes() {
     assert!(g.battlefield_find(hatchling).is_some(), "the bot escaped it");
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 7);
 }
+
+/// CR 122.2 (and Me, the Immortal's exception) — its counters stay with it
+/// into the graveyard and back onto the battlefield when it's cast from
+/// there by discarding two cards.
+#[test]
+fn me_the_immortal_keeps_its_counters_across_zones() {
+    let mut g = pod(2);
+    let me = g.add_card_to_battlefield(0, catalog::me_the_immortal());
+    g.battlefield_find_mut(me).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    flood(&mut g, 0);
+    cast(&mut g, 0, blade, Some(Target::Permanent(me))).expect("doom blade");
+    let in_gy = g.players[0].graveyard.iter().find(|c| c.id == me).expect("in the graveyard");
+    assert_eq!(in_gy.counter_count(CounterType::PlusOnePlusOne), 2);
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    flood(&mut g, 0);
+    flashback(&mut g, 0, me, None).expect("cast from the graveyard");
+    assert_eq!(counters(&g, me), 2, "it comes back with them");
+    assert!(g.players[0].hand.is_empty(), "two cards discarded");
+}
