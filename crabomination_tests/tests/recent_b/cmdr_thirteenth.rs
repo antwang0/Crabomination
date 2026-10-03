@@ -644,6 +644,36 @@ fn cr_707_9b_psychic_paper_renames_while_attached() {
     assert_eq!(h.definition.subtypes.creature_types, vec![CreatureType::Human]);
 }
 
+/// Psychic Paper equipped by a prompting seat (a pod or training bot): the two
+/// "as it becomes attached" choices are answered where the attach happens,
+/// not left as a stranded suspension for the next resolution to surface
+/// (strict debug pod, seed 54177 game 16).
+#[test]
+fn psychic_paper_choices_dont_strand_for_a_prompting_seat() {
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let paper = g.add_card_to_battlefield(0, catalog::psychic_paper());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: paper, target: giant }).expect("equip");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_none());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_none(), "{:?}", g.pending_decision.as_ref().map(|p| &p.decision));
+    assert_eq!(g.players[1].life, 17);
+}
+
 /// A headless seat equipping Psychic Paper keeps the host's name and takes
 /// its own deck's most common creature type.
 #[test]

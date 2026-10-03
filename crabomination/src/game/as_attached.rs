@@ -27,7 +27,7 @@ impl GameState {
                 continue;
             }
             let ctx = EffectContext::for_ability(attachment, c.controller, None);
-            let _ = self.resolve_effect(&Effect::ChooseColorForSelf, &ctx);
+            let _ = self.resolve_as_enters_driven(&Effect::ChooseColorForSelf, &ctx);
         }
     }
 }

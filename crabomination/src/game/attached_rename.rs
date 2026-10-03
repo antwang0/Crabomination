@@ -24,12 +24,15 @@ impl GameState {
         // and takes its own deck's most common creature type — the Auto
         // decider's blanket answer for "choose a creature type" would strip a
         // Doctor of its tribe.
-        let _ = self.resolve_effect(
+        // Answered here, at any depth (`resolve_as_enters_driven`): a plain
+        // `resolve_effect` stranded a prompting seat's ask for the next
+        // resolution to surface.
+        let _ = self.resolve_as_enters_driven(
             &Effect::NameCard { what: Selector::This, restrict_to: Some(SelectionRequirement::Creature) },
             &ctx,
         );
         if self.seat_prompts(controller) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
-            let _ = self.resolve_effect(&Effect::NameCreatureType { what: Selector::This }, &ctx);
+            let _ = self.resolve_as_enters_driven(&Effect::NameCreatureType { what: Selector::This }, &ctx);
         } else {
             let pick = self.own_most_common_creature_type(controller, host);
             if let Some(p) = self.battlefield.find_by_id_mut(equipment) {
