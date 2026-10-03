@@ -5854,12 +5854,18 @@ pub enum Effect {
     /// **you** as the controller, so "you don't control" means the caster —
     /// and `body` runs with it bound as `Target(0)` (Volcanic Offering).
     /// `chooser` names the picking player instead (Bladegriff Prototype's
-    /// "of that player's choice"). Nothing happens without a match.
+    /// "of that player's choice"); `theirs` keeps the pick among the chooser's
+    /// own ("… they control", Magus of the Arena). Every user prints "target",
+    /// so the pick must be a legal target for you (CR 115.4). The spell's own
+    /// targets follow the pick, from `Target(1)` on. Nothing happens without a
+    /// match.
     OpponentChoosesPermanentThen {
         filter: SelectionRequirement,
         body: Box<Effect>,
         #[serde(default)]
         chooser: Option<PlayerRef>,
+        #[serde(default)]
+        theirs: bool,
     },
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the

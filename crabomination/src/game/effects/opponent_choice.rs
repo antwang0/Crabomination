@@ -19,6 +19,7 @@ impl GameState {
         filter: &SelectionRequirement,
         body: &Effect,
         chooser: Option<&crate::effect::PlayerRef>,
+        theirs: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -55,7 +56,11 @@ impl GameState {
         let candidates: Vec<&CardInstance> = self
             .battlefield
             .iter()
-            .filter(|c| self.evaluate_requirement_on_card(filter, c, me))
+            .filter(|c| (!theirs || c.controller == chooser) && self.evaluate_requirement_on_card(filter, c, me))
+            .filter(|c| {
+                let t = Target::Permanent(c.id);
+                self.check_target_legality(&t, me).is_ok() && !self.ability_target_has_protection(&t, source)
+            })
             .collect();
         if candidates.is_empty() {
             self.clear_answer_log();
@@ -87,7 +92,13 @@ impl GameState {
         };
         self.clear_answer_log();
         let Some(pick) = ids.first().copied().or(auto) else { return Ok(()) };
-        self.run_effect(&Effect::BindTargetObjects { ids: vec![pick], body: Box::new(body.clone()) }, ctx, events)
+        let ids = std::iter::once(pick)
+            .chain(ctx.targets.iter().filter_map(|t| match t {
+                Target::Permanent(id) => Some(*id),
+                Target::Player(_) => None,
+            }))
+            .collect();
+        self.run_effect(&Effect::BindTargetObjects { ids, body: Box::new(body.clone()) }, ctx, events)
     }
 
     /// Three passes over the table (CR 101.4, APNAP): exile each player's

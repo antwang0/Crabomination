@@ -108,6 +108,7 @@ pub fn bladegriff_prototype() -> CardDefinition {
             filter: R::Nonland.and(R::ControlledByOpponent),
             body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
             chooser: Some(PlayerRef::TriggerEventPlayer),
+            theirs: false,
         })],
         ..creature("Bladegriff Prototype", cost(&[generic(5)]), vec![CreatureType::Griffin], 3, 2)
     }

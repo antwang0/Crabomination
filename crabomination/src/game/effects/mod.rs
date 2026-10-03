@@ -12714,8 +12714,8 @@ impl GameState {
             // CR 509.4 — mint a token already blocking the targeted attacker.
             Effect::CopyAttackersAsBlockers => self.copy_attackers_as_blockers(ctx, events),
             Effect::EachPlayerRecyclesArtifacts => self.each_player_recycles_artifacts(ctx, events),
-            Effect::OpponentChoosesPermanentThen { filter, body, chooser } => {
-                self.opponent_chooses_permanent_then(filter, body, chooser.as_ref(), effect, ctx, events)
+            Effect::OpponentChoosesPermanentThen { filter, body, chooser, theirs } => {
+                self.opponent_chooses_permanent_then(filter, body, chooser.as_ref(), *theirs, effect, ctx, events)
             }
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
