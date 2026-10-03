@@ -35,6 +35,17 @@ fn cast(g: &mut GameState, seat: usize, id: CardId, target: Option<Target>) -> R
 }
 
 fn activate(g: &mut GameState, seat: usize, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
+    activate_x(g, seat, id, index, target, None)
+}
+
+fn activate_x(
+    g: &mut GameState,
+    seat: usize,
+    id: CardId,
+    index: usize,
+    target: Option<Target>,
+    x_value: Option<u32>,
+) -> Result<(), String> {
     flood(g, seat);
     g.priority.player_with_priority = seat;
     g.perform_action(GameAction::ActivateAbility {
@@ -42,7 +53,7 @@ fn activate(g: &mut GameState, seat: usize, id: CardId, index: usize, target: Op
         ability_index: index,
         target,
         additional_targets: vec![],
-        x_value: None,
+        x_value,
         mode: None,
     })
     .map(|_| ())
@@ -277,16 +288,56 @@ fn gontis_aether_heart_charges() {
     assert_eq!(g.players[0].energy, 4);
 }
 
-/// Hourglass of the Lost — ticks up for mana, then returns permanents of
-/// that mana value.
+/// Filigree Racer's attack payoff grants jump-start (CR 702.133): the card is
+/// cast from the graveyard for its cost plus a discard, then exiled; the
+/// grant ends at cleanup.
+#[test]
+fn filigree_racer_grants_jump_start() {
+    let mut g = pod(2);
+    let racer = g.add_card_to_battlefield(0, catalog::filigree_racer());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let fodder = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].energy = 2;
+    let pay = catalog::filigree_racer().triggered_abilities[1].effect.clone();
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Permanent(bolt)), 0, 0);
+    ctx.source = Some(racer);
+    g.resolve_effect(&pay, &ctx).expect("pay {E}{E}");
+    assert_eq!(g.players[0].energy, 0);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("jump-start");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "discarded as a cost");
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+    // Unused, the grant wears off at cleanup.
+    let again = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].energy = 2;
+    let ctx = EffectContext { targets: vec![Target::Permanent(again)], ..ctx };
+    g.resolve_effect(&pay, &ctx).expect("pay again");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == again && c.has_jump_start()));
+    let _ = g.do_cleanup(&mut Vec::new());
+    assert!(g.find_card_anywhere(again).is_some_and(|c| !c.has_jump_start()));
+}
+
+/// Hourglass of the Lost — X is the number of time counters removed, chosen
+/// as the cost is paid (CR 107.3), not all of them.
 #[test]
 fn hourglass_of_the_lost_returns_mv_x() {
     let mut g = pod(2);
     let hg = g.add_card_to_battlefield(0, catalog::hourglass_of_the_lost());
-    g.battlefield_find_mut(hg).unwrap().add_counters(CounterType::Time, 2);
+    g.battlefield_find_mut(hg).unwrap().add_counters(CounterType::Time, 4);
     let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
-    activate(&mut g, 0, hg, 1, None).expect("hourglass");
+    assert!(activate_x(&mut g, 0, hg, 1, None, Some(5)).is_err(), "only four to remove");
+    activate_x(&mut g, 0, hg, 1, None, Some(2)).expect("hourglass");
     assert!(g.battlefield_find(bears).is_some(), "mana value 2");
     assert!(g.battlefield_find(giant).is_none(), "mana value 4");
     assert!(g.battlefield_find(hg).is_none(), "exiled");
@@ -355,8 +406,9 @@ fn sphinx_of_the_revelation_draws_with_energy() {
     assert_eq!(g.players[0].energy, 3);
     g.clear_sickness(s);
     let hand = g.players[0].hand.len();
-    activate(&mut g, 0, s, 0, None).expect("draw");
-    assert_eq!(g.players[0].hand.len(), hand + 3);
+    activate_x(&mut g, 0, s, 0, None, Some(2)).expect("draw");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "X {{E}} paid as a cost (CR 107.14)");
+    assert_eq!(g.players[0].energy, 1);
 }
 
 /// Stone Idol Generator — each attacker gives {E}; six make a Construct.

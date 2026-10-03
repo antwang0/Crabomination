@@ -1984,11 +1984,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
 | 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
-| 🟡 Filigree Racer | Creative Energy (M3C) | the granted jump-start is a flashback for the card's mana cost, without the discard. |
-| 🟡 Hourglass of the Lost | Creative Energy (M3C) | it removes all its time counters (X is that number), not a chosen X. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
-| 🟡 Sphinx of the Revelation | Creative Energy (M3C) | the X {E} is paid as the ability resolves, not as a cost. |
 | 🟡 Betor, Ancestor's Voice | Abzan Armor (TDC) | its two targeted halves are two end-step triggers (a target list can't leave slot 0 empty before slot 1). |
 | 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |

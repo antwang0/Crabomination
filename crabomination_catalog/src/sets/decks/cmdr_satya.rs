@@ -305,16 +305,13 @@ pub fn conversion_apparatus() -> CardDefinition {
 /// Filigree Racer — Vehicle; {E}{E}{E}{E} on entering; attacking, pay {E}{E}
 /// to let an instant or sorcery in your graveyard be cast again this turn;
 /// crew 1.
-///
-/// Residual: the grant is a flashback for the card's mana cost (no
-/// discard).
 pub fn filigree_racer() -> CardDefinition {
     let mut d = vehicle("Filigree Racer", cost(&[generic(3), r()]), 5, 5, 1);
     d.triggered_abilities = vec![
         etb(energy(4)),
         on_attack(Effect::PayEnergy {
             amount: 2,
-            then: Box::new(Effect::GrantFlashbackThisTurn {
+            then: Box::new(Effect::GrantJumpStartThisTurn {
                 what: target_filtered(
                     R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
                 ),
@@ -347,9 +344,7 @@ pub fn gontis_aether_heart() -> CardDefinition {
 
 /// Hourglass of the Lost — {T}: {W} and a time counter; {T}, exile it:
 /// return each nonland permanent card with mana value X (its time
-/// counters) from your graveyard.
-///
-/// Residual: X is all its time counters, not a chosen number.
+/// counters removed) from your graveyard.
 pub fn hourglass_of_the_lost() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
@@ -364,19 +359,15 @@ pub fn hourglass_of_the_lost() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 sorcery_speed: true,
-                effect: Effect::WithX {
-                    x: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Time },
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Exile { what: Selector::This },
-                        Effect::Move {
-                            what: Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: R::PermanentCard.and(R::Not(Box::new(R::Land))).and(R::ManaValueExactlyXFromCost),
-                            },
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                        },
-                    ])),
+                remove_counter_x: Some(CounterType::Time),
+                exile_self_cost: true,
+                effect: Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: R::PermanentCard.and(R::Not(Box::new(R::Land))).and(R::ManaValueExactlyXFromCost),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
                 ..Default::default()
             },
@@ -490,8 +481,6 @@ pub fn salvation_colossus() -> CardDefinition {
 
 /// Sphinx of the Revelation — flying, lifelink; life you gain becomes {E};
 /// {W}{U}{U}, {T}, pay X {E}: draw X.
-///
-/// Residual: the {E} is paid as the ability resolves.
 pub fn sphinx_of_the_revelation() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -503,9 +492,8 @@ pub fn sphinx_of_the_revelation() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w(), u(), u()]),
             tap_cost: true,
-            effect: Effect::PayAnyEnergy {
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::EnergyPaidThisEffect }),
-            },
+            energy_x_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
             ..Default::default()
         }],
         ..creature("Sphinx of the Revelation", cost(&[generic(3), w(), u()]), vec![CreatureType::Sphinx], 4, 5)

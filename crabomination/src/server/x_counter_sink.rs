@@ -1,5 +1,5 @@
 //! The bot's sink for "{X}, Remove X [kind] counters from this / from among
-//! your permanents" activations
+//! your permanents" and "pay X {E}" activations
 //! (Marath, Will of the Wild; Arcbound Javelineer). No generator chose an X
 //! for one, so Marath's counters sat unspent and its seat won 6 % of four-seat
 //! pods. Every mode at every payable X is dry-run and scored against passing;
@@ -35,6 +35,9 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
                     });
                 let n: u32 = if ab.remove_counter_among_x_one { counts.max().unwrap_or(0) } else { counts.sum() };
                 n.min(12)
+            } else if ab.energy_x_cost {
+                // "Pay X {E}" (Sphinx of the Revelation, Chthonian Nightmare).
+                state.players[seat].energy.min(12)
             } else {
                 continue;
             };
@@ -100,6 +103,30 @@ mod tests {
         let pick = pick_x_counter_ability(&g, 0, &EvalWeights::default());
         assert!(
             matches!(pick, Some(GameAction::ActivateAbility { card_id, x_value: Some(x), target: Some(Target::Permanent(_)), .. }) if card_id == mr && x > 0),
+            "{pick:?}"
+        );
+    }
+
+    /// "Pay X {E}" is an X the bot sizes too: Sphinx of the Revelation draws
+    /// with the energy it has.
+    #[test]
+    fn a_pod_bot_sizes_an_energy_x() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let s = g.add_card_to_battlefield(0, crate::catalog::sphinx_of_the_revelation());
+        g.clear_sickness(s);
+        for _ in 0..5 {
+            g.add_card_to_library(0, crate::catalog::island());
+        }
+        g.players[0].energy = 3;
+        for c in [crate::mana::Color::White, crate::mana::Color::Blue] {
+            g.players[0].mana_pool.add(c, 3);
+        }
+        let pick = pick_x_counter_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(pick, Some(GameAction::ActivateAbility { card_id, x_value: Some(x), .. }) if card_id == s && x > 0),
             "{pick:?}"
         );
     }

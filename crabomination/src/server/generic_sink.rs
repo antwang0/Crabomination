@@ -46,6 +46,7 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
             if (ability_sink_bits(ab) != 0 && !ab.mana_cost.has_x())
                 || crate::game::actions::is_mana_ability(&ab.effect)
                 || ab.remove_counter_x.is_some()
+                || ab.energy_x_cost
                 || ab.from_hand
                 || ab.from_graveyard
                 || ab.from_exile

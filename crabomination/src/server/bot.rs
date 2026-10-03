@@ -7470,7 +7470,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
                 _ => 0,
             };
         }
-        if c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some() {
+        if c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some() || c.granted_jumpstart_eot {
             m |= spec::GY_RECAST;
         }
         if state.granted_escape_eot.iter().any(|(id, ..)| *id == c.id) {
@@ -8873,7 +8873,7 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat].graveyard.iter() {
         use crate::card::Keyword;
         let recastable = c.effective_flashback().is_some()
-            || c.definition.keywords.has_kw(&Keyword::JumpStart)
+            || c.has_jump_start()
             || c.definition.keywords.has_kw(&Keyword::GraveyardCast);
         if recastable {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
@@ -9543,7 +9543,7 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     if super::transform_sink::ability_transforms_self(&ab.effect) {
         m |= sink::AB_TRANSFORM;
     }
-    if ab.remove_counter_x.is_some() || ab.remove_counter_among_x.is_some() {
+    if ab.remove_counter_x.is_some() || ab.remove_counter_among_x.is_some() || ab.energy_x_cost {
         m |= sink::AB_X_COUNTERS;
     }
     m
