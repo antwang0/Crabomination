@@ -254,3 +254,18 @@ fn industrial_advancement_digs() {
     end_step(&mut g);
     assert!(g.battlefield_find(wurm).is_some());
 }
+
+/// First Responder's end-step return is a choice made on resolution, not a
+/// target: it takes the creature and grows by that creature's power.
+#[test]
+fn first_responder_returns_a_chosen_creature() {
+    let mut g = two_player_game();
+    let fr = g.add_card_to_battlefield(0, catalog::first_responder());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let trigger = g.battlefield_find(fr).unwrap().definition.triggered_abilities[0].effect.clone();
+    assert!(!trigger.requires_target(), "nothing is targeted");
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&trigger, &EffectContext::for_ability(fr, 0, None)).expect("end step");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert_eq!(g.battlefield_find(fr).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}

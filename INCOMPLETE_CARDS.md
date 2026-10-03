@@ -2046,7 +2046,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
 | 🟡 Vastwood Hydra | Enhanced Evolution (C20) | the counters go among up to three target creatures you control, not "any number" chosen on resolution. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
-| 🟡 First Responder | Riveteers Rampage (NCC) | the returned creature is targeted, not chosen as the trigger resolves. |
 | 🟡 Mezzio Mugger | Riveteers Rampage (NCC) | the exiled cards may be cast with mana of any type (the printed "as though any color" excludes colorless). |
 | 🟡 Next of Kin | Riveteers Rampage (NCC) | the lesser creature card comes from your hand only, not the command zone. |
 | 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |

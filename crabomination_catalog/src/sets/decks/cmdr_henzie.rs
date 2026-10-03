@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Henzie** — a spell with its own blitz uses its printed blitz cost, not
 //!   a choice between that and Henzie's.
-//! - **First Responder** — the returned creature is targeted, not chosen.
 //! - **Mezzio Mugger** — the exiled cards may be cast with mana of any type.
 //! - **Next of Kin** — the creature card comes from your hand only (not the
 //!   command zone).
@@ -21,7 +20,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{blitz, etb, on_attack, on_dies, target_filtered};
+use crate::effect::shortcut::{blitz, choose_one_then, chosen_one, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, PlayerRef, Predicate, RevealMissDest, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r};
@@ -193,8 +192,8 @@ pub fn evolutionary_leap() -> CardDefinition {
 
 /// First Responder — {3}{G} 3/3 vigilance. At your end step you may return
 /// another creature you control to hand, then it gets +1/+1 counters equal
-/// to that creature's power (read before it leaves — the same number).
-/// Residual: the returned creature is targeted, not chosen.
+/// to that creature's power (read before it leaves — the same number). The
+/// creature is chosen on resolution, not targeted.
 pub fn first_responder() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
@@ -202,15 +201,18 @@ pub fn first_responder() -> CardDefinition {
             event: your_end_step(),
             effect: Effect::MayDo {
                 description: "Return another creature you control to its owner's hand?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    // Its power is read while it is still on the battlefield;
-                    // the Move below declares the slot.
-                    plus_counters(Selector::This, Value::PowerOf(Box::new(Selector::Target(0)))),
-                    Effect::Move {
-                        what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                    },
-                ])),
+                body: Box::new(choose_one_then(
+                    Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                    PlayerRef::You,
+                    Effect::Seq(vec![
+                        // Its power is read while it is still on the battlefield.
+                        plus_counters(Selector::This, Value::PowerOf(Box::new(chosen_one()))),
+                        Effect::Move {
+                            what: chosen_one(),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(chosen_one()))),
+                        },
+                    ]),
+                )),
             },
         }],
         ..creature(
