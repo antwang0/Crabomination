@@ -26238,8 +26238,17 @@ impl GameState {
         {
             claimed.push(k);
         }
+        // A friendly fan-out (a pump, a +1/+1 counter) whose primary is your
+        // own permanent stops at your board: once yours run out the picker
+        // falls back to any legal creature, and Baldin's +0/+X went on to
+        // the opponent's blockers.
+        let own = |cid: CardId| self.battlefield_find(cid).is_some_and(|c| c.controller == controller);
+        let friendly_only = matches!(primary, Some(Target::Permanent(c)) if own(c))
+            && !eff.permanent_slot_is_hostile(0, None)
+            && eff.any_nested(&|e| e.prefers_friendly_target());
         while chosen.len() + 1 < max {
             match self.auto_target_for_effect_avoiding_set(eff, controller, &avoid) {
+                Some(Target::Permanent(cid)) if friendly_only && !own(cid) => break,
                 Some(t @ Target::Permanent(cid)) if !avoid.contains(&cid) => {
                     // Rejected picks still join `avoid`, so the next round asks
                     // for a different permanent and the loop terminates when the
@@ -26257,7 +26266,42 @@ impl GameState {
                 _ => break,
             }
         }
+        // CR 115.1 — the source is a legal pick for its own "up to N target
+        // creatures" unless the filter says "other" (Baldin's toughness pump
+        // on itself). The loop above spares it, so a friendly fan-out over
+        // your board takes it last, with room left.
+        if let Some(t) = self.source_as_last_friendly_pick(eff, source, controller, &primary, &chosen, max) {
+            chosen.push(t);
+        }
         chosen
+    }
+
+    /// The source itself as the final slot of a friendly same-filter fan-out
+    /// whose primary is one of `controller`'s own permanents: `None` when a
+    /// slot is hostile, the filter rejects the source ("other"), it is already
+    /// picked, or every slot is filled.
+    fn source_as_last_friendly_pick(
+        &self,
+        eff: &Effect,
+        source: CardId,
+        controller: usize,
+        primary: &Option<Target>,
+        chosen: &[Target],
+        max: usize,
+    ) -> Option<Target> {
+        let Some(Target::Permanent(first)) = primary else { return None };
+        if chosen.len() + 1 >= max || *first == source || eff.permanent_slot_is_hostile(0, None) {
+            return None;
+        }
+        let Effect::ApplyToTargets { filter, .. } = eff else { return None };
+        let owns = |id: CardId| self.battlefield_find(id).is_some_and(|c| c.controller == controller);
+        if !owns(*first) || !owns(source) || chosen.contains(&Target::Permanent(source)) {
+            return None;
+        }
+        let t = Target::Permanent(source);
+        (self.evaluate_requirement_static(filter, &t, controller, Some(source))
+            && self.check_target_legality(&t, controller).is_ok())
+        .then_some(t)
     }
 
     /// Fill slots 1.. of a triggered ability whose effect surfaces a *distinct*
