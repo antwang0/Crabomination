@@ -368,3 +368,22 @@ fn locke_mug_grants_spells_not_lands() {
     assert!(may(&g, bolt), "the milled Bolt is castable");
     assert!(!may(&g, forest), "the milled Forest is not");
 }
+
+/// CR 707.9b — Gogo copies another creature of yours "except its name is
+/// Gogo": copying a legend leaves two differently named legends, so the
+/// legend rule (CR 704.5j) doesn't apply.
+#[test]
+fn cr_707_9b_gogo_keeps_its_name() {
+    let mut g = main_phase(2);
+    let gogo = g.add_card_to_battlefield(0, catalog::gogo_mysterious_mime());
+    let legend = g.add_card_to_battlefield(0, catalog::baldin_century_herdmaster());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    let cp = g.computed_permanent(gogo).expect("Gogo stays");
+    assert_eq!(g.battlefield_find(gogo).unwrap().definition.name, "Gogo, Mysterious Mime");
+    assert_eq!((cp.power, cp.toughness), (2, 7), "Baldin's 0/7 plus +2/+0");
+    assert!(g.battlefield_find(legend).is_some(), "no legend-rule clash");
+}

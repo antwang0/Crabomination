@@ -8,7 +8,6 @@
 //! - **Espers to Magicite** — the copied card is the first creature card
 //!   exiled, not a chosen target; the artifact-only type is a layer-4 set,
 //!   not a copiable value.
-//! - **Gogo, Mysterious Mime** — the copy takes the copied creature's name.
 //! - **The Warring Triad** — the mill is part of the effect, not a cost, and
 //!   you are always the player who adds the mana.
 //! - **Umaro, Raging Yeti** — the random mode is picked, and a damage target
@@ -360,7 +359,8 @@ pub fn general_leo_cristophe() -> CardDefinition {
 }
 
 /// Gogo, Mysterious Mime — each combat may mimic another creature of yours;
-/// both get +2/+0 and haste and must attack. Residual: the name changes too.
+/// both get +2/+0 and haste and must attack. The copy keeps Gogo's name
+/// (CR 707.9b), so a legendary original doesn't trip the legend rule.
 pub fn gogo_mysterious_mime() -> CardDefinition {
     let both = |e: fn(Selector) -> Effect| vec![e(Selector::This), e(Selector::Target(0))];
     let mut body = vec![Effect::BecomeCopyOfFor {
@@ -369,6 +369,14 @@ pub fn gogo_mysterious_mime() -> CardDefinition {
         duration: Duration::EndOfTurn,
         non_legendary: false,
     }];
+    body.push(Effect::AmendCopiableValues {
+        what: Selector::This,
+        name: Some("Gogo, Mysterious Mime".into()),
+        set_creature_types: None,
+        add_creature_types: vec![],
+        legendary: false,
+        add_colors: vec![],
+    });
     body.extend(both(|s| Effect::PumpPT {
         what: s,
         power: Value::Const(2),
