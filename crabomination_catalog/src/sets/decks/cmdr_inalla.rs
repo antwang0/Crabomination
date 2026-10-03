@@ -8,9 +8,8 @@
 //!   artifact or creature card from your hand or graveyard.
 //! - **Magus of the Abyss** — "target … of their choice" is a choice, not a
 //!   target: a hexproof creature can still be picked.
-//! - **Shifting Shadow** — the reveal is from the Aura's controller's library,
-//!   which is the creature's controller unless the Aura changed hands; the new
-//!   creature enters before the old one is destroyed.
+//! - **Shifting Shadow** — the new creature enters before the old one is
+//!   destroyed.
 //! - **Vindictive Lich** — the modes are always all three, in the order lose
 //!   five / discard two / sacrifice; with fewer opponents than modes the
 //!   modes left without a distinct opponent do nothing.
@@ -423,9 +422,10 @@ pub fn serendib_sorcerer() -> CardDefinition {
 /// Shifting Shadow — enchanted creature has haste; at its controller's upkeep
 /// it's destroyed, and the Aura moves to the next creature card revealed off
 /// the top (the rest go to the bottom at random). The trigger sits on the
-/// Aura, so "this creature" is what it enchants. Residuals: the library is the
-/// Aura controller's, and the new creature enters before the old one is
-/// destroyed.
+/// Aura, so "this creature" is what it enchants, and the reveal runs as the
+/// enchanted creature's controller (`AsPlayer`: "your library" is theirs, and
+/// the new creature enters under them). Residual: the new creature enters
+/// before the old one is destroyed.
 pub fn shifting_shadow() -> CardDefinition {
     let host = || Selector::AttachedTo(Box::new(Selector::This));
     CardDefinition {
@@ -446,7 +446,14 @@ pub fn shifting_shadow() -> CardDefinition {
             effect: Effect::ForEach {
                 selector: host(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false, may: false },
+                    Effect::AsPlayer {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                        body: Box::new(Effect::RevealUntilOneToBattlefieldRestBottom {
+                            filter: R::Creature,
+                            damage_controller: false,
+                            may: false,
+                        }),
+                    },
                     Effect::Attach { what: Selector::This, to: Selector::LastMoved },
                     Effect::Destroy { what: Selector::TriggerSource },
                 ])),

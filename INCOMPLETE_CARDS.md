@@ -2099,7 +2099,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | the cage takes the highest-mana-value artifact or creature card. |
 | 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
-| 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |
+| 🟡 Shifting Shadow | Arcane Wizardry (C17) | the new creature enters before the old one is destroyed. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |

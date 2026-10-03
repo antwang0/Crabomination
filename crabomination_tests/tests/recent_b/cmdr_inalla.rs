@@ -300,6 +300,25 @@ fn shifting_shadow_polymorphs_each_upkeep() {
     assert!(g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Haste));
 }
 
+/// Shifting Shadow on an OPPONENT's creature: the upkeep ability is the
+/// creature's, so "your library" is its controller's and the new creature
+/// enters under them — not the Aura controller's library.
+#[test]
+fn shifting_shadow_reveals_from_the_enchanted_creatures_controller() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_library(0, catalog::serra_angel());
+    let theirs = g.add_card_to_library(1, catalog::serra_angel());
+    let shadow = g.add_card_to_hand(0, catalog::shifting_shadow());
+    cast(&mut g, 0, shadow, Some(Target::Permanent(bear))).expect("cast");
+    g.active_player_idx = 1;
+    step(&mut g, TurnStep::Upkeep);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(1), "off seat 1's library, under seat 1");
+    assert!(g.battlefield_find(mine).is_none(), "the Aura controller's library is untouched");
+    assert_eq!(g.battlefield_find(shadow).and_then(|c| c.attached_to), Some(theirs));
+}
+
 /// Taigam keeps one of three at upkeep, bins the rest, and turns graveyard
 /// cards into -X/-X.
 #[test]
