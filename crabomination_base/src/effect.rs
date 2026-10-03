@@ -5783,8 +5783,17 @@ pub enum Effect {
     CopyOnePerOpponentWithTotalStats,
     /// "Copy the next loyalty ability you activate this turn" `copies` times
     /// (Jaya's Phoenix: once; Repeated Reverberation: twice). Adds a one-shot
-    /// `LoyaltyCopyGrant` to the controller.
-    CopyNextLoyaltyAbility { copies: u32 },
+    /// `LoyaltyCopyGrant` to the controller. `linked`: one "when you next"
+    /// shared with the source's spell rider — whichever fires first spends
+    /// the other (`DropLinkedLoyaltyCopies`).
+    CopyNextLoyaltyAbility {
+        copies: u32,
+        #[serde(default)]
+        linked: bool,
+    },
+    /// Spend the source's pending `linked` loyalty-copy grant: its shared
+    /// "when you next …" fired on a spell instead (Repeated Reverberation).
+    DropLinkedLoyaltyCopies,
     /// Leori, Sparktouched Hunter — "choose a planeswalker type. Until end of
     /// turn, whenever you activate an ability of a planeswalker of that type,
     /// copy that ability." The type is the one most common among the

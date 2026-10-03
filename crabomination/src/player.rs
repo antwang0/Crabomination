@@ -129,6 +129,10 @@ pub struct LoyaltyCopyGrant {
     pub subtype: Option<crate::card::PlaneswalkerSubtype>,
     /// Consumed by the first activation it copies ("the next").
     pub once: bool,
+    /// The source whose spell rider shares this "when you next" (Repeated
+    /// Reverberation): spending either spends both.
+    #[serde(default)]
+    pub linked: Option<CardId>,
 }
 
 /// The rarely-written, heap-owning tail of a seat: registries only a handful

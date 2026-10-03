@@ -351,11 +351,11 @@ pub fn jayas_phoenix() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::CopyNextLoyaltyAbility { copies: 1 },
+                effect: Effect::CopyNextLoyaltyAbility { copies: 1, linked: false },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
-                effect: Effect::CopyNextLoyaltyAbility { copies: 1 },
+                effect: Effect::CopyNextLoyaltyAbility { copies: 1, linked: false },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard).with_filter(
@@ -534,21 +534,23 @@ pub fn onakke_oathkeeper() -> CardDefinition {
     }
 }
 
-/// Repeated Reverberation — the next instant, sorcery or loyalty ability this
-/// turn is copied twice. Residual: three separate riders.
+/// Repeated Reverberation — when you next cast an instant or sorcery or
+/// activate a loyalty ability this turn, copy it twice. One "next" across all
+/// three: the spell rider and the loyalty grant are linked, and whichever
+/// fires first spends the other.
 pub fn repeated_reverberation() -> CardDefinition {
-    let copy_twice = |t: CardType| Effect::OnYourNextSpellOfTypeThisTurn {
-        card_type: t,
-        body: Box::new(Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::Const(2) }),
-    };
     CardDefinition {
         name: "Repeated Reverberation",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            copy_twice(CardType::Instant),
-            copy_twice(CardType::Sorcery),
-            Effect::CopyNextLoyaltyAbility { copies: 2 },
+            Effect::OnYourNextInstantSorceryThisTurn {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::DropLinkedLoyaltyCopies,
+                    Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::Const(2) },
+                ])),
+            },
+            Effect::CopyNextLoyaltyAbility { copies: 2, linked: true },
         ]),
         ..Default::default()
     }

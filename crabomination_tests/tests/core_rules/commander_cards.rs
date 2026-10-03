@@ -1516,7 +1516,7 @@ fn cr_707_10_the_next_loyalty_ability_is_copied_once() {
     let a = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Jace));
     let b = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Chandra));
     let ctx = EffectContext::for_spell(0, None, 0, 0);
-    g.resolve_effect(&Effect::CopyNextLoyaltyAbility { copies: 1 }, &ctx).expect("grant");
+    g.resolve_effect(&Effect::CopyNextLoyaltyAbility { copies: 1, linked: false }, &ctx).expect("grant");
     let life = g.players[0].life;
     plus_one(&mut g, a).expect("copied");
     assert_eq!(g.players[0].life, life + 2);

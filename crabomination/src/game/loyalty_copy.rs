@@ -30,7 +30,7 @@ impl GameState {
         subtype: Option<PlaneswalkerSubtype>,
         once: bool,
     ) {
-        self.players[p].loyalty_copy_grants.push(LoyaltyCopyGrant { copies, subtype, once });
+        self.players[p].loyalty_copy_grants.push(LoyaltyCopyGrant { copies, subtype, once, linked: None });
     }
 
     /// Leori — the planeswalker type most common among `p`'s planeswalkers
@@ -68,7 +68,22 @@ impl GameState {
         if copies == 0 {
             return;
         }
+        // A linked grant's spell rider was the same "when you next": it is
+        // spent with the grant (Repeated Reverberation).
+        let linked: Vec<CardId> = self.players[p]
+            .loyalty_copy_grants
+            .iter()
+            .filter(|g| g.once && applies(g))
+            .filter_map(|g| g.linked)
+            .collect();
         self.players[p].loyalty_copy_grants.retain(|g| !(g.once && applies(g)));
+        if !linked.is_empty() {
+            self.delayed_triggers.retain(|dt| {
+                !(dt.controller == p
+                    && linked.contains(&dt.source)
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn))
+            });
+        }
         let Some(item) = self.stack.last().cloned() else { return };
         for _ in 0..copies {
             self.push_stack(item.clone());

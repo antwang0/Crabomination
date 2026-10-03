@@ -325,6 +325,39 @@ fn repeated_reverberation_triples_a_bolt() {
     assert_eq!(g.players[1].life, life - 9);
 }
 
+/// "When you NEXT cast an instant, cast a sorcery, or activate a loyalty
+/// ability" is one trigger condition: a loyalty ability first spends it, so
+/// the Bolt after is not copied; and a sorcery first leaves no second copy
+/// for a later instant or loyalty ability.
+#[test]
+fn repeated_reverberation_fires_once_across_its_three_events() {
+    let mut g = pod(2);
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
+    let rr = g.add_card_to_hand(0, catalog::repeated_reverberation());
+    cast(&mut g, rr, None, None).expect("cast");
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, teyo, 0, Some(Target::Player(1)), None).expect("+1");
+    assert_eq!(g.players[0].hand.len(), hand + 3, "the +1 and two copies each draw you one");
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)), None).expect("bolt");
+    assert_eq!(g.players[1].life, life - 3, "already spent on the loyalty ability");
+
+    let mut g = pod(2);
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
+    let rr = g.add_card_to_hand(0, catalog::repeated_reverberation());
+    cast(&mut g, rr, None, None).expect("cast");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)), None).expect("bolt");
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, teyo, 0, Some(Target::Player(1)), None).expect("+1");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the instant spent it");
+}
+
 /// CR 613.1d — Sparkshaper Visionary turns your walkers into 3/3 flyers.
 #[test]
 fn sparkshaper_visionary_makes_birds() {

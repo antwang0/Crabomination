@@ -35903,8 +35903,22 @@ impl GameState {
                 self.choose_attack_direction_until_next_turn(ctx);
                 Ok(())
             }
-            Effect::CopyNextLoyaltyAbility { copies } => {
+            Effect::CopyNextLoyaltyAbility { copies, linked } => {
                 self.grant_loyalty_copies(ctx.controller, *copies, None, true);
+                if *linked
+                    && let Some(g) = self.players[ctx.controller].loyalty_copy_grants.last_mut()
+                {
+                    g.linked = ctx.source;
+                }
+                Ok(())
+            }
+            Effect::DropLinkedLoyaltyCopies => {
+                let p = ctx.controller;
+                if let Some(src) = ctx.source
+                    && self.players[p].loyalty_copy_grants.iter().any(|g| g.linked == Some(src))
+                {
+                    self.players[p].loyalty_copy_grants.retain(|g| g.linked != Some(src));
+                }
                 Ok(())
             }
             Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => {
