@@ -6601,7 +6601,7 @@ impl GameState {
             Effect::Voyage { home } => self.voyage(*home, ctx, events),
             Effect::ShuffleIntoTopPile { what, depth } => self.shuffle_into_top_pile(what, depth, ctx, events),
             Effect::ExileOtherCreaturesKeepingUpTo { keep, max } => {
-                self.exile_other_creatures_keeping(keep, *max, ctx, events)
+                self.exile_other_creatures_keeping(keep, *max, effect, ctx, events)
             }
             Effect::SetCopiableCreatureTypes { what, creature_types } => {
                 for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {

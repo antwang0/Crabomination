@@ -2515,7 +2515,8 @@ linked phase-out put time counters on its source** (Out of Time's rider fired
 for Oubliette and The Moment too — it now needs a vanishing source).
 Regenerations Restored is vanishing 12 spelled out, so its last counter exiles
 it rather than sacrificing it. Residuals: **Clockspinning**, **Everybody
-Lives!**, **Idris**, **The Day of the Doctor**, **The Eleventh Hour**, **The
+Lives!**, **Idris**, ~~**The Day of the Doctor**~~ (`01QFHGia`: the keep is
+chosen), **The Eleventh Hour**, **The
 Pandorica**, **The War Doctor**, **Wedding Ring** (INCOMPLETE_CARDS). Four
 seats beside Blast from the Past / Masters of Evil / Turtle Power! (seed
 10560, 1,000, `--card-census`: nothing unplayed): all decided, 21.8 %; six

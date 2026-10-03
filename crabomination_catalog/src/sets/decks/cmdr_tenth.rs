@@ -777,9 +777,8 @@ pub fn star_whale() -> CardDefinition {
 }
 
 /// The Day of the Doctor — I–III: exile from the top until a legendary card,
-/// playable while this remains. IV: keep up to three Doctors and you may exile
-/// every other creature for 13 damage to you. Residual: IV keeps your own
-/// greatest-power Doctors.
+/// playable while this remains. IV: keep up to three Doctors (anyone's, your
+/// choice) and you may exile every other creature for 13 damage to you.
 pub fn the_day_of_the_doctor() -> CardDefinition {
     let summon = || {
         Effect::Seq(vec![

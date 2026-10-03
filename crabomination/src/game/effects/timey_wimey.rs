@@ -307,30 +307,51 @@ impl GameState {
         }
     }
 
-    /// `Effect::ExileOtherCreaturesKeepingUpTo` — keep up to `max` of the
-    /// controller's creatures matching `keep` (greatest power first) and
-    /// exile every other creature.
+    /// `Effect::ExileOtherCreaturesKeepingUpTo` — the controller keeps up to
+    /// `max` creatures matching `keep`, anyone's (headless: its own, greatest
+    /// power first), and every other creature is exiled.
     pub(super) fn exile_other_creatures_keeping(
         &mut self,
         keep: &SelectionRequirement,
         max: u32,
+        effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
-        let mut kept: Vec<(CardId, i32)> = self
+        // "Choose up to three Doctors" — any player's; headless, your own
+        // greatest-power ones.
+        let candidates: Vec<(CardId, String)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == me && self.computed_is_creature(c))
-            .filter(|c| self.evaluate_requirement_on_card(keep, c, me))
+            .filter(|c| self.computed_is_creature(c) && self.evaluate_requirement_on_card(keep, c, me))
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        let mut auto: Vec<(CardId, i32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == me && candidates.iter().any(|(id, _)| *id == c.id))
             .map(|c| (c.id, self.computed_permanent(c.id).map_or(0, |cp| cp.power)))
             .collect();
-        kept.sort_by_key(|&(id, power)| (std::cmp::Reverse(power), id));
-        kept.truncate(max as usize);
+        auto.sort_by_key(|&(id, power)| (std::cmp::Reverse(power), id));
+        auto.truncate(max as usize);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let Some(kept) = self.choose_up_to_cards(
+            me,
+            format!("Choose up to {max} to keep"),
+            source,
+            candidates,
+            max,
+            PickValue::Gain,
+            effect,
+            auto.into_iter().map(|(id, _)| id).collect(),
+        ) else {
+            return Ok(());
+        };
         let others: Vec<CardId> = self
             .battlefield
             .iter()
-            .filter(|c| self.computed_is_creature(c) && !kept.iter().any(|(k, _)| *k == c.id))
+            .filter(|c| self.computed_is_creature(c) && !kept.contains(&c.id))
             .map(|c| c.id)
             .collect();
         self.run_effect(&Effect::Exile { what: Selector::ExactObjects(others) }, ctx, events)

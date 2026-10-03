@@ -8335,8 +8335,8 @@ pub enum Effect {
     /// their abilities to it, stamped as they're exiled.
     AcquireAbilitiesOfExiledWithSource,
     /// "Choose up to `max` [keep]. Exile all other creatures" (The Day of
-    /// the Doctor's IV, inside its "you may"). The controller keeps its own
-    /// greatest-power matches.
+    /// the Doctor's IV, inside its "you may"). The controller chooses among
+    /// every match, anyone's; headless, its own greatest-power ones.
     ExileOtherCreaturesKeepingUpTo { keep: crate::card::SelectionRequirement, max: u32 },
     /// CR 707.9b — a copy "except it's [types] named [name]" (The Eleventh
     /// Hour's Prisoner Zero): the name and creature types become part of the

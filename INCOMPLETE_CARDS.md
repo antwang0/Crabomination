@@ -1986,7 +1986,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |
-| 🟡 The Day of the Doctor | Timey-Wimey (WHO) | chapter IV keeps your own greatest-power Doctors; you can't keep an opponent's. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |

@@ -406,7 +406,7 @@ fn idris_exiles_the_chosen_artifact() {
 }
 
 /// The Day of the Doctor IV — up to three Doctors stay; every other creature
-/// is exiled.
+/// is exiled. The pick is the controller's, among anyone's Doctors.
 #[test]
 fn the_day_of_the_doctor_keeps_three_doctors() {
     let mut g = main_phase(2);
@@ -432,6 +432,26 @@ fn the_day_of_the_doctor_keeps_three_doctors() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(docs.iter().filter(|d| g.battlefield_find(**d).is_some()).count(), 3);
     assert!(g.battlefield_find(docs[2]).is_none(), "the weakest Doctor (The Ninth, 2 power) goes");
+
+    // "Choose up to three Doctors" is the controller's pick among anyone's:
+    // keeping an opponent's Doctor and one's own.
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_battlefield(0, catalog::the_day_of_the_doctor());
+    let mine = g.add_card_to_battlefield(0, catalog::the_tenth_doctor());
+    let other = g.add_card_to_battlefield(0, catalog::the_war_doctor());
+    let theirs = g.add_card_to_battlefield(1, catalog::the_ninth_doctor());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![mine, theirs])]));
+    run(
+        &mut g,
+        Effect::ExileOtherCreaturesKeepingUpTo {
+            keep: crabomination::card::SelectionRequirement::HasCreatureType(crabomination::card::CreatureType::Doctor),
+            max: 3,
+        },
+        saga,
+    );
+    assert!(g.battlefield_find(mine).is_some() && g.battlefield_find(theirs).is_some());
+    assert!(g.battlefield_find(other).is_none(), "not chosen");
 }
 
 /// CR 707.9b — The Eleventh Hour III: the copy is a legendary Alien named
