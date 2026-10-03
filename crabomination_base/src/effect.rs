@@ -2356,6 +2356,11 @@ pub enum Predicate {
     /// against the topmost matching `StackItem::Spell`'s `card.definition.
     /// mana_cost` via `ManaCost::has_x()`.
     CastSpellHasX,
+    /// CR 602.1a / 107.3 — the activated ability whose activation fired this
+    /// `AbilityActivated` trigger (the newest activated ability on the stack
+    /// from `ctx.trigger_source`) has `{X}` in its activation cost (Unbound
+    /// Flourishing's "or that ability's activation cost contains {X}").
+    ActivationCostHasX,
     /// True if the just-cast spell's total mana spent (the value stashed
     /// on `StackItem::Spell.mana_spent` at cast time, threaded onto the
     /// `StackItem::Trigger.mana_spent`) is at least `at_least`. Powers

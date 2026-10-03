@@ -3248,6 +3248,7 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::ActivationCostHasX => self.activation_cost_has_x(ctx),
             Predicate::CastSpellHasX => {
                 // Locate the just-cast spell via the trigger source and
                 // peek at its printed mana cost. Used by "whenever you

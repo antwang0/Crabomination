@@ -182,6 +182,7 @@ mod first_each_turn;
 mod escape_extra;
 // CR 508.1c — "only the chosen creatures can attack during that combat".
 mod attack_only_chosen;
+mod activation_x;
 // CR 608.2d — "choose any number of them", then each.
 mod for_each_chosen;
 // Psychic Paper's chosen name and creature type on the equipped creature.
