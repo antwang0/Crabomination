@@ -6513,7 +6513,8 @@ impl GameState {
                     .iter()
                     .find_map(|e| e.as_permanent_id());
                 if let (Some(fid), Some(tid)) = (from_id, to_id)
-                    && fid != tid {
+                    && fid != tid
+                    && !(*counter == crate::card::CounterType::Stun && self.stun_locked_on(fid)) {
                         let avail = self
                             .battlefield_find(fid)
                             .map(|c| c.counter_count(*counter))
@@ -19676,8 +19677,15 @@ impl GameState {
                     // Keyword counters live in a separate map, but "move all
                     // counters" (CR 122.5) relocates every kind — including
                     // keyword counters (Reluctant Role Model's flying/lifelink).
+                    let stun_stays = self.stun_locked_on(src);
                     let (taken, taken_kw) = if let Some(c) = self.battlefield_find_mut(src) {
-                        (std::mem::take(&mut c.counters), std::mem::take(&mut c.keyword_counters))
+                        let mut taken = std::mem::take(&mut c.counters);
+                        // Fear of Sleep Paralysis — the stun counters stay put.
+                        if stun_stays && let Some(&n) = taken.get(&crate::card::CounterType::Stun) {
+                            taken.remove(&crate::card::CounterType::Stun);
+                            c.add_counters(crate::card::CounterType::Stun, n);
+                        }
+                        (taken, std::mem::take(&mut c.keyword_counters))
                     } else {
                         self.died_card_snapshots
                             .get(&src)
@@ -19727,6 +19735,10 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 let Some(src_cid) = source_cids.first().copied() else { return Ok(()); };
+                // Fear of Sleep Paralysis — its stun counters can't be moved off.
+                if *kind == crate::card::CounterType::Stun && self.stun_locked_on(src_cid) {
+                    return Ok(());
+                }
                 let removed = if let Some(s) = self.battlefield_find_mut(src_cid) {
                     s.remove_counters(*kind, request)
                 } else {
@@ -30780,6 +30792,9 @@ impl GameState {
                     .collect();
                 let mut moved = 0u32;
                 for id in sources {
+                    if *kind == crate::card::CounterType::Stun && self.stun_locked_on(id) {
+                        continue;
+                    }
                     if let Some(c) = self.battlefield.find_by_id_mut(id) {
                         let n = c.counter_count(*kind);
                         if n > 0 {

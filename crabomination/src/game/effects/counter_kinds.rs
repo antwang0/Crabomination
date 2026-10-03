@@ -300,6 +300,10 @@ impl GameState {
             if self.battlefield_find(dst).is_none() {
                 break;
             }
+            // Fear of Sleep Paralysis — a stun counter can't be moved off.
+            if matches!(kind, CounterKind::Plain(crate::card::CounterType::Stun)) && self.stun_locked_on(src) {
+                continue;
+            }
             let Some(s) = self.battlefield_find_mut(src) else { continue };
             match kind {
                 CounterKind::Plain(k) => {

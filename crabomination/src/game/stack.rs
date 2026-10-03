@@ -3757,6 +3757,12 @@ impl GameState {
     /// Fear of Sleep Paralysis — "stun counters can't be removed from
     /// permanents your opponents control": true when an opponent of `seat`
     /// controls the static.
+    /// A stun counter on `id` can't leave it — moved as well as removed
+    /// (Fear of Sleep Paralysis guards its controller's opponents').
+    pub(crate) fn stun_locked_on(&self, id: crate::card::CardId) -> bool {
+        self.battlefield_find(id).is_some_and(|c| self.stun_counters_stay(c.controller))
+    }
+
     pub(crate) fn stun_counters_stay(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
