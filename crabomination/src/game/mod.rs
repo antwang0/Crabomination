@@ -168,6 +168,7 @@ mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
 mod stack_ability;
+mod trigger_time;
 mod cast_watch;
 mod live_pt;
 // "As this becomes attached, choose …" (Sanctuary Blade).
@@ -2106,6 +2107,12 @@ fn serde_true() -> bool {
 /// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResolutionScratch {
+    /// The object the trigger being targeted or resolved fired on, read by
+    /// `SelectionRequirement::OtherThanTriggerSubject`. Stamped only for a
+    /// trigger whose filter names it (`stamp_trigger_subject`), so the group
+    /// is not unshared for every other trigger.
+    #[serde(skip)]
+    pub(crate) trigger_subject: Option<CardId>,
     /// Transient: per-colour mana spent paying the activation currently
     /// resolving, stamped into `EffectContext.mana_spent_by_color`
     /// (Protective Sphere's "shares a color with the mana spent").
@@ -25548,11 +25555,12 @@ impl GameState {
         // Elesh-Norn-doubled ETB aims its second copy at a fresh target
         // instead of duplicating (and later fizzling on) the first pick.
         let mut picked_this_batch: Vec<(CardId, CardId)> = Vec::new();
-        while let Some(pending) = iter.next() {
+        while let Some(mut pending) = iter.next() {
             // Event-amount-relative target filters (Scrap Trawler's
             // "lesser mana value than that artifact") read this scratch
             // during legal-target enumeration below.
             self.trigger_event_amount_scratch = pending.event_amount;
+            self.settle_trigger_time_x(&mut pending);
             // A player subject names the seat; otherwise the event's actor does
             // (the caster, for "becomes the target of a spell an opponent
             // controls" — Scalelord Reckoner's "that player"). Without the
@@ -25562,6 +25570,12 @@ impl GameState {
                 _ => pending.actor,
             };
             let needs = pending.effect.targeting_view(pending.mode).requires_target();
+            if needs {
+                self.stamp_trigger_subject(
+                    pending.effect.targeting_view(pending.mode).primary_target_filter(),
+                    pending.subject,
+                );
+            }
             let chooser = self.trigger_target_chooser(&pending.effect, pending.controller);
             let wants_ui = !force_auto && self.seat_prompts(chooser);
             if needs && wants_ui {
@@ -29512,10 +29526,10 @@ impl GameState {
         let resolved_target = match target.as_ref() {
             // The chosen mode's filter (CR 700.2a): a later mode's target
             // checked against mode 0's filter fizzled every such trigger.
-            Some(t) => match effect
-                .target_filter_for_slot_in_mode(0, Some(mode))
-                .map(|f| f.resolve_x(x_value).resolve_converge(converged_value))
-            {
+            Some(t) => match effect.target_filter_for_slot_in_mode(0, Some(mode)).map(|f| {
+                self.stamp_trigger_subject(Some(f), trigger_source_ent);
+                f.resolve_x(x_value).resolve_converge(converged_value)
+            }) {
                 Some(filter)
                     if !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {

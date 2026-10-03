@@ -3425,6 +3425,12 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// "**another** target …" relative to the object a trigger fired on
+    /// rather than the ability's source (Puca's Covenant: "another target
+    /// permanent card" than the creature that died). Read off
+    /// `ResolutionScratch::trigger_subject`, stamped as the trigger is
+    /// targeted and again as it resolves (`mentions_trigger_subject`).
+    OtherThanTriggerSubject,
     /// Excludes the permanent stamped on the source's `chosen_permanent` slot
     /// — the "creatures other than this and the chosen creature" half of an
     /// ETB choose-a-creature rider (Zenos yae Galvus).
@@ -3973,6 +3979,17 @@ impl SelectionRequirement {
             | Self::SharesCreatureTypeWithSource => true,
             Self::And(a, b) | Self::Or(a, b) => a.mentions_source_context() || b.mentions_source_context(),
             Self::Not(a) => a.mentions_source_context(),
+            _ => false,
+        }
+    }
+
+    /// True when the filter reads the triggering object
+    /// (`OtherThanTriggerSubject`), so the trigger paths stamp it first.
+    pub fn mentions_trigger_subject(&self) -> bool {
+        match self {
+            Self::OtherThanTriggerSubject => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_trigger_subject() || b.mentions_trigger_subject(),
+            Self::Not(a) => a.mentions_trigger_subject(),
             _ => false,
         }
     }

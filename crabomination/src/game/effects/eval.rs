@@ -4618,6 +4618,7 @@ impl GameState {
             R::ControlledByChosenPlayerOfSource => Some(self.controlled_by_chosen_player_of(cid, source)),
             R::IsAttackingTriggerPlayer => Some(self.attacking_trigger_player(cid)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
+            R::OtherThanTriggerSubject => Some(self.scratch.trigger_subject != Some(cid)),
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
             R::HasSuspend => Some(self.find_card_anywhere(cid).is_some_and(crate::card::CardInstance::has_suspend)),
@@ -5935,6 +5936,7 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(*cid),
                     // CR 601.2c — "**another** target": the battlefield walker
                     // reads the same stamp the cast/activation validator
                     // leaves, so the UI's candidate list and the picker agree
@@ -6840,6 +6842,7 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(card.id),
             // Source-less path: no `chosen_permanent` slot to consult.
             R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.
