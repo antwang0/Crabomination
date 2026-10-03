@@ -420,6 +420,31 @@ fn bold_plagiarist_reads_who_put_the_counters() {
     assert_eq!(g.battlefield_find(bp).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
 }
 
+/// "The same number and kind of counters": an opponent's shield counter on
+/// their own creature gives Bold Plagiarist a shield counter, not a +1/+1.
+#[test]
+fn bold_plagiarist_copies_the_counter_kind() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let bp = g.add_card_to_battlefield(0, catalog::bold_plagiarist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(bear, 1, None);
+    let evs = g
+        .resolve_effect(
+            &Effect::AddCounter {
+                what: Selector::ExactObjects(vec![bear]),
+                kind: CounterType::Shield,
+                amount: crabomination::card::Value::Const(1),
+            },
+            &ctx,
+        )
+        .expect("their shield on their bear");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bp).unwrap();
+    assert_eq!((c.counter_count(CounterType::Shield), c.counter_count(CounterType::PlusOnePlusOne)), (1, 0));
+}
+
 /// Deathbringer Liege taps with a white spell and kills the tapped with a
 /// black one.
 #[test]

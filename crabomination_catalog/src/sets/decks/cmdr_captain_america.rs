@@ -205,18 +205,21 @@ pub fn captain_mar_vell_space_born() -> CardDefinition {
 /// Captain Marvel, Apex Avenger — flying, double strike, indestructible;
 /// counters you put on another non-Kree creature may be copied onto her.
 ///
-/// ⚠ Residual: only +1/+1 counters are copied.
+/// ⚠ Residual: keyword counters aren't copied.
 pub fn captain_marvel_apex_avenger() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike, Keyword::Indestructible],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YouPutCounters).with_filter(
+            event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::OtherThanSource).and(R::HasCreatureType(CreatureType::Kree).negate()),
                 },
             ),
-            effect: may("Put the same counters on Captain Marvel?", plus(Selector::This, Value::TriggerEventAmount)),
+            effect: may(
+                "Put the same counters on Captain Marvel?",
+                Effect::AddCounterOfTriggerKind { what: Selector::This, amount: Value::TriggerEventAmount },
+            ),
         }],
         ..creature(
             "Captain Marvel, Apex Avenger",

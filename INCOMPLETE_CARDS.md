@@ -1959,7 +1959,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | the undaunted discount holds only while Durnan is on the battlefield; the rest go to the bottom in a random order, not one you choose. |
-| 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and an opponent's own Plagiarist is never copied from. |
+| 🟡 Bold Plagiarist | Silverquill Statement (C21) | keyword counters aren't copied (their event carries no placer), and an opponent's own Plagiarist is never copied from. |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
@@ -2102,7 +2102,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 | 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
-| 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
+| 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | keyword counters put on another creature aren't copied onto her. |
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
