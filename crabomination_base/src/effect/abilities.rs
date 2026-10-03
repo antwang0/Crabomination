@@ -2567,6 +2567,16 @@ pub enum StaticEffect {
         kind: CounterType,
         amount: u32,
     },
+    /// `MatchingEntersWithExtraCounters` with a live count: "nontoken
+    /// creatures you control enter with an additional +1/+1 counter on them
+    /// for each creature that died under your control this turn" (Gorma, the
+    /// Gullet). `value` is evaluated for the source as each permanent enters,
+    /// whatever put it there.
+    MatchingEntersWithCountersPer {
+        filter: SelectionRequirement,
+        kind: CounterType,
+        value: Value,
+    },
     /// "Each planeswalker you control enters with an additional `amount`
     /// loyalty counters on it" (Oath of Gideon). Read alongside the
     /// creature-scoped enters-with statics in `chosen_type_etb_counter_specs`.

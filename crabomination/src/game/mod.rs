@@ -7927,6 +7927,20 @@ impl GameState {
                             specs.push((*kind, *amount));
                         }
                     }
+                    StaticEffect::MatchingEntersWithCountersPer { filter, kind, value } => {
+                        let ctx = crate::game::effects::EffectContext::for_ability(src.id, src.controller, None);
+                        let n = self.evaluate_value(value, &ctx).max(0) as u32;
+                        if n > 0
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &crate::game::Target::Permanent(entering),
+                                controller,
+                                Some(src.id),
+                            )
+                        {
+                            specs.push((*kind, n));
+                        }
+                    }
                     // Master Biomancer — any other creature you control enters
                     // with additional counters equal to the source's live power.
                     StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { kind } => {
@@ -32542,6 +32556,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantCastInstantsOrSorceries
             | StaticEffect::ControllerIsStartingPlayer
             | StaticEffect::MatchingEntersWithExtraCounters { .. }
+            | StaticEffect::MatchingEntersWithCountersPer { .. }
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
