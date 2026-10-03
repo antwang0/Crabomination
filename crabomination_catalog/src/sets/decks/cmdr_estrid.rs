@@ -124,6 +124,7 @@ pub fn estrid_the_masked() -> CardDefinition {
                         host: None,
                         max: None,
                         creatures_only: false,
+                        equipment_unattached: false,
                     },
                 ]),
                 ..Default::default()
@@ -205,6 +206,7 @@ pub fn bruna_light_of_alabaster() -> CardDefinition {
                 host: Some(Selector::This),
                 max: None,
                 creatures_only: false,
+                equipment_unattached: false,
             },
         ])
     };

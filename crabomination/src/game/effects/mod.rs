@@ -37949,13 +37949,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PutOntoBattlefieldAttached { zones, filter, host, max, creatures_only } => {
+            Effect::PutOntoBattlefieldAttached { zones, filter, host, max, creatures_only, equipment_unattached } => {
                 self.put_onto_battlefield_attached(
                     zones,
                     filter,
                     host.as_ref(),
                     max.as_ref(),
-                    *creatures_only,
+                    (*creatures_only, *equipment_unattached),
                     ctx,
                     events,
                     effect,

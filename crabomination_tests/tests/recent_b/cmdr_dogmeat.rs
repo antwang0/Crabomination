@@ -384,3 +384,31 @@ fn inventory_management_moves_each_to_its_own_host() {
         }
     }
 }
+
+/// Vault 101 II puts an Equipment onto the battlefield and "you may attach it
+/// to a creature you control" — never an opponent's; with no creature of
+/// yours it enters unattached. Brotherhood Outcast returns one unattached.
+#[test]
+fn vault_101_attaches_equipment_only_to_yours() {
+    let mut g = pod(2);
+    let saga = g.add_card_to_battlefield(0, catalog::vault_101_birthday_party());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let blade = g.add_card_to_hand(0, catalog::bonesplitter());
+    let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[1].1.clone();
+    let ctx = EffectContext::for_ability(saga, 0, None);
+    g.resolve_effect(&chapter, &ctx).expect("II");
+    assert_eq!(g.battlefield_find(blade).expect("enters").attached_to, None, "not on the opponent's Angel");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_graveyard(0, catalog::short_sword());
+    g.resolve_effect(&chapter, &ctx).expect("III");
+    assert_eq!(g.battlefield_find(sword).expect("enters").attached_to, Some(bear));
+
+    let knife = g.add_card_to_graveyard(0, catalog::short_sword());
+    let outcast = g.add_card_to_battlefield(0, catalog::brotherhood_outcast());
+    let Effect::ChooseMode(modes) = &g.battlefield_find(outcast).unwrap().definition.triggered_abilities[0].effect else {
+        panic!("modal ETB")
+    };
+    let ret = modes[0].clone();
+    g.resolve_effect(&ret, &EffectContext::for_ability(outcast, 0, None)).expect("return");
+    assert_eq!(g.battlefield_find(knife).expect("returned").attached_to, None, "a returned Equipment is unattached");
+}

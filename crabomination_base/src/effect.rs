@@ -11999,6 +11999,11 @@ pub enum Effect {
         max: Option<Value>,
         #[serde(default)]
         creatures_only: bool,
+        /// An Equipment enters unattached (Brotherhood Outcast's return);
+        /// follow with `attach_moved_equipment_to_your_creature` for "you may
+        /// attach it to a creature you control" (Vault 101: Birthday Party).
+        #[serde(default)]
+        equipment_unattached: bool,
     },
     /// Reveal the top `count` cards; each `filter` card among them goes onto
     /// the battlefield attached to its best legal host; the rest go to the

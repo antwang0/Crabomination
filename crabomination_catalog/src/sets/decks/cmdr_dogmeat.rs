@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Brotherhood Outcast** — the Aura or Equipment card is picked rather
 //!   than targeted.
-//! - **Vault 101: Birthday Party** — an Aura only goes on a creature, and an
-//!   Equipment is always attached (to any creature, not only yours).
 
 use std::sync::Arc;
 
@@ -16,7 +14,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, on_attack, on_dies, on_you_attack, target_filtered};
+use crate::effect::shortcut::{attach_moved_equipment_to_your_creature, etb, on_attack, on_dies, on_you_attack, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, w, Color, ManaCost, SpendRestriction};
@@ -170,7 +168,14 @@ fn regrow_attachment() -> Effect {
 /// "An Aura or Equipment card from your graveyard (or hand) onto the
 /// battlefield" — the card and its host are the engine's pick.
 fn put_attachment_from(zones: Vec<Zone>, filter: R) -> Effect {
-    Effect::PutOntoBattlefieldAttached { zones, filter, host: None, max: Some(Value::ONE), creatures_only: true }
+    Effect::PutOntoBattlefieldAttached {
+        zones,
+        filter,
+        host: None,
+        max: Some(Value::ONE),
+        creatures_only: true,
+        equipment_unattached: true,
+    }
 }
 
 /// Acquired Mutation — +2/+2 and goaded; attacking, defending player gets two
@@ -908,9 +913,8 @@ pub fn three_dog_galaxy_news_dj() -> CardDefinition {
 
 /// Vault 101: Birthday Party — I: a 1/1 Human Soldier and a Food; II, III: an
 /// Aura or Equipment card of your choice from your hand or graveyard onto the
-/// battlefield, on a host you choose. Residual: an Aura only goes on a
-/// creature, and an Equipment is always attached (the host may be any
-/// creature, not only yours).
+/// battlefield — an Aura on a creature you choose, an Equipment unattached
+/// unless you attach it to a creature of yours.
 pub fn vault_101_birthday_party() -> CardDefinition {
     let soldier = TokenDefinition {
         name: "Human Soldier".into(),
@@ -921,7 +925,12 @@ pub fn vault_101_birthday_party() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
         ..Default::default()
     };
-    let gift = || put_attachment_from(vec![Zone::Hand, Zone::Graveyard], aura_or_equipment());
+    let gift = || {
+        Effect::Seq(vec![
+            put_attachment_from(vec![Zone::Hand, Zone::Graveyard], aura_or_equipment()),
+            attach_moved_equipment_to_your_creature(true),
+        ])
+    };
     saga("Vault 101: Birthday Party", cost(&[generic(3), w()]), vec![
         (1, Effect::Seq(vec![make(soldier, Value::ONE), make(food_token(), Value::ONE)])),
         (2, gift()),

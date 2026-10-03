@@ -111,12 +111,15 @@ impl GameState {
         filter: &SelectionRequirement,
         host: Option<&Selector>,
         max: Option<&Value>,
-        creatures_only: bool,
+        (creatures_only, equipment_unattached): (bool, bool),
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
         effect: &Effect,
     ) {
         let p = ctx.controller;
+        let free_equipment = |g: &Self, id: CardId| {
+            equipment_unattached && g.find_card_anywhere(id).is_some_and(|c| c.definition.is_equipment())
+        };
         let host_id = match host {
             Some(sel) => match self.resolve_selector(sel, ctx).into_iter().find_map(|e| e.as_permanent_id()) {
                 Some(h) => Some(h),
@@ -151,7 +154,7 @@ impl GameState {
             let hosted: Vec<CardId> = cands
                 .iter()
                 .copied()
-                .filter(|&id| !self.attach_hosts_for(id, host_id, creatures_only, p).is_empty())
+                .filter(|&id| free_equipment(self, id) || !self.attach_hosts_for(id, host_id, creatures_only, p).is_empty())
                 .collect();
             let named: Vec<(CardId, String)> = hosted
                 .iter()
@@ -175,22 +178,35 @@ impl GameState {
             cands = chosen;
         }
         let mut cap = cap;
-        let mut picks: Vec<(CardId, CardId)> = Vec::new();
+        let mut picks: Vec<(CardId, Option<CardId>)> = Vec::new();
         for id in cands {
             if cap == 0 {
                 break;
+            }
+            if free_equipment(self, id) {
+                picks.push((id, None));
+                cap -= 1;
+                continue;
             }
             let Some(h) = self.choose_attach_host(&mut cursor, id, host_id, creatures_only, p, effect, false) else {
                 return;
             };
             if let Some(h) = h {
-                picks.push((id, h));
+                picks.push((id, Some(h)));
                 cap -= 1;
             }
         }
         self.clear_answer_log();
         for (id, h) in picks {
-            self.put_attached(id, h, ctx, events);
+            match h {
+                Some(h) => self.put_attached(id, h, ctx, events),
+                None => self.move_card_to(
+                    id,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    ctx,
+                    events,
+                ),
+            }
             self.scratch.last_moved_cards.push(id);
         }
     }

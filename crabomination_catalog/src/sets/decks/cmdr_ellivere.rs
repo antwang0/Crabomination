@@ -281,6 +281,7 @@ pub fn liberated_livestock() -> CardDefinition {
                         host: Some(Selector::TriggerSource),
                         max: Some(Value::ONE),
                         creatures_only: true,
+                        equipment_unattached: false,
                     }),
                 },
             ]),
@@ -360,6 +361,7 @@ pub fn retether() -> CardDefinition {
             host: None,
             max: None,
             creatures_only: true,
+            equipment_unattached: false,
         },
         ..Default::default()
     }
