@@ -80,6 +80,12 @@
 #   +0.00 / +0.01 points -> passes; `pod_share_eval: 60` ADOPTED on the
 #   default. (podshare30 +0.6 % / +2.1 %; the podshare15 cells were not
 #   needed by the rule.)
+#
+# STAGE search READ (2026-10-03): control 1.251x [1.205, 1.297], share
+#   1.321x, sharelap 1.345x; share - control +1.76 points [+0.28, +3.23]
+#   -> under +2.0: NOT adopted (the rules above have a gap here — a positive
+#   interval under the bar — read as not adopted); sharelap - share +0.61
+#   [-0.84, +2.06] -> NOT adopted. The pod search was already 1.25x.
 set -u
 cd "$(dirname "$0")/.."
 LADDER=${LADDER:-.ladder/r80/bot_ladder_r80}

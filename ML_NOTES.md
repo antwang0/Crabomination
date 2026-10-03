@@ -5878,7 +5878,7 @@ a pod.
 - `encode_state`'s face-down leak (step-1 note): fix when the v5 champion
   retires, not before.
 
-## Round 80 — the pod evaluation as a share of the table: the heuristic's ADOPTED at T = 60 (1.070x / 1.035x); the search's leaf read pending (2026-10-02)
+## Round 80 — the pod evaluation as a share of the table: the heuristic's ADOPTED at T = 60 (1.070x / 1.035x); the search's leaf +1.76, under its bar; the pod search was never weak (1.25x) (2026-10-02)
 
 Pre-registration: `.ladder/run_r80_pod_share.sh` (every stage's rule is in
 its header, each written before that stage's first cell).
@@ -5946,16 +5946,50 @@ the soft material: an even four-seat table reads `sigmoid(−60·ln 3 / 30)` =
 (`pod_share_leaf`). The search stage below ran on the pre-adoption binary,
 so its control is the old sum.
 
-**Stage search — RUNNING** (`mcts-dflt-256` / `mcts-share-256` /
-`mcts-sharelap-256` as the hero in a pre-adoption `dflt` field, the four-seat
-fields, 384 games each). Its rule: share − control ≥ +2.0 points, 95 % CI
-above 0 → adopt `pod_share_leaf: 30`; sharelap − share ≥ +1.5 points →
-adopt the lap horizon too. At ~23 min a field it is ~14 h of wall clock.
+**Stage search — READ (2026-10-03).** Hero in a pre-adoption `dflt` field,
+the twelve four-seat fields, 384 games each (1,152 deal groups, 4,608
+games an arm), every arm on the same deals:
+
+| hero | share | x due | leaf mean | best − worst arm |
+|---|---|---|---|---|
+| `mcts-dflt-256` (the sum) | 31.27 % ± 0.59 | 1.251x [1.205, 1.297] | 0.124 | 0.032 |
+| `mcts-share-256` | 33.03 % ± 0.58 | 1.321x [1.276, 1.367] | 0.340 | 0.084 |
+| `mcts-sharelap-256` | 33.64 % ± 0.58 | 1.345x [1.300, 1.391] | 0.301 | 0.083 |
+
+Group-paired: share − control **+1.76 points ± 0.75, 95 % [+0.28, +3.23]**
+(9 of 12 fields up); sharelap − share +0.61 ± 0.74 [−0.84, +2.06] (7 of
+12); sharelap − control +2.37 [+0.90, +3.83] (not a pre-registered
+contrast).
+
+- **`pod_share_leaf` NOT adopted.** The effect is real (the interval clears
+  0) and runs through the predicted mechanism (the arms separate 2.6x
+  wider), but it is under the pre-registered +2.0. The rule had a gap — a
+  positive interval below the bar was neither "adopt" nor "close" — and it
+  is read as not adopted rather than moved after the fact.
+- **The lap horizon NOT adopted** (under +1.5, the interval spans 0).
+- **The pod search was never weak.** The material-leaf search reads
+  **1.251x** its due share in a `dflt` field over 4,608 games; the
+  2026-09-26 reading of 0.87x was 92 games ([0.56, 1.18]) on an older
+  engine. So it already clears the plan's G4 strength bar (>= 1.05x, the
+  interval above 1.00x) without any net, and the lobby's "pods get the
+  heuristic" is a latency choice now, not a strength one — the next pod
+  lever is a latency read for `mcts-dflt-256` at four and six seats
+  (~15 CPU-s a four-seat game at 256 iterations, one searching seat), not
+  its leaf.
+- **The adoption above already moved the default search's leaf** (0.10 at
+  an even four-seat table, not 0.011), so the leaf question is now
+  `pod_share_leaf` against *that* default, not against the sum this stage
+  read. Not run.
+- **A stuck-rollout lead.** In one field (precons 41 / 87 / 133 / 179),
+  41-48 % of every arm's rollouts end on `STALE_ROUNDS` (eight policy
+  rounds with no action) — or on a rejected decision answer, which the
+  `CRAB_MCTS_TIMING` "stale" bucket also counts — and are scored before
+  the horizon. Every other field reads 0.0 %. A deck-specific stall of the
+  rollout policy; unread.
 
 **Not yet read.** The heuristic's cost per decision with the share on
 (one battlefield walk plus an `exp` per hostile seat per evaluation; the
 census ran beside the search stage, so its wall clock is not a reading).
-Found on the way: the core_rules ratchet
-`printed_type_line_reads_only_shrink` fails at the branch tip 830b9aabc
-(70 `definition.is_creature()` reads under game/ against a cap of 69, from
-06f58064c) — not this round's.
+The search stage's wall clock is contaminated the same way (the census,
+two suites and three builds ran beside it), so no per-arm cost is
+recorded.
