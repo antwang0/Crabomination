@@ -310,18 +310,25 @@ fn gates_power_the_maze() {
     assert!(g.computed_permanent(plains).is_some_and(|c| c.keywords().contains(&Keyword::Haste)));
 }
 
-/// Magus of the Candelabra untaps X lands.
+/// Magus of the Candelabra untaps X target lands (CR 601.2c: exactly X).
 #[test]
 fn magus_of_the_candelabra_untaps() {
     let mut g = main_phase(2);
     let m = g.add_card_to_battlefield(0, catalog::magus_of_the_candelabra());
     g.clear_sickness(m);
     let lands: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
-    for &l in &lands {
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    for &l in lands.iter().chain([&theirs]) {
         g.battlefield_find_mut(l).unwrap().tapped = true;
     }
-    activate_x(&mut g, m, 0, &[], Some(2)).expect("untap two");
-    assert_eq!(lands.iter().filter(|&&l| !g.battlefield_find(l).unwrap().tapped).count(), 2);
+    // CR 601.2c — exactly X targets: one too few is refused.
+    let mut probe = g.clone();
+    assert!(activate_x(&mut probe, m, 0, &[Target::Permanent(lands[0])], Some(2)).is_err());
+    // Any player's lands are legal targets.
+    activate_x(&mut g, m, 0, &[Target::Permanent(lands[0]), Target::Permanent(theirs)], Some(2)).expect("untap two");
+    assert!(!g.battlefield_find(lands[0]).unwrap().tapped);
+    assert!(!g.battlefield_find(theirs).unwrap().tapped);
+    assert!(g.battlefield_find(lands[1]).unwrap().tapped && g.battlefield_find(lands[2]).unwrap().tapped);
 }
 
 /// Ulvenwald Hydra counts your lands and fetches one tapped.

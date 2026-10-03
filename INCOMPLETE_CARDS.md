@@ -1968,7 +1968,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
 | 🟡 Sunken Palace | Tricky Terrain (M3C) | its rider copies a spell it pays for, not an activated ability. |
-| 🟡 Magus of the Candelabra | Tricky Terrain (M3C) | untaps up to X of your own tapped lands, untargeted (Candelabra of Tawnos's approximation). |
 | 🟡 Rampant Frogantua | Tricky Terrain (M3C) | every milled land goes onto the battlefield ("any number" isn't offered). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |

@@ -10,7 +10,6 @@
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
 //!   or library" only by a discard or a mill here.
 //! - **Sunken Palace** — its rider copies a spell, not an activated ability.
-//! - **Magus of the Candelabra** — untaps up to X of your lands, untargeted.
 //! - **Rampant Frogantua** — every milled land goes onto the battlefield.
 //! - **March from Velis Vel** — the land type is chosen as a mode.
 
@@ -345,14 +344,21 @@ pub fn jyoti_moag_ancient() -> CardDefinition {
     }
 }
 
-/// Magus of the Candelabra — {X}, {T}: untap X lands. Residual: up to X of
-/// your own lands, untargeted.
+/// Magus of the Candelabra — {X}, {T}: untap X target lands (any player's;
+/// exactly X targets, CR 601.2c).
 pub fn magus_of_the_candelabra() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x()]),
             tap_cost: true,
-            effect: Effect::Untap { what: yours(R::Land.and(R::Tapped)), up_to: Some(Value::XFromCost) },
+            effect: Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 10,
+                    min_targets: 1,
+                    filter: R::Land,
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                }),
+            },
             ..Default::default()
         }],
         ..creature("Magus of the Candelabra", cost(&[g()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 2)
