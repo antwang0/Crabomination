@@ -54,10 +54,10 @@ they call a deck 🟡, the table wins.
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 135 | Kaust, Eyes of the Glade (RGW) | 2: boltbender, tesak_judiths_hellhound |
-| 137 | Zimone, Infinite Analyst (GU) | 4: kinetic_ooze, primo_the_unbounded, quandrix_command, unbound_flourishing |
+| 137 | Zimone, Infinite Analyst (GU) | 3: primo_the_unbounded, quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 3: parnesse_the_subtle_brush, syrix_carrier_of_the_flame, zndrsplts_judgment |
 | 141 | Prosper, Tome-Bound (BR) | 3: danse_macabre, hellish_rebuke, share_the_spoils |
-| 142 | Kadena, Slinking Sorcerer (BGU) | 3: gift_of_doom, rayami_first_of_the_fallen, vesuvan_shapeshifter |
+| 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
 | 144 | Satya, Aetherflux Genius (URW) | 2: overclocked_electromancer, razorfield_ripper |
 | 145 | Hakbal of the Surging Soul (GU) | 3: bygone_marvels, quandrix_command, xolatoyac_the_smiling_flood |
 | 146 | Perrie, the Pulverizer (GWU) | 4: agents_toolkit, aven_mimeomancer, littjara_mirrorlake, skyship_plunderer |
