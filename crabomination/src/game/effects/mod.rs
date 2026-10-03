@@ -2174,7 +2174,25 @@ impl GameState {
             // a pick the chooser may override, not a rule.
             let own = matches!(orig, crate::game::types::Target::Permanent(id)
                 if self.battlefield_find(*id).is_some_and(|c| c.controller == caster));
-            if own
+            // A hostile copy (Flametongue Kavu's 4 damage copied by Aboleth
+            // Spawn) aimed at the copier's own permanent, or at the copier,
+            // defaults to the copier's opponents' side.
+            let hostile_at_self = match orig {
+                crate::game::types::Target::Permanent(_) => own && effect.permanent_slot_is_hostile(slot, None),
+                crate::game::types::Target::Player(p) => *p == caster && effect.player_slot_is_hostile(slot, None),
+            };
+            if hostile_at_self && !legal.is_empty() {
+                let mine = |t: &crate::game::types::Target| match t {
+                    crate::game::types::Target::Permanent(id) => {
+                        self.battlefield_find(*id).is_some_and(|c| self.same_team(c.controller, caster))
+                    }
+                    crate::game::types::Target::Player(p) => self.same_team(*p, caster),
+                };
+                let (theirs, ours): (Vec<_>, Vec<_>) = legal.drain(..).partition(|t| !mine(t));
+                legal = theirs;
+                legal.extend(ours);
+                legal.push(orig.clone());
+            } else if own
                 && !legal.is_empty()
                 && self.battlefield.iter().filter(|c| c.controller == caster).count() >= CROWDED_COPY_BOARD
             {
