@@ -293,9 +293,8 @@ corrupted opponent" were wrong at a table), `EventSpec::once_per_batch_across_pl
 (CR 603.2c "to one or more players" — Contaminant Grafter), `Predicate::AnAttackedPlayerHasPoisonAtLeast`
 (Norn's Decree) and `EquipBonus::sacrifice_host_when_unattached` (`game/unattach.rs`,
 queued at all seven unattach sites) — which also restored **Grafted Wargear**'s
-dropped rider. Residuals: **Geth's Summons** and **Glissa's Retriever** pick
-their cards at resolution instead of targeting (the Summons reads poison then,
-not as it is cast), and **Ixhel** exiles face up (hidden information only).
+dropped rider. Geth's Summons and Glissa's Retriever target since 2026-10-03;
+**Ixhel** exiles face up (hidden information only).
 Seed 10020, 1,000 games at 20 seats: **999 decided, 1 action cap (427 turns at
 the 100,000 budget), 0 board caps, zero panics**; Ixhel wins 5.0 %;
 `--card-census` 999 distinct, every card of all twenty lists played. In
