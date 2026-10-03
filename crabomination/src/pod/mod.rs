@@ -2835,10 +2835,18 @@ mod tests {
         // 82.80/81.82 turns at 3/4/6 seats, every block 2,000/2,000 decided,
         // longest 87/91, 144/154, 173/164 turns; `--bench` counters
         // byte-identical (duels run the old difference).
+        // Re-blessed 2026-10-03 (auto-tapper: a free source pays a coloured
+        // pip before a filter ability, so a "{1}, {T}: any color" land no
+        // longer eats the pool — reverting that hunk alone restores the rows
+        // above): 0xC0FFEE 2491→2492 actions, same winner; 43 seat 3 → seat
+        // 0, 65→77 turns; 4242 seat 0 → seat 3, 187→82 turns. Aggregate,
+        // `bot_ladder --commander`, 2,000 games at seed 9991, before/after:
+        // 32.36/32.43, 45.66/45.60, 68.34/68.20 turns at 3/4/6 seats, every
+        // block 2,000/2,000 decided; `--bench` 196,176 byte-identical.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 54, 2491),
-            (43, Some(3), 65, 3087),
-            (4242, Some(0), 187, 9938),
+            (0xC0FFEE, Some(2), 54, 2492),
+            (43, Some(0), 77, 3646),
+            (4242, Some(3), 82, 4120),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
