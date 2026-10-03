@@ -481,19 +481,17 @@ pub fn spellbinding_soprano() -> CardDefinition {
     }
 }
 
-/// Syrix, Carrier of the Flame — flying, haste; each end step after a card
-/// left your graveyard, a Phoenix of yours deals its power to any target;
-/// another Phoenix of yours dying lets you cast Syrix from your graveyard.
-///
-/// Residual: the end-step check counts any card leaving your graveyard,
-/// and the graveyard cast is a permission for the rest of the turn.
+/// Syrix, Carrier of the Flame — flying, haste; each end step after a
+/// creature card left your graveyard, a Phoenix of yours deals its power to
+/// any target; another Phoenix of yours dying lets you cast Syrix from your
+/// graveyard as that trigger resolves (CR 608.2g), for its cost.
 pub fn syrix_carrier_of_the_flame() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
-                    Predicate::CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
+                    Predicate::CreatureCardsLeftGraveyardThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
                 ),
                 effect: Effect::DealDamageFrom {
                     source: target_filtered(phoenix().and(R::ControlledByYou)),
@@ -508,12 +506,12 @@ pub fn syrix_carrier_of_the_flame() -> CardDefinition {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: phoenix().and(R::OwnedByYou) },
                 ),
-                effect: Effect::GrantMayPlay {
+                effect: Effect::CastWithoutPayingImmediate {
                     what: Selector::This,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    to_owner: false,
+                    source_zone: Zone::Graveyard,
                     exile_after: false,
-                    any_color: false,
+                    copy: false,
+                    reduce_generic: 0,
                     pay_own_cost: true,
                 },
             },

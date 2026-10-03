@@ -365,14 +365,48 @@ fn spellbinding_soprano_discounts() {
     assert_eq!(g.players[0].turn_spell_discounts.len(), 1);
 }
 
-/// Syrix — a Phoenix of yours dying lets Syrix be cast from the graveyard.
+/// Syrix — a Phoenix of yours dying lets you cast Syrix from the graveyard,
+/// as that trigger resolves (CR 608.2g) and for its cost; it isn't left a
+/// permission for later.
 #[test]
 fn syrix_returns_when_a_phoenix_dies() {
     let mut g = pod(2);
     let sy = g.add_card_to_graveyard(0, catalog::syrix_carrier_of_the_flame());
     let rp = g.add_card_to_battlefield(0, catalog::rekindling_phoenix());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
     kill(&mut g, rp);
-    assert!(g.players[0].graveyard.iter().find(|c| c.id == sy).is_some_and(|c| c.may_play_until.is_some()));
+    assert!(g.battlefield_find(sy).is_some(), "cast as the trigger resolved");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "for its cost");
+}
+
+/// Syrix's end step: "if a CREATURE card left your graveyard this turn" — a
+/// land regrown doesn't count; a creature card does, and Syrix deals its
+/// power.
+#[test]
+fn syrix_burns_after_a_creature_card_leaves_the_graveyard() {
+    let mut g = pod(2);
+    // A bot seat aims "any target" damage at an opponent.
+    g.players[0].hostile_player_targets = true;
+    g.add_card_to_battlefield(0, catalog::syrix_carrier_of_the_flame());
+    let land = g.add_card_to_graveyard(0, catalog::island());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let end_step = |g: &mut GameState| {
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(g);
+    };
+    let life = g.players[1].life;
+    let rg = g.add_card_to_hand(0, catalog::regrowth());
+    cast(&mut g, 0, rg, Some(Target::Permanent(land))).expect("regrow the land");
+    end_step(&mut g);
+    assert_eq!(g.players[1].life, life, "a land card isn't a creature card");
+    g.step = TurnStep::PreCombatMain;
+    let rg = g.add_card_to_hand(0, catalog::regrowth());
+    cast(&mut g, 0, rg, Some(Target::Permanent(bear))).expect("regrow the bear");
+    end_step(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
 }
 
 /// Waste Management — exiles two graveyard cards and makes a Rogue per
