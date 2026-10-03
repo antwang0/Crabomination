@@ -24542,6 +24542,12 @@ impl GameState {
                 Ok(())
             }
 
+            // "Them" — the batch the dispatcher bound; a parked remainder
+            // keeps the binding (`BindTargetObjects`).
+            Effect::OverTriggerBatch { body, ids } => {
+                self.run_effect(&Effect::BindTargetObjects { ids: ids.clone(), body: body.clone() }, ctx, events)
+            }
+
             Effect::PutFromHandOrCommandZoneOntoBattlefield { filter, then } => {
                 self.put_from_hand_or_command_zone(filter, then.as_deref(), effect, ctx, events)
             }
@@ -41240,6 +41246,17 @@ impl GameState {
                 .get(*idx as usize)
                 .map(target_to_entity)
                 .into_iter()
+                .collect(),
+            Selector::TriggerBatch => ctx
+                .targets
+                .iter()
+                .filter_map(|t| match target_to_entity(t) {
+                    EntityRef::Permanent(id) if self.battlefield_find(id).is_some() => Some(EntityRef::Permanent(id)),
+                    EntityRef::Permanent(id) | EntityRef::Card(id) => {
+                        self.find_card_anywhere(id).map(|_| EntityRef::Card(id))
+                    }
+                    EntityRef::Player(_) => None,
+                })
                 .collect(),
             Selector::AllTargets => ctx
                 .targets

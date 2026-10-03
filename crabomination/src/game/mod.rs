@@ -24302,7 +24302,7 @@ impl GameState {
                     }
                     candidates.push(TriggerCandidate {
                         source: trig_source,
-                        effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                        effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                         controller,
                         filter: ta.event.filter.clone(),
                         subject,
@@ -24475,7 +24475,7 @@ impl GameState {
                             from_mana_ability: false,
                             actor: None,
                             source: snap.id,
-                            effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                            effect: self.trigger_effect_for(&ta.effect, &ta.event, snap, ev, events),
                             controller: snap.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
@@ -24511,7 +24511,7 @@ impl GameState {
                                 from_mana_ability: false,
                                 actor: None,
                                 source: src,
-                                effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                                effect: self.trigger_effect_for(&ta.effect, &ta.event, snap, ev, events),
                                 controller: snap.controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
@@ -24559,7 +24559,7 @@ impl GameState {
                                 from_mana_ability: false,
                                 actor: None,
                                 source: card.id,
-                                effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                                effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                                 controller: card.controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
@@ -24679,7 +24679,7 @@ impl GameState {
                         candidates.push(TriggerCandidate {
                             actor: crate::game::effects::events::event_actor(self, ev),
                             source: card.id,
-                            effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                            effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                             controller: card.owner,
                             filter: ta.event.filter.clone(),
                             subject,
@@ -24748,7 +24748,7 @@ impl GameState {
                             candidates.push(TriggerCandidate {
                                 actor: None,
                                 source: card.id,
-                                effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                                effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                                 controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
@@ -24826,7 +24826,7 @@ impl GameState {
                         candidates.push(TriggerCandidate {
                             actor: None,
                             source: card.id,
-                            effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                            effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                             controller: card.owner,
                             filter: ta.event.filter.clone(),
                             subject,
@@ -24876,7 +24876,7 @@ impl GameState {
                                     from_mana_ability: false,
                                     actor: None,
                                     source: card.id,
-                                    effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
+                                    effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),
                                     controller: card.owner,
                                     filter: ta.event.filter.clone(),
                                     subject: crate::game::effects::event_subject(
@@ -30274,6 +30274,63 @@ impl GameState {
                 })
             })
             .count() as u32
+    }
+
+    /// The effect a matched trigger goes on the stack with: the event's own
+    /// rewrite (`for_trigger_event`), or for `OverTriggerBatch` the batch's
+    /// subjects bound as "them".
+    pub(crate) fn trigger_effect_for(
+        &self,
+        effect: &crate::effect::Effect,
+        spec: &crate::effect::EventSpec,
+        source: &CardInstance,
+        ev: &GameEvent,
+        events: &[GameEvent],
+    ) -> crate::effect::Effect {
+        match effect {
+            crate::effect::Effect::OverTriggerBatch { body, .. } => crate::effect::Effect::OverTriggerBatch {
+                body: body.clone(),
+                ids: self.batch_subjects(events, spec, source),
+            },
+            e => crate::game::effects::for_trigger_event(self, e, ev),
+        }
+    }
+
+    /// The batch's matching subjects, in event order and once each — "them"
+    /// in an `Effect::OverTriggerBatch` body.
+    pub(crate) fn batch_subjects(
+        &self,
+        events: &[GameEvent],
+        spec: &crate::effect::EventSpec,
+        source: &CardInstance,
+    ) -> Vec<CardId> {
+        let mut ids = Vec::new();
+        for ev in events {
+            if !crate::game::effects::events::event_matches_spec(self, ev, spec, source) {
+                continue;
+            }
+            let subject = crate::game::effects::event_subject(ev, &spec.kind);
+            let id = match subject {
+                Some(crate::game::effects::EntityRef::Card(id))
+                | Some(crate::game::effects::EntityRef::Permanent(id)) => id,
+                _ => continue,
+            };
+            let passes = spec.filter.as_ref().is_none_or(|f| {
+                self.evaluate_predicate(
+                    f,
+                    &crate::game::effects::EffectContext::for_intervening_filter(
+                        source.controller,
+                        source.id,
+                        subject,
+                        self.event_amount_for(ev),
+                    ),
+                )
+            });
+            if passes && !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+        ids
     }
 
     pub(crate) fn batch_card_type_count(

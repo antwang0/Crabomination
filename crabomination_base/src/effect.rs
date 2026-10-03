@@ -266,6 +266,11 @@ pub enum Selector {
     Target(u8),
     /// A chosen target slot with a restriction that must be validated at cast time.
     TargetFiltered { slot: u8, filter: SelectionRequirement },
+    /// "Them" in an `Effect::OverTriggerBatch` body: the batch the
+    /// dispatcher bound, wherever each card is now (a milled or discarded card
+    /// is a graveyard card, not a permanent — `AllTargets` reads only the
+    /// battlefield).
+    TriggerBatch,
     /// Every declared target slot (permanents/players still legal). Powers
     /// "then [do X] to each of those [targets]" riders that operate on the
     /// whole cast-time target list rather than a single slot — Biogenic
@@ -8882,6 +8887,16 @@ pub enum Effect {
     /// context, so without it the rest of that iteration's body reads the
     /// caster's targets.
     BindTargetObjects { ids: Vec<crate::card::CardId>, body: Box<Effect> },
+    /// CR 603.2c — "whenever one or more [cards] …, [body] one of them": on a
+    /// `once_per_batch` trigger the dispatcher fills `ids` with the batch's
+    /// matching subjects, and `body` runs with them as its target list, so
+    /// `AllTargets` reads "them" (Conspiracy Theorist, Colossal Grave-Reaver).
+    /// They are bound, never chosen: no cast-time slot.
+    OverTriggerBatch {
+        body: Box<Effect>,
+        #[serde(default)]
+        ids: Vec<crate::card::CardId>,
+    },
     /// Run `body` with one piece of the resolver's per-iteration scratch state
     /// pinned to the value the iteration that parked it had.
     ///

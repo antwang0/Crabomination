@@ -445,6 +445,7 @@ impl Effect {
             | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
+            | Effect::OverTriggerBatch { body, .. }
             | Effect::BindScratch { body, .. }
             | Effect::WithRandomOpponent { body }
             | Effect::OptionalTargets { body, .. }
@@ -1305,7 +1306,8 @@ impl Effect {
             Effect::GrantPlayFromTopThisTurn => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. }
-            | Effect::PutFromHandOrCommandZoneOntoBattlefield { .. } => false,
+            | Effect::PutFromHandOrCommandZoneOntoBattlefield { .. }
+            | Effect::OverTriggerBatch { .. } => false,
             Effect::DeployCreatureFromHandAttacking { .. } => false,
             Effect::LockCreatureAndPlaneswalkerCasts => false,
             Effect::ExileTopFaceDownTokenReturns { .. } => false,
