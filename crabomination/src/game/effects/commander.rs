@@ -88,12 +88,38 @@ impl GameState {
         Some(total <= limit)
     }
 
-    /// Bell Borca's note: raise the turn's greatest exiled mana value.
+    /// A card was put into exile: raise each noting permanent's own note
+    /// (Bell Borca — CR 400.7: only what it saw while on the battlefield,
+    /// `CardCold::exile_note`).
     pub(crate) fn note_exiled_mana_value(&mut self, mv: u32) {
         let mv = mv.min(u8::MAX as u32) as u8;
-        if mv > self.greatest_exiled_mv_this_turn {
-            self.greatest_exiled_mv_this_turn = mv;
+        let turn = self.turn_number;
+        let noters: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| notes_exiled_mana_values(&c.definition))
+            .filter(|c| {
+                let held = c.exile_note.filter(|&(t, s, _)| t == turn && s == c.battlefield_timestamp);
+                held.is_none_or(|(_, _, m)| mv > m)
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in noters {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                let stamp = c.battlefield_timestamp;
+                c.exile_note = Some((turn, stamp, mv));
+            }
         }
+    }
+
+    /// Bell Borca's own note (`Value::GreatestManaValueNotedForSource`).
+    pub(crate) fn noted_exiled_mana_value(&self, source: Option<CardId>) -> u8 {
+        source
+            .and_then(|s| self.battlefield_find(s))
+            .and_then(|c| {
+                c.exile_note.filter(|&(t, s, _)| t == self.turn_number && s == c.battlefield_timestamp)
+            })
+            .map_or(0, |(_, _, m)| m)
     }
 
     pub(crate) fn grant_next_spell_affinity(&mut self, seat: usize) {
@@ -594,4 +620,17 @@ impl GameState {
                 .or_else(|| self.find_card_anywhere(*id).map(|c| c.owner)),
         }
     }
+}
+
+/// Does this permanent note exiled mana values for itself (Bell Borca)?
+fn notes_exiled_mana_values(def: &crate::card::CardDefinition) -> bool {
+    def.static_abilities.iter().any(|sa| {
+        matches!(
+            &sa.effect,
+            crate::effect::StaticEffect::SelfBasePtFromValue {
+                power: crate::effect::Value::GreatestManaValueNotedForSource,
+                ..
+            }
+        )
+    })
 }

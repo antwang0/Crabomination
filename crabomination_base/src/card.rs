@@ -8010,6 +8010,10 @@ pub struct CardCold {
     /// "this way" gains "when this Equipment enters, attach it to target
     /// creature you control"; stamped on the spell, read at entry.
     pub attach_on_entry: bool,
+    /// Bell Borca's note — the greatest mana value it has noted, with the turn
+    /// and the `battlefield_timestamp` it was noted under, so a note from
+    /// another turn or a previous object (CR 400.7) reads as nothing.
+    pub exile_note: Option<(u32, u64, u8)>,
     /// CR 702.171 — the creatures that have saddled this permanent this turn
     /// (the riders tapped by a Saddle activation). Read by
     /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one

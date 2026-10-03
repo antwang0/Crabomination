@@ -207,15 +207,15 @@ pub fn ashling_the_pilgrim() -> CardDefinition {
     }
 }
 
-/// Bell Borca, Spectral Sergeant — power is the greatest mana value noted as
-/// cards were exiled this turn; an impulse draw each upkeep. Residual: the
-/// note includes cards exiled before it entered.
+/// Bell Borca, Spectral Sergeant — power is the greatest mana value it noted
+/// for itself as cards were exiled this turn while it was on the battlefield
+/// (`Value::GreatestManaValueNotedForSource`); an impulse draw each upkeep.
 pub fn bell_borca_spectral_sergeant() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Bell Borca's power is equal to the greatest number noted for it this turn.",
             effect: StaticEffect::SelfBasePtFromValue {
-                power: Value::GreatestManaValueExiledThisTurn,
+                power: Value::GreatestManaValueNotedForSource,
                 toughness: Value::Const(5),
             },
         }],

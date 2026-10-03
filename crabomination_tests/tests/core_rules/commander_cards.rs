@@ -1412,48 +1412,45 @@ fn cr_614_10_a_symmetric_extra_turn_skip_binds_its_controller() {
     assert!(g.extra_turn_denied_for(0) && g.extra_turn_denied_for(1));
 }
 
-/// CR 406 — "note the mana value of each card as it's put into exile" (Bell
-/// Borca): the turn's greatest exiled mana value is noted from the library
-/// and from the battlefield, and forgotten at the next turn.
+/// CR 406 / 400.7 — "note the mana value of each card as it's put into exile"
+/// (Bell Borca): what Bell notes **for it** — nothing exiled before it
+/// entered, then the greatest exiled mana value from the library and from the
+/// battlefield, forgotten at the next turn.
 #[test]
 fn cr_406_the_greatest_exiled_mana_value_is_noted_this_turn() {
     use crabomination::effect::{Effect, Selector, Value};
     use crabomination::game::effects::EffectContext;
     let mut g = commander_game();
+    g.add_card_to_library(0, catalog::craw_wurm());
     g.add_card_to_library(0, catalog::grizzly_bears());
     for _ in 0..4 {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(1, catalog::island());
     }
     let ctx = EffectContext::for_spell(0, None, 0, 0);
-    let note = |g: &mut GameState| {
+    let exile_top = |g: &mut GameState| {
         g.resolve_effect(
-            &Effect::GainLife { who: Selector::You, amount: Value::GreatestManaValueExiledThisTurn },
+            &Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
             &ctx,
         )
-        .expect("resolve");
+        .expect("exile the top card");
     };
-    g.resolve_effect(
-        &Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
-        &ctx,
-    )
-    .expect("exile the Bears");
-    let life = g.players[0].life;
-    note(&mut g);
-    assert_eq!(g.players[0].life, life + 2);
+    exile_top(&mut g); // Craw Wurm (6), before Bell is around.
+    let bell = g.add_card_to_battlefield(0, catalog::bell_borca_spectral_sergeant());
+    let power = |g: &GameState| g.computed_permanent(bell).unwrap().power;
+    assert_eq!(power(&g), 0, "the Wurm was exiled before Bell entered");
+    exile_top(&mut g); // Grizzly Bears (2).
+    assert_eq!(power(&g), 2);
     let ring = g.add_card_to_battlefield(0, catalog::solemn_simulacrum());
     g.remove_from_battlefield_to_exile(ring);
-    note(&mut g);
-    assert_eq!(g.players[0].life, life + 2 + 4, "Solemn's four from the battlefield");
+    assert_eq!(power(&g), 4, "Solemn's four from the battlefield");
     for _ in 0..200 {
         if g.active_player_idx == 1 {
             break;
         }
         let _ = g.perform_action(GameAction::PassPriority);
     }
-    let life = g.players[0].life;
-    note(&mut g);
-    assert_eq!(g.players[0].life, life, "a new turn forgets");
+    assert_eq!(power(&g), 0, "a new turn forgets");
 }
 
 // ── Primitives for Planeswalker Party (CMM, Commodore Guff) ───────────────

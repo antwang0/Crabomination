@@ -910,10 +910,10 @@ pub enum Value {
     /// spell of a turn"). The summed sibling of `SpellsCastThisTurn`, which
     /// takes the max over the resolved seats.
     SpellsCastThisTurnTotal,
-    /// The greatest mana value among cards put into exile this turn (Bell
-    /// Borca, Spectral Sergeant's noted mana values). Backed by
-    /// `GameState::greatest_exiled_mv_this_turn`.
-    GreatestManaValueExiledThisTurn,
+    /// The greatest mana value the source permanent itself noted this turn as
+    /// cards were put into exile while it was on the battlefield (Bell Borca,
+    /// Spectral Sergeant: "noted **for it**"). Backed by `CardCold::exile_note`.
+    GreatestManaValueNotedForSource,
     OtherSpellsCastThisTurn(PlayerRef),
     /// Instant and sorcery spells `who` has cast so far this turn (max over
     /// the resolved players). Backed by

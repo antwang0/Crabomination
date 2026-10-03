@@ -4842,9 +4842,6 @@ impl GameState {
         // EOE Void — reset the game-wide "a nonland permanent left this turn"
         // flag at the turn boundary.
         self.nonland_permanent_left_bf_this_turn = false;
-        if self.greatest_exiled_mv_this_turn != 0 {
-            self.greatest_exiled_mv_this_turn = 0;
-        }
         // Teyo's −2 lasts until its controller's next turn.
         if matches!(self.temporary_attack_direction, Some((_, s)) if s == p) {
             self.temporary_attack_direction = None;
