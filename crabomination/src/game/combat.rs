@@ -97,6 +97,10 @@ pub(crate) enum BatchSubject {
     Permanent(CardId),
     /// Every damaged player at once — `EventSpec::batch_across_players`.
     AnyPlayer,
+    /// Every recipient of one dealer — the recipient-agnostic kinds
+    /// ("whenever ~ deals combat damage"), which trigger once for a dealer's
+    /// simultaneous damage however many objects it hits (Sword of Hours).
+    Dealer(CardId),
 }
 
 impl BatchSubject {
@@ -7319,9 +7323,17 @@ impl GameState {
         if let Target::Player(p) = default_target {
             self.trigger_event_player_scratch = Some(p);
         }
-        for (trig_source, effect, controller, filter, bind_dealer, once) in
-            by_kind.into_iter().flatten()
+        for (kind_i, (trig_source, effect, controller, filter, bind_dealer, once)) in by_kind
+            .into_iter()
+            .enumerate()
+            .flat_map(|(i, bucket)| bucket.into_iter().map(move |e| (i, e)))
         {
+            // CR 510.2 — "whenever ~ deals combat damage" names no recipient:
+            // one event per dealer per damage step, its amount the total. A
+            // later recipient of the same dealer adds to the fire already on
+            // the stack; the fire's subject is the dealer.
+            let agnostic = combat_batch
+                && matches!(kinds[kind_i], EventKind::DealsCombatDamage | EventKind::DealsDamage);
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
             // a creature you control *with toxic* deals combat damage…" —
             // Necrogen Rotpriest). `TriggerSource` in the filter reads the
@@ -7349,7 +7361,23 @@ impl GameState {
             // Skaab): an across-players batch that counts its subjects reads
             // the distinct players hit, not the first dealer's damage.
             let mut counts_players = false;
-            if let Some((i, per_turn)) = once {
+            if agnostic {
+                let key = (trig_source, once.map_or(usize::MAX - 1, |(i, _)| i), BatchSubject::Dealer(source));
+                if self.combat_trigger_fired_this_step.contains(&key) {
+                    let dealer = Some(crate::game::effects::EntityRef::Permanent(source));
+                    if let Some(StackItem::Trigger { event_amount, x_value, .. }) =
+                        self.stack.iter_mut().rev().find(|si| {
+                            matches!(si, StackItem::Trigger { source: s, trigger_source, .. }
+                                if *s == trig_source && *trigger_source == dealer)
+                        })
+                    {
+                        *event_amount += damage_amount;
+                        *x_value += damage_amount;
+                    }
+                    continue;
+                }
+                self.combat_trigger_fired_this_step.push(key);
+            } else if let Some((i, per_turn)) = once {
                 if per_turn {
                     if !self.triggered_once_per_turn_used.insert((trig_source, i)) {
                         continue;
@@ -7442,7 +7470,7 @@ impl GameState {
             // `PlayerRef::Triggerer` body on a combat-damage trigger resolved
             // to nobody and did nothing at all, which is how Phage the
             // Untouchable's "that player loses the game" was dead.
-            let dealer = if bind_dealer {
+            let dealer = if bind_dealer || agnostic {
                 Some(crate::game::effects::EntityRef::Permanent(source))
             } else {
                 match default_target {
