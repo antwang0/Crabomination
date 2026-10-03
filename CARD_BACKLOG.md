@@ -4569,18 +4569,13 @@ Shipped: `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf),
 
 ## Equipment / Voltron (`decks::recent94`)
 
-- **Stonehewer Giant tutor auto-attach.** It searches an Equipment onto the
-  battlefield but drops the "attach it to a creature you control" rider (the searched card isn't a target, so it lands unattached). Needs a
-  `Search`-then-`Attach` variant that threads the found card into a follow-up
-  attach.
 - **O-Naginata attach restriction.** "Attach only to a creature with power 3+" is
   dropped (no equip-target power gate).
 - **Bigger Voltron cards not yet done:** Halvar, God of Battle // Sword of the
   Realms (DFC God + combat move-an-Aura/Equipment + Equipment back face),
   Ardenn (attach any number at combat), Champion of Lambholt (global
   "power-less creatures can't block yours" static), Bruenor Battlehammer
-  (per-attached-Equipment team pump + first-equip-free), Armored Skyhunter
-  (look-top-6, put an Aura/Equipment onto the battlefield + attach).
+  (per-attached-Equipment team pump + first-equip-free).
 - **Client compile-verify.** `crabomination_client` can't build in the headless
   cloud env (`wayland-sys`); the `attached_to_name` tooltip line was reviewed by
   hand — re-verify on a GUI host.

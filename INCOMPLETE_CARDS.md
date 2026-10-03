@@ -1930,9 +1930,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
-| 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
-| 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, not secretly. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
 | 🟡 Deathmist Raptor | Jump Scare! (DSC) | it returns face up; the face-down option isn't offered. |
@@ -1971,7 +1969,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
-| 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
@@ -2004,7 +2001,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
 | 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
-| 🟡 Vislor Turlough | Masters of Evil (WHO) | goaded for the rest of the game, not only while the opponent controls it. |
 | 🟡 Weeping Angel | Masters of Evil (WHO) | its combat damage to a creature is dealt, then that creature is shuffled away (not prevented). |
 | 🟡 Zygon Infiltrator | Masters of Evil (WHO) | the copy lasts until end of turn, not while the target stays tapped. |
 | 🟡 Clockspinning | Timey-Wimey (WHO) | keyword counters can't be chosen. |
@@ -2018,7 +2014,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
 | 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
-| 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
