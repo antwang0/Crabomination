@@ -2039,24 +2039,19 @@ pub fn restless_vents() -> CardDefinition {
 
 // ── Check-lands (M10/Innistrad duals) ────────────────────────────────────────
 
-/// Check-land ETB trigger: "enters tapped unless you control a [type_a] or
-/// [type_b]." Check-lands are typeless, so the post-ETB count is safe.
-fn checkland_etb_conditional_tap(type_a: LandType, type_b: LandType) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::HasLandType(type_a)
-                        .or(SelectionRequirement::HasLandType(type_b))
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(1),
-            },
-            then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
+/// Check-land: "This land enters tapped unless you control a [type_a] or
+/// [type_b]" — the CR 614.1c replacement, not an ETB trigger that taps the
+/// land after it could already have made mana.
+fn checkland_enters_tapped_unless(type_a: LandType, type_b: LandType) -> crate::effect::StaticAbility {
+    crate::effect::StaticAbility {
+        description: "This land enters tapped unless you control a land of either type.",
+        effect: crate::effect::StaticEffect::EntersTappedUnless {
+            applies_to: Selector::This,
+            condition: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasLandType(type_a)
+                    .or(SelectionRequirement::HasLandType(type_b))
+                    .and(SelectionRequirement::ControlledByYou),
+            )),
         },
     }
 }
@@ -2074,7 +2069,7 @@ fn checkland(
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(a), tap_add(b)],
-        triggered_abilities: vec![checkland_etb_conditional_tap(type_a, type_b)],
+        static_abilities: vec![checkland_enters_tapped_unless(type_a, type_b)],
         ..Default::default()
     }
 }

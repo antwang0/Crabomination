@@ -475,6 +475,8 @@ fn checkland_taps_only_without_a_matching_type() {
     let tapped = g.add_card_to_hand(0, catalog::glacial_fortress());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::PlayLand(tapped)).expect("plays");
+    // CR 614.1c — a replacement: it enters tapped, no trigger to answer.
+    assert!(g.battlefield_find(tapped).unwrap().tapped && g.stack.is_empty(), "tapped as it enters");
     drain_stack(&mut g);
     assert!(g.battlefield_find(tapped).unwrap().tapped, "no check → tapped");
     // With an Island on board the next one enters untapped.
