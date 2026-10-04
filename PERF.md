@@ -3382,6 +3382,11 @@ second stretch     CR 603.3b attack-trigger APNAP sort, CR 603.3c mode
                    games, 1,138 decided, 2 legit undecided (a 999-Inkling
                    board cap; an Exocrine X=13 draw); debug pods 4 x 2 +
                    3 x 2 = 214 games clean; suite 22,852 + 1,196 / 0
+third stretch      modal-activation candidates, may-cost gate, reflexive
+                   payoffs: --bench 196,176 / 613.0 / 0 stalls, byte-
+                   identical; concession pods (CRAB_POD_CONCEDE=8) 5 x 10
+                   + 4 x 10 = 830 games all decided; debug pods 4 x 2 +
+                   5 x 2 = 166 clean; suite 22,873 / 0
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
