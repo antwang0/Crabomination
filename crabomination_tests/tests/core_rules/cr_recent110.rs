@@ -740,3 +740,31 @@ fn cr_118_3_an_unpayable_may_cost_gives_no_payoff() {
     assert_eq!(g.players[0].hand.len(), 1, "discarded the Bears, drew the Forest");
     assert_eq!(g.players[0].graveyard.len(), 1);
 }
+
+/// CR 118.3 — the same for "you may remove a counter from this. If you do":
+/// with no counter on the source nothing is drawn; with one it is.
+#[test]
+fn cr_118_3_a_may_counter_cost_needs_the_counter() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector, Value};
+    let body = Effect::MayDo {
+        description: "Remove an oil counter to draw?".into(),
+        body: Box::new(Effect::Seq(vec![
+            Effect::RemoveCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])),
+    };
+    let mut g = main_phase();
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::forest());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 0, "no counter to remove, no draw");
+    g.battlefield_find_mut(src).unwrap().add_counters(CounterType::Oil, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 1);
+}
