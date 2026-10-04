@@ -8076,3 +8076,18 @@ fn cr_701_15b_a_goaded_creature_cant_attack_a_planeswalker_instead() {
     );
     declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]).expect("the non-goader");
 }
+
+/// CR 725.4 — when the monarch leaves, the active player BECOMES the
+/// monarch, and that is an event ("whenever you become the monarch"). The
+/// leave path set the designation but dropped its events.
+#[test]
+fn cr_725_4_the_heir_becoming_monarch_is_an_event() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let mut events = Vec::new();
+    g.set_monarch(1, &mut events);
+    let events = g.concede(1);
+    assert_eq!(g.monarch, Some(0));
+    assert!(events.iter().any(|e| matches!(e, GameEvent::MonarchChanged { player: 0 })), "{events:?}");
+}

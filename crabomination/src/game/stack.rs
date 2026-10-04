@@ -5937,7 +5937,7 @@ impl GameState {
         // there is no active player), the next player in turn order who can
         // still become the monarch does.
         if self.monarch == Some(p) {
-            self.monarch = if self.active_player_idx != p && !self.players[self.active_player_idx].eliminated {
+            let heir = if self.active_player_idx != p && !self.players[self.active_player_idx].eliminated {
                 Some(self.active_player_idx)
             } else {
                 let n = self.players.len();
@@ -5945,9 +5945,17 @@ impl GameState {
                     .map(|off| (self.active_player_idx + off) % n)
                     .find(|&q| q != p && !self.players[q].eliminated)
             };
-            let mut events = vec![];
-            self.return_monarch_guarded_exiles(self.monarch, &mut events);
-            self.sync_monarch_control();
+            // The heir BECOMES the monarch: `MonarchChanged` (its "becomes
+            // the monarch" triggers) and Palace Jailer's returns go out with
+            // the leave's own events, not into a dropped buffer.
+            match heir {
+                Some(q) => self.set_monarch(q, events),
+                None => {
+                    self.monarch = None;
+                    self.return_monarch_guarded_exiles(None, events);
+                    self.sync_monarch_control();
+                }
+            }
         }
         // CR 726.4 — the same succession for the initiative, and the heir
         // *takes* it, so CR 726.2's "whenever a player takes the initiative,
@@ -5965,8 +5973,7 @@ impl GameState {
             };
             self.initiative = None;
             if let Some(q) = heir {
-                let mut events = vec![];
-                self.take_initiative(q, &mut events);
+                self.take_initiative(q, events);
             }
         }
     }
