@@ -35,6 +35,8 @@ pub fn wickerfolk_thresher() -> CardDefinition {
             ),
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,
+                tapped: false,
+                nonland_stays: false,
             },
         }],
         ..Default::default()

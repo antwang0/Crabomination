@@ -1484,7 +1484,7 @@ pub fn grappling_hook() -> CardDefinition {
 }
 
 /// Explorer's Scope — {1} Equipment. Attacking turns a land off the top into a
-/// tapped land drop. Equip {1}.
+/// tapped land drop; anything else stays on top. Equip {1}.
 pub fn explorers_scope() -> CardDefinition {
     CardDefinition {
         name: "Explorer's Scope",
@@ -1498,7 +1498,7 @@ pub fn explorers_scope() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+                effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You, tapped: true, nonland_stays: true },
             }],
             ..Default::default()
         }),

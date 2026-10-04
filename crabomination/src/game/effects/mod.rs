@@ -31308,14 +31308,16 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopLandToBattlefieldElseHand { who } => {
+            Effect::RevealTopLandToBattlefieldElseHand { who, tapped, nonland_stays } => {
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (cid, name, is_land) =
                         (top.id, top.definition.name, top.definition.is_land());
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     let dest = if is_land {
-                        ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false }
+                        ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped }
+                    } else if *nonland_stays {
+                        continue;
                     } else {
                         ZoneDest::Hand(PlayerRef::Seat(p))
                     };

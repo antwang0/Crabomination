@@ -1527,6 +1527,8 @@ pub fn coiling_oracle() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![etb(Effect::RevealTopLandToBattlefieldElseHand {
             who: PlayerRef::You,
+            tapped: false,
+            nonland_stays: false,
         })],
         ..Default::default()
     }

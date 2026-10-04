@@ -2185,6 +2185,32 @@ fn risen_reef_etb_puts_land_onto_battlefield() {
     drain_stack(&mut g);
     let bf1 = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
     assert!(bf1 > bf0, "the revealed Forest entered the battlefield");
+    assert!(g.battlefield_find(fid).is_some_and(|c| c.tapped), "\"put it onto the battlefield tapped\"");
+}
+
+/// Explorer's Scope — "if it's a land card, you may put it onto the
+/// battlefield tapped": a land off the top enters tapped, and anything else
+/// stays on top (it never goes to the hand).
+#[test]
+fn explorers_scope_takes_a_land_and_leaves_anything_else_on_top() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let scope = g.add_card_to_battlefield(0, catalog::explorers_scope());
+    g.battlefield_find_mut(scope).unwrap().attached_to = Some(bear);
+    let effect = g.battlefield_find(scope).unwrap().definition.equipped_bonus.as_ref().unwrap().triggered_abilities[0]
+        .effect
+        .clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(bear, 0, None);
+    let spell = g.next_id();
+    g.players[0].add_to_library_top(spell, catalog::lightning_bolt());
+    let hand = g.players[0].hand.len();
+    g.resolve_effect(&effect, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), hand, "a nonland card stays on top");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(spell));
+    let land = g.next_id();
+    g.players[0].add_to_library_top(land, catalog::forest());
+    g.resolve_effect(&effect, &ctx).expect("resolves");
+    assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "the land enters tapped");
 }
 
 /// Trinket Mage tutors a small artifact to hand.

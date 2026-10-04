@@ -36342,8 +36342,8 @@ pub fn dragonlord_atarka() -> CardDefinition {
 }
 
 /// Risen Reef — {1}{G}{U} 1/1 Elemental. Whenever this or another Elemental you
-/// control enters, reveal the top card: a land enters, else it goes to hand.
-/// (The "may, tapped" choice collapses to an unconditional untapped put.)
+/// control enters, look at the top card: a land enters tapped (the "may" is
+/// always taken), else it goes to hand.
 pub fn risen_reef() -> CardDefinition {
     CardDefinition {
         name: "Risen Reef",
@@ -36363,6 +36363,8 @@ pub fn risen_reef() -> CardDefinition {
                 }),
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,
+                tapped: true,
+                nonland_stays: false,
             },
         }],
         ..Default::default()
@@ -55175,6 +55177,8 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
             },
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,
+                tapped: false,
+                nonland_stays: false,
             },
         }],
         ..Default::default()
@@ -63028,6 +63032,8 @@ pub fn parcelbeast() -> CardDefinition {
             tap_cost: true,
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,
+                tapped: false,
+                nonland_stays: false,
             },
             ..Default::default()
         }],

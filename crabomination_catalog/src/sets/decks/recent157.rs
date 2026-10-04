@@ -137,6 +137,8 @@ pub fn fecund_greenshell() -> CardDefinition {
                 }),
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,
+                tapped: true,
+                nonland_stays: false,
             },
         }],
         ..Default::default()

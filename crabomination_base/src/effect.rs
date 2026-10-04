@@ -10407,9 +10407,17 @@ pub enum Effect {
     RevealTopNPutMatchingToBattlefield { who: PlayerRef, count: Value, filter: SelectionRequirement },
 
     /// Reveal the top card of `who`'s library; if it's a land, put it onto the
-    /// battlefield (untapped). Otherwise put it into their hand. Coiling
-    /// Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
-    RevealTopLandToBattlefieldElseHand { who: PlayerRef },
+    /// battlefield (`tapped`: Risen Reef, Fecund Greenshell). Otherwise put it
+    /// into their hand — or, with `nonland_stays`, leave it on top ("If it's a
+    /// land card, you may put it onto the battlefield tapped", Explorer's
+    /// Scope). Coiling Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
+    RevealTopLandToBattlefieldElseHand {
+        who: PlayerRef,
+        #[serde(default)]
+        tapped: bool,
+        #[serde(default)]
+        nonland_stays: bool,
+    },
 
     /// Look at the top card of `who`'s library; if it's a land, put it into
     /// their hand, otherwise mill it (surveil-flavored dig). Both printed
