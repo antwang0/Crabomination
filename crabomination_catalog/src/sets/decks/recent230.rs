@@ -37,6 +37,7 @@ pub fn wickerfolk_thresher() -> CardDefinition {
                 who: PlayerRef::You,
                 tapped: false,
                 nonland_stays: false,
+                may: true,
             },
         }],
         ..Default::default()

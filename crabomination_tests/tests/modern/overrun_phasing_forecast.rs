@@ -2198,11 +2198,21 @@ fn dragonlord_atarka_etb_divides_five_damage() {
 }
 
 /// Risen Reef triggers when an Elemental you control enters, putting a revealed
-/// land onto the battlefield.
+/// land onto the battlefield; its "you may" declined, the land goes to hand.
 #[test]
 fn risen_reef_etb_puts_land_onto_battlefield() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::risen_reef());
+    let declined = g.next_id();
+    g.players[0].add_to_library_top(declined, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let dig = catalog::risen_reef().triggered_abilities[0].effect.clone();
+    let reef0 = g.battlefield.iter().find(|c| c.definition.name == "Risen Reef").unwrap().id;
+    g.resolve_effect(&dig, &crabomination::game::effects::EffectContext::for_trigger(reef0, 0, None, 0))
+        .expect("resolves");
+    assert!(g.players[0].hand.iter().any(|c| c.id == declined), "declined: the land goes to hand");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
     // Top of library is a Forest; cast a second Risen Reef to trigger the first.
     let fid = g.next_id();
     g.players[0].add_to_library_top(fid, catalog::forest());
@@ -2241,6 +2251,12 @@ fn explorers_scope_takes_a_land_and_leaves_anything_else_on_top() {
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(spell));
     let land = g.next_id();
     g.players[0].add_to_library_top(land, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.resolve_effect(&effect, &ctx).expect("resolves");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(land), "declined: the land stays on top");
     g.resolve_effect(&effect, &ctx).expect("resolves");
     assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "the land enters tapped");
 }

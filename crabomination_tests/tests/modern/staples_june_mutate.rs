@@ -1736,6 +1736,7 @@ fn parcelbeast_drops_top_land() {
     let pb = g.add_card_to_battlefield(0, catalog::parcelbeast());
     g.clear_sickness(pb);
     let land = g.add_card_to_library(0, catalog::forest()); // top of empty library
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,

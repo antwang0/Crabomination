@@ -923,6 +923,7 @@ mod recent230 {
         g.players[0].add_to_library_top(land_id, catalog::forest());
         let before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count();
         let effect = catalog::wickerfolk_thresher().triggered_abilities[0].effect.clone();
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
         g.resolve_effect(&effect, &EffectContext::for_trigger(thresher, 0, None, 0)).unwrap();
         drain_stack(&mut g);
         let after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count();

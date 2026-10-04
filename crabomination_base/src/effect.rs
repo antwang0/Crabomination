@@ -10416,12 +10416,16 @@ pub enum Effect {
     /// into their hand — or, with `nonland_stays`, leave it on top ("If it's a
     /// land card, you may put it onto the battlefield tapped", Explorer's
     /// Scope). Coiling Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
+    /// `may`: the player may keep the land off the battlefield (it then goes
+    /// to hand, or stays on top with `nonland_stays`) — Risen Reef.
     RevealTopLandToBattlefieldElseHand {
         who: PlayerRef,
         #[serde(default)]
         tapped: bool,
         #[serde(default)]
         nonland_stays: bool,
+        #[serde(default)]
+        may: bool,
     },
 
     /// Look at the top card of `who`'s library; if it's a land, put it into

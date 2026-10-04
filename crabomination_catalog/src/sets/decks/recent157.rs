@@ -139,6 +139,7 @@ pub fn fecund_greenshell() -> CardDefinition {
                 who: PlayerRef::You,
                 tapped: true,
                 nonland_stays: false,
+                may: true,
             },
         }],
         ..Default::default()

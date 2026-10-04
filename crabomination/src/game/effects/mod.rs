@@ -31363,13 +31363,30 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopLandToBattlefieldElseHand { who, tapped, nonland_stays } => {
+            Effect::RevealTopLandToBattlefieldElseHand { who, tapped, nonland_stays, may } => {
+                let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (cid, name, is_land) =
                         (top.id, top.definition.name, top.definition.is_land());
+                    // "If it's a land card, you **may** put it onto the battlefield."
+                    let deploy = if is_land && *may {
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Put {name} onto the battlefield?"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                            OptionalKind::FreeUpside,
+                        ) else {
+                            return Ok(());
+                        };
+                        yes
+                    } else {
+                        is_land
+                    };
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
-                    let dest = if is_land {
+                    let dest = if deploy {
                         ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped }
                     } else if *nonland_stays {
                         continue;
@@ -31377,6 +31394,9 @@ impl GameState {
                         ZoneDest::Hand(PlayerRef::Seat(p))
                     };
                     self.move_card_to(cid, &dest, ctx, events);
+                }
+                if *may {
+                    self.clear_answer_log();
                 }
                 Ok(())
             }

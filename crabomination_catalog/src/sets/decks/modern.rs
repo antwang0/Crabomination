@@ -36341,8 +36341,8 @@ pub fn dragonlord_atarka() -> CardDefinition {
 }
 
 /// Risen Reef — {1}{G}{U} 1/1 Elemental. Whenever this or another Elemental you
-/// control enters, look at the top card: a land enters tapped (the "may" is
-/// always taken), else it goes to hand.
+/// control enters, look at the top card: a land may enter tapped, else it goes
+/// to hand.
 pub fn risen_reef() -> CardDefinition {
     CardDefinition {
         name: "Risen Reef",
@@ -36364,6 +36364,7 @@ pub fn risen_reef() -> CardDefinition {
                 who: PlayerRef::You,
                 tapped: true,
                 nonland_stays: false,
+                may: true,
             },
         }],
         ..Default::default()
@@ -55184,6 +55185,7 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
                 who: PlayerRef::You,
                 tapped: false,
                 nonland_stays: false,
+                may: false,
             },
         }],
         ..Default::default()
@@ -63019,7 +63021,7 @@ pub fn sanctuary_lockdown() -> CardDefinition {
 
 /// Parcelbeast — {2}{G}{U} 2/4 Elemental Beast. Mutate {G}{U}. {1}, {T}: Look at
 /// the top card of your library; if it's a land you may put it onto the
-/// battlefield, else into your hand. (The "may" on a land collapses to yes.)
+/// battlefield, else into your hand.
 pub fn parcelbeast() -> CardDefinition {
     CardDefinition {
         name: "Parcelbeast",
@@ -63039,6 +63041,7 @@ pub fn parcelbeast() -> CardDefinition {
                 who: PlayerRef::You,
                 tapped: false,
                 nonland_stays: false,
+                may: true,
             },
             ..Default::default()
         }],

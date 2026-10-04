@@ -1529,6 +1529,7 @@ pub fn coiling_oracle() -> CardDefinition {
             who: PlayerRef::You,
             tapped: false,
             nonland_stays: false,
+            may: false,
         })],
         ..Default::default()
     }
