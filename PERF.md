@@ -3239,6 +3239,13 @@ pod (strict debug) CRAB_ANSWER_LOG=strict, every deck: 4 seats x 20 (63501+),
                    6 x 12 (63601+), 3 x 20 (65301+), 5 x 12 (65501+), 4 x 15
                    conceding (65401+) = 3,646 games, all decided, no leak
 suite              23,956 / 0 / 5
+second half        CR 613.8 gates (changeling / color / keyword) + SecondPass
+                   packing, callgrind fixed --games 6 against their parent
+                   4911c8c44: 868,223,216 -> 872,343,637 Ir (+0.47 %;
+                   compute_permanent_pass +1.51 M, affected_includes_gated
+                   +1.01 M, computed_permanent_hinted +0.78 M); --bench
+                   byte-identical; 4 / 6 seats x 100 every deck (69401+ /
+                   69601+) all decided; suite 23,984 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
