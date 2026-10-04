@@ -405,8 +405,8 @@ pub fn genestealer_patriarch() -> CardDefinition {
 }
 
 /// Ghyrson Starn, Kelermorph — ward {2}; another source of yours dealing
-/// exactly 1 damage has Ghyrson deal 2 more to the same recipient.
-/// Residual: only a permanent source's damage is seen.
+/// exactly 1 damage has Ghyrson deal 2 more to the same recipient — a
+/// spell's damage too (`fire_spell_damage_listeners`).
 pub fn ghyrson_starn_kelermorph() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::generic(2))],
@@ -774,13 +774,12 @@ pub fn the_first_tyrannic_war() -> CardDefinition {
 }
 
 /// The Red Terror — a red source of yours dealing damage gives it a +1/+1
-/// counter.
-/// Residual: only a permanent source's damage is seen.
+/// counter; a red spell's damage counts (`fire_spell_damage_listeners`).
 pub fn the_red_terror() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsDamage, EventScope::YourControl)
-                .with_filter(trigger_is(R::HasColor(Color::Red)))
+                .with_filter(Predicate::TriggerSourceHasColor(Color::Red))
                 .once_per_batch(),
             effect: plus(Selector::This, Value::ONE),
         }],

@@ -2021,10 +2021,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III: a land among the exiled cards can't be played. |
-| 🟡 Ghyrson Starn, Kelermorph | Tyranid Swarm (40K) | only a permanent source's 1 damage is seen (not an instant's or sorcery's). |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
-| 🟡 The Red Terror | Tyranid Swarm (40K) | only a permanent source's damage is seen (not a red instant's or sorcery's). |
 | 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |

@@ -296,3 +296,19 @@ fn magus_lucea_kane_copies_the_next_x_ability() {
     cast_x(&mut g, 0, hydra, None, Some(2)).expect("hydra");
     assert_eq!(named(&g, 0, "Primordial Hydra").len(), 1, "the spell half is spent too");
 }
+
+/// A spell is a source too (CR 120.1): Spark Jolt's 1 damage has Ghyrson add
+/// 2, and The Red Terror grows off the red spell's damage — and off red
+/// Ghyrson's — once each.
+#[test]
+fn spell_damage_reaches_ghyrson_and_the_red_terror() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::ghyrson_starn_kelermorph());
+    let terror = g.add_card_to_battlefield(0, catalog::the_red_terror());
+    let jolt = g.add_card_to_hand(0, catalog::spark_jolt());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g, 0);
+    cast_x(&mut g, 0, jolt, Some(Target::Player(1)), None).expect("jolt");
+    assert_eq!(g.players[1].life, 20 - 1 - 2, "the jolt's 1 became 3");
+    assert_eq!(counters(&g, terror), 2, "the red spell, then red Ghyrson");
+}
