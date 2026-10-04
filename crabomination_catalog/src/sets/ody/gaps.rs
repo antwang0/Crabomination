@@ -1089,13 +1089,19 @@ pub fn standstill() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            // "Sacrifice this. If you do, …" — a second spell's trigger finds
+            // it already gone and draws nobody anything.
             effect: Effect::Seq(vec![
-                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::IsSource },
-                Effect::Draw {
-                    who: Selector::Player(PlayerRef::OpponentOf(Box::new(
-                        PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
-                    ))),
-                    amount: Value::Const(3),
+                Effect::SacrificeSource,
+                Effect::If {
+                    cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::Player(PlayerRef::OpponentOf(Box::new(
+                            PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                        ))),
+                        amount: Value::Const(3),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
         }],

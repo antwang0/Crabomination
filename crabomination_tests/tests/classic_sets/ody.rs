@@ -322,6 +322,33 @@ fn standstill_refills_the_casters_opponents() {
     assert_eq!(g.players[0].hand.len(), before + 3, "the caster's opponent drew three");
 }
 
+/// CR 118.3 — "sacrifice this. If you do": two spells in a row trigger
+/// Standstill twice, and only the first trigger, which sacrifices it, draws.
+#[test]
+fn standstill_pays_off_once_for_two_spells() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::standstill());
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let before = g.players[0].hand.len();
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 3, "three cards, not six");
+}
+
 /// Aven Windreader turns a library top face up until it moves.
 #[test]
 fn aven_windreader_reveals_a_library_top() {
