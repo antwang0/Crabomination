@@ -3333,6 +3333,14 @@ fourth part        CR 603.2 departed "enters" listeners (one extra
                    listeners: --bench byte-identical, pods 4 x 4 (74001+) +
                    6 x 6 (74201+) every deck = 370 games, all decided, 0 %
                    stalls; suite 24,019 / 0 / 5
+second stretch     CR 603.3b attack-trigger APNAP sort, CR 603.3c mode
+                   legality, WithTriggerBatch, graveyard_card_count:
+                   --bench 196,176 / 613.0 / 0 stalls, determinism ok,
+                   byte-identical; pods (release-fast) 4 x 10 (82001+) +
+                   5 x 10 (82201+) + 6 x 10 (82401+) every deck = 1,140
+                   games, 1,138 decided, 2 legit undecided (a 999-Inkling
+                   board cap; an Exocrine X=13 draw); debug pods 4 x 2 +
+                   3 x 2 = 214 games clean; suite 22,852 + 1,196 / 0
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
