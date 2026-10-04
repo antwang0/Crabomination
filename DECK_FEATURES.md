@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`016kc94f`). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`01WwQaPJ`, 158/183). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -51,17 +51,18 @@ they call a deck 🟡, the table wins.
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
 | 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
-| 152 | Anje Falkenrath (BR) | 2: chainer_nightmare_adept, krrik_son_of_yawgmoth |
+| 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
-| 166 | The Wise Mothman (BGU) | 1: rampaging_yao_guai |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
-| 177 | Szarekh, the Silent King (B) | 2: biotransference, canoptek_wraith |
+| 177 | Szarekh, the Silent King (B) | 1: biotransference |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 5: aces_baseball_bat, peri_brown, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor |
+
+158 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 157 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

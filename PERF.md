@@ -3191,6 +3191,28 @@ pod (strict      CRAB_ANSWER_LOG=strict debug at the later tip (Haldan, Clara):
                  CRAB_POD_CONCEDE=5 (98201+) = 1,385 games, all decided, no finds
 ```
 
+### 2026-10-04 (Commander session `01WwQaPJ`, second stretch) — guardrail, no perf work
+
+Engine edits on reachable paths: the activation push wraps its body in
+`WithPaidCosts` / `WithCountersRemovedAsCost` only when a cost set that
+scratch (CR 602.2b); `equip` rejects a self-attach; a cast resets and maybe
+stamps `CardData::cast_discarded_mana_value`; the cross-slot
+`SlotsTotalManaValueAtMost` atom. Bot: `tap_maker` (pods only), reconfigure
+in `pick_equip`, the selection sink's loot shape. Release-fast, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (after the bot changes too); determinism ok
+pod (release)    seeds 91302..91308, 2..8 seats x 2,000 = 14,000 games, all
+                 decided, zero panics; turns/game 19.36 / 32.31 / 45.60 /
+                 57.47 / 68.37 / 81.75 / 96.09 (the ~12 a seat curve holds)
+census           6 seats x 3,000 (42611, decks 0-5) and 6 x 2,000 (42711,
+                 decks 166/182/180/175/169/160): all decided; Bloodline
+                 Keeper's token and the reconfigure cards now activated
+two-player pools cube / sos / sealed x 300 an archetype, seeds 9141/9142:
+                 14,998 of 15,000 decided, the other two CR 104.4a draws
+```
+
 ### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
 
 Engine edits on paths every pool reaches, through three funnels:
