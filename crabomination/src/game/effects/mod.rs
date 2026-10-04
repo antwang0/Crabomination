@@ -16769,6 +16769,10 @@ impl GameState {
                 self.players[ctx.controller].forage_graveyard_casts_turn = Some(self.turn_number);
                 Ok(())
             }
+            Effect::MayCastCreatureFromGraveyardThisTurn => {
+                self.players[ctx.controller].graveyard_creature_cast_turn = Some(self.turn_number);
+                Ok(())
+            }
 
             Effect::PutGraveyardCardOntoBattlefield { filter } => {
                 use crate::effect::ZoneDest;

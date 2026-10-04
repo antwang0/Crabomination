@@ -6079,6 +6079,33 @@ impl GameState {
             }
             return r;
         }
+        // Chainer — one creature spell from your graveyard this turn, any
+        // creature card there as it's cast. Same hop; the cast spends it.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && self.graveyard_creature_cast_available(p, card_id)
+        {
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            self.players[p].hand.push(card);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
+            let mut r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            self.casting_hop = None;
+            match &mut r {
+                Err(_) => {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        self.players[p].send_to_graveyard(card);
+                    }
+                }
+                Ok(evs) => {
+                    self.note_left_graveyard(p, card_id, evs);
+                    self.players[p].graveyard_creature_cast_turn = None;
+                    self.entered_from_graveyard_this_turn.insert(card_id);
+                }
+            }
+            return r;
+        }
         // Noctis — cast a covered spell from your graveyard by paying the
         // static's life surcharge; it enters with a finality counter. Hop the
         // card into hand for the normal cast pipeline; restore on failure.
@@ -6265,6 +6292,22 @@ impl GameState {
             return r;
         }
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default())
+    }
+
+    /// Chainer's unspent "creature spell from your graveyard this turn".
+    pub(crate) fn graveyard_creature_cast_live(&self, p: usize) -> bool {
+        self.players.get(p).is_some_and(|pl| pl.graveyard_creature_cast_turn == Some(self.turn_number))
+    }
+
+    /// `card_id` is a creature card in `p`'s graveyard that Chainer's
+    /// permission can cast now.
+    pub(crate) fn graveyard_creature_cast_available(&self, p: usize, card_id: CardId) -> bool {
+        self.graveyard_creature_cast_live(p)
+            && self.players[p].graveyard.iter().any(|c| {
+                c.id == card_id
+                    && self.computed_is_creature(c)
+                    && !self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
+            })
     }
 
     /// When `card_id` sits in `p`'s graveyard on `p`'s turn and a
@@ -8407,7 +8450,9 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
-        card.cast_from_hand = true;
+        // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
+        // a cast from the card's real zone, not from the hand.
+        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -8484,7 +8529,9 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
-        card.cast_from_hand = true;
+        // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
+        // a cast from the card's real zone, not from the hand.
+        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -8681,7 +8728,9 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
-        card.cast_from_hand = true;
+        // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
+        // a cast from the card's real zone, not from the hand.
+        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -9615,7 +9664,9 @@ impl GameState {
         let mut card =
             self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         cast_census::add(1);
-        card.cast_from_hand = true;
+        // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
+        // a cast from the card's real zone, not from the hand.
+        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));

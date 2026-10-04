@@ -7569,10 +7569,11 @@ pub(super) fn cast_candidates<'a>(
         }
         | if w.may_play { may_play_specialty(state, seat) } else { 0 }
         | if facts.prepared { spec::PREPARED } else { 0 }
-        | if facts.grants_gy_cast
+        | if (facts.grants_gy_cast
             && (state.active_player_idx == seat || facts.grants_gy_cast_any_turn)
             // Coram casts from ANY graveyard, so an empty own one isn't a skip.
-            && (!state.players[seat].graveyard.is_empty() || state.has_milled_play_permission(seat))
+            && (!state.players[seat].graveyard.is_empty() || state.has_milled_play_permission(seat)))
+            || (state.graveyard_creature_cast_live(seat) && !state.players[seat].graveyard.is_empty())
         {
             spec::GY_GRANT
         } else {
@@ -9033,10 +9034,11 @@ pub(super) fn cast_candidates<'a>(
         let own_alt =
             c.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard);
         let granted = !own_alt
-            && facts.grants_gy_cast
             && !c.definition.is_land()
-            && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
-                || state.graveyard_cast_type_available(seat, c.id).is_some());
+            && ((facts.grants_gy_cast
+                && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
+                    || state.graveyard_cast_type_available(seat, c.id).is_some()))
+                || state.graveyard_creature_cast_available(seat, c.id));
         if !own_alt && !granted {
             continue;
         }

@@ -9026,6 +9026,10 @@ pub enum Effect {
     /// foraging in addition to paying their other costs; a creature cast this
     /// way enters with a finality counter" (Osteomancer Adept, CR 701.61).
     GrantForageGraveyardCreatureCastsThisTurn,
+    /// "You may cast a creature spell from your graveyard this turn"
+    /// (Chainer, Nightmare Adept): one cast, any creature card there when
+    /// it's cast (`Player::graveyard_creature_cast_turn`).
+    MayCastCreatureFromGraveyardThisTurn,
     /// "Put a `filter` card from a graveyard onto the battlefield under your
     /// control" (Victor, Valgavoth's Seneschal). Untargeted: a resolution-time
     /// `Decision::ChooseCards` over *every* graveyard, auto-picking the highest

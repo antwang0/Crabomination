@@ -1218,6 +1218,11 @@ pub struct PlayerData {
     /// their graveyard by foraging (Osteomancer Adept). Cleared at cleanup.
     #[serde(default)]
     pub forage_graveyard_casts_turn: Option<u32>,
+    /// "You may cast a creature spell from your graveyard this turn"
+    /// (Chainer, Nightmare Adept): the turn it was granted, cleared by the
+    /// one cast it allows. Read by `graveyard_creature_cast_available`.
+    #[serde(default)]
+    pub graveyard_creature_cast_turn: Option<u32>,
     /// CR 502.3 — number of this player's upcoming untap steps to skip
     /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
     /// their untap step would run; while > 0 their permanents don't untap.
@@ -1742,6 +1747,7 @@ impl Player {
             spell_names_cast_this_turn: crate::copyvec::CopyVec::new(),
             spell_ids_cast_this_turn: crate::copyvec::CopyVec::new(),
             forage_graveyard_casts_turn: None,
+            graveyard_creature_cast_turn: None,
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,

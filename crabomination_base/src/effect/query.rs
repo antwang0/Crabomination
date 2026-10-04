@@ -1190,6 +1190,7 @@ impl Effect {
             | Effect::PutGraveyardCardOntoBattlefield { .. }
             | Effect::RevealTopExileOnePerCardType { .. }
             | Effect::GrantForageGraveyardCreatureCastsThisTurn
+            | Effect::MayCastCreatureFromGraveyardThisTurn
             | Effect::GainControlWhileTriggerAuraAttached => false,
             // The fan-out ref can itself name a target ("each player other
             // than *its controller*" — Fractured Identity), so both halves.
