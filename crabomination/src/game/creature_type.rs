@@ -85,6 +85,66 @@ impl GameState {
             })
     }
 
+    /// CR 205.1a / 611.3a — does `card`, off the battlefield, gain card type
+    /// `t` from a static its controller (a spell's caster) or owner controls
+    /// (Biotransference: "creature spells you control and creature cards you
+    /// own that aren't on the battlefield" are artifacts)? The type it must
+    /// already have is read off the printed line, so the question never
+    /// recurses. `false` behind the card-type lane on every other board.
+    pub(crate) fn card_off_battlefield_gains_card_type(&self, card: &CardInstance, t: crate::card::CardType) -> bool {
+        self.off_battlefield_card_type_adds(card).contains(&t)
+    }
+
+    /// The card types [`Self::card_off_battlefield_gains_card_type`] adds to
+    /// `card`; empty (no walk) behind the card-type lane.
+    pub(crate) fn off_battlefield_card_type_adds(
+        &self,
+        card: &CardInstance,
+    ) -> smallvec::SmallVec<[crate::card::CardType; 1]> {
+        use crate::effect::StaticEffect as SE;
+        let mut out = smallvec::SmallVec::new();
+        if !self.battlefield.has_card_type_changer(super::card_can_change_card_types_def)
+            || self.battlefield.find_by_id(card.id).is_some()
+        {
+            return out;
+        }
+        let who = self.stack_caster_for_card(card.id).unwrap_or(card.owner);
+        let has = |having: &crate::card::CardType| {
+            card.definition.card_types.contains(having)
+                || (*having == crate::card::CardType::Creature && card.definition.creature_off_battlefield)
+        };
+        for c in self.battlefield.iter().filter(|c| c.controller == who) {
+            for sa in &c.definition.static_abilities {
+                if let SE::OwnedCardsOffBattlefieldHaveCardType { having, add } = &sa.effect
+                    && has(having)
+                    && !card.definition.card_types.contains(add)
+                    && !out.contains(add)
+                {
+                    out.push(add.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// [`super::layers::requirement_matches_card`] for a card off the
+    /// battlefield, with the card types a static grants it there
+    /// (Biotransference's creature cards are artifacts for Szarekh's mill).
+    pub(crate) fn off_battlefield_card_matches(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+    ) -> bool {
+        let adds = self.off_battlefield_card_type_adds(card);
+        if adds.is_empty() {
+            return super::layers::requirement_matches_card(req, card, controller);
+        }
+        let mut types = card.definition.card_types.to_vec();
+        types.extend(adds);
+        super::layers::requirement_matches_card_typed(req, card, controller, &types, None, None, None)
+    }
+
     /// CR 702.73a / 205.3 — is `card`, off the battlefield, every creature
     /// type (changeling, or Maskwood Nexus's "cards you own")?
     pub(crate) fn card_off_battlefield_is_every_creature_type(&self, card: &CardInstance) -> bool {
@@ -150,7 +210,7 @@ impl GameState {
     #[inline(never)]
     fn computed_has_card_type_slow(&self, card: &CardInstance, t: crate::card::CardType) -> bool {
         if self.battlefield.find_by_id(card.id).is_none() {
-            return card.definition.card_types.contains(&t);
+            return card.definition.card_types.contains(&t) || self.card_off_battlefield_gains_card_type(card, t);
         }
         self.computed_permanent_on(card)
             .map_or_else(|| card.definition.card_types.contains(&t), |cp| cp.card_types().contains(&t))

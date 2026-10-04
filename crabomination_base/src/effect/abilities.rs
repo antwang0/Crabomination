@@ -2024,6 +2024,12 @@ pub enum StaticEffect {
     /// off-battlefield `HasLandType` arms; the battlefield half is a
     /// `LandTypeChanger`.
     OwnedLandCardsOffBattlefieldHaveLandType(crate::card::LandType),
+    /// "[`having`] spells you control and [`having`] cards you own that
+    /// aren't on the battlefield are [`add`]s in addition to their other
+    /// types" (Biotransference's creatures are artifacts). Read by the
+    /// off-battlefield card-type arms (`card_off_battlefield_gains_card_type`);
+    /// the battlefield half is an `AddCardTypeToMatching`. CR 205.1a / 611.3a.
+    OwnedCardsOffBattlefieldHaveCardType { having: crate::card::CardType, add: crate::card::CardType },
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,

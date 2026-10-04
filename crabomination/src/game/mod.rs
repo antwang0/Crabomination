@@ -32713,6 +32713,7 @@ fn static_effect_to_effects(
             | StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
             | StaticEffect::OwnedCardsOffBattlefieldAreEveryCreatureType { .. }
             | StaticEffect::OwnedLandCardsOffBattlefieldHaveLandType(_)
+            | StaticEffect::OwnedCardsOffBattlefieldHaveCardType { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::GraveyardCardsHaveRetrace { .. }
             | StaticEffect::CollectsLeaverCounters

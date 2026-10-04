@@ -10719,7 +10719,7 @@ impl GameState {
                 // graveyard and match `filter`.
                 let cands: Vec<(CardId, String)> = self.players[p].graveyard.iter()
                     .filter(|c| milled.contains(&c.id)
-                        && crate::game::layers::requirement_matches_card(filter, c, p))
+                        && self.off_battlefield_card_matches(filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if cands.is_empty() {
@@ -10778,7 +10778,7 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         milled.contains(&c.id)
-                            && crate::game::layers::requirement_matches_card(filter, c, p)
+                            && self.off_battlefield_card_matches(filter, c, p)
                     })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();

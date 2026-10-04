@@ -4593,7 +4593,7 @@ impl GameState {
             if on_bf && (card.bestowed || gates.card(self)) {
                 return None;
             }
-            Some(card.definition.card_types.contains(&t))
+            Some(card.definition.card_types.contains(&t) || (!on_bf && self.card_off_battlefield_gains_card_type(card, t)))
         };
         match req {
             R::Any => Some(true),
@@ -5278,7 +5278,10 @@ impl GameState {
                     let gathered =
                         !computed_absent() && (card.bestowed || self.card_type_change_in_scope());
                     if !gathered {
-                        return card.definition.card_types.contains(&t);
+                        // CR 611.3a — off the battlefield, a static's grant
+                        // (Biotransference) beside the printed line.
+                        return card.definition.card_types.contains(&t)
+                            || (bf_card.is_none() && self.card_off_battlefield_gains_card_type(card, t));
                     }
                     match computed() {
                         Some(cp) => cp.card_types().contains(&t),

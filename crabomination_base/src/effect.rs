@@ -13176,6 +13176,9 @@ pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
     match effect {
         // `static_effect_to_effects` arms.
         SE::MatchingLandsAreCreatures { .. } | SE::AddCardTypeToMatching { .. } => true,
+        // The off-battlefield half: no layer effect, but the same gate tells
+        // the card-type readers a type may differ from the printed line.
+        SE::OwnedCardsOffBattlefieldHaveCardType { .. } => true,
         // Stateful gather passes — each reads live GameState (devotion, a
         // counter count, a predicate), so it can't route through
         // `static_effect_to_effects`, but the printed static is the same tell.
