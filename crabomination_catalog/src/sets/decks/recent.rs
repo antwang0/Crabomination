@@ -683,20 +683,46 @@ pub fn bloodthirsty_adversary() -> CardDefinition {
         .and(SelectionRequirement::ManaValueAtMost(3))
         .and(SelectionRequirement::InYourGraveyard);
     CardDefinition {
-        // CR 603.3d — the cards are targets, chosen as the trigger goes on
-        // the stack (Rot Hulk's shape); the cap is the payments.
-        triggered_abilities: vec![etb(Effect::CapTargetsAt {
-            amount: Value::TimesKicked,
-            body: Box::new(Effect::ApplyToTargets {
-                max_targets: 8,
-                min_targets: 0,
-                filter: spells,
-                effect: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
-                    Effect::CopyCardAndCastFree { what: Selector::Target(0) },
-                ])),
-            }),
-        })],
+        // "When this creature enters, you may pay {2}{R} any number of
+        // times. When you pay this cost one or more times, …" — the payments
+        // are made as the ETB resolves (whether or not it was cast), and the
+        // payoff is a CR 603.7 reflexive trigger whose up-to-that-many
+        // targets are chosen as it goes on the stack.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::MayPayRepeatedly {
+                who: PlayerRef::You,
+                description: "Pay {2}{R} (again) for Bloodthirsty Adversary?".into(),
+                mana_cost: cost(&[generic(2), r()]),
+                body: Box::new(Effect::Noop),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::TimesPaidThisEffect, Value::ONE),
+                then: Box::new(Effect::WithX {
+                    x: Value::TimesPaidThisEffect,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::AddCounter {
+                                what: Selector::This,
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::XFromCost,
+                            },
+                            Effect::CapTargetsAtX {
+                                body: Box::new(Effect::ApplyToTargets {
+                                    max_targets: 8,
+                                    min_targets: 0,
+                                    filter: spells,
+                                    effect: Box::new(Effect::Seq(vec![
+                                        Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                                        Effect::CopyCardAndCastFree { what: Selector::Target(0) },
+                                    ])),
+                                }),
+                            },
+                        ])),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         name: "Bloodthirsty Adversary",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
@@ -706,11 +732,7 @@ pub fn bloodthirsty_adversary() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![
-            Keyword::Haste,
-            Keyword::Multikicker(cost(&[generic(2), r()])),
-        ],
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        keywords: vec![Keyword::Haste],
         ..Default::default()
     }
 }

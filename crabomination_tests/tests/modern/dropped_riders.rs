@@ -2,8 +2,9 @@
 //! `audit_activated_costs.py` finds): each test asserts the rider, not the
 //! card's already-covered body.
 
-use crabomination::card::{CardId, CreatureType, Keyword};
+use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -241,25 +242,39 @@ fn kari_zev_ragavan_attacks_and_leaves() {
     assert!(g.battlefield_find(rag).is_none(), "exiled at end of combat");
 }
 
-/// Bloodthirsty Adversary — kicked once, it exiles a targeted instant with
-/// mana value 3 or less from your graveyard, copies it and casts the copy
-/// free. CR 603.3d: the cards are targets, capped at the payments, so a
-/// second target past the one payment is left in the graveyard.
+/// Bloodthirsty Adversary — "When this creature enters, you may pay {2}{R}
+/// any number of times. When you pay this cost one or more times, put that
+/// many +1/+1 counters on this creature, then exile up to that many target
+/// instant and/or sorcery cards …". Paid once as the ETB resolves (it was
+/// never cast — no kicker involved), the CR 603.7 reflexive trigger takes one
+/// target: one counter, one card exiled and its copy cast free, the other
+/// card left in the graveyard.
 #[test]
 fn bloodthirsty_adversary_recasts_a_graveyard_spell() {
     let mut g = main_phase();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let shock = g.add_card_to_graveyard(0, catalog::shock());
-    let adv = g.add_card_to_battlefield(0, catalog::bloodthirsty_adversary());
-    g.battlefield_find_mut(adv).unwrap().kick_count = 1;
-    let etb = catalog::bloodthirsty_adversary().triggered_abilities[0].effect.clone();
-    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(adv, 0, None, 0);
-    ctx.targets = vec![Target::Permanent(shock), Target::Permanent(bolt)];
-    g.resolve_effect(&etb, &ctx).expect("etb");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    let adv = g.move_card_to_battlefield_for_test(0, catalog::bloodthirsty_adversary());
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == shock), "the first target is exiled");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "one payment, one card");
-    assert_eq!(g.players[1].life, 18, "the Shock's copy was cast free at the opponent");
+    assert_eq!(g.battlefield_find(adv).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "paid once");
+    let exiled = [bolt, shock].iter().filter(|id| g.exile.iter().any(|c| c.id == **id)).count();
+    assert_eq!(exiled, 1, "one payment, one card");
+    assert!(g.players[1].life < 20, "the copy was cast free at the opponent");
+}
+
+/// The payments are optional and made at resolution: with no mana the ETB
+/// does nothing — no counters, nothing exiled.
+#[test]
+fn bloodthirsty_adversary_unpaid_does_nothing() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let adv = g.move_card_to_battlefield_for_test(0, catalog::bloodthirsty_adversary());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(adv).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
 }
 
 /// Aura of Silence — only *opponents'* artifact and enchantment spells cost
