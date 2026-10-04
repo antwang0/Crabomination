@@ -22945,6 +22945,12 @@ impl GameState {
                 queued_effect =
                     Effect::WithTreasureManaSpent { amount: activation_treasure_mana, body: Box::new(queued_effect) };
             }
+            if ability.remove_all_counters_cost.is_some() {
+                queued_effect = Effect::WithCountersRemovedAsCost {
+                    amount: self.counters_removed_as_cost,
+                    body: Box::new(queued_effect),
+                };
+            }
             // "If the discarded card was a creature card" (Moria Scavenger):
             // the cost's card rides to resolution — only for an ability that
             // asks, so every other discard-cost ability queues as before.

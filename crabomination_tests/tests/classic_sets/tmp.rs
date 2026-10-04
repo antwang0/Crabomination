@@ -183,6 +183,24 @@ fn essence_bottle_cashes_in_every_elixir_counter() {
     assert_eq!(g.battlefield_find(bottle).unwrap().counter_count(CounterType::Elixir), 0);
 }
 
+/// CR 602.2b — the counters are removed as the ability is activated; the
+/// tally rides the ability, so another activation in response (which pays its
+/// own costs) doesn't zero Essence Bottle's payoff.
+#[test]
+fn essence_bottle_tally_survives_an_activation_in_response() {
+    let mut g = two_player_game();
+    let bottle = ready(&mut g, 0, catalog::essence_bottle());
+    let other = ready(&mut g, 0, catalog::essence_bottle());
+    g.step = TurnStep::PreCombatMain;
+    g.battlefield_find_mut(bottle).unwrap().add_counters(CounterType::Elixir, 3);
+    let life = g.players[0].life;
+    activate(&mut g, bottle, 1, None).expect("cash in");
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, other, 0, None).expect("bank in response");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6, "the three removed counters still pay 6");
+}
+
 /// Torture Chamber shares the same cost: the ping scales with the counters the
 /// activation removed.
 #[test]

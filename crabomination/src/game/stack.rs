@@ -307,6 +307,7 @@ impl GameState {
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::WithTreasureManaSpent { body, .. }
+            | Effect::WithCountersRemovedAsCost { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }

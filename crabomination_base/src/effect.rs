@@ -10901,6 +10901,12 @@ pub enum Effect {
     /// `Value::TreasureManaSpentToActivate`. Wrapped around the queued effect
     /// by `activate_ability` when any was spent; not for card definitions.
     WithTreasureManaSpent { amount: u32, body: Box<Effect> },
+    /// Internal plumbing: re-stamp how many counters the activation's
+    /// `remove_all_counters_cost` removed before running `body`, for
+    /// `Value::CountersRemovedAsCost` — the tally is paid at activation
+    /// (CR 602.2b) and an activation in response resets the scratch.
+    /// Wrapped by `activate_ability`; not for card definitions.
+    WithCountersRemovedAsCost { amount: u32, body: Box<Effect> },
 
     /// Internal plumbing: re-stamp how many nonland cards the caster
     /// discarded to pay an "as an additional cost, discard" (CR 601.2h) before

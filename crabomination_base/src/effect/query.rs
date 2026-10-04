@@ -461,6 +461,7 @@ impl Effect {
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::WithTreasureManaSpent { body, .. }
+            | Effect::WithCountersRemovedAsCost { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
@@ -1529,7 +1530,9 @@ impl Effect {
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
-            Effect::WithTappedPower { body, .. } | Effect::WithTreasureManaSpent { body, .. } => {
+            Effect::WithTappedPower { body, .. }
+            | Effect::WithTreasureManaSpent { body, .. }
+            | Effect::WithCountersRemovedAsCost { body, .. } => {
                 body.requires_target()
             }
             Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. }
@@ -3099,6 +3102,7 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::WithTreasureManaSpent { body, .. }
+            | Effect::WithCountersRemovedAsCost { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
@@ -5536,6 +5540,8 @@ impl Effect {
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::WithTappedPower { body, .. }
                 | Effect::WithTreasureManaSpent { body, .. }
+                | Effect::WithCountersRemovedAsCost { body, .. }
+            | Effect::WithCountersRemovedAsCost { body, .. }
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
