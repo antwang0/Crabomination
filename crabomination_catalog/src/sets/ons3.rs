@@ -315,21 +315,34 @@ pub fn wheel_and_deal() -> CardDefinition {
 /// Entrails Feaster — feed it a graveyard creature each upkeep or it stays down.
 pub fn entrails_feaster() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_upkeep(Effect::MayDoElse {
-            description: "Exile a creature card from a graveyard?".into(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::ExileFromGraveyard {
-                    who: PlayerRef::EachPlayer,
-                    count: Value::ONE,
-                    filter: R::Creature,
-                },
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            ])),
-            else_: Box::new(Effect::Tap { what: Selector::This }),
+        // "Exile a creature card from a graveyard" — one card, from any
+        // graveyard (it exiled one from each). None anywhere: it can't be
+        // done, so the creature taps (CR 118.3).
+        triggered_abilities: vec![on_upkeep({
+            let creature_cards = || Selector::EachMatching {
+                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
+                filter: R::Creature,
+            };
+            Effect::If {
+                cond: crate::card::Predicate::SelectorExists(creature_cards()),
+                then: Box::new(Effect::MayDoElse {
+                    description: "Exile a creature card from a graveyard?".into(),
+                    body: Box::new(crate::effect::shortcut::choose_one_then(
+                        creature_cards(),
+                        PlayerRef::You,
+                        Effect::Seq(vec![
+                            Effect::Move { what: crate::effect::shortcut::chosen_one(), to: ZoneDest::Exile },
+                            Effect::AddCounter {
+                                what: Selector::This,
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::ONE,
+                            },
+                        ]),
+                    )),
+                    else_: Box::new(Effect::Tap { what: Selector::This }),
+                }),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            }
         })],
         ..creature(
             "Entrails Feaster",

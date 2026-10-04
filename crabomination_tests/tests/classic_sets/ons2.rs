@@ -863,3 +863,25 @@ fn tephraderm_sends_spell_damage_to_the_spells_controller() {
     assert_eq!(g.players[1].life, 17, "and handed it back to the caster");
     assert_eq!(g.players[0].life, 20);
 }
+
+/// Entrails Feaster — "exile a creature card from a graveyard": one card,
+/// not one from each graveyard; with none anywhere, it taps.
+#[test]
+fn entrails_feaster_exiles_one_creature_card() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::entrails_feaster());
+    let body = g.battlefield_find(src).unwrap().definition.triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert!(g.battlefield_find(src).unwrap().tapped, "nothing to exile: tapped");
+    g.battlefield_find_mut(src).unwrap().tapped = false;
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    let left = g.players.iter().map(|p| p.graveyard.len()).sum::<usize>();
+    assert_eq!(left, 1, "one Bears exiled, the other stays");
+    let fe = g.battlefield_find(src).unwrap();
+    assert!(!fe.tapped);
+    assert_eq!(fe.counter_count(CounterType::PlusOnePlusOne), 1);
+}
