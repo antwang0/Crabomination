@@ -691,7 +691,14 @@ impl GameState {
                         player,
                         installed_turn,
                     } => ends_for(player) && turn > installed_turn,
+                    // CR 800.4m — "until the end of your next turn" of a
+                    // departed player ends where that turn would have begun
+                    // (its own cleanup will never come).
                     crate::game::layers::EffectDuration::UntilYourNextUpkeep {
+                        player,
+                        installed_turn,
+                    }
+                    | crate::game::layers::EffectDuration::UntilEndOfYourNextTurn {
                         player,
                         installed_turn,
                     } => departed & (1u64 << (player & 63)) != 0 && turn > installed_turn,
@@ -699,7 +706,7 @@ impl GameState {
                 };
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
                 self.expire_granted_triggers(|g| ends_now(&g.expiry));
-                self.revert_next_turn_copies(self.active_player_idx, turn, false);
+                self.revert_next_turn_copies(self.active_player_idx, turn, false, departed);
                 // CR 801.2c — ranges of influence are determined as each turn
                 // begins, so a player leaving only shifts them now.
                 self.refresh_range_matrix();
@@ -4643,16 +4650,25 @@ impl GameState {
         self.players[p].life_locked_until_next_turn = false;
         // "Opponents' spells cost more until your next turn" expires too
         // (Elspeth Conquers Death II).
-        retain_cold!(self.turn_scoped_spell_taxes, |t| t.controller != p);
+        // CR 800.4m — a departed controller's "until your next turn" ends
+        // where that turn would have begun (`ends`), never "indefinitely".
+        retain_cold!(self.turn_scoped_spell_taxes, |t| !ends(t.controller));
         // "Opponents can't cast spells named X until your next turn"
         // (Academic Probation mode 0) expires as the lock owner's turn begins.
-        if !self.players[p].opponents_cant_cast_named.is_empty() {
-            self.players[p].opponents_cant_cast_named.clear();
+        for q in 0..self.players.len() {
+            if ends(q) && !self.players[q].opponents_cant_cast_named.is_empty() {
+                self.players[q].opponents_cant_cast_named.clear();
+            }
         }
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).
-        retain_cold!(self.staggered_damage_players, |(_, reg)| *reg != p);
-        retain_cold!(self.tripled_combat_damage_to_opponents, |(_, reg)| *reg != p);
+        retain_cold!(self.staggered_damage_players, |(_, reg)| !ends(*reg));
+        // Single Combat ("until the end of your next turn") ends at its
+        // registrant's cleanup; a DEPARTED registrant's ends here, where that
+        // turn would have begun (CR 800.4m) — else nobody casts a creature
+        // spell for the rest of the game.
+        retain_cold!(self.creature_pw_cast_locks, |(reg, _)| *reg == p || !ends(*reg));
+        retain_cold!(self.tripled_combat_damage_to_opponents, |(_, reg)| !ends(*reg));
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {
@@ -4927,7 +4943,7 @@ impl GameState {
         // flag at the turn boundary.
         self.nonland_permanent_left_bf_this_turn = false;
         // Teyo's −2 lasts until its controller's next turn.
-        if matches!(self.temporary_attack_direction, Some((_, s)) if s == p) {
+        if matches!(self.temporary_attack_direction, Some((_, s)) if ends(s)) {
             self.temporary_attack_direction = None;
         }
         // CR 609.4b — North Star's permission lasts the turn, for every seat
@@ -5167,7 +5183,7 @@ impl GameState {
         ]);
         // CR 707 — "becomes a copy ... until end of turn" swaps snap back.
         self.revert_temporary_copies(&[crate::effect::Duration::EndOfTurn]);
-        self.revert_next_turn_copies(self.active_player_idx, self.turn_number, true);
+        self.revert_next_turn_copies(self.active_player_idx, self.turn_number, true, 0);
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         // Autumn Willow's "until end of turn" shroud waiver (CR 514.2).
         clear_cold!(self.shroud_waivers);

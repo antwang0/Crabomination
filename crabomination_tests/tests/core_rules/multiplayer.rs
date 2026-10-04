@@ -7937,3 +7937,38 @@ fn cr_800_4a_replay_skips_a_departed_seats_answer() {
     assert_eq!(g.players[1].life, 25, "seat 1 accepted");
     assert_eq!(g.players[3].life, 25, "seat 3 accepted — its own answer, not seat 2's");
 }
+
+/// CR 800.4m — "until the end of your next turn" from a player who has left
+/// lasts until that turn would have begun, not forever: Single Combat's cast
+/// lock from seat 0, who conceded, lifts when the turn passes seat 0's place.
+/// The lock ended only at the registrant's own cleanup, which never came, so
+/// nobody could cast a creature spell for the rest of the game.
+#[test]
+fn cr_800_4m_a_departed_players_cast_lock_lifts() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(3);
+    for p in 0..3 {
+        for _ in 0..5 {
+            g.add_card_to_library(p, catalog::forest());
+        }
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::LockCreatureAndPlaneswalkerCasts, &ctx).unwrap();
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    g.step = TurnStep::End;
+    g.concede(0);
+    let mut guard = 0;
+    while !(g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        guard += 1;
+        assert!(guard < 200);
+    }
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("the departed seat's lock has lifted");
+}

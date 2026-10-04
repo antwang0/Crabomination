@@ -18485,13 +18485,18 @@ impl GameState {
     /// (turn `turn`): "until your next turn" ones end as it begins, and with
     /// `at_cleanup` the "until the end of your next turn" ones end in its
     /// cleanup step.
-    pub(crate) fn revert_next_turn_copies(&mut self, active: usize, turn: u32, at_cleanup: bool) {
+    /// `departed`: seats whose turn would have begun now (CR 800.4m) — a copy
+    /// lasting until (a point in) a departed player's next turn ends here.
+    pub(crate) fn revert_next_turn_copies(&mut self, active: usize, turn: u32, at_cleanup: bool, departed: u64) {
         use crate::effect::Duration as D;
         if self.temporary_copies.iter().all(|tc| tc.until_turn_of.is_none()) {
             return;
         }
         self.revert_temporary_copies_where(|tc| {
             tc.until_turn_of.is_some_and(|(p, installed)| {
+                if !at_cleanup && departed & (1u64 << (p & 63)) != 0 {
+                    return turn > installed;
+                }
                 p == active
                     && turn > installed
                     && if at_cleanup {
