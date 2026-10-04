@@ -197,6 +197,25 @@ fn concord_with_the_kami_modes_by_board() {
     assert_eq!((g.players[0].hand.len(), named(&g, 0, "Spirit")), (hand + 1, 1));
 }
 
+/// CR 603.3c — Concord's "choose one or more" is chosen as the trigger goes on
+/// the stack, and a mode with no legal target can't be: with no creature
+/// carrying a counter, the card and the Spirit still come.
+#[test]
+fn cr_603_3c_concord_skips_a_mode_with_no_target() {
+    let mut g = main_phase(2);
+    library(&mut g, 0, 2);
+    g.add_card_to_battlefield(0, catalog::concord_with_the_kami());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::rancor());
+    attach(&mut g, aura, bear);
+    let blade = g.add_card_to_battlefield(0, catalog::mage_slayer());
+    attach(&mut g, blade, bear);
+    let hand = g.players[0].hand.len();
+    fire(&mut g, TurnStep::End);
+    assert_eq!((g.players[0].hand.len(), named(&g, 0, "Spirit")), (hand + 1, 1));
+    assert_eq!(counters(&g, bear), 0);
+}
+
 /// Elemental Mastery: the enchanted creature taps for power-many hasty
 /// Elementals, exiled at the next end step.
 #[test]

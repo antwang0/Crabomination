@@ -158,41 +158,39 @@ pub fn collision_of_realms() -> CardDefinition {
     )
 }
 
-/// Concord with the Kami — your end step: a counter on a creature with a
-/// counter, a card with an enchanted creature, a Spirit with an equipped one.
-/// Residual: "Choose one or more" takes every mode that can do something.
+/// Concord with the Kami — your end step, choose one or more: a counter on
+/// a creature with a counter, a card with an enchanted creature, a Spirit
+/// with an equipped one. Each nonempty set of modes is one `ChooseMode`
+/// option (all three first), picked as the trigger goes on the stack.
 pub fn concord_with_the_kami() -> CardDefinition {
     let control = |filter: R| Predicate::SelectorCountAtLeast {
         sel: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(filter)),
         n: Value::ONE,
     };
+    let modes = [
+        Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::WithAnyCounter)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+        Effect::If {
+            cond: control(R::IsEnchanted),
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            else_: Box::new(Effect::Noop),
+        },
+        Effect::If {
+            cond: control(R::IsEquipped),
+            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: colorless_spirit() }),
+            else_: Box::new(Effect::Noop),
+        },
+    ];
+    let sets: [&[usize]; 7] = [&[0, 1, 2], &[0, 1], &[0, 2], &[1, 2], &[0], &[1], &[2]];
     CardDefinition {
         triggered_abilities: vec![at_your(
             TurnStep::End,
-            Effect::OptionalTargets {
-                min: 0,
-                body: Box::new(Effect::Seq(vec![
-                    Effect::AddCounter {
-                        what: target_filtered(R::Creature.and(R::WithAnyCounter)),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::ONE,
-                    },
-                    Effect::If {
-                        cond: control(R::IsEnchanted),
-                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
-                        else_: Box::new(Effect::Noop),
-                    },
-                    Effect::If {
-                        cond: control(R::IsEquipped),
-                        then: Box::new(Effect::CreateToken {
-                            who: PlayerRef::You,
-                            count: Value::ONE,
-                            definition: colorless_spirit(),
-                        }),
-                        else_: Box::new(Effect::Noop),
-                    },
-                ])),
-            },
+            Effect::ChooseMode(
+                sets.iter().map(|set| Effect::Seq(set.iter().map(|&i| modes[i].clone()).collect())).collect(),
+            ),
         )],
         ..spell("Concord with the Kami", cost(&[generic(3), g()]), CardType::Enchantment, Effect::Noop)
     }
