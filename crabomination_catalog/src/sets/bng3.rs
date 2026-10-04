@@ -694,9 +694,9 @@ pub fn acolytes_reward() -> CardDefinition {
     }
 }
 
-/// Champion of Stray Souls — {4}{B}{B} 4/4. Sacrifice X creatures to reanimate
-/// X creature cards from your graveyard (picked at resolution rather than
-/// targeted); {5}{B}{B} from the graveyard puts it back on top.
+/// Champion of Stray Souls — {4}{B}{B} 4/4. Sacrifice X other creatures to
+/// return X target creature cards from your graveyard (CR 601.2c: exactly X);
+/// {5}{B}{B} from the graveyard puts it back on top.
 pub fn champion_of_stray_souls() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
@@ -705,18 +705,16 @@ pub fn champion_of_stray_souls() -> CardDefinition {
                 tap_cost: true,
                 sac_other_filter: Some((R::Creature, 1)),
                 sac_other_x: true,
-                effect: Effect::MoveChosen {
-                    from: Selector::EachMatching {
-                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                        filter: R::Creature,
-                    },
-                    filter: None,
-                    count: Value::XFromCost,
-                    up_to: false,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+                effect: Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        min_targets: 0,
+                        max_targets: 20,
+                        filter: R::Creature.and(R::InYourGraveyard),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    }),
                 },
                 ..Default::default()
             },

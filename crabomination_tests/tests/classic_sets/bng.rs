@@ -1048,7 +1048,8 @@ fn arbiter_of_the_ideal_cheats_in_an_enchantment() {
     );
 }
 
-/// Champion of Stray Souls trades X creatures for X reanimations.
+/// Champion of Stray Souls trades X creatures for X reanimations; the cards are
+/// targets chosen with the activation, exactly X of them (CR 601.2c).
 #[test]
 fn champion_of_stray_souls_reanimates_x() {
     let mut g = main_phase();
@@ -1058,14 +1059,15 @@ fn champion_of_stray_souls_reanimates_x() {
     let dead = g.add_card_to_graveyard(0, catalog::great_hart());
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::ActivateAbility {
+    let act = |target| GameAction::ActivateAbility {
         card_id: champ,
         ability_index: 0,
-        target: None,
+        target,
         additional_targets: vec![],
         x_value: Some(1), mode: None,
-    })
-    .expect("sac one, return one");
+    };
+    assert!(!g.would_accept(act(None)), "X = 1 needs one target");
+    g.perform_action(act(Some(Target::Permanent(dead)))).expect("sac one, return one");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
     assert!(g.battlefield_find(dead).is_some(), "reanimated");
