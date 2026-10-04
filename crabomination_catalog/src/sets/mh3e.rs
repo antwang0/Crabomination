@@ -181,10 +181,9 @@ pub fn volatile_stormdrake() -> CardDefinition {
     }
 }
 
-/// Jolted Awake — {W} sorcery. Target artifact or creature card in your
-/// graveyard; get {E}{E}, then you may pay {E} equal to its mana value to
-/// return it to the battlefield. Cycling {2}. (Printed "up to one" target
-/// modeled as a required target.)
+/// Jolted Awake — {W} sorcery. Up to one target artifact or creature card in
+/// your graveyard; get {E}{E}, then you may pay {E} equal to its mana value to
+/// return it to the battlefield. Cycling {2}.
 pub fn jolted_awake() -> CardDefinition {
     CardDefinition {
         name: "Jolted Awake",

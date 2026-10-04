@@ -458,3 +458,17 @@ fn cr_608_2d_rampant_frogantua_picks_the_milled_lands() {
     assert!(g.battlefield_find(island).is_some_and(|c| c.tapped), "the chosen land, tapped");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == forest), "the other land stays milled");
 }
+
+/// Planar Nexus is every nonbasic land type, in play and in the graveyard
+/// (CR 604.3 — it defines its subtypes): a Desert, a Gate, a Cave.
+#[test]
+fn planar_nexus_is_every_nonbasic_land_type() {
+    use crabomination::card::LandType;
+    let mut g = main_phase(2);
+    let nexus = g.add_card_to_battlefield(0, catalog::planar_nexus());
+    let types = g.computed_permanent(nexus).unwrap().subtypes().land_types.clone();
+    for t in [LandType::Desert, LandType::Gate, LandType::Cave, LandType::Urza] {
+        assert!(types.contains(&t), "{t:?}");
+    }
+    assert!(catalog::planar_nexus().subtypes.land_types.contains(&LandType::Desert), "a Desert card off the battlefield too");
+}

@@ -20489,17 +20489,14 @@ pub fn stonecoil_serpent() -> CardDefinition {
 }
 
 /// Planar Nexus — Land. `{T}: Add {C}.` `{1}, {T}: Add one mana of any color.`
-///
-/// ⚠ It shipped as an **ETB-tapped** land whose only ability was a free
-/// `{T}: any color` — neither half printed. The printed "this land is every
-/// nonbasic land type" is still dropped: `StaticEffect::GrantAllBasicLandTypes`
-/// is the basic-type sibling and there is no nonbasic one. Nonbasic types
-/// produce no mana, so the drop costs nothing the mana ratchet can see.
+/// "This land is every nonbasic land type" defines its subtypes (CR 604.3, so
+/// in every zone — a Desert card in a graveyard): printed as all thirteen.
 pub fn planar_nexus() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Planar Nexus",
         card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: crate::card::LandType::NONBASIC.to_vec(), ..Default::default() },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
