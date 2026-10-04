@@ -802,7 +802,7 @@ pub fn environmental_sciences() -> CardDefinition {
     }
 }
 
-// ── Demonstrate cycle (the STX "Technique" sorceries, CR 702.150) ────────────
+// ── Demonstrate cycle (the STX "Technique" sorceries, CR 702.144) ────────────
 // Each fires `shortcut::demonstrate()` — a SpellCast/SelfSource trigger running
 // `Effect::Demonstrate`, which copies the spell for its caster and an opponent
 // (both copies may choose new targets).

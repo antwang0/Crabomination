@@ -6348,6 +6348,7 @@ fn cr_702_144a_demonstrate_copies_for_the_chosen_opponent() {
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let back = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::healing_technique());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {

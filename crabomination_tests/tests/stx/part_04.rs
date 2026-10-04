@@ -878,6 +878,7 @@ fn prismari_inventor_magecraft_mints_treasure() {
 fn silverquill_lecturer_demonstrates_creature_spells() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::silverquill_lecturer());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add(Color::Green, 2);
     let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
     g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })

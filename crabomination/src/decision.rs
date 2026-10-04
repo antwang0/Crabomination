@@ -211,6 +211,9 @@ pub enum OptionalKind {
     /// Lim-Dûl's Vault: yes pays 1 life to bottom the five-card window at
     /// `offset` into the library and look at the next five.
     DigForLife { offset: u32 },
+    /// Demonstrate (CR 702.144a): yes copies the spell (`source`) and an
+    /// opponent of the seat's choice copies it too.
+    Demonstrate,
 }
 
 impl OptionalKind {
@@ -241,7 +244,8 @@ impl OptionalKind {
             | OptionalKind::Neutral
             | OptionalKind::TemptingOffer
             | OptionalKind::PeaceOffer { .. }
-            | OptionalKind::PushYourLuck { .. } => false,
+            | OptionalKind::PushYourLuck { .. }
+            | OptionalKind::Demonstrate => false,
         }
     }
 }

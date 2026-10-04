@@ -195,15 +195,16 @@ fn sisterhood_of_karn_doubles() {
     assert_eq!(counters(&g, sk), 2);
 }
 
-/// CR 702.150 — The Twelfth Doctor: the first not-from-hand spell is
+/// CR 702.144 — The Twelfth Doctor: the first not-from-hand spell is
 /// demonstrated, and each copy of yours grows it.
 #[test]
-fn cr_702_150_twelfth_doctor_demonstrates() {
+fn cr_702_144_twelfth_doctor_demonstrates() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::return_the_past());
     let twelve = g.add_card_to_battlefield(0, catalog::the_twelfth_doctor());
     let sob = g.add_card_to_graveyard(0, catalog::surge_of_brilliance());
     flood(&mut g, 0);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     let hand = g.players[0].hand.len();
     flashback(&mut g, 0, sob, None).expect("flashback Surge");
     assert!(counters(&g, twelve) >= 1, "your copy grew it");

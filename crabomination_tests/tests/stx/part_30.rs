@@ -16,6 +16,7 @@ fn replication_technique_demonstrate_copies_for_both_players() {
     let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::replication_technique());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
 
@@ -85,10 +86,8 @@ fn healing_technique_returns_card_and_gains_life() {
     assert!(g.players[0].hand.iter().any(|c| c.id == card), "card returned to hand");
     // Gain life equal to the returned card's mana value (Grizzly Bears = 2).
     assert!(g.players[0].life >= life + 2, "gain life equal to mana value");
-    // The Demonstrate copy resolves first and keeps the Bears as its target,
-    // so the original finds its only target gone and is countered on
-    // resolution (CR 608.2b) rather than exiled.
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "countered to the graveyard");
+    // Demonstrate declined (AutoDecider), so the original resolves and exiles itself.
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiled as it resolves");
 }
 
 /// Incarnation Technique mills five, then returns a creature card from your
@@ -123,8 +122,9 @@ fn creative_technique_impulse_casts_a_nonland() {
     let spell = g.add_card_to_hand(0, catalog::creative_technique());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(4);
-    // Accept the Cascade free-cast prompt.
+    // Decline demonstrate, then accept the free-cast prompt.
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
         crabomination::decision::DecisionAnswer::Bool(true),
     ]));
 

@@ -5353,6 +5353,13 @@ pub fn decide_optional_trigger(
             (!last, false)
         }
         K::FreeUpside | K::Neutral => (true, false),
+        // A legendary permanent spell's copy meets the legend rule (CR
+        // 704.5j) and only the opponent's copy survives it.
+        K::Demonstrate => {
+            let legend = optional_trigger_def(state, source)
+                .is_some_and(|d| d.is_permanent() && d.supertypes.contains(&crate::card::Supertype::Legendary));
+            (!legend, false)
+        }
         // Another card averages ~3 mana value: stop with five to spare.
         K::PushYourLuck { total, limit } => (total + 5 <= *limit, false),
         // Dig past a window with nothing to cast, keeping 10 life back.

@@ -1920,7 +1920,7 @@ impl GameState {
     }
 
     /// As `copy_stack_spell`, but `controller` (when `Some`) controls the
-    /// copies and chooses their new targets — CR 702.150 Demonstrate hands a
+    /// copies and chooses their new targets — CR 702.144 Demonstrate hands a
     /// copy to an opponent. `riders` (when `Some`) stamps
     /// `CardInstance.resolve_riders` = (grant_haste, sacrifice_eot) on each
     /// copy — `Effect::CopySpellWithRiders` (Choreographed Sparks); the
@@ -2189,7 +2189,7 @@ impl GameState {
         }
         // Offer the original first so the conservative default keeps it —
         // but only when it's actually legal for *this* chooser. A
-        // Demonstrate copy handed to an opponent (CR 702.150 / 707.12) often
+        // Demonstrate copy handed to an opponent (CR 702.144 / 707.12) often
         // can't keep the caster's target ("…you control"), so forcing it
         // would pick an illegal target; in that case leave the legal set as
         // enumerated so the default lands on a legal object.
@@ -35290,7 +35290,7 @@ impl GameState {
             }
 
             Effect::Demonstrate => {
-                // CR 702.150 — copy this spell for its caster, then an
+                // CR 702.144 — copy this spell for its caster, then an
                 // opponent of the caster's choosing also copies it; every
                 // copy may choose new targets. Fired from a self-cast
                 // trigger, so `ctx.source` is the spell still on the stack.
@@ -35307,6 +35307,22 @@ impl GameState {
                         None => return Ok(()),
                     },
                 };
+                // CR 702.144a — "you **may** copy it".
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    "Demonstrate: copy it (an opponent copies it too)?".into(),
+                    spell_id,
+                    effect,
+                    OptionalKind::Demonstrate,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if !yes {
+                    return Ok(());
+                }
                 self.copy_stack_spell(spell_id, 1, true, events);
                 // CR 702.144a — "choose an opponent. That player copies the
                 // spell": the caster names the seat.

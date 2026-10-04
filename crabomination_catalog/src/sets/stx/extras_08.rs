@@ -35,8 +35,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w};
 /// ⚠ It shipped with an invented Magecraft pump under the printed name
 /// (`scripts/audit_synthesised_name.py`). The grant is a cast trigger on the
 /// Lecturer whose `Effect::Demonstrate` copies the cast spell (its trigger
-/// subject), as The Twelfth Doctor's does; the printed "you may" collapses
-/// as demonstrate's does everywhere.
+/// subject), as The Twelfth Doctor's does.
 pub fn silverquill_lecturer() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Lecturer",
