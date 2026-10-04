@@ -75,7 +75,7 @@ def main():
         slots = int(slots)
         if slots and want != slots and want - players != slots:
             rows.append(f"{name:40} slots {slots} vs printed {want}")
-        elif up_to and mn not in ("0",):
+        elif up_to and slots and mn not in ("0",):
             rows.append(f"{name:40} printed up to {want}; min {mn}")
     for r in rows:
         print(r)
