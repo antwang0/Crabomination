@@ -6,11 +6,6 @@
 //! - **Kros, Defense Contractor** — only the counters its own upkeep
 //!   trigger puts goad; counters other sources put on an opposing creature
 //!   don't.
-//! - **Aven Mimeomancer** — the 3/1 flier lasts while Mimeomancer is on the
-//!   battlefield (a static over every creature with a feather counter), not
-//!   for as long as the counter stays.
-//! - **Agent's Toolkit** — its counters arrive by an entry trigger, and the
-//!   counter it moves is the engine's pick (+1/+1 first).
 //! - **Littjara Mirrorlake** — the extra +1/+1 counter is put on the copy
 //!   after it enters.
 //! - **Skyship Plunderer** — a player target gets one more energy,

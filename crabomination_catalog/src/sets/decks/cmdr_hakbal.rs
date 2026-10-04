@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_hakbal.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Xolatoyac, the Smiling Flood** — its flooded lands are Islands only
-//!   while Xolatoyac is on the battlefield (the ruling keeps them Islands).
 //! - **Bygone Marvels** — a copy's new target is the decider's pick, and the
 //!   auto-decider keeps the original's (so that copy returns nothing).
 
