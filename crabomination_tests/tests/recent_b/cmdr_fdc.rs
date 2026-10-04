@@ -6187,6 +6187,30 @@ fn cr_701_15a_firkraag_goads_and_rewards_forced_attackers() {
     assert_eq!(g.players[0].hand.len(), 1);
 }
 
+/// CR 508.1d — Firkraag's "had to attack this combat" is read as attackers
+/// are declared: a creature goaded only after it attacked earns nothing, and
+/// one goaded at the declaration still pays off once the goad is gone.
+#[test]
+fn cr_508_1d_firkraag_reads_the_requirement_at_the_declaration() {
+    let late_goad = |g: &mut GameState, bear: CardId| g.battlefield.find_by_id_mut(bear).unwrap().goaded_by.push(1);
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::firkraag_cunning_instigator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |g| late_goad(g, bear));
+    assert_eq!(g.players[0].hand.len(), 0, "goaded after it attacked");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::firkraag_cunning_instigator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    late_goad(&mut g, bear);
+    g.add_card_to_library(0, catalog::island());
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |g| {
+        g.battlefield.find_by_id_mut(bear).unwrap().goaded_by.clear();
+    });
+    assert_eq!(g.players[0].hand.len(), 1, "it had to attack when it did");
+}
+
 /// CR 508.1 — Firkraag triggers once per opponent its Dragons attack, and
 /// each trigger targets a creature *that* player controls; an opponent only a
 /// non-Dragon attacks is left alone.

@@ -1981,7 +1981,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 
-| 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | the new creature enters before the old one is destroyed. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |

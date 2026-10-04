@@ -309,9 +309,9 @@ pub fn dissipation_field() -> CardDefinition {
 
 /// Firkraag, Cunning Instigator — flying, haste; Dragons you control
 /// attacking an opponent goad a creature of theirs; a creature that had to
-/// attack dealing combat damage to your opponent grows Firkraag and draws.
-/// Residual: "had to attack" is goaded or must-attack when the damage is
-/// dealt.
+/// attack dealing combat damage to your opponent grows Firkraag and draws —
+/// "had to attack" is a requirement that bound it as attackers were declared
+/// (`HadToAttackThisCombat`: goad, must-attack, a lure).
 pub fn firkraag_cunning_instigator() -> CardDefinition {
     let dragon = || R::HasCreatureType(CreatureType::Dragon);
     CardDefinition {
@@ -339,7 +339,7 @@ pub fn firkraag_cunning_instigator() -> CardDefinition {
                         Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer },
                         Predicate::EntityMatches {
                             what: Selector::TriggerSource,
-                            filter: R::IsGoaded.or(R::HasKeyword(Keyword::MustAttack)),
+                            filter: R::HadToAttackThisCombat,
                         },
                     ])),
                 effect: Effect::Seq(vec![
