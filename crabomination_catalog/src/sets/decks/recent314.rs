@@ -7,6 +7,7 @@ use crate::card::{
     Selector, StaticAbility, Subtypes, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::KeywordDonors;
 use crate::effect::{Effect, PlayerRef, RevealMissDest, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
@@ -72,7 +73,8 @@ pub fn death_mask_duplicant() -> CardDefinition {
         }],
         static_abilities: vec![StaticAbility {
             description: "Gains the evasion keywords of cards exiled with this creature.",
-            effect: StaticEffect::GainKeywordsFromExiledWith {
+            effect: StaticEffect::GainKeywordsOfCards {
+                from: KeywordDonors::ExiledWithSource,
                 keywords: vec![
                     Keyword::Flying,
                     Keyword::Fear,

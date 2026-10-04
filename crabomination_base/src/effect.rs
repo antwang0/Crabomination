@@ -13411,7 +13411,7 @@ pub fn static_effect_grants_keyword(
         // on the affected card carried, produced by a *text* change. It is
         // unbounded in exactly the same sense as the five below, and
         // `static_effect_removes_keyword` carries it for the other direction.
-        SE::GainKeywordsFromExiledWith { .. }
+        SE::GainKeywordsOfCards { .. }
         | SE::SelfHasDraftNotedKeywords
         | SE::AnnihilatorPerPlusOneCounter
         | SE::GrantProtectionFromChosenColor { .. }

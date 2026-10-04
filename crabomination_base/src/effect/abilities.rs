@@ -1332,13 +1332,13 @@ pub enum StaticEffect {
     /// loss state that survives the life reset (poison, commander damage)
     /// ends the game at the next check.
     ReplaceControllerLossWithExileSelf,
-    /// Death-Mask Duplicant — "as long as a card exiled with this creature has
-    /// [keyword], this creature has [keyword]". Each entry in `keywords` is
-    /// matched against the exiled cards' keywords by *variant*, so
-    /// `Landwalk(Island)` / `Protection(White)` stand for any landwalk / any
-    /// protection-from-a-colour. Live-resolved in
-    /// `gather_continuous_effects_inner` (it reads the exile zone).
-    GainKeywordsFromExiledWith { keywords: Vec<Keyword> },
+    /// "As long as [a donor card] has [keyword], this has [keyword]" (Death-Mask
+    /// Duplicant, Cairn Wanderer, Rayami). Each listed entry is answered by
+    /// `Keyword::answers_listed`, so `Protection(White)` / `Landwalk(Island)`
+    /// / `Hexproof` stand for their whole family and the donor's own variant
+    /// is gained. Printed keywords only. Live-resolved in
+    /// `gather_continuous_effects_inner`.
+    GainKeywordsOfCards { from: KeywordDonors, keywords: Vec<Keyword> },
     /// "This creature gets +X/+Y, where X is the exiled creature card's power
     /// and Y is its toughness" (Phyrexian Ingester). Live-resolved off the
     /// card stamped `exiled_with = this`.
@@ -4445,4 +4445,15 @@ pub struct LoyaltyAbility {
     /// `Value::XFromCost`. `loyalty_cost` is ignored when set. — Kasmina.
     #[serde(default)]
     pub x_cost: bool,
+}
+
+/// The cards a `StaticEffect::GainKeywordsOfCards` reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum KeywordDonors {
+    /// Cards exiled with the source (Death-Mask Duplicant).
+    ExiledWithSource,
+    /// Creature cards in any graveyard (Cairn Wanderer).
+    CreatureCardsInGraveyards,
+    /// Exiled creature cards with a counter of this kind (Rayami's blood).
+    ExiledCreatureCardsWithCounter(CounterType),
 }

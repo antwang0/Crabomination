@@ -14504,9 +14504,9 @@ impl GameState {
                 });
             }
         }
-        // Death-Mask Duplicant — the imprinted card's evasion keywords bleed
-        // onto the Duplicant. Matched by variant so the printed "landwalk" /
-        // "protection" families cover any land type / colour.
+        // "As long as [a donor card] has [keyword], this has [keyword]" —
+        // Death-Mask Duplicant's imprints, Cairn Wanderer's graveyards,
+        // Rayami's blood-countered exiles. The donor's own variant is gained.
         let before = all_effects.len();
         if sa_open(sa_mask, gs::GAIN_KEYWORDS_FROM_EXILED_WITH) {
             for &(card, bits) in &sa_cards {
@@ -14514,28 +14514,40 @@ impl GameState {
                     continue;
                 }
                 for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::GainKeywordsFromExiledWith { keywords } =
-                        &sa.effect
-                    else {
+                    let crate::effect::StaticEffect::GainKeywordsOfCards { from, keywords } = &sa.effect else {
                         continue;
                     };
-                    let wanted: Vec<std::mem::Discriminant<crate::card::Keyword>> =
-                        keywords.iter().map(std::mem::discriminant).collect();
-                    for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
-                        for kw in &exiled.definition.keywords {
-                            if !wanted.contains(&std::mem::discriminant(kw)) {
-                                continue;
-                            }
-                            all_effects.push(ContinuousEffect {
-                                timestamp: card.object_timestamp(),
-                                source: card.id,
-                                affected: AffectedPermanents::Source,
-                                layer: Layer::L6Ability,
-                                sublayer: None,
-                                duration: EffectDuration::WhileSourceOnBattlefield,
-                                modification: Modification::AddKeyword(kw.clone()),
-                            });
+                    use crate::effect::KeywordDonors as D;
+                    let donors: Vec<&crate::card::CardInstance> = match *from {
+                        D::ExiledWithSource => self.exile.iter().filter(|c| c.exiled_with == Some(card.id)).collect(),
+                        // CR 111.8 — a token in a graveyard is no card.
+                        D::CreatureCardsInGraveyards => self
+                            .players
+                            .iter()
+                            .flat_map(|p| p.graveyard.iter())
+                            .filter(|c| !c.is_token && c.definition.is_creature())
+                            .collect(),
+                        D::ExiledCreatureCardsWithCounter(kind) => self
+                            .exile
+                            .iter()
+                            .filter(|c| !c.is_token && c.definition.is_creature() && c.counter_count(kind) > 0)
+                            .collect(),
+                    };
+                    let mut gained: Vec<&crate::card::Keyword> = Vec::new();
+                    for kw in donors.iter().flat_map(|c| c.definition.keywords.iter()) {
+                        if gained.contains(&kw) || !keywords.iter().any(|w| kw.answers_listed(w)) {
+                            continue;
                         }
+                        gained.push(kw);
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
                     }
                 }
             }
@@ -32411,9 +32423,9 @@ fn static_effect_to_effects(
             // `gather_continuous_effects_inner` (needs the source's named_card).
             | StaticEffect::NamedLandsNeutralized
             | StaticEffect::BlightedLandsNeutralized
-            // GainKeywordsFromExiledWith — live-resolved in
+            // GainKeywordsOfCards — live-resolved in
             // `gather_continuous_effects_inner` (reads the exile zone).
-            | StaticEffect::GainKeywordsFromExiledWith { .. }
+            | StaticEffect::GainKeywordsOfCards { .. }
             | StaticEffect::PumpSelfByExiledWithStats
             | StaticEffect::ProtectionFromExiledWithCardTypes
             // TokenCreationAddsToken — consulted in the resolve_effect

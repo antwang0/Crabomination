@@ -2556,6 +2556,46 @@ pub enum Keyword {
 }
 
 impl Keyword {
+    /// "As long as [a card] has [keyword], this has [keyword]": does `self`
+    /// on a donor card answer a listed `wanted`? The same variant, or any
+    /// member of the protection (CR 702.16), landwalk (CR 702.14a) or
+    /// hexproof (CR 702.11d-e) family — the specific variant is what's gained.
+    pub fn answers_listed(&self, wanted: &Keyword) -> bool {
+        use Keyword as K;
+        fn family(k: &Keyword) -> u8 {
+            match k {
+                K::Protection(_)
+                | K::ProtectionFromColoredSpells
+                | K::ProtectionFromSpells
+                | K::ProtectionFromCreatures
+                | K::ProtectionFromMatching(_)
+                | K::ProtectionFromCreatureType(_)
+                | K::ProtectionFromSpellSubtype(_)
+                | K::ProtectionFromManaValueExcept(_)
+                | K::ProtectionFromManaValueParity { .. }
+                | K::ProtectionFromMulticolored
+                | K::ProtectionFromMonocolored
+                | K::ProtectionFromCardType(_)
+                | K::ProtectionFromInstants
+                | K::ProtectionFromEverything
+                | K::ProtectionFromOwnColors
+                | K::ProtectionFromColorsOutsideCommanderIdentity => 1,
+                K::Landwalk(_) | K::LandwalkFiltered(_) | K::DomainLandwalk | K::LegendaryLandwalk => 2,
+                K::Hexproof
+                | K::HexproofFromColor(_)
+                | K::HexproofFromMonocolored
+                | K::HexproofFromMulticolored
+                | K::HexproofExceptColors(_)
+                | K::HexproofFromAbilities => 3,
+                _ => 0,
+            }
+        }
+        match family(wanted) {
+            0 => std::mem::discriminant(self) == std::mem::discriminant(wanted),
+            f => family(self) == f,
+        }
+    }
+
     /// CR 702.124 — a keyword that only matters while building a Commander
     /// deck (Partner and its kin). It gives the card no in-game ability, so a
     /// heuristic that counts keywords as power should skip it.
@@ -8578,7 +8618,7 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::SelfHasKeywordWhileCountersAtLeast { .. } => {
             g::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST
         }
-        SE::GainKeywordsFromExiledWith { .. } => g::GAIN_KEYWORDS_FROM_EXILED_WITH,
+        SE::GainKeywordsOfCards { .. } => g::GAIN_KEYWORDS_FROM_EXILED_WITH,
         SE::PumpSelfByExiledWithStats => g::PUMP_SELF_BY_EXILED_WITH_STATS,
         SE::ProtectionFromExiledWithCardTypes => g::PROTECTION_FROM_EXILED_WITH_CARD_TYPES,
         SE::NamedLandsNeutralized => g::NAMED_LANDS_NEUTRALIZED,
