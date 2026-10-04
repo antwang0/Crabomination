@@ -8200,6 +8200,34 @@ fn cr_122_1b_keyword_counter_grants_keyword() {
         "the keyword counter grants vigilance");
 }
 
+/// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
+/// placement: under Doubling Season a Saga gets two and both chapters
+/// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
+/// none (CR 122.1 lock on enchantments).
+#[test]
+fn cr_714_3b_lore_counters_take_the_counter_replacements() {
+    use crabomination::card::CounterType::Lore;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doubling_season());
+    let saga = g.add_card_to_battlefield(0, catalog::ajani_fells_the_godsire());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(saga).map(|c| c.counter_count(Lore)), Some(2), "one lore counter, doubled");
+    assert!(g.battlefield_find(angel).is_none(), "chapter I exiled the opposing creature");
+    assert_eq!(g.battlefield_find(ally).unwrap().keyword_counters
+        .get(&crabomination::card::Keyword::Vigilance).copied().unwrap_or(0), 2,
+        "chapter II's vigilance counter, doubled too");
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::solemnity());
+    let saga = g.add_card_to_battlefield(0, catalog::ajani_fells_the_godsire());
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(saga).map(|c| c.counter_count(Lore)), Some(0), "Solemnity: no lore counter");
+}
+
 // ── CR 712 — modal double-faced cards ────────────────────────────────────────
 
 /// CR 712.9/712.14 — a modal DFC's back land face is chosen when the card is

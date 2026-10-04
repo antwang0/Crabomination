@@ -1586,15 +1586,22 @@ impl GameState {
     }
 
     pub fn saga_advance(&mut self, card_id: CardId) {
-        let Some(card) = self.battlefield.find_by_id_mut(card_id) else {
+        use crate::card::CounterType::Lore;
+        let Some(card) = self.battlefield.find_by_id(card_id) else {
             return;
         };
-        if card.definition.saga_chapters.is_empty() {
+        if card.definition.saga_chapters.is_empty() || self.counters_locked() {
             return;
         }
-        let before = card.counter_count(crate::card::CounterType::Lore);
-        card.add_counters(crate::card::CounterType::Lore, 1);
-        self.saga_chapters_crossed(card_id, before, before + 1);
+        let before = card.counter_count(Lore);
+        // CR 714.3a-b / 614.16 — the lore counter is a counter placement, so
+        // the replacements apply: under Doubling Season a Saga gets two and
+        // its next two chapters trigger (Doubling Season's 2018 ruling).
+        let n = self.scaled_counter_count_on(card_id, Lore, 1);
+        if let Some(card) = self.battlefield.find_by_id_mut(card_id) {
+            card.add_counters(Lore, n);
+        }
+        self.saga_chapters_crossed(card_id, before, before + n);
     }
 
     /// CR 904.9 — "set a scheme in motion": move the top card of `seat`'s
