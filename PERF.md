@@ -3134,6 +3134,22 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-04 (Commander session `01JMRKMd`) — guardrail, no perf work
+
+Per-bucket artifact provenance on `ManaPool` (`[u32; 6]`, skipped on the wire
+when zero); an X-sized mana row flag on `ManaSourceInfo` (`Option<u8>`, in
+padding) and a shortfall pass reached only when such a row exists.
+4-core container, `release`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split)
+suite            24,082 / 0 / 5 (CRAB_ANSWER_LOG=strict); clippy 0
+pods             126101 4 seats (180/126/75/94) 1,000/1,000; 126102 6 seats
+                 1,000/1,000; 126103 4 seats 1,000/1,000; 126104 6 seats
+                 1,000/1,000; 126105 census 400/400 — every undecided_by 0
+```
+
 ### 2026-10-04 (Commander session `016kc94f`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: one emptiness test of the active
