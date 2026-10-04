@@ -562,7 +562,16 @@ pub fn garruk_relentless() -> CardDefinition {
                 -1,
                 Effect::Seq(vec![
                     Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
-                    Effect::Search { who: PlayerRef::You, filter: R::Creature, to: ZoneDest::Hand(PlayerRef::You) },
+                    // "If you do" — no creature to sacrifice, no search.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::Creature,
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
                 ]),
             ),
             loyalty(-3, {
