@@ -2,9 +2,8 @@
 //! "one mana of any color that a land an opponent controls could produce").
 
 use super::GameState;
-use crate::card::LandType;
 use crate::effect::{Effect, ManaPayload};
-use crate::mana::{Color, ColorSet};
+use crate::mana::ColorSet;
 
 impl GameState {
     /// Every color a land one of `seat`'s opponents controls could produce
@@ -18,32 +17,29 @@ impl GameState {
 
     fn lands_could_produce(&self, seat: usize, recurse: bool) -> ColorSet {
         let mut set = ColorSet::empty();
-        for land in self.battlefield.iter().filter(|c| c.controller != seat && c.definition.is_land()) {
-            for lt in &land.definition.subtypes.land_types {
-                let c = match lt {
-                    LandType::Plains => Color::White,
-                    LandType::Island => Color::Blue,
-                    LandType::Swamp => Color::Black,
-                    LandType::Mountain => Color::Red,
-                    LandType::Forest => Color::Green,
-                    _ => continue,
-                };
-                set = set.union(ColorSet::single(c));
-            }
-            for ab in &land.definition.activated_abilities {
-                let colors = match &ab.effect {
-                    Effect::AddMana { pool: ManaPayload::AnyColorOpponentCouldProduce, .. } => {
-                        if recurse {
-                            self.lands_could_produce(land.controller, false)
-                        } else {
-                            ColorSet::empty()
-                        }
-                    }
-                    e => super::actions::effect_produced_colors(e),
-                };
-                set = set.union(colors);
+        // Opponents only (a 2HG teammate's lands are not "an opponent's"),
+        // through `types_lands_could_produce_where`: computed land types
+        // (Urborg, Blood Moon), chosen colors (Thriving lands), and each
+        // payload read for ITS controller (Command Tower makes that player's
+        // identity, not all five).
+        for q in self.opponents_of(seat) {
+            set = set.union(self.types_lands_could_produce_where(q, |_, _| true).0);
+            if recurse && self.controls_orchard_land(q) {
+                set = set.union(self.lands_could_produce(q, false));
             }
         }
         set
+    }
+
+    /// Does `q` control a land whose mana ability reads its opponents' lands
+    /// (Exotic Orchard)?
+    fn controls_orchard_land(&self, q: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == q
+                && self.computed_has_card_type(c, crate::card::CardType::Land)
+                && c.definition.activated_abilities.iter().any(|ab| {
+                    matches!(&ab.effect, Effect::AddMana { pool: ManaPayload::AnyColorOpponentCouldProduce, .. })
+                })
+        })
     }
 }

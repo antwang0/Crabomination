@@ -10,6 +10,10 @@ use crate::mana::ColorSet;
 fn reads_your_lands(pool: &ManaPayload) -> bool {
     match pool {
         ManaPayload::AnyColorAGateYouControlCouldProduce
+        // Exotic Orchard reads OTHER players' lands; `could_produce.rs` walks
+        // it one level down itself (CR 106.7), so here it adds nothing rather
+        // than `payload_produced_colors`' all five.
+        | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyColorABasicLandYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)

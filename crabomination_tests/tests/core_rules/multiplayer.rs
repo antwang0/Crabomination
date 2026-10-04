@@ -8013,3 +8013,24 @@ fn cr_603_3b_step_triggers_follow_reversed_turn_order() {
     };
     assert_eq!(top, 1, "the last seat in (reversed) turn order resolves first");
 }
+
+/// CR 106.7 / 903.4 — Exotic Orchard makes what an opponent's land COULD
+/// produce: an opponent's Command Tower under a mono-red commander could
+/// produce only {R}. The could-produce walk read the printed Tower as all
+/// five colors (and missed computed land types and chosen colors).
+#[test]
+fn cr_106_7_orchard_reads_an_opponents_command_tower_as_its_identity() {
+    let mut g = game_with_format(Format::Commander, 3);
+    g.seat_commanders(1, vec![catalog::krenko_mob_boss()]);
+    g.add_card_to_battlefield(1, catalog::command_tower());
+    let orchard = g.add_card_to_battlefield(0, catalog::exotic_orchard());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orchard, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap Exotic Orchard");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!((pool.amount(crabomination::mana::Color::Red), pool.total()), (1, 1), "only {{R}}");
+}
