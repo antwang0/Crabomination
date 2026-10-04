@@ -364,8 +364,8 @@ pub fn vow_of_flight() -> CardDefinition {
     vow("Vow of Flight", cost(&[generic(2), u()]), Keyword::Flying)
 }
 
-/// Whirlpool Whelm — clash, then bounce target creature; on a win it goes on
-/// top of its owner's library instead (the "may" always taken).
+/// Whirlpool Whelm — clash, then bounce target creature; on a win you may put it
+/// on top of its owner's library instead.
 pub fn whirlpool_whelm() -> CardDefinition {
     let owner = || PlayerRef::OwnerOf(Box::new(target_n(0)));
     spell(
@@ -373,9 +373,12 @@ pub fn whirlpool_whelm() -> CardDefinition {
         cost(&[generic(1), u()]),
         Effect::Seq(vec![
             Effect::ClashWithOpponent {
-                on_win: Box::new(Effect::Move {
-                    what: target_n(0),
-                    to: crate::effect::ZoneDest::Library { who: owner(), pos: crate::effect::LibraryPosition::Top },
+                on_win: Box::new(Effect::MayDo {
+                    description: "Put that creature on top of its owner's library instead?".into(),
+                    body: Box::new(Effect::Move {
+                        what: target_n(0),
+                        to: crate::effect::ZoneDest::Library { who: owner(), pos: crate::effect::LibraryPosition::Top },
+                    }),
                 }),
                 with: None,
             },

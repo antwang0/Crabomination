@@ -190,12 +190,21 @@ fn pollen_lullaby_locks_the_clashed_opponent() {
     assert!(g.battlefield_find(bear).unwrap().tapped);
 }
 
-/// Whirlpool Whelm: a won clash puts the creature on top of its owner's
-/// library; a lost one bounces it to hand.
+/// Whirlpool Whelm: a won clash lets its caster put the creature on top of its
+/// owner's library ("you may"); declined, or a lost clash, bounces it to hand.
 #[test]
 fn whirlpool_whelm_tops_on_a_win() {
-    for (mine, theirs, on_top) in [(catalog::craw_wurm(), catalog::island(), true), (catalog::island(), catalog::craw_wurm(), false)] {
+    let wins = || (catalog::craw_wurm(), catalog::island());
+    for ((mine, theirs), take, on_top) in
+        [(wins(), true, true), (wins(), false, false), ((catalog::island(), catalog::craw_wurm()), true, false)]
+    {
         let mut g = pod(2);
+        // Both clashers keep their card on top, then the caster's "you may".
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(false),
+            DecisionAnswer::Bool(false),
+            DecisionAnswer::Bool(take),
+        ]));
         g.add_card_to_library(0, mine);
         g.add_card_to_library(1, theirs);
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

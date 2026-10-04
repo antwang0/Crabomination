@@ -5525,8 +5525,10 @@ fn removal_targets_own_permanent(state: &GameState, body: &Effect) -> bool {
         return false;
     }
     let Some(pd) = &state.pending_decision else { return false };
-    let ResumeContext::Trigger { controller, target: Some(Target::Permanent(id)), .. } =
-        &pd.resume
+    // A resolving spell's rider too (Whirlpool Whelm's "top of the library
+    // instead" on a creature its caster bounced to save).
+    let (ResumeContext::Trigger { controller, target: Some(Target::Permanent(id)), .. }
+    | ResumeContext::Spell { caster: controller, target: Some(Target::Permanent(id)), .. }) = &pd.resume
     else {
         return false;
     };
