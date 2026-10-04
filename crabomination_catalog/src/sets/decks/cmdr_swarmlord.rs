@@ -737,8 +737,8 @@ pub fn tervigon() -> CardDefinition {
 
 /// The First Tyrannic War — I: a creature card from your hand onto the
 /// battlefield, with a counter per land if it has {X}; II, III: double the
-/// counters on target creature you control.
-/// Residual: chapter I's counters go on after it enters.
+/// counters on target creature you control. Chapter I's counters are
+/// stamped before the move, so the creature enters with them.
 pub fn the_first_tyrannic_war() -> CardDefinition {
     let double = || Effect::DoubleAllCountersOn { what: target_filtered(yours(R::Creature)) };
     CardDefinition {
@@ -749,23 +749,35 @@ pub fn the_first_tyrannic_war() -> CardDefinition {
         saga_chapters: vec![
             (
                 1,
-                Effect::PutFromHandOntoBattlefield {
-                    who: PlayerRef::You,
-                    filter: R::Creature,
-                    count: Value::ONE,
-                    tapped: false,
-                    haste: false,
-                    sacrifice_eot: false,
-                    return_eot: false,
-                    then: Some(Box::new(Effect::If {
-                        cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: R::HasXInCost },
-                        then: Box::new(plus(
-                            Selector::LastMoved,
-                            Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land),
-                        )),
-                        else_: Box::new(Effect::Noop),
-                    })),
-                },
+                // CR 614.1c — "it enters with" counters: stamped on the card
+                // before the move, so ETB abilities see them.
+                crate::effect::shortcut::choose_some_then(
+                    Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Hand(PlayerRef::You),
+                        filter: R::Creature,
+                    },
+                    PlayerRef::You,
+                    Value::ONE,
+                    true,
+                    Effect::Seq(vec![
+                        Effect::If {
+                            cond: Predicate::EntityMatches {
+                                what: crate::effect::shortcut::chosen_one(),
+                                filter: R::HasXInCost,
+                            },
+                            then: Box::new(Effect::SpellEntersWithCounters {
+                                what: crate::effect::shortcut::chosen_one(),
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land),
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                        Effect::Move {
+                            what: crate::effect::shortcut::chosen_one(),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                    ]),
+                ),
             ),
             (2, double()),
             (3, double()),

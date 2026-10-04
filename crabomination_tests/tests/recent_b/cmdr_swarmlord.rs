@@ -312,3 +312,26 @@ fn spell_damage_reaches_ghyrson_and_the_red_terror() {
     assert_eq!(g.players[1].life, 20 - 1 - 2, "the jolt's 1 became 3");
     assert_eq!(counters(&g, terror), 2, "the red spell, then red Ghyrson");
 }
+
+/// CR 614.1c — The First Tyrannic War I: an {X} creature put onto the
+/// battlefield from hand ENTERS with a +1/+1 counter per land you control, so
+/// Walking Ballista (0/0) lives with three.
+#[test]
+fn first_tyrannic_war_i_enters_with_its_counters() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let ballista = g.add_card_to_hand(0, catalog::walking_ballista());
+    let saga = catalog::the_first_tyrannic_war();
+    let chapter = saga.saga_chapters[0].1.clone();
+    let src = g.add_card_to_battlefield(0, saga);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![ballista])]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    let evs = g.resolve_effect(&chapter, &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(ballista).expect("Ballista entered and survived");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 3);
+}
