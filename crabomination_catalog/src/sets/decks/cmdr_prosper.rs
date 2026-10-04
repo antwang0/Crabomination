@@ -195,7 +195,8 @@ pub fn chaos_channeler() -> CardDefinition {
 
 /// Danse Macabre — each player sacrifices a nontoken creature; a d20 plus
 /// your sacrifice's toughness returns one, or up to two, of them under your
-/// control. Residual: yours is sacrificed after the others'.
+/// control. Choices in APNAP order (CR 101.4): the caster — the active
+/// player at sorcery speed — picks first, then each opponent.
 pub fn danse_macabre() -> CardDefinition {
     let fodder = || R::Creature.and(R::NotToken);
     let back = |count: i32, up_to: bool| Effect::MoveChosen {
@@ -210,8 +211,8 @@ pub fn danse_macabre() -> CardDefinition {
         cost(&[generic(3), b(), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), count: Value::ONE, filter: fodder() },
             Effect::SacrificeAndRemember { who: PlayerRef::You, filter: fodder() },
+            Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), count: Value::ONE, filter: fodder() },
             Effect::RollDie {
                 sides: 20,
                 count: Value::ONE,

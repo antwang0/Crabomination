@@ -1956,7 +1956,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
-| 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
 | 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |
 | 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |

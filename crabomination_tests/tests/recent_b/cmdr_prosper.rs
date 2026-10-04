@@ -155,6 +155,18 @@ fn danse_macabre_takes_the_fallen() {
     for id in [mine, theirs] {
         assert_eq!(g.battlefield_find(id).map(|c| c.controller), Some(0), "back under your control");
     }
+
+    // CR 101.4 — the caster (the active player) chooses first: when the
+    // opponent is asked which creature to sacrifice, yours is already gone.
+    let mut g = main_phase(2);
+    g.players[1].wants_ui = true;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dm = g.add_card_to_hand(0, catalog::danse_macabre());
+    cast_at(&mut g, dm, &[]).expect("cast");
+    assert!(g.pending_decision.is_some(), "the opponent picks");
+    assert!(g.battlefield_find(mine).is_none(), "yours went first");
 }
 
 /// Karazikar: attacking a player taps and goads a creature of theirs.
