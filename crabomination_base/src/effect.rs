@@ -5831,6 +5831,10 @@ pub enum Effect {
     /// Spend the source's pending `linked` loyalty-copy grant: its shared
     /// "when you next …" fired on a spell instead (Repeated Reverberation).
     DropLinkedLoyaltyCopies,
+    /// "When you next … activate an ability with {X} in its activation cost
+    /// this turn, copy that ability" (Magus Lucea Kane): a one-shot grant
+    /// beside the spell rider; `linked` ties the two so either spends both.
+    CopyNextXAbilityThisTurn { linked: bool },
     /// Leori, Sparktouched Hunter — "choose a planeswalker type. Until end of
     /// turn, whenever you activate an ability of a planeswalker of that type,
     /// copy that ability." The type is the one most common among the

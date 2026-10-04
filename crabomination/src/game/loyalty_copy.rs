@@ -30,7 +30,7 @@ impl GameState {
         subtype: Option<PlaneswalkerSubtype>,
         once: bool,
     ) {
-        self.players[p].loyalty_copy_grants.push(LoyaltyCopyGrant { copies, subtype, once, linked: None });
+        self.players[p].loyalty_copy_grants.push(LoyaltyCopyGrant { copies, subtype, once, linked: None, x_ability: false });
     }
 
     /// Leori — "choose a planeswalker type": `p` picks among the types of
@@ -71,7 +71,7 @@ impl GameState {
             .battlefield_find(source)
             .map(|c| c.definition.subtypes.planeswalker_subtypes.clone())
             .unwrap_or_default();
-        let applies = |g: &LoyaltyCopyGrant| g.subtype.is_none_or(|t| types.contains(&t));
+        let applies = |g: &LoyaltyCopyGrant| !g.x_ability && g.subtype.is_none_or(|t| types.contains(&t));
         let copies: u32 =
             self.players[p].loyalty_copy_grants.iter().filter(|g| applies(g)).map(|g| g.copies).sum();
         if copies == 0 {
@@ -91,6 +91,31 @@ impl GameState {
                 !(dt.controller == p
                     && linked.contains(&dt.source)
                     && matches!(dt.kind, crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn))
+            });
+        }
+        let Some(item) = self.stack.last().cloned() else { return };
+        for _ in 0..copies {
+            self.push_stack(item.clone());
+        }
+    }
+
+    /// Magus Lucea Kane — called as an activated ability with {X} in its
+    /// activation cost goes on the stack: push the copy a "when you next
+    /// activate an ability with {X}" grant owes it, spend the grant and its
+    /// linked spell rider.
+    pub(crate) fn copy_x_ability_for_grants(&mut self, p: usize) {
+        if !self.players[p].loyalty_copy_grants.iter().any(|g| g.x_ability) {
+            return;
+        }
+        let copies: u32 = self.players[p].loyalty_copy_grants.iter().filter(|g| g.x_ability).map(|g| g.copies).sum();
+        let linked: Vec<CardId> =
+            self.players[p].loyalty_copy_grants.iter().filter(|g| g.x_ability).filter_map(|g| g.linked).collect();
+        self.players[p].loyalty_copy_grants.retain(|g| !g.x_ability);
+        if !linked.is_empty() {
+            self.delayed_triggers.retain(|dt| {
+                !(dt.controller == p
+                    && linked.contains(&dt.source)
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(_)))
             });
         }
         let Some(item) = self.stack.last().cloned() else { return };

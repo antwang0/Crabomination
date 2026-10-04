@@ -277,3 +277,22 @@ fn winged_hive_tyrant_grants_to_countered() {
     assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Flying));
     assert!(!g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Flying));
 }
+
+/// Magus Lucea Kane's Psychic Stimulus copies the next ABILITY with {X} too —
+/// once, and it spends the spell half of the same "when you next".
+#[test]
+fn magus_lucea_kane_copies_the_next_x_ability() {
+    let mut g = pod(2);
+    let magus = g.add_card_to_battlefield(0, catalog::magus_lucea_kane());
+    g.clear_sickness(magus);
+    let helix = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    flood(&mut g, 0);
+    activate(&mut g, 0, magus, 0, None, None).expect("psychic stimulus");
+    activate(&mut g, 0, helix, 0, None, Some(3)).expect("helix X=3");
+    assert_eq!(g.battlefield_find(helix).unwrap().counter_count(CounterType::Charge), 6, "copied once");
+    activate(&mut g, 0, helix, 0, None, Some(2)).expect("helix X=2");
+    assert_eq!(g.battlefield_find(helix).unwrap().counter_count(CounterType::Charge), 8, "not again");
+    let hydra = g.add_card_to_hand(0, catalog::primordial_hydra());
+    cast_x(&mut g, 0, hydra, None, Some(2)).expect("hydra");
+    assert_eq!(named(&g, 0, "Primordial Hydra").len(), 1, "the spell half is spent too");
+}

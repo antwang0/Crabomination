@@ -534,8 +534,9 @@ pub fn lictor() -> CardDefinition {
 }
 
 /// Magus Lucea Kane — each combat on your turn, a +1/+1 counter on target
-/// creature; {T}: {C}{C}, and the next spell with {X} this turn is copied.
-/// Residual: an ability with {X} isn't copied.
+/// creature; {T}: {C}{C}, and the next spell or ability with {X} this turn is
+/// copied (one "when you next": either spends both). The ability's copy
+/// keeps its targets.
 pub fn magus_lucea_kane() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -548,8 +549,12 @@ pub fn magus_lucea_kane() -> CardDefinition {
                 Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(2)) },
                 Effect::OnYourNextSpellMatchingThisTurn {
                     filter: R::HasXInCost,
-                    body: Box::new(Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE }),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::DropLinkedLoyaltyCopies,
+                        Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+                    ])),
                 },
+                Effect::CopyNextXAbilityThisTurn { linked: true },
             ]),
             ..Default::default()
         }],

@@ -133,6 +133,10 @@ pub struct LoyaltyCopyGrant {
     /// Reverberation): spending either spends both.
     #[serde(default)]
     pub linked: Option<CardId>,
+    /// Copies the next activated ability with {X} in its activation cost
+    /// instead of a loyalty ability (Magus Lucea Kane).
+    #[serde(default)]
+    pub x_ability: bool,
 }
 
 /// The rarely-written, heap-owning tail of a seat: registries only a handful

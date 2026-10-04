@@ -2322,6 +2322,7 @@ impl Effect {
             | Effect::CopyOnePerOpponentWithTotalStats
             | Effect::CopyNextLoyaltyAbility { .. }
             | Effect::DropLinkedLoyaltyCopies
+            | Effect::CopyNextXAbilityThisTurn { .. }
             | Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => false,
             Effect::ShuffleInThenCastFromTopFree { what } => sel_has_target(what),
             Effect::GrantFreeCastOnePerCardType { what } => sel_has_target(what),

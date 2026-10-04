@@ -22961,6 +22961,9 @@ impl GameState {
                     .build(),
             );
             self.randomize_single_target_on_stack();
+            if ability.mana_cost.has_x() {
+                self.copy_x_ability_for_grants(p);
+            }
             // Pit Automaton — the claimed exhaust watchers go above the
             // ability they copy, so each resolves before its original.
             for dt in &exhaust_watchers {

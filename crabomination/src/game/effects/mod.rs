@@ -36017,6 +36017,17 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::CopyNextXAbilityThisTurn { linked } => {
+                let grant = crate::player::LoyaltyCopyGrant {
+                    copies: 1,
+                    subtype: None,
+                    once: true,
+                    linked: if *linked { ctx.source } else { None },
+                    x_ability: true,
+                };
+                self.players[ctx.controller].loyalty_copy_grants.push(grant);
+                Ok(())
+            }
             Effect::DropLinkedLoyaltyCopies => {
                 let p = ctx.controller;
                 if let Some(src) = ctx.source
