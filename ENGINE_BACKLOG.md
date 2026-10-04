@@ -129,7 +129,12 @@ the handoff.
   starts). `CardData::cast_discarded_mana_value` is stamped at the cast and
   read as `Value::LastDiscardedManaValue`'s last fallback.
 
-- ✅ *(2026-10-04, `01NJGEp2`)* for **"enters" listeners**:
+- **A listener that leaves in the same resolution missed the events
+  before it left (CR 603.2 / 603.10)** — found re-ordering Martial Coup to
+  create-then-destroy (`Selector::EachPermanentExceptLastCreated`): triggers
+  are collected after the resolution from the permanents still there, so
+  Soul Warden gained nothing for the five Soldiers before the sweep.
+  ✅ *(2026-10-04, `01NJGEp2`)* for **"enters" listeners**:
   `game/departed_listeners.rs` gives a listener gone by dispatch the entries
   the batch records between its own entry and its first in-order departure
   (`CreatureDied` / `PermanentLeftBattlefield` / exiled / bounced; the
@@ -137,18 +142,6 @@ the handoff.
   gains 5 (`cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before`).
   ⏳ Still open: other event kinds (life gained, counters, casts) and
   once-per-turn/batch listeners, which this pass skips.
-- ⏳ **A listener that leaves in the same resolution misses the events
-  before it left (CR 603.2 / 603.10)** — triggered abilities are collected AFTER a
-  resolution finishes, from the permanents still on the battlefield. A
-  listener the same resolution removes never sees the earlier events: Soul
-  Warden under a Martial Coup (X ≥ 5) gains nothing for the five Soldiers
-  that entered before the sweep, though CR 603.2 has it trigger the moment
-  each Soldier enters. Fix shape: snapshot (listener, event) pairs as each
-  event is pushed, or keep `leaves_bf_lki` listeners eligible for events
-  emitted before their own departure within the resolution. Found
-  re-ordering Martial Coup to create-then-destroy
-  (`Selector::EachPermanentExceptLastCreated`); the card's end board is
-  right, only the cross-resolution trigger is lost.
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token
 
