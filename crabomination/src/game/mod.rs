@@ -22383,6 +22383,11 @@ impl GameState {
         // The target must be a creature (equip, CR 702.6c) — or a land
         // (fortify, CR 702.71c) — the activating player controls. Use the
         // computed view so animated permanents are honored.
+        // CR 301.5c — an Equipment can't equip itself (a reconfigure
+        // creature offered as its own host).
+        if target == equipment {
+            return Err(GameError::InvalidTarget);
+        }
         let wanted = if fortify.is_some() {
             crate::card::CardType::Land
         } else {
