@@ -1114,7 +1114,7 @@ impl GameState {
             EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
                 controller == active
             }
-            EventScope::OpponentControl => controller != active,
+            EventScope::OpponentControl => !self.same_team(controller, active),
             EventScope::AnotherOfYours => false,
             // Walked separately below.
             EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer => false,
@@ -1517,11 +1517,16 @@ impl GameState {
         // CR 603.3b — APNAP order: the active player's triggers push first
         // (resolving last). Battlefield-Vec order is otherwise preserved as
         // each controller's chosen same-controller order (stable sort).
-        let n_players = self.players.len();
-        let apnap_rank = |seat: usize| -> usize {
-            (seat + n_players - active) % n_players.max(1)
-        };
-        queue.sort_by_key(|t| apnap_rank(t.controller));
+        // Ranked off `apnap_sort` (turn order from the active player, so an
+        // Aeon Engine reversal and departed seats are honoured like every
+        // other APNAP path), not seat index.
+        // Only a queue of two or more has an order to settle (nearly every
+        // step has none).
+        if queue.len() > 1 {
+            let order = self.apnap_sort((0..self.players.len()).collect());
+            let apnap_rank = |seat: usize| order.iter().position(|&s| s == seat).unwrap_or(usize::MAX);
+            queue.sort_by_key(|t| apnap_rank(t.controller));
+        }
         self.drain_trigger_queue(queue);
     }
 

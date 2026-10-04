@@ -15834,7 +15834,9 @@ impl GameState {
         // A SpellCast trigger applies iff its scope matches the caster.
         let scope_matches = |scope: EventScope, c_controller: usize| match scope {
             EventScope::YourControl => c_controller == controller,
-            EventScope::OpponentControl => c_controller != controller,
+            // CR 102.3 — a teammate is not an opponent (Esper Sentinel and
+            // Mystic Remora don't tax a 2HG partner's spells).
+            EventScope::OpponentControl => !self.same_team(c_controller, controller),
             EventScope::AnyPlayer => true,
             _ => false,
         };

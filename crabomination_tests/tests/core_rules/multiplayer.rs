@@ -7986,3 +7986,30 @@ fn cr_702_11b_a_teammate_may_target_your_hexproof_creature() {
     assert!(g.check_target_legality(&Target::Permanent(mine), 0).is_ok(), "a teammate's");
     assert!(g.check_target_legality(&Target::Permanent(theirs), 0).is_err(), "an opponent's");
 }
+
+/// CR 603.3b — beginning-of-step triggers go on the stack in APNAP order by
+/// TURN order, which Aeon Engine reverses: with seat 0 active and the order
+/// 0, 3, 2, 1, seat 1's upkeep trigger is put on last and resolves first.
+/// The step path ranked seats by index (0, 1, 2, 3), so seat 3's was on top.
+#[test]
+fn cr_603_3b_step_triggers_follow_reversed_turn_order() {
+    let mut g = multi_player_game(4);
+    for seat in [1, 3] {
+        g.add_card_to_battlefield(seat, catalog::sulfuric_vortex());
+    }
+    g.turn_order_reversed = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    let mut guard = 0;
+    while g.stack.len() < 2 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        guard += 1;
+        assert!(guard < 20, "the upkeep triggers never went on the stack");
+    }
+    let top = match g.stack.last() {
+        Some(crabomination::game::types::StackItem::Trigger { controller, .. }) => *controller,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(top, 1, "the last seat in (reversed) turn order resolves first");
+}
