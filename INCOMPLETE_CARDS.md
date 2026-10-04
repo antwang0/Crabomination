@@ -385,7 +385,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 |---|---|---|
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
-| The Curse of Fenric | II makes a legendary 6/6 Horror but doesn't name it Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name effect |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
@@ -1991,7 +1990,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
-| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric, so III's Mutant fights any other creature. |
+| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 

@@ -8,7 +8,7 @@ use crabomination::card::{CardId, CounterType, Keyword, Supertype, Value};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, PlayerRef, Selector};
-use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -465,6 +465,7 @@ fn curse_of_fenric_ii_makes_a_legendary_horror() {
     assert!(cp.supertypes().contains(&Supertype::Legendary));
     assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Horror]);
     assert!(!cp.keywords().contains(&Keyword::Flying));
+}
 
 /// The Fourth Doctor — "once each turn, you may play a historic land or cast
 /// a historic spell from the top of your library. When you do, create a
@@ -566,4 +567,45 @@ fn the_eighth_doctor_plays_a_historic_land_from_the_graveyard() {
     flood(&mut g, 0);
     let cast = GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None };
     assert!(g.perform_action(cast).is_err(), "one allowance, not one each");
+}
+
+/// The Curse of Fenric — II: "target nontoken creature becomes a 6/6
+/// legendary Horror creature named Fenric and loses all abilities"; III: "target
+/// Mutant fights another target creature named Fenric" — a creature not
+/// named Fenric is no legal second target, so it isn't fought.
+#[test]
+fn the_curse_of_fenric_names_its_horror_and_the_mutant_fights_only_fenric() {
+    use crabomination::card::{CreatureType, SelectionRequirement as R};
+    let mut g = pod(2);
+    let saga = g.add_card_to_battlefield(0, catalog::the_curse_of_fenric());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mutant = g.add_card_to_battlefield(0, catalog::rampaging_yao_guai());
+    let chapter = |g: &GameState, n: u32| -> Effect {
+        g.battlefield_find(saga).unwrap().definition.saga_chapters.iter().find(|(c, _)| *c == n).unwrap().1.clone()
+    };
+    let run = |g: &mut GameState, effect: &Effect, targets: Vec<Target>| {
+        let mut ctx = EffectContext::for_spell(0, targets.first().cloned(), 0, 0);
+        ctx.source = Some(saga);
+        ctx.targets = targets;
+        let evs = g.resolve_effect(effect, &ctx).expect("resolves");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    let two = chapter(&g, 2);
+    run(&mut g, &two, vec![Target::Permanent(angel)]);
+    let fenric = g.computed_permanent(angel).unwrap();
+    assert_eq!(g.battlefield_find(angel).unwrap().definition.name, "Fenric");
+    assert!(fenric.supertypes().contains(&Supertype::Legendary));
+    assert_eq!(fenric.subtypes().creature_types, vec![CreatureType::Horror]);
+    assert!(!fenric.keywords().contains(&Keyword::Flying), "loses all abilities");
+    assert_eq!(fenric.base_pt(), (6, 6));
+    assert!(g.evaluate_requirement_static(&R::HasName("Fenric".into()), &Target::Permanent(angel), 0, None));
+    // III off a second Curse read ahead to chapter III: the Bears are no
+    // legal "creature named Fenric", so the Mutant fights Fenric.
+    g.add_card_to_battlefield(0, catalog::barbara_wright());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(3)]));
+    cast(&mut g, catalog::the_curse_of_fenric());
+    assert!(g.battlefield_find(other).is_some_and(|c| c.damage == 0), "not named Fenric");
+    assert!(g.battlefield_find(mutant).is_none(), "the 2/2 Mutant fought the 6/6 Fenric");
 }

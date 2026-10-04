@@ -5,15 +5,8 @@
 //! Residuals (each also on its card):
 //! - **Ace's Baseball Bat** — "must be blocked by a Dalek if able" is not
 //!   modelled.
-//! - **Peri Brown** — every historic spell has convoke, not only the first
-//!   each turn.
-//! - **Reverse the Polarity** — "can't be blocked" reaches only the
-//!   creatures on the battlefield as it resolves.
-//! - **The Curse of Fenric** — I spares your own creatures; II makes a 6/6
-//!   with no abilities but doesn't rename it Fenric or make it legendary, so
-//!   III is a Mutant fighting any other creature.
-//! - **The Second Doctor** — an opponent who draws has its current creatures
-//!   barred from attacking you, not ones that arrive later.
+//! - **The Curse of Fenric** — II's name is a copiable value, so a copy of
+//!   Fenric is named Fenric too.
 
 use std::sync::Arc;
 
@@ -927,11 +920,12 @@ pub fn the_caves_of_androzani() -> CardDefinition {
 }
 
 /// The Curse of Fenric — kills up to one creature per player for a
-/// deathtouch Mutant; blanks a creature into a 6/6; a Mutant fights it.
+/// deathtouch Mutant; II makes a creature a 6/6 legendary Horror named Fenric
+/// with no abilities; III, a Mutant fights another creature named Fenric.
 ///
-/// ⚠ Residual: II doesn't rename the creature Fenric (it does become a
-/// legendary 6/6 Horror); III's Mutant fights any other creature — no name
-/// change exists to target "named Fenric" by.
+/// ⚠ Residual: the name is written into the copiable values
+/// (`AmendCopiableValues` — the engine has no non-copy name effect), so a
+/// copy of Fenric is named Fenric too (CR 707.2).
 pub fn the_curse_of_fenric() -> CardDefinition {
     let mutant = token("Mutant", vec![Color::Green], vec![CreatureType::Mutant], 3, 3, vec![Keyword::Deathtouch]);
     saga("The Curse of Fenric", cost(&[generic(2), g(), w()]), vec![
@@ -969,12 +963,20 @@ pub fn the_curse_of_fenric() -> CardDefinition {
                 duration: Duration::Permanent,
             },
             Effect::BecomeLegendary { what: Selector::Target(0), duration: Duration::Permanent },
+            Effect::AmendCopiableValues {
+                what: Selector::Target(0),
+                name: Some("Fenric".into()),
+                set_creature_types: None,
+                add_creature_types: vec![],
+                legendary: false,
+                add_colors: vec![],
+            },
         ])),
         (3, Effect::Fight {
             attacker: target_filtered(R::HasCreatureType(CreatureType::Mutant)),
             defender: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature.and(R::OtherThanTargetSlot(0)),
+                filter: R::Creature.and(R::OtherThanTargetSlot(0)).and(R::HasName("Fenric".into())),
             },
         }),
     ])
