@@ -99,8 +99,9 @@ pub fn sevinne_the_chronoclasm() -> CardDefinition {
 /// Elsha of the Infinite — prowess; look at your top card; cast noncreature
 /// spells from the top of your library, with flash.
 ///
-/// ⚠ Residual: the flash also covers a top-of-library cast another permission
-/// allowed, not only Elsha's own.
+/// The flash covers exactly the spells Elsha's own permission covers
+/// (noncreature, the top of your library), so any spell it reaches could have
+/// been cast "this way".
 pub fn elsha_of_the_infinite() -> CardDefinition {
     let noncreature = R::HasCardType(CardType::Creature).negate().and(R::HasCardType(CardType::Land).negate());
     CardDefinition {
@@ -116,7 +117,7 @@ pub fn elsha_of_the_infinite() -> CardDefinition {
             },
             StaticAbility {
                 description: "If you cast a spell this way, you may cast it as though it had flash.",
-                effect: StaticEffect::ControllerSpellsHaveFlash { filter: noncreature.and(R::OnTopOfLibrary) },
+                effect: StaticEffect::ControllerSpellsHaveFlash { filter: noncreature.and(R::OnTopOfLibrary).and(R::OwnedByYou) },
             },
         ],
         ..legendary(creature(
