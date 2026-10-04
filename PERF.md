@@ -3255,6 +3255,12 @@ third part         CR 603.2c noncombat damage batch (`run_effect` asks
                    (72201+) every deck = 540 games, all decided, 0 % stalls;
                    strict debug 4 x 20 (71401+) + 6 x 12 (71601+), all
                    decided, no leak; suite 23,997 / 0 / 5
+fourth part        CR 603.2 departed "enters" listeners (one extra
+                   candidate pass per dispatch; two `any` scans of the batch
+                   when nothing departed): --bench 196,176 / 613.0 / 0
+                   stalls, byte-identical; pods 4 seats x 4 (73001+) + 5
+                   seats x 6 (73201+) every deck = 406 games, all decided,
+                   0 % stalls; suite 24,008 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
