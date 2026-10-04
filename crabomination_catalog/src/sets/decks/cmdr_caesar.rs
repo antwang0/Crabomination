@@ -1,11 +1,6 @@
 //! Commander: the cards the **Hail, Caesar** precon (PIP, Caesar, Legion's
 //! Emperor) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_caesar.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Mr. House, President and CEO** — its roll is one die (no extra die
-//!   per Treasure mana), and "whenever you roll a 4 or higher" reads a roll's
-//!   highest die once.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -622,9 +617,9 @@ pub fn memorial_to_glory() -> CardDefinition {
     }
 }
 
-/// Mr. House, President and CEO — whenever you roll a 4 or higher, a 3/3
-/// Robot (and a Treasure on a 6+); {4},{T}: roll a d6. Residual: the roll is
-/// one die, and the trigger reads a roll's highest die once.
+/// Mr. House, President and CEO — whenever you roll a 4 or higher (each die
+/// its own trigger), a 3/3 Robot (and a Treasure on a 6+); {4},{T}: roll a
+/// d6, plus a d6 for each mana from Treasures spent on the activation.
 pub fn mr_house_president_and_ceo() -> CardDefinition {
     let robot = TokenDefinition {
         name: "Robot".into(),
@@ -636,7 +631,7 @@ pub fn mr_house_president_and_ceo() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl)
+            event: EventSpec::new(EventKind::Performed(KeywordAct::DieResult), EventScope::YourControl)
                 .with_filter(Predicate::DieResultAtLeast(4)),
             effect: Effect::Seq(vec![
                 make(robot, Value::ONE),
@@ -652,7 +647,7 @@ pub fn mr_house_president_and_ceo() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             effect: Effect::RollDie {
                 sides: 6,
-                count: Value::ONE,
+                count: Value::Sum(vec![Value::ONE, Value::TreasureManaSpentToActivate]),
                 modifier: Value::Const(0),
                 reroll_at_most: 0,
                 ignore_lowest: 0,

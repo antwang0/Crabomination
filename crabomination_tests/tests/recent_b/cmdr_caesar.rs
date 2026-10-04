@@ -369,3 +369,31 @@ fn cr_601_2c_mysterious_stranger_targets_one_card_per_graveyard() {
     assert_eq!([d1, d2].iter().filter(|&&d| in_gy(&g, 1, d)).count(), 1, "one Divination per graveyard");
     assert!(!in_gy(&g, 2, opt), "the Opt's graveyard has its own target");
 }
+
+/// CR 706.2 — Mr. House rolls an extra d6 per Treasure mana spent on the
+/// activation, and "whenever you roll a 4 or higher" fires per die: rolls of
+/// 4, 6 and 1 make two Robots and one Treasure.
+#[test]
+fn cr_706_2_mr_house_rolls_a_die_per_treasure_mana_and_triggers_per_die() {
+    let mut g = main_phase(2);
+    let house = g.add_card_to_battlefield(0, catalog::mr_house_president_and_ceo());
+    g.clear_sickness(house);
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.mark_from_treasure(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DieRoll(4),
+        DecisionAnswer::DieRoll(6),
+        DecisionAnswer::DieRoll(1),
+    ]));
+    act(&mut g, GameAction::ActivateAbility {
+        card_id: house,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{4}, {T}");
+    assert_eq!(named(&g, 0, "Robot").len(), 2);
+    assert_eq!(named(&g, 0, "Treasure").len(), 1);
+}

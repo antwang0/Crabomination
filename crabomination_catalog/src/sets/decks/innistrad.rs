@@ -3225,8 +3225,11 @@ pub fn ground_pounder() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl)
-                .with_filter(Predicate::DieResultAtLeast(5)),
+            event: EventSpec::new(
+                EventKind::Performed(crate::effect::KeywordAct::DieResult),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::DieResultAtLeast(5)),
             effect: Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Trample,
