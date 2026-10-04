@@ -754,6 +754,22 @@ fn nalfeshnee_copies_spells_cast_from_exile() {
     assert_eq!(bears.iter().filter(|c| c.is_token).count(), 1, "the copy is a token");
 }
 
+/// CR 707.10c — the copy of a permanent spell may take new targets too: a
+/// Pacifism cast from exile onto one Bears, its copy onto the other.
+#[test]
+fn nalfeshnee_retargets_a_copied_aura() {
+    let mut g = b_main_phase();
+    g.add_card_to_battlefield(0, catalog::nalfeshnee());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pac = g.add_card_to_exile(0, catalog::pacifism());
+    b_grant_free(&mut g, pac);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(b))]));
+    b_cast_from_exile(&mut g, pac, Some(Target::Permanent(a)));
+    let host = |id: CardId| g.battlefield.iter().filter(|c| c.definition.name == "Pacifism" && c.attached_to == Some(id)).count();
+    assert_eq!((host(a), host(b)), (1, 1));
+}
+
 /// Keeper of Secrets pings only for spells cast from somewhere other than the
 /// hand, for their mana value.
 #[test]

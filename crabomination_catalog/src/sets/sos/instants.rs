@@ -1664,6 +1664,7 @@ pub fn choreographed_sparks() -> CardDefinition {
         count: Value::Const(1),
         grant_haste: true,
         sacrifice_eot: true,
+        may_choose_new_targets: false,
     };
     CardDefinition {
         name: "Choreographed Sparks",

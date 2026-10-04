@@ -841,8 +841,6 @@ pub fn etali_primal_conqueror() -> CardDefinition {
 /// Permanent spells take `CopySpellWithRiders` (haste + next-end-step
 /// sacrifice on the resulting token), everything else takes
 /// `CopySpellMayChooseTargets`.
-/// Approximation: a permanent spell's copy keeps the original's target (the
-/// riders copy path doesn't offer a retarget). That only matters for Auras.
 pub fn nalfeshnee() -> CardDefinition {
     CardDefinition {
         name: "Nalfeshnee",
@@ -865,6 +863,7 @@ pub fn nalfeshnee() -> CardDefinition {
                     count: Value::ONE,
                     grant_haste: true,
                     sacrifice_eot: true,
+                    may_choose_new_targets: true,
                 }),
                 else_: Box::new(Effect::CopySpellMayChooseTargets {
                     what: Selector::TriggerSource,

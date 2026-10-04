@@ -34723,7 +34723,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CopySpellWithRiders { what, count, grant_haste, sacrifice_eot } => {
+            Effect::CopySpellWithRiders { what, count, grant_haste, sacrifice_eot, may_choose_new_targets } => {
                 // As `CopySpell`, but each copy carries `resolve_riders`
                 // (haste EOT / next-end-step sacrifice) applied when the
                 // permanent-spell copy resolves onto the battlefield —
@@ -34755,7 +34755,7 @@ impl GameState {
                     self.copy_stack_spell_controlled(
                         cid,
                         n,
-                        false,
+                        *may_choose_new_targets,
                         None,
                         Some((*grant_haste, *sacrifice_eot)),
                         events,

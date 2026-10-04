@@ -9524,6 +9524,10 @@ pub enum Effect {
         count: Value,
         grant_haste: bool,
         sacrifice_eot: bool,
+        /// CR 707.10c — "you may choose new targets for the copy" (Nalfeshnee
+        /// copying an Aura spell).
+        #[serde(default)]
+        may_choose_new_targets: bool,
     },
     /// CR 707.9b — copy the spell `what` once, "except the copy is a 1/1
     /// Spirit in addition to its other types" (Donal, Herald of Wings). The
