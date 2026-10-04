@@ -9566,6 +9566,20 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
     let restricted_floating = state.players[seat].mana_pool.restricted_total() > 0;
+    // K'rrik — "for each {B} in a cost, you may pay 2 life": those pips need
+    // no mana of their colour (a five-seat strict debug pod, seed 64036,
+    // asserted on Champion of Stray Souls' {B}{B} with one Swamp untapped).
+    let life_pips: u8 = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat)
+        .flat_map(|c| c.definition.static_abilities.iter())
+        .fold(0, |m, sa| match sa.effect {
+            crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } => {
+                m | 1 << crate::game::actions::color_index(color)
+            }
+            _ => m,
+        });
     let mut gy_ability_grant = false;
     // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
     // Alchemy): the per-card memo answers "is one out" without a walk.
@@ -9637,7 +9651,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             if idx < printed
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
-                && !colors_coverable(&ab.mana_cost, have.get())
+                && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)
             {
                 continue;
             }
@@ -17202,6 +17216,25 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
 /// [`AvailableMana::by_color`] is already widened to `total` wherever a
 /// colour cannot be bounded (see `available_mana`), so this answers `true`
 /// there.
+/// [`colors_coverable`] with the pips of the colours in `life_pips` (a bit per
+/// `color_index`) payable with life instead (K'rrik, Son of Yawgmoth).
+fn colors_coverable_paying_life(cost: &ManaCost, have: &AvailableMana, life_pips: u8) -> bool {
+    use crate::mana::ManaSymbol;
+    if life_pips == 0 {
+        return colors_coverable(cost, have);
+    }
+    let mut need = [0u32; 5];
+    for s in cost.symbols.iter() {
+        if let ManaSymbol::Colored(c) = s {
+            let i = crate::game::actions::color_index(*c);
+            if life_pips & (1 << i) == 0 {
+                need[i] += 1;
+            }
+        }
+    }
+    need.iter().zip(have.by_color.iter()).all(|(n, have)| n <= have)
+}
+
 fn colors_coverable(cost: &ManaCost, have: &AvailableMana) -> bool {
     use crate::mana::ManaSymbol;
     let mut need = [0u32; 5];
@@ -21214,6 +21247,25 @@ mod tests {
             matches!(action, GameAction::ActivateAbility { card_id, .. } if card_id == marvel),
             "{action:?}"
         );
+    }
+
+    /// K'rrik's "pay 2 life for each {B}" reaches activation costs, so the sink
+    /// gate must not drop a {B} ability the board has no black mana for
+    /// (five-seat strict debug pod, seed 64036).
+    #[test]
+    fn sink_gate_counts_krriks_life_for_black_pips() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::PostCombatMain;
+        g.add_card_to_battlefield(0, catalog::krrik_son_of_yawgmoth());
+        let wurm = g.add_card_to_battlefield(0, catalog::golgari_rotwurm());
+        g.clear_sickness(wurm);
+        g.players[1].life = 1;
+        g.players[2].life = 1;
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.priority.player_with_priority = 0;
+        // The debug assertion inside `gated_pick!` is the check.
+        let _ = main_phase_action(&g, 0);
     }
 
     /// The bot pays Offspring (CR 702.175) when it can afford it — the chosen
