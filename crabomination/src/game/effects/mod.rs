@@ -24038,22 +24038,12 @@ impl GameState {
             }
 
             Effect::SacrificeSource => {
-                // CR 701.16 — the shared sacrifice gate: `CantBeSacrificed`
-                // (Assault Suit) and The Master's token shield.
+                // CR 701.16 — through the shared sacrifice (its gate, events
+                // and the per-resolution record "if you do" reads: Standstill).
                 if let Some(id) = ctx.source
-                    && self.can_be_sacrificed(id)
-                    && let Some(c) = self.battlefield_find(id)
+                    && let Some(p) = self.battlefield_find(id).map(|c| c.controller)
                 {
-                    let p = c.controller;
-                    let is_creature = self.computed_is_creature(c);
-                    if is_creature {
-                        self.died_card_snapshots.insert(id, self.lki_clone(c));
-                        events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
-                        events.push(GameEvent::CreatureDied { card_id: id });
-                    }
-                    events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                    events.append(&mut die_evs);
+                    self.sacrifice_one(id, p, events);
                 }
                 Ok(())
             }
