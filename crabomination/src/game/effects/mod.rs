@@ -13867,12 +13867,10 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    // CR 106.7 — Gond Gate: no color a Gate could make, no mana.
                     ManaPayload::AnyColorAGateYouControlCouldProduce => {
                         let legal = self.colors_gates_could_produce(p);
-                        if legal.is_empty() {
-                            self.players[p].mana_pool.add_colorless(mult);
-                            events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
-                        } else {
+                        if !legal.is_empty() {
                             let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
