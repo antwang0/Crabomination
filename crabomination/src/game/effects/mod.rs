@@ -8,6 +8,7 @@
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
+mod with_targets;
 mod choose_one;
 mod keep_one;
 mod combat_copies;
@@ -21804,6 +21805,7 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WithTargets { what, body } => self.run_with_targets(what, body, ctx, events),
             Effect::ChooseOneAmong { what, chooser, chosen, other } => {
                 self.choose_one_among(what, chooser, chosen, other, ctx, events, effect)
             }

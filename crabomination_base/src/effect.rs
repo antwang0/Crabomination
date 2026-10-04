@@ -5014,6 +5014,12 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// Run `body` with the entities `what` resolves to as its targets — a
+    /// resolution-time choice ("choose a land you control", not a target)
+    /// read by a body that reads targets (`SameNameAsTarget`: Canoptek
+    /// Wraith's "basic land cards which have the same name as the chosen
+    /// land", inside `ChooseOneAmong`).
+    WithTargets { what: Selector, body: Box<Effect> },
     /// "For each different power among [filter] permanents, choose one with
     /// that power" (Celestial Judgment), or with `up_to` "choose any number
     /// with different powers" (Sigardian Zealot): the controller picks per

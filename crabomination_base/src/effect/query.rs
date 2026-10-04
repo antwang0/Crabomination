@@ -599,6 +599,7 @@ impl Effect {
                     f(e);
                 }
             }
+            Effect::WithTargets { body, .. } => f(body),
             Effect::SeparateIntoPiles { chosen, other, .. }
             | Effect::ChooseOneAmong { chosen, other, .. }
             | Effect::ChooseSomeAmong { chosen, other, .. }
@@ -1080,6 +1081,8 @@ impl Effect {
             Effect::ChooseOneAmong { what, chooser, .. } | Effect::ChooseSomeAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
             }
+            // The body's targets are the bound objects, not chosen at cast.
+            Effect::WithTargets { what, .. } => sel_has_target(what),
             Effect::OpponentVetoesOne { what, .. }
             | Effect::ChooseOneAtRandomAmong { what, .. } => sel_has_target(what),
             Effect::FaceDownFaceUpPiles { .. } => false,
@@ -5533,6 +5536,7 @@ impl Effect {
                 Effect::ChooseOneAmong { what, chooser, .. } | Effect::ChooseSomeAmong { what, chooser, .. } => {
                     sel_find(what, slot).or_else(|| pref_find(chooser, slot))
                 }
+                Effect::WithTargets { what, .. } => sel_find(what, slot),
                 Effect::OpponentVetoesOne { what, .. } => sel_find(what, slot),
                 Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
                     .or_else(|| pref_find(splitter, slot))
