@@ -491,6 +491,7 @@ impl Effect {
             | Effect::OnYourNextNamedSpellThisTurn { body, .. }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
             | Effect::AtEachCombatThisTurn { body, .. }
+            | Effect::AtTheAddedCombat { body }
             | Effect::WhenLastCreatedTokenLeaves { body, .. } => {
                 f(body);
             }
@@ -2281,7 +2282,7 @@ impl Effect {
             | Effect::AdditionalUpkeepStep { count }
             | Effect::AdditionalBeginningPhase { count } => value_has_target(count),
             // Registers a delayed trigger; its body targets at fire time, not cast.
-            Effect::AtEachCombatThisTurn { .. } => false,
+            Effect::AtEachCombatThisTurn { .. } | Effect::AtTheAddedCombat { .. } => false,
             Effect::UnlockRoomDoor { what } | Effect::LockOrUnlockRoomDoor { what } => {
                 sel_has_target(what)
             }
@@ -5757,7 +5758,8 @@ impl Effect {
             | Effect::OnMatchingAttacksThisTurn { body, .. }
             | Effect::OnMatchingBlocksThisTurn { body, .. }
             | Effect::DelayUntil { body, .. }
-            | Effect::AtEachCombatThisTurn { body, .. } => body.min_targets_in_mode(mode),
+            | Effect::AtEachCombatThisTurn { body, .. }
+            | Effect::AtTheAddedCombat { body } => body.min_targets_in_mode(mode),
             Effect::DelayUntilWithCapture { capture, body, .. } if sel_has_target(capture) => {
                 body.min_targets_in_mode(mode)
             }

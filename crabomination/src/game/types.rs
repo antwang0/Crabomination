@@ -1396,6 +1396,9 @@ pub enum DelayedKind {
     /// not fire once, expires at cleanup. Registered by
     /// `Effect::AtEachCombatThisTurn` (Full Throttle).
     EachCombatThisTurn,
+    /// "At the beginning of that combat" — the `n`th combat of the
+    /// controller's turn, an added one (Moraug). Fires once; expires at cleanup.
+    CombatNumberThisTurn(u32),
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (`Effect::DelayUntil { kind: EndOfCombat }`; Fortune, Loyal Steed).
     EndOfCombat,

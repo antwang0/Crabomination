@@ -1375,6 +1375,7 @@ impl GameState {
         );
         let mut delayed_to_fire: Vec<DelayedFire> = Vec::new();
         let turn = self.turn_number;
+        let combat_no = self.combat_phases_this_turn;
         let delayed_matches = |dt: &DelayedTrigger| match (&dt.kind, step) {
             (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
             (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
@@ -1392,6 +1393,9 @@ impl GameState {
             }
             (DelayedKind::NextCleanupStep, TurnStep::Cleanup) => true,
             (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => dt.controller == active,
+            (DelayedKind::CombatNumberThisTurn(n), TurnStep::BeginCombat) => {
+                dt.controller == active && *n == combat_no
+            }
             (DelayedKind::EndOfCombat, TurnStep::EndCombat) => true,
             (DelayedKind::NextCombat, TurnStep::BeginCombat) => true,
             _ => false,
@@ -5256,6 +5260,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(_)
                         | crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(_)
                         | crate::game::types::DelayedKind::EachCombatThisTurn
+                        | crate::game::types::DelayedKind::CombatNumberThisTurn(_)
                         | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
                         | crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)
                         | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)

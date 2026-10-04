@@ -105,6 +105,7 @@ pub(crate) fn deferred(e: &Effect) -> bool {
             | Effect::OnYourNextSpellMatchingThisTurn { .. }
             | Effect::OnYourNextNamedSpellThisTurn { .. }
             | Effect::AtEachCombatThisTurn { .. }
+            | Effect::AtTheAddedCombat { .. }
             | Effect::WhenLastCreatedTokenLeaves { .. }
     )
 }

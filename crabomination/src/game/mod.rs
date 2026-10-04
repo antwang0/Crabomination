@@ -185,6 +185,8 @@ mod granted_entry;
 mod first_each_turn;
 // CR 702.138 — escape's "exile a permanent you control".
 mod escape_extra;
+// CR 500.8 — "at the beginning of that combat" (an added one).
+mod added_combat;
 // CR 508.1c — "only the chosen creatures can attack during that combat".
 mod attack_only_chosen;
 mod activation_x;

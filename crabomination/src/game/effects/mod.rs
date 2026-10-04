@@ -40961,6 +40961,10 @@ impl GameState {
                 self.cant_attack_this_combat_except(except, ctx);
                 Ok(())
             }
+            Effect::AtTheAddedCombat { body } => {
+                self.at_the_added_combat((**body).clone(), ctx);
+                Ok(())
+            }
             Effect::AtEachCombatThisTurn { body } => {
                 // Register a turn-scoped delayed trigger that re-fires at the
                 // start of every Begin-Combat step for the controller's turn.

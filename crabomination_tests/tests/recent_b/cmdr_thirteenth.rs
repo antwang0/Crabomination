@@ -601,6 +601,49 @@ fn cr_508_1c_last_night_together_only_the_chosen_attack() {
     );
 }
 
+/// CR 500.8 — cast before combat, Last Night Together's extra combat comes
+/// after the scheduled one: everything may attack in the scheduled combat,
+/// only the chosen two in the one it added.
+#[test]
+fn cr_500_8_last_night_together_binds_the_added_combat() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    for id in [a, b, giant] {
+        g.clear_sickness(id);
+    }
+    let spell = g.add_card_to_hand(0, catalog::last_night_together());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let at = |id| Attack { attacker: id, target: AttackTarget::Player(1) };
+    let mut combats = 0;
+    for _ in 0..60 {
+        if g.step == TurnStep::DeclareAttackers && g.combat_phases_this_turn > combats {
+            combats = g.combat_phases_this_turn;
+            let mut probe = g.clone();
+            let giant_ok = probe.perform_action(GameAction::DeclareAttackers(vec![at(giant)])).is_ok();
+            assert_eq!(giant_ok, combats == 1, "combat {combats}");
+            g.perform_action(GameAction::DeclareAttackers(vec![])).expect("no attack");
+        }
+        if g.step == TurnStep::End {
+            break;
+        }
+        g.priority.player_with_priority = g.active_player_idx;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(combats, 2);
+}
+
 /// CR 707.9b / 611.2c — Psychic Paper: as it becomes attached, the chosen
 /// creature card name and creature type become the equipped creature's; it
 /// keeps them only while the Paper stays attached.

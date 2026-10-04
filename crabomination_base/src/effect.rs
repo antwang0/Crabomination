@@ -11899,7 +11899,7 @@ pub enum Effect {
     AdditionalCombatPhaseAfterMain { count: Value },
     /// "Only the chosen creatures can attack during that combat phase" (Last
     /// Night Together, after its `AdditionalCombatPhaseAfterMain`): at the
-    /// beginning of this turn's next combat, every creature you control other
+    /// beginning of the combat it banked, every creature you control other
     /// than the resolving spell's target creatures can't attack until end of
     /// combat (CR 508.1c). The targets are read at resolution.
     OnlyTargetsCanAttackNextCombat,
@@ -11924,6 +11924,10 @@ pub enum Effect {
     /// this with `AdditionalCombatPhaseAfterMain` to untap attackers between
     /// its extra combats.
     AtEachCombatThisTurn { body: Box<Effect> },
+    /// CR 500.8 — "At the beginning of that combat, [body]" after an
+    /// `AdditionalCombatPhaseAfterMain` in the same resolution: a one-shot
+    /// delayed trigger bound to the combat just banked (Moraug).
+    AtTheAddedCombat { body: Box<Effect> },
     /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
     /// Appends an `Emblem` (named after its source) to the player's
     /// emblem zone. Emblems never leave; their triggered abilities fire

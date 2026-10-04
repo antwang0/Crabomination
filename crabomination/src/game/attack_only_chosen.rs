@@ -9,8 +9,8 @@ use crate::game::layers::Modification;
 use crate::game::types::{DelayedKind, DelayedTrigger, Target};
 
 impl GameState {
-    /// Registers the restriction for this turn's next beginning of combat,
-    /// keyed on the resolving spell's target creatures.
+    /// Registers the restriction for the combat the same spell just banked
+    /// (CR 500.8 — not the turn's scheduled one), keyed on its targets.
     pub(crate) fn only_targets_attack_next_combat(&mut self, ctx: &EffectContext) {
         let except: Vec<CardId> = ctx
             .targets
@@ -23,7 +23,7 @@ impl GameState {
         self.delayed_triggers.push(DelayedTrigger {
             controller: ctx.controller,
             source: ctx.source.unwrap_or(CardId(0)),
-            kind: DelayedKind::EachCombatThisTurn,
+            kind: DelayedKind::CombatNumberThisTurn(self.last_added_combat_number()),
             effect: Effect::CantAttackThisCombatExcept { except },
             target: None,
             bound_token: None,
