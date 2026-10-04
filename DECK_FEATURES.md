@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`016kc94f`, 164/183). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`01JMRKMd`, 165/183). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -53,14 +53,9 @@ they call a deck 🟡, the table wins.
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
-| 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
 
-164 / 183 pod decks carry no residual in their card docs; the rest are listed.
-
-158 / 183 pod decks carry no residual in their card docs; the rest are listed.
-
-157 / 183 pod decks carry no residual in their card docs; the rest are listed.
+165 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not

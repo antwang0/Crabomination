@@ -1211,12 +1211,12 @@ pub struct ManaPool {
     /// so snapshots without a Treasure are byte-identical.
     #[serde(default, skip_serializing_if = "is_zero_u32")]
     treasure: u32,
-    /// Provenance counter: how much of the pool came from an artifact's mana
-    /// ability (a Treasure's included). Read only to count "mana from an
-    /// artifact source spent to cast it" (Coin of Mastery); clamped and
-    /// skipped on the wire exactly like `treasure`.
-    #[serde(default, skip_serializing_if = "is_zero_u32")]
-    artifact: u32,
+    /// Provenance counter, WUBRG then colorless like `creature`: how much of
+    /// each bucket came from an artifact's mana ability (a Treasure's
+    /// included). Read only to count "mana from an artifact source spent to
+    /// cast it" (Coin of Mastery); skipped on the wire when all zero.
+    #[serde(default, skip_serializing_if = "is_zero_prov")]
+    artifact: [u32; 6],
     /// Provenance counter: how much of the pool came from a Desert's mana
     /// ability. Read only to count "mana from a Desert spent to cast this
     /// spell" (Cataclysmic Prospecting); clamped and skipped on the wire
@@ -1227,6 +1227,10 @@ pub struct ManaPool {
 
 fn is_zero_u32(n: &u32) -> bool {
     *n == 0
+}
+
+fn is_zero_prov(n: &[u32; 6]) -> bool {
+    n.iter().all(|&x| x == 0)
 }
 
 /// Index into [`ManaPool::creature`] for a color (5 = colorless).
@@ -1344,7 +1348,9 @@ impl ManaPool {
             *n *= 2;
         }
         self.treasure *= 2;
-        self.artifact *= 2;
+        for n in self.artifact.iter_mut() {
+            *n *= 2;
+        }
         self.desert *= 2;
     }
 
@@ -1381,9 +1387,11 @@ impl ManaPool {
         if self.treasure > 0 {
             self.treasure = self.treasure.min(self.total());
         }
-        if self.artifact > 0 {
-            self.artifact = self.artifact.min(self.total());
+        for c in Color::ALL {
+            let idx = color_index(c);
+            self.artifact[idx] = self.artifact[idx].min(*self.slot(c));
         }
+        self.artifact[5] = self.artifact[5].min(self.colorless);
         if self.desert > 0 {
             self.desert = self.desert.min(self.total());
         }
@@ -1408,16 +1416,33 @@ impl ManaPool {
         self.desert
     }
 
-    /// Tag `amount` mana just added as artifact-produced (the same
-    /// activation-path delta as [`mark_from_treasure`](Self::mark_from_treasure)).
-    pub fn mark_from_artifact(&mut self, amount: u32) {
-        self.artifact += amount;
+    /// Tag `amount` mana just added to `color`'s bucket (`None` = colorless)
+    /// as artifact-produced — the activation path's per-bucket pool delta.
+    pub fn mark_from_artifact(&mut self, color: Option<Color>, amount: u32) {
+        self.artifact[prov_index(color)] += amount;
         self.clamp_creature();
     }
 
     /// Artifact-produced mana floating (see the field).
     pub fn artifact_amount(&self) -> u32 {
-        self.artifact
+        self.artifact.iter().sum()
+    }
+
+    /// Artifact mana `self` spent since `before`, the payer spending it ahead
+    /// of other mana in each bucket (CR 601.2h: the payer picks which mana) —
+    /// and the provenance left behind is debited to match.
+    pub fn settle_artifact_spent(&mut self, before: &ManaPool) -> u32 {
+        let mut spent = 0;
+        for i in 0..6 {
+            let (was, now) = match i {
+                5 => (before.colorless, self.colorless),
+                _ => (*before.slot(Color::ALL[i]), *self.slot(Color::ALL[i])),
+            };
+            let n = before.artifact[i].min(was.saturating_sub(now));
+            self.artifact[i] = self.artifact[i].min(before.artifact[i] - n);
+            spent += n;
+        }
+        spent
     }
 
     /// Treasure-produced mana floating (see the field).
@@ -2105,7 +2130,7 @@ impl ManaPool {
             && self.restricted_colorless.is_empty()
             && self.creature.iter().all(|&n| n == 0)
             && self.treasure == 0
-            && self.artifact == 0
+            && is_zero_prov(&self.artifact)
             && self.desert == 0
     }
 
@@ -2175,7 +2200,9 @@ impl ManaPool {
             self.creature[i] += *n;
         }
         self.treasure += other.treasure;
-        self.artifact += other.artifact;
+        for (i, n) in other.artifact.iter().enumerate() {
+            self.artifact[i] += *n;
+        }
         self.desert += other.desert;
         for (n, r) in &other.restricted_colorless {
             self.add_restricted_colorless(*n, *r);

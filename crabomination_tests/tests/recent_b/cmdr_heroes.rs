@@ -158,9 +158,45 @@ fn coin_of_mastery_counts_artifact_mana_spent() {
         .expect("cast with {C}{G}");
     drain_stack(&mut g);
     assert_eq!(plus(&g, bears), 1, "one mana from an artifact spent");
-    // A creature cast with no artifact mana gets nothing.
+    // A creature cast with no artifact mana gets nothing (Sol Ring's second
+    // {C} is still floating, so empty the pool first).
+    g.players[0].mana_pool.empty();
     let other = cast(&mut g, catalog::grizzly_bears());
     assert_eq!(plus(&g, other), 0);
+}
+
+/// Coin of Mastery with land mana left floating: Sol Ring's {C}{C} pays
+/// Steel Overseer's {2} and the Forest's {G} stays in the pool — both
+/// artifact mana count (the old pool-total count read 1), and the {G} that
+/// pays the next creature is not artifact mana.
+#[test]
+fn coin_of_mastery_counts_per_bucket_with_mana_floating() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::coin_of_mastery());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    for id in [ring, forest] {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for mana");
+    }
+    let overseer = g.add_card_to_hand(0, catalog::steel_overseer());
+    g.perform_action(GameAction::CastSpell { card_id: overseer, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast with {C}{C}");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, overseer), 2, "both of Sol Ring's mana spent");
+    assert_eq!(g.players[0].mana_pool.artifact_amount(), 0);
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.perform_action(GameAction::CastSpell { card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast with the floating {G}");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, elf), 0, "the Forest's mana");
 }
 
 /// CR 603.2 — Krang: "you draw a card" (Baxter's counter) triggers twice;

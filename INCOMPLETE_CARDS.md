@@ -1978,7 +1978,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III: a land among the exiled cards can't be played. |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |
-| 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
 

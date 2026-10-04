@@ -3652,7 +3652,7 @@ impl crate::game::GameState {
             self.players[p].cast_paid_with_treasure = true;
         }
         // Coin of Mastery — how much artifact mana this payment spent.
-        let spent = receipt.pool_before.artifact_amount().saturating_sub(self.players[p].mana_pool.artifact_amount());
+        let spent = self.players[p].mana_pool.settle_artifact_spent(&receipt.pool_before);
         if spent > 0 {
             self.players[p].cast_paid_artifact_mana = spent;
         }
@@ -19375,10 +19375,18 @@ impl GameState {
                 c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)
             })
             .map(|_| self.players[p].mana_pool.total());
-        // Coin of Mastery — any artifact's mana is marked the same way.
+        // Coin of Mastery — any artifact's mana is marked per bucket.
         let artifact_before = source
             .filter(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact))
-            .map(|_| self.players[p].mana_pool.total());
+            .map(|_| {
+                let pool = &self.players[p].mana_pool;
+                let mut b = [0u32; 6];
+                for (i, c) in ManaColor::ALL.into_iter().enumerate() {
+                    b[i] = pool.amount(c);
+                }
+                b[5] = pool.colorless_amount();
+                b
+            });
         // Cataclysmic Prospecting — a Desert's mana, printed or granted.
         let desert_before = source
             .filter(|c| self.permanent_has_land_type(c, crate::card::LandType::Desert))
@@ -19430,11 +19438,17 @@ impl GameState {
                 pool.mark_from_treasure(d);
             }
         }
-        if let Some(total) = artifact_before {
+        if let Some(b) = artifact_before {
             let pool = &mut self.players[p].mana_pool;
-            let d = pool.total().saturating_sub(total);
+            for (i, c) in ManaColor::ALL.into_iter().enumerate() {
+                let d = pool.amount(c).saturating_sub(b[i]);
+                if d > 0 {
+                    pool.mark_from_artifact(Some(c), d);
+                }
+            }
+            let d = pool.colorless_amount().saturating_sub(b[5]);
             if d > 0 {
-                pool.mark_from_artifact(d);
+                pool.mark_from_artifact(None, d);
             }
         }
         if let Some(total) = desert_before {

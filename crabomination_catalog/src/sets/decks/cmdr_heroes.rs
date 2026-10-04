@@ -789,10 +789,8 @@ pub fn arcade_cabinet() -> CardDefinition {
 }
 
 /// Coin of Mastery — a creature of yours enters with a counter per mana from
-/// artifacts spent on it; taps for a Treasure.
-///
-/// ⚠ Residual: artifact mana is counted off the pool, so mana floated from
-/// lands and artifacts together and only partly spent can read low.
+/// artifacts spent on it (per mana bucket, artifact mana spent first);
+/// taps for a Treasure.
 pub fn coin_of_mastery() -> CardDefinition {
     CardDefinition {
         name: "Coin of Mastery",
