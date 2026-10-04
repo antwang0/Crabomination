@@ -108,6 +108,30 @@ fn serene_master_swaps_powers_with_what_it_blocks() {
     assert!(g.battlefield_find(master).is_some(), "and took no damage");
 }
 
+/// Serene Master's 2013-10-17 rulings: each power becomes the other's former
+/// power, and counters still apply to the new value — a Wurm with a +1/+1
+/// counter (7) blocked by a Master with one (1) leaves the Master at 7 + 1
+/// and the Wurm at 1 + 1.
+#[test]
+fn serene_master_exchange_keeps_counters_on_top() {
+    let mut g = main_phase(2);
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let master = g.add_card_to_battlefield(1, catalog::serene_master());
+    g.battlefield_find_mut(wurm).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(master).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(wurm);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: wurm, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(master, wurm)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(master).unwrap().power, 8);
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 2);
+}
+
 /// Lim-Dûl's Vault digs past a window of lands for 1 life a step and leaves
 /// the window it stopped on on top.
 #[test]
