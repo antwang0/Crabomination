@@ -5,7 +5,6 @@
 //! pods. Every mode at every payable X is dry-run and scored against passing;
 //! the best improvement is taken.
 
-use crate::effect::Effect;
 use crate::game::GameState;
 use crate::game::types::GameAction;
 
@@ -44,11 +43,7 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
             if have == 0 || ab.sac_cost || ab.exhaust {
                 continue;
             }
-            let modes: Vec<(Option<usize>, &Effect)> = match &ab.effect {
-                Effect::ChooseMode(ms) => ms.iter().enumerate().map(|(i, m)| (Some(i), m)).collect(),
-                other => vec![(None, other)],
-            };
-            for (mode, eff) in modes {
+            for (mode, eff) in super::modal_activation::mode_variants(&ab.effect) {
                 let target = if eff.requires_target() {
                     match state.auto_target_for_effect(eff, seat) {
                         Some(t) => Some(t),

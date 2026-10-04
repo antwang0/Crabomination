@@ -9359,27 +9359,29 @@ pub(super) fn cast_candidates<'a>(
                 if !colors_coverable(&ab.mana_cost, have_mana.get()) {
                     continue;
                 }
-                let (target, additional_targets) = if ab.effect.requires_target() {
-                    let (t, extras) =
-                        state.auto_targets_for_effect_all_slots(&ab.effect, seat, None);
-                    if t.is_none() {
-                        continue;
-                    }
-                    (t, extras)
-                } else {
-                    (None, vec![])
-                };
-                ability_cands.push((
-                    cmc,
-                    GameAction::ActivateAbility {
-                        card_id: c.id,
-                        ability_index: i,
-                        target,
-                        additional_targets,
-                        mode: None,
-                        x_value: None,
-                    },
-                ));
+                // Each mode of a modal one, aimed by its own slots.
+                for (mode, eff) in super::modal_activation::mode_variants(&ab.effect) {
+                    let (target, additional_targets) = if eff.requires_target() {
+                        let (t, extras) = state.auto_targets_for_effect_all_slots(&ab.effect, seat, mode);
+                        if t.is_none() {
+                            continue;
+                        }
+                        (t, extras)
+                    } else {
+                        (None, vec![])
+                    };
+                    ability_cands.push((
+                        cmc,
+                        GameAction::ActivateAbility {
+                            card_id: c.id,
+                            ability_index: i,
+                            target,
+                            additional_targets,
+                            mode,
+                            x_value: None,
+                        },
+                    ));
+                }
             }
         }
         ability_cands.sort_by_key(|(cmc, _)| *cmc);
@@ -10370,14 +10372,6 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
             {
                 continue;
             }
-            let target = if ab.effect.requires_target() {
-                match state.auto_target_for_effect(&ab.effect, seat) {
-                    Some(t) => Some(t),
-                    None => continue,
-                }
-            } else {
-                None
-            };
             // "Sacrifice X [filter]" (Springjack Pasture, Grim Hireling): X
             // is the activator's, so each payable size is scored and the
             // best one that beats passing is taken; X = 0 pays nothing.
@@ -10397,24 +10391,36 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
                 _ => vec![None],
             };
             let mut best: Option<(i32, GameAction)> = None;
-            for x_value in sizes {
-                let action = GameAction::ActivateAbility {
-                    card_id: card.id,
-                    ability_index: idx,
-                    target: target.clone(),
-                    additional_targets: Vec::new(),
-                    x_value,
-                    mode: None,
-                };
-                if !ward_gate_ok(state, seat, &action) {
-                    continue;
-                }
-                let Some(settled) = state.accept(action.clone()) else { continue };
-                if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
-                    && ev > baseline
-                    && best.as_ref().is_none_or(|(b, _)| ev > *b)
-                {
-                    best = Some((ev, action));
+            // Each mode of a modal one with its own target (Breya).
+            let variants: Vec<(Option<usize>, Option<Target>)> = super::modal_activation::mode_variants(&ab.effect)
+                .into_iter()
+                .filter_map(|(mode, eff)| {
+                    if !eff.requires_target() {
+                        return Some((mode, None));
+                    }
+                    state.auto_target_for_effect(eff, seat).map(|t| (mode, Some(t)))
+                })
+                .collect();
+            for (mode, target) in variants {
+                for &x_value in &sizes {
+                    let action = GameAction::ActivateAbility {
+                        card_id: card.id,
+                        ability_index: idx,
+                        target: target.clone(),
+                        additional_targets: Vec::new(),
+                        x_value,
+                        mode,
+                    };
+                    if !ward_gate_ok(state, seat, &action) {
+                        continue;
+                    }
+                    let Some(settled) = state.accept(action.clone()) else { continue };
+                    if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
+                        && ev > baseline
+                        && best.as_ref().is_none_or(|(b, _)| ev > *b)
+                    {
+                        best = Some((ev, action));
+                    }
                 }
             }
             if let Some((_, action)) = best {

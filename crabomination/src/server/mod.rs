@@ -122,6 +122,7 @@ mod loyalty_pick;
 mod life_draw;
 mod transform_sink;
 mod x_counter_sink;
+mod modal_activation;
 mod generic_sink;
 mod tap_maker;
 mod donate_draw;
