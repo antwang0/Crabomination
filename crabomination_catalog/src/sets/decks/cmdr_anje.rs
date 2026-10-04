@@ -13,7 +13,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value, Zone,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{combat_partner_punisher, etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
@@ -283,33 +283,16 @@ pub fn call_to_the_netherworld() -> CardDefinition {
     )
 }
 
-/// Chainer, Nightmare Adept — discard to cast a creature from your graveyard
-/// this turn; creatures you didn't cast from hand get haste. The permission
-/// covers every creature card there, one cast among them
-/// (`OneCastAmongGranted`).
-/// Residual: a creature card put into your graveyard after the activation
-/// isn't covered.
+/// Chainer, Nightmare Adept — discard to cast a creature spell from your
+/// graveyard this turn (one, any creature card there as it's cast:
+/// `MayCastCreatureFromGraveyardThisTurn`); creatures you didn't cast from
+/// hand get haste.
 pub fn chainer_nightmare_adept() -> CardDefinition {
-    let yard = || Selector::CardsInZone {
-        who: PlayerRef::You,
-        zone: Zone::Graveyard,
-        filter: R::Creature.and(R::Nonland),
-    };
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Any, 1)),
             once_per_turn: true,
-            effect: Effect::Seq(vec![
-                Effect::GrantMayPlay {
-                    what: yard(),
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    to_owner: false,
-                    exile_after: false,
-                    pay_own_cost: true,
-                    any_color: false,
-                },
-                Effect::OneCastAmongGranted { what: yard() },
-            ]),
+            effect: Effect::MayCastCreatureFromGraveyardThisTurn,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

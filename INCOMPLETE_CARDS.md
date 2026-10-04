@@ -1972,7 +1972,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
-| 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the one-cast permission covers the creature cards in your graveyard as it resolves; one put there later isn't covered. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells, activated abilities, turning face up, cycling and the other action costs, and "unless [you] pay" costs (ward, taxes); not a mana ability's cost. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |

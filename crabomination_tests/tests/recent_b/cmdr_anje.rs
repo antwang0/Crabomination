@@ -193,6 +193,20 @@ fn krrik_pays_a_cycling_cost_with_life() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == decree));
 }
 
+/// CR 601.2a — a spell cast from the graveyard was not cast from the hand,
+/// even when the engine routes the cast through the hand (Muldrotha's
+/// permission): "if you didn't cast it from your hand" sees it.
+#[test]
+fn cr_601_2a_a_graveyard_cast_is_not_a_cast_from_hand() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::muldrotha_the_gravetide());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    cast(&mut g, bear, &[]).expect("cast from the graveyard");
+    let c = g.battlefield_find(bear).expect("resolved");
+    assert!(!c.cast_from_hand && c.cast_from_graveyard);
+}
+
 /// Bone Miser: a discarded creature makes a 2/2 Zombie.
 #[test]
 fn bone_miser_pays_for_a_discarded_creature() {
@@ -227,7 +241,7 @@ fn chainer_hastes_what_you_did_not_cast_from_hand() {
     g.add_card_to_hand(0, catalog::swamp());
     activate(&mut g, chainer, 0).expect("discard");
     flood(&mut g, 0);
-    cast_granted(&mut g, dead).expect("cast from the graveyard");
+    cast(&mut g, dead, &[]).expect("cast from the graveyard");
     let cp = g.computed_permanent(dead).expect("on the battlefield");
     assert!(cp.keywords().contains(&Keyword::Haste));
     let fresh = g.add_card_to_hand(0, catalog::grizzly_bears());
@@ -243,10 +257,21 @@ fn chainer_hastes_what_you_did_not_cast_from_hand() {
     g.add_card_to_hand(0, catalog::swamp());
     activate(&mut g, chainer, 0).expect("discard");
     flood(&mut g, 0);
-    cast_granted(&mut g, second).expect("the angel");
+    cast(&mut g, second, &[]).expect("the angel");
     assert!(g.battlefield_find(second).is_some());
     flood(&mut g, 0);
-    assert!(cast_granted(&mut g, first).is_err(), "one creature spell");
+    assert!(cast(&mut g, first, &[]).is_err(), "one creature spell");
+
+    // Any creature card there AS IT'S CAST: one that reached the graveyard
+    // after the activation is covered.
+    let mut g = main_phase(2);
+    let chainer = g.add_card_to_battlefield(0, catalog::chainer_nightmare_adept());
+    g.add_card_to_hand(0, catalog::swamp());
+    activate(&mut g, chainer, 0).expect("discard");
+    let late = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    cast(&mut g, late, &[]).expect("a card put there after the activation");
+    assert!(g.battlefield_find(late).is_some());
 }
 
 /// Hedonist's Trove exiles an opponent's graveyard, and you may cast from it.
