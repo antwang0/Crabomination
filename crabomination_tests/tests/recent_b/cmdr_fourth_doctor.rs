@@ -421,3 +421,48 @@ fn peri_brown_convokes_only_the_first_historic_spell() {
     g.players[0].mana_pool.add_colorless(1);
     assert!(convoke(&mut g, stone, bears[1]).is_err(), "the second one this turn doesn't");
 }
+
+/// The Curse of Fenric I — "for each creature destroyed this way, its
+/// controller creates a 3/3 Mutant": the Bears' controller gets one, the
+/// indestructible creature's controller doesn't (CR 702.12b).
+#[test]
+fn curse_of_fenric_mutants_only_for_the_destroyed() {
+    let mut g = pod(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut tough = catalog::grizzly_bears();
+    tough.keywords.push(Keyword::Indestructible);
+    let tough = g.add_card_to_battlefield(2, tough);
+    let saga = catalog::the_curse_of_fenric();
+    let chapter = saga.saga_chapters[0].1.clone();
+    let src = g.add_card_to_battlefield(0, saga);
+    let mut ctx = EffectContext::for_ability(src, 0, None);
+    ctx.targets = vec![
+        crabomination::game::types::Target::Permanent(bear),
+        crabomination::game::types::Target::Permanent(tough),
+    ];
+    g.resolve_effect(&chapter, &ctx).expect("resolves");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(tough).is_some());
+    let mutants = |seat| g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Mutant").count();
+    assert_eq!((mutants(1), mutants(2)), (1, 0));
+}
+
+/// The Curse of Fenric II — the target becomes a 6/6 legendary Horror with
+/// no abilities (CR 613.1d/f layers 4, 6 and 7b).
+#[test]
+fn curse_of_fenric_ii_makes_a_legendary_horror() {
+    let mut g = pod(2);
+    let mut flier = catalog::grizzly_bears();
+    flier.keywords.push(Keyword::Flying);
+    let bear = g.add_card_to_battlefield(1, flier);
+    let saga = catalog::the_curse_of_fenric();
+    let chapter = saga.saga_chapters[1].1.clone();
+    let src = g.add_card_to_battlefield(0, saga);
+    let ctx = EffectContext::for_ability(src, 0, Some(crabomination::game::types::Target::Permanent(bear)));
+    g.resolve_effect(&chapter, &ctx).expect("resolves");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6));
+    assert!(cp.supertypes().contains(&Supertype::Legendary));
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Horror]);
+    assert!(!cp.keywords().contains(&Keyword::Flying));
+}

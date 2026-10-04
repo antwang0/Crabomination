@@ -385,7 +385,7 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 |---|---|---|
 | Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
-| The Curse of Fenric | II doesn't make the creature a legendary Horror named Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name / add-supertype effect |
+| The Curse of Fenric | II makes a legendary 6/6 Horror but doesn't name it Fenric, so III's "another target creature named Fenric" takes any other creature | no set-name effect |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
 
@@ -1993,7 +1993,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
-| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
+| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric, so III's Mutant fights any other creature. |
 | 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
 | 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |

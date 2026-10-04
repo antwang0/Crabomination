@@ -944,26 +944,32 @@ pub fn the_caves_of_androzani() -> CardDefinition {
 /// The Curse of Fenric — kills up to one creature per player for a
 /// deathtouch Mutant; blanks a creature into a 6/6; a Mutant fights it.
 ///
-/// ⚠ Residual: II doesn't rename the creature Fenric or make it legendary;
-/// III's Mutant fights any other creature.
+/// ⚠ Residual: II doesn't rename the creature Fenric (it does become a
+/// legendary 6/6 Horror); III's Mutant fights any other creature — no name
+/// change exists to target "named Fenric" by.
 pub fn the_curse_of_fenric() -> CardDefinition {
     let mutant = token("Mutant", vec![Color::Green], vec![CreatureType::Mutant], 3, 3, vec![Keyword::Deathtouch]);
     saga("The Curse of Fenric", cost(&[generic(2), g(), w()]), vec![
-        (1, Effect::ForEachPlayerTarget {
-            body: Box::new(Effect::ApplyToTargets {
-                max_targets: 8,
-                min_targets: 0,
-                filter: R::Creature,
-                effect: Box::new(Effect::Seq(vec![
-                    Effect::CreateToken {
-                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                        count: Value::ONE,
-                        definition: Arc::new(mutant),
-                    },
-                    Effect::Destroy { what: Selector::Target(0) },
-                ])),
-            }),
-        }),
+        // "For each creature destroyed this way, its controller creates" —
+        // a survivor (indestructible, regenerated) makes no Mutant.
+        (1, Effect::Seq(vec![
+            Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                }),
+            },
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::CreaturesDestroyedThisResolutionControlledBy(PlayerRef::You),
+                    definition: Arc::new(mutant),
+                }),
+            },
+        ])),
         (2, Effect::Seq(vec![
             Effect::LoseAllAbilities { what: target_filtered(R::Creature.and(R::NotToken)), duration: Duration::Permanent },
             Effect::SetBasePT {
@@ -972,6 +978,12 @@ pub fn the_curse_of_fenric() -> CardDefinition {
                 toughness: Value::Const(6),
                 duration: Duration::Permanent,
             },
+            Effect::BecomeCreatureType {
+                what: Selector::Target(0),
+                creature_types: vec![CreatureType::Horror],
+                duration: Duration::Permanent,
+            },
+            Effect::BecomeLegendary { what: Selector::Target(0), duration: Duration::Permanent },
         ])),
         (3, Effect::Fight {
             attacker: target_filtered(R::HasCreatureType(CreatureType::Mutant)),
