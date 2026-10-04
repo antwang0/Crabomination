@@ -2,6 +2,7 @@
 
 use crabomination::card::CardId;
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -58,7 +59,7 @@ fn agent_of_stromgald_filters_red_into_black() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0);
 }
 
-/// Arcane Denial pays its victim two cards and you one, both next upkeep.
+/// Arcane Denial pays its victim up to two cards and you one, both next upkeep.
 #[test]
 fn arcane_denial_refunds_both_sides_next_upkeep() {
     let mut g = main_phase();
@@ -74,6 +75,8 @@ fn arcane_denial_refunds_both_sides_next_upkeep() {
     let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
     cast(&mut g, 0, denial, Some(Target::Permanent(bolt)));
     assert_eq!(g.players[0].life, 20, "countered");
+    // "May draw up to two": the victim says yes to both draws.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
     next_upkeep(&mut g);
     assert_eq!(g.players[0].hand.len(), mine - 1 + 1, "you drew one");
     assert_eq!(g.players[1].hand.len(), theirs + 2, "they drew two");

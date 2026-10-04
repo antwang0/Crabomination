@@ -72,8 +72,14 @@ pub fn agent_of_stromgald() -> CardDefinition {
     }
 }
 
-/// Arcane Denial — a counterspell that pays its victim back.
+/// Arcane Denial — a counterspell that pays its victim back: its controller
+/// "may draw up to two cards" (each draw a yes/no of theirs, so 0, 1 or 2).
 pub fn arcane_denial() -> CardDefinition {
+    let may_draw = || Effect::MayDoBy {
+        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+        description: "Draw a card (Arcane Denial)?".into(),
+        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+    };
     CardDefinition {
         name: "Arcane Denial",
         cost: cost(&[generic(1), u()]),
@@ -81,10 +87,7 @@ pub fn arcane_denial() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
             Effect::AtNextTurnsUpkeep {
-                body: Box::new(Effect::Draw {
-                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
-                    amount: Value::Const(2),
-                }),
+                body: Box::new(Effect::Seq(vec![may_draw(), may_draw()])),
             },
             cantrip_next_upkeep(),
         ]),
