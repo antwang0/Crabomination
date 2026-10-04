@@ -128,6 +128,38 @@ fn biotransference_turns_flesh_to_metal() {
     assert_eq!(g.players[0].life, 19);
 }
 
+/// CR 205.1a / 611.3a — Biotransference: "the same is true for creature
+/// spells you control and creature cards you own that aren't on the
+/// battlefield." A milled Grizzly Bears is an artifact creature card for
+/// Szarekh — under its owner's Biotransference, not an opponent's.
+#[test]
+fn cr_611_3a_biotransference_makes_a_milled_creature_card_an_artifact() {
+    for (holder, taken) in [(0, true), (1, false)] {
+        let mut g = main_phase(2);
+        g.add_card_to_battlefield(holder, catalog::biotransference());
+        library(&mut g, 0, 2);
+        let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+        let szarekh = g.add_card_to_battlefield(0, catalog::szarekh_the_silent_king());
+        attack(&mut g, &[szarekh], 1);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == bear), taken, "Biotransference on seat {holder}");
+    }
+}
+
+/// CR 611.3a — Anrakyr casts "an artifact spell" from the graveyard: under
+/// Biotransference a creature card there is one, and the spell it becomes is
+/// an artifact spell for Biotransference's own cast trigger.
+#[test]
+fn cr_611_3a_anrakyr_casts_a_creature_card_biotransference_made_an_artifact() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::biotransference());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let anrakyr = g.add_card_to_battlefield(0, catalog::anrakyr_the_traveller());
+    attack(&mut g, &[anrakyr], 1);
+    assert!(g.battlefield_find(bear).is_some(), "cast from the graveyard");
+    assert_eq!(count(&g, 0, "Necron Warrior"), 1, "an artifact spell was cast");
+    assert_eq!(g.players[0].life, 17, "two life for the Bears, one for the Warrior");
+}
+
 /// Canoptek Scarab Swarm exiles a graveyard and makes an Insect per artifact
 /// or land card exiled.
 /// Canoptek Wraith: "choose a land you control. Then search for up to two

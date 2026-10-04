@@ -128,12 +128,11 @@ pub fn anrakyr_the_traveller() -> CardDefinition {
     })
 }
 
-/// Biotransference — creatures you control are artifacts; casting an
-/// artifact spell costs 1 life and makes a Necron Warrior.
-///
-/// ⚠ Residual: only permanents become artifacts (not spells or cards in other
-/// zones); the cast trigger reads "artifact or creature spell", the set the
-/// printed text makes it.
+/// Biotransference — creatures you control are artifacts, and so are creature
+/// spells you control and creature cards you own that aren't on the
+/// battlefield (`OwnedCardsOffBattlefieldHaveCardType`: Szarekh takes a milled
+/// Grizzly Bears, Anrakyr casts one); casting an artifact spell costs 1 life
+/// and makes a Necron Warrior.
 pub fn biotransference() -> CardDefinition {
     CardDefinition {
         name: "Biotransference",
@@ -146,10 +145,16 @@ pub fn biotransference() -> CardDefinition {
                 card_type: CardType::Artifact,
                 artifact_subtype: None,
             },
+        }, StaticAbility {
+            description: "The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
+            effect: StaticEffect::OwnedCardsOffBattlefieldHaveCardType {
+                having: CardType::Creature,
+                add: CardType::Artifact,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.or(R::Creature) },
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
             ),
             effect: Effect::Seq(vec![
                 Effect::LoseLife { who: Selector::You, amount: Value::ONE },
