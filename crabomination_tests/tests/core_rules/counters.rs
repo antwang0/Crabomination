@@ -648,6 +648,23 @@ fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// CR 701.32a — support is "each of **up to** N target creatures": with no
+/// creature on the battlefield the spell is still castable (and still draws).
+#[test]
+fn cr_701_32a_support_with_no_creature_is_castable() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::shoulder_to_shoulder());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("support with zero targets is a legal cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+}
+
 // ── Populate (CR 701.36) ────────────────────────────────────────────────────
 
 #[test]

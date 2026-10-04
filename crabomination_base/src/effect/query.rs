@@ -5741,8 +5741,11 @@ impl Effect {
             Effect::DealDamageDivided { .. }
             | Effect::PreventNextDamageDivided { .. }
             | Effect::DealDamageDividedEvenly { .. }
-            | Effect::DistributeCounters { .. }
-            | Effect::SupportCounters { .. } => Some(1),
+            | Effect::DistributeCounters { .. } => Some(1),
+            // CR 701.32a — support N is "each of **up to** N target
+            // creatures": zero is a legal choice (Lead by Example with no
+            // creature in play was uncastable).
+            Effect::SupportCounters { .. } => Some(0),
             Effect::Seq(v) => v.iter().find_map(|e| e.min_targets_in_mode(None)),
             // The required slots run up to the first member with an optional
             // one; a member with no minimum of its own requires all its slots.
