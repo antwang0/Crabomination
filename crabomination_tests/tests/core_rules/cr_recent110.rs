@@ -361,3 +361,29 @@ fn cr_611_2c_a_resolved_pump_skips_later_creatures() {
     assert_eq!(g.computed_permanent(late).unwrap().power, 2, "entered after Overrun resolved");
     assert!(!g.computed_permanent(late).unwrap().keywords().contains(&crabomination::card::Keyword::Trample));
 }
+
+/// CR 119.9 / 120.3f — two lifelinkers' combat damage is dealt at once, but
+/// each source causes its own life gain: Ajani's Pridemate triggers twice.
+#[test]
+fn cr_119_9_each_lifelink_source_is_its_own_life_gain() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase();
+    let cat = g.add_card_to_battlefield(0, catalog::ajanis_pridemate());
+    let a = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    let b = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 24);
+    assert_eq!(g.battlefield_find(cat).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
