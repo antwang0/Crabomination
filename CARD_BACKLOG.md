@@ -440,8 +440,8 @@ subject; the attack path's does not, and that is the next thing to unify.
 ⚠ **What each ratchet signs off, and none of it is an unbatched trigger.**
 Damage: **Quartzwood Crasher** (wants the batch's summed damage for its X) and
 **Magmatic Galleon** (the clause is not modelled at all), both in
-INCOMPLETE_CARDS. Attack: **Frontier Warmonger** (a `StaticEffect::
-GrantKeywordToAttackers`, not a trigger), **Sabotage Strategist** ("those
+INCOMPLETE_CARDS. Attack: **Frontier Warmonger** (now an `AnyPlayerAttacks`
+trigger, 2026-10-04 — once per declaration), **Sabotage Strategist** ("those
 creatures get -1/-0" — one fire per creature is how one instance reaches every
 member of the set; batching it would pump one and leave the rest) and
 **Orim's Prayer** (per-attacker `GainLife 1` sums to the printed amount, and a

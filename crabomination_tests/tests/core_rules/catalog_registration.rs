@@ -313,9 +313,9 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     ("Locke, Treasure Hunter", "skulk"),
     ("Ant-Man, Elusive Avenger", "skulk"),
     // "you may pay {N} any number of times" (the Adversary cycle) is
-    // multikicker in everything but name.
+    // multikicker in everything but name. (Bloodthirsty Adversary pays on
+    // its ETB with `MayPayRepeatedly`, as printed.)
     ("Intrepid Adversary", "kicker"),
-    ("Bloodthirsty Adversary", "kicker"),
     // "cast from your graveyard by paying {3}{R} and exiling four other
     // cards" is Escape 4 spelled out.
     ("Squee, Dubious Monarch", "escape"),
@@ -2065,11 +2065,8 @@ fn every_graveyard_leave_trigger_fires_once_a_batch() {
     );
 }
 
-/// The two names the attack-batch ratchet below signs off, and neither is an
-/// unbatched trigger. **Frontier Warmonger** models "those creatures gain
-/// menace" as `StaticEffect::GrantKeywordToAttackers` — a continuous grant to
-/// the whole attacking set, which is the printed result and not a trigger at
-/// all. **Sabotage Strategist** models "those creatures get -1/-0" as a
+/// The names the attack-batch ratchet below signs off, and none is an
+/// unbatched trigger. **Sabotage Strategist** models "those creatures get -1/-0" as a
 /// per-attacker `PumpPT { what: TriggerSource }`, and firing once per creature
 /// is exactly how one instance reaches every member of the set; batching it
 /// would pump one attacker and leave the rest alone.
@@ -2078,8 +2075,7 @@ fn every_graveyard_leave_trigger_fires_once_a_batch() {
 /// to exactly the printed amount, and batching it would need a count of
 /// the creatures attacking *you* — which at N > 2 is not the same as the
 /// creatures attacking, and no `SelectionRequirement` draws that line.
-const ATTACK_BATCH_SIGNED_OFF: &[&str] =
-    &["Frontier Warmonger", "Sabotage Strategist", "Orim's Prayer"];
+const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer"];
 
 /// **A card that prints "whenever one or more … attack" fires once per
 /// declaration, not once per attacker.**
@@ -2095,7 +2091,10 @@ const ATTACK_BATCH_SIGNED_OFF: &[&str] =
 /// more **Halflings** you control" — has to stay on `Attacks` and carry
 /// `once_per_batch` instead. `EventScope::YouAttackedPlayer` is the fourth:
 /// once per declaration *per attacked player*, which is how "attack an
-/// opponent, … that player" is printed (Firkraag).
+/// opponent, … that player" is printed (Firkraag). `EventScope::
+/// AnyPlayerAttacks` is the fifth: once per declaration, whoever declares it
+/// (Frontier Warmonger's "one or more creatures attack one of your
+/// opponents").
 #[test]
 fn every_batched_attack_trigger_fires_once_a_declaration() {
     clause_ratchet(
@@ -2112,6 +2111,7 @@ fn every_batched_attack_trigger_fires_once_a_declaration() {
                 || body.contains("once_per_turn: true")
                 || body.contains("kind: YouAttack")
                 || body.contains("scope: YouAttackedPlayer")
+                || body.contains("scope: AnyPlayerAttacks")
         },
     );
 }
