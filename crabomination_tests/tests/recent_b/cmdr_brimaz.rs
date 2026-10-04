@@ -410,6 +410,34 @@ fn vulpine_harvester_returns_an_artifact_it_can_carry() {
     assert!(in_graveyard(&g, 0, idol), "mana value 10 > power 3");
 }
 
+/// CR 603.2c / 608.2h — "their total power" is over the Phyrexians that
+/// attacked, read as the trigger resolves; one killed in response counts
+/// with its last-known power (2023-04-14 ruling).
+#[test]
+fn vulpine_harvester_counts_an_attacker_killed_in_response() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase(2);
+    let fox = g.add_card_to_battlefield(0, catalog::vulpine_harvester());
+    let rager = g.add_card_to_battlefield(0, catalog::phyrexian_rager());
+    g.battlefield_find_mut(rager).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let worm = g.add_card_to_graveyard(0, catalog::wurmcoil_engine());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(worm))]));
+    for a in [fox, rager] {
+        g.clear_sickness(a);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        [fox, rager].iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    let ctx = crabomination::game::effects::EffectContext::for_ability(fox, 1, None);
+    g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![rager]) }, &ctx).expect("kill");
+    assert!(in_graveyard(&g, 0, rager));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(worm).is_some(), "mana value 6 <= 3 + the Rager's last-known 3 (2/2 and a counter)");
+}
+
 /// CR 205.4e — Yawgmoth's Vile Offering needs a legendary creature; it
 /// reanimates, destroys, and exiles itself.
 #[test]

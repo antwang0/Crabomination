@@ -494,11 +494,10 @@ pub fn phyrexian_triniform() -> CardDefinition {
 /// return target artifact card from your graveyard if its mana value is at
 /// most their total power.
 ///
-/// Any artifact card may be targeted and the mana value is checked as the
-/// trigger resolves (2023-04-14 ruling). ⚠ Residual: the total reads the
-/// Phyrexians still attacking then, not the ones that attacked (LKI).
+/// Any artifact card may be targeted and the total is checked as the trigger
+/// resolves, over the Phyrexians that attacked, wherever they are now (LKI;
+/// 2023-04-14 ruling) — `Effect::WithTriggerBatch`.
 pub fn vulpine_harvester() -> CardDefinition {
-    let attacking_phyrexians = || yours(R::Creature.and(phyrexian()).and(R::IsAttacking));
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
@@ -507,16 +506,19 @@ pub fn vulpine_harvester() -> CardDefinition {
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: phyrexian() },
                 )
             },
-            effect: Effect::If {
-                cond: Predicate::ValueAtMost(
-                    Value::ManaValueOf(Box::new(Selector::Target(0))),
-                    Value::PowerOf(Box::new(attacking_phyrexians())),
-                ),
-                then: Box::new(Effect::Move {
-                    what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            effect: Effect::WithTriggerBatch {
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::Target(0))),
+                        Value::PowerOf(Box::new(Selector::BoundTriggerBatch)),
+                    ),
+                    then: Box::new(Effect::Move {
+                        what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    else_: Box::new(Effect::Noop),
                 }),
-                else_: Box::new(Effect::Noop),
+                ids: vec![],
             },
         }],
         ..creature(
