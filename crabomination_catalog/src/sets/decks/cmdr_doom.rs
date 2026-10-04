@@ -1175,7 +1175,7 @@ pub fn villainous_hideout() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::ONE)),
-                        SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Villain),
+                        SpendRestriction::TypeSpellOrItsAbility(CreatureType::Villain),
                     ),
                 },
                 ..Default::default()

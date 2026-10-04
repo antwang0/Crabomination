@@ -268,7 +268,7 @@ pub fn orb_of_dragonkind() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyColors(Value::Const(2))),
-                        SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Dragon),
+                        SpendRestriction::TypeSpellOrItsAbility(CreatureType::Dragon),
                     ),
                 },
                 ..Default::default()

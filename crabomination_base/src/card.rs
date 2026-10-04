@@ -7534,17 +7534,20 @@ impl CardDefinition {
     /// ("… or activate abilities of artifacts" — Power Depot).
     pub fn ability_spend_kind(&self) -> crate::mana::SpellKind {
         let creature = self.is_creature();
+        let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
             artifact: self.is_artifact(),
             land_ability: self.is_land(),
             creature_ability: creature,
-            // The source's types, for "an ability of a creature of [type]".
-            creature_types: if creature {
+            // The source's types, for "an ability of a creature of [type]" —
+            // and of a Kindred source, which is "an Elemental" too (CR 308.3).
+            creature_types: if creature || kindred {
                 smallvec::SmallVec::from_slice(&self.subtypes.creature_types)
             } else {
                 smallvec::SmallVec::new()
             },
-            changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
+            changeling: (creature || kindred) && self.keywords.has_kw(&Keyword::Changeling),
+            kindred,
             activating_ability: true,
             equipment: self.is_equipment(),
             any_color: self.static_abilities.iter().any(|sa| {

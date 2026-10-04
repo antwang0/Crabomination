@@ -810,11 +810,16 @@ pub enum SpendRestriction {
     CreatureCastCounter,
     /// "Spend this mana only to cast a [type] spell or activate an ability of
     /// a [type]" for either of two types (Gallifrey Council Chamber: Time
-    /// Lord or Alien). Changelings count.
+    /// Lord or Alien). Changelings and Kindred spells and sources count.
     CreatureOfEitherTypeOrItsAbility(crate::card::CreatureType, crate::card::CreatureType),
     /// "Spend this mana only to cast spells" (Klauth, Troyan, Thieving
     /// Varmint, Rootcoil Creeper): any spell, no activated ability.
     SpellsOnly,
+    /// "Spend this mana only to cast [type] spells or activate abilities of
+    /// [type]s" (Flamebraider, Smokebraider, Primal Beyond: Elemental) — any
+    /// spell or source with the type, a Kindred one included (CR 308.3);
+    /// `CreatureOfTypeOrItsAbility` is the creature-only wording.
+    TypeSpellOrItsAbility(crate::card::CreatureType),
 }
 
 impl SpendRestriction {
@@ -855,6 +860,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
                 "only spells and abilities of the two listed creature types"
             }
+            SpendRestriction::TypeSpellOrItsAbility(_) => "only spells and abilities of the listed type",
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
             SpendRestriction::XCostsOnly => "only costs that contain {X}",
@@ -976,9 +982,9 @@ impl SpendRestriction {
                         || kind.creature_types.contains(&crate::card::CreatureType::Mount))
             }
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(a, b) => {
-                (kind.creature || kind.creature_ability)
-                    && (kind.changeling || kind.creature_types.contains(&a) || kind.creature_types.contains(&b))
+                kind.changeling || kind.creature_types.contains(&a) || kind.creature_types.contains(&b)
             }
+            SpendRestriction::TypeSpellOrItsAbility(t) => kind.changeling || kind.creature_types.contains(&t),
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability
             }

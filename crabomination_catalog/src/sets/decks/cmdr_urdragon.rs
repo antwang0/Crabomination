@@ -127,7 +127,7 @@ pub fn crucible_of_the_spirit_dragon() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyColors(Value::XFromCost)),
-                        SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Dragon),
+                        SpendRestriction::TypeSpellOrItsAbility(CreatureType::Dragon),
                     ),
                 },
                 ..Default::default()

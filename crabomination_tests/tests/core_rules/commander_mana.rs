@@ -671,7 +671,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | MountOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
-                | SpellsOnly => {}
+                | SpellsOnly | TypeSpellOrItsAbility(_) => {}
             }
         }
         use SpendRestriction::*;
@@ -686,6 +686,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             SpellsYouDontOwn,
             SpellsOnly,
             CreatureOfTypeOrItsAbility(CreatureType::Bear),
+            TypeSpellOrItsAbility(CreatureType::Bear),
             CreatureOfTypeOrLegendaryCreature(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
             InstantSorceryOrTypes([CreatureType::Demon, CreatureType::Spirit]),
@@ -923,4 +924,21 @@ fn cr_106_6_type_spell_mana_does_not_pay_that_types_abilities() {
     let kind = lifegain_body("Test Body", CreatureType::Vampire).ability_spend_kind();
     assert!(!SpendRestriction::CreatureOfType(CreatureType::Vampire).allows(&kind));
     assert!(SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Vampire).allows(&kind));
+}
+
+/// CR 308.3 — "Elemental spells or abilities of Elementals" (Flamebraider,
+/// Smokebraider, Primal Beyond; the Dragon, Villain and Hero lands alike)
+/// counts a Kindred spell of the type, which "creature spell of the type"
+/// (Secluded Courtyard) does not.
+#[test]
+fn cr_308_3_a_typed_spells_restriction_takes_a_kindred_spell() {
+    use crabomination::card::CreatureType;
+    let kindred = catalog::nameless_inversion().spell_kind();
+    let elemental_spells = SpendRestriction::TypeSpellOrItsAbility(CreatureType::Elemental);
+    assert!(elemental_spells.allows(&kindred), "a Kindred changeling is an Elemental spell");
+    assert!(!SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elemental).allows(&kindred));
+    assert!(elemental_spells.allows(&catalog::smokebraider().spell_kind()));
+    assert!(elemental_spells.allows(&catalog::smokebraider().ability_spend_kind()), "an Elemental's ability");
+    assert!(!elemental_spells.allows(&catalog::grizzly_bears().spell_kind()));
+    assert!(!elemental_spells.allows(&catalog::lightning_bolt().spell_kind()));
 }

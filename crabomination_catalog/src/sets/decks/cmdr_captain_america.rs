@@ -819,7 +819,7 @@ pub fn avengers_tower() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::ONE)),
-                        SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Hero),
+                        SpendRestriction::TypeSpellOrItsAbility(CreatureType::Hero),
                     ),
                 },
                 ..Default::default()

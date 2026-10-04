@@ -73,7 +73,7 @@ fn braider(name: &'static str, types: Vec<CreatureType>, p: i32, t: i32) -> Card
     CardDefinition {
         activated_abilities: vec![restricted_tap(
             ManaPayload::AnyColors(Value::Const(2)),
-            SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elemental),
+            SpendRestriction::TypeSpellOrItsAbility(CreatureType::Elemental),
         )],
         ..creature(name, cost(&[generic(1), r()]), types, p, t)
     }
@@ -488,7 +488,7 @@ pub fn primal_beyond() -> CardDefinition {
             tap_add_colorless(),
             restricted_tap(
                 ManaPayload::AnyOneColor(Value::ONE),
-                SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elemental),
+                SpendRestriction::TypeSpellOrItsAbility(CreatureType::Elemental),
             ),
         ],
         ..Default::default()
