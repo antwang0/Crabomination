@@ -2477,6 +2477,8 @@ impl GameState {
             || !spec.extra_supertypes.is_empty()
             || spec.non_legendary
             || spec.not_a_creature
+            || spec.override_pt.is_some()
+            || !spec.add_colors.is_empty()
             || spec.as_vehicle_crew.is_some())
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
@@ -2516,6 +2518,19 @@ impl GameState {
             // CR 707.2e — strip Legendary so the copy dodges the legend rule.
             if spec.non_legendary {
                 def.supertypes.retain(|s| *s != crate::card::Supertype::Legendary);
+            }
+            // CR 707.9b — "except it's 4/4" sets the base P/T, and it beats a
+            // copied characteristic-defining ability (Lazotep Convert).
+            if let Some((p, t)) = spec.override_pt {
+                def.power = p;
+                def.toughness = t;
+                def.dynamic_pt = None;
+            }
+            // "…black in addition to its other colors" (Lazotep Convert).
+            for col in &spec.add_colors {
+                if !def.color_indicator.contains(col) {
+                    def.color_indicator.push(*col);
+                }
             }
             // "It's not a creature" (Machine God's Effigy).
             if spec.not_a_creature {

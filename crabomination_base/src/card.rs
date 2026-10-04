@@ -5608,6 +5608,15 @@ pub struct EntersAsCopy {
     /// 708.8).
     #[serde(default)]
     pub as_turned_face_up: bool,
+    /// CR 707.9b — "except it's 4/4": the copy's base power and toughness,
+    /// overriding the copied values and any copied characteristic-defining
+    /// P/T (Lazotep Convert).
+    #[serde(default)]
+    pub override_pt: Option<(i32, i32)>,
+    /// CR 707.9 — "except it's black in addition to its other colors"
+    /// (Lazotep Convert): colors added to the copied ones.
+    #[serde(default)]
+    pub add_colors: Vec<Color>,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters
