@@ -13,8 +13,8 @@ use crate::mana::{b, cost, generic, w};
 /// library for a basic land card, put it onto the battlefield tapped, then
 /// shuffle."
 ///
-/// The "may" optionality collapses to always-search — `Effect::Search`
-/// already lets the searcher decline by returning `Search(None)`.
+/// The "may" is the search's own decline (`Effect::Search` takes a
+/// `Search(None)` answer).
 pub fn erode() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {

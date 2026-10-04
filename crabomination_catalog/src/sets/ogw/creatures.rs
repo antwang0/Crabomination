@@ -1536,8 +1536,7 @@ pub fn sifter_of_skulls() -> CardDefinition {
 }
 
 /// Pawn of Ulamog — {1}{B}{B} 2/2 Vampire Shaman. Whenever this or another
-/// nontoken creature you control dies, create a 0/1 Eldrazi Spawn. (The "may"
-/// collapses to always.)
+/// nontoken creature you control dies, you may create a 0/1 Eldrazi Spawn.
 pub fn pawn_of_ulamog() -> CardDefinition {
     use crate::card::{
         CreatureType, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility,
