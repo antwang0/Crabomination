@@ -10313,6 +10313,12 @@ fn main_phase_action_with(
         return BotStep::plain(action);
     }
 
+    // Pods: a creature put from hand (Elvish Piper), or a hasty one-turn
+    // swing before combat (Sneak Attack).
+    if let Some(action) = super::put_from_hand::pick_put_from_hand(state, seat) {
+        return BotStep::plain(action);
+    }
+
     // Pods: any other non-mana ability that beats passing (Arbor Elf, Elvish
     // Piper, the scry and tutor rocks). Two seats return at once.
     if let Some(action) = super::generic_sink::pick_generic_ability(state, seat, w) {
