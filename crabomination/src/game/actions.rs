@@ -12060,6 +12060,19 @@ impl GameState {
         // "you may choose new targets for the copies" (the original is
         // offered first, so the default keeps it).
         if let Some((def, n)) = storm_copies {
+            // CR 707.10 — Twinning Staff: one more copy per such static the
+            // copies' controller controls, as on every other copy path.
+            let n = if n > 0 {
+                n + self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .flat_map(|c| c.definition.static_abilities.iter())
+                    .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::SpellCopiesPlusOne))
+                    .count() as u32
+            } else {
+                n
+            };
             for _ in 0..n {
                 let copy_target = if target.is_some() {
                     self.repoint_copy_target(&def, p, &target)
@@ -12087,6 +12100,15 @@ impl GameState {
                     mana_spent: 0,
                     uncounterable: false,
                 });
+            }
+            // "Whenever you copy a spell" (Kalamax) and "cast or copy"
+            // magecraft hear storm copies like any other.
+            if n > 0 {
+                self.dispatch_triggers_for_events(&[GameEvent::SpellsCopied {
+                    original: card_id,
+                    count: n,
+                    controller: p,
+                }]);
             }
         }
         self.randomize_single_target_on_stack();

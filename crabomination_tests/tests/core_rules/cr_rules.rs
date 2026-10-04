@@ -8638,6 +8638,26 @@ fn cr_707_10_a_copy_can_be_countered() {
     assert_eq!(g.players[1].life, 18, "only the original Burst resolved");
 }
 
+/// CR 702.40a / 707.10 — storm copies are copies like any other: Twinning
+/// Staff adds one, so Grapeshot after one earlier spell makes two copies (3
+/// damage in all). The storm path pushed its copies by hand and skipped it.
+#[test]
+fn cr_702_40_storm_copies_take_twinning_staff() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::twinning_staff());
+    g.spells_cast_this_turn = 1;
+    let shot = g.add_card_to_hand(0, catalog::grapeshot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shot, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Grapeshot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "the original and two copies");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
