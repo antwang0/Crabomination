@@ -34,7 +34,11 @@ OPP = re.compile(r"\b(an opponent controls|your opponents control|opponents cont
 ALL = re.compile(r"\bon the battlefield\b|^(other|attacking|blocking|tapped|untapped) ", re.I)
 OPENERS = ("CountOf(", "CountMatching {", "TotalManaValueOf(", "ForEach { selector:",
            "PowerOf(", "ToughnessOf(")
-F_YOU = re.compile(r"ControlledByYou\b|who: You\b|ControlledBy \{ who: You")
+# A named count is the controller's by construction: `DynamicPt::
+# ArtifactsControlledPower` (Nim Shrieker), `LandsControlledPower` (Zell
+# Dincht), and an `EquipBonus.scale` reads the equipped creature's controller.
+F_YOU = re.compile(r"ControlledByYou\b|who: You\b|ControlledBy \{ who: You|"
+                   r"\w+Controlled\w*|\w+YouControl\w*|scale: Some\(")
 F_OPP = re.compile(r"Opponent|Not\(ControlledByYou\)|who: Target|TargetPlayer|TriggerPlayer|"
                    r"ControlledByTarget|NotControlledByYou|DefendingPlayer")
 
@@ -58,6 +62,16 @@ def fragments(dbg):
             start = i + 1
     return [f for f in out if "EachPermanent" in f or "ControlledBy" in f]
 
+
+# Reviewed rows: the count is right and the regex cannot see why.
+REVIEWED = {
+    "Ancestor Dragon": "only your creatures attack on the turn its trigger fires",
+    "Tesak, Judith's Hellhound": "only your creatures attack on the turn its trigger fires",
+    "Etherium Pteramander": "`cost_reduction_per` counts the activator's artifacts",
+    "Mirror Match": "bespoke `CopyAttackersAsBlockers` reads the attackers on you",
+    "Onakke Oathkeeper": "bespoke `AttackTaxOnYourPlaneswalkers` static",
+    "Ruxa, Patient Professor": "the per-creature clause is a static over your no-ability creatures",
+}
 
 def main():
     cache = json.load(open(CACHE, encoding="utf-8"))
@@ -87,9 +101,16 @@ def main():
             elif ALL.search(ph):
                 if frags and all(F_YOU.search(f) for f in frags):
                     out.append(f"{name}\tall\t{ph[:80]}")
-    print("\n".join(sorted(set(out))))
-    print(f"# {len(set(out))} rows", file=sys.stderr)
-    if "--gate" in sys.argv and out:
+    out = sorted(set(out))
+    flagged = {row.split("\t", 1)[0] for row in out}
+    stale = sorted(set(REVIEWED) - flagged) if pod is None else []
+    out = [row for row in out if row.split("\t", 1)[0] not in REVIEWED]
+    print("\n".join(out))
+    for name in stale:
+        print(f"# REVIEWED is STALE: {name} no longer flagged", file=sys.stderr)
+    print(f"# {len(out)} rows ({len(flagged) - len({r.split(chr(9), 1)[0] for r in out})} reviewed, "
+          f"{len(stale)} stale)", file=sys.stderr)
+    if "--gate" in sys.argv and (out or stale):
         sys.exit(1)
 
 

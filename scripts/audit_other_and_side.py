@@ -27,6 +27,21 @@ SIDE_OK = re.compile(r"ControlledByOpponent|Not\(ControlledByYou\)|NotControlled
                      r"Opponent|YouDontControl|NotYours")
 
 
+# Reviewed rows: the filter is right and the regex cannot see why.
+REVIEWED = {
+    "Comeuppance": "`PreventOpposingDamageThisTurnReflecting` reads 'sources you don't control'",
+    "Energy Field": "`PreventAllDamageToControllerFromOthersSources`",
+    "Exhilarating Elocution": "+1/+1 to all, then -1/-1 to the countered target: 'other' net",
+    "Frontline Medic": "'other creatures attack' is battalion's condition, not the grant",
+    "Legion Loyalist": "'other creatures attack' is battalion's condition, not the grant",
+    "Glory of Warfare": "'turns other than yours' is the turn condition",
+    "Oak Street Innkeeper": "'turns other than yours' is the turn condition (`WhileNotYourTurn`)",
+    "Pest Rescuer": "'if you don't control a Pest' is the intervening-if",
+    "Remove Enchantments": "your own enchantments; the opposing-attacker Aura clause is unmodeled",
+    "Vampire Nocturnus": "'this creature and other Vampires' — `IsSource` joins the filter",
+}
+
+
 def main():
     cache = json.load(open(CACHE, encoding="utf-8"))
     pod = None
@@ -48,9 +63,15 @@ def main():
         m = SIDE.search(text)
         if m and not SIDE_OK.search(dbg):
             out.append(f"{name}\tside\t{m.group(0)[:90]}")
-    print("\n".join(sorted(out)))
-    print(f"# {len(out)} rows", file=sys.stderr)
-    if "--gate" in sys.argv and out:
+    out = sorted(set(out))
+    flagged = {row.split("\t", 1)[0] for row in out}
+    stale = sorted(set(REVIEWED) - flagged) if pod is None else []
+    out = [row for row in out if row.split("\t", 1)[0] not in REVIEWED]
+    print("\n".join(out))
+    for name in stale:
+        print(f"# REVIEWED is STALE: {name} no longer flagged", file=sys.stderr)
+    print(f"# {len(out)} rows ({len(stale)} stale reviewed entries)", file=sys.stderr)
+    if "--gate" in sys.argv and (out or stale):
         sys.exit(1)
 
 
