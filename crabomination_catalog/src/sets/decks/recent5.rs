@@ -724,24 +724,24 @@ pub fn savage_smash() -> CardDefinition {
 }
 
 /// Bite Down — {1}{G} Instant. Target creature you control deals damage equal
-/// to its power to target creature or planeswalker you don't control. (Modeled
-/// as the spell dealing the damage.)
+/// to its power to target creature or planeswalker you don't control. The
+/// creature is the source, so its deathtouch, lifelink and infect apply.
 pub fn bite_down() -> CardDefinition {
     CardDefinition {
         name: "Bite Down",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: Selector::TargetFiltered {
+        effect: Effect::DealDamageEqualToPower {
+            source: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            target: Selector::TargetFiltered {
                 slot: 1,
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Planeswalker)
                     .and(SelectionRequirement::ControlledByOpponent),
             },
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            })),
         },
         ..Default::default()
     }

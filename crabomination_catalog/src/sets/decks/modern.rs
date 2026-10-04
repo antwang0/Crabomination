@@ -3700,9 +3700,7 @@ pub fn raise_the_alarm() -> CardDefinition {
 /// enchantment.
 ///
 /// Standard "ETB Disenchant" body — same shape as Loran of the Third Path's
-/// ETB but at 2/1 for one less mana. The "you may" clause collapses (we
-/// always destroy if a legal target exists; the AutoDecider opp-preference
-/// keeps us from blowing up our own stuff).
+/// ETB but at 2/1 for one less mana; the "you may" is a `MayDo`.
 pub fn reclamation_sage() -> CardDefinition {
     CardDefinition {
         name: "Reclamation Sage",

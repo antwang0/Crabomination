@@ -9999,6 +9999,24 @@ mod recent5 {
         assert!(g.battlefield_find(theirs).is_none(), "6 damage kills the 2/2");
     }
 
+    /// Bite Down — the creature deals the damage (CR 120.1 / 702.2b), so a
+    /// 1-power deathtouch biter kills a 4/4.
+    #[test]
+    fn bite_down_damage_is_the_creatures_deathtouch_included() {
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::typhoid_rats());
+        let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let id = g.add_card_to_hand(0, catalog::bite_down());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(mine)),
+            additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+        }).expect("cast Bite Down");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(theirs).is_none(), "1 deathtouch damage is lethal");
+    }
+
     /// Crushing Vines (mode 1) destroys a target artifact.
     #[test]
     fn crushing_vines_destroys_artifact() {
