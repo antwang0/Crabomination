@@ -12696,8 +12696,22 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
     // CR 701.15b — then a goaded attacker aimed at its goader goes at another
     // opponent when one exists.
     for a in attacks.iter_mut() {
-        if let AttackTarget::Player(p) = a.target {
-            a.target = AttackTarget::Player(goad_legal_target(state, seat, a.attacker, p));
+        match a.target {
+            AttackTarget::Player(p) => {
+                a.target = AttackTarget::Player(goad_legal_target(state, seat, a.attacker, p));
+            }
+            // "Attacks a PLAYER other than the goader": a goaded creature aimed
+            // at a planeswalker or battle goes at a player instead.
+            AttackTarget::Planeswalker(t) | AttackTarget::Battle(t)
+                if state.battlefield_find(a.attacker).is_some_and(|c| !state.goaders(c).is_empty()) =>
+            {
+                let owner = state.battlefield_find(t).map_or(seat, |c| c.controller);
+                let q = goad_legal_target(state, seat, a.attacker, owner);
+                if q != seat && !state.goaders(state.battlefield_find(a.attacker).unwrap()).contains(&q) {
+                    a.target = AttackTarget::Player(q);
+                }
+            }
+            _ => {}
         }
         // CR 508.1d — Raving Dead attacks its chosen opponent if able; any
         // other aim makes the engine reject the whole declaration.
@@ -12753,11 +12767,18 @@ fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usiz
     if !goaders.contains(&preferred) {
         return preferred;
     }
+    // Only a non-goader this creature may actually attack counts (CR
+    // 508.1c, the engine's own test): otherwise the goader stays legal.
+    let kws: Vec<crate::card::Keyword> =
+        state.computed_permanent(id).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
     let n = state.players.len();
     (1..n)
         .map(|i| (seat + i) % n)
         .find(|&q| {
-            !state.same_team(seat, q) && state.players[q].is_alive() && !goaders.contains(&q)
+            !state.same_team(seat, q)
+                && state.players[q].is_alive()
+                && !goaders.contains(&q)
+                && state.attacker_target_block(seat, id, &kws, Some(q)).is_none()
         })
         .unwrap_or(preferred)
 }

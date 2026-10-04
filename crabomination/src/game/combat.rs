@@ -1430,22 +1430,45 @@ impl GameState {
             }
         }
 
-        // CR 701.15b — a goaded creature "attacks a player other than the
-        // controller of the [goad source] if able." Enforce the player-target
-        // half: a goaded attacker may not attack one of its own goaders while
-        // an unattacked, alive non-goader opponent it could instead attack
-        // exists. (Planeswalker/battle redirection is not modeled here.)
+        // CR 701.15b — a goaded creature "attacks a PLAYER other than the
+        // controller of the [goad source] if able": attacking a goader, or a
+        // planeswalker or battle (not a player, CR 506.4c), is illegal while
+        // an alive non-goader opponent it could instead attack exists.
         for atk in &attacks {
-            if let AttackTarget::Player(target_player) = atk.target
-                && let Some(c) = self.battlefield_find(atk.attacker)
+            let target_player = match atk.target {
+                AttackTarget::Player(q) => q,
+                AttackTarget::Planeswalker(cid) | AttackTarget::Battle(cid) => {
+                    self.battlefield_find(cid).map_or(usize::MAX, |c| c.controller)
+                }
+            };
+            let at_player = matches!(atk.target, AttackTarget::Player(_));
+            if let Some(c) = self.battlefield_find(atk.attacker)
                 && let goaders = self.goaders(c)
-                && goaders.contains(&target_player)
+                && !goaders.is_empty()
+                && (!at_player || goaders.contains(&target_player))
             {
+                // CR 508.1c/d — a requirement counts only where it can be met
+                // without breaking a restriction, and no one must pay a cost
+                // to meet one: a non-goader this creature can't attack (Crown-
+                // Hunter Hireling's own restriction) or can attack only for a
+                // tax (Ghostly Prison) is no option.
+                let p = self.active_player_idx;
+                let kws: Vec<Keyword> =
+                    self.computed_permanent(atk.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
+                let statics = attack_static_scan(self);
+                let taxed = self.attack_tax_possible(statics);
                 let has_nongoader_option = (0..self.players.len()).any(|q| {
-                    q != self.active_player_idx
-                        && !self.same_team(self.active_player_idx, q)
+                    q != p
+                        && !self.same_team(p, q)
                         && self.players[q].is_alive()
                         && !goaders.contains(&q)
+                        && self.attacker_target_block(p, atk.attacker, &kws, Some(q)).is_none()
+                        && (!taxed || {
+                            let a = Attack { attacker: atk.attacker, target: AttackTarget::Player(q) };
+                            self.attack_tax_for(std::slice::from_ref(&a), statics, |_| {
+                                self.attack_block_keyword_tax(atk.attacker, &kws, true)
+                            }) == 0
+                        })
                 });
                 if has_nongoader_option {
                     return Err(GameError::InvalidAttackTarget(target_player));
@@ -2005,17 +2028,16 @@ impl GameState {
         }
 
         let any_attackers = !attacks.is_empty();
-        // CR 702.121 — Melee counts the distinct opponents this player attacked
-        // this combat (a player targeted directly, or the controller of a
-        // planeswalker/battle attacked). Computed over the whole batch up front.
+        // CR 702.121a — Melee counts the distinct OPPONENTS this player
+        // attacked this combat; a planeswalker or battle attacked doesn't
+        // count its controller (Adriana's 2016-08-23 ruling: "counts only
+        // opponents (and not planeswalkers)"). Computed over the batch.
         let melee_opponents: i32 = {
             let mut seats: crate::game::types::IdSet<usize> = Default::default();
             for atk in &attacks {
                 let seat = match atk.target {
                     AttackTarget::Player(s) => Some(s),
-                    AttackTarget::Planeswalker(cid) | AttackTarget::Battle(cid) => {
-                        self.battlefield_find(cid).map(|c| c.controller)
-                    }
+                    AttackTarget::Planeswalker(_) | AttackTarget::Battle(_) => None,
                 };
                 if let Some(s) = seat.filter(|s| !self.same_team(*s, p)) {
                     seats.insert(s);

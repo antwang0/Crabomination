@@ -8034,3 +8034,45 @@ fn cr_106_7_orchard_reads_an_opponents_command_tower_as_its_identity() {
     let pool = &g.players[0].mana_pool;
     assert_eq!((pool.amount(crabomination::mana::Color::Red), pool.total()), (1, 1), "only {{R}}");
 }
+
+/// Declare `attacks` for seat 0 in a fresh declare-attackers step.
+fn declare_for_seat0(g: &mut GameState, attacks: Vec<Attack>) -> Result<Vec<GameEvent>, GameError> {
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(attacks))
+}
+
+/// CR 702.121a — melee counts OPPONENTS attacked, not planeswalkers (the
+/// 2016-08-23 ruling): Wings of the Guard attacking only a planeswalker gets
+/// nothing. The count took the planeswalker's controller.
+#[test]
+fn cr_702_121a_melee_ignores_an_attacked_planeswalker() {
+    let mut g = multi_player_game(3);
+    let wings = g.add_card_to_battlefield(0, catalog::wings_of_the_guard());
+    g.clear_sickness(wings);
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    declare_for_seat0(&mut g, vec![Attack { attacker: wings, target: AttackTarget::Planeswalker(jace) }]).expect("attack");
+    drain_stack(&mut g);
+    let pt = g.computed_permanent(wings).map(|c| (c.power, c.toughness));
+    assert_eq!(pt, Some((1, 1)), "no opponent attacked, no bonus");
+}
+
+/// CR 701.15b — a goaded creature attacks a PLAYER other than its goader if
+/// able; a planeswalker is not a player. With a non-goader opponent open,
+/// attacking a planeswalker is illegal. Only player targets were checked.
+#[test]
+fn cr_701_15b_a_goaded_creature_cant_attack_a_planeswalker_instead() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let jace = g.add_card_to_battlefield(2, catalog::jace_beleren());
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+    assert!(
+        declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Planeswalker(jace) }]).is_err(),
+        "seat 2 (a non-goader) is open"
+    );
+    declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]).expect("the non-goader");
+}
