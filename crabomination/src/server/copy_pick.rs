@@ -4,7 +4,8 @@
 //! its controller's commander and the legend rule (CR 704.5j) binned one of
 //! the two at once. The copy is ours whoever controls the original, so
 //! candidates rank by value alone, and a legend we already hold is skipped
-//! unless the copy drops the name or the supertype.
+//! unless the copy drops the name or the supertype. A copier that locks what
+//! it copies (Wall of Stolen Identity) takes an opponent's creature first.
 
 use super::bot::{EvalWeights, permanent_value};
 use crate::card::{CardId, EntersAsCopy, Supertype};
@@ -44,16 +45,18 @@ pub(super) fn decide_copy_source(
         return None;
     }
     let legend_safe = spec.non_legendary || spec.keep_name;
-    let mut ranked: Vec<(CardId, bool, i32)> = candidates
+    // Wall of Stolen Identity taps and locks what it copies: an opponent's first.
+    let locks_own = |id: CardId| spec.lock_copied && state.battlefield_find(id).is_some_and(|c| state.same_team(c.controller, seat));
+    let mut ranked: Vec<(CardId, (bool, bool), i32)> = candidates
         .iter()
         .map(|&(id, _)| {
             let clash = !legend_safe && copies_held_legend(state, seat, source, id);
-            (id, clash, permanent_value(state, id, w))
+            (id, (clash, locks_own(id)), permanent_value(state, id, w))
         })
         .collect();
     // Stable: equal values keep the engine's offer order (highest power first).
     ranked.sort_by(|a, b| a.1.cmp(&b.1).then(b.2.cmp(&a.2)));
-    let pick = ranked.first().filter(|(_, clash, _)| !*clash || min > 0).map(|(id, ..)| *id);
+    let pick = ranked.first().filter(|(_, (clash, _), _)| !*clash || min > 0).map(|(id, ..)| *id);
     Some(DecisionAnswer::Cards(pick.into_iter().collect()))
 }
 
@@ -89,6 +92,17 @@ mod tests {
         let ragavan = g.add_card_to_battlefield(2, catalog::ragavan_nimble_pilferer());
         let mirror = g.add_card_to_battlefield(0, catalog::cursed_mirror());
         assert_eq!(pick(&g, mirror, 0), vec![ragavan]);
+    }
+
+    /// Wall of Stolen Identity taps and locks the creature it copies, so the
+    /// bot copies an opponent's creature over a bigger one of its own.
+    #[test]
+    fn locking_copier_copies_an_opponents_creature() {
+        let mut g = crate::game::multi_player_game(3);
+        g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+        let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        let wall = g.add_card_to_battlefield(0, catalog::wall_of_stolen_identity());
+        assert_eq!(pick(&g, wall, 0), vec![bears]);
     }
 
     /// A "you may" copier declines rather than copy only a held legend; a
