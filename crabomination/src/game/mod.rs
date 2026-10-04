@@ -34178,7 +34178,14 @@ fn blocker_matches_block_filter(
                 || blocker_matches_block_filter(blocker, computed, enchanted, monarch, b)
         }
         R::Not(inner) => !blocker_matches_block_filter(blocker, computed, enchanted, monarch, inner),
-        _ => false,
+        // A leaf this walker can't read answers "doesn't match", which for a
+        // "can't be blocked by [filter]" is a restriction that never applies
+        // (The Black Gate's `ControlledBySeat` until 2026-10-04). Loud in
+        // tests and debug pods; the shipped build keeps the old answer.
+        other => {
+            debug_assert!(false, "blocker filter leaf not read here: {other:?}");
+            false
+        }
     }
 }
 

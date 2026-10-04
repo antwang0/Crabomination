@@ -2074,3 +2074,75 @@ fn an_optional_you_control_slot_is_filled_on_your_side() {
     let (slot0, _) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
     assert_eq!(slot0, Some(Target::Permanent(sword)));
 }
+
+/// CR 509.1b / 509.1c — every "can't be blocked [except] by [filter]" a card
+/// grants is read by `can_block_attacker_computed`'s block-filter walker,
+/// which answers "doesn't match" for a leaf it can't read: The Black Gate's
+/// seat-bound filter never restricted a block that way. Each filter leaf in
+/// the catalog must be one the walker reads (keep `READ` in step with
+/// `blocker_matches_block_filter`).
+#[test]
+fn every_block_filter_leaf_is_read_by_the_block_walker() {
+    const KEYWORDS: &[&str] =
+        &["CantBeBlockedBy", "CantBeBlockedExceptBy", "CantBeBlockedExceptByWhilePowerAtMost"];
+    const READ: &[&str] = &[
+        "And", "Any", "Artifact", "Colorless", "ControlledByMonarch", "ControlledBySeat", "Creature",
+        "Enchantment", "HasArtifactSubtype", "HasCardType", "HasColor", "HasCreatureType", "HasKeyword",
+        "HasModular", "HasMutate", "HasSupertype", "HasToxic", "IsEnchanted", "IsToken", "Land", "Not",
+        "NotToken", "Or", "Permanent", "PowerAtLeast", "PowerAtMost", "ToughnessAtLeast",
+        "ToughnessAtMost", "ToughnessGreaterThanPower",
+    ];
+    /// The requirement's leaf tags, not descending into a leaf's payload.
+    fn leaves(v: &Value, out: &mut Vec<String>) {
+        match v {
+            Value::String(s) => out.push(s.clone()),
+            Value::Object(m) => {
+                for (k, inner) in m {
+                    out.push(k.clone());
+                    if matches!(k.as_str(), "And" | "Or" | "Not") {
+                        match inner {
+                            Value::Array(items) => items.iter().for_each(|i| leaves(i, out)),
+                            other => leaves(other, out),
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    fn walk(v: &Value, bad: &mut Vec<String>, seen: &mut usize) {
+        match v {
+            Value::Object(m) => {
+                for (k, inner) in m {
+                    if KEYWORDS.contains(&k.as_str()) {
+                        *seen += 1;
+                        let filter = match inner {
+                            Value::Array(a) => a.last().cloned().unwrap_or(Value::Null),
+                            other => other.clone(),
+                        };
+                        let mut ls = Vec::new();
+                        leaves(&filter, &mut ls);
+                        bad.extend(ls.into_iter().filter(|l| !READ.contains(&l.as_str())));
+                    } else {
+                        walk(inner, bad, seen);
+                    }
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|i| walk(i, bad, seen)),
+            _ => {}
+        }
+    }
+    let mut bad: Vec<String> = Vec::new();
+    let mut seen = 0usize;
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let json = serde_json::to_value(&def).expect("CardDefinition serializes");
+        let mut found = Vec::new();
+        walk(&json, &mut found, &mut seen);
+        bad.extend(found.into_iter().map(|l| format!("{} reads `{l}`", def.name)));
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(seen >= 30, "the walk found only {seen} block filters — the serde tags moved");
+    assert!(bad.is_empty(), "block filters with a leaf the walker can't read:\n  {}", bad.join("\n  "));
+}
