@@ -3414,6 +3414,7 @@ impl HeuristicBot {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
+                    let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
@@ -10438,7 +10439,7 @@ fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
 /// mana sink — grows the board when the bot has nothing better to do. Skips
 /// sacrifice-cost and once-per-game (Exhaust) abilities. Dry-run-gated through
 /// `would_accept`, so cost/timing legality bottoms out there.
-fn ability_makes_token(e: &Effect) -> bool {
+pub(super) fn ability_makes_token(e: &Effect) -> bool {
     match e {
         Effect::CreateToken { .. } | Effect::CreateTokenAttacking { .. } => true,
         Effect::Seq(steps) => steps.iter().any(ability_makes_token),
