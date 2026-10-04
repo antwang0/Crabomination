@@ -77,7 +77,11 @@ pub fn cactus_preserve() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add(ManaPayload::AnyColorYouCouldProduce), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add(ManaPayload::AnyTypeALandYouControlCouldProduce(Value::ONE)),
+                ..Default::default()
+            },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::BecomeCreature {

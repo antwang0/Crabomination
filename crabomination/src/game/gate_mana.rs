@@ -10,6 +10,8 @@ use crate::mana::ColorSet;
 fn reads_your_lands(pool: &ManaPayload) -> bool {
     match pool {
         ManaPayload::AnyColorAGateYouControlCouldProduce
+        | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorABasicLandYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
         | ManaPayload::AnyTypeAGateYouControlCouldProduce => true,
         ManaPayload::Restricted(inner, _) => reads_your_lands(inner),
@@ -49,17 +51,39 @@ impl GameState {
     /// its Gates when `gates_only` — and their chosen colors could produce.
     pub(crate) fn types_lands_could_produce(&self, p: usize, gates_only: bool) -> (ColorSet, bool) {
         use crate::card::LandType;
+        self.types_lands_could_produce_where(p, |g, c| !gates_only || g.permanent_has_land_type(c, LandType::Gate))
+    }
+
+    /// [`Self::types_lands_could_produce`] over the lands `keep` admits. A
+    /// basic land type's intrinsic mana ability counts (CR 305.6), so a land
+    /// made a Swamp makes {B}.
+    pub(crate) fn types_lands_could_produce_where(
+        &self,
+        p: usize,
+        keep: impl Fn(&Self, &crate::card::CardInstance) -> bool,
+    ) -> (ColorSet, bool) {
+        use crate::card::LandType;
+        use crate::mana::Color;
         let mut out = (ColorSet::empty(), false);
         for c in self.battlefield.iter().filter(|c| {
-            c.controller == p
-                && self.computed_has_card_type(c, crate::card::CardType::Land)
-                && (!gates_only || self.permanent_has_land_type(c, LandType::Gate))
+            c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Land) && keep(self, c)
         }) {
             for a in &c.definition.activated_abilities {
                 effect_types(self, p, &a.effect, &mut out);
             }
             if let Some(col) = c.chosen_color {
                 out.0.insert(col);
+            }
+            for (lt, col) in [
+                (LandType::Plains, Color::White),
+                (LandType::Island, Color::Blue),
+                (LandType::Swamp, Color::Black),
+                (LandType::Mountain, Color::Red),
+                (LandType::Forest, Color::Green),
+            ] {
+                if self.permanent_has_land_type(c, lt) {
+                    out.0.insert(col);
+                }
             }
         }
         out

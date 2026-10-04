@@ -549,15 +549,14 @@ pub fn fellwar_stone() -> CardDefinition {
 }
 
 /// Star Compass — {2} Artifact. Enters tapped. "{T}: Add one mana of any color
-/// that a basic land you control could produce" — the controller-side mirror
-/// of Fellwar Stone via `ManaPayload::AnyColorYouCouldProduce`.
+/// that a basic land you control could produce" (CR 106.7).
 pub fn star_compass() -> CardDefinition {
     CardDefinition {
         name: "Star Compass",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![enters_tapped()],
-        activated_abilities: vec![tap_for(ManaPayload::AnyColorYouCouldProduce)],
+        activated_abilities: vec![tap_for(ManaPayload::AnyColorABasicLandYouControlCouldProduce)],
         ..Default::default()
     }
 }

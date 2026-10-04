@@ -13901,33 +13901,18 @@ impl GameState {
                             }
                         }
                     }
-                    ManaPayload::AnyColorYouCouldProduce => {
-                        // Star Compass — "a basic land you control could
-                        // produce": the legal colors are your lands' basic
-                        // types. Falls back to colorless if none.
-                        use crate::card::LandType;
-                        let mut legal: Vec<Color> = Vec::new();
-                        let push_unique = |c: Color, v: &mut Vec<Color>| {
-                            if !v.contains(&c) { v.push(c); }
-                        };
-                        for opp in self.battlefield.iter().filter(|c| c.controller == p) {
-                            for lt in &opp.definition.subtypes.land_types {
-                                match lt {
-                                    LandType::Plains => push_unique(Color::White, &mut legal),
-                                    LandType::Island => push_unique(Color::Blue, &mut legal),
-                                    LandType::Swamp => push_unique(Color::Black, &mut legal),
-                                    LandType::Mountain => push_unique(Color::Red, &mut legal),
-                                    LandType::Forest => push_unique(Color::Green, &mut legal),
-                                    _ => {} // Non-basic land types (Desert,
-                                            // Gate, Locus, etc.) don't produce
-                                            // a fixed color.
-                                }
-                            }
-                        }
-                        if legal.is_empty() {
-                            self.players[p].mana_pool.add_colorless(mult);
-                            events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
-                        } else {
+                    // CR 106.7 — "any color a [basic] land you control could
+                    // produce" (Harvester Druid, Star Compass): no color, no mana.
+                    ManaPayload::AnyColorYouCouldProduce | ManaPayload::AnyColorABasicLandYouControlCouldProduce => {
+                        let basic = matches!(pool, ManaPayload::AnyColorABasicLandYouControlCouldProduce);
+                        let legal: Vec<Color> = self
+                            .types_lands_could_produce_where(p, |_, c| {
+                                !basic || c.definition.supertypes.contains(&crate::card::Supertype::Basic)
+                            })
+                            .0
+                            .iter()
+                            .collect();
+                        if !legal.is_empty() {
                             let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });

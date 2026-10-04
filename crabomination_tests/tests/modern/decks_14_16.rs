@@ -1748,20 +1748,42 @@ fn star_compass_taps_for_your_basic_land_color() {
     assert_eq!(pool.total(), 1);
 }
 
-/// Star Compass falls back to colorless when you control no basic-typed land.
+/// CR 106.7 — Star Compass makes nothing when no basic land you control could
+/// produce a color: an opponent's Island and your own nonbasic Overgrown Tomb
+/// don't count.
 #[test]
-fn star_compass_falls_back_to_colorless() {
+fn star_compass_makes_nothing_without_a_basic_land_of_yours() {
     let mut g = two_player_game();
     let compass = g.add_card_to_battlefield(0, catalog::star_compass());
     g.battlefield_find_mut(compass).unwrap().summoning_sick = false;
-    // Opp's Island shouldn't count — only the controller's own lands do.
     g.add_card_to_battlefield(1, catalog::island());
+    g.add_card_to_battlefield(0, catalog::overgrown_tomb());
     g.perform_action(GameAction::ActivateAbility {
         card_id: compass, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Star Compass activates with no basic land you control");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// CR 106.7 / 305.6 — Harvester Druid makes a color any land of yours could
+/// produce, a nonbasic's included; colorless-only lands give it nothing.
+#[test]
+fn harvester_druid_reads_every_land_and_makes_no_colorless() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::harvester_druid());
+    g.clear_sickness(druid);
+    g.add_card_to_battlefield(0, catalog::wastes());
+    let tap = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    tap(&mut g).expect("activates");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "a Wastes makes no color");
+    g.battlefield_find_mut(druid).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::overgrown_tomb());
+    tap(&mut g).expect("activates");
     let pool = &g.players[0].mana_pool;
-    assert_eq!(pool.total(), 1);
-    assert_eq!(pool.amount(Color::Blue), 0, "opp's Island doesn't feed Star Compass");
+    assert_eq!(pool.amount(Color::Black) + pool.amount(Color::Green), 1);
 }
 
 /// Grim Lavamancer's `{R}, {T}, Exile two cards from your gy:` deals

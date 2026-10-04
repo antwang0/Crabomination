@@ -53,6 +53,7 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
         | ManaPayload::DifferentColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorABasicLandYouControlCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
         | ManaPayload::AnyTypeAGateYouControlCouldProduce

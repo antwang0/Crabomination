@@ -1815,6 +1815,7 @@ impl Effect {
                     | ManaPayload::ImprintedCardColor
                     | ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce
+                    | ManaPayload::AnyColorABasicLandYouControlCouldProduce
                     | ManaPayload::AnyColorAGateYouControlCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
                     | ManaPayload::AnyColorInCommanderIdentity

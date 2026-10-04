@@ -2991,6 +2991,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorABasicLandYouControlCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
         | ManaPayload::AnyTypeAGateYouControlCouldProduce
@@ -4513,6 +4514,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::DifferentColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorABasicLandYouControlCouldProduce
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
         | ManaPayload::AnyTypeAGateYouControlCouldProduce => ColorSet::all(),
