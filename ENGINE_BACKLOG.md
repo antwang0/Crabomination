@@ -129,6 +129,14 @@ the handoff.
   starts). `CardData::cast_discarded_mana_value` is stamped at the cast and
   read as `Value::LastDiscardedManaValue`'s last fallback.
 
+- ✅ *(2026-10-04, `01NJGEp2`)* for **"enters" listeners**:
+  `game/departed_listeners.rs` gives a listener gone by dispatch the entries
+  the batch records between its own entry and its first in-order departure
+  (`CreatureDied` / `PermanentLeftBattlefield` / exiled / bounced; the
+  synthesized `PermanentDied` can't date one). Soul Warden under Martial Coup
+  gains 5 (`cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before`).
+  ⏳ Still open: other event kinds (life gained, counters, casts) and
+  once-per-turn/batch listeners, which this pass skips.
 - ⏳ **A listener that leaves in the same resolution misses the events
   before it left (CR 603.2 / 603.10)** — triggered abilities are collected AFTER a
   resolution finishes, from the permanents still on the battlefield. A

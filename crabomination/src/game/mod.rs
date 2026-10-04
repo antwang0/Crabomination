@@ -165,6 +165,7 @@ mod vanishing;
 mod commander_return;
 mod legend_rule;
 mod simultaneous_deaths;
+mod departed_listeners;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
@@ -23900,6 +23901,9 @@ impl GameState {
         let dies_suppressed = scan.dies_suppressed;
         // CR 603.10a — creatures that died together see each other die.
         candidates.extend(self.simultaneous_death_observer_candidates(events, dies_suppressed));
+        // CR 603.2 — an "enters" listener this batch removed saw the entries
+        // made while it was still there (Soul Warden under Martial Coup).
+        candidates.extend(self.departed_listener_etb_candidates(events));
         // Which permanents have lost their abilities (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR

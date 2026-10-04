@@ -465,3 +465,27 @@ fn cr_603_2c_a_noncombat_sweep_fires_deals_damage_once() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 24, "19 after the ping, +5");
 }
+
+/// CR 603.2 — an ability triggers when its event happens, not when the
+/// resolution ends: Martial Coup (X = 5) makes five Soldiers and THEN
+/// destroys every other creature, so Soul Warden, on the battlefield as each
+/// Soldier entered, gains 1 life five times though it is dead by dispatch.
+#[test]
+fn cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let coup = g.add_card_to_hand(0, catalog::martial_coup());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: coup,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(5),
+    })
+    .expect("cast Martial Coup for X=5");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Soul Warden"), "the sweep took the Warden");
+    assert_eq!(g.players[0].life, 25, "one life per Soldier that entered before the sweep");
+}
