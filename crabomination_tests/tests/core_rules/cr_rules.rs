@@ -8291,6 +8291,23 @@ fn cr_306_5b_starting_loyalty_is_doubled_by_doubling_season() {
     assert_eq!(g.battlefield_find(jace).map(|c| c.counter_count(CounterType::Loyalty)), Some(6));
 }
 
+/// CR 701.47a / 111.1 — Amass's Army is a created token, so Anointed
+/// Procession makes two; the counters go on one, and the other 0/0 dies
+/// (CR 704.5f). The Army path minted one, unscaled.
+#[test]
+fn cr_701_47_amass_army_takes_the_token_multipliers() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::anointed_procession());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: None }, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].tokens_created_this_turn, 2, "two Armies created");
+    let armies: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name.contains("Army")).collect();
+    assert_eq!(armies.len(), 1, "the counterless Army died");
+    assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

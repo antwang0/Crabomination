@@ -5429,9 +5429,7 @@ impl GameState {
             });
         }
         let def = crabomination_base::tokens::token_card_arc(&token);
-        for _ in 0..dealt {
-            self.mint_token_onto_battlefield(def.clone(), controller, false, events);
-        }
+        self.mint_tokens_scaled(def, controller, dealt, false, events);
         true
     }
 

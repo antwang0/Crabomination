@@ -14201,7 +14201,7 @@ impl GameState {
                         || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid))
                     {
                         let def = crabomination_base::tokens::token_card_arc(definition);
-                        self.mint_token_onto_battlefield(def, seat, false, events);
+                        self.mint_tokens_scaled(def, seat, 1, false, events);
                     }
                 }
                 Ok(())
@@ -19442,9 +19442,7 @@ impl GameState {
                     for cid in hand {
                         self.discard_card(p, cid, events);
                     }
-                    for _ in 0..count {
-                        self.mint_token_onto_battlefield(def.clone(), p, false, events);
-                    }
+                    self.mint_tokens_scaled(def.clone(), p, count as u32, false, events);
                 }
                 Ok(())
             }
@@ -22174,7 +22172,13 @@ impl GameState {
                             },
                             ..Default::default()
                         });
-                        self.mint_token_onto_battlefield(def, p, false, events)
+                        // CR 701.47a / 111.1 — the Army is a created token, so
+                        // the multipliers apply (Doubling Season: two Armies,
+                        // the counters on one).
+                        self.mint_tokens_scaled(def, p, 1, false, events)
+                            .into_iter()
+                            .next()
+                            .unwrap_or(CardId(u32::MAX))
                     }
                 };
                 // CR 614.16 — counter replacement effects apply to the amass.
@@ -22237,7 +22241,11 @@ impl GameState {
                             ],
                             ..Default::default()
                         });
-                        self.mint_token_onto_battlefield(def, p, false, events)
+                        // CR 111.1 — a created token: the multipliers apply.
+                        self.mint_tokens_scaled(def, p, 1, false, events)
+                            .into_iter()
+                            .next()
+                            .unwrap_or(CardId(u32::MAX))
                     }
                 };
                 // CR 614.16 — counter replacement effects apply.
@@ -24779,9 +24787,11 @@ impl GameState {
                     .collect();
                 for host in hosts {
                     let def = token_card_arc(definition);
-                    let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
-                    if let Some(c) = self.battlefield_find_mut(minted) {
-                        c.attached_to = Some(host);
+                    // CR 111.1 — the multipliers apply; each copy attaches.
+                    for minted in self.mint_tokens_scaled(def, ctx.controller, 1, false, events) {
+                        if let Some(c) = self.battlefield_find_mut(minted) {
+                            c.attached_to = Some(host);
+                        }
                     }
                 }
                 Ok(())
@@ -37505,9 +37515,11 @@ impl GameState {
                     .filter(|id| self.battlefield_find(*id).is_some())
                     .collect();
                 for host in targets {
-                    let minted = self.mint_token_onto_battlefield(def.clone(), ctx.controller, false, events);
-                    if let Some(c) = self.battlefield_find_mut(minted) {
-                        c.attached_to = Some(host);
+                    // CR 111.1 — the multipliers apply; each copy attaches.
+                    for minted in self.mint_tokens_scaled(def.clone(), ctx.controller, 1, false, events) {
+                        if let Some(c) = self.battlefield_find_mut(minted) {
+                            c.attached_to = Some(host);
+                        }
                     }
                 }
                 Ok(())
@@ -39255,27 +39267,30 @@ impl GameState {
                     .into_iter()
                     .filter(|&q| self.players[q].is_alive() && !self.same_team(q, p))
                     .collect();
+                // CR 702.141a / 111.1 — each opponent's token batch takes the
+                // multipliers; every copy must attack that opponent.
                 for q in opps {
-                    let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
-                    self.grant_keyword_eot(tid, Keyword::Haste);
-                    // CR 702.141a — each token "attacks that opponent this
-                    // turn if able": the CR 508.1d requirement Raving Dead
-                    // carries, bound to its own opponent.
-                    if let Some(c) = self.battlefield_find_mut(tid) {
-                        c.chosen_player = Some(q);
+                    for tid in self.mint_tokens_scaled(def.clone(), p, 1, false, events) {
+                        self.grant_keyword_eot(tid, Keyword::Haste);
+                        // CR 702.141a — each token "attacks that opponent this
+                        // turn if able": the CR 508.1d requirement Raving Dead
+                        // carries, bound to its own opponent.
+                        if let Some(c) = self.battlefield_find_mut(tid) {
+                            c.chosen_player = Some(q);
+                        }
+                        self.grant_keyword_eot(tid, Keyword::MustAttackChosenPlayer);
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: p,
+                            source: tid,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::SacrificeSource,
+                            target: None,
+                            bound_token: None,
+                            bound_subject: None,
+                            fires_once: true,
+                            expires_after_turn: None,
+                        });
                     }
-                    self.grant_keyword_eot(tid, Keyword::MustAttackChosenPlayer);
-                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
-                        controller: p,
-                        source: tid,
-                        kind: crate::game::types::DelayedKind::NextEndStep,
-                        effect: Effect::SacrificeSource,
-                        target: None,
-                        bound_token: None,
-                        bound_subject: None,
-                        fires_once: true,
-                        expires_after_turn: None,
-                    });
                 }
                 Ok(())
             }
@@ -43385,9 +43400,12 @@ impl GameState {
                     return Ok(());
                 }
                 let def = token_card_arc(definition);
-                let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
-                if let Some(c) = self.battlefield_find_mut(minted) {
-                    c.attached_to = Some(tid);
+                // CR 111.1 — the multipliers apply; each copy attaches (a
+                // doubled Role then meets CR 303.7's one-Role rule).
+                for minted in self.mint_tokens_scaled(def, ctx.controller, 1, false, events) {
+                    if let Some(c) = self.battlefield_find_mut(minted) {
+                        c.attached_to = Some(tid);
+                    }
                 }
                 Ok(())
             }

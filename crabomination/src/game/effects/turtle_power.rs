@@ -43,10 +43,13 @@ impl GameState {
         // A seat that has left the game is no opponent (CR 800.4a).
         let mut opps = self.opponents_of(ctrl);
         opps.retain(|&q| q != defending);
+        // CR 111.1 — each opponent's copy takes the token multipliers; every
+        // copy attacks that opponent.
         for opp in opps {
-            let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
-            if self.put_into_combat_attacking(id, AttackTarget::Player(opp)) && cleanup != AttackingTokenCleanup::None {
-                self.attacking_token_cleanup.push((id, cleanup));
+            for id in self.mint_tokens_scaled(def.clone(), ctrl, 1, true, events) {
+                if self.put_into_combat_attacking(id, AttackTarget::Player(opp)) && cleanup != AttackingTokenCleanup::None {
+                    self.attacking_token_cleanup.push((id, cleanup));
+                }
             }
         }
     }

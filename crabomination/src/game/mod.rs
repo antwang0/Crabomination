@@ -170,6 +170,7 @@ mod vow;
 mod lose_control;
 mod stack_ability;
 mod retarget_any;
+mod token_batch;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;

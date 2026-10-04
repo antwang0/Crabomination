@@ -30,12 +30,14 @@ impl GameState {
             .collect();
         for attacker in attackers {
             let Some(def) = self.battlefield_find(attacker).map(|c| c.definition.arc()) else { continue };
-            let token = self.mint_token_onto_battlefield(def, me, false, events);
-            self.add_block(token, attacker);
-            if !self.blocked_attackers.contains(&attacker) {
-                self.blocked_attackers.push(attacker);
+            // CR 111.1 — the multipliers apply; every copy blocks.
+            for token in self.mint_tokens_scaled(def, me, 1, false, events) {
+                self.add_block(token, attacker);
+                if !self.blocked_attackers.contains(&attacker) {
+                    self.blocked_attackers.push(attacker);
+                }
+                self.attacking_token_cleanup.push((token, AttackingTokenCleanup::ExileAtEndOfCombat));
             }
-            self.attacking_token_cleanup.push((token, AttackingTokenCleanup::ExileAtEndOfCombat));
         }
         Ok(())
     }
@@ -71,15 +73,17 @@ impl GameState {
             .map(|a| a.target)
             .or_else(|| self.default_hostile_opponent(me).map(AttackTarget::Player));
         let Some(target) = target else { return Ok(()) };
-        let token = self.mint_token_onto_battlefield(def, me, true, events);
-        self.last_created_token = Some(token);
-        if self.put_into_combat_attacking(token, target) {
-            let cleanup = if sacrifice {
-                AttackingTokenCleanup::SacrificeAtEndOfCombat
-            } else {
-                AttackingTokenCleanup::ExileAtEndOfCombat
-            };
-            self.attacking_token_cleanup.push((token, cleanup));
+        // CR 111.1 — the multipliers apply; every copy attacks.
+        for token in self.mint_tokens_scaled(def, me, 1, true, events) {
+            self.last_created_token = Some(token);
+            if self.put_into_combat_attacking(token, target) {
+                let cleanup = if sacrifice {
+                    AttackingTokenCleanup::SacrificeAtEndOfCombat
+                } else {
+                    AttackingTokenCleanup::ExileAtEndOfCombat
+                };
+                self.attacking_token_cleanup.push((token, cleanup));
+            }
         }
         Ok(())
     }
@@ -111,9 +115,11 @@ impl GameState {
             .map(|a| a.target)
             .or_else(|| self.default_hostile_opponent(me).map(AttackTarget::Player));
         let Some(target) = target else { return Ok(()) };
-        let token = self.mint_token_onto_battlefield(def, me, true, events);
-        self.put_into_combat_attacking(token, target);
-        self.last_created_token = Some(token);
+        // CR 111.1 — the multipliers apply; every copy attacks.
+        for token in self.mint_tokens_scaled(def, me, 1, true, events) {
+            self.put_into_combat_attacking(token, target);
+            self.last_created_token = Some(token);
+        }
         Ok(())
     }
 }
