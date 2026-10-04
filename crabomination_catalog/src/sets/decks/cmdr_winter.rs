@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
 //! Residuals (each also on its card):
-//! - **Winter** — the engine picks the exiled set (the greatest-mana-value
-//!   permanent card plus the cheapest cards covering four card types), and
-//!   the finality counter is added as the card enters rather than with it.
 //! - **Into the Pit** — the sacrifice is paid as the cast completes.
 
 use crate::card::{
@@ -110,9 +107,8 @@ fn multi_typed() -> R {
 
 /// Winter, Cynical Opportunist — deathtouch; mills three on attack;
 /// delirium end step: exile cards with four card types from your graveyard
-/// to return a permanent card from among them with a finality counter.
-///
-/// Approximation: the engine picks the exiled set.
+/// to return a permanent card from among them with a finality counter (both
+/// picks the controller's; the counter is on it as it enters).
 pub fn winter_cynical_opportunist() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Deathtouch],

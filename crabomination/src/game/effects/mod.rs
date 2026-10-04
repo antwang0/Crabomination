@@ -12786,7 +12786,7 @@ impl GameState {
                 self.add_mana_kept_this_turn_any_one_color(who, amount, ctx, events)
             }
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
-                self.exile_type_spread_return_permanent(*min_types, ctx, events)
+                self.exile_type_spread_return_permanent(*min_types, ctx, events, effect)
             }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
                 self.choose_graveyard_creatures_each_may_return(ctx, events)

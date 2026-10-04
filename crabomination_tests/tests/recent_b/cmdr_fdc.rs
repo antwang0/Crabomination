@@ -4871,6 +4871,26 @@ fn delirium_yard(g: &mut GameState) -> CardId {
     giant
 }
 
+/// CR 207.2c — Winter's exiled set and returned card are its controller's:
+/// the Bears (not the costlier Giant) come back, exiled with three other card
+/// types; a set short of four types is a decline that exiles nothing.
+#[test]
+fn cr_207_2c_winter_exiles_the_set_its_controller_picks() {
+    for full in [true, false] {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::winter_cynical_opportunist());
+        let giant = delirium_yard(&mut g);
+        let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let others: Vec<CardId> = g.players[0].graveyard.iter().map(|c| c.id).filter(|&c| c != giant && c != bears).collect();
+        let set = if full { [vec![bears], others.clone()].concat() } else { vec![bears, others[0]] };
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(set), DecisionAnswer::Cards(vec![bears])]));
+        to_end_step(&mut g);
+        assert_eq!(g.battlefield_find(bears).map(|c| c.counter_count(CounterType::Finality)), full.then_some(1));
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == giant), "the Giant stays");
+        assert_eq!(g.players[0].graveyard.len(), if full { 1 } else { 5 });
+    }
+}
+
 fn to_end_step(g: &mut GameState) {
     g.step = TurnStep::PostCombatMain;
     let ev = g.advance_step(Vec::new()).expect("to the end step");
