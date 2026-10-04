@@ -6,8 +6,6 @@
 //! - **Winter** — the engine picks the exiled set (the greatest-mana-value
 //!   permanent card plus the cheapest cards covering four card types), and
 //!   the finality counter is added as the card enters rather than with it.
-//! - **Cemetery Tampering** — a hidden land is put onto the battlefield
-//!   rather than played (it doesn't use the land drop).
 //! - **Polluted Cistern** — counts milled and surveiled cards, not other
 //!   library-to-graveyard moves (reveal-until).
 //! - **Into the Pit** — the sacrifice is paid as the cast completes.
