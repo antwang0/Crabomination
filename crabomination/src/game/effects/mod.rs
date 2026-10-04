@@ -33355,15 +33355,35 @@ impl GameState {
 
             Effect::SecretNumbersMatch { opponent, max, on_match, on_miss, fresh } => {
                 use rand::seq::IteratorRandom;
-                let Some(_opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
+                let Some(opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
                 let hi = (*max).max(1);
                 let used: Vec<u8> = match ctx.source.and_then(|s| self.battlefield_find(s)) {
                     Some(c) if *fresh => c.chosen_numbers.clone(),
                     _ => Vec::new(),
                 };
                 let open = || (1..=hi).filter(|n| !used.contains(&(*n as u8)));
-                let Some(mine) = open().choose(&mut self.rng.draw()) else { return Ok(()) };
-                let theirs = open().choose(&mut self.rng.draw()).unwrap_or(1);
+                // A prompting seat names its own number; any other draws
+                // uniformly — the equilibrium of a matching game.
+                let numbers: Vec<u32> = open().collect();
+                if numbers.is_empty() {
+                    return Ok(());
+                }
+                let (mut cursor, mut asked) = (0, false);
+                let src = ctx.source.unwrap_or(CardId(0));
+                let mut secret = |g: &mut Self, seat: usize| -> Option<u32> {
+                    if !g.seat_prompts(seat) {
+                        return Some(open().choose(&mut g.rng.draw()).unwrap_or(1));
+                    }
+                    asked = true;
+                    let names = numbers.iter().map(u32::to_string).collect();
+                    let i = g.ask_seat_option(&mut cursor, seat, "Secretly choose a number".into(), src, names, effect)?;
+                    Some(numbers[i])
+                };
+                let Some(mine) = secret(self, ctx.controller) else { return Ok(()) };
+                let Some(theirs) = secret(self, opp) else { return Ok(()) };
+                if asked {
+                    self.clear_answer_log();
+                }
                 if *fresh
                     && let Some(c) = ctx.source.and_then(|s| self.battlefield_find_mut(s))
                 {

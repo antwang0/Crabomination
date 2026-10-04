@@ -149,6 +149,36 @@ fn expert_level_safe_eventually_cracks() {
     assert!(g.players[0].hand.len() >= hand + 2, "every stashed card came to hand");
 }
 
+/// Expert-Level Safe — a prompting seat names its secret number (each
+/// seat's own ask): matching picks crack it, differing ones stash a card.
+#[test]
+fn expert_level_safe_prompting_seats_name_their_numbers() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    for (picks, cracks) in [([1u32, 1], true), ([0, 2], false)] {
+        let mut g = pod(2);
+        flood(&mut g, 0);
+        let safe = g.add_card_to_hand(0, catalog::expert_level_safe());
+        cast(&mut g, 0, safe, None).expect("Safe");
+        g.players[0].wants_ui = true;
+        g.players[1].wants_ui = true;
+        g.players[0].mana_pool.add_colorless(1);
+        let _ = activate(&mut g, 0, safe, 0, Some(Target::Player(1)));
+        let mut asked = Vec::new();
+        for &i in &picks {
+            let Some(p) = g.pending_decision.as_ref() else { break };
+            assert!(matches!(p.decision, Decision::ChooseOption { .. }), "{:?}", p.decision);
+            asked.push(p.acting_player());
+            g.submit_decision(DecisionAnswer::Amount(i)).expect("answer");
+            drain_stack(&mut g);
+        }
+        assert_eq!(asked, vec![0, 1], "you, then the target opponent");
+        assert!(g.pending_decision.is_none());
+        let stash = g.exile.iter().filter(|c| c.exiled_with == Some(safe)).count();
+        assert_eq!(g.battlefield_find(safe).is_none(), cracks);
+        assert_eq!(stash, if cracks { 0 } else { 3 });
+    }
+}
+
 /// Overencumbered — the enchanted opponent gets three tokens, and must pay
 /// {1} per artifact at combat or no creature attacks.
 #[test]

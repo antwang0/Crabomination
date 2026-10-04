@@ -909,9 +909,8 @@ pub fn intelligence_bobblehead() -> CardDefinition {
 /// of your library face down. {1}, {T}: You and target opponent each secretly
 /// choose 1, 2, or 3. If they match, sacrifice it and put all cards exiled
 /// with it into their owners' hands. Otherwise, exile the top card of your
-/// library face down.
-///
-/// ⚠ Residual: both numbers are drawn at random.
+/// library face down. A prompting seat names its number; a bot picks
+/// uniformly (the matching game's equilibrium).
 pub fn expert_level_safe() -> CardDefinition {
     let stash = |n| Effect::ExileTopOfLibrary {
         who: Selector::You,

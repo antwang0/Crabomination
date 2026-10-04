@@ -8112,8 +8112,9 @@ pub enum Effect {
     RadOnCastUntilEndOfTheirNextTurn { who: PlayerRef, amount: u32 },
     /// "You and [opponent] each secretly choose 1 through `max`. Then those
     /// choices are revealed. If they match, [on_match]. Otherwise,
-    /// [on_miss]" (Expert-Level Safe). Each pick is uniform at random —
-    /// the game's equilibrium strategy, so no seat is asked. `on_miss` reads
+    /// [on_miss]" (Expert-Level Safe). A prompting seat names its number
+    /// (`ask_seat_option`); any other picks uniformly at random — the game's
+    /// equilibrium strategy. `on_miss` reads
     /// the opponent's guess as `Value::TriggerEventAmount` (The Toymaker's
     /// Trap). `fresh`: "a number that hasn't been chosen" — the source
     /// keeps the numbers it chose (`CardCold::chosen_numbers`), both picks
