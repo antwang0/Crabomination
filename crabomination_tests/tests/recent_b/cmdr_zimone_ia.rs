@@ -283,9 +283,20 @@ fn primo_makes_fractals_from_damage() {
     cast_x(&mut g, 0, p, None, Some(2)).expect("primo");
     assert_eq!(counters(&g, p), 4);
     g.clear_sickness(p);
+    // A second base-power-0 attacker (a 0/0 with two counters) and a bear,
+    // whose base power isn't 0: the one Fractal counts the batch's damage by
+    // the 0-power creatures, 4 + 2 (CR 603.2c).
+    let other = g.add_card_to_battlefield(0, catalog::hangarback_walker());
+    g.battlefield_find_mut(other).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [other, bear] {
+        g.clear_sickness(id);
+    }
     g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: p, target: AttackTarget::Player(1) }]))
-        .expect("attack");
+    g.perform_action(GameAction::DeclareAttackers(
+        [p, other, bear].into_iter().map(|attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
     drain_stack(&mut g);
     g.step = TurnStep::CombatDamage;
     let ev = g.resolve_combat().expect("damage");
@@ -293,7 +304,7 @@ fn primo_makes_fractals_from_damage() {
     drain_stack(&mut g);
     let f = named(&g, 0, "Fractal");
     assert_eq!(f.len(), 1);
-    assert_eq!(pt(&g, f[0]), (4, 4));
+    assert_eq!(pt(&g, f[0]), (6, 6));
 }
 
 /// Primordial Hydra — doubles each upkeep and tramples at ten.

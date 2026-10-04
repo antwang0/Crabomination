@@ -358,10 +358,8 @@ pub fn ozolith_the_shattered_spire() -> CardDefinition {
 }
 
 /// Primo, the Unbounded — trample; enters with twice X counters; base-power-0
-/// creatures of yours connecting make a Fractal the size of the damage.
-///
-/// Residual: with several such creatures connecting at once, the Fractal
-/// reads the first one's damage.
+/// creatures of yours connecting make a Fractal the size of the damage —
+/// the batch's total to that player (`once_per_batch_summing_damage`).
 pub fn primo_the_unbounded() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -372,7 +370,7 @@ pub fn primo_the_unbounded() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::BasePowerIs(0) })
-                .once_per_batch(),
+                .once_per_batch_summing_damage(),
             effect: make_fractal(Value::TriggerEventAmount),
         }],
         ..legend(
