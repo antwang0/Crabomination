@@ -42,7 +42,6 @@ VERBS = {
 # Reviewed rows: (name, verb) -> why the unprinted constant is right, or the
 # approximation's own doc comment that already names it.
 REVIEWED = {
-    ("Arcane Denial", "draw"): "'may draw up to two cards' — the upper bound",
     ("Candles' Glow", "gain"): "life equal to the 3 damage prevented",
     ("Intervention Pact", "gain"): "life equal to the damage prevented (the shield's cap)",
     ("Reverse Damage", "gain"): "life equal to the damage prevented (an uncapped shield)",
