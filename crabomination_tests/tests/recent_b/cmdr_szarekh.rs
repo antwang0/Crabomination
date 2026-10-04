@@ -130,6 +130,33 @@ fn biotransference_turns_flesh_to_metal() {
 
 /// Canoptek Scarab Swarm exiles a graveyard and makes an Insect per artifact
 /// or land card exiled.
+/// Canoptek Wraith: "choose a land you control. Then search for up to two
+/// basic land cards which have the same name as the chosen land" — both
+/// fetched basics carry the one chosen land's name, not just any name on the
+/// battlefield.
+#[test]
+fn canoptek_wraith_fetches_basics_named_like_the_chosen_land() {
+    let mut g = main_phase(2);
+    let wraith = g.add_card_to_battlefield(0, catalog::canoptek_wraith());
+    g.add_card_to_battlefield(0, catalog::island());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    for def in [catalog::island(), catalog::swamp(), catalog::swamp(), catalog::island(), catalog::plains()] {
+        g.add_card_to_library(0, def);
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![swamp])]));
+    let effect = g.battlefield_find(wraith).unwrap().definition.triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(wraith, 0, None);
+    let ev = g.resolve_effect(&effect, &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&ev);
+    assert!(g.battlefield_find(wraith).is_none(), "sacrificed");
+    let lands: Vec<&str> = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.definition.name).collect();
+    let islands = lands.iter().filter(|n| **n == "Island").count();
+    let swamps = lands.iter().filter(|n| **n == "Swamp").count();
+    assert_eq!((islands, swamps), (1, 3), "two Swamps for the chosen Swamp: {lands:?}");
+}
+
 #[test]
 fn canoptek_scarab_swarm_eats_a_graveyard() {
     let mut g = main_phase(2);

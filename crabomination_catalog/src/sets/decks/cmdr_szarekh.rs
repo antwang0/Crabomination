@@ -224,15 +224,23 @@ pub fn canoptek_tomb_sentinel() -> CardDefinition {
 }
 
 /// Canoptek Wraith — unblockable; combat damage to a player: may pay {3} and
-/// sacrifice it for two basic lands named like a land you control.
-///
-/// ⚠ Residual: each basic shares a name with some permanent, not necessarily
-/// the one land chosen.
+/// sacrifice it, then choose a land you control and fetch up to two basics
+/// with that land's name (`ChooseOneAmong` → `WithTargets` → `SearchUpToN`
+/// over `SameNameAsTarget`).
 pub fn canoptek_wraith() -> CardDefinition {
-    let fetch = Effect::Search {
-        who: PlayerRef::You,
-        filter: R::IsBasicLand.and(R::SameNameAsAPermanent),
-        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+    let fetch = Effect::ChooseOneAmong {
+        what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+        chooser: PlayerRef::You,
+        chosen: Box::new(Effect::WithTargets {
+            what: Selector::SeparatedPile { chosen: true },
+            body: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand.and(R::SameNameAsTarget),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            }),
+        }),
+        other: Box::new(Effect::Noop),
     };
     CardDefinition {
         keywords: vec![Keyword::Unblockable],
@@ -243,7 +251,6 @@ pub fn canoptek_wraith() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::IsSource },
-                    fetch.clone(),
                     fetch,
                 ])),
                 else_: None,
