@@ -3236,6 +3236,10 @@ third stretch    --bench byte-identical again after the historic tally, the
                  6 x 800 (43000+) 24,800 games, three CR 104.4a draws;
                  strict debug pods every deck 4 seats x 12 (98500+) = 540,
                  one draw, no finds; full suite 24,375 / 0 / 5; clippy 0
+fourth stretch   --bench byte-identical after each bot pick and the token
+                 tallies; pods 91704/6/8 x 1,500 all decided; 183-deck census
+                 re-run (43000+) 363 never-activated (from 399), one board
+                 cap found and fixed (43138 g203), three CR 104.4a draws
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
