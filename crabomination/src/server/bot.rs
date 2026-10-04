@@ -3662,8 +3662,9 @@ fn decide_pending_policy_inner(
         }
         // AutoDecider chooses nothing; the bot exiles opponents'
         // graveyard cards (deny graveyard value) up to the cap.
-        crate::decision::Decision::ChooseCards { candidates, min, max, value, .. } => {
-            decide_choose_cards(w, state, seat, *value, candidates, *min, *max)
+        crate::decision::Decision::ChooseCards { source, candidates, min, max, value, .. } => {
+            super::copy_pick::decide_copy_source(state, seat, w, *source, candidates, *min)
+                .unwrap_or_else(|| decide_choose_cards(w, state, seat, *value, candidates, *min, *max))
         }
         // London mulligan bottoming (CR 103.5) and "put N cards
         // from your hand on top/bottom" effects. `AutoDecider`

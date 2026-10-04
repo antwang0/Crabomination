@@ -131,6 +131,7 @@ mod graveyard_to_top;
 mod regrowth_sink;
 mod land_ramp;
 mod renewal_guard;
+mod copy_pick;
 pub mod encode;
 pub mod encode_table;
 pub mod card_tokens;

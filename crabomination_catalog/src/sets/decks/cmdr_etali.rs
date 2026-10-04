@@ -652,7 +652,7 @@ pub fn mirror_box() -> CardDefinition {
 /// except it has haste.
 /// An `enters_as_copy` replacement (CR 614.1c / 707.2) that lasts until end
 /// of turn. The creature is chosen, not targeted, so hexproof / shroud
-/// creatures are legal picks, as printed; the "you may" is always taken.
+/// creatures are legal picks, as printed.
 pub fn cursed_mirror() -> CardDefinition {
     CardDefinition {
         name: "Cursed Mirror",
