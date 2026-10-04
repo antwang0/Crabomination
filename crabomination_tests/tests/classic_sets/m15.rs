@@ -1007,3 +1007,28 @@ fn yisan_tutors_by_verse_count() {
     assert_eq!(g.battlefield_find(yisan).unwrap().counter_count(CounterType::Verse), 1);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Llanowar Elves"), "MV 1 hit");
 }
+
+/// Soul of Innistrad — up to three TARGET creature cards return (CR 115.1):
+/// the chosen two come back, a third creature card stays.
+#[test]
+fn soul_of_innistrad_returns_its_targets() {
+    let mut g = main_phase();
+    let soul = g.add_card_to_battlefield(0, catalog::soul_of_innistrad());
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let c = g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: soul,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let in_hand = |id| g.players[0].hand.iter().any(|h| h.id == id);
+    assert!(in_hand(a) && in_hand(b) && !in_hand(c));
+}

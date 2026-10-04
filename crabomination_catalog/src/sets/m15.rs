@@ -527,22 +527,19 @@ pub fn soul_of_ravnica() -> CardDefinition {
 }
 
 /// Soul of Innistrad — {4}{B}{B} 6/6 with deathtouch. {3}{B}{B}: up to three
-/// creature cards from your graveyard to hand.
+/// target creature cards from your graveyard to hand (from the battlefield,
+/// or exiling it from your graveyard).
 pub fn soul_of_innistrad() -> CardDefinition {
     soul(
         "Soul of Innistrad",
         cost(&[generic(4), b(), b()]),
         vec![Keyword::Deathtouch],
         cost(&[generic(3), b(), b()]),
-        Effect::MoveChosen {
-            from: Selector::EachMatching {
-                zone: ZoneRef::Graveyard(PlayerRef::You),
-                filter: R::Creature,
-            },
-            filter: None,
-            count: Value::Const(3),
-            up_to: true,
-            to: ZoneDest::Hand(PlayerRef::You),
+        Effect::ApplyToTargets {
+            max_targets: 3,
+            min_targets: 0,
+            filter: R::Creature.and(R::InYourGraveyard),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
         },
     )
 }
