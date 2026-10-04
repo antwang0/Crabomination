@@ -446,6 +446,10 @@ pub enum Selector {
     /// target list — the "choose one, [destroy] the rest" shape (Deadly
     /// Vanity: "Choose a creature or planeswalker. Destroy the rest.").
     EachPermanentExceptTargets(SelectionRequirement),
+    /// All battlefield permanents matching `filter` EXCEPT the tokens this
+    /// resolution just created (`LastCreatedTokens`) — "create X Soldiers …
+    /// destroy all other creatures" (Martial Coup).
+    EachPermanentExceptLastCreated(SelectionRequirement),
     /// All battlefield permanents controlled by `who` matching `filter`.
     /// The player-relative sibling of `EachPermanent` — lets one effect
     /// touch every permanent a *targeted* player controls (Sleep: tap +

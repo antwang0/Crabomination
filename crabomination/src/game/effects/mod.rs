@@ -41970,6 +41970,17 @@ impl GameState {
                     .collect()
             }
 
+            Selector::EachPermanentExceptLastCreated(filter) => {
+                let filter = filter.resolve_x(ctx.x_value);
+                let gates = eval::PrintedGates::default();
+                self.battlefield
+                    .iter()
+                    .filter(|c| !self.scratch.last_created_tokens.contains(&c.id))
+                    .filter(|c| self.requirement_on_permanent(&filter, c, ctx.controller, ctx.source, &gates))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
             Selector::EachPermanentExceptTargets(filter) => {
                 let filter = filter.resolve_x(ctx.x_value);
                 let chosen: Vec<CardId> = ctx
