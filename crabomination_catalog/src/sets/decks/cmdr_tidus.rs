@@ -280,18 +280,13 @@ pub fn lord_jyscal_guado() -> CardDefinition {
     })
 }
 
-/// Lulu, Stern Guardian — an opponent attacking you stuns one of its
-/// attackers; {3}{U}: proliferate.
-///
-/// ⚠ Residual: the attacker is chosen as the trigger resolves, not as it's
-/// put on the stack.
+/// Lulu, Stern Guardian — an opponent attacking you stuns a target creature
+/// attacking you, chosen once the declaration is done; {3}{U}: proliferate.
 pub fn lulu_stern_guardian() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent).once_per_batch(),
-            // The attack dispatch binds the attacking player into slot 0, so
-            // the creature is picked as the trigger resolves.
-            effect: Effect::Reflexive { body: Box::new(stun(target_filtered(R::Creature.and(R::IsAttackingYou)))) },
+            effect: stun(target_filtered(R::Creature.and(R::IsAttackingYou))),
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),

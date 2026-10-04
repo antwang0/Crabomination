@@ -474,20 +474,32 @@ fn auron_exiles_a_smaller_defender() {
     assert!(g.battlefield_find(small).is_some(), "back when Auron leaves");
 }
 
-/// Lulu stuns a creature attacking you.
+/// CR 603.3d / 508.1m — Lulu's "target creature attacking you" is chosen as
+/// the trigger goes on the stack, after the whole declaration: the creature
+/// declared second is a legal pick.
 #[test]
 fn lulu_stuns_an_attacker() {
     let mut g = pod(2);
     g.active_player_idx = 1;
     g.add_card_to_battlefield(0, catalog::lulu_stern_guardian());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     g.clear_sickness(bear);
+    g.clear_sickness(angel);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
-        .expect("attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(0) },
+        Attack { attacker: angel, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    let picked = g.stack.iter().find_map(|si| match si {
+        crabomination::game::types::StackItem::Trigger { controller: 0, target, .. } => target.clone(),
+        _ => None,
+    });
+    assert_eq!(picked, Some(Target::Permanent(angel)), "the bigger attacker, declared second");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 1);
+    assert_eq!(g.battlefield_find(angel).unwrap().counter_count(CounterType::Stun), 1);
 }
 
 
