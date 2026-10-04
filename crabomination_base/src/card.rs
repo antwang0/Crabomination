@@ -8156,6 +8156,11 @@ pub struct CardCold {
     /// CR 400.7). Surfaced after the printed abilities in both
     /// `activate_ability` index space and the client view.
     pub granted_activated_abilities: Vec<ActivatedAbility>,
+    /// Static abilities a `GrantStaticAbility` source wrote into this
+    /// permanent's definition, with that source — what
+    /// `GameState::sync_granted_statics` takes back out when the grant ends.
+    /// Cleared with the baked grants as the permanent leaves (CR 400.7).
+    pub granted_statics: Vec<(CardId, crate::effect::StaticAbility)>,
     /// "Until end of turn" sibling of `granted_activated_abilities` — cleared
     /// by `clear_end_of_turn_effects` (Lightning Volley, Retraction Helix).
     pub granted_activated_eot: Vec<ActivatedAbility>,
@@ -11740,6 +11745,9 @@ struct CardInstanceWire {
     /// for back-compat.
     #[serde(default)]
     granted_activated_abilities: Vec<ActivatedAbility>,
+    /// `GrantStaticAbility` statics baked into this permanent's definition.
+    #[serde(default)]
+    granted_statics: Vec<(CardId, crate::effect::StaticAbility)>,
     /// The EOT-duration half of the same grant. `#[serde(default)]` for
     /// back-compat.
     #[serde(default)]
@@ -12078,6 +12086,7 @@ impl serde::Serialize for CardInstance {
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
+            granted_statics: self.granted_statics.clone(),
             granted_activated_eot: self.granted_activated_eot.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
@@ -12218,6 +12227,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
         c.granted_activated_abilities = wire.granted_activated_abilities;
+        c.granted_statics = wire.granted_statics;
         c.granted_activated_eot = wire.granted_activated_eot;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;

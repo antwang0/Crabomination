@@ -211,6 +211,8 @@ mod live_pt;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
 mod as_attached;
+// CR 613 layer 6 — "[filter] have '[static]'" (a Background's grant).
+mod static_grant;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -1626,6 +1628,11 @@ pub struct ColdState {
     /// as it enters (`bake_graveyard_play_rider`). Cleared at each untap.
     #[serde(default)]
     pub(crate) graveyard_play_riders: Vec<(CardId, crate::effect::GraveyardPlayRider)>,
+    /// Some permanent carries a `GrantStaticAbility` static baked into its
+    /// definition, so `sync_granted_statics` runs even with no source left
+    /// (to take it back out). Written only on that transition.
+    #[serde(default)]
+    pub(crate) static_grants_live: bool,
     /// Edgar, Master Machinist — spells cast this turn through a grant whose
     /// permanent "enters tapped". Read as it enters; cleared at each untap.
     #[serde(default)]
@@ -32380,6 +32387,7 @@ fn static_effect_to_effects(
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::EquippedMustBeBlockedByIfAble { .. }
+            | StaticEffect::GrantStaticAbility { .. }
             | StaticEffect::CreatureSpellsGainOffspring { .. }
             | StaticEffect::GrantImproviseToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents

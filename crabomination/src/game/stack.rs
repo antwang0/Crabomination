@@ -134,6 +134,7 @@ struct SbaBoardScan {
     supertype_grant: bool,
     legend_rule_off: bool,
     lethal_by_power: bool,
+    static_grant: bool,
     world: bool,
     saga: bool,
     planeswalker: bool,
@@ -152,6 +153,9 @@ struct SbaBoardScan {
 /// Where the four instance-only flags and the legendary count sit in
 /// [`GameState::sba_board_walk`]'s packed word. `sba_bits` occupies 8..29, so
 /// the low 32 are the mask's and these start above it.
+/// Bit 30 is free in the low word (`sba_bits` stop at 29) and is not a memo
+/// bit: a `GrantStaticAbility` source, read off the statics in the walk.
+const SBA_STATIC_GRANT: u32 = 30;
 const SBA_BESTOWED: u32 = 32;
 const SBA_SOULBOND: u32 = 33;
 const SBA_SECTOR_SET: u32 = 34;
@@ -6207,6 +6211,14 @@ impl GameState {
             if c.attached_to.is_some() {
                 m |= d & b::EQUIPMENT;
             }
+            if c.gather_scan_bits() & crate::card::gather_spec::HAS_STATICS != 0
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GrantStaticAbility { .. }))
+            {
+                flags |= 1 << SBA_STATIC_GRANT;
+            }
             flags |= (c.bestowed as u64) << SBA_BESTOWED;
             flags |= (c.soulbond_partner.is_some() as u64) << SBA_SOULBOND;
             flags |= (c.sector.is_some() as u64) << SBA_SECTOR_SET;
@@ -6218,7 +6230,7 @@ impl GameState {
                     << SBA_PM_BOTH;
             }
         }
-        debug_assert_eq!(m >> 32, 0, "sba_bits outgrew the low word of the packed fold");
+        debug_assert_eq!(m >> SBA_STATIC_GRANT, 0, "sba_bits outgrew bits 8..29 of the packed fold");
         debug_assert!(legendary_count < 1 << 28, "legendary count outgrew the packed fold");
         m | flags | ((legendary_count as u64) << SBA_LEGENDARY_COUNT)
     }
@@ -6276,6 +6288,7 @@ impl GameState {
         s.supertype_grant = m & b::SUPERTYPE_GRANT != 0;
         s.legend_rule_off = m & b::LEGEND_RULE_OFF != 0;
         s.lethal_by_power = m & b::LETHAL_BY_POWER != 0;
+        s.static_grant = packed & (1 << SBA_STATIC_GRANT) != 0;
         // CR 704.5j — the Ring's emblem grants the supertype without a
         // battlefield source.
         s.supertype_grant |= self.players.iter().any(|p| p.ring_temptations >= 1);
@@ -6506,6 +6519,12 @@ impl GameState {
         // a definition; Persist/Undying puts a permanent back).
         let mut scan = self.sba_board_scan();
         let mut flipped = false;
+
+        // CR 613 layer 6 — "[filter] have '[static]'" grants, brought in line
+        // before anything below reads a definition's statics.
+        if (scan.static_grant || self.static_grants_live) && self.sync_granted_statics() {
+            scan = self.sba_board_scan();
+        }
 
         // CR 613 layer 1 — Volrath's Shapeshifter. Moved *under* the scan and
         // gated on it: the sync's own `filter` was a second whole-battlefield

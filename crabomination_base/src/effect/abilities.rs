@@ -2837,6 +2837,16 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         ability: Box<TriggeredAbility>,
     },
+    /// "[filter] have '[static ability]'" (CR 613 layer 6 — a Background's
+    /// "Commander creatures you own have …"): the static is written into each
+    /// matching permanent's definition as an effect (`bake_grant`: not
+    /// copiable, gone when it leaves), so it reads that permanent's
+    /// controller as "you". Kept in step by `GameState::sync_granted_statics`
+    /// at each state-based-action check.
+    GrantStaticAbility {
+        filter: SelectionRequirement,
+        ability: Box<StaticAbility>,
+    },
     /// CR 118.9 — "You may pay {X} rather than pay the mana cost for [filter]
     /// spells you cast, where X is that spell's mana value" (Kentaro, the
     /// Smiling Cat). Read by `effective_alternative_cost`.
