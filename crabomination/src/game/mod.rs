@@ -26428,6 +26428,27 @@ impl GameState {
                 _ => break,
             }
         }
+        // CR 601.2c — "with total mana value N or less": each pick was
+        // checked alone; keep them in the picker's order while the running
+        // total (the primary's included) still fits.
+        if let Effect::ApplyToTargets { filter, .. } = eff {
+            let x = self.battlefield_find(source).map_or(0, |c| c.cast_x_value);
+            if let Some(cap) = filter.slots_total_mana_value_cap(x) {
+                let mv = |t: &Target| match t {
+                    Target::Permanent(id) => self.find_card_anywhere(*id).map_or(0, |c| c.definition.cost.cmc()),
+                    Target::Player(_) => 0,
+                };
+                let mut total = primary.as_ref().map_or(0, mv);
+                chosen.retain(|t| {
+                    let next = total.saturating_add(mv(t));
+                    let fits = next <= cap;
+                    if fits {
+                        total = next;
+                    }
+                    fits
+                });
+            }
+        }
         // CR 115.1 — the source is a legal pick for its own "up to N target
         // creatures" unless the filter says "other" (Baldin's toughness pump
         // on itself). The loop above spares it, so a friendly fan-out over

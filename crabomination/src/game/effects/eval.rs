@@ -4191,6 +4191,17 @@ impl GameState {
     /// CR 601.2c — check the `SameControllerAsTargetSlot` constraints in `req`
     /// against an explicit slot vector, for the `&self` auto-target walkers
     /// that can't stamp `target_slots_scratch`.
+    /// CR 601.2c — `R::SlotsTotalManaValueAtMost`: the candidate's mana
+    /// value plus every other chosen slot's is at most `cap`.
+    pub(crate) fn slots_total_mana_value_ok(&self, cap: u32, target: &Target, slots: &[Option<Target>]) -> bool {
+        let mv = |t: &Target| match t {
+            Target::Permanent(id) => self.find_card_anywhere(*id).map_or(0, |c| c.definition.cost.cmc()),
+            Target::Player(_) => 0,
+        };
+        let others = slots.iter().flatten().filter(|t| *t != target).map(mv).fold(0u32, u32::saturating_add);
+        mv(target).saturating_add(others) <= cap
+    }
+
     pub(crate) fn cross_slot_targets_ok(
         &self,
         req: &SelectionRequirement,
@@ -4203,6 +4214,10 @@ impl GameState {
                 self.cross_slot_targets_ok(a, target, slots)
                     && self.cross_slot_targets_ok(b, target, slots)
             }
+            R::SlotsTotalManaValueAtMost(cap) => self.slots_total_mana_value_ok(*cap, target, slots),
+            // No source here: the X form is concretized by every caller
+            // that has one (`resolve_x`); unresolved, only its own MV counts.
+            R::SlotsTotalManaValueAtMostX => true,
             R::SameControllerAsTargetSlot(slot) => {
                 let ctrl_of = |t: &Target| match t {
                     Target::Permanent(cid) => self
@@ -4923,6 +4938,14 @@ impl GameState {
             // CR 601.2c — "controlled by the same player as slot N". The
             // already-chosen slots live in `target_slots_scratch`, stamped by
             // the cast/activation validator; an unstamped slot passes.
+            // CR 601.2c — the slots chosen so far, stamped by the validator.
+            R::SlotsTotalManaValueAtMost(cap) => {
+                self.slots_total_mana_value_ok(*cap, target, &self.target_slots_scratch)
+            }
+            R::SlotsTotalManaValueAtMostX => {
+                let cap = source.and_then(|s| self.find_card_anywhere(s)).map_or(0, |c| c.cast_x_value);
+                self.slots_total_mana_value_ok(cap, target, &self.target_slots_scratch)
+            }
             R::SameControllerAsTargetSlot(slot) => {
                 let ctrl_of = |t: &Target| match t {
                     Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
@@ -6525,6 +6548,9 @@ impl GameState {
         use SelectionRequirement as R;
         match req {
             R::Any => true,
+            // No slots in scope: the candidate's own mana value is the floor.
+            R::SlotsTotalManaValueAtMost(cap) => card.definition.cost.cmc() <= *cap,
+            R::SlotsTotalManaValueAtMostX => false,
             R::ManaValueEqualsTriggerAmount => {
                 card.definition.cost.cmc() == self.trigger_event_amount_scratch
             }

@@ -3399,6 +3399,17 @@ pub enum SelectionRequirement {
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
     ManaValueAtMostXFromCost,
+    /// CR 601.2c — "any number of target … with total mana value N or less"
+    /// (March from the Tomb): the candidate's mana value plus every OTHER
+    /// chosen slot's is at most N. A cross-slot atom: the cast validator and
+    /// the auto-targeter hand it the chosen slots; with none chosen it is
+    /// the candidate's own mana value against N.
+    SlotsTotalManaValueAtMost(u32),
+    /// [`SlotsTotalManaValueAtMost`](Self::SlotsTotalManaValueAtMost) with
+    /// N the X paid into the cost — Rampaging Yao Guai's "with total mana
+    /// value X or less". `resolve_x` concretizes it; unresolved, it reads the
+    /// source permanent's cast X.
+    SlotsTotalManaValueAtMostX,
     /// Mana value == the X paid into the resolving spell/ability's cost.
     /// Resolved to a concrete `ManaValueExactly(x)` by `resolve_x` (Hearth
     /// Kami's "destroy target artifact with mana value X"); unresolved
@@ -4010,6 +4021,18 @@ impl SelectionRequirement {
     /// callers carry a `debug_assert_eq!` recomputing the rewrite on the
     /// borrowed path so a leaf added to one and not here fails loudly under
     /// `-C debug-assertions=yes` rather than leaving a filter unresolved.
+    /// The cap of a `SlotsTotalManaValueAtMost` / `…AtMostX` atom in this
+    /// tree (through `And`), with `x` for the X form — `None` when the
+    /// filter has no total-mana-value budget.
+    pub fn slots_total_mana_value_cap(&self, x: u32) -> Option<u32> {
+        match self {
+            Self::SlotsTotalManaValueAtMost(n) => Some(*n),
+            Self::SlotsTotalManaValueAtMostX => Some(x),
+            Self::And(a, b) => a.slots_total_mana_value_cap(x).or_else(|| b.slots_total_mana_value_cap(x)),
+            _ => None,
+        }
+    }
+
     pub fn names_x_or_converge(&self) -> bool {
         match self {
             Self::ManaValueAtMostXFromCost
@@ -4017,6 +4040,7 @@ impl SelectionRequirement {
             | Self::PowerAtMostXFromCost
             | Self::PowerExactlyXFromCost
             | Self::ToughnessAtMostXFromCost
+            | Self::SlotsTotalManaValueAtMostX
             | Self::ManaValueAtMostConverged => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.names_x_or_converge() || b.names_x_or_converge()
@@ -4029,6 +4053,7 @@ impl SelectionRequirement {
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
+            Self::SlotsTotalManaValueAtMostX => Self::SlotsTotalManaValueAtMost(x),
             Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
             Self::PowerAtMostXFromCost => Self::PowerAtMost(x as i32),
             Self::PowerExactlyXFromCost => {
@@ -4201,7 +4226,9 @@ impl SelectionRequirement {
             Self::SameControllerAsTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
-            | Self::SameGraveyardAsTargetSlot(_) => true,
+            | Self::SameGraveyardAsTargetSlot(_)
+            | Self::SlotsTotalManaValueAtMost(_)
+            | Self::SlotsTotalManaValueAtMostX => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_cross_slot() || b.mentions_cross_slot()
             }
