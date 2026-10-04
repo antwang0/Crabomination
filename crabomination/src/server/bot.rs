@@ -14995,6 +14995,35 @@ fn enforce_block_requirements(
         pin(blocks, b.id, required);
     }
 
+    // CR 509.1c — "must be blocked by a [filter] if able" (Ace's Baseball
+    // Bat): the cheapest idle matching body, when no matching one is on it.
+    for atk in state.attacking().iter() {
+        if state.defender_for(atk.target) != Some(seat) || !state.block_requirement_binds(atk.attacker) {
+            continue;
+        }
+        let Some(filter) = state.must_be_blocked_by(atk.attacker) else { continue };
+        let matches = |b: CardId| state.evaluate_requirement_static(&filter, &Target::Permanent(b), seat, None);
+        if blocks.iter().any(|(bid, aid)| *aid == atk.attacker && matches(*bid)) {
+            continue;
+        }
+        let pick = state
+            .battlefield
+            .iter()
+            .filter(|b| {
+                b.controller == seat
+                    && !state.is_blocking(b.id)
+                    && !blocks.iter().any(|(bid, _)| *bid == b.id)
+                    && matches(b.id)
+                    && state.block_requirement_able(b, atk.attacker)
+                    && state.blocker_can_block_attacker(b.id, atk.attacker)
+            })
+            .min_by_key(|b| b.power())
+            .map(|b| b.id);
+        if let Some(b) = pick {
+            pin(blocks, b, atk.attacker);
+        }
+    }
+
     // The two keyword requirements below walk the board, so gate them on
     // whether the board can carry the keyword at all. `board_keyword_in_scope`
     // is authoritative on `false` and it is `false` on an ordinary board, so

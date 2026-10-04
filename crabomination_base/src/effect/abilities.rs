@@ -3646,6 +3646,11 @@ pub enum StaticEffect {
     /// spells." Symmetric (any player's Damping Engine binds every player);
     /// escapable for the turn via `Effect::IgnoreStaticFromSourceThisTurn`.
     MostPermanentsCantPlay,
+    /// CR 509.1c — on an Equipment: "as long as equipped creature is
+    /// attacking, it must be blocked by a [filter] if able" (Ace's Baseball
+    /// Bat: a Dalek). One matching blocker satisfies it; read by
+    /// `GameState::must_be_blocked_by` at the block declaration.
+    EquippedMustBeBlockedByIfAble { filter: SelectionRequirement },
     /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
     /// Consulted by the convoke cast path alongside the printed keyword.
     GrantConvokeToSpells { filter: SelectionRequirement },

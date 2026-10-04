@@ -609,3 +609,30 @@ fn the_curse_of_fenric_names_its_horror_and_the_mutant_fights_only_fenric() {
     assert!(g.battlefield_find(other).is_some_and(|c| c.damage == 0), "not named Fenric");
     assert!(g.battlefield_find(mutant).is_none(), "the 2/2 Mutant fought the 6/6 Fenric");
 }
+
+/// Ace's Baseball Bat — CR 509.1c: "as long as equipped creature is
+/// attacking, it must be blocked by a Dalek if able": no block, or a
+/// non-Dalek block, is rejected while an idle Dalek could block it; a Dalek
+/// meets it, and the bot's block plan supplies one.
+#[test]
+fn aces_baseball_bat_must_be_blocked_by_a_dalek() {
+    let mut g = pod(2);
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bat = g.add_card_to_battlefield(0, catalog::aces_baseball_bat());
+    g.battlefield_find_mut(bat).unwrap().attached_to = Some(hero);
+    let dalek = g.add_card_to_battlefield(1, catalog::dalek_drone());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(hero);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: hero, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    let blocks = |g: &GameState, b: Vec<(CardId, CardId)>| g.clone().perform_action(GameAction::DeclareBlockers(b)).is_ok();
+    assert!(!blocks(&g, vec![]), "an idle Dalek could block it");
+    assert!(!blocks(&g, vec![(bear, hero)]), "a non-Dalek doesn't meet it");
+    assert!(blocks(&g, vec![(dalek, hero)]));
+    assert!(blocks(&g, vec![(dalek, hero), (bear, hero)]));
+    let plan = crabomination::server::bot::pick_blocks_for_test(&g, 1);
+    assert!(plan.contains(&(dalek, hero)), "the bot's plan pins the Dalek: {plan:?}");
+}

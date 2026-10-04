@@ -32314,6 +32314,7 @@ fn static_effect_to_effects(
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
+            | StaticEffect::EquippedMustBeBlockedByIfAble { .. }
             | StaticEffect::CreatureSpellsGainOffspring { .. }
             | StaticEffect::GrantImproviseToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents

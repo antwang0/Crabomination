@@ -2,11 +2,8 @@
 //! Doctor + Sarah Jane Smith) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fourth_doctor.rs`.
 //!
-//! Residuals (each also on its card):
-//! - **Ace's Baseball Bat** — "must be blocked by a Dalek if able" is not
-//!   modelled.
-//! - **The Curse of Fenric** — II's name is a copiable value, so a copy of
-//!   Fenric is named Fenric too.
+//! Residual (also on its card): **The Curse of Fenric** — II's name is a
+//! copiable value, so a copy of Fenric is named Fenric too.
 
 use std::sync::Arc;
 
@@ -720,12 +717,14 @@ pub fn displaced_dinosaurs() -> CardDefinition {
 
 // ── Artifacts ───────────────────────────────────────────────────────────────
 
-/// Ace's Baseball Bat — +3/+0, first strike attacking; equip a legend for
-/// {1}.
-///
-/// ⚠ Residual: "must be blocked by a Dalek if able" is not modelled.
+/// Ace's Baseball Bat — +3/+0; attacking, first strike and "must be blocked
+/// by a Dalek if able" (CR 509.1c); equip a legend for {1}.
 pub fn aces_baseball_bat() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as equipped creature is attacking, it must be blocked by a Dalek if able.",
+            effect: StaticEffect::EquippedMustBeBlockedByIfAble { filter: R::HasCreatureType(CreatureType::Dalek) },
+        }],
         name: "Ace's Baseball Bat",
         cost: cost(&[generic(2)]),
         supertypes: vec![Supertype::Legendary],

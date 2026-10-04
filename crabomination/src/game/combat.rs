@@ -3150,6 +3150,36 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — "must be blocked by a [filter] if able" (Ace's Baseball
+        // Bat). Met by one matching blocker on it; rejected while it has none
+        // and an idle matching creature could block it.
+        for atk in self.attacking.iter() {
+            let Some(filter) = self.must_be_blocked_by(atk.attacker) else { continue };
+            if !self.block_requirement_binds(atk.attacker) {
+                continue;
+            }
+            let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+            let matches = |b: CardId| {
+                self.evaluate_requirement_static(&filter, &Target::Permanent(b), defender_idx, None)
+            };
+            let met = self.battlefield.iter().any(|b| self.blocks(b.id, atk.attacker) && matches(b.id))
+                || assignments.iter().any(|(bid, aid)| *aid == atk.attacker && matches(*bid));
+            if met {
+                continue;
+            }
+            let idle_able = self.battlefield.iter().any(|b| {
+                self.same_team(b.controller, defender_idx)
+                    && !self.is_blocking(b.id)
+                    && !assignments.iter().any(|(bid, _)| *bid == b.id)
+                    && matches(b.id)
+                    && self.block_requirement_able(b, atk.attacker)
+                    && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
+            });
+            if idle_able {
+                return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
+            }
+        }
+
         // CR 509.1c — true Lure ("all creatures able to block this do so").
         // Every idle defender creature that *can* legally block such an
         // attacker must be assigned to it in the merged block set.
@@ -6378,6 +6408,18 @@ impl GameState {
     ///
     /// The able set is counted, not the assigned one: the question is whether
     /// a legal block *exists*, not whether this declaration made it.
+    /// CR 509.1c — the creature an Equipment on `attacker` says must block
+    /// it if able (`EquippedMustBeBlockedByIfAble`: Ace's Baseball Bat's
+    /// Dalek), if any. Several such Equipment still want only one blocker.
+    pub(crate) fn must_be_blocked_by(&self, attacker: CardId) -> Option<crate::card::SelectionRequirement> {
+        self.battlefield.iter().filter(|c| c.attached_to == Some(attacker)).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(crate::effect::StaticEffect::EquippedMustBeBlockedByIfAble { filter }) => Some(filter.clone()),
+                _ => None,
+            })
+        })
+    }
+
     pub(crate) fn block_requirement_binds(&self, attacker: CardId) -> bool {
         let Some(acp) = self.computed_permanent(attacker) else { return true };
         let mut min_b = if acp.keywords().has_kw(&Keyword::Menace) { 2usize } else { 1 };
