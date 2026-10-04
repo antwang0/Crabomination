@@ -3302,6 +3302,10 @@ seventh stretch  the universal move path now runs `apply_enters_as_copy` (a
                  wrappers: --bench byte-identical again; pods every deck 6 x
                  40 (95501+) + 4/8 seats x 300 = 1,840 games, all decided,
                  zero panics; suite 24,129 / 0 / 5
+  (put_from_hand) --bench byte-identical (pods-only picker); pods every deck
+                 6 x 60 (96501+) + 3/4/8 seats x 400 = 3,060 games, all
+                 decided bar one CR 104.4a draw (Davros / Doctors), zero
+                 panics; engine lib 921 / 0 / 4
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
