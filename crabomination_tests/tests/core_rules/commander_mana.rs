@@ -660,7 +660,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | ForetellOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
-                | EnchantmentSpell | MulticoloredSpell | ColoredSpellWithoutX
+                | EnchantmentSpell | NotGeneric | MulticoloredSpell | ColoredSpellWithoutX
                 | PlaneswalkerSpellsOnly
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
@@ -707,6 +707,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             HighMvOrX,
             DragonOrOmenSpell,
             EnchantmentSpell,
+            NotGeneric,
             MulticoloredSpell,
             ColoredSpellWithoutX,
             PlaneswalkerSpellsOnly,

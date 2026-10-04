@@ -16639,7 +16639,10 @@ impl GameState {
                 }
                 let Effect::AddMana { pool, .. } = &a.effect else { continue };
                 let (inner, allowed) = match pool {
-                    ManaPayload::Restricted(inner, r) if !r.is_rider() => (inner, r.allows(kind)),
+                    // `NotGeneric` funds colored pips of any payment.
+                    ManaPayload::Restricted(inner, r) if !r.is_rider() => {
+                        (inner, r.allows(kind) || *r == SR::NotGeneric)
+                    }
                     ManaPayload::RestrictedToChosenType(inner) => {
                         (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureOfTypeUncounterable(t).allows(kind)))
                     }

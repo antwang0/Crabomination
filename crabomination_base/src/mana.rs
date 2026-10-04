@@ -706,6 +706,11 @@ pub enum SpendRestriction {
     /// turn a permanent face up." (Creeping Peeper.) Only the enchantment-spell
     /// half is enforced; the ability halves aren't gated.
     EnchantmentSpell,
+    /// "This mana can't be spent to pay generic mana costs." (Jegantha, the
+    /// Wellspring.) Any payment may use it, but only for its own color's
+    /// colored pips: `pay_for_spell` caps it at that pip count. `allows` is
+    /// false — it never funds a payment as a whole.
+    NotGeneric,
     /// "Spend this mana only to cast a multicolored spell." (Pillar of the
     /// Paruns.) Matches a spell with two or more colors.
     MulticoloredSpell,
@@ -855,6 +860,7 @@ impl SpendRestriction {
             SpendRestriction::XCostsOnly => "only costs that contain {X}",
             SpendRestriction::DragonOrOmenSpell => "only Dragon or Omen spells",
             SpendRestriction::EnchantmentSpell => "only enchantment spells",
+            SpendRestriction::NotGeneric => "not generic mana costs",
             SpendRestriction::MulticoloredSpell => "only multicolored spells",
             SpendRestriction::ColoredSpellWithoutX => "only colored spells without {X}",
             SpendRestriction::PlaneswalkerSpellsOnly => "only planeswalker spells",
@@ -985,6 +991,10 @@ impl SpendRestriction {
                             || kind.creature_types.contains(&crate::card::CreatureType::Dragon))
             }
             SpendRestriction::EnchantmentSpell => kind.enchantment,
+            // Per pip, not per payment: never a whole payment's fund.
+            // `pay_for_spell` and the auto-tapper's restricted fallback
+            // take it by name, capped at the cost's colored pips.
+            SpendRestriction::NotGeneric => false,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
             SpendRestriction::ColoredSpellWithoutX => {
                 !kind.colorless && !kind.has_x && !kind.activating_ability && kind.mana_value > 0
@@ -1929,11 +1939,37 @@ impl ManaPool {
             return self.pay_creature_only(cost);
         }
         // How much restricted mana, per color, may fund a spell of `kind`?
+        // `NotGeneric` mana only pays its color's colored pips, so it counts
+        // up to that pip count (`ng_cap`) and no further.
         let mut spendable = [0u32; 5];
+        let mut ng_cap = [0u32; 5];
+        for s in &cost.symbols {
+            if let ManaSymbol::Colored(c) = s {
+                ng_cap[color_index(*c)] += 1;
+            }
+        }
         for (c, n, r) in &self.restricted {
-            if r.allows(kind) {
+            if *r == SpendRestriction::NotGeneric {
+                let i = color_index(*c);
+                let k = (*n).min(ng_cap[i]);
+                ng_cap[i] -= k;
+                spendable[i] += k;
+            } else if r.allows(kind) {
                 spendable[color_index(*c)] += *n;
             }
+        }
+        // The drain below takes `NotGeneric` entries only up to what was
+        // counted for them.
+        let mut ng_left = [0u32; 5];
+        for (c, n, r) in &self.restricted {
+            if *r == SpendRestriction::NotGeneric {
+                ng_left[color_index(*c)] += *n;
+            }
+        }
+        for c in Color::ALL {
+            let i = color_index(c);
+            let pips = cost.symbols.iter().filter(|s| matches!(s, ManaSymbol::Colored(x) if *x == c)).count() as u32;
+            ng_left[i] = ng_left[i].min(pips);
         }
         let spendable_colorless: u32 = self
             .restricted_colorless
@@ -2004,8 +2040,12 @@ impl ManaPool {
                 if rem == 0 {
                     break;
                 }
-                if entry.0 == c && entry.2.allows(kind) {
-                    let d = rem.min(entry.1);
+                if entry.0 == c && (entry.2.allows(kind) || entry.2 == SpendRestriction::NotGeneric) {
+                    let mut d = rem.min(entry.1);
+                    if entry.2 == SpendRestriction::NotGeneric {
+                        d = d.min(ng_left[idx]);
+                        ng_left[idx] -= d;
+                    }
                     entry.1 -= d;
                     rem -= d;
                     if d > 0 {
