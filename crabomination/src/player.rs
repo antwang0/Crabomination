@@ -1048,6 +1048,11 @@ pub struct PlayerData {
     /// back-compat.
     #[serde(default)]
     pub creatures_cast_this_turn: u32,
+    /// CR 700.6 — historic spells (artifact, legendary or Saga) cast this
+    /// turn; reset with `creatures_cast_this_turn`. Peri Brown's "the first
+    /// historic spell you cast each turn".
+    #[serde(default)]
+    pub historic_spells_cast_this_turn: u32,
     /// Pending "first spell costs {1} more" taxes against this player.
     /// Each spell cast consumes one charge, charging the caster {1} extra
     /// generic in `extra_cost_for_spell`. Set by Chancellor of the Annex's
@@ -1704,6 +1709,7 @@ impl Player {
             artifacts_sacrificed_this_turn: 0,
             nontoken_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
+            historic_spells_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             life_locked_this_turn: false,
             life_locked_until_next_turn: false,

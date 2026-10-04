@@ -935,6 +935,10 @@ pub enum Value {
     /// players). Backed by `Player.spells_cast_this_game_turn` — Narset, Jeskai
     /// Waymaster draws this many after discarding her hand.
     SpellsCastThisTurn(PlayerRef),
+    /// CR 700.6 — historic spells `who` has cast this turn
+    /// (`Player.historic_spells_cast_this_turn`): Peri Brown's "the first
+    /// historic spell you cast each turn".
+    HistoricSpellsCastThisTurn(PlayerRef),
     /// Spells `who` has cast this turn **other than** the source spell/ability
     /// itself — `spells_cast_this_turn` minus one, clamped at 0. The current
     /// spell is already counted at cast time, so subtracting one yields "the

@@ -9088,8 +9088,10 @@ impl GameState {
     pub(crate) fn spell_granted_convoke(&self, p: usize, card: &CardInstance) -> bool {
         self.battlefield.iter().any(|c| {
             c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    crate::effect::StaticEffect::GrantConvokeToSpells { filter } => {
+                // Through a gate (`WhileCondition` — Peri Brown's "the first
+                // historic spell you cast each turn").
+                && c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::GrantConvokeToSpells { filter }) => {
                         crate::game::layers::requirement_matches_card(filter, card, p)
                     }
                     _ => false,
@@ -11870,6 +11872,12 @@ impl GameState {
         }
         if fdef.is_creature() {
             me.creatures_cast_this_turn += 1;
+        }
+        if fdef.is_artifact()
+            || fdef.supertypes.contains(&crate::card::Supertype::Legendary)
+            || fdef.subtypes.enchantment_subtypes.contains(&crate::card::EnchantmentSubtype::Saga)
+        {
+            me.historic_spells_cast_this_turn += 1;
         }
         // Spell-type tallies for the per-turn lock pieces (Deafening Silence,
         // Ethersworn Canonist).

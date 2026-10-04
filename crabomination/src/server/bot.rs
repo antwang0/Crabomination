@@ -7305,6 +7305,16 @@ impl BoardFacts {
                 || c.definition.triggered_abilities.iter().any(is_repartee_trigger);
             for sa in c.definition.static_abilities.iter() {
                 use crate::effect::StaticEffect as SE;
+                // A gated grant (Peri Brown's first historic spell) counts
+                // while its gate is open.
+                if matches!(sa.effect, SE::WhileCondition { .. })
+                    && matches!(
+                        state.active_static(&sa.effect, c),
+                        Some(SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. })
+                    )
+                {
+                    f.grants_convoke = true;
+                }
                 match sa.effect {
                     SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. } => {
                         f.grants_convoke = true

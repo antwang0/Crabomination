@@ -4920,6 +4920,7 @@ impl GameState {
             if pl.instants_or_sorceries_cast_this_turn != 0
                 || pl.greatest_is_mana_value_this_turn != 0
                 || pl.creatures_cast_this_turn != 0
+                || pl.historic_spells_cast_this_turn != 0
                 || !pl.pending_is_discounts.is_empty()
                 || !pl.pending_spell_discounts.is_empty()
                 || !pl.pending_affinity_next_spell.is_empty()
@@ -4928,6 +4929,7 @@ impl GameState {
                 pl.instants_or_sorceries_cast_this_turn = 0;
                 pl.greatest_is_mana_value_this_turn = 0;
                 pl.creatures_cast_this_turn = 0;
+                pl.historic_spells_cast_this_turn = 0;
                 pl.pending_is_discounts.clear();
                 pl.pending_spell_discounts.clear();
                 pl.pending_affinity_next_spell.clear();

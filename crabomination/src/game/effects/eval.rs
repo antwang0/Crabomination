@@ -841,6 +841,12 @@ impl GameState {
                 .map(|&p| self.players[p].spells_cast_this_game_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::HistoricSpellsCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].historic_spells_cast_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::GreatestManaValueNotedForSource => self.noted_exiled_mana_value(ctx.source) as i32,
             Value::SpellsCastThisTurnTotal => {
                 self.players.iter().map(|p| p.spells_cast_this_game_turn as i32).sum()
