@@ -5969,6 +5969,29 @@ fn cr_701_15_baeloth_goads_lesser_power_opponents() {
     // bear's power is now less.
     g.add_card_to_battlefield(0, catalog::glorious_anthem());
     assert!(goaded(&g, bear), "2 < 3 under the anthem");
+
+    // "Whenever a goaded attacking or blocking creature dies": the dying
+    // creature's goad is read off its last-known information (CR 603.10a),
+    // off the battlefield — a Treasure for Baeloth's controller.
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.clear_sickness(elf);
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: elf,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }]))
+    .expect("the goaded elf attacks");
+    drain_stack(&mut g);
+    let events = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![elf]) },
+            &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0),
+        )
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
 }
 
 /// CR 701.15 / 509.1b — Bothersome Quasit: a noncreature spell goads an

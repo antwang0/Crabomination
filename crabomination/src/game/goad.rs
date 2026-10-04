@@ -48,10 +48,15 @@ impl GameState {
         a.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, a) {
             Some(StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded) => {
                 // CR 613.4c — the powers compared are the current ones,
-                // anthems included (the layer pass reads printed here).
+                // anthems included (the layer pass reads printed here). A
+                // snapshot off the battlefield (a dying goaded creature's
+                // last-known information) keeps its own power.
+                let power = |x: &CardInstance| {
+                    if self.battlefield.find_by_id(x.id).is_some() { self.effective_power_on(x) } else { x.power() }
+                };
                 self.computed_is_creature(c)
                     && !self.same_team(a.controller, c.controller)
-                    && self.effective_power_on(c) < self.effective_power_on(a)
+                    && power(c) < power(a)
             }
             Some(StaticEffect::OthersNamedLikeThisAreGoaded) => {
                 c.id != a.id && self.computed_is_creature(c) && c.definition.name == a.definition.name
