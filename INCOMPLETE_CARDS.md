@@ -1989,7 +1989,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
-| 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
 

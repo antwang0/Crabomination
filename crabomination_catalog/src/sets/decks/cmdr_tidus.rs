@@ -354,20 +354,19 @@ pub fn oaka_traveling_merchant() -> CardDefinition {
     })
 }
 
-/// Rikku, Resourceful Guardian — your counters make a creature unblockable
-/// this turn; Steal: move a counter from an opponent's creature to yours.
-///
-/// ⚠ Residual: "can't be blocked by creatures your opponents control" is
-/// unblockable, which it is in free-for-all.
+/// Rikku, Resourceful Guardian — a creature you put counters on can't be
+/// blocked by creatures your opponents control this turn (you and a teammate
+/// still block an opponent's); Steal: move a counter from an opponent's
+/// creature to yours.
 pub fn rikku_resourceful_guardian() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
                 .once_per_batch(),
-            effect: Effect::GrantKeyword {
+            effect: Effect::CantBeBlockedByPlayer {
                 what: Selector::TriggerSource,
-                keyword: Keyword::Unblockable,
+                by: PlayerRef::EachOpponent,
                 duration: Duration::EndOfTurn,
             },
         }],

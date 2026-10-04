@@ -173,17 +173,24 @@ fn generous_patron_draws_for_counters_on_theirs() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
-/// Rikku makes a creature you put counters on unblockable this turn.
+/// CR 509.1b — a creature you put counters on can't be blocked by creatures
+/// your opponents control this turn; one an opponent controls still can be
+/// blocked by yours (it isn't unblockable).
 #[test]
-fn rikku_counters_make_it_unblockable() {
+fn rikku_counters_keep_opponents_from_blocking() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::rikku_resourceful_guardian());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let their_wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     put(&mut g, 1, other, CounterType::PlusOnePlusOne, 1);
-    assert!(!g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Unblockable), "not yours");
+    assert!(g.blocker_can_block_attacker(their_wall, other), "an opponent's counters: no grant");
     put(&mut g, 0, bear, CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
+    assert!(!g.blocker_can_block_attacker(their_wall, bear));
+    put(&mut g, 0, theirs, CounterType::PlusOnePlusOne, 1);
+    assert!(g.blocker_can_block_attacker(other, theirs), "your own creatures still block it");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Rikku's Steal moves a counter from an opponent's creature onto yours.
