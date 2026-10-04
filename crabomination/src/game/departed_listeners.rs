@@ -7,7 +7,8 @@
 //! snapshot, for the entries the batch records between its own entry (if
 //! any) and its departure.
 //!
-//! Scope: "whenever [a permanent] enters" listeners only (the reported class),
+//! Scope: the kinds in [`LOOKS_BACK`] — ones that only the dispatch walk
+//! fires, so a departed listener can't also have fired from a direct hook —
 //! and only departures with an in-order event — the synthesized
 //! `PermanentDied` is appended after the batch, so it can't date a departure.
 //! Once-per-turn / once-per-batch listeners are left to the walk's budget
@@ -18,6 +19,16 @@ use super::types::{GameEvent, TriggerCandidate};
 use crate::card::CardId;
 use crate::effect::{EventKind, EventScope};
 use crate::game::effects::{EffectContext, events};
+
+/// The listener kinds this pass serves: "whenever [a permanent] enters" and
+/// "whenever you gain life" (printed `LifeGained` listeners fire only from
+/// the walk; `fire_life_gained_watchers` serves delayed ones).
+const LOOKS_BACK: [EventKind; 2] = [EventKind::EntersBattlefield, EventKind::LifeGained];
+
+/// Whether `ev` is an event a [`LOOKS_BACK`] listener can see.
+fn looked_back_on(ev: &GameEvent) -> bool {
+    matches!(ev, GameEvent::PermanentEntered { .. } | GameEvent::LifeGained { .. })
+}
 
 /// The card an in-order departure event moves off the battlefield.
 fn departure_of(ev: &GameEvent) -> Option<CardId> {
@@ -31,11 +42,11 @@ fn departure_of(ev: &GameEvent) -> Option<CardId> {
 }
 
 impl GameState {
-    /// One candidate per (departed "enters" listener, entry it saw before it
-    /// left). Empty unless the batch holds both an entry and a departure.
-    pub(crate) fn departed_listener_etb_candidates(&self, events: &[GameEvent]) -> Vec<TriggerCandidate> {
+    /// One candidate per (departed listener, event it saw before it left).
+    /// Empty unless the batch holds both a looked-back event and a departure.
+    pub(crate) fn departed_listener_candidates(&self, events: &[GameEvent]) -> Vec<TriggerCandidate> {
         let mut out: Vec<TriggerCandidate> = Vec::new();
-        if !events.iter().any(|e| matches!(e, GameEvent::PermanentEntered { .. }))
+        if !events.iter().any(looked_back_on)
             || !events.iter().any(|e| departure_of(e).is_some())
         {
             return out;
@@ -54,7 +65,7 @@ impl GameState {
                 continue;
             };
             let listens = |ta: &&crate::card::TriggeredAbility| {
-                ta.event.kind == EventKind::EntersBattlefield
+                LOOKS_BACK.contains(&ta.event.kind)
                     && !ta.event.zone.command_zone_only()
                     && !ta.event.once_per_turn
                     && !ta.event.once_per_batch
@@ -74,8 +85,10 @@ impl GameState {
                 .map_or(0, |i| i + 1);
             for ta in snap.definition.triggered_abilities.iter().filter(listens) {
                 for ev in &events[start..dep] {
-                    let GameEvent::PermanentEntered { card_id } = ev else { continue };
-                    if *card_id == listener || !events::event_matches_spec(self, ev, &ta.event, snap) {
+                    if !looked_back_on(ev)
+                        || matches!(ev, GameEvent::PermanentEntered { card_id } if *card_id == listener)
+                        || !events::event_matches_spec(self, ev, &ta.event, snap)
+                    {
                         continue;
                     }
                     let subject = events::event_subject(ev, &ta.event.kind);
@@ -93,7 +106,7 @@ impl GameState {
                         filter: ta.event.filter.clone(),
                         subject,
                         event_amount,
-                        triggered_by_etb: true,
+                        triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         triggered_by_death: false,
                         triggered_by_attack: false,
                         triggered_by_land_entry: false,

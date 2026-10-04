@@ -134,13 +134,15 @@ the handoff.
   create-then-destroy (`Selector::EachPermanentExceptLastCreated`): triggers
   are collected after the resolution from the permanents still there, so
   Soul Warden gained nothing for the five Soldiers before the sweep.
-  ✅ *(2026-10-04, `01NJGEp2`)* for **"enters" listeners**:
+  ✅ *(2026-10-04, `01NJGEp2`)* for **"enters" and "you gain life" listeners**:
   `game/departed_listeners.rs` gives a listener gone by dispatch the entries
   the batch records between its own entry and its first in-order departure
   (`CreatureDied` / `PermanentLeftBattlefield` / exiled / bounced; the
   synthesized `PermanentDied` can't date one). Soul Warden under Martial Coup
   gains 5 (`cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before`).
-  ⏳ Still open: other event kinds (life gained, counters, casts) and
+  Marauding Blight-Priest sees a gain made before the sweep
+  (`cr_603_2_a_departed_life_gain_listener_saw_the_gain`).
+  ⏳ Still open: other event kinds (counters, casts, draws) and
   once-per-turn/batch listeners, which this pass skips.
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token

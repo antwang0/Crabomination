@@ -528,3 +528,28 @@ fn cr_704_3_an_orphaned_aura_goes_in_the_sweep_after_the_resolution() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == aura));
     assert_eq!(g.players[0].hand.len(), hand + 1, "the Aura's trigger drew one");
 }
+
+/// CR 603.2 — the same for a "whenever you gain life" listener: a resolution
+/// that gains life and then destroys every creature still triggers Marauding
+/// Blight-Priest, which was on the battlefield when the life came in.
+#[test]
+fn cr_603_2_a_departed_life_gain_listener_saw_the_gain() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase();
+    let priest = g.add_card_to_battlefield(0, catalog::marauding_blight_priest());
+    let seq = Effect::Seq(vec![
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+    ]);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(priest, 0, None);
+    let events = g.resolve_effect(&seq, &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(priest).is_none(), "the sweep took the priest");
+    assert_eq!(g.players[0].life, 23);
+    assert_eq!(g.players[1].life, 19, "the priest saw the gain before it died");
+}
