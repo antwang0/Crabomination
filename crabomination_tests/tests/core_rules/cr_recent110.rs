@@ -839,3 +839,21 @@ fn cr_118_3_an_exile_from_graveyard_cost_needs_every_card() {
     assert_eq!(g.players[0].graveyard.len(), 1, "the lone card stays");
     assert_eq!(g.computed_permanent(src).unwrap().power, 2, "and no counter");
 }
+
+/// CR 400.7 — "when another creature dies, you may exile it. If you do":
+/// the card shuffled back into its library is a new object, so it stays
+/// there and Brenard, Ginger Sculptor makes no copy.
+#[test]
+fn cr_400_7_a_may_exile_of_a_card_gone_to_a_hidden_zone_is_not_offered() {
+    use crabomination::game::effects::{EffectContext, EntityRef};
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::brenard_ginger_sculptor());
+    let body = g.battlefield_find(src).unwrap().definition.triggered_abilities[0].effect.clone();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(src, 0, None);
+    ctx.trigger_source = Some(EntityRef::Card(bear));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert!(g.players[0].library.iter().any(|c| c.id == bear), "still in the library");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no copy");
+}

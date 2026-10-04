@@ -59,6 +59,12 @@ impl GameState {
                     _ => ctx.trigger_source.and_then(|e| e.as_card_id()),
                 };
                 let Some(zone) = id.and_then(|id| self.find_card_zone(id)) else { return true };
+                // CR 400.7 — a trigger's card that went to a hidden zone is a
+                // new object: "you may exile it" (a dead creature shuffled
+                // back, a discarded card returned to hand) finds nothing.
+                if matches!(what, Selector::TriggerSource) && matches!(zone, Zone::Hand | Zone::Library) {
+                    return true;
+                }
                 matches!(
                     (zone, to),
                     (Zone::Exile, ZoneDest::Exile)
