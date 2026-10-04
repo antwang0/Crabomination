@@ -476,8 +476,8 @@ fn kenrith(
     }
 }
 
-/// Rowan Kenrith — +2: target player's creatures attack if able (residual:
-/// until your next turn, those it has at resolution); −2: 3 damage to each
+/// Rowan Kenrith — +2: during target player's next turn, each creature they
+/// control attacks if able (a player-level requirement); −2: 3 damage to each
 /// tapped creature target player controls; −8: an emblem copying their
 /// activated abilities. Partner with Will Kenrith.
 pub fn rowan_kenrith() -> CardDefinition {
@@ -490,11 +490,7 @@ pub fn rowan_kenrith() -> CardDefinition {
         vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
-                effect: Effect::GrantKeyword {
-                    what: theirs(R::Creature),
-                    keyword: Keyword::MustAttack,
-                    duration: Duration::UntilNextTurn,
-                },
+                effect: Effect::AttackIfAbleDuringTheirNextTurn { who: target_filtered(R::Player) },
                 ..Default::default()
             },
             LoyaltyAbility {

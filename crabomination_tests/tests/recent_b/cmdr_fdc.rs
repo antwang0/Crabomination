@@ -6048,6 +6048,46 @@ fn goaded(g: &GameState, id: CardId) -> bool {
     g.is_goaded(g.battlefield_find(id).unwrap())
 }
 
+/// CR 508.1d — Rowan Kenrith's +2 binds the PLAYER: during their next turn
+/// each creature they control attacks if able, one that arrived after the
+/// ability resolved included; their turn after that is free.
+#[test]
+fn cr_508_1d_rowan_kenrith_makes_the_whole_side_attack_next_turn() {
+    let mut g = main_phase();
+    let rowan = g.add_card_to_battlefield(0, catalog::rowan_kenrith());
+    loyalty_at(&mut g, rowan, 0, Some(Target::Player(1)));
+    let early = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let late = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let declare = |g: &GameState, turn_ahead: u32, attackers: &[CardId]| {
+        let mut g = g.clone();
+        g.turn_number += turn_ahead;
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        for &id in &[early, late] {
+            g.clear_sickness(id);
+        }
+        let attacks = attackers.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(0) }).collect();
+        g.perform_action(GameAction::DeclareAttackers(attacks)).is_ok()
+    };
+    assert!(!declare(&g, 1, &[early]), "the later creature must attack too");
+    assert!(declare(&g, 1, &[early, late]));
+    // Their turn ends; on the one after, nothing binds them.
+    let mut after = g.clone();
+    after.turn_number += 1;
+    after.active_player_idx = 1;
+    after.step = TurnStep::End;
+    for _ in 0..20 {
+        if after.active_player_idx != 1 {
+            break;
+        }
+        after.priority.player_with_priority = after.active_player_idx;
+        let _ = after.perform_action(GameAction::PassPriority);
+    }
+    assert_ne!(after.active_player_idx, 1, "the turn passed");
+    assert!(declare(&after, 1, &[early]));
+}
+
 /// CR 701.15 — Baeloth goads each opposing creature with less power than it
 /// (2): the 1/1 is goaded, the 2/2 and your own 1/1 aren't.
 #[test]
