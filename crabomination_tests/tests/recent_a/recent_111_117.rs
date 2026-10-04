@@ -80,18 +80,25 @@ mod recent111 {
         assert_eq!((cp.power, cp.toughness), (2, 1), "lord-pumped 1/0");
     }
 
-    /// Loaming Shaman shuffles the target player's graveyard into their library.
+    /// Loaming Shaman: target player shuffles any number of target cards from
+    /// their graveyard into their library — only the targeted ones (2019-07-12
+    /// ruling: none targeted is just a shuffle), and only from that graveyard.
     #[test]
     fn loaming_shaman_recycles_graveyard() {
         let mut g = two_player_game();
-        g.add_card_to_graveyard(1, catalog::grizzly_bears());
-        g.add_card_to_graveyard(1, catalog::lightning_bolt());
+        let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+        let mine = g.add_card_to_graveyard(0, catalog::lightning_bolt());
         let shaman = g.add_card_to_battlefield(0, catalog::loaming_shaman());
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
-        g.fire_self_etb_triggers(shaman, 0);
-        drain_stack(&mut g);
-        assert!(g.players[1].graveyard.is_empty(), "graveyard shuffled away");
-        assert_eq!(g.players[1].library.len(), 2);
+        let etb = catalog::loaming_shaman().triggered_abilities[0].effect.clone();
+        let ctx = crabomination::game::effects::EffectContext {
+            targets: vec![Target::Player(1), Target::Permanent(bear)],
+            ..crabomination::game::effects::EffectContext::for_trigger(shaman, 0, None, 0)
+        };
+        g.resolve_effect(&etb, &ctx).expect("resolves");
+        assert!(g.players[1].library.iter().any(|c| c.id == bear), "the targeted card went home");
+        assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "an untargeted card stays");
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == mine));
     }
 
     /// Defense of the Heart fires only against three opposing creatures.

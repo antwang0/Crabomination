@@ -177,8 +177,8 @@ pub fn master_of_waves() -> CardDefinition {
     }
 }
 
-/// Loaming Shaman — {2}{G} 3/2; ETB: target player shuffles their graveyard
-/// into their library (printed "any number of target cards" collapses to all).
+/// Loaming Shaman — {2}{G} 3/2; ETB: target player shuffles any number of target
+/// cards from their graveyard into their library (none targeted: just a shuffle).
 pub fn loaming_shaman() -> CardDefinition {
     CardDefinition {
         name: "Loaming Shaman",
@@ -192,9 +192,24 @@ pub fn loaming_shaman() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ShuffleGraveyardIntoLibrary {
-                who: PlayerRef::Target(0),
-            },
+            effect: Effect::Seq(vec![
+                Effect::SlotGroups(vec![
+                    Effect::TargetPlayerThen { filter: SelectionRequirement::Player, then: Box::new(Effect::Noop) },
+                    Effect::ApplyToTargets {
+                        max_targets: 20,
+                        min_targets: 0,
+                        filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::SameGraveyardAsTargetSlot(0)),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Library {
+                                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                pos: crate::effect::LibraryPosition::Bottom,
+                            },
+                        }),
+                    },
+                ]),
+                Effect::ShuffleLibrary { who: PlayerRef::Target(0) },
+            ]),
         }],
         ..Default::default()
     }
