@@ -275,6 +275,24 @@ fn theater_of_horrors_cards_close_when_it_leaves() {
     assert!(!g.exile.iter().any(|c| c.id == bear && c.may_play_until.is_some()), "closed with it");
 }
 
+/// Theater of Horrors says "play": a land exiled with it is played (a land
+/// drop) once an opponent has lost life on your turn.
+#[test]
+fn theater_of_horrors_plays_an_exiled_land() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::theater_of_horrors());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    step_into(&mut g, 0, TurnStep::Untap, TurnStep::Draw);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "no opponent has lost life yet");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_by(&mut g, 0, bolt, &[Target::Player(1)]);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(forest)).expect("played from exile");
+    assert!(g.battlefield_find(forest).is_some());
+}
+
 /// Titan Hunter: at each player's end step with no creature death this turn,
 /// that player takes 4.
 #[test]

@@ -1927,7 +1927,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
-| 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
 | 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
 
