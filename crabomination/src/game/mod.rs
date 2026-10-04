@@ -10502,11 +10502,9 @@ impl GameState {
                 specs.append(&mut c.pending_etb_counters);
             }
             for (kind, n) in minted.into_iter().chain(specs) {
-                let scaled = if kind == crate::card::CounterType::PlusOnePlusOne {
-                    self.scaled_counter_count(ctrl, kind, n, true)
-                } else {
-                    n
-                };
+                // CR 614.1c / 614.16 — the whole chain, every kind: the
+                // filtered adders (Benevolent Hydra, Ozolith) read the token.
+                let scaled = self.scaled_counter_count_on(id, kind, n);
                 if scaled > 0 {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(kind, scaled);

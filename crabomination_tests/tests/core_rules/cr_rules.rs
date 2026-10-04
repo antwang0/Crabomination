@@ -8200,6 +8200,28 @@ fn cr_122_1b_keyword_counter_grants_keyword() {
         "the keyword counter grants vigilance");
 }
 
+/// CR 614.1c / 614.16 — a token created "with N counters" takes the
+/// filtered adders too: Witherbloom Pestrider's Pest enters with one +1/+1
+/// counter, and Benevolent Hydra ("another creature you control") makes it
+/// two. The token path ran only the controller-wide chain.
+#[test]
+fn cr_614_16_token_entering_with_counters_takes_benevolent_hydra() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::benevolent_hydra());
+    let rider = g.add_card_to_hand(0, catalog::witherbloom_pestrider());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rider, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Witherbloom Pestrider");
+    drain_stack(&mut g);
+    let pest = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Pest")
+        .expect("a Pest token");
+    assert_eq!(pest.counter_count(CounterType::PlusOnePlusOne), 2, "one plus Benevolent Hydra's one");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
