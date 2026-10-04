@@ -3319,7 +3319,10 @@ fourth part        CR 603.2 departed "enters" listeners (one extra
                    when nothing departed): --bench 196,176 / 613.0 / 0
                    stalls, byte-identical; pods 4 seats x 4 (73001+) + 5
                    seats x 6 (73201+) every deck = 406 games, all decided,
-                   0 % stalls; suite 24,008 / 0 / 5
+                   0 % stalls; suite 24,008 / 0 / 5; + LifeGained
+                   listeners: --bench byte-identical, pods 4 x 4 (74001+) +
+                   6 x 6 (74201+) every deck = 370 games, all decided, 0 %
+                   stalls; suite 24,019 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
