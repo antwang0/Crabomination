@@ -247,6 +247,41 @@ fn hedonists_trove_plays_their_graveyard() {
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
 }
 
+/// Hedonist's Trove: lands from among its cards freely, but one spell a turn
+/// (re-armed as the turn ends), and nothing once it has left the battlefield
+/// (CR 611.3a — a static ability's effect ends with its source).
+#[test]
+fn hedonists_trove_one_spell_a_turn_while_it_stays() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let land = g.add_card_to_graveyard(1, catalog::swamp());
+    let trove = g.add_card_to_hand(0, catalog::hedonists_trove());
+    flood(&mut g, 0);
+    cast(&mut g, trove, &[]).expect("cast");
+    flood(&mut g, 0);
+    cast_granted(&mut g, bear).expect("the first spell");
+    flood(&mut g, 0);
+    assert!(cast_granted(&mut g, angel).is_err(), "one spell this way each turn");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("lands aren't capped");
+    assert!(g.battlefield_find(land).is_some());
+
+    let granted_to = |g: &GameState| g.exile.iter().find(|c| c.id == angel).and_then(|c| c.may_play_until).map(|m| m.player);
+    let started = g.turn_number;
+    while g.turn_number == started {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(granted_to(&g), Some(0), "a new turn, a new spell");
+
+    let naturalize = g.add_card_to_hand(0, catalog::naturalize());
+    flood(&mut g, 0);
+    cast(&mut g, naturalize, &[Target::Permanent(trove)]).expect("destroy the Trove");
+    assert!(g.battlefield_find(trove).is_none());
+    assert_eq!(granted_to(&g), None, "the permission left with the Trove");
+}
+
 /// Boneyard Parley brings creature cards from graveyards back under your
 /// control.
 #[test]

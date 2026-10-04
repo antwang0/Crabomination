@@ -1553,8 +1553,7 @@ Anje 19.5 %; 6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia
 precons 1,000 decided, 1.2 %; 8 seats (seats 4-10) 1,000 decided, 5.7 %.
 Residuals: Archfiend of Spite's damager always sacrifices when able;
 Boneyard Parley's five are an untargeted pick; Chainer's permission names one
-card as it resolves; Hedonist's Trove has no one-spell cap and its cards stay
-playable after it leaves; K'rrik's life-for-{B} covers spells only. Census:
+card as it resolves; K'rrik's life-for-{B} covers spells only. Census:
 no card of the list unplayed. Debug strict pods (400 games): clean. `--bench`
 byte-identical.
 

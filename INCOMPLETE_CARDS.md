@@ -1987,8 +1987,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
-| 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
-| 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
+| 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the one-cast permission covers the creature cards in your graveyard as it resolves; one put there later isn't covered. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells, activated abilities and turning face up; not a mana ability's cost or the other special-action costs (cycling, ward). |
 | 🟡 Littjara Mirrorlake | Bedecked Brokers (NCC) | the extra +1/+1 counter is put on the copy after it enters. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |

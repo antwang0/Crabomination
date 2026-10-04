@@ -502,15 +502,19 @@ pub fn greven_predator_captain() -> CardDefinition {
     }
 }
 
-/// Hedonist's Trove — exile an opponent's graveyard and play from it.
-/// Residual: no one-spell-a-turn cap; playable after the Trove leaves.
+/// Hedonist's Trove — exile an opponent's graveyard and play from it while
+/// the Trove stays: lands freely, one spell a turn
+/// (`MayPlayDuration::WhileSourceOnBattlefield`).
 pub fn hedonists_trove() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0), filter: None },
             Effect::GrantMayPlay {
                 what: Selector::ExiledThisResolution { filter: R::Any },
-                duration: crate::card::MayPlayDuration::WhileExiled,
+                duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
+                    source: crate::card::CardId(0),
+                    one_spell_a_turn: true,
+                },
                 to_owner: false,
                 exile_after: false,
                 pay_own_cost: true,
