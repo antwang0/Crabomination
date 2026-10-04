@@ -7899,3 +7899,41 @@ fn grave_consequences_replays_each_seats_own_pick() {
     assert!(g.exile.iter().any(|c| c.id == theirs), "seat 1's pick");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == kept), "only the picked card");
 }
+
+/// CR 800.4a — the replay log skips a DEPARTED seat's answers. A
+/// `PlayersMayAccept` offer walks the living opponents: seat 1 accepts,
+/// seat 2 declines and then concedes, seat 3 accepts. On the re-run seat 2
+/// is gone from the walk, and its "no" used to be read as seat 3's answer.
+/// Each logged answer now carries its seat (`game/answer_log.rs`).
+#[test]
+fn cr_800_4a_replay_skips_a_departed_seats_answer() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in 0..4 {
+        g.players[p].wants_ui = true;
+    }
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let offer = Effect::PlayersMayAccept {
+        who: PlayerRef::EachOpponent,
+        description: "Gain 5 life?".into(),
+        on_accept: Box::new(Effect::GainLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(5) }),
+        if_any: Box::new(Effect::Noop),
+        otherwise: Box::new(Effect::Noop),
+    };
+    g.stack.push(TriggerPush::new(src, 0, offer).build());
+    g.resolve_top_of_stack().expect("resolve");
+    let mut asked = 0;
+    while let Some(pending) = g.pending_decision.as_ref() {
+        let seat = pending.acting_player();
+        assert!(matches!(pending.decision, Decision::OptionalTrigger { .. }));
+        g.submit_decision(DecisionAnswer::Bool(seat != 2)).expect("answer");
+        if seat == 2 {
+            g.concede(2);
+        }
+        asked += 1;
+        assert!(asked < 10, "the offer keeps re-asking");
+    }
+    assert_eq!(g.players[1].life, 25, "seat 1 accepted");
+    assert_eq!(g.players[3].life, 25, "seat 3 accepted — its own answer, not seat 2's");
+}

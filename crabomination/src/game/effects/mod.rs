@@ -1060,11 +1060,14 @@ impl GameState {
         kind: crate::decision::OptionalKind,
     ) -> Option<bool> {
         use crate::decision::{Decision, DecisionAnswer};
+        self.skip_departed_answers(cursor, seat);
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Bool(_)));
         if let Some(a) = self.scratch.resolution_answer_log.get(*cursor) {
             *cursor += 1;
             return Some(matches!(a, DecisionAnswer::Bool(true)));
         }
+        // Logged under the seat the ARM named (`answer_log`'s replay skip).
+        let named = seat;
         // CR 800.4f/g — the seat may have left the game since the arm derived
         // it (tribute asks an opponent, and in a pod that opponent is often
         // long dead). A cost of theirs is not paid and nobody is asked; any
@@ -1072,7 +1075,7 @@ impl GameState {
         let seat = match self.route_ask(seat, source, kind.is_cost()) {
             crate::game::departed::AskRoute::Seat(q) => q,
             crate::game::departed::AskRoute::CostNotPaid => {
-                self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(false));
+                self.log_answer(DecisionAnswer::Bool(false), Some(named));
                 *cursor += 1;
                 return Some(false);
             }
@@ -1089,7 +1092,7 @@ impl GameState {
         let b = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
         // Log synchronous answers too, so a later suspend's re-run replays
         // them instead of re-asking the decider.
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        self.log_answer(DecisionAnswer::Bool(b), Some(named));
         *cursor += 1;
         Some(b)
     }
@@ -1162,6 +1165,8 @@ impl GameState {
         };
         // A decline is a `Target`-family answer either way: a non-optional
         // re-run reads it as the fallback below.
+        self.skip_departed_answers(cursor, seat);
+        let named = seat;
         self.drop_stale_answer_log(*cursor, |a| {
             matches!(a, DecisionAnswer::Target(_) | DecisionAnswer::DeclineTarget)
         });
@@ -1202,10 +1207,11 @@ impl GameState {
             _ => Some(fallback),
         };
         // Log synchronous answers too, so a later suspend's re-run replays them.
-        self.scratch.resolution_answer_log.push(match &picked {
+        let logged = match &picked {
             Some(t) => DecisionAnswer::Target(t.clone()),
             None => DecisionAnswer::DeclineTarget,
-        });
+        };
+        self.log_answer(logged, Some(named));
         *cursor += 1;
         Some(picked)
     }
@@ -1236,7 +1242,7 @@ impl GameState {
             return (b, false);
         }
         let b = self.flip_one_coin(player);
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        self.log_answer(DecisionAnswer::Bool(b), None);
         *cursor += 1;
         (b, true)
     }
@@ -1418,6 +1424,8 @@ impl GameState {
         effect: &Effect,
     ) -> Option<u32> {
         use crate::decision::{Decision, DecisionAnswer};
+        self.skip_departed_answers(cursor, seat);
+        let named = seat;
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Amount(_)));
         if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n).min(max);
@@ -1439,7 +1447,7 @@ impl GameState {
             DecisionAnswer::Amount(n) => n.min(max),
             _ => 0,
         };
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Amount(n));
+        self.log_answer(DecisionAnswer::Amount(n), Some(named));
         *cursor += 1;
         Some(n)
     }
@@ -1459,6 +1467,8 @@ impl GameState {
     ) -> Option<usize> {
         use crate::decision::{Decision, DecisionAnswer};
         let last = options.len().saturating_sub(1);
+        self.skip_departed_answers(cursor, seat);
+        let named = seat;
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Amount(_)));
         if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n as usize).min(last);
@@ -1480,7 +1490,7 @@ impl GameState {
             DecisionAnswer::Amount(n) => (n as usize).min(last),
             _ => 0,
         };
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Amount(n as u32));
+        self.log_answer(DecisionAnswer::Amount(n as u32), Some(named));
         *cursor += 1;
         Some(n)
     }
@@ -1609,6 +1619,8 @@ impl GameState {
                 .take(max as usize)
                 .collect()
         };
+        self.skip_departed_answers(cursor, seat);
+        let named = seat;
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Cards(_)));
         if let Some(DecisionAnswer::Cards(v)) = self.scratch.resolution_answer_log.get(*cursor) {
             let v = sane(v);
@@ -1634,7 +1646,7 @@ impl GameState {
                 _ => Vec::new(),
             }
         };
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
+        self.log_answer(DecisionAnswer::Cards(ids.clone()), Some(named));
         *cursor += 1;
         Some(ids)
     }
@@ -1784,6 +1796,7 @@ impl GameState {
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
         clear_scratch!(self.resolution_answer_log);
+        clear_scratch!(self.resolution_answer_seats);
     }
 
     /// Drop an earlier arm's leftover answers before this arm's first ask
@@ -2930,10 +2943,13 @@ impl GameState {
         // The nested resolution read the vote's ballot as its own answer, and
         // on completing dropped the channel as a leak. The two channels are
         // per resolution: set the parked one's aside and give it back.
-        let outer_log = if self.scratch.resolution_answer_log.is_empty() {
-            Vec::new()
+        let (outer_log, outer_seats) = if self.scratch.resolution_answer_log.is_empty() {
+            (Vec::new(), Vec::new())
         } else {
-            std::mem::take(&mut self.scratch.resolution_answer_log)
+            (
+                std::mem::take(&mut self.scratch.resolution_answer_log),
+                std::mem::take(&mut self.scratch.resolution_answer_seats),
+            )
         };
         let outer_stash = take_opt_scratch!(self.stashed_resolution_answer);
         let run = |g: &mut Self| -> Result<Vec<GameEvent>, GameError> {
@@ -2944,6 +2960,7 @@ impl GameState {
         let result = run(self);
         if !outer_log.is_empty() {
             self.scratch.resolution_answer_log = outer_log;
+            self.scratch.resolution_answer_seats = outer_seats;
         }
         if outer_stash.is_some() {
             self.scratch.stashed_resolution_answer = outer_stash;

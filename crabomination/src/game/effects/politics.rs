@@ -183,7 +183,7 @@ impl GameState {
             return matches!(a, DecisionAnswer::Bool(true));
         }
         let b = f(self);
-        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        self.log_answer(DecisionAnswer::Bool(b), None);
         *cursor += 1;
         b
     }

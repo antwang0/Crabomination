@@ -174,6 +174,7 @@ mod token_batch;
 mod life_events;
 mod draw_batch;
 mod exile_return;
+mod answer_log;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
@@ -2429,6 +2430,13 @@ pub struct ResolutionScratch {
     /// snapshot taken between two questions of the same effect round-trips.
     #[serde(default)]
     pub(crate) resolution_answer_log: Vec<DecisionAnswer>,
+    /// The seat that gave each `resolution_answer_log` entry (`u8::MAX`: no
+    /// seat — a logged gate, a test plant). A replay skips a DEPARTED seat's
+    /// entries (CR 800.4a): a seat that leaves between a suspend and its
+    /// resume drops out of the arm's seat walk, and its answers would
+    /// otherwise be read as the next seat's (`skip_departed_answers`).
+    #[serde(default)]
+    pub(crate) resolution_answer_seats: Vec<u8>,
     /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
     /// `pay_receipt_life` mid-cast and drained into the action's event batch
     /// at the end of `perform_action`, so paid life fires life-loss triggers
@@ -27815,9 +27823,12 @@ impl GameState {
             return self.apply_pending_effect_answer_inner(state, answer);
         }
         let parked = std::mem::take(&mut self.scratch.resolution_answer_log);
+        let parked_seats = std::mem::take(&mut self.scratch.resolution_answer_seats);
         let out = self.apply_pending_effect_answer_inner(state, answer);
         let mut pushed = std::mem::replace(&mut self.scratch.resolution_answer_log, parked);
+        let mut pushed_seats = std::mem::replace(&mut self.scratch.resolution_answer_seats, parked_seats);
         self.scratch.resolution_answer_log.append(&mut pushed);
+        self.scratch.resolution_answer_seats.append(&mut pushed_seats);
         out
     }
 
@@ -28853,11 +28864,11 @@ impl GameState {
                 self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Amount((*n).min(max)));
                 Ok(Vec::new())
             }
-            PendingEffectState::SeatAmountAnswerPending { max, .. } => {
+            PendingEffectState::SeatAmountAnswerPending { max, player } => {
                 let DecisionAnswer::Amount(n) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.scratch.resolution_answer_log.push(DecisionAnswer::Amount((*n).min(max)));
+                self.log_answer(DecisionAnswer::Amount((*n).min(max)), Some(player));
                 Ok(Vec::new())
             }
             PendingEffectState::MayDoAnswerPending => {
@@ -28867,19 +28878,19 @@ impl GameState {
                 self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
-            PendingEffectState::SeatBoolAnswerPending { .. } => {
+            PendingEffectState::SeatBoolAnswerPending { player } => {
                 let DecisionAnswer::Bool(b) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(*b));
+                self.log_answer(DecisionAnswer::Bool(*b), Some(player));
                 Ok(Vec::new())
             }
-            PendingEffectState::SeatTargetAnswerPending { .. } => {
+            PendingEffectState::SeatTargetAnswerPending { player, .. } => {
                 // Raw append — the re-run checks it against its own legal set
                 // (a decline only reads as one where the ask was optional).
                 match answer {
                     DecisionAnswer::Target(_) | DecisionAnswer::DeclineTarget => {
-                        self.scratch.resolution_answer_log.push(answer.clone());
+                        self.log_answer(answer.clone(), Some(player));
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
@@ -28910,13 +28921,13 @@ impl GameState {
                 self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
                 Ok(Vec::new())
             }
-            PendingEffectState::SeatCardsAnswerPending { .. } => {
+            PendingEffectState::SeatCardsAnswerPending { player, .. } => {
                 let DecisionAnswer::Cards(ids) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 // Logged (not stashed) so the re-run can ask further
                 // questions after replaying this one.
-                self.scratch.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
+                self.log_answer(DecisionAnswer::Cards(ids.clone()), Some(player));
                 Ok(Vec::new())
             }
             PendingEffectState::MayCastExiledPending { player, card, decline } => {
