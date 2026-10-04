@@ -7101,12 +7101,9 @@ impl GameState {
                 Vec::new()
             }
         };
-        for id in world_victims {
-            if let Some(c) = self.battlefield.find_by_id(id) {
-                self.died_card_snapshots.insert(id, self.lki_clone(c));
-            }
-            self.remove_from_battlefield_to_graveyard_raw(id);
-        }
+        // CR 704.5k — the world rule's victims go to the graveyard like the
+        // legend rule's: a creature among them dies (CR 700.4).
+        self.put_legend_rule_victims(world_victims, events);
 
         // Saga rule (CR 714.4 / 704.5s): a Saga whose lore counters have
         // reached its final chapter number is sacrificed — unless one of its
@@ -8380,14 +8377,20 @@ impl GameState {
         }
         let leaver = card.definition.is_creature().then_some((card.id, card.controller));
         self.note_left_without_dying(&card, &mut events);
+        // CR 903.9b — a commander bounced this way may go to the command zone
+        // instead (the replacement runs in `resolve_zone_change`); the placer
+        // also splits a melded or mutated pile (CR 712.8g / 721.3).
+        let resolved = self.resolve_zone_change(id, crate::card::Zone::Battlefield, crate::card::Zone::Hand);
         if !card.is_token {
-            self.players[owner].hand.push(card);
+            self.place_card_at_resolved_zone(card, resolved);
         }
         self.on_left_battlefield(id, &mut events);
         if let Some((card_id, controller)) = leaver {
             events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
         }
-        events.push(GameEvent::PermanentReturnedToHand { card_id: id, player: owner });
+        if resolved == crate::card::Zone::Hand {
+            events.push(GameEvent::PermanentReturnedToHand { card_id: id, player: owner });
+        }
         events
     }
 

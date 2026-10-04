@@ -2317,6 +2317,24 @@ impl GameState {
         // it. The resolved dest uses concrete `PlayerRef::You`-anchored refs.
         let resolved_dest = self.resolve_zonedest_player(dest, ctx);
 
+        // CR 700.4 — a permanent put into a graveyard from the battlefield
+        // DIES, whatever put it there ("put this into its owner's
+        // graveyard", the Illusions' "sacrifice it" templates): the death
+        // funnel takes it — dies/LTB triggers with LKI, the graveyard
+        // replacements (Rest in Peace, Kalitas), persist/undying, the tally.
+        if matches!(resolved_dest, ZoneDest::Graveyard)
+            && let Some(c) = self.battlefield.find_by_id(cid)
+        {
+            // As `destroy_permanent`: the LKI snapshot (CR 603.10) and the
+            // death event are the caller's half of the funnel.
+            self.died_card_snapshots.insert(cid, self.lki_clone(c));
+            if self.permanent_is_creature(cid) {
+                events.push(GameEvent::CreatureDied { card_id: cid });
+            }
+            let evs = self.remove_to_graveyard_with_triggers(cid);
+            events.extend(evs);
+            return;
+        }
         // Try battlefield first.
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
             let mut card = self.battlefield.remove(pos);

@@ -8495,6 +8495,25 @@ fn cr_120_3d_infect_combat_damage_is_a_damage_event() {
     );
 }
 
+/// CR 700.4 — a permanent put into a graveyard from the battlefield dies,
+/// whatever moved it: the "put it into its owner's graveyard" template
+/// (Illusions, the "sacrifice it" lands) fires Blood Artist. A generic Move
+/// skipped the death funnel, so nothing heard it.
+#[test]
+fn cr_700_4_a_move_to_the_graveyard_is_a_death() {
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(bears, 0, None);
+    let events = g.resolve_effect(&Effect::Move { what: Selector::This, to: ZoneDest::Graveyard }, &ctx).unwrap();
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bears));
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::CreatureDied { card_id, .. } if *card_id == bears)),
+        "{events:?}"
+    );
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

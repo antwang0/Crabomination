@@ -2168,3 +2168,33 @@ fn a_pod_bot_reaps_a_graveyard_creature() {
         "got {action:?}"
     );
 }
+
+/// CR 903.9b — a commander returned to its owner's hand as a COST (Magosi's
+/// "return it to its owner's hand:") may go to the command zone instead.
+/// The self-bounce cost pushed it straight into the hand.
+#[test]
+fn cr_903_9b_a_commander_bounced_as_a_cost_goes_home() {
+    use crabomination::effect::{ActivatedAbility, Effect, PlayerRef, Selector, Value};
+    let def = CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            bounce_self_cost: true,
+            effect: Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..bear_commander()
+    };
+    let mut g = game_with_format(Format::Commander, 2);
+    let id = g.seat_commanders(0, vec![def])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == id).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    assert!(g.players[0].command.iter().any(|c| c.id == id), "home, not in hand");
+    assert!(g.players[0].hand.iter().all(|c| c.id != id));
+}

@@ -186,6 +186,8 @@ fn skullbriar_keeps_its_counters_off_the_battlefield() {
     .expect("recast from the command zone");
     drain_stack(&mut g);
     assert_eq!(plus_ones(&g, s), 2, "enters with the counters it kept");
+    // Decline the CR 903.9b command-zone return so it reaches the hand.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
     let _ = g.remove_from_battlefield_to_hand(s);
     let in_hand = g.players[0].hand.iter().find(|c| c.id == s).expect("bounced");
     assert_eq!(in_hand.counter_count(CounterType::PlusOnePlusOne), 0, "a hand strips them");
