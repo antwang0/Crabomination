@@ -10282,6 +10282,11 @@ fn main_phase_action_with(
     // Sink leftover mana into a repeatable "{cost}: +1/+1 counter on this"
     // ability to grow the board (Fire Sages, Water Tribe Captain). Last resort,
     // so it never pre-empts a spell or land. Dry-run-gated.
+    // Pods: a tap that spreads +1/+1 counters over the team (Mikaeus, the
+    // Lunarch) before the same card's self-pump takes the tap.
+    if let Some(action) = super::counter_sink::pick_team_counter_spread(state, seat) {
+        return BotStep::plain(action);
+    }
     gated_pick!(state, sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat, w));
 
     // Sink leftover mana into a "{cost}: create a token" ability to grow the

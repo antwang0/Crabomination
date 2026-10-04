@@ -277,6 +277,61 @@ pub(super) fn pick_fate_sink(state: &GameState, seat: usize, w: &super::bot::Eva
     })
 }
 
+/// The fewest other creatures a "+1/+1 counter on each other creature you
+/// control" tap must reach before it beats the same card's self-pump.
+const MIN_SPREAD: usize = 2;
+
+/// Mikaeus, the Lunarch's "{T}, remove a +1/+1 counter: put a +1/+1 counter
+/// on each other creature you control" was never activated in a 183-deck
+/// census: its own "{T}: put a +1/+1 counter on Mikaeus" takes the tap first,
+/// every turn, through the self-pump sink. A tap that spreads +1/+1 counters
+/// over at least [`MIN_SPREAD`] other creatures is taken in either main phase
+/// of the controller's turn, ahead of that sink (before combat, the pumped
+/// team attacks bigger).
+pub(super) fn pick_team_counter_spread(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::game::types::TurnStep;
+    if state.players.len() <= 2
+        || !state.stack.is_empty()
+        || state.active_player_idx != seat
+        || !matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+    {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat && !c.tapped) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::AddCounter { what: Selector::EachPermanent(filter), kind: CounterType::PlusOnePlusOne, .. } =
+                &ab.effect
+            else {
+                continue;
+            };
+            if !ab.tap_cost || ab.sac_cost || ab.exhaust {
+                continue;
+            }
+            let reached = state
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card.id && c.controller == seat && state.computed_is_creature(c))
+                .filter(|c| state.evaluate_requirement_static(filter, &Target::Permanent(c.id), seat, Some(card.id)))
+                .count();
+            if reached < MIN_SPREAD {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -459,5 +514,26 @@ mod tests {
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::Fate), 1);
+    }
+
+    /// Mikaeus, the Lunarch spreads a counter over two others before its
+    /// self-pump can take the tap, and grows itself with only one other.
+    #[test]
+    fn mikaeus_spreads_before_its_self_pump() {
+        use crate::game::types::TurnStep;
+        let mut g = crate::game::multi_player_game(4);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let m = g.add_card_to_battlefield(0, crate::catalog::mikaeus_the_lunarch());
+        g.clear_sickness(m);
+        g.battlefield_find_mut(m).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        assert!(pick_team_counter_spread(&g, 0).is_none(), "one other creature: not worth a counter");
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        assert!(matches!(
+            pick_team_counter_spread(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == m
+        ));
     }
 }
