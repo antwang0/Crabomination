@@ -581,53 +581,42 @@ pub fn falthis_shadowcat_familiar() -> CardDefinition {
 /// creature, enchantment, land, or planeswalker. If you do, each opponent may
 /// sacrifice a permanent of their choice that shares a card type with it. For
 /// each opponent who doesn't, that player loses 2 life and you draw a card."
-/// Modelled as a choice among the five card types (or declining), then the
-/// sacrifice of a permanent of that type; "shares a card type" reads as "has
-/// the chosen type".
+/// An artifact creature you sacrifice is answered by an artifact or a
+/// creature (`SharesCardTypeWithFirstSacrificed`).
 pub fn braids_arisen_nightmare() -> CardDefinition {
-    let braid = |ty: CardType| {
-        Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::ONE,
-                filter: R::HasCardType(ty.clone()).and(R::ControlledByYou),
-            },
-            Effect::If {
-                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
-                then: Box::new(Effect::EachPlayerDoes {
-                    who: PlayerRef::EachOpponent,
-                    body: Box::new(Effect::MaySacrifice {
-                        description: format!("Sacrifice a {ty:?} to deny Braids?"),
-                        filter: R::HasCardType(ty).and(R::ControlledByYou),
-                        count: Value::ONE,
-                        then: Box::new(Effect::Noop),
-                        else_: Some(Box::new(Effect::Seq(vec![
-                            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-                            Effect::Draw {
-                                who: Selector::Player(PlayerRef::ControllerOf(Box::new(
-                                    Selector::This,
-                                ))),
-                                amount: Value::ONE,
-                            },
-                        ]))),
-                    }),
+    let sacrificeable = R::HasCardType(CardType::Artifact)
+        .or(R::HasCardType(CardType::Creature))
+        .or(R::HasCardType(CardType::Enchantment))
+        .or(R::HasCardType(CardType::Land))
+        .or(R::HasCardType(CardType::Planeswalker));
+    let braid = Effect::Seq(vec![
+        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: sacrificeable.and(R::ControlledByYou) },
+        Effect::If {
+            cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+            then: Box::new(Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::MaySacrifice {
+                    description: "Sacrifice a permanent that shares a card type to deny Braids?".into(),
+                    filter: R::SharesCardTypeWithFirstSacrificed.and(R::ControlledByYou),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Noop),
+                    else_: Some(Box::new(Effect::Seq(vec![
+                        Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                        Effect::Draw {
+                            who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::This))),
+                            amount: Value::ONE,
+                        },
+                    ]))),
                 }),
-                else_: Box::new(Effect::Noop),
-            },
-        ])
-    };
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    ]);
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: your_step(TurnStep::End),
-            effect: Effect::ChooseMode(vec![
-                braid(CardType::Artifact),
-                braid(CardType::Creature),
-                braid(CardType::Enchantment),
-                braid(CardType::Land),
-                braid(CardType::Planeswalker),
-                // "You may sacrifice" — declining is its own choice.
-                Effect::Noop,
-            ]),
+            // "You may sacrifice" — declining is its own choice.
+            effect: Effect::ChooseMode(vec![braid, Effect::Noop]),
         }],
         ..legend(
             "Braids, Arisen Nightmare",

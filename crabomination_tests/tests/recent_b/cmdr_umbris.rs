@@ -1328,3 +1328,22 @@ fn aboleth_spawn_copies_the_ability_it_sits_on_or_nothing() {
     drain_stack(&mut g);
     assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (h0, h1), "countered, and no copy");
 }
+
+/// Braids — "a permanent … that shares a card type with it": an artifact
+/// creature sacrificed is answered by a creature (the Bears), while an
+/// opponent with only an enchantment can't answer and loses 2.
+#[test]
+fn cmdr_umbris_braids_matches_any_shared_card_type() {
+    let mut g = game(3);
+    g.add_card_to_battlefield(0, catalog::braids_arisen_nightmare());
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::honor_of_the_pure());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    end_step(&mut g);
+    assert!(g.battlefield_find(thopter).is_none(), "Braids' controller sacrificed the artifact creature");
+    assert!(g.battlefield_find(bears).is_none(), "a creature shares a card type with it");
+    assert_eq!((g.players[1].life, g.players[2].life), (20, 18));
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

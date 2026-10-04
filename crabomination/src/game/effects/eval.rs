@@ -6122,6 +6122,12 @@ impl GameState {
                     R::NotSacrificedThisResolution => {
                         !self.scratch.cards_sacrificed_this_resolution.contains(cid)
                     }
+                    R::SharesCardTypeWithFirstSacrificed => {
+                        let types = self.computed_permanent(*cid).map(|cp| cp.card_types().clone());
+                        self.shares_card_type_with_first_sacrificed(
+                            types.as_deref().unwrap_or(&card.definition.card_types),
+                        )
+                    }
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
@@ -7031,6 +7037,9 @@ impl GameState {
             R::NotSacrificedThisResolution => {
                 !self.scratch.cards_sacrificed_this_resolution.contains(&card.id)
             }
+            R::SharesCardTypeWithFirstSacrificed => {
+                self.shares_card_type_with_first_sacrificed(&card.definition.card_types)
+            }
             R::InGraveyard => self
                 .players
                 .iter()
@@ -7220,5 +7229,19 @@ impl GameState {
             | R::PlayerDamagedBySourceThisTurn | R::ControllerCombatDamagedBySourceThisTurn
             | R::SaddledSourceThisTurn => false,
         }
+    }
+}
+
+impl GameState {
+    /// Do `types` share a card type with the first permanent sacrificed this
+    /// resolution, as it last existed on the battlefield (CR 608.2h)?
+    fn shares_card_type_with_first_sacrificed(&self, types: &[crate::card::CardType]) -> bool {
+        let Some(&first) = self.scratch.cards_sacrificed_this_resolution.first() else { return false };
+        let snap = self.died_card_snapshots.get(&first).or_else(|| self.leaves_bf_lki.get(&first));
+        let theirs = snap
+            .map(|c| c.definition.card_types.clone())
+            .or_else(|| self.find_card_anywhere(first).map(|c| c.definition.card_types.clone()))
+            .unwrap_or_default();
+        types.iter().any(|t| theirs.contains(t))
     }
 }

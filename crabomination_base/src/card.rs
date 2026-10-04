@@ -3585,6 +3585,11 @@ pub enum SelectionRequirement {
     /// "another permanent card" in a sacrifice-then-recur line (Deadly Brew).
     /// Backed by `GameState::cards_sacrificed_this_resolution`.
     NotSacrificedThisResolution,
+    /// The candidate shares a card type with the first permanent sacrificed
+    /// this resolution — "each opponent may sacrifice a permanent that shares
+    /// a card type with it" (Braids, Arisen Nightmare). Backed by
+    /// `GameState::cards_sacrificed_this_resolution`'s first entry.
+    SharesCardTypeWithFirstSacrificed,
     /// The mirror of [`SelectionRequirement::OtherThanSource`] — the candidate
     /// *is* the ability's source. Lets a cost name the permanent itself
     /// ("Return this enchantment to its owner's hand:" — Attunement).
