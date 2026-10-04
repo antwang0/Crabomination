@@ -3153,6 +3153,9 @@ two-player pools cube / sos / sealed x 2,000, seed 96001: 50,000 games, all
 pod (release)    every deck seated: 4 seats x 200 (46 groups, 92001+), 3 x 100
                  (61, 93001+), 6 x 100 (31, 94001+), 8 x 60 (23, 95001+) =
                  19,780 games, zero panics, all decided but three CR 104.4a draws
+pod (strict      CRAB_ANSWER_LOG=strict debug at the later tip (Haldan, Clara):
+  debug)         every deck, 4 seats x 20 (98101+) and 6 seats x 15 with
+                 CRAB_POD_CONCEDE=5 (98201+) = 1,385 games, all decided, no finds
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
