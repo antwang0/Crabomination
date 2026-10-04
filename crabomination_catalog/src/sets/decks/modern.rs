@@ -12471,6 +12471,7 @@ pub fn saheeli_rai() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::GrantKeyword {
                 what: Selector::LastCreatedToken,
@@ -22946,6 +22947,7 @@ pub fn esikas_chariot() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
             },
         ],
@@ -27102,6 +27104,7 @@ pub fn helm_of_the_host() -> CardDefinition {
                     non_legendary: true,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -28823,6 +28826,7 @@ pub fn followed_footsteps() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
         }],
         ..Default::default()
@@ -38067,6 +38071,7 @@ pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -44378,6 +44383,7 @@ pub fn stolen_identity() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::Cipher,
         ]),
@@ -47810,6 +47816,7 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -50132,6 +50139,7 @@ pub fn splinter_twin() -> CardDefinition {
                             non_legendary: false,
                             legendary: false,
                             no_mana_cost: false,
+                            enters_with_counters: None,
                         },
                         Effect::GrantKeyword {
                             what: Selector::LastCreatedToken,
@@ -52134,6 +52142,7 @@ pub fn scute_swarm() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
@@ -52229,6 +52238,7 @@ pub fn pack_rat() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             ..Default::default()
         }],
@@ -52569,6 +52579,7 @@ pub fn ocelot_pride() -> CardDefinition {
                                     non_legendary: false,
                                     legendary: false,
                                     no_mana_cost: false,
+                                    enters_with_counters: None,
                                 }),
                             }),
                             else_: Box::new(Effect::Noop),
@@ -55232,6 +55243,7 @@ pub fn springheart_nantuko() -> CardDefinition {
                         override_colors: None,
                         enters_tapped: false,
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     }),
                     else_: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
@@ -56671,6 +56683,7 @@ pub fn fractured_identity() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
                 }),
             },
             Effect::Exile {
@@ -58579,6 +58592,7 @@ pub fn tempt_with_reflections() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             }),
         },
         ..Default::default()
@@ -63110,6 +63124,7 @@ pub fn mythos_of_illuna() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::If {
                     cond: Predicate::All(vec![

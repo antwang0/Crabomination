@@ -214,6 +214,7 @@ pub fn council_of_reeds() -> CardDefinition {
             legendary: false,
             extra_keywords: vec![],
             no_mana_cost: false,
+            enters_with_counters: None,
         })],
         ..creature(
             "Council of Reeds",

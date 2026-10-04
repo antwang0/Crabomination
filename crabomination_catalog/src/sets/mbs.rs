@@ -1956,6 +1956,7 @@ pub fn mirrorworks() -> CardDefinition {
                     legendary: false,
                     non_legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 }),
                 else_: None,
             },

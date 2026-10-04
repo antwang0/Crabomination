@@ -104,6 +104,7 @@ pub fn ran_and_shaw() -> CardDefinition {
                 legendary: false,
                 extra_keywords: Vec::new(),
                 no_mana_cost: false,
+                enters_with_counters: None,
             }),
             else_: Box::new(Effect::Noop),
         })],

@@ -118,6 +118,7 @@ pub fn calamity_galloping_inferno() -> CardDefinition {
                 legendary: false,
                 extra_keywords: Vec::new(),
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
             Effect::SacrificeLastCreatedTokensAtNextEndStep,

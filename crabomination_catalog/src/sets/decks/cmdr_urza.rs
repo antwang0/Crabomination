@@ -49,6 +49,7 @@ fn token_copy(source: Selector, extra_card_types: Vec<CardType>) -> Effect {
         legendary: false,
         extra_keywords: vec![],
         no_mana_cost: false,
+        enters_with_counters: None,
     }
 }
 

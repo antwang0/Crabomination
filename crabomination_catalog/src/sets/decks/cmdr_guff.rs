@@ -315,6 +315,7 @@ pub fn jace_mirror_mage() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::SetLoyalty { what: Selector::LastCreatedToken, value: Value::ONE },
             ])),

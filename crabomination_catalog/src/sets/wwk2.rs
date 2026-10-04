@@ -106,6 +106,7 @@ pub fn nemesis_trap() -> crate::card::CardDefinition {
                 legendary: false,
                 extra_keywords: vec![],
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::Exile { what: Selector::Target(0) },
             Effect::ExileLastCreatedTokensAtNextEndStep,

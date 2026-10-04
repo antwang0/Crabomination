@@ -327,6 +327,7 @@ pub fn mechanized_production() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::If {
                     cond: Predicate::ControlsSameNamedAtLeast {

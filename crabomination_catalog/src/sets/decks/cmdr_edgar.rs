@@ -1675,6 +1675,7 @@ pub fn renewed_solidarity() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 }),
             },
         }],

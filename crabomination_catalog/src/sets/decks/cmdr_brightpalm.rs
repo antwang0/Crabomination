@@ -397,6 +397,7 @@ pub fn mirror_style_master() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },
                 Effect::DelayUntil {

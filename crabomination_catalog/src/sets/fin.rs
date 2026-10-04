@@ -3643,6 +3643,7 @@ pub fn relms_sketching() -> CardDefinition {
             non_legendary: false,
             legendary: false,
             no_mana_cost: false,
+            enters_with_counters: None,
         },
         ..Default::default()
     }
@@ -6263,6 +6264,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
             ]),
         }],
@@ -9716,6 +9718,7 @@ pub fn firion_wild_rose_warrior() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::ReduceEquipCost {
                     what: Selector::LastCreatedToken,

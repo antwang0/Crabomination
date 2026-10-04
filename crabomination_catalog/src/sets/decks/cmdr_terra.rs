@@ -303,6 +303,7 @@ pub fn espers_to_magicite() -> CardDefinition {
                         legendary: false,
                         extra_keywords: vec![],
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     Effect::SetCardTypesTo { what: Selector::LastCreatedTokens, card_types: vec![CardType::Artifact] },
                 ]),

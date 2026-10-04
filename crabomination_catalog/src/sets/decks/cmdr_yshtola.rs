@@ -693,6 +693,7 @@ pub fn summon_good_king_mog_xii() -> CardDefinition {
                 legendary: false,
                 extra_keywords: vec![],
                 no_mana_cost: false,
+                enters_with_counters: None,
             }),
             else_: Box::new(Effect::Noop),
         }),

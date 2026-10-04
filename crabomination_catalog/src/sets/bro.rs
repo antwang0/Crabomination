@@ -259,6 +259,7 @@ pub fn skitterbeam_battalion() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             }),
             else_: Box::new(Effect::Noop),
         })],

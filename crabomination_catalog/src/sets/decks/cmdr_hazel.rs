@@ -252,6 +252,7 @@ pub fn hazel_of_the_rootbloom() -> CardDefinition {
         legendary: false,
         extra_keywords: vec![],
         no_mana_cost: false,
+        enters_with_counters: None,
     };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -423,6 +424,7 @@ pub fn rootcast_apprenticeship() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(target_filtered(R::Player))),
@@ -465,6 +467,7 @@ pub fn saw_in_half() -> CardDefinition {
                         legendary: false,
                         extra_keywords: vec![],
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     Effect::SetBasePT {
                         what: Selector::LastCreatedTokens,

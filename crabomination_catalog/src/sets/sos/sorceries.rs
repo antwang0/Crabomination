@@ -2088,6 +2088,7 @@ pub fn echocasting_symposium() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::RegisterParadigm,
         ]),
@@ -2268,6 +2269,7 @@ pub fn applied_geometry() -> CardDefinition {
                 non_legendary: false,
                 legendary: false,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

@@ -4888,6 +4888,7 @@ impl GameState {
                         extra_keywords: vec![],
                         legendary: false,
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     ctx,
                     events,
@@ -5719,6 +5720,7 @@ impl GameState {
                         legendary: false,
                         extra_keywords: vec![crate::card::Keyword::Haste],
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     ctx,
                     events,
@@ -22012,6 +22014,7 @@ impl GameState {
                                 legendary: false,
                                 extra_keywords: vec![],
                                 no_mana_cost: false,
+                                enters_with_counters: None,
                             },
                             &EffectContext {
                                 controller: p,
@@ -22419,6 +22422,7 @@ impl GameState {
                 legendary,
                 extra_keywords,
                 no_mana_cost,
+                enters_with_counters,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let base = self.evaluate_value(count, ctx).max(0) as u32;
@@ -22516,7 +22520,8 @@ impl GameState {
                 let def: std::sync::Arc<crate::card::CardDefinition> = std::sync::Arc::from(def);
                 let n = self.scaled_token_count(p, base, def.is_creature());
                 for _ in 0..n {
-                    self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
+                    let counters = enters_with_counters.as_ref().map(|(kind, v)| (*kind, v, ctx));
+                    self.mint_token_with_counters(def.clone(), p, *enters_tapped, counters, events);
                 }
                 Ok(())
             }
@@ -22559,6 +22564,7 @@ impl GameState {
                             non_legendary: false,
                             legendary: false,
                             no_mana_cost: false,
+                            enters_with_counters: None,
                         },
                         &sub,
                         events,
@@ -30651,6 +30657,7 @@ impl GameState {
                             legendary: false,
                             extra_keywords: vec![],
                             no_mana_cost: false,
+                            enters_with_counters: None,
                         },
                         &sub,
                         events,

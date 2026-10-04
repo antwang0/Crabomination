@@ -94,6 +94,7 @@ pub fn feldon_of_the_third_path() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![Keyword::Haste],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),

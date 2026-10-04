@@ -1575,6 +1575,7 @@ pub fn lorehold_archivist() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 // The exile runs *after* the copy so `Target(0)` still names a
                 // graveyard card when `CreateTokenCopyOf` reads its copiable

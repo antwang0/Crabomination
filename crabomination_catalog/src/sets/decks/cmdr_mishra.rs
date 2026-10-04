@@ -77,6 +77,7 @@ pub fn mishra_eminent_one() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 Effect::AmendCopiableValues {
                     what: Selector::LastCreatedToken,

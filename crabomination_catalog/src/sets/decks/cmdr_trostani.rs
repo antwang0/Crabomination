@@ -79,6 +79,7 @@ fn copy_of(source: Selector) -> Effect {
         legendary: false,
         extra_keywords: vec![],
         no_mana_cost: false,
+        enters_with_counters: None,
     }
 }
 
@@ -373,6 +374,7 @@ pub fn lazotep_quarry() -> CardDefinition {
                         legendary: false,
                         extra_keywords: vec![],
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     Effect::SetCopiableCreatureTypes {
                         what: Selector::LastCreatedToken,

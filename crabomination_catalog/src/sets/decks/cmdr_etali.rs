@@ -138,6 +138,7 @@ fn a_copy_of(
         legendary: false,
         extra_keywords,
         no_mana_cost: false,
+        enters_with_counters: None,
     }
 }
 

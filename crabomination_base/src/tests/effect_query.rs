@@ -79,6 +79,7 @@ fn targeted_effects_carry_slot_filters() {
             non_legendary: false,
             legendary: false,
             no_mana_cost: false,
+            enters_with_counters: None,
         },
     ];
     for e in &cases {

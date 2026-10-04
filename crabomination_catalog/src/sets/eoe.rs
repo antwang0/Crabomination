@@ -5666,6 +5666,7 @@ pub fn adagia_windswept_bastion() -> CardDefinition {
                 non_legendary: false,
                 legendary: true,
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
             ..Default::default()
         }],

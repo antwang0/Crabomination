@@ -3786,6 +3786,7 @@ pub fn repudiate_replicate() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
             },
             fuse: false,

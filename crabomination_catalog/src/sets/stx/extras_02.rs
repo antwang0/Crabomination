@@ -714,6 +714,7 @@ pub fn sublime_epiphany() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 // Mode 4: Target player draws a card.
                 Effect::Draw {

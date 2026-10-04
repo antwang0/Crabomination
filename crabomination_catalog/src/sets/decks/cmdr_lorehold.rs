@@ -95,6 +95,7 @@ pub fn osgir_the_reconstructor() -> CardDefinition {
                     legendary: false,
                     extra_keywords: vec![],
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 ..Default::default()
             },

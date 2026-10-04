@@ -3566,6 +3566,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
                     non_legendary: false,
                     legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
             ]),
         )],

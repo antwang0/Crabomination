@@ -9177,6 +9177,11 @@ pub enum Effect {
         /// `override_colors`' indicator and its mana value is 0.
         #[serde(default)]
         no_mana_cost: bool,
+        /// "… except it enters with an additional [kind] counter on it"
+        /// (Littjara Mirrorlake): placed as part of the mint (CR 614.1c), so
+        /// the copy never exists without it.
+        #[serde(default)]
+        enters_with_counters: Option<(crate::card::CounterType, Value)>,
     },
     /// CR 707.9b — a copy exception written into the copiable values of each
     /// permanent `what` names, so a copy of it carries it too: "except its

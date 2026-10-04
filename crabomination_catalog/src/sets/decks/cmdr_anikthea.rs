@@ -96,6 +96,7 @@ fn copy_of(source: Selector) -> Effect {
         legendary: false,
         extra_keywords: vec![],
         no_mana_cost: false,
+        enters_with_counters: None,
     }
 }
 
@@ -158,6 +159,7 @@ pub fn anikthea_hand_of_erebos() -> CardDefinition {
                 legendary: false,
                 extra_keywords: vec![],
                 no_mana_cost: false,
+                enters_with_counters: None,
             },
         ])),
     };

@@ -228,6 +228,7 @@ pub fn mirror_room_fractured_realm() -> CardDefinition {
                 legendary: false,
                 extra_keywords: Vec::new(),
                 no_mana_cost: false,
+                enters_with_counters: None,
             })],
             ..Default::default()
         },

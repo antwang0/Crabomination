@@ -1184,6 +1184,7 @@ pub fn cackling_counterpart() -> CardDefinition {
             non_legendary: false,
             legendary: false,
             no_mana_cost: false,
+            enters_with_counters: None,
         },
         ..Default::default()
     }

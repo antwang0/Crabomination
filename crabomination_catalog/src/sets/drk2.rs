@@ -1327,6 +1327,7 @@ pub fn dance_of_many() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     Effect::RememberPermanentOnSource { what: Selector::LastCreatedToken },
                 ]),

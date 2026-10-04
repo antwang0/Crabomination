@@ -966,6 +966,7 @@ pub fn ghired_mirror_of_the_wilds() -> CardDefinition {
                         legendary: false,
                         non_legendary: false,
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     ..Default::default()
                 },
@@ -1005,6 +1006,7 @@ pub fn kambal_profiteering_mayor() -> CardDefinition {
                     legendary: false,
                     non_legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
             },
             TriggeredAbility {
@@ -1369,6 +1371,7 @@ pub fn oko_the_ringleader() -> CardDefinition {
                     legendary: false,
                     non_legendary: false,
                     no_mana_cost: false,
+                    enters_with_counters: None,
                 },
                 ..Default::default()
             },

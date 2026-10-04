@@ -104,6 +104,7 @@ pub fn fated_infatuation() -> CardDefinition {
             legendary: false,
             extra_keywords: vec![],
             no_mana_cost: false,
+            enters_with_counters: None,
         },
     )
 }
@@ -766,6 +767,7 @@ pub fn felhide_spiritbinder() -> CardDefinition {
                         legendary: false,
                         extra_keywords: vec![Keyword::Haste],
                         no_mana_cost: false,
+                        enters_with_counters: None,
                     },
                     Effect::ExileLastCreatedTokensAtNextEndStep,
                 ])),
