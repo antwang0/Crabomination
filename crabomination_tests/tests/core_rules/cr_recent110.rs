@@ -435,3 +435,33 @@ fn cr_613_8_a_keyword_anthem_reads_granted_keywords() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Levitation's flying meets Favorable Winds");
 }
+
+/// CR 603.2c / 120.3 — one damage-dealing sentence is one damage event per
+/// source: Pestilence Demon's "1 damage to each creature and each player"
+/// fires Spirit Link's recipient-agnostic "whenever enchanted creature deals
+/// damage" ONCE, for the total, not once per recipient.
+#[test]
+fn cr_603_2c_a_noncombat_sweep_fires_deals_damage_once() {
+    let mut g = main_phase();
+    let demon = g.add_card_to_battlefield(0, catalog::pestilence_demon());
+    let link = g.add_card_to_battlefield(0, catalog::spirit_link());
+    g.battlefield_find_mut(link).unwrap().attached_to = Some(demon);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sweep = g.battlefield_find(demon).unwrap().definition.activated_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(demon, 0, None);
+    g.resolve_effect(&sweep, &ctx).expect("resolves");
+    let fires: Vec<u32> = g
+        .stack
+        .iter()
+        .filter_map(|si| match si {
+            crabomination::game::types::StackItem::Trigger { source, event_amount, .. } if *source == link => {
+                Some(*event_amount)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(fires, vec![5], "three creatures and two players: one fire for 5");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 24, "19 after the ping, +5");
+}

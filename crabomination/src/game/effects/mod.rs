@@ -72,6 +72,7 @@ mod masters_of_evil;
 mod timey_wimey;
 mod life_loss_grants;
 mod spell_damage;
+mod damage_batch;
 mod static_copy;
 // CR 701.38 — secret council ballots whose counts matter (Círdan, Trap the Trespassers).
 mod secret_council;
@@ -3829,6 +3830,23 @@ impl GameState {
     }
 
     pub(crate) fn run_effect(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        // CR 603.2c — one damage event per damage-dealing sentence.
+        if damage_batch::is_damage_sentence(effect)
+            && let Some(mark) = self.open_noncombat_damage_batch()
+        {
+            let r = self.run_effect_body(effect, ctx, events);
+            self.close_noncombat_damage_batch(mark);
+            return r;
+        }
+        self.run_effect_body(effect, ctx, events)
+    }
+
+    fn run_effect_body(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,

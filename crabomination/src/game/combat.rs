@@ -101,6 +101,13 @@ pub(crate) enum BatchSubject {
     /// ("whenever ~ deals combat damage"), which trigger once for a dealer's
     /// simultaneous damage however many objects it hits (Sword of Hours).
     Dealer(CardId),
+    /// The noncombat twin of `Dealer`: every recipient of one dealer within
+    /// one damage-dealing effect (a Pestilence sweep is one event for
+    /// "whenever ~ deals damage"). Lives only inside one
+    /// `effects::damage_batch` scope.
+    NoncombatDealer(CardId),
+    /// The open-batch marker those keys sit above.
+    NoncombatBatch,
 }
 
 impl BatchSubject {
@@ -6959,6 +6966,13 @@ impl GameState {
         // noncombat delivery is a batch of its own (`None`), which is why it
         // neither reads nor writes the step-scoped set.
         let batch_subject = combat_batch.then(|| BatchSubject::of(&default_target));
+        // CR 603.2c / 120.3 — a noncombat effect that deals damage to several
+        // recipients at once is one damage event per source: a
+        // recipient-agnostic "whenever ~ deals damage" fires once, its amount
+        // the total. Only inside an effect that opened the batch.
+        let noncombat_batch = !combat_batch
+            && kinds.contains(&EventKind::DealsDamage)
+            && self.noncombat_damage_batch_open();
         // One [`DamageTrigger`] bucket per requested kind; drained in order at
         // the bottom.
         let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
@@ -7454,19 +7468,18 @@ impl GameState {
             // Skaab): an across-players batch that counts its subjects reads
             // the distinct players hit, not the first dealer's damage.
             let mut counts_players = false;
+            let noncombat_key = (noncombat_batch && matches!(kinds[kind_i], EventKind::DealsDamage))
+                .then_some((trig_source, usize::MAX - 1, BatchSubject::NoncombatDealer(source)));
+            if let Some(key) = noncombat_key
+                && self.combat_trigger_fired_this_step.contains(&key)
+            {
+                self.add_to_dealer_fire(trig_source, source, damage_amount);
+                continue;
+            }
             if agnostic {
                 let key = (trig_source, once.map_or(usize::MAX - 1, |(i, _)| i), BatchSubject::Dealer(source));
                 if self.combat_trigger_fired_this_step.contains(&key) {
-                    let dealer = Some(crate::game::effects::EntityRef::Permanent(source));
-                    if let Some(StackItem::Trigger { event_amount, x_value, .. }) =
-                        self.stack.iter_mut().rev().find(|si| {
-                            matches!(si, StackItem::Trigger { source: s, trigger_source, .. }
-                                if *s == trig_source && *trigger_source == dealer)
-                        })
-                    {
-                        *event_amount += damage_amount;
-                        *x_value += damage_amount;
-                    }
+                    self.add_to_dealer_fire(trig_source, source, damage_amount);
                     continue;
                 }
                 self.combat_trigger_fired_this_step.push(key);
@@ -7513,6 +7526,12 @@ impl GameState {
                     }
                 }
             }
+            // Keyed only once the fire survived its once-per-turn gate, so a
+            // later recipient never merges into an older fire.
+            if let Some(key) = noncombat_key {
+                self.combat_trigger_fired_this_step.push(key);
+            }
+            let agnostic = agnostic || noncombat_key.is_some();
             // CR 603.2c — "each of those creatures": the batch's dealers,
             // this one first; later dealers join through
             // `add_dealer_to_trigger_batch` (Heroes in a Half Shell).
@@ -7640,6 +7659,20 @@ impl GameState {
 }
 
 impl GameState {
+    /// A recipient-agnostic damage fire already on the stack for `dealer`
+    /// (CR 510.2 combat, CR 603.2c noncombat) takes a later recipient's
+    /// damage instead of firing again.
+    pub(crate) fn add_to_dealer_fire(&mut self, trig_source: CardId, dealer: CardId, amount: u32) {
+        let dealer = Some(crate::game::effects::EntityRef::Permanent(dealer));
+        if let Some(StackItem::Trigger { event_amount, x_value, .. }) = self.stack.iter_mut().rev().find(|si| {
+            matches!(si, StackItem::Trigger { source: s, trigger_source, .. }
+                if *s == trig_source && *trigger_source == dealer)
+        }) {
+            *event_amount += amount;
+            *x_value += amount;
+        }
+    }
+
     /// `EventSpec::batch_sums_damage` — a later dealer in an already-fired
     /// batch adds its damage to the fire on the stack, so the one trigger
     /// reads the batch's total. A no-op for every other batched trigger.
