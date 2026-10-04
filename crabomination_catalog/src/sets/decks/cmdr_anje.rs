@@ -512,7 +512,8 @@ pub fn hedonists_trove() -> CardDefinition {
 /// with 2 life; each black spell you cast grows it. Spells, activations,
 /// turning face up, cycling and the other action costs, and "unless [you]
 /// pay" costs (ward, taxes) take the life (`phyrexianize_for_payer`).
-/// Residual: not a mana ability's cost.
+/// Residual: a mana ability the auto-tapper activates on its own pays its {B}
+/// with mana (one you activate yourself takes the life).
 pub fn krrik_son_of_yawgmoth() -> CardDefinition {
     let pb = phyrexian(Color::Black);
     CardDefinition {
