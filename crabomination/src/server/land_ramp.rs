@@ -89,6 +89,35 @@ pub(super) fn pick_land_ramp(state: &GameState, seat: usize) -> Option<GameActio
             }
         }
     }
+    // "{cost}, discard this: search for a basic land" from hand (Greater
+    // Tanuki's channel — never activated in a 183-deck census): taken while
+    // the seat has fewer lands than the card costs, so it can't cast it yet.
+    for card in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
+        if lands as u32 >= card.definition.cost.cmc() {
+            continue;
+        }
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let fetches = land_fetches(&ab.effect);
+            if fetches.is_empty()
+                || !ab.from_hand
+                || !ab.discard_self_cost
+                || !fetches.iter().any(|f| library.iter().any(|c| state.evaluate_requirement_on_card(f, c, seat)))
+            {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.accept(action.clone()).is_some() {
+                return Some(action);
+            }
+        }
+    }
     None
 }
 
@@ -100,6 +129,28 @@ mod tests {
         g.active_player_idx = 2;
         g.step = TurnStep::End;
         g.priority.player_with_priority = 0;
+    }
+
+    /// Greater Tanuki is channelled for a basic while its controller has fewer
+    /// lands than it costs, and kept once it can be cast.
+    #[test]
+    fn greater_tanuki_channels_while_short_of_lands() {
+        for (lands, want) in [(4, true), (6, false)] {
+            let mut g = crate::game::multi_player_game(3);
+            end_step_before_seat_0(&mut g);
+            let tanuki = g.add_card_to_hand(0, crate::catalog::greater_tanuki());
+            for _ in 0..lands {
+                g.add_card_to_battlefield(0, crate::catalog::forest());
+            }
+            g.add_card_to_library(0, crate::catalog::forest());
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
+            let got = pick_land_ramp(&g, 0);
+            assert_eq!(
+                matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == tanuki),
+                want,
+                "{lands} lands"
+            );
+        }
     }
 
     /// Sakura-Tribe Elder is sacrificed for a basic in the end step before its
