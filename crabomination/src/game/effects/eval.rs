@@ -1009,7 +1009,7 @@ impl GameState {
                                 .creature_types
                                 .contains(&crate::card::CreatureType::Ooze))
                 };
-                let gy = self.players[p].graveyard.iter().filter(|c| is_ooze(c)).count();
+                let gy = self.players[p].graveyard.iter().filter(|c| !c.is_token && is_ooze(c)).count();
                 let ex = self.exile.iter().filter(|c| is_ooze(c)).count();
                 (gy + ex) as i32
             }
@@ -1611,7 +1611,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == p)
-                    .chain(self.players[p].graveyard.iter());
+                    .chain(self.players[p].graveyard.iter().filter(|c| !c.is_token));
                 for c in cards {
                     for t in &c.definition.card_types {
                         if !kinds.contains(&t) {
@@ -1912,7 +1912,8 @@ impl GameState {
             }
             Value::CardsInGraveyardMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
-                let ids: Vec<CardId> = self.players[p].graveyard.iter().map(|c| c.id).collect();
+                let ids: Vec<CardId> =
+                    self.players[p].graveyard.iter().filter(|c| !c.is_token).map(|c| c.id).collect();
                 ids.into_iter()
                     .filter(|id| {
                         self.evaluate_requirement_static(
@@ -1934,7 +1935,7 @@ impl GameState {
                 .players
                 .iter()
                 .flat_map(|p| p.graveyard.iter())
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                .filter(|c| !c.is_token && self.evaluate_requirement_on_card(filter, c, ctx.controller))
                 .count() as i32,
             Value::CardsInOpponentsGraveyardsMatching { filter } => {
                 let ids: Vec<CardId> = self
@@ -1943,6 +1944,7 @@ impl GameState {
                     .enumerate()
                     .filter(|(i, _)| !self.same_team(*i, ctx.controller))
                     .flat_map(|(_, p)| p.graveyard.iter())
+                    .filter(|c| !c.is_token)
                     .map(|c| c.id)
                     .collect();
                 ids.into_iter()
@@ -2285,7 +2287,7 @@ impl GameState {
                 self.players
                     .iter()
                     .flat_map(|p| p.graveyard.iter())
-                    .filter(|c| c.definition.name == name)
+                    .filter(|c| !c.is_token && c.definition.name == name)
                     .count() as i32
             }
             Value::RememberedAmountOfSource => {
@@ -4018,7 +4020,7 @@ impl GameState {
                 self.players[p]
                     .graveyard
                     .iter()
-                    .filter(|c| c.definition.is_permanent())
+                    .filter(|c| !c.is_token && c.definition.is_permanent())
                     .count()
                     >= *count as usize
             }
@@ -4310,6 +4312,7 @@ impl GameState {
         self.players
             .iter()
             .flat_map(|p| p.graveyard.iter())
+            .filter(|c| !c.is_token)
             .filter(|c| {
                 c.definition.name == name
                     || c.definition.counts_as_named_in_graveyard.is_some_and(|a| a == name)

@@ -17194,7 +17194,8 @@ impl GameState {
     /// count as a number (`Value::CardTypesInGraveyard`, Lucid Dreams).
     pub fn distinct_card_types_in_graveyard(&self, seat: usize) -> usize {
         let mut kinds: crate::fxhash::HashSet<&CardType> = crate::fxhash::HashSet::default();
-        for c in &self.players[seat].graveyard {
+        // CR 111.8 — a dead token awaiting 704.5d is no card.
+        for c in self.players[seat].graveyard.iter().filter(|c| !c.is_token) {
             for t in &c.definition.card_types {
                 kinds.insert(t);
             }
@@ -17208,7 +17209,7 @@ impl GameState {
         self.players[seat]
             .graveyard
             .iter()
-            .filter(|c| c.definition.is_permanent())
+            .filter(|c| !c.is_token && c.definition.is_permanent())
             .count()
     }
 

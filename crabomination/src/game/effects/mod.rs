@@ -30094,7 +30094,7 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let mut cursor = 0;
                 for seat in self.seats_in_turn_order_from(ctx.controller) {
-                    if self.players[seat].graveyard.len() < n {
+                    if self.players[seat].graveyard_card_count() < n {
                         continue;
                     }
                     let Some(yes) = self.ask_seat_bool(

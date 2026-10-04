@@ -164,9 +164,13 @@ the handoff.
   reads (`Value::GraveyardSizeOf` and its three siblings, threshold, the
   graveyard-count requirements, `DynamicPt::ControllerGraveyardSize`) go
   through `Player::graveyard_card_count`, which skips a token
-  (`cr_111_7_a_dead_token_is_not_a_graveyard_card`). ⏳ The per-card walks
-  in `game/effects/` (type tallies, "creature cards in your graveyard"
-  filters outside `CardsInZone`) still see one.
+  (`cr_111_7_a_dead_token_is_not_a_graveyard_card`). ✅ *(`01WwQaPJ`)* the
+  per-card walks: delirium's card types, descend's permanent cards,
+  `CardsInGraveyardMatching` / all / opponents', same-name and Ooze counts,
+  forage, Carrion Rats and the damage-for-graveyard-exile replacement; and a
+  dying token no longer counts as a card put into a graveyard or descends
+  (`send_to_graveyard`). The `graveyard.iter()` walks left are id lookups and
+  selections (`CardsInZone` already skips tokens).
 - ✅ `keyword_is_friendly` read MustBlock as a buff — a lure's headless
   target was the caster's own creature.
 

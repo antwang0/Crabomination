@@ -11252,7 +11252,7 @@ impl GameState {
     /// CR 701.61 — can `p` forage (exile three graveyard cards or sacrifice a
     /// Food they control)?
     pub(crate) fn can_forage(&self, p: usize) -> bool {
-        self.players[p].graveyard.len() >= 3
+        self.players[p].graveyard_card_count() >= 3
             || self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition

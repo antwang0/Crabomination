@@ -666,3 +666,26 @@ fn cr_707_2_a_token_copy_skips_a_permanent_keyword_grant() {
     let token = g.battlefield.iter().find(|c| c.is_token).expect("a token").id;
     assert!(!g.computed_permanent(token).unwrap().keywords().contains(&Keyword::Flying));
 }
+
+/// CR 111.8 — a creature TOKEN sacrificed earlier in the resolution is no
+/// creature card in the graveyard: a land, an instant and an artifact read
+/// three card types (delirium's count), not four.
+#[test]
+fn cr_111_8_a_dead_token_is_no_card_type_for_delirium() {
+    use crabomination::card::{SelectionRequirement as R, Value};
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::sol_ring());
+    let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    let life = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let body = Effect::Seq(vec![
+        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+        Effect::GainLife { who: Selector::You, amount: Value::CardTypesInGraveyard(PlayerRef::You) },
+    ]);
+    g.resolve_effect(&body, &ctx).unwrap();
+    assert_eq!(g.players[0].life, life + 3);
+}

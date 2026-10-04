@@ -206,7 +206,7 @@ impl GameState {
                     })
             })
         {
-            if (self.players[p].graveyard.len() as u32) < amount {
+            if (self.players[p].graveyard_card_count() as u32) < amount {
                 self.players[p].eliminated = true;
             } else {
                 for _ in 0..amount {
