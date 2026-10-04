@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`016kc94f`, 162/183). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`016kc94f`, 164/183). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -41,7 +41,6 @@ they call a deck 🟡, the table wins.
 | 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 109 | Chishiro, the Shattered Blade (RG) | 1: concord_with_the_kami |
 | 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
@@ -53,12 +52,11 @@ they call a deck 🟡, the table wins.
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
-| 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
-| 177 | Szarekh, the Silent King (B) | 1: biotransference |
+| 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
 
-162 / 183 pod decks carry no residual in their card docs; the rest are listed.
+164 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 158 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
