@@ -7,7 +7,7 @@
 //! took it.
 
 use super::{EffectContext, GameState};
-use crate::effect::{Effect, PlayerRef, Selector, Value};
+use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::Target;
 
 impl GameState {
@@ -49,6 +49,24 @@ impl GameState {
             Effect::Exile { what: Selector::This } => ctx
                 .source
                 .is_none_or(|id| self.find_card_anywhere(id).is_none() || self.exile.iter().any(|c| c.id == id)),
+            // "Exile / sacrifice / return this (or that card)" spelled as a
+            // move: it's gone, or already where the move would put it
+            // (Angelic Renewal's second trigger after the first sacrificed it).
+            Effect::Move { what: what @ (Selector::This | Selector::TriggerSource), to } => {
+                let id = match what {
+                    Selector::This => ctx.source,
+                    _ => ctx.trigger_source.and_then(|e| e.as_card_id()),
+                };
+                let Some(zone) = id.and_then(|id| self.find_card_zone(id)) else { return true };
+                use crate::card::Zone;
+                matches!(
+                    (zone, to),
+                    (Zone::Exile, ZoneDest::Exile)
+                        | (Zone::Graveyard, ZoneDest::Graveyard)
+                        | (Zone::Battlefield, ZoneDest::Battlefield { .. })
+                        | (Zone::Hand, ZoneDest::Hand(_))
+                )
+            }
             _ => false,
         }
     }
