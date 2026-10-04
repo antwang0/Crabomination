@@ -999,8 +999,15 @@ pub fn apply_layers(
 /// than three: on a board carrying none of the three (the common one) every
 /// `any()` runs to the end, so the early exit buys nothing and three walks
 /// cost three times one.
+/// Packed into one `u16` ([`Flags`] spelled out) because it rides inline
+/// in `GameState`'s two gather memos, which `cow::tests::game_state_stays_small`
+/// caps; nine `bool`s overflowed the padding the five had used.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
-pub(crate) struct SecondPass {
+pub(crate) struct SecondPass(u16);
+
+/// [`SecondPass`] unpacked.
+#[derive(Clone, Copy, Default)]
+struct Flags {
     power: bool,
     type_changer: bool,
     type_lord: bool,
@@ -1019,8 +1026,38 @@ pub(crate) struct SecondPass {
 }
 
 impl SecondPass {
+    fn pack(f: Flags) -> Self {
+        let bits = [
+            f.power,
+            f.type_changer,
+            f.type_lord,
+            f.card_type_changer,
+            f.card_type_filtered,
+            f.color_changer,
+            f.color_filtered,
+            f.keyword_changer,
+            f.keyword_filtered,
+        ];
+        SecondPass(bits.iter().enumerate().fold(0, |m, (i, b)| m | (u16::from(*b) << i)))
+    }
+
+    fn unpack(self) -> Flags {
+        let b = |i: u16| self.0 & (1 << i) != 0;
+        Flags {
+            power: b(0),
+            type_changer: b(1),
+            type_lord: b(2),
+            card_type_changer: b(3),
+            card_type_filtered: b(4),
+            color_changer: b(5),
+            color_filtered: b(6),
+            keyword_changer: b(7),
+            keyword_filtered: b(8),
+        }
+    }
+
     pub(crate) fn of(effects: &[ContinuousEffect]) -> Self {
-        let mut g = Self::default();
+        let mut g = Flags::default();
         for e in effects {
             match &e.affected {
                 AffectedPermanents::CardMatchPowerGated { .. } => g.power = true,
@@ -1067,7 +1104,7 @@ impl SecondPass {
                 _ => {}
             }
         }
-        g
+        Self::pack(g)
     }
 }
 
@@ -1167,6 +1204,7 @@ fn compute_permanent_gated(
     // *computed* types, so a creature animated/retyped into the lord's tribe
     // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
     // Only re-run when both a type-changer and a type lord are present.
+    let gates = gates.unpack();
     let has_type_gated = gates.type_changer && gates.type_lord;
     let has_card_type_gated = gates.card_type_changer && gates.card_type_filtered;
     let has_color_gated = gates.color_changer && gates.color_filtered;
