@@ -522,6 +522,11 @@ fn avarice_amulet_draws_each_upkeep() {
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
+    // "Whenever equipped creature dies, target opponent gains control of this
+    // Equipment."
+    cast(&mut g, catalog::lightning_bolt(), Some(Target::Permanent(bear)), 0, &[(Color::Red, 1)]);
+    assert!(g.battlefield_find(bear).is_none(), "the bear died");
+    assert_eq!(g.battlefield_find(amulet).unwrap().controller, 1, "the opponent took the Amulet");
 }
 
 /// Kapsho Kitefins taps a blocker each time you add a creature.

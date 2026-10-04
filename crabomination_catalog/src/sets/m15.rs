@@ -2106,9 +2106,22 @@ pub fn feast_on_the_fallen() -> CardDefinition {
 }
 
 /// Avarice Amulet — {4} Equipment. +2/+0, vigilance, and an upkeep draw;
-/// equip {2}.
+/// equip {2}. "Whenever equipped creature dies, target opponent gains control
+/// of this Equipment" rides the Amulet itself (`EnchantedBySource` reads the
+/// death-time attachment snapshot), so `This` is the Equipment.
 pub fn avarice_amulet() -> CardDefinition {
-    equipment(
+    let donate = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+        effect: Effect::Seq(vec![
+            crate::effect::shortcut::declare_target_opponent(),
+            Effect::GainControl {
+                what: Selector::This,
+                to: Some(PlayerRef::Target(0)),
+                duration: Duration::Permanent,
+            },
+        ]),
+    };
+    let amulet = equipment(
         "Avarice Amulet",
         cost(&[generic(4)]),
         cost(&[generic(2)]),
@@ -2127,7 +2140,8 @@ pub fn avarice_amulet() -> CardDefinition {
             }],
             ..Default::default()
         },
-    )
+    );
+    CardDefinition { triggered_abilities: vec![donate], ..amulet }
 }
 
 /// Kapsho Kitefins — {4}{U}{U} 3/3 flier. Any creature you control entering
