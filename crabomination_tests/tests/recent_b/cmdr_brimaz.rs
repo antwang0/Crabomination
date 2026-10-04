@@ -244,6 +244,22 @@ fn filigree_vector_counters_and_proliferates() {
     assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 2);
 }
 
+/// CR 115.1 — Filigree Vector's counters go on TARGETS: an artifact creature
+/// (in both groups) takes both counters, a shrouded creature none.
+#[test]
+fn filigree_vector_targets_its_counters() {
+    let mut g = main_phase(2);
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let mut veiled = catalog::grizzly_bears();
+    veiled.keywords.push(Keyword::Shroud);
+    let veiled = g.add_card_to_battlefield(0, veiled);
+    let fv = g.add_card_to_hand(0, catalog::filigree_vector());
+    cast(&mut g, fv);
+    assert_eq!(counters(&g, thopter, CounterType::PlusOnePlusOne), 1);
+    assert_eq!(counters(&g, thopter, CounterType::Charge), 1);
+    assert_eq!(counters(&g, veiled, CounterType::PlusOnePlusOne), 0, "shroud: not a legal target");
+}
+
 /// First-Sphere Gargantua draws on entry, and unearths from the graveyard.
 #[test]
 fn first_sphere_gargantua_draws_and_unearths() {

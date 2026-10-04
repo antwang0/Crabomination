@@ -279,21 +279,39 @@ pub fn excise_the_imperfect() -> CardDefinition {
     }
 }
 
-/// Filigree Vector — on entry, +1/+1 counters on creatures and charge
-/// counters on artifacts; {1}, {T}, sacrifice another artifact: proliferate.
-///
-/// ⚠ Residual: every creature and artifact you control gets its counter
-/// (not chosen targets).
+/// Filigree Vector — on entry, a +1/+1 counter on each of any number of
+/// target creatures you control and a charge counter on each of any number of
+/// target artifacts you control; {1}, {T}, sacrifice another artifact:
+/// proliferate. The two target groups are one here: each chosen creature
+/// takes the +1/+1 and each chosen artifact the charge counter, so an
+/// artifact creature takes both — what naming it in both groups does.
 pub fn filigree_vector() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: yours(R::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            },
-            Effect::AddCounter { what: yours(R::Artifact), kind: CounterType::Charge, amount: Value::ONE },
-        ]))],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 20,
+            min_targets: 0,
+            filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Artifact },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Charge,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
