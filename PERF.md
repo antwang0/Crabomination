@@ -3152,7 +3152,11 @@ pods (overflow)  seeds 131001+..134001+ (two with concessions): 6,165 games,
                  all decided, zero panics
 census (tip)     every deck, 4/6/8 seats x 60 (seeds 135001+/136001+/137001+):
                  6,000 games, 5,999 decided, zero panics; one 6-seat board
-                 cap (136026 game 48, decks 56,10,65,118,18,105, 70 turns)
+                 cap (136026 game 48, decks 56,10,65,118,18,105, 70 turns) —
+                 proven a real loop, not an engine one: Secret Arcade makes
+                 every Pegasus an enchantment, so Archon of Sun's Grace
+                 re-triggers on its own token (973 Pegasus, 972 Doomwake
+                 Giant triggers stacked); a mandatory loop CR 104.4b draws
 pod table        re-blessed once (hideaway plays a hidden land; bisected)
 ```
 
