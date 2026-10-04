@@ -1013,6 +1013,7 @@ impl Effect {
             | Effect::CantAttackPlaneswalkerTypeThisTurn { who, defender, .. } => {
                 player_has_target(who) || player_has_target(defender)
             }
+            Effect::CantAttackYouDuringTheirNextTurn { who } => player_has_target(who),
             Effect::LifeLockUntilNextTurn { who } => sel_has_target(who),
             Effect::DistributeControlAmongOpponents { what } => sel_has_target(what),
             Effect::EachPlayerMillsYouMayCastOne { count } => value_has_target(count),

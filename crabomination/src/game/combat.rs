@@ -1207,6 +1207,8 @@ impl GameState {
                         || self
                             .cant_attack_player_this_turn
                             .contains(&(self.active_player_idx, target_player))
+                        // CR 508.1 — The Second Doctor's next-turn ban.
+                        || self.next_turn_attack_banned(self.active_player_idx, target_player)
                         // CR 508.1a — Weathered Sentinels attacks only a player
                         // who attacked you during their last turn.
                         || (self.sentinel_bound(atk.attacker)
@@ -3691,7 +3693,9 @@ impl GameState {
     /// left to `declare_attackers`, which sees the actual batch.
     pub(crate) fn player_cant_be_attacked_at_all(&self, seat: usize, defender: usize) -> bool {
         use crate::effect::StaticEffect;
-        if self.cant_attack_player_this_turn.contains(&(seat, defender)) {
+        if self.cant_attack_player_this_turn.contains(&(seat, defender))
+            || self.next_turn_attack_banned(seat, defender)
+        {
             return true;
         }
         self.battlefield.iter().any(|c| {
@@ -5152,6 +5156,12 @@ impl GameState {
     /// CR 506.2 — whether `id` carries a computed `Keyword::CantBeAttacked`,
     /// so it can't be declared as an attack target (The Aetherspark).
     pub(crate) fn permanent_cant_be_attacked(&self, id: CardId) -> bool {
+        if self.players.get(self.active_player_idx).is_some_and(|p| !p.next_turn_attack_bans.is_empty())
+            && let Some(c) = self.battlefield_find(id)
+            && self.next_turn_attack_banned(self.active_player_idx, c.controller)
+        {
+            return true;
+        }
         if !self.cant_attack_pw_type_this_turn.is_empty()
             && let Some(pw) = self.battlefield_find(id)
             && self.cant_attack_pw_type_this_turn.iter().any(|(a, ctrl, t)| {

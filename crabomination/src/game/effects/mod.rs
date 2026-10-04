@@ -30313,6 +30313,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantAttackYouDuringTheirNextTurn { who } => {
+                self.ban_attacks_next_turn(who, ctx);
+                Ok(())
+            }
+
             Effect::CantAttackPlaneswalkerTypeThisTurn { who, defender, subtype } => {
                 let (Some(a), Some(d)) =
                     (self.resolve_player(who, ctx), self.resolve_player(defender, ctx))

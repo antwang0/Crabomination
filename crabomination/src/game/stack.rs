@@ -5180,6 +5180,7 @@ impl GameState {
         // ("until the end of your next turn").
         let (active, turn) = (self.active_player_idx, self.turn_number);
         retain_cold!(self.creature_pw_cast_locks, |(reg, t)| !(*reg == active && turn > *t));
+        self.expire_attack_bans();
         // CR 500.8 — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;

@@ -12707,6 +12707,10 @@ pub enum Effect {
     /// "Creatures `who` controls can't attack `defender` this turn"
     /// (Web of Inertia's punishment half). Cleared at cleanup.
     CantAttackPlayerThisTurn { who: PlayerRef, defender: PlayerRef },
+    /// "`who` can't attack you or permanents you control during their next
+    /// turn" (The Second Doctor) — a player-level ban (CR 508.1), so a
+    /// creature they get later is barred too.
+    CantAttackYouDuringTheirNextTurn { who: PlayerRef },
     /// "Until that player's next turn, … their life total can't change"
     /// (Teferi's Reproach, CR 119.10).
     LifeLockUntilNextTurn { who: Selector },

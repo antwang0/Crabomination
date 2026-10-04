@@ -1224,6 +1224,11 @@ pub struct PlayerData {
     /// back-compat.
     #[serde(default)]
     pub skip_next_combat: u32,
+    /// "Can't attack [defender] or permanents they control during their next
+    /// turn" (The Second Doctor): `(defender, turn registered)`, live on this
+    /// player's first turn after the registration, dropped at its cleanup.
+    #[serde(default)]
+    pub next_turn_attack_bans: Vec<(usize, u32)>,
     /// Number of this player's upcoming untap steps in which the **lands** they
     /// control don't untap (Bontu's Last Reckoning). Decremented when their
     /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
@@ -1731,6 +1736,7 @@ impl Player {
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,
             skip_next_combat: 0,
+            next_turn_attack_bans: Vec::new(),
             lands_dont_untap_next_untap: 0,
             lands_produce_color_this_turn: None,
             half_damage_shields: 0,
