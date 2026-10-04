@@ -561,11 +561,11 @@ mod recent239 {
         assert!(!SpendRestriction::EnchantmentSpell.allows(&catalog::grizzly_bears().spell_kind()));
     }
 
-    /// Fear of Burning Alive burns each opponent for 4 on ETB, and with delirium its
-    /// noncombat-damage trigger copies the damage onto an opponent's creature.
+    /// Fear of Burning Alive burns each opponent for 4 on ETB, and with delirium a
+    /// source you control damaging an opponent copies the damage onto a creature
+    /// that player controls.
     #[test]
     fn fear_of_burning_alive_etb_and_delirium_copy() {
-        use crabomination::effect::{EventKind, EventScope};
         let mut g = two_player_game();
         let etb = catalog::fear_of_burning_alive().triggered_abilities[0].effect.clone();
         let before = g.players[1].life;
@@ -573,19 +573,30 @@ mod recent239 {
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, before - 4, "each opponent burned for 4");
 
-        // Delirium trigger is a noncombat-damage listener; it copies the amount.
-        let def = catalog::fear_of_burning_alive();
-        assert_eq!(def.triggered_abilities[1].event.kind, EventKind::PlayerDealtNoncombatDamage);
-        assert!(matches!(def.triggered_abilities[1].event.scope, EventScope::OpponentControl));
-        let mut g = two_player_game();
-        let src = g.add_card_to_battlefield(0, catalog::fear_of_burning_alive());
+        // Delirium: only a source Fear's controller controls, and only a
+        // creature the damaged player controls (seat 2's giant survives).
+        let mut g = crabomination::game::multi_player_game(3);
+        g.add_card_to_battlefield(0, catalog::fear_of_burning_alive());
+        for c in [catalog::forest(), catalog::lightning_bolt(), catalog::grizzly_bears(), catalog::divination()] {
+            g.add_card_to_graveyard(0, c);
+        }
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
-        let copy = def.triggered_abilities[1].effect.clone();
-        let mut ctx = EffectContext { targets: vec![Target::Permanent(victim)], ..EffectContext::for_trigger(src, 0, None, 0) };
-        ctx.event_amount = 5; // an earlier source dealt 5 noncombat
-        g.resolve_effect(&copy, &ctx).unwrap();
-        drain_stack(&mut g);
-        assert!(g.battlefield_find(victim).is_none(), "5 copied damage killed the 3/3");
+        let bystander = g.add_card_to_battlefield(2, catalog::hill_giant());
+        let hit = |g: &mut crabomination::game::GameState, src, seat, to| {
+            let ping = Effect::DealDamage {
+                to: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::Seat(to)),
+                amount: crabomination::effect::Value::Const(3),
+            };
+            let ev = g.resolve_effect(&ping, &EffectContext::for_trigger(src, seat, None, 0)).unwrap();
+            g.dispatch_triggers_for_events(&ev);
+            drain_stack(g);
+        };
+        hit(&mut g, victim, 1, 2);
+        assert!(g.battlefield_find(victim).is_some() && g.battlefield_find(bystander).is_some(), "not a source of mine");
+        hit(&mut g, mine, 0, 1);
+        assert!(g.battlefield_find(victim).is_none(), "3 copied damage killed the 3/3 seat 1 controls");
+        assert!(g.battlefield_find(bystander).is_some());
     }
 
     /// Mudflat Village's sac ability returns a Rat card from the graveyard to hand;

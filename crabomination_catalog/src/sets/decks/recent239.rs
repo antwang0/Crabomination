@@ -893,9 +893,7 @@ pub fn feed_the_cycle() -> CardDefinition {
 /// Fear of Burning Alive — {4}{R}{R} Enchantment Creature — Nightmare 4/4. ETB:
 /// deals 4 to each opponent. Delirium — whenever a source you control deals
 /// noncombat damage to an opponent, if delirium, deal that much to a creature
-/// that player controls. (The "source you control" clause collapses to "an
-/// opponent is dealt noncombat damage", matching the catalog's other
-/// noncombat-damage triggers.)
+/// that player controls.
 pub fn fear_of_burning_alive() -> CardDefinition {
     CardDefinition {
         name: "Fear of Burning Alive",
@@ -918,7 +916,7 @@ pub fn fear_of_burning_alive() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::PlayerDealtNoncombatDamage,
-                    EventScope::OpponentControl,
+                    EventScope::YourSourceDamagedOpponent,
                 )
                 .with_filter(Predicate::DeliriumActive {
                     who: PlayerRef::You,
@@ -926,7 +924,7 @@ pub fn fear_of_burning_alive() -> CardDefinition {
                 effect: Effect::DealDamage {
                     to: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::Creature.and(R::ControlledByOpponent),
+                        filter: R::Creature.and(R::ControlledByTriggerPlayer),
                     },
                     amount: Value::TriggerEventAmount,
                 },
