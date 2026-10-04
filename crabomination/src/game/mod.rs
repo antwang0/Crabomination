@@ -175,6 +175,7 @@ mod life_events;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
+mod cascade_grant;
 // Rod of Absorption / River Song's Diary, fixed at cast.
 mod absorb;
 // CR 614.12 — static grants read as a permanent enters.
@@ -8733,6 +8734,7 @@ impl GameState {
                 miracle: false,
                 pay_life: false,
                 bottom_after: false,
+                undaunted: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
         }
@@ -21375,6 +21377,7 @@ impl GameState {
                 miracle: false,
                 pay_life: false,
                 bottom_after: false,
+                undaunted: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -21397,6 +21400,7 @@ impl GameState {
                 miracle: false,
                 pay_life: false,
                 bottom_after: false,
+                undaunted: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -21993,6 +21997,7 @@ impl GameState {
                 miracle: true,
                 pay_life: false,
                 bottom_after: false,
+                undaunted: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
             self.step_bounded_may_play = true;
@@ -27870,6 +27875,7 @@ impl GameState {
                             miracle: false,
                             pay_life: true,
                             bottom_after: false,
+                            undaunted: false,
                         });
                     }
                 }
@@ -28496,6 +28502,7 @@ impl GameState {
                             miracle: false,
                             pay_life: false,
                             bottom_after: false,
+                            undaunted: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(taxed);
                         self.exile.push(card);

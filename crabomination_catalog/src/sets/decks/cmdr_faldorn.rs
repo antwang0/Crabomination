@@ -124,10 +124,8 @@ pub fn faldorn_dread_wolf_herald() -> CardDefinition {
     }
 }
 
-/// Aurora Phoenix — flying, cascade; casting a spell with cascade returns it
-/// from your graveyard to your hand.
-///
-/// Approximation: a spell given cascade by a trigger doesn't count.
+/// Aurora Phoenix — flying, cascade; casting a spell with cascade (printed or
+/// given, `CastSpellHasCascade`) returns it from your graveyard to your hand.
 pub fn aurora_phoenix() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Cascade],
@@ -135,10 +133,7 @@ pub fn aurora_phoenix() -> CardDefinition {
             cascade(6),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::HasKeyword(Keyword::Cascade),
-                    }),
+                    .with_filter(Predicate::CastSpellHasCascade),
                 effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
             },
         ],

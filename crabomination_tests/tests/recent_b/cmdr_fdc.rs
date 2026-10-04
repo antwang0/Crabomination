@@ -6732,6 +6732,23 @@ fn cr_702_125a_durnans_undaunted_outlives_durnan() {
     assert!(g.battlefield_find(tusk).is_some());
 }
 
+/// CR 702.85a — a spell Wild-Magic Sorcerer gives cascade is a spell with
+/// cascade: casting it returns Aurora Phoenix.
+#[test]
+fn cr_702_85a_aurora_phoenix_sees_a_granted_cascade() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::wild_magic_sorcerer());
+    let phoenix = g.add_card_to_graveyard(0, catalog::aurora_phoenix());
+    let faldorn = g.add_card_to_battlefield(0, catalog::faldorn_dread_wolf_herald());
+    g.clear_sickness(faldorn);
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, faldorn, 0, None).expect("impulse the Giant");
+    flood(&mut g, 0);
+    cast_bare(&mut g, giant, None).expect("cast from exile");
+    assert!(g.players[0].hand.iter().any(|c| c.id == phoenix), "the Phoenix came back");
+}
+
 /// Durnan looks at the top four and the controller picks the creature card to
 /// exile (it exiled the first creature it revealed); a land is not a pick, and
 /// the other three go to the bottom.

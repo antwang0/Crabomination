@@ -3439,6 +3439,7 @@ impl GameState {
                 self.evaluate_predicate(&Predicate::CastSpellFromExile, ctx)
                     && self.players[ctx.controller].spells_cast_from_exile_this_turn == 1
             }
+            Predicate::CastSpellHasCascade => self.cast_spell_has_cascade(ctx),
             Predicate::CastSpellFromGraveyard => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
