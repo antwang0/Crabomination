@@ -619,6 +619,10 @@ fn lost_in_the_maze_stuns_and_hides() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).unwrap().tapped, "X=2 taps both creatures");
     assert!(g.battlefield_find(mine).unwrap().tapped);
+    // "Put a stun counter on each of those creatures you don't control."
+    let stun = crabomination::card::CounterType::Stun;
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(stun), 1, "theirs is stunned");
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(stun), 0, "yours is not");
     assert!(
         g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Hexproof),
         "your tapped creature has hexproof"

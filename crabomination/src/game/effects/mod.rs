@@ -17078,7 +17078,7 @@ impl GameState {
                         }
                     }
                 }
-                for cid in chosen {
+                for &cid in &chosen {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         if !c.tapped {
                             c.tapped = true;
@@ -17088,6 +17088,12 @@ impl GameState {
                             c.skip_next_untap = true;
                         }
                     }
+                }
+                // "Put a stun counter on each of those creatures" (Lost in the
+                // Maze) reads the picks as `LastMoved`. Unrecorded, the stun
+                // landed on nothing. Guarded: `scratch` is a CoW group.
+                if !chosen.is_empty() {
+                    self.scratch.last_moved_cards = chosen;
                 }
                 Ok(())
             }

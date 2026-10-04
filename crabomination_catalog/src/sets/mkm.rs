@@ -668,8 +668,13 @@ pub fn lost_in_the_maze() -> CardDefinition {
                 skip_untap: false,
                 exact: true,
             },
+            // "Put a stun counter on each of those creatures you don't
+            // control" — the ones you tapped of your own stay stun-free.
             Effect::AddCounter {
-                what: Selector::LastMoved,
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::LastMoved),
+                    filter: SelectionRequirement::ControlledByOpponent,
+                },
                 kind: CounterType::Stun,
                 amount: Value::ONE,
             },
