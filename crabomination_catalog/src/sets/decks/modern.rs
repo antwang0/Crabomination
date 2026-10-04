@@ -54368,23 +54368,22 @@ pub fn sorin_imperious_bloodlord() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::MayDo {
+                // "You may sacrifice a Vampire. When you do, …" — no Vampire
+                // sacrificed, no damage or life (CR 603.7c reflexive).
+                effect: Effect::MaySacrifice {
                     description: "Sacrifice a Vampire for 3 damage + 3 life?".into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Sacrifice {
-                            who: Selector::Player(PlayerRef::You),
-                            count: Value::Const(1),
-                            filter: SelectionRequirement::Creature.and(vampire.clone()),
-                        },
-                        Effect::DealDamage {
-                            to: crate::effect::shortcut::target_any(),
-                            amount: Value::Const(3),
-                        },
-                        Effect::GainLife {
-                            who: Selector::You,
-                            amount: Value::Const(3),
-                        },
-                    ])),
+                    filter: vampire.clone(),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::DealDamage {
+                                to: crate::effect::shortcut::target_any(),
+                                amount: Value::Const(3),
+                            },
+                            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                        ])),
+                    }),
+                    else_: None,
                 },
                 ..Default::default()
             },

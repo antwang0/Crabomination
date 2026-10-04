@@ -3165,15 +3165,17 @@ fn serum_core_chimera_oil_loop() {
     let c = g.battlefield_find_mut(chimera).unwrap();
     c.add_counters(CounterType::Oil, 2);
     g.add_card_to_library(0, catalog::forest());
-    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
     let victim = g.add_card_to_battlefield(1, catalog::wind_drake()); // 2/2 flyer
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // The damage is a reflexive trigger's (CR 603.7c): no target at activation.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: chimera, ability_index: 0, target: Some(Target::Permanent(victim)),
+        card_id: chimera, ability_index: 0, target: None,
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("remove three oil");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "3 damage killed the drake");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "only a nonland card is discarded");
 }
 
 // ── ONE planeswalkers: Compleated (CR 702.150) + friends ─────────────────────

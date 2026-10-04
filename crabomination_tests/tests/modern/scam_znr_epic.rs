@@ -592,6 +592,34 @@ fn sorin_bloodlord_minus_three_deploys_vampire() {
     );
 }
 
+/// CR 603.7c — Sorin, Imperious Bloodlord's second +1 is "you may sacrifice
+/// a Vampire. When you do, 3 damage and 3 life": without a Vampire to
+/// sacrifice nothing happens; with one, both do.
+#[test]
+fn sorin_bloodlord_plus_one_needs_a_vampire() {
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_imperious_bloodlord());
+    g.players[0].hostile_player_targets = true;
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: sorin, ability_index: 1, target: None, x_value: None })
+        .expect("Sorin +1");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (20, 20), "no Vampire, no payoff");
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_imperious_bloodlord());
+    let vamp = g.add_card_to_battlefield(0, catalog::child_of_night());
+    g.players[0].hostile_player_targets = true;
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: sorin, ability_index: 1, target: None, x_value: None })
+        .expect("Sorin +1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vamp).is_none(), "sacrificed");
+    assert_eq!(g.players[0].life, 23);
+    assert!(g.players[1].life <= 20, "3 damage went somewhere hostile");
+}
+
 /// Floodpits Drowner stuns on entry and shuffles itself + the stunned
 /// creature away.
 #[test]

@@ -6163,14 +6163,20 @@ pub fn serum_core_chimera() -> CardDefinition {
             remove_counter_cost: Some((CounterType::Oil, 3)),
             effect: Effect::Seq(vec![
                 draw(1),
-                Effect::MayDiscard {
+                // "You may discard a nonland card. When you discard a card
+                // this way, …" — a reflexive trigger, so the ability needs no
+                // creature or planeswalker to aim at when it's activated.
+                Effect::MayDiscardMatching {
                     description: "Discard a nonland card for 3 damage?".into(),
                     count: Value::ONE,
-                    then: Box::new(Effect::DealDamage {
-                        to: target_filtered(
-                            SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                        ),
-                        amount: Value::Const(3),
+                    filter: SelectionRequirement::Nonland,
+                    then: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::DealDamage {
+                            to: target_filtered(
+                                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                            ),
+                            amount: Value::Const(3),
+                        }),
                     }),
                     else_: None,
                 },
