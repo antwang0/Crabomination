@@ -297,3 +297,63 @@ fn tempt_with_immortality_returns_a_creature() {
     cast_at(&mut g, spell, &[]).expect("cast");
     assert!(g.battlefield_find(dead).is_some());
 }
+
+/// Springjack Pasture with `goats` Goat tokens made by its own {4},{T}
+/// ability, untapped and with an empty pool afterwards.
+fn pasture_with_goats(g: &mut GameState, goats: usize) -> CardId {
+    let pasture = g.add_card_to_battlefield(0, catalog::springjack_pasture());
+    for _ in 0..goats {
+        flood(g, 0);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pasture,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("make a Goat");
+        drain_stack(g);
+        g.battlefield_find_mut(pasture).unwrap().tapped = false;
+    }
+    g.players[0].mana_pool.empty();
+    pasture
+}
+
+fn goats(g: &GameState) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Goat").count()
+}
+
+/// CR 107.3 / 605.1a — Springjack Pasture's "{T}, Sacrifice X Goats: Add X
+/// mana of any one color" pays a spell through the auto-tapper, X sized to
+/// what the cost still needs: {W}{W}{W} beside a Plains sacrifices two of
+/// three Goats for {W}{W} and gains 2 life.
+#[test]
+fn springjack_pasture_pays_a_spell_with_x_sized_to_the_shortfall() {
+    let mut g = main_phase(2);
+    pasture_with_goats(&mut g, 3);
+    g.add_card_to_battlefield(0, catalog::plains());
+    let life = g.players[0].life;
+    let marshal = g.add_card_to_hand(0, catalog::benalish_marshal());
+    g.perform_action(GameAction::CastSpell { card_id: marshal, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Plains + two Goats pay {W}{W}{W}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(marshal).is_some());
+    assert_eq!(goats(&g), 1, "only the two Goats the cost needed");
+    assert_eq!(g.players[0].life, life + 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana left floating");
+}
+
+/// With no Goat to sacrifice the Pasture still taps for {C}: a {1} cost is
+/// paid by its first ability, not by an X of zero.
+#[test]
+fn springjack_pasture_without_goats_taps_for_colorless() {
+    let mut g = main_phase(2);
+    pasture_with_goats(&mut g, 0);
+    let bears = g.add_card_to_hand(0, catalog::steel_overseer());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Plains + the Pasture's {C} pay {2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+}

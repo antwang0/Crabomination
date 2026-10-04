@@ -323,8 +323,8 @@ pub fn serene_master() -> CardDefinition {
 }
 
 /// Springjack Pasture — {T}: {C}; {4}, {T}: a 0/1 Goat; {T}, sacrifice X
-/// Goats: X mana of any one color and X life. The bot's sacrifice sink sizes
-/// X by score. Residual: the auto-tapper never pays a spell with its X mana.
+/// Goats: X mana of any one color and X life. The auto-tapper sizes X to a
+/// spell's shortfall; the bot's sacrifice sink sizes it by score otherwise.
 pub fn springjack_pasture() -> CardDefinition {
     let goat = Arc::new(TokenDefinition {
         name: "Goat".into(),

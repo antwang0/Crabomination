@@ -973,6 +973,64 @@ pub fn color_index(c: ManaColor) -> usize {
 /// payer (`GameState::mana_source_self_harm`).
 const LETHAL_TAP_WINDOW: i32 = 3;
 
+/// What `pool` still lacks to pay `cost`: per-colour pips (WUBRG) and
+/// generic mana. Hybrid pips count against their first colour, Phyrexian
+/// ones are left to life, `{C}` short of colorless is counted as generic.
+fn mana_deficit(pool: &crate::mana::ManaPool, cost: &crate::mana::ManaCost) -> ([u32; 5], u32) {
+    let mut avail = [0u32; 5];
+    for c in ManaColor::ALL {
+        avail[color_index(c)] = pool.amount(c);
+    }
+    let mut colorless = pool.colorless_amount();
+    let mut need = [0u32; 5];
+    let mut generic = 0u32;
+    let take = |c: ManaColor, avail: &mut [u32; 5]| {
+        let k = color_index(c);
+        if avail[k] > 0 { avail[k] -= 1; true } else { false }
+    };
+    for sym in &cost.symbols {
+        match sym {
+            ManaSymbol::Colored(c) => {
+                if !take(*c, &mut avail) {
+                    need[color_index(*c)] += 1;
+                }
+            }
+            ManaSymbol::Hybrid(a, b) => {
+                if !take(*a, &mut avail) && !take(*b, &mut avail) {
+                    need[color_index(*a)] += 1;
+                }
+            }
+            ManaSymbol::Phyrexian(c) => {
+                take(*c, &mut avail);
+            }
+            ManaSymbol::PhyrexianHybrid(a, b) => {
+                let _ = take(*a, &mut avail) || take(*b, &mut avail);
+            }
+            ManaSymbol::MonoHybrid(n, c) => {
+                if !take(*c, &mut avail) {
+                    generic += n;
+                }
+            }
+            ManaSymbol::ColorlessHybrid(c) => {
+                if colorless > 0 {
+                    colorless -= 1;
+                } else if !take(*c, &mut avail) {
+                    generic += 1;
+                }
+            }
+            ManaSymbol::Generic(n) => generic += n,
+            ManaSymbol::Colorless(n) => {
+                let paid = colorless.min(*n);
+                colorless -= paid;
+                generic += n - paid;
+            }
+            ManaSymbol::Snow | ManaSymbol::X => {}
+        }
+    }
+    let left: u32 = avail.iter().sum::<u32>() + colorless;
+    (need, generic.saturating_sub(left))
+}
+
 struct ManaSourceInfo {
     id: CardId,
     /// Where the source sat on the battlefield when the table was built, so
@@ -991,6 +1049,11 @@ struct ManaSourceInfo {
     /// one heap allocation per untapped source per `auto_tap_for_cost`.
     colors: crate::mana::ColorSet,
     color_idx: [usize; 5],
+    /// An X-sized mana ability's index ([`is_x_sized_mana_ability`]): such a
+    /// row is left to the shortfall pass, never tapped by the pip loops.
+    ///
+    /// [`is_x_sized_mana_ability`]: crate::game::mana_shape::is_x_sized_mana_ability
+    x_idx: Option<u8>,
 }
 
 /// The printed mana summary a definition packs into one memo word for
@@ -1103,6 +1166,7 @@ mod mana_summary {
             rank: ((w >> 5) & 0x3) as u8,
             colors: crate::mana::ColorSet((w & 0x1f) as u8),
             color_idx,
+            x_idx: None,
         })
     }
 }
@@ -1115,7 +1179,9 @@ mod mana_summary {
 fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     // A mana ability gated on the board ("activate only if", ferocious) is
     // state, not definition: no memo, the table's live walk decides.
-    if def.activated_abilities.iter().any(|a| a.condition.is_some() && is_mana_ability(&a.effect)) {
+    if def.activated_abilities.iter().any(|a| {
+        (a.condition.is_some() || crate::game::mana_shape::is_x_sized_mana_ability(a)) && is_mana_ability(&a.effect)
+    }) {
         return None;
     }
     let mut first: Option<(usize, &crate::effect::ActivatedAbility)> = None;
@@ -17432,6 +17498,27 @@ impl GameState {
             if sick {
                 abilities.retain(|(_, a)| !(a.tap_cost || a.untap_self_cost));
             }
+            // An X-sized ability claims no colour: the pip loops would
+            // activate it with X = 0 (see `auto_tap_x_sized_sources`).
+            let x_idx = abilities
+                .iter()
+                .find(|(_, a)| crate::game::mana_shape::is_x_sized_mana_ability(a))
+                .map(|(i, _)| *i as u8);
+            if x_idx.is_some() {
+                abilities.retain(|(_, a)| !crate::game::mana_shape::is_x_sized_mana_ability(a));
+                if abilities.is_empty() {
+                    out.push(ManaSourceInfo {
+                        id: c.id,
+                        bf_idx,
+                        first_idx: x_idx.map_or(0, usize::from),
+                        rank: 2,
+                        colors: crate::mana::ColorSet::empty(),
+                        color_idx: [0; 5],
+                        x_idx,
+                    });
+                    continue;
+                }
+            }
             let Some((first_idx, first)) = abilities.first() else { continue };
             // One walk of each ability's effect tree, not one per colour:
             // the first ability that makes a colour is the one the old
@@ -17478,6 +17565,7 @@ impl GameState {
                 rank: Self::mana_source_cost_rank(first),
                 colors,
                 color_idx,
+                x_idx,
             });
         }
         out
@@ -17823,7 +17911,7 @@ impl GameState {
             let source = sources
                 .iter()
                 .enumerate()
-                .filter(|(_, s)| !self.source_card(s).is_some_and(|c| c.tapped))
+                .filter(|(_, s)| s.x_idx.is_none() && !self.source_card(s).is_some_and(|c| c.tapped))
                 .map(|(i, s)| {
                     let keep = if smart { keep_by_idx[i] } else { 0 };
                     let fresh = if diverse && rarest {
@@ -17897,7 +17985,90 @@ impl GameState {
         // Park the scratch decider for the next auto-tap. The early return
         // above the loops never took one, so a `None` here is a no-op.
         decider_pool::park(scripted_slot.take());
+        if sources.iter().any(|s| s.x_idx.is_some()) {
+            let xs: SmallVec<[(CardId, usize, Option<usize>); 2]> = sources
+                .iter()
+                .filter_map(|s| {
+                    let x = usize::from(s.x_idx?);
+                    Some((s.id, x, (s.first_idx != x).then_some(s.first_idx)))
+                })
+                .collect();
+            drop(sources);
+            self.auto_tap_x_sized_sources(player, cost, &xs, &mut events);
+        }
         events
+    }
+
+    /// CR 107.3 / 605.3 — the shortfall pass over X-sized mana sources
+    /// (Springjack Pasture's "Sacrifice X Goats", Hazel's "Tap X untapped
+    /// tokens"): what the pool still lacks after the pip loops, each source
+    /// activated with X sized to it (capped by what it can pay), or its plain
+    /// mana ability when that covers the last generic mana.
+    fn auto_tap_x_sized_sources(
+        &mut self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        xs: &[(CardId, usize, Option<usize>)],
+        events: &mut Vec<GameEvent>,
+    ) {
+        for &(id, x_idx, plain) in xs {
+            let (need, generic) = mana_deficit(&self.players[player].mana_pool, cost);
+            let colored: u32 = need.iter().sum();
+            if colored + generic == 0 {
+                return;
+            }
+            let Some(card) = self.battlefield_find(id).filter(|c| !c.tapped) else { continue };
+            let Some(ab) = card.definition.activated_abilities.get(x_idx).cloned() else { continue };
+            let max_x = self.x_sized_mana_capacity(player, id, &ab);
+            if colored == 0 && generic == 1 && plain.is_some() || max_x == 0 {
+                if colored == 0 && let Some(i) = plain {
+                    let _ = self.activate_ability_into(id, i, None, Vec::new(), None, None, events);
+                }
+                continue;
+            }
+            // "X mana of any one color" goes to the colour short the most;
+            // "any combination" names each colour short, then any.
+            let one_color = matches!(&ab.effect, Effect::Seq(v) if v.iter().any(|e| matches!(e, Effect::AddMana { pool: ManaPayload::AnyOneColor(_), .. })))
+                || matches!(&ab.effect, Effect::AddMana { pool: ManaPayload::AnyOneColor(_), .. });
+            let top = ManaColor::ALL.into_iter().max_by_key(|c| (need[color_index(*c)], std::cmp::Reverse(color_index(*c))));
+            let mut script: Vec<crate::decision::DecisionAnswer> = Vec::new();
+            let x = if one_color {
+                let c = top.unwrap_or(ManaColor::White);
+                script.push(crate::decision::DecisionAnswer::Color(c));
+                (need[color_index(c)] + generic).min(max_x)
+            } else {
+                for c in ManaColor::ALL {
+                    for _ in 0..need[color_index(c)] {
+                        script.push(crate::decision::DecisionAnswer::Color(c));
+                    }
+                }
+                (colored + generic).min(max_x)
+            };
+            let prev = std::mem::replace(&mut self.decider, Box::new(crate::decision::ScriptedDecider::new(script)));
+            let prev_wants_ui = self.players[player].wants_ui;
+            self.players[player].wants_ui = false;
+            let _ = self.activate_ability_into(id, x_idx, None, Vec::new(), Some(x), None, events);
+            self.decider = prev;
+            self.players[player].wants_ui = prev_wants_ui;
+        }
+    }
+
+    /// The most X an X-sized mana ability of `id` could pay now: the
+    /// permanents its sacrifice or tap cost could take.
+    fn x_sized_mana_capacity(&self, p: usize, id: CardId, ab: &crate::effect::ActivatedAbility) -> u32 {
+        let count = |filter: &crate::card::SelectionRequirement, untapped: bool, may_be_source: bool| {
+            self.battlefield
+                .iter()
+                .filter(|c| c.controller == p && (may_be_source || c.id != id) && !(untapped && c.tapped))
+                .filter(|c| untapped || self.can_be_sacrificed(c.id))
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .count() as u32
+        };
+        match (&ab.sac_other_filter, &ab.tap_n_filter) {
+            (Some((f, _)), _) if ab.sac_other_x => count(f, false, ab.sac_other_may_be_source),
+            (_, Some((f, _))) if ab.tap_n_x => count(f, true, !ab.tap_cost),
+            _ => 0,
+        }
     }
 
     // ── Activate ability ──────────────────────────────────────────────────────

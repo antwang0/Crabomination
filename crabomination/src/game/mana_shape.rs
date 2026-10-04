@@ -110,6 +110,15 @@ pub(crate) fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
         && matches!(a.effect, Effect::AddMana { .. })
 }
 
+/// A mana ability whose X is a non-mana cost the activator sizes — "{T},
+/// Sacrifice X Goats: Add X mana" (Springjack Pasture), "{T}, Tap X untapped
+/// tokens you control: Add X mana" (Hazel). Activated with no X it makes
+/// nothing, so the auto-tapper sizes it to the shortfall instead.
+#[inline]
+pub(crate) fn is_x_sized_mana_ability(a: &ActivatedAbility) -> bool {
+    (a.sac_other_x || a.tap_n_x) && !a.mana_cost.has_x()
+}
+
 /// Whether a mana ability's amount is a runtime `Value` rather than a
 /// constant — [`mana_ability_output`] reports one for those, which is a
 /// *lower* bound and so cannot be spent as a per-colour budget.

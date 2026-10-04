@@ -31,19 +31,18 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`01JMRKMd`, 165/183). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`01JMRKMd`, 166/183). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
 | 66 | Inalla, Archmage Ritualist (UBR) | 1: vindictive_lich |
-| 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
+| 75 | Hazel of the Rootbloom (BG) | 1: sword_of_the_squeak |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
 | 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
-| 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
 | 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
@@ -55,7 +54,7 @@ they call a deck 🟡, the table wins.
 | 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
 
-165 / 183 pod decks carry no residual in their card docs; the rest are listed.
+166 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not

@@ -77,7 +77,7 @@ fn hazel_doubles_a_squirrel_at_end_step() {
     assert_eq!(named(&g, 0, "Squirrel").len(), 4);
 }
 
-/// Hazel's mana ability taps the other untapped tokens for that much mana.
+/// Hazel's mana ability taps X untapped tokens for X mana.
 #[test]
 fn hazel_taps_tokens_for_mana() {
     let mut g = pod(2);
@@ -92,13 +92,42 @@ fn hazel_taps_tokens_for_mana() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: Some(2),
         mode: None,
     })
     .expect("mana");
     assert_eq!(g.players[0].mana_pool.total(), 2);
     assert_eq!(g.players[0].life, life - 2);
     assert!(named(&g, 0, "Squirrel").iter().all(|&s| g.battlefield_find(s).unwrap().tapped));
+}
+
+/// CR 107.3 / 602.2b — Hazel's X is chosen: paying Grizzly Bears' {1}{G}
+/// through the auto-tapper taps two of three tokens, not all of them.
+#[test]
+fn hazel_pays_a_spell_tapping_only_the_tokens_it_needs() {
+    let mut g = pod(2);
+    let hazel = g.add_card_to_battlefield(0, catalog::hazel_of_the_rootbloom());
+    g.clear_sickness(hazel);
+    let squirrel = crabomination::card::TokenDefinition {
+        name: "Squirrel".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    };
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &squirrel);
+    }
+    let life = g.players[0].life;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Hazel pays {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    let tapped = named(&g, 0, "Squirrel").iter().filter(|&&s| g.battlefield_find(s).unwrap().tapped).count();
+    assert_eq!(tapped, 2);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
 /// Saw in Half: two copies at half power and toughness, rounded up.

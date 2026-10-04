@@ -1918,7 +1918,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
-| 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 
@@ -1954,7 +1953,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
-| 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |

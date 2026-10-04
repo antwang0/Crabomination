@@ -235,10 +235,8 @@ pub fn gourmands_talent() -> CardDefinition {
 
 /// Hazel of the Rootbloom — {T}, pay 2 life, tap X untapped tokens: X mana in
 /// any colors; at your end step, copy target token you control (twice for a
-/// Squirrel).
-/// Residual: the tap takes every other untapped token you control.
+/// Squirrel). X is the activator's (the auto-tapper sizes it to the cost).
 pub fn hazel_of_the_rootbloom() -> CardDefinition {
-    let tokens = || yours(R::IsToken.and(R::Untapped).and(R::OtherThanSource));
     let copy = |source: Selector| Effect::CreateTokenCopyOf {
         who: PlayerRef::You,
         count: Value::ONE,
@@ -259,13 +257,9 @@ pub fn hazel_of_the_rootbloom() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             life_cost: 2,
-            effect: Effect::Seq(vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::AnyColors(Value::CountOf(Box::new(tokens()))),
-                },
-                Effect::Tap { what: tokens() },
-            ]),
+            tap_n_filter: Some((R::IsToken, 0)),
+            tap_n_x: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::XFromCost) },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
