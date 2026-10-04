@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04. The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`016kc94f`). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -41,11 +41,8 @@ they call a deck 🟡, the table wins.
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
 | 77 | Winter, Cynical Opportunist (BG) | 1: into_the_pit |
-| 79 | Hearthhull, the Worldseed (BRG) | 1: evendo_brushrazer |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
-| 91 | Commodore Guff (URW) | 1: chandra_legacy_of_fire |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 107 | Firkraag, Cunning Instigator (UR) | 2: firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
@@ -64,9 +61,9 @@ they call a deck 🟡, the table wins.
 | 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
 | 177 | Szarekh, the Silent King (B) | 2: biotransference, canoptek_wraith |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
-| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 6: aces_baseball_bat, peri_brown, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
+| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 5: aces_baseball_bat, peri_brown, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor |
 
-150 / 183 pod decks carry no residual in their card docs; the rest are listed.
+157 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
