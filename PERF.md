@@ -3240,6 +3240,9 @@ fourth stretch   --bench byte-identical after each bot pick and the token
                  tallies; pods 91704/6/8 x 1,500 all decided; 183-deck census
                  re-run (43000+) 363 never-activated (from 399), one board
                  cap found and fixed (43138 g203), three CR 104.4a draws
+fifth stretch    --bench byte-identical; pods 91804/6 x 1,500 decided; strict
+                 debug 6 seats + concessions every deck (283) clean; suite
+                 24,083 / 0 / 5; clippy 0
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
