@@ -886,6 +886,27 @@ fn bloodgift_demon_draws_and_loses_one_at_upkeep() {
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
 
+/// Bloodgift Demon — "TARGET player draws a card and loses 1 life": aimed at
+/// an opponent, that player draws and loses the life.
+#[test]
+fn bloodgift_demon_can_target_an_opponent() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodgift_demon());
+    g.add_card_to_library(1, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.players[0].wants_ui = true;
+    let (life, hand) = (g.players[1].life, g.players[1].hand.len());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    assert!(g.pending_decision.is_some(), "the target is asked for");
+    g.submit_decision(DecisionAnswer::Target(Target::Player(1))).expect("target the opponent");
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].hand.len(), g.players[1].life), (hand + 1, life - 1));
+}
+
 // ── Tap-to-ping / pump-grant / vanilla bodies (claude/modern_decks) ──────────
 
 #[test]

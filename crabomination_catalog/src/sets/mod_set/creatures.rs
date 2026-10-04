@@ -3570,8 +3570,8 @@ pub fn abyssal_specter() -> CardDefinition {
 }
 
 /// Bloodgift Demon — {3}{B}{B} 5/4 Demon, Flying. At the beginning of your
-/// upkeep, draw a card and lose 1 life. (Printed "target player" collapses
-/// to the controller — the usual line.)
+/// upkeep, target player draws a card and loses 1 life (the Sign in Blood
+/// shape: usually you, an opponent at 1 life when it kills).
 pub fn bloodgift_demon() -> CardDefinition {
     CardDefinition {
         name: "Bloodgift Demon",
@@ -3591,11 +3591,11 @@ pub fn bloodgift_demon() -> CardDefinition {
             ),
             effect: Effect::Seq(vec![
                 Effect::Draw {
-                    who: Selector::You,
+                    who: target_filtered(SelectionRequirement::Player),
                     amount: Value::Const(1),
                 },
                 Effect::LoseLife {
-                    who: Selector::You,
+                    who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::Const(1),
                 },
             ]),
