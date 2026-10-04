@@ -74,10 +74,12 @@ fn cr_509_1b_land_restriction_reads_the_attacking_player() {
     g.perform_action(GameAction::DeclareBlockers(vec![(hound, attacker)])).expect("2 > 1");
 }
 
-/// CR 122.5 — Doubling Season doesn't apply to counters that are *moved*: the
-/// pile Spike Cannibal absorbs arrives at its original size.
+/// CR 122.5 — moved counters are put onto Spike Cannibal, so Doubling Season
+/// doubles the pile it absorbs (Bioshift / Daghatar / Nesting Grounds
+/// rulings); the donor is left with none. This test once asserted the
+/// opposite reading.
 #[test]
-fn cr_122_5_moving_counters_is_not_creating_them() {
+fn cr_122_5_moved_counters_take_doubling_season() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::doubling_season());
     let donor = g.add_card_to_battlefield_with_counters(1, catalog::spike_rogue());
@@ -88,9 +90,10 @@ fn cr_122_5_moving_counters_is_not_creating_them() {
     g.resolve_effect(&etb, &ctx).expect("etb");
     assert_eq!(
         g.battlefield_find(cannibal).unwrap().counter_count(CounterType::PlusOnePlusOne),
-        2,
-        "moved, not doubled"
+        4,
+        "two moved, put on doubled"
     );
+    assert_eq!(g.battlefield_find(donor).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "the donor's are gone");
 }
 
 /// CR 611.2c — the Licid's steal is scoped to the Aura staying attached, so

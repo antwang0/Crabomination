@@ -59,10 +59,13 @@ fn cr_303_4_aura_attached_self_trigger_is_source_specific() {
     assert_eq!(saprolings, 4, "only the enchanted Bramble's attach trigger fired");
 }
 
-/// CR 122.5 — moving counters preserves counter identity (it's not "putting"
-/// counters), so `Doubling Season` does not double the moved amount.
+/// CR 122.5 — to move a counter is to remove it and *put it onto* the second
+/// object, so the CR 614.16 replacements apply there: Doubling Season doubles
+/// the moved counter (Bioshift 2013-01-24, Daghatar 2014-11-24, Nesting
+/// Grounds 2020-04-17: "any abilities that care about a counter being placed
+/// … will apply"). This test once asserted the opposite reading.
 #[test]
-fn cr_122_5_moving_counters_is_not_doubled_by_doubling_season() {
+fn cr_122_5_moving_counters_is_doubled_by_doubling_season() {
     let mut g = two_player_game();
     let _ds = g.add_card_to_battlefield(0, catalog::doubling_season());
     let gm = g.add_card_to_battlefield(0, catalog::simic_guildmage());
@@ -78,8 +81,13 @@ fn cr_122_5_moving_counters_is_not_doubled_by_doubling_season() {
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(dst).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
-        1,
-        "exactly one counter moved — Doubling Season doesn't apply to a move (CR 122.5)"
+        2,
+        "one counter moved, put on as two — Doubling Season applies to a move (CR 122.5)"
+    );
+    assert_eq!(
+        g.battlefield_find(src).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        0,
+        "the source gave up its one"
     );
 }
 

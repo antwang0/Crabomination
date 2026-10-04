@@ -8190,9 +8190,10 @@ impl GameState {
         if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
             c.turn_face_up();
             c.cast_x_value = x_value;
-            if megamorph {
-                c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
-            }
+        }
+        // CR 702.37b / 614.16 — megamorph's counter is a placement.
+        if megamorph {
+            self.place_counters(card_id, crate::card::CounterType::PlusOnePlusOne, 1);
         }
         self.run_as_turned_face_up(card_id, p, &mut events);
         // The returned events are dispatched once by `perform_action`; an extra

@@ -8222,6 +8222,75 @@ fn cr_614_16_token_entering_with_counters_takes_benevolent_hydra() {
     assert_eq!(pest.counter_count(CounterType::PlusOnePlusOne), 2, "one plus Benevolent Hydra's one");
 }
 
+/// CR 701.53a / 614.16 — an Incubator token is a noncreature artifact as its
+/// counters go on: Hardened Scales ("a creature you control") adds nothing,
+/// Winding Constrictor ("an artifact or creature") adds one.
+#[test]
+fn cr_701_53_incubator_counters_see_artifact_not_creature_replacements() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let incubate = |g: &mut GameState| {
+        let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+        g.resolve_effect(&Effect::Incubate { who: PlayerRef::You, amount: Value::Const(2) }, &ctx).unwrap();
+        g.battlefield.iter().find(|c| c.definition.name == "Incubator")
+            .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    assert_eq!(incubate(&mut g), Some(2), "Hardened Scales reads creatures only");
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winding_constrictor());
+    assert_eq!(incubate(&mut g), Some(3), "Winding Constrictor reaches the artifact");
+}
+
+/// CR 702.93a / 702.79a / 614.16 — undying and persist return the creature
+/// "with" a counter, an enters-with placement: Hardened Scales makes Young
+/// Wolf's +1/+1 two, and under Solemnity (CR 122.1) Kitchen Finks comes back
+/// with no -1/-1 counter at all.
+#[test]
+fn cr_702_93_undying_and_persist_counters_take_the_replacements() {
+    use crabomination::effect::{Effect, Selector};
+    let kill = |g: &mut GameState, id| {
+        let ctx = crabomination::game::effects::EffectContext::for_ability(id, 0, None);
+        g.resolve_effect(&Effect::Destroy { what: Selector::This }, &ctx).unwrap();
+        drain_stack(g);
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    let wolf = g.add_card_to_battlefield(0, catalog::young_wolf());
+    kill(&mut g, wolf);
+    assert_eq!(
+        g.battlefield_find(wolf).map(|c| c.counter_count(CounterType::PlusOnePlusOne)),
+        Some(2),
+        "undying's one plus Hardened Scales' one"
+    );
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::solemnity());
+    let finks = g.add_card_to_battlefield(0, catalog::kitchen_finks());
+    kill(&mut g, finks);
+    assert_eq!(
+        g.battlefield_find(finks).map(|c| c.counter_count(CounterType::MinusOneMinusOne)),
+        Some(0),
+        "persist returned it, but Solemnity kept the counter off"
+    );
+}
+
+/// CR 306.5b / 614.16 — a planeswalker's starting loyalty is a counter
+/// placement: under Doubling Season Jace Beleren enters with six.
+#[test]
+fn cr_306_5b_starting_loyalty_is_doubled_by_doubling_season() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doubling_season());
+    let jace = g.add_card_to_hand(0, catalog::jace_beleren());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jace, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Jace Beleren");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jace).map(|c| c.counter_count(CounterType::Loyalty)), Some(6));
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

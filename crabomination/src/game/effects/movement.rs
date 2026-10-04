@@ -182,14 +182,14 @@ impl GameState {
             }).flatten()
         }) {
             let (cid, kind) = shield;
-            if let Some(c) = self.battlefield_find_mut(cid) {
-                c.add_counters(kind, amount);
+            let n = self.place_counters(cid, kind, amount);
+            if n > 0 {
+                events.push(GameEvent::CounterAdded {
+                    card_id: cid,
+                    counter_type: kind,
+                    count: n, placer: self.resolution_causer,
+                });
             }
-            events.push(GameEvent::CounterAdded {
-                card_id: cid,
-                counter_type: kind,
-                count: amount, placer: self.resolution_causer,
-            });
             return true;
         }
         // CR 614 — Nefarious Lich: damage to its controller exiles
@@ -1060,14 +1060,15 @@ impl GameState {
         // Brace for Impact — one +1/+1 counter per point the shield soaked.
         if counters_for_target > 0
             && let Some(cid) = to_card
-            && let Some(c) = self.battlefield_find_mut(cid)
         {
-            c.add_counters(CounterType::PlusOnePlusOne, counters_for_target);
-            events.push(GameEvent::CounterAdded {
-                card_id: cid,
-                counter_type: CounterType::PlusOnePlusOne,
-                count: counters_for_target, placer: self.resolution_causer,
-            });
+            let n = self.place_counters(cid, CounterType::PlusOnePlusOne, counters_for_target);
+            if n > 0 {
+                events.push(GameEvent::CounterAdded {
+                    card_id: cid,
+                    counter_type: CounterType::PlusOnePlusOne,
+                    count: n, placer: self.resolution_causer,
+                });
+            }
         }
         if life_gain > 0 && let Some(p) = life_gain_to.or(to_player) {
             let applied = self.adjust_life_applied(p, life_gain as i32);
@@ -1466,10 +1467,8 @@ impl GameState {
             let unpreventable = how != crate::effect::DamageToCounters::Instead
                 && self.damage_is_unpreventable_now(source);
             let (grow, left) = crate::game::combat::damage_to_counters_split(how, unpreventable, amount);
+            let grow = self.place_counters(tgt, kind, grow);
             if grow > 0 {
-                if let Some(c) = self.battlefield_find_mut(tgt) {
-                    c.add_counters(kind, grow);
-                }
                 events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: grow, placer: self.resolution_causer });
             }
             if left == 0 {
@@ -1512,14 +1511,14 @@ impl GameState {
                 }))
             && !self.damage_is_unpreventable_now(source)
         {
-            if let Some(c) = self.battlefield_find_mut(tgt) {
-                c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+            let n = self.place_counters(tgt, crate::card::CounterType::PlusOnePlusOne, amount);
+            if n > 0 {
+                events.push(GameEvent::CounterAdded {
+                    card_id: tgt,
+                    counter_type: crate::card::CounterType::PlusOnePlusOne,
+                    count: n, placer: self.resolution_causer,
+                });
             }
-            events.push(GameEvent::CounterAdded {
-                card_id: tgt,
-                counter_type: crate::card::CounterType::PlusOnePlusOne,
-                count: amount, placer: self.resolution_causer,
-            });
             return;
         }
         // "…deals that much damage plus N instead" (Aether Revolt) — additive,
@@ -1836,6 +1835,14 @@ impl GameState {
                         cp.keywords().has_kw(&crate::card::Keyword::DamageBecomesMinusCounters)
                     });
                     let placer = self.resolution_causer;
+                    // CR 614.16 / 122.1 — wither's counters are a placement:
+                    // scaled (Vizier, doublers) and locked (Solemnity), read
+                    // before the mutable borrow.
+                    let wither_n = if (source_has_wither || victim_converts) && !self.counters_locked() {
+                        self.scaled_counter_count_on(cid, CounterType::MinusOneMinusOne, amount)
+                    } else {
+                        0
+                    };
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
@@ -1854,12 +1861,14 @@ impl GameState {
                         }
                     }
                     if (source_has_wither || victim_converts) && c.definition.is_creature() {
-                        c.add_counters(CounterType::MinusOneMinusOne, amount);
-                        events.push(GameEvent::CounterAdded {
-                            card_id: cid,
-                            counter_type: CounterType::MinusOneMinusOne,
-                            count: amount, placer,
-                        });
+                        if wither_n > 0 {
+                            c.add_counters(CounterType::MinusOneMinusOne, wither_n);
+                            events.push(GameEvent::CounterAdded {
+                                card_id: cid,
+                                counter_type: CounterType::MinusOneMinusOne,
+                                count: wither_n, placer,
+                            });
+                        }
                     } else {
                         c.damage += amount;
                         if source_has_deathtouch && c.definition.is_creature() {
@@ -2880,6 +2889,10 @@ impl GameState {
                         .base_loyalty
                         .saturating_sub(card.compleated_life_paid);
                     card.compleated_life_paid = 0;
+                    // CR 306.5b / 614.16 — entering with loyalty is a counter
+                    // placement: Doubling Season doubles it (lock aside:
+                    // Solemnity doesn't reach planeswalkers).
+                    let loyalty = self.scaled_counter_count(p, CounterType::Loyalty, loyalty, false);
                     if loyalty > 0 {
                         card.counters.insert(CounterType::Loyalty, loyalty);
                     } else {

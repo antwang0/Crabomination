@@ -2515,16 +2515,16 @@ impl GameState {
         // "Enters with N additional counters if it's a [type]" — part of the
         // copy replacement, so the counters are there as it enters.
         for (filter, kind, n) in &spec.extra_counters {
-            if self.evaluate_requirement_static(filter, &Target::Permanent(card_id), controller, Some(card_id))
-                && let Some(c) = self.battlefield_find_mut(card_id)
-            {
-                c.add_counters(*kind, *n);
-                events.push(GameEvent::CounterAdded {
-                    card_id,
-                    counter_type: *kind,
-                    count: *n,
-                    placer: Some(controller),
-                });
+            if self.evaluate_requirement_static(filter, &Target::Permanent(card_id), controller, Some(card_id)) {
+                let n = self.place_counters(card_id, *kind, *n);
+                if n > 0 {
+                    events.push(GameEvent::CounterAdded {
+                        card_id,
+                        counter_type: *kind,
+                        count: n,
+                        placer: Some(controller),
+                    });
+                }
             }
         }
         // "Enter TAPPED as a copy" (Vesuva): the tapping is part of this
@@ -4540,6 +4540,10 @@ impl GameState {
 
             Effect::DistributeCountersFromSource { kind, filter } => {
                 let Some(source) = ctx.source else { return Ok(()) };
+                // CR 122.5 — a move needs both halves; locked, nothing moves.
+                if self.counters_locked() {
+                    return Ok(());
+                }
                 let available =
                     self.battlefield_find(source).map(|c| c.counter_count(*kind)).unwrap_or(0);
                 if available == 0 {
@@ -4576,13 +4580,14 @@ impl GameState {
                         counter_type: *kind,
                         count: moved,
                     });
-                    if let Some(t) = self.battlefield_find_mut(*id) {
-                        t.add_counters(*kind, moved);
-                    }
+                    // CR 122.5 — the moved counters are put onto the
+                    // recipient, so the CR 614.16 chain applies (Bioshift's
+                    // 2013-01-24 ruling).
+                    let put = self.place_counters(*id, *kind, moved);
                     events.push(GameEvent::CounterAdded {
                         card_id: *id,
                         counter_type: *kind,
-                        count: moved, placer: self.resolution_causer,
+                        count: put, placer: self.resolution_causer,
                     });
                 }
                 Ok(())
@@ -6266,6 +6271,9 @@ impl GameState {
                 let me = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
+                    // CR 614.16 — a defense counter is a placement (Solemnity
+                    // doesn't reach battles, so no lock).
+                    let up = self.scaled_counter_count_on(cid, CounterType::Defense, 1);
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     if !c.definition.is_battle() {
                         continue;
@@ -6278,11 +6286,11 @@ impl GameState {
                             count: 1,
                         });
                     } else {
-                        c.add_counters(CounterType::Defense, 1);
+                        c.add_counters(CounterType::Defense, up);
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: CounterType::Defense,
-                            count: 1, placer: self.resolution_causer,
+                            count: up, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -6321,15 +6329,17 @@ impl GameState {
                     if !milled_insect {
                         break;
                     }
-                    if let Some(src) = ctx.source
-                        && let Some(c) = self.battlefield_find_mut(src)
-                    {
-                        c.add_counters(CounterType::Loyalty, 1);
-                        events.push(GameEvent::CounterAdded {
-                            card_id: src,
-                            counter_type: CounterType::Loyalty,
-                            count: 1, placer: self.resolution_causer,
-                        });
+                    // CR 614.16 — loyalty from an effect is a placement.
+                    if let Some(src) = ctx.source {
+                        let up = self.scaled_counter_count_on(src, CounterType::Loyalty, 1);
+                        if let Some(c) = self.battlefield_find_mut(src) {
+                            c.add_counters(CounterType::Loyalty, up);
+                            events.push(GameEvent::CounterAdded {
+                                card_id: src,
+                                counter_type: CounterType::Loyalty,
+                                count: up, placer: self.resolution_causer,
+                            });
+                        }
                     }
                 }
                 Ok(())
@@ -6537,6 +6547,10 @@ impl GameState {
             }
 
             Effect::MoveCounters { from, to, counter, amount } => {
+                // CR 122.5 — a move needs both halves; locked, nothing moves.
+                if self.counters_locked() {
+                    return Ok(());
+                }
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 let from_id = self
                     .resolve_selector(from, ctx)
@@ -6563,15 +6577,14 @@ impl GameState {
                                 counter_type: *counter,
                                 count: moved,
                             });
-                            // CR 122.5 — moving isn't "placing" for doubling
-                            // purposes; add the raw count.
-                            if let Some(t) = self.battlefield_find_mut(tid) {
-                                t.add_counters(*counter, moved);
-                            }
+                            // CR 122.5 — the moved counters are put onto the
+                            // recipient, so the CR 614.16 chain applies
+                            // (Bioshift's 2013-01-24 ruling).
+                            let put = self.place_counters(tid, *counter, moved);
                             events.push(GameEvent::CounterAdded {
                                 card_id: tid,
                                 counter_type: *counter,
-                                count: moved, placer: self.resolution_causer,
+                                count: put, placer: self.resolution_causer,
                             });
                         }
                     }
@@ -6609,7 +6622,7 @@ impl GameState {
                             _ => None,
                         })
                         .sum();
-                    let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, base + bonus, true);
+                    let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, base + bonus);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded {
@@ -8548,10 +8561,7 @@ impl GameState {
                     .filter(|id| self.battlefield_find(*id).is_some_and(|c| self.computed_is_creature(c)))
                     .collect();
                 for id in targets {
-                    let ctrl = self.battlefield_find(id).map(|c| c.controller);
-                    let n = ctrl
-                        .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, 1, true))
-                        .unwrap_or(1);
+                    let n = self.scaled_counter_count_on(id, CounterType::PlusOnePlusOne, 1);
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded {
@@ -11063,10 +11073,11 @@ impl GameState {
                             d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_)))
                         });
                     c.turn_face_up();
-                    if megamorph {
-                        c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
-                    }
                     let controller = c.controller;
+                    // CR 702.37b / 614.16 — megamorph's counter is a placement.
+                    if megamorph {
+                        self.place_counters(cid, crate::card::CounterType::PlusOnePlusOne, 1);
+                    }
                     self.run_as_turned_face_up(cid, controller, events);
                     events.push(GameEvent::TurnedFaceUp { card_id: cid });
                 }
@@ -12345,10 +12356,7 @@ impl GameState {
                     return Ok(());
                 }
                 // CR 614.16 — counter replacement effects scale monstrosity.
-                let ctrl = self.battlefield_find(src).map(|c| c.controller);
-                let count = ctrl
-                    .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, base, true))
-                    .unwrap_or(base);
+                let count = self.scaled_counter_count_on(src, CounterType::PlusOnePlusOne, base);
                 if let Some(c) = self.battlefield_find_mut(src) {
                     c.monstrous = true;
                     if count > 0 {
@@ -13293,8 +13301,7 @@ impl GameState {
                         } else {
                             // Nonland revealed (or empty library): +1/+1 counter.
                             // CR 614.16 — counter replacement effects apply.
-                            let n =
-                                self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, 1, true);
+                            let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, 1);
                             if let Some(c) = self.battlefield_find_mut(cid) {
                                 c.add_counters(CounterType::PlusOnePlusOne, n);
                                 events.push(GameEvent::CounterAdded {
@@ -16095,14 +16102,14 @@ impl GameState {
                             actor: Some(seat),
                             as_attacker: false,
                         });
-                        if let Some(c) = self.battlefield_find_mut(cid) {
-                            c.add_counters(*counter, 1);
+                        let put = self.place_counters(cid, *counter, 1);
+                        if put > 0 {
+                            events.push(GameEvent::CounterAdded {
+                                card_id: cid,
+                                counter_type: *counter,
+                                count: put, placer: self.resolution_causer,
+                            });
                         }
-                        events.push(GameEvent::CounterAdded {
-                            card_id: cid,
-                            counter_type: *counter,
-                            count: 1, placer: self.resolution_causer,
-                        });
                     }
                 }
                 Ok(())
@@ -16335,7 +16342,7 @@ impl GameState {
                     returned += 1;
                     self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
                     if *counters > 0 {
-                        let n = self.scaled_counter_count(p, crate::card::CounterType::PlusOnePlusOne, *counters, true);
+                        let n = self.scaled_counter_count_on(cid, crate::card::CounterType::PlusOnePlusOne, *counters);
                         if let Some(inst) = self.battlefield_find_mut(cid) {
                             inst.add_counters(crate::card::CounterType::PlusOnePlusOne, n);
                         }
@@ -17198,13 +17205,14 @@ impl GameState {
                 // Moment phase things out until they leave and count nothing.
                 if *until_source_leaves && phased > 0
                     && let Some(sid) = source
-                    && let Some(src) = self.battlefield_find_mut(sid)
-                    && src.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Vanishing(_))) {
-                        src.add_counters(crate::card::CounterType::Time, phased);
+                    && self.battlefield_find(sid).is_some_and(|src| {
+                        src.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Vanishing(_)))
+                    }) {
+                        let put = self.place_counters(sid, crate::card::CounterType::Time, phased);
                         events.push(GameEvent::CounterAdded {
                             card_id: sid,
                             counter_type: crate::card::CounterType::Time,
-                            count: phased, placer: self.resolution_causer,
+                            count: put, placer: self.resolution_causer,
                         });
                     }
                 Ok(())
@@ -17969,8 +17977,8 @@ impl GameState {
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 if let Some(c) = self.battlefield.find_by_id_mut(src) {
                     c.definition_make_mut().subtypes.creature_types = types.clone();
-                    c.add_counters(*kind, *amount);
                 }
+                self.place_counters(src, *kind, *amount);
                 Ok(())
             }
 
@@ -17984,9 +17992,7 @@ impl GameState {
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
-                if let Some(c) = self.battlefield.find_by_id_mut(src) {
-                    c.add_counters(*kind, *amount);
-                }
+                self.place_counters(src, *kind, *amount);
                 Ok(())
             }
 
@@ -19138,8 +19144,7 @@ impl GameState {
                     let base = c.definition.base_power().saturating_add(c.perm_power_bonus);
                     let diff = c.power().saturating_sub(base).max(0);
                     if diff == 0 { continue; }
-                    let ctrl = c.controller;
-                    let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, diff as u32, true);
+                    let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, diff as u32);
                     if n == 0 { continue; }
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
@@ -19647,11 +19652,13 @@ impl GameState {
                             c.keyword_counters.add(kw.clone(), 1);
                         }
                         events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1, placer: self.resolution_causer });
-                    } else if let Some(c) = self.battlefield_find_mut(cid) {
-                        c.add_counters(CounterType::PlusOnePlusOne, 1);
-                        events.push(GameEvent::CounterAdded {
-                            card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: self.resolution_causer,
-                        });
+                    } else {
+                        let put = self.place_counters(cid, CounterType::PlusOnePlusOne, 1);
+                        if put > 0 {
+                            events.push(GameEvent::CounterAdded {
+                                card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: put, placer: self.resolution_causer,
+                            });
+                        }
                     }
                 }
                 Ok(())
@@ -19742,6 +19749,17 @@ impl GameState {
                     };
                     self.board_instance_keywords |= taken_kw.iter().any(|(_, n)| *n > 0);
                     let placer = self.resolution_causer;
+                    // CR 122.5 / 614.16 — the moved counters are put onto
+                    // `dst`, so the replacement chain scales each kind
+                    // (Bioshift's 2013-01-24 ruling).
+                    let locked = self.counters_locked();
+                    let taken: Vec<(crate::card::CounterType, u32)> = taken
+                        .into_iter()
+                        .map(|(kind, n)| {
+                            let n = if locked || n == 0 { 0 } else { self.scaled_counter_count_on(dst, kind, n) };
+                            (kind, n)
+                        })
+                        .collect();
                     if let Some(d) = self.battlefield_find_mut(dst) {
                         for (kind, n) in taken {
                             if n > 0 {
@@ -19769,10 +19787,11 @@ impl GameState {
             }
 
             Effect::MoveCounter { from, to, kind, amount } => {
-                // CR 122.5: moving counters is a single zone-internal
-                // transfer, not a remove-then-add (DoubleCounters does
-                // NOT apply). The actual move is clamped at the source's
-                // current counter pool.
+                // CR 122.5: a move removes the counters and puts them onto
+                // the second object, so the CR 614.16 chain applies there
+                // (Bioshift's 2013-01-24 ruling); locked, nothing moves. The
+                // actual move is clamped at the source's current pool.
+                if self.counters_locked() { return Ok(()); }
                 let request = self.evaluate_value(amount, ctx).max(0) as u32;
                 if request == 0 { return Ok(()); }
                 // Pick the source (singular — moves typically target one
@@ -19795,15 +19814,14 @@ impl GameState {
                 events.push(GameEvent::CounterRemoved {
                     card_id: src_cid, counter_type: *kind, count: removed,
                 });
-                // Pick the first destination and add the removed counter
-                // count (no doubling per CR 122.5 — moves preserve the
-                // counter identity, they're not "put counters").
+                // Pick the first destination and put the removed counters
+                // on it through the CR 614.16 chain.
                 for ent in self.resolve_selector(to, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
-                        && let Some(d) = self.battlefield_find_mut(cid) {
-                            d.add_counters(*kind, removed);
+                        && self.battlefield_find(cid).is_some() {
+                            let put = self.place_counters(cid, *kind, removed);
                             events.push(GameEvent::CounterAdded {
-                                card_id: cid, counter_type: *kind, count: removed, placer: self.resolution_causer,
+                                card_id: cid, counter_type: *kind, count: put, placer: self.resolution_causer,
                             });
                             break;
                         }
@@ -21026,10 +21044,8 @@ impl GameState {
                         c.attached_to = Some(host);
                     }
                 }
-                if let Some(c) = self.battlefield_find_mut(host) {
-                    for (kind, n) in noted {
-                        c.add_counters(kind, n);
-                    }
+                for (kind, n) in noted {
+                    self.place_counters(host, kind, n);
                 }
                 Ok(())
             }
@@ -22112,8 +22128,7 @@ impl GameState {
                         let id = self.mint_token_onto_battlefield(def, p, false, events);
                         if n > 0 && self.battlefield.find_by_id(id).is_some() {
                             // CR 614.16 — counter replacements apply to the +1/+1s.
-                            let scaled =
-                                self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
+                            let scaled = self.scaled_counter_count_on(id, CounterType::PlusOnePlusOne, n);
                             if let Some(c) = self.battlefield_find_mut(id) {
                                 c.add_counters(CounterType::PlusOnePlusOne, scaled);
                             }
@@ -22164,8 +22179,7 @@ impl GameState {
                 };
                 // CR 614.16 — counter replacement effects apply to the amass.
                 if n > 0 && self.battlefield.find_by_id(army).is_some() {
-                    let scaled =
-                        self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
+                    let scaled = self.scaled_counter_count_on(army, CounterType::PlusOnePlusOne, n);
                     if let Some(c) = self.battlefield_find_mut(army) {
                         c.add_counters(CounterType::PlusOnePlusOne, scaled);
                     }
@@ -22228,7 +22242,7 @@ impl GameState {
                 };
                 // CR 614.16 — counter replacement effects apply.
                 if n > 0 && self.battlefield.find_by_id(jace).is_some() {
-                    let scaled = self.scaled_counter_count(p, CounterType::Loyalty, n, true);
+                    let scaled = self.scaled_counter_count_on(jace, CounterType::Loyalty, n);
                     if let Some(c) = self.battlefield_find_mut(jace) {
                         c.add_counters(CounterType::Loyalty, scaled);
                     }
@@ -27956,13 +27970,13 @@ impl GameState {
                     ctx, events,
                 );
                 if let Some(c) = self.battlefield.find_by_id_mut(id) {
-                    c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     // "…a black Zombie in addition to its other types."
                     let def = c.definition_make_mut();
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
                         def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
                     }
                 }
+                self.place_counters(id, crate::card::CounterType::PlusOnePlusOne, 1);
                 // The added black is a layer-5 colour-add. Sourced to the
                 // reanimated creature so it is swept when that creature leaves
                 // (the one-shot doesn't depend on the Betrayal sticking around).
@@ -29322,14 +29336,12 @@ impl GameState {
                         let left = (n_tokens - i) as u32;
                         remaining.div_ceil(left)
                     };
-                    if share > 0
-                        && let Some(c) = self.battlefield_find_mut(*cid)
-                    {
-                        c.add_counters(*kind, share);
+                    if share > 0 && self.battlefield_find(*cid).is_some() {
+                        let put = self.place_counters(*cid, *kind, share);
                         events.push(GameEvent::CounterAdded {
                             card_id: *cid,
                             counter_type: *kind,
-                            count: share, placer: self.resolution_causer,
+                            count: put, placer: self.resolution_causer,
                         });
                         remaining -= share;
                     }
@@ -30871,10 +30883,9 @@ impl GameState {
                         }
                     }
                 }
-                if moved > 0
-                    && let Some(c) = self.battlefield.find_by_id_mut(dest)
-                {
-                    c.add_counters(*kind, moved);
+                // CR 122.5 / 614.16 — moved counters are put onto `dest`.
+                if moved > 0 {
+                    self.place_counters(dest, *kind, moved);
                 }
                 Ok(())
             }
@@ -31126,10 +31137,8 @@ impl GameState {
                     if self.battlefield_find(cid).is_none() {
                         continue;
                     }
-                    if let Some(k) = counter
-                        && let Some(c) = self.battlefield_find_mut(cid)
-                    {
-                        c.add_counters(*k, 1);
+                    if let Some(k) = counter {
+                        self.place_counters(cid, *k, 1);
                     }
                     for t in extra_types {
                         let ts = self.next_timestamp();
@@ -35676,13 +35685,11 @@ impl GameState {
                         DecisionAnswer::Mode(i) if i < KINDS.len() => i,
                         _ => 1,
                     };
-                    if let Some(c) = self.battlefield_find_mut(source) {
-                        c.add_counters(KINDS[pick], 1);
-                    }
+                    let put = self.place_counters(source, KINDS[pick], 1);
                     events.push(GameEvent::CounterAdded {
                         card_id: source,
                         counter_type: KINDS[pick],
-                        count: 1, placer: self.resolution_causer,
+                        count: put, placer: self.resolution_causer,
                     });
                 }
                 Ok(())
@@ -44255,12 +44262,15 @@ impl GameState {
                             .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
                             .map(|c| c.id);
                         if let Some(cid) = pick {
+                            // CR 614.16 — a cost that puts counters is a
+                            // placement (Vizier of Remedies shaves it).
+                            let put = self.scaled_counter_count_on(cid, CounterType::MinusOneMinusOne, *n);
                             if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.add_counters(CounterType::MinusOneMinusOne, *n);
+                                c.add_counters(CounterType::MinusOneMinusOne, put);
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
                                     counter_type: CounterType::MinusOneMinusOne,
-                                    count: *n, placer: self.resolution_causer,
+                                    count: put, placer: self.resolution_causer,
                                 });
                             }
                             self.check_state_based_actions_mid_resolution(events);

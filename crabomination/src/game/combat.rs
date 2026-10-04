@@ -4796,17 +4796,17 @@ impl GameState {
                         b.damaged_by_this_turn.push(atk.id);
                     }
                     if atk.has_infect || atk.has_wither {
-                        if dealt > 0
-                            && let Some(blocker) = self.battlefield_find_mut(blocker_id)
-                        {
-                            blocker.add_counters(
-                                crate::card::CounterType::MinusOneMinusOne,
-                                dealt as u32,
-                            );
+                        // CR 614.16 / 122.1 — the counters are a placement.
+                        let n = if dealt > 0 {
+                            self.place_counters(blocker_id, crate::card::CounterType::MinusOneMinusOne, dealt as u32)
+                        } else {
+                            0
+                        };
+                        if n > 0 {
                             events.push(GameEvent::CounterAdded {
                                 card_id: blocker_id,
                                 counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                count: dealt as u32, placer: Some(atk.controller),
+                                count: n, placer: Some(atk.controller),
                             });
                         }
                     } else if dealt > 0
@@ -4987,18 +4987,26 @@ impl GameState {
                             || bc.keywords().has_kw(&Keyword::Infect)
                             || bc.keywords().has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
+                        // CR 614.16 / 122.1 — infect/wither counters are a
+                        // placement, scaled before the mutable borrow.
+                        let infect_n = if infect && !self.counters_locked() {
+                            self.scaled_counter_count_on(hit, crate::card::CounterType::MinusOneMinusOne, dmg)
+                        } else {
+                            0
+                        };
                         if let Some(attacker) = self.battlefield_find_mut(hit) {
                             attacker.dealt_damage_this_turn = true;
                             attacker.damage_dealt_to_this_turn += dmg;
                             attacker.damaged_by_this_turn.push(bid);
                             if infect {
-                                attacker
-                                    .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
-                                events.push(GameEvent::CounterAdded {
-                                    card_id: hit,
-                                    counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                    count: dmg, placer: Some(bc.controller),
-                                });
+                                if infect_n > 0 {
+                                    attacker.add_counters(crate::card::CounterType::MinusOneMinusOne, infect_n);
+                                    events.push(GameEvent::CounterAdded {
+                                        card_id: hit,
+                                        counter_type: crate::card::CounterType::MinusOneMinusOne,
+                                        count: infect_n, placer: Some(bc.controller),
+                                    });
+                                }
                             } else {
                                 attacker.damage += dmg;
                                 attacker.record_damage_from(bid, dmg);
@@ -5271,10 +5279,8 @@ impl GameState {
             && self.damage_is_unpreventable_now(Some(source));
         let (grow, left) = damage_to_counters_split(how, unpreventable, dealt as u32);
         let grow = if per { grow } else { grow.min(1) };
+        let grow = self.place_counters(recipient, kind, grow);
         if grow > 0 {
-            if let Some(c) = self.battlefield_find_mut(recipient) {
-                c.add_counters(kind, grow);
-            }
             events.push(GameEvent::CounterAdded {
                 card_id: recipient,
                 counter_type: kind,
@@ -5637,14 +5643,14 @@ impl GameState {
                         })
                     })
                 {
-                    if let Some(c) = self.battlefield_find_mut(atk.id) {
-                        c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+                    let n = self.place_counters(atk.id, crate::card::CounterType::PlusOnePlusOne, amount);
+                    if n > 0 {
+                        events.push(GameEvent::CounterAdded {
+                            card_id: atk.id,
+                            counter_type: crate::card::CounterType::PlusOnePlusOne,
+                            count: n, placer: self.resolution_causer,
+                        });
                     }
-                    events.push(GameEvent::CounterAdded {
-                        card_id: atk.id,
-                        counter_type: crate::card::CounterType::PlusOnePlusOne,
-                        count: amount, placer: self.resolution_causer,
-                    });
                     self.mill_instead_of_combat_damage(p, amount, events);
                     return 0;
                 }

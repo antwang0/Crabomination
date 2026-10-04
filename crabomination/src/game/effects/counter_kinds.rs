@@ -317,10 +317,9 @@ impl GameState {
                         continue;
                     }
                     events.push(GameEvent::CounterRemoved { card_id: src, counter_type: k, count: moved });
-                    if let Some(d) = self.battlefield_find_mut(dst) {
-                        d.add_counters(k, moved);
-                    }
-                    events.push(GameEvent::CounterAdded { card_id: dst, counter_type: k, count: moved, placer });
+                    // CR 122.5 / 614.16 — moved counters are put onto `dst`.
+                    let put = self.place_counters(dst, k, moved);
+                    events.push(GameEvent::CounterAdded { card_id: dst, counter_type: k, count: put, placer });
                 }
                 CounterKind::Keyword(k) => {
                     let moved = s.keyword_counters.remove_up_to(&k, n);

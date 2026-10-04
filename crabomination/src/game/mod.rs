@@ -7540,7 +7540,7 @@ impl GameState {
             return;
         }
         self.permanents_amplified_counter_this_turn.insert(cid);
-        let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, 1, true);
+        let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, 1);
         if n == 0 {
             return;
         }
@@ -7664,6 +7664,25 @@ impl GameState {
             }
         }
         self.scaled_counter_count(ctrl, kind, base, is_creature)
+    }
+
+    /// Put `base` `kind` counters on battlefield permanent `cid` through the
+    /// CR 122.1 lock (Solemnity) and the CR 614.16 chain
+    /// ([`Self::scaled_counter_count_on`]); returns how many went on (0 when
+    /// locked, gone or scaled away). The caller pushes its own event. For a
+    /// site with no rider of its own between the scaling and the add.
+    pub(crate) fn place_counters(&mut self, cid: CardId, kind: crate::card::CounterType, base: u32) -> u32 {
+        if base == 0 || self.counters_locked() {
+            return 0;
+        }
+        let n = self.scaled_counter_count_on(cid, kind, base);
+        match self.battlefield_find_mut(cid) {
+            Some(c) if n > 0 => {
+                c.add_counters(kind, n);
+                n
+            }
+            _ => 0,
+        }
     }
 
     /// CR 614.16 scaling for player-bound counters (poison): Winding
@@ -8116,11 +8135,11 @@ impl GameState {
             self.apply_bloodthirst_etb(cid, bloodthirst, events);
         }
         let Some((kind, n)) = spec else { return };
+        // CR 614.1c / 614.16 — "enters with" counters take the chain and the
+        // CR 122.1 lock.
+        let n = self.place_counters(cid, kind, n);
         if n == 0 {
             return;
-        }
-        if let Some(card_mut) = self.battlefield_find_mut(cid) {
-            card_mut.add_counters(kind, n);
         }
         events.push(crate::game::GameEvent::CounterAdded {
             card_id: cid,
@@ -8136,7 +8155,7 @@ impl GameState {
     fn apply_bloodthirst_etb(&mut self, cid: CardId, n: u32, events: &mut Vec<crate::game::GameEvent>) {
         use crate::card::CounterType;
         let Some(card) = self.battlefield_find(cid) else { return };
-        let (controller, is_creature) = (card.controller, self.computed_is_creature(card));
+        let controller = card.controller;
         if self.counters_locked() {
             return;
         }
@@ -8148,7 +8167,7 @@ impl GameState {
         if !bled {
             return;
         }
-        let n = self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, n, is_creature);
+        let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, n);
         if let Some(card_mut) = self.battlefield_find_mut(cid) {
             card_mut.add_counters(CounterType::PlusOnePlusOne, n);
         }
@@ -8194,7 +8213,11 @@ impl GameState {
             return;
         }
         card.impending_counters = 0;
-        card.add_counters(CounterType::Time, n);
+        // CR 614.1c / 614.16 — the chain and the CR 122.1 lock.
+        let n = self.place_counters(cid, CounterType::Time, n);
+        if n == 0 {
+            return;
+        }
         events.push(crate::game::GameEvent::CounterAdded {
             card_id: cid,
             counter_type: CounterType::Time,
@@ -8346,14 +8369,16 @@ impl GameState {
             })
         };
         for (id, cost) in affected {
-            if let Some(c) = self.battlefield_find_mut(id) {
-                c.add_counters(CounterType::Age, 1);
+            // CR 702.24a / 614.16 — the age counter is a placement: doubled
+            // under Doubling Season, never put on under Solemnity (CR 122.1).
+            let put = self.place_counters(id, CounterType::Age, 1);
+            if put > 0 {
+                events.push(crate::game::GameEvent::CounterAdded {
+                    card_id: id,
+                    counter_type: CounterType::Age,
+                    count: put, placer: self.resolution_causer,
+                });
             }
-            events.push(crate::game::GameEvent::CounterAdded {
-                card_id: id,
-                counter_type: CounterType::Age,
-                count: 1, placer: self.resolution_causer,
-            });
             let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
             // A wants_ui controller gets a real pay-or-sacrifice trigger for
             // mana/life/graveyard cumulative upkeeps (coin-flip and sacrifice kinds have
@@ -8432,13 +8457,11 @@ impl GameState {
                 }
                 CumulativeUpkeepCost::PutCounterOnSelf(kind) => {
                     // Always payable — the permanent pays with its own body.
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.add_counters(*kind, n);
-                    }
+                    let put = self.place_counters(id, *kind, n);
                     events.push(crate::game::GameEvent::CounterAdded {
                         card_id: id,
                         counter_type: *kind,
-                        count: n, placer: self.resolution_causer,
+                        count: put, placer: self.resolution_causer,
                     });
                     true
                 }
@@ -10243,13 +10266,11 @@ impl GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::CollectsLeaverCounters))
         });
         let Some(cid) = collector.map(|c| c.id) else { return };
+        // CR 122.8 / 614.16 — "put the same number of each kind": a
+        // placement per kind, through the chain.
         let counters = card.counters.clone();
-        if let Some(c) = self.battlefield_find_mut(cid) {
-            for (kind, n) in counters {
-                if n > 0 {
-                    c.add_counters(kind, n);
-                }
-            }
+        for (kind, n) in counters {
+            self.place_counters(cid, kind, n);
         }
     }
 
@@ -20481,9 +20502,7 @@ impl GameState {
                 },
                 events,
             );
-            if let Some(c) = self.battlefield_find_mut(card_id) {
-                c.add_counters(kind, n);
-            }
+            self.place_counters(card_id, kind, n);
             return true;
         }
 
@@ -20838,9 +20857,8 @@ impl GameState {
         }
         let mut events = self.pay_action_mana(seat, &cost)?;
         self.discard_card(seat, card_id, &mut events);
-        if let Some(c) = self.battlefield.find_by_id_mut(tid) {
-            c.add_counters(CounterType::PlusOnePlusOne, n);
-        }
+        // CR 702.77a / 614.16 — reinforce's counters are a placement.
+        self.place_counters(tid, CounterType::PlusOnePlusOne, n);
         Ok(events)
     }
 
@@ -29398,11 +29416,11 @@ impl GameState {
                 },
                 &mut events,
             );
-            if let Some(kind) = counter
-                && let Some(c) = self.battlefield_find_mut(cid)
-            {
-                c.add_counters(kind, 1);
-                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: 1, placer: self.resolution_causer });
+            if let Some(kind) = counter {
+                let put = self.place_counters(cid, kind, 1);
+                if put > 0 {
+                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: put, placer: self.resolution_causer });
+                }
             }
             return Ok(events);
         }

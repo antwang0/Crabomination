@@ -2588,6 +2588,11 @@ impl GameState {
                             .base_loyalty
                             .saturating_sub(card.compleated_life_paid);
                         card.compleated_life_paid = 0;
+                        // CR 306.5b / 614.16 — entering with loyalty is a
+                        // counter placement: Doubling Season doubles it.
+                        let loyalty = self.scaled_counter_count(
+                            caster, crate::card::CounterType::Loyalty, loyalty, false,
+                        );
                         if loyalty > 0 {
                             card.counters
                                 .insert(crate::card::CounterType::Loyalty, loyalty);
@@ -8327,9 +8332,8 @@ impl GameState {
             // Ravenous Slime's counters, when the creature really went to exile.
             if let (Some(src), crate::card::Zone::Exile) = (slime_redirect, resolved)
                 && slime_power > 0
-                && let Some(s) = self.battlefield_find_mut(src)
             {
-                s.add_counters(crate::card::CounterType::PlusOnePlusOne, slime_power);
+                self.place_counters(src, crate::card::CounterType::PlusOnePlusOne, slime_power);
             }
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
@@ -8930,10 +8934,13 @@ impl GameState {
                 self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
             returned.damage = 0;
             returned.summoning_sick = true;
-            returned.add_counters(kind, 1);
             let rid = returned.id;
             events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
             self.battlefield.push(returned);
+            // CR 702.79a / 702.93a — it returns "with" the counter: an
+            // enters-with placement, so the CR 614.16 chain (Hardened Scales
+            // makes undying's two) and the CR 122.1 lock apply.
+            self.place_counters(rid, kind, 1);
             self.tally_permanent_entry(rid);
             events.push(GameEvent::PermanentEntered { card_id: rid });
         }
