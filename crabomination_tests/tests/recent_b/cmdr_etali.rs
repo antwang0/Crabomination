@@ -860,6 +860,47 @@ fn evendo_brushrazer_land_sac_exiles_a_playable_card() {
     assert!(g.battlefield_find(top).is_some(), "cast from exile for its own {{1}}{{G}}");
 }
 
+/// Evendo's play permission is a static of the creature's (CR 611.3a): a card
+/// exiled on an opponent's turn waits for your turn AND a nontoken sacrifice
+/// on it, which opens every card exiled with Evendo; when Evendo leaves the
+/// battlefield, its cards can't be played.
+#[test]
+fn evendo_brushrazer_opens_its_exiles_on_your_turn_after_a_sacrifice() {
+    let live = |g: &GameState, id: CardId| g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some_and(|p| p.player == 0));
+    let mut g = b_main_phase();
+    let ev = g.add_card_to_battlefield(0, catalog::evendo_brushrazer());
+    g.clear_sickness(ev);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    // The opponent's turn: the sacrifice exiles a card, which stays shut.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    b_activate(&mut g, ev, 0);
+    drain_stack(&mut g);
+    let first = g.exile.iter().find(|c| c.exiled_with == Some(ev)).map(|c| c.id).expect("exiled");
+    assert!(!live(&g, first), "not your turn");
+    // Your turn, nothing sacrificed yet: still shut.
+    g.active_player_idx = 0;
+    g.turn_number += 1;
+    g.players[0].nontoken_sacrificed_this_turn = 0;
+    g.priority.player_with_priority = 0;
+    assert!(!live(&g, first));
+    g.clear_sickness(ev);
+    g.battlefield_find_mut(ev).unwrap().tapped = false;
+    b_activate(&mut g, ev, 0);
+    drain_stack(&mut g);
+    assert!(live(&g, first), "a nontoken sacrifice on your turn opens the earlier card too");
+    // Evendo leaves: its cards are shut for good.
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![ev]) };
+    let ev_ = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).expect("destroy");
+    g.dispatch_triggers_for_events(&ev_);
+    assert!(!live(&g, first), "gone with Evendo");
+}
+
 /// Tibalt's Trickery counters, mills the random count (a scripted d3 = 2),
 /// then casts the next nonland card for free and bottoms the passed-over land.
 #[test]

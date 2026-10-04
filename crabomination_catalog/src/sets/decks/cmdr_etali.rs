@@ -987,18 +987,10 @@ pub fn professional_face_breaker() -> CardDefinition {
 /// your turn, as long as you've sacrificed a nontoken permanent this turn, you
 /// may play cards exiled with this creature. {T}, Sacrifice a land: Add {R}{R}.
 ///
-/// The trigger exiles the top card linked to this creature
-/// (`ExileTopOfLibrary { link_to_source }`). On your turn, the same trigger
-/// then grants a play-this-turn permission, paying the card's own cost, to
-/// *every* card exiled with it (`GrantMayPlay(CardExiledWithSource)`). The
-/// trigger is itself the "you've sacrificed a nontoken permanent this turn"
-/// event, so from the first such sacrifice on your turn every linked card is
-/// playable until end of turn. That covers cards exiled on earlier turns and
-/// on opponents' turns.
-/// Approximation: the static is event-driven. A nontoken sacrifice made on
-/// your turn while this creature wasn't on the battlefield doesn't open the
-/// window, and the window stays open for the rest of the turn even if this
-/// creature leaves.
+/// The trigger exiles the top card linked to this creature with a
+/// `HolderTurnsAfterNontokenSacrifice` grant: live on your turn once you've
+/// sacrificed a nontoken permanent (whoever's trigger saw it), parked between
+/// turns, and gone with this creature (CR 611.3a).
 pub fn evendo_brushrazer() -> CardDefinition {
     CardDefinition {
         name: "Evendo Brushrazer",
@@ -1016,26 +1008,15 @@ pub fn evendo_brushrazer() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::NotToken,
                 }),
-            effect: Effect::Seq(vec![
-                Effect::ExileTopOfLibrary {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                    link_to_source: true,
-                    face_down: false,
-                },
-                Effect::If {
-                    cond: Predicate::IsTurnOf(PlayerRef::You),
-                    then: Box::new(Effect::GrantMayPlay {
-                        what: Selector::CardExiledWithSource,
-                        duration: MayPlayDuration::EndOfThisTurn,
-                        to_owner: false,
-                        exile_after: false,
-                        pay_own_cost: true,
-                        any_color: false,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::HolderTurnsAfterNontokenSacrifice { holder: 0, source: crate::card::CardId(0) },
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
