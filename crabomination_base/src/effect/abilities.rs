@@ -86,6 +86,10 @@ pub enum DamageToCounters {
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
     PumpPT { applies_to: Selector, power: i32, toughness: i32 },
+    /// "Each creature you control gets +`per_power`/+0 for each time it has
+    /// attacked this turn" (Moraug, Fury of Akoum): per object, read off
+    /// `CardInstance::times_attacked_this_turn` in layer 7c.
+    PumpPowerPerTimesAttackedThisTurn { applies_to: Selector, per_power: i32 },
     /// Anthem scaled by the counters on the *source*: everything the
     /// selector picks gets +(n×per_power)/+(n×per_toughness) where n is the
     /// source's `kind`-counter count (Joraga Warcaller's "Other Elf

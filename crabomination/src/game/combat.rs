@@ -2110,6 +2110,7 @@ impl GameState {
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
             card.attacked_own_turn = true;
+            card.times_attacked_this_turn = card.times_attacked_this_turn.saturating_add(1);
             // Territorial Hellkite's record of whom it attacked this combat.
             if let AttackTarget::Player(d) = atk.target
                 && card.cold_any(|k| k.combat_defenders.as_ref().is_some_and(|v| !v.contains(&d)))

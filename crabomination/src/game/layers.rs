@@ -172,6 +172,8 @@ pub enum Modification {
     /// creature types, capped at `max` types (Diligent Zookeeper). Reads the
     /// layer-4 computed creature types of the same card.
     ModifyPtPerOwnCreatureType(i32, i32, u32),
+    /// +N/+0 for each time the permanent has attacked this turn (Moraug).
+    ModifyPowerPerTimesAttacked(i32),
     /// 7c — +per_power/+per_toughness for each of the affected creature's own
     /// colors, only while it has two or more (Knight of New Alara). Reads the
     /// layer-5 computed colors of the same card.
@@ -270,6 +272,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         | M::ModifyToughness(_)
         | M::ModifyPowerToughness(..)
         | M::ModifyPtPerOwnCreatureType(..)
+        | M::ModifyPowerPerTimesAttacked(_)
         | M::ModifyPtPerOwnColorIfMulticolored(..)
         | M::SwitchPowerToughness => 0,
     };
@@ -1401,6 +1404,9 @@ fn compute_permanent_pass(
                 let n = (subtypes.creature_types.len() as u32).min(*max) as i32;
                 mod_power += pp * n;
                 mod_toughness += pt * n;
+            }
+            Modification::ModifyPowerPerTimesAttacked(pp) => {
+                mod_power += pp * i32::from(card.times_attacked_this_turn);
             }
             Modification::ModifyPtPerOwnColorIfMulticolored(pp, pt) => {
                 // Colors are final at layer 5, before this layer-7 effect.

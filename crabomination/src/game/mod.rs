@@ -31499,6 +31499,19 @@ fn static_effect_to_effects(
                     });
                 }
             }
+            StaticEffect::PumpPowerPerTimesAttackedThisTurn { applies_to, per_power } => {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerPerTimesAttacked(*per_power),
+                    });
+                }
+            }
             StaticEffect::PumpPTPerOwnCreatureType { applies_to, per_power, per_toughness, max } => {
                 if let Some(affected) = selector_to_affected(applies_to, card) {
                     out.push(ContinuousEffect {

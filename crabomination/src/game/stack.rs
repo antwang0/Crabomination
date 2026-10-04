@@ -4581,6 +4581,7 @@ impl GameState {
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
             if card.attacked_this_turn {
                 card.attacked_this_turn = false;
+                card.times_attacked_this_turn = 0;
             }
             if card.definition.keywords.has_kw(&crate::card::Keyword::CantAttackPlayerAttackedThisTurn)
                 && card.cold_any(|k| k.combat_defenders.is_some())

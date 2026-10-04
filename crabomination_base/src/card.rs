@@ -10080,6 +10080,10 @@ pub struct CardInstance {
     /// Attacked during its controller's own turn — the half
     /// `attacked_last_turn` is promoted from at untap.
     pub attacked_own_turn: bool,
+    /// How many times it has attacked this turn (CR 508.1 declarations;
+    /// Moraug's "+1/+0 for each time it has attacked this turn"). Reset with
+    /// `attacked_this_turn`.
+    pub times_attacked_this_turn: u8,
     /// `attacked_own_turn` as of the previous turn (Kithkin Greatheart's
     /// "attacked during your last turn").
     pub attacked_last_turn: bool,
@@ -10128,6 +10132,7 @@ impl From<CardData> for CardInstance {
             summoning_sick: false,
             attacked_this_turn: false,
             attacked_own_turn: false,
+            times_attacked_this_turn: 0,
             attacked_last_turn: false,
             blocked_this_turn: false,
             tapped_this_turn: false,
