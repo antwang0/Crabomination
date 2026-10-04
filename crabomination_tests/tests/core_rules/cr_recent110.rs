@@ -599,3 +599,70 @@ fn cr_111_7_a_dead_token_is_not_a_graveyard_card() {
     g.resolve_effect(&seq, &ctx).expect("resolves");
     assert_eq!(g.players[0].life, 22, "the Bears and Raise the Alarm, not the two Soldiers");
 }
+
+/// CR 707.2 — a copy takes the copiable values only: an ability an effect
+/// granted (baked into the definition for as long as the object lasts) is not
+/// one. A Bear that gained flying for good, copied, makes a Bear without it.
+#[test]
+fn cr_707_2_a_permanent_keyword_grant_is_not_copied() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Duration, Effect, Selector};
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let copier = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let grant = Effect::GrantKeyword {
+        what: Selector::ExactObjects(vec![bear]),
+        keyword: Keyword::Flying,
+        duration: Duration::Permanent,
+    };
+    g.resolve_effect(&grant, &ctx).expect("grant");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+    let copy = Effect::BecomeCopyOf {
+        what: Selector::ExactObjects(vec![copier]),
+        source: Selector::ExactObjects(vec![bear]),
+        extra_creature_types: vec![],
+        keep_own_triggered: false,
+        keep_own_activated: false,
+        keep_name: false,
+    };
+    g.resolve_effect(&copy, &ctx).expect("copy");
+    let cp = g.computed_permanent(copier).unwrap();
+    assert_eq!(g.battlefield_find(copier).unwrap().definition.name, "Grizzly Bears");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "the grant was an effect, not a copiable value");
+}
+
+/// CR 707.2 — the same for a token copy: a token copy of a Bear that gained
+/// flying for good is a Bear without flying.
+#[test]
+fn cr_707_2_a_token_copy_skips_a_permanent_keyword_grant() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector, Value};
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let grant = Effect::GrantKeyword {
+        what: Selector::ExactObjects(vec![bear]),
+        keyword: Keyword::Flying,
+        duration: Duration::Permanent,
+    };
+    g.resolve_effect(&grant, &ctx).expect("grant");
+    let copy = Effect::CreateTokenCopyOf {
+        extra_keywords: vec![],
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source: Selector::ExactObjects(vec![bear]),
+        extra_creature_types: vec![],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: false,
+        legendary: false,
+        no_mana_cost: false,
+        enters_with_counters: None,
+    };
+    g.resolve_effect(&copy, &ctx).expect("token copy");
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("a token").id;
+    assert!(!g.computed_permanent(token).unwrap().keywords().contains(&Keyword::Flying));
+}

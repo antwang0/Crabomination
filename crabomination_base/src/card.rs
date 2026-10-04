@@ -11185,9 +11185,11 @@ impl CardInstance {
         self.set_definition(Arc::new(stickered));
     }
 
-    /// This object's copiable values — its definition without its stickers.
+    /// This object's copiable values — its definition without its stickers,
+    /// and without what [`Self::bake_grant`] wrote into it: a granted ability
+    /// is an effect, not a copiable value (CR 707.2).
     pub fn copiable_definition(&self) -> Arc<CardDefinition> {
-        self.definition.arc().copiable()
+        self.pre_grant_definition.as_ref().unwrap_or(&self.definition.arc()).copiable()
     }
 
     /// CR 123.5 — stickers are not retained as an object moves to a hidden

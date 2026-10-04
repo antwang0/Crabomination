@@ -22560,7 +22560,9 @@ impl GameState {
                     // A card still in a library (Haunting Imitation copies
                     // each player's revealed top card).
                     .or_else(|| self.find_card_anywhere(src_id))
-                    .map(|c| c.definition.boxed_clone());
+                    // CR 707.2 / 123.1 — its copiable values: no baked grant,
+                    // no sticker.
+                    .map(|c| c.copiable_definition().boxed_clone());
                 // Edited through the `Box` and moved into the `Arc` heap to
                 // heap below: the by-value form kept an 8 KB slot in this
                 // frame, and `Arc::make_mut` would inline one back.
