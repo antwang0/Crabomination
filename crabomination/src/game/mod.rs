@@ -172,6 +172,7 @@ mod stack_ability;
 mod retarget_any;
 mod token_batch;
 mod life_events;
+mod draw_batch;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
@@ -6470,9 +6471,7 @@ impl GameState {
         // cards instead." The gain never happens.
         if delta > 0 && self.life_gain_becomes_draw_now(seat) {
             let mut events = Vec::new();
-            for _ in 0..delta {
-                self.draw_one_or_deck(seat, &mut events);
-            }
+            self.draw_n(seat, delta as usize, &mut events);
             return self.effective_life(seat);
         }
         if delta > 0 && self.player_cannot_gain_life_now(seat) {
@@ -8469,9 +8468,7 @@ impl GameState {
                     true
                 }
                 CumulativeUpkeepCost::Draw(per) => {
-                    for _ in 0..(per * n) {
-                        self.draw_one_or_deck(active, &mut events);
-                    }
+                    self.draw_n(active, (per * n) as usize, &mut events);
                     true
                 }
                 CumulativeUpkeepCost::GraveyardCardsToBottom(per) => {
@@ -18757,9 +18754,7 @@ impl GameState {
         // way — every one a card that says "draw a card" — so CR 104.3c applied
         // to the draw STEP and to `Effect::Draw` and to nothing else.
         for p in 0..self.players.len() {
-            for _ in 0..self.starting_hand_size(p) {
-                self.draw_one_or_deck(p, events);
-            }
+            self.draw_n(p, self.starting_hand_size(p) as usize, events);
         }
 
         // 727.5 — the exempt cards never joined a deck; Karn deploys them.
@@ -21084,9 +21079,7 @@ impl GameState {
         // site: the seven draws below can arm a NEW one (a card pool smaller
         // than seven), and clearing the flag after them would erase that.
         self.players[p].pending_deck_loss = false;
-        for _ in 0..7 {
-            self.draw_one_or_deck(p, &mut events);
-        }
+        self.draw_n(p, 7, &mut events);
         // CR 119.5 — "your life total becomes 20" is a gain of the
         // difference, through the CR 119 funnel (doublers, can't-gain).
         let delta = 20 - self.effective_life(p);
@@ -21751,13 +21744,12 @@ impl GameState {
                 if !ask(self, "Draw from the exiled pile instead?") {
                     return false;
                 }
+                // CR 616.1e — "put a card from the pile into your hand
+                // INSTEAD" replaces the draw: no draw happened (no tally, no
+                // draw event), as the other instead-of-draw digs.
                 let mut card = self.exile.remove(pos);
                 card.face_down = false;
-                let card_id = card.id;
                 self.players[p].hand.push(card);
-                self.players[p].cards_drawn_this_turn += 1;
-                self.players[p].last_drawn_card = Some(card_id);
-                events.push(GameEvent::CardDrawn { player: p, card_id });
                 true
             }
             // Tomorrow, Azami's Familiar — look at the top N, keep one,

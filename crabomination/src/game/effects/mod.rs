@@ -4833,9 +4833,7 @@ impl GameState {
                         stashed.push(self.players[p].hand.remove(i));
                     }
                 }
-                for _ in 0..stashed.len() {
-                    self.draw_one_or_deck(p, events);
-                }
+                self.draw_n(p, stashed.len(), events);
                 // The order the picks came back in is the order they go back
                 // on top (a UI seat's `ChooseCards` answer is ordered).
                 for card in stashed.into_iter().rev() {
@@ -6039,10 +6037,9 @@ impl GameState {
                     && let Some(&(chosen, _)) = picks.choose(&mut self.rng.draw())
                     && let Some(pos) = self.players[p].library.iter().position(|c| c.id == chosen)
                 {
+                    // "Put that card into your hand" — not a draw (CR 121.1).
                     let card = self.players[p].library.remove(pos);
                     self.players[p].hand.push(card);
-                    self.players[p].last_drawn_card = Some(chosen);
-                    events.push(GameEvent::CardDrawn { player: p, card_id: chosen });
                 }
                 self.shuffle_library(p, events);
                 Ok(())
@@ -10175,35 +10172,13 @@ impl GameState {
             Effect::Draw { who, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        // CR 614.1a — Alms Collector: an opponent's draw of
-                        // two or more becomes one card each.
-                        let (n, alms) = match (n >= 2).then(|| self.alms_collector_for(p)).flatten() {
-                            Some(seat) => (1, Some(seat)),
-                            None => (n, None),
-                        };
-                        if let Some(seat) = alms
-                            && !self.draw_one_or_deck(seat, events)
-                        {
-                            return Ok(());
-                        }
-                        // CR 121.2b — a per-turn draw cap truncates the draw.
-                        let n = match self.draw_cap_for(p) {
-                            Some(cap) => {
-                                let remaining = (cap as usize)
-                                    .saturating_sub(self.players[p].cards_drawn_this_turn as usize);
-                                n.min(remaining)
-                            }
-                            None => n,
-                        };
-                        for _ in 0..n {
-                            // `draw_one` applies the Dredge replacement
-                            // (CR 702.52) before falling back to a normal
-                            // draw; AutoDecider declines dredge by default.
-                            if !self.draw_one_or_deck(p, events) {
-                                return Ok(());
-                            }
-                        }
+                    // `draw_n`: Alms Collector and the per-turn cap see the
+                    // whole draw; each card takes the per-draw funnel (dredge,
+                    // CR 702.52 — AutoDecider declines it by default).
+                    if let EntityRef::Player(p) = ent
+                        && !self.draw_n(p, n, events)
+                    {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -10226,11 +10201,7 @@ impl GameState {
                     for cid in hand {
                         self.discard_card(p, cid, events);
                     }
-                    for _ in 0..n {
-                        if !self.draw_one_or_deck(p, events) {
-                            break;
-                        }
-                    }
+                    self.draw_n(p, n, events);
                 }
                 Ok(())
             }
@@ -10460,9 +10431,7 @@ impl GameState {
                     per_seat[seat] += 1;
                 }
                 for (seat, n) in per_seat.into_iter().enumerate() {
-                    for _ in 0..n {
-                        self.draw_one_or_deck(seat, events);
-                    }
+                    self.draw_n(seat, n, events);
                 }
                 Ok(())
             }
@@ -22762,10 +22731,8 @@ impl GameState {
                         // That player shuffles (searched their library —
                         // CR 701.19), then draws per hand-exile.
                         self.shuffle_library(owner, events);
-                        for _ in 0..hand_exiled {
-                            if !self.draw_one_or_deck(owner, events) {
-                                return Ok(());
-                            }
+                        if !self.draw_n(owner, hand_exiled, events) {
+                            return Ok(());
                         }
                     }
                 }
@@ -24958,7 +24925,7 @@ impl GameState {
                 self.each_player_keeps_one(who, filter, *destroy, ctx, events, effect)
             }
 
-            Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
+            Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx),
 
             Effect::ExileThenBranchByController { what, theirs } => {
                 let Some(id) =
@@ -29215,9 +29182,7 @@ impl GameState {
                     let n = hand.len() as u32;
                     self.players[p].library.extend(hand);
                     self.shuffle_library(p, events);
-                    for _ in 0..n {
-                        self.draw_one_or_deck(p, events);
-                    }
+                    self.draw_n(p, n as usize, events);
                 }
                 Ok(())
             }
@@ -31810,11 +31775,7 @@ impl GameState {
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
-                for _ in 0..x {
-                    if !self.draw_one_or_deck(p, events) {
-                        break;
-                    }
-                }
+                self.draw_n(p, x as usize, events);
                 Ok(())
             }
 
@@ -32151,12 +32112,8 @@ impl GameState {
                     {
                         break;
                     }
-                    for _ in 0..2 {
-                        self.draw_one_or_deck(v, events);
-                    }
-                    for _ in 0..4 {
-                        self.draw_one_or_deck(ctx.controller, events);
-                    }
+                    self.draw_n(v, 2, events);
+                    self.draw_n(ctx.controller, 4, events);
                 }
                 self.clear_answer_log();
                 Ok(())
@@ -37696,11 +37653,7 @@ impl GameState {
                             c.face_down = true;
                         }
                     }
-                    for _ in 0..7 {
-                        if !self.draw_one_or_deck(seat, events) {
-                            break;
-                        }
-                    }
+                    self.draw_n(seat, 7, events);
                 }
                 self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                     kind: crate::game::types::DelayedKind::NextEndStep,
@@ -43339,9 +43292,7 @@ impl GameState {
                         manifested += 1;
                     }
                     if controller_draws {
-                        for _ in 0..manifested {
-                            self.draw_one_or_deck(ctx.controller, events);
-                        }
+                        self.draw_n(ctx.controller, manifested as usize, events);
                     }
                 }
                 Ok(())
@@ -43643,7 +43594,6 @@ impl GameState {
         &mut self,
         filter: &crate::card::SelectionRequirement,
         ctx: &EffectContext,
-        events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
                 // Sideboard first ("outside the game"), then own exiled
                 // cards; a wants_ui controller picks via ChooseCards.
@@ -43695,11 +43645,9 @@ impl GameState {
                 };
                 let card = Self::take_card(&mut self.players[p].sideboard, chosen)
                     .or_else(|| Self::take_card(&mut self.exile, chosen));
+                // A wish puts the card into your hand — not a draw (CR 121.1).
                 if let Some(card) = card {
-                    let cid = card.id;
                     self.players[p].hand.push(card);
-                    self.players[p].last_drawn_card = Some(cid);
-                    events.push(GameEvent::CardDrawn { player: p, card_id: cid });
                 }
                 Ok(())
             }

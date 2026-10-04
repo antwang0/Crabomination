@@ -8400,6 +8400,45 @@ fn false_cure_gain_and_loss_are_both_events() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::LifeLost { player: 0, amount: 6 })), "{events:?}");
 }
 
+/// CR 614.1a / 121.2 — "discard your hand, then draw that many" is ONE draw
+/// of N, so an opponent's Alms Collector sees it: each of them draws one.
+/// The draw was a loop of single draws, which the Collector never saw.
+#[test]
+fn cr_614_1a_alms_collector_sees_a_windfall_draw() {
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::alms_collector());
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    let (hand1, ctx) = (
+        g.players[1].hand.len(),
+        crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None),
+    );
+    g.resolve_effect(&Effect::DiscardHandDrawThatMany { who: Selector::Player(PlayerRef::You) }, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), 1, "three became one");
+    assert_eq!(g.players[1].hand.len(), hand1 + 1, "the Collector's controller draws one");
+}
+
+/// CR 121.1 — a wish PUTS a card into your hand; it isn't drawn, so no
+/// `CardDrawn` (no "whenever you draw" trigger, no draw tally).
+#[test]
+fn cr_121_1_a_wish_is_not_a_draw() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::Effect;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_sideboard(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    let events = g.resolve_effect(&Effect::WishToHand { filter: SelectionRequirement::Creature }, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears), "wished into hand");
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::CardDrawn { .. })), "{events:?}");
+    assert_eq!(g.players[0].cards_drawn_this_turn, 0);
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

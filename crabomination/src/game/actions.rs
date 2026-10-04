@@ -4763,10 +4763,10 @@ impl GameState {
         // above and this remove and could touch the sideboard.
         let card = Self::take_card(&mut self.players[p].sideboard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let cid = card.id;
+        // CR 702.139a — the companion is PUT into hand, not drawn (CR 121.1):
+        // no draw event, no draw trigger.
         self.players[p].hand.push(card);
-        self.players[p].last_drawn_card = Some(cid);
-        Ok(vec![GameEvent::CardDrawn { player: p, card_id: cid }])
+        Ok(Vec::new())
     }
 
     pub(crate) fn play_land_from_graveyard(

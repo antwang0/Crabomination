@@ -19,7 +19,7 @@ impl GameState {
         }) else {
             return false;
         };
-        if card.definition.keywords.iter().any(|k| *k == Keyword::Cascade) {
+        if card.definition.keywords.contains(&Keyword::Cascade) {
             return true;
         }
         let grants = |t: &TriggeredAbility, scope: EventScope, source: CardId| {
