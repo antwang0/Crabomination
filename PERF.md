@@ -3177,6 +3177,10 @@ pod (release,    every deck at c72e4d13c: 2 x 200 (92 groups, 103401+), 3 x 200
   fourth tip)    (61, 103301+), 4 x 300 (46, 103101+), 6 x 150 (31, 103201+)
                  = 49,050 games, all decided — zero panics, draws or caps;
                  turns/game 19.59 / 30.65 / 42.64 / 67.17
+pod (strict      Biotransference's deck (177) beside 3 others x 8 at 4 seats x 40
+  debug, fourth) (104001+) = 320 games; every deck 2 x 30 (104401+), 3 x 20
+                 (104201+), 4 x 20 (104101+), 6 x 10 (104301+) = 5,210 games;
+                 all decided, no walker/printed disagreement asserted
 suite            24,037 / 0 / 5 at the tip (CRAB_ANSWER_LOG=strict);
                  workspace clippy 0
 turns/game       3 seats 30.58, 4 seats 42.61, 5 seats 54.35, 8 seats 91.64
