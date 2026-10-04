@@ -101,7 +101,23 @@ impl GameState {
         self.with_frozen_layers(|s| {
             s.auto_target_for_effect_avoiding_set_xc_inner(eff, controller, avoid, x, converge)
         })
-        .filter(|t| !self.declines_own_side_pick(eff, controller, t))
+        .filter(|t| !self.declines_own_side_pick(eff, controller, t) && !self.declines_gift_pick(eff, controller, t))
+    }
+
+    /// CR 601.2c — the mirror of [`declines_own_side_pick`]: the leading
+    /// optional friendly group of a `SlotGroups` ("a +1/+1 counter on each of
+    /// any number of target creatures", Filigree Vector) leaves an opponent's
+    /// permanent unpicked rather than handing it a counter. A bare optional
+    /// slot reaches the picker peeled of its context — a dual-use one (Atomic
+    /// Microsizer) or a per-player one (Nils) — so it keeps its pick.
+    fn declines_gift_pick(&self, eff: &Effect, controller: usize, t: &Target) -> bool {
+        let Effect::SlotGroups(v) = eff else { return false };
+        let leads_friendly = v.iter().find(|m| m.requires_target()).is_some_and(|m| {
+            matches!(m, Effect::ApplyToTargets { min_targets: 0, effect, .. }
+                if effect.prefers_friendly_target() && !effect.permanent_slot_is_hostile(0, None))
+        });
+        let Target::Permanent(tid) = t else { return false };
+        leads_friendly && self.battlefield_find(*tid).is_some_and(|c| !self.same_team(c.controller, controller))
     }
 
     /// CR 601.2c — "up to one target": a removal-shaped slot that could name
