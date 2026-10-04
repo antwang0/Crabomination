@@ -2910,6 +2910,30 @@ mod recent {
         assert_eq!(g.players[0].library.len(), 0, "milled all four");
         assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
             "the instant stays milled");
+        assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "no Squirrel either way");
+    }
+
+    /// Cache Grab — returning a Squirrel card makes the Food with no Squirrel
+    /// on the battlefield.
+    #[test]
+    fn cache_grab_makes_food_for_a_returned_squirrel() {
+        let mut g = two_player_game();
+        let mut squirrel = catalog::grizzly_bears();
+        squirrel.subtypes.creature_types = vec![crabomination::card::CreatureType::Squirrel];
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let sq = g.add_card_to_library(0, squirrel);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![sq])]));
+        let grab = g.add_card_to_hand(0, catalog::cache_grab());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: grab, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("castable");
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == sq));
+        assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
     }
 
     /// Lumbering Worldwagon's power equals the lands you control; toughness stays 4.

@@ -8730,9 +8730,8 @@ pub fn topiary_stomper() -> CardDefinition {
 }
 
 /// Cache Grab — {1}{G} Instant. Mill four, then you may put a permanent card
-/// milled this way into your hand. If you control a Squirrel, create a Food.
-/// (The "returned a Squirrel this way" half of the Food trigger is approximated
-/// to controlling one.)
+/// milled this way into your hand. If you control a Squirrel or returned a
+/// Squirrel card this way (`Selector::LastMoved`), create a Food.
 pub fn cache_grab() -> CardDefinition {
     use crate::card::CreatureType;
     use crate::effect::Predicate;
@@ -8747,10 +8746,16 @@ pub fn cache_grab() -> CardDefinition {
                 otherwise: None,
             },
             Effect::If {
-                cond: Predicate::SelectorExists(Selector::ControlledBy {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Squirrel),
-                }),
+                cond: Predicate::Any(vec![
+                    Predicate::SelectorExists(Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Squirrel),
+                    }),
+                    Predicate::EntityMatchesAny {
+                        what: Selector::LastMoved,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Squirrel),
+                    },
+                ]),
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),

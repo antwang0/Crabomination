@@ -40,7 +40,7 @@ they call a deck 🟡, the table wins.
 | 66 | Inalla, Archmage Ritualist (UBR) | 2: shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
 | 72 | Faldorn, Dread Wolf Herald (RG) | 3: aurora_phoenix, durnan_of_the_yawning_portal, nalfeshnee |
-| 75 | Hazel of the Rootbloom (BG) | 3: cache_grab, hazel_of_the_rootbloom, sword_of_the_squeak |
+| 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
 | 77 | Winter, Cynical Opportunist (BG) | 4: into_the_pit, old_stickfingers, polluted_cistern_dim_oubliette, winter_cynical_opportunist |
 | 79 | Hearthhull, the Worldseed (BRG) | 2: evendo_brushrazer, moraug_fury_of_akoum |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
