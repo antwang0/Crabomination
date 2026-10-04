@@ -2356,6 +2356,12 @@ pub struct ResolutionScratch {
     /// permanent card" clause can't pick back what it just ate (Deadly Brew).
     #[serde(default)]
     pub(crate) cards_sacrificed_this_resolution: Vec<CardId>,
+    /// The card types of the first permanent sacrificed this resolution, read
+    /// as it left (Braids, Arisen Nightmare's "shares a card type with it"):
+    /// a token's snapshot doesn't outlive the next trigger dispatch, which a
+    /// suspended ask sits across.
+    #[serde(default)]
+    pub(crate) first_sacrificed_types: Vec<crate::card::CardType>,
     /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
     /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
     /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.

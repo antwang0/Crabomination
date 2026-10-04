@@ -7236,12 +7236,7 @@ impl GameState {
     /// Do `types` share a card type with the first permanent sacrificed this
     /// resolution, as it last existed on the battlefield (CR 608.2h)?
     fn shares_card_type_with_first_sacrificed(&self, types: &[crate::card::CardType]) -> bool {
-        let Some(&first) = self.scratch.cards_sacrificed_this_resolution.first() else { return false };
-        let snap = self.died_card_snapshots.get(&first).or_else(|| self.leaves_bf_lki.get(&first));
-        let theirs = snap
-            .map(|c| c.definition.card_types.clone())
-            .or_else(|| self.find_card_anywhere(first).map(|c| c.definition.card_types.clone()))
-            .unwrap_or_default();
+        let theirs = &self.scratch.first_sacrificed_types;
         types.iter().any(|t| theirs.contains(t))
     }
 }

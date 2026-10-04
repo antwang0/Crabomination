@@ -3146,6 +3146,7 @@ impl GameState {
             self.countered_spell_mana_value = 0;
             clear_scratch!(self.players_sacrificed_this_resolution);
             clear_scratch!(self.cards_sacrificed_this_resolution);
+            clear_scratch!(self.first_sacrificed_types);
             clear_opt_scratch!(self.named_card_this_resolution);
             clear_scratch!(self.names_this_resolution);
         }
@@ -3378,9 +3379,19 @@ impl GameState {
         }
         events.push(GameEvent::PermanentSacrificed { card_id: id, who });
         self.scratch.players_sacrificed_this_resolution.insert(who);
+        self.note_first_sacrificed(id);
         self.scratch.cards_sacrificed_this_resolution.push(id);
         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
         events.append(&mut die_evs);
+    }
+
+    /// Stamp the card types of the resolution's first sacrifice while `id` is
+    /// still on the battlefield (computed types: an animated land is a creature).
+    fn note_first_sacrificed(&mut self, id: CardId) {
+        if self.scratch.cards_sacrificed_this_resolution.is_empty() {
+            let types = self.computed_permanent(id).map(|cp| cp.card_types().clone()).unwrap_or_default();
+            self.scratch.first_sacrificed_types = types;
+        }
     }
 
     /// The permanents `player` controls that satisfy a sacrifice `filter`
@@ -31899,6 +31910,7 @@ impl GameState {
                     // The same bookkeeping `sacrifice_one` keeps, so "put into
                     // a graveyard this way" reads it (Danse Macabre).
                     self.scratch.players_sacrificed_this_resolution.insert(p);
+                    self.note_first_sacrificed(cid);
                     self.scratch.cards_sacrificed_this_resolution.push(cid);
                     // CR 700.4 — through the rich funnel so dies/LTB triggers
                     // and Persist/Undying fire (Kitchen Finks sacrificed to

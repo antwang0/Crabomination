@@ -1347,3 +1347,43 @@ fn cmdr_umbris_braids_matches_any_shared_card_type() {
     assert_eq!((g.players[1].life, g.players[2].life), (20, 18));
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Braids — a sacrificed TOKEN still has card types to share: a Treasure
+/// (no snapshot outlives it) is answered by an opponent's artifact. The types
+/// used to be looked up on the departed card, so a token matched nothing and
+/// the opponent who would answer was charged 2 life unasked (a strict debug
+/// pod found the resumed half of it: Prossh's seat, seed 152039).
+#[test]
+fn cmdr_umbris_braids_matches_a_sacrificed_token() {
+    let mut g = game(3);
+    g.add_card_to_battlefield(0, catalog::braids_arisen_nightmare());
+    let treasure = g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_battlefield(2, catalog::honor_of_the_pure());
+    // Prompting seats, as in a pod: seat 1's ask suspends across the trigger
+    // dispatch that drops the Treasure's snapshot.
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    for _ in 0..50 {
+        if let Some(pd) = &g.pending_decision {
+            use crabomination::decision::{Decider, Decision};
+            let answer = match &pd.decision {
+                Decision::ChooseMode { .. } => DecisionAnswer::Mode(0),
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                Decision::ChooseTarget { .. } => DecisionAnswer::Target(Target::Permanent(treasure)),
+                d => AutoDecider.decide(d),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(g.battlefield_find(treasure).is_none(), "Braids' controller sacrificed the Treasure");
+    assert!(g.battlefield_find(ring).is_none(), "an artifact shares a card type with it");
+    assert_eq!((g.players[1].life, g.players[2].life), (20, 18));
+}
