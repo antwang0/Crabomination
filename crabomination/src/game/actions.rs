@@ -22945,6 +22945,23 @@ impl GameState {
                 queued_effect =
                     Effect::WithTreasureManaSpent { amount: activation_treasure_mana, body: Box::new(queued_effect) };
             }
+            if !self.cost_exiled_cards.is_empty()
+                || self.exiled_for_cost_mana_value.is_some()
+                || !self.tapped_for_cost.is_empty()
+                || !self.scratch.cost_sacrificed_batch.is_empty()
+                || self.cost_discarded_mana_value.is_some()
+            {
+                queued_effect = Effect::WithPaidCosts {
+                    paid: Box::new(crate::effect::PaidCostRecord {
+                        exiled_cards: self.cost_exiled_cards.to_vec(),
+                        exiled_mana_value: self.exiled_for_cost_mana_value,
+                        tapped: self.tapped_for_cost.to_vec(),
+                        sacrificed_batch: self.scratch.cost_sacrificed_batch.to_vec(),
+                        discarded_mana_value: self.cost_discarded_mana_value,
+                    }),
+                    body: Box::new(queued_effect),
+                };
+            }
             if ability.remove_all_counters_cost.is_some() {
                 queued_effect = Effect::WithCountersRemovedAsCost {
                     amount: self.counters_removed_as_cost,

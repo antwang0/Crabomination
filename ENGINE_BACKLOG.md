@@ -112,9 +112,20 @@ the handoff.
 
 # Bugs & robustness
 
-## OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — a listener that leaves in the same resolution misses the events before it left
+## FIXED/OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — paid costs read back at resolution, and a listener that leaves in the same resolution
 
-- ⏳ **CR 603.2 / 603.10** — triggered abilities are collected AFTER a
+- ✅ **CR 602.2b** — what an activation's costs did lived in `GameState`
+  scratch that EVERY activation resets: an ability activated in response
+  zeroed Essence Bottle / Torture Chamber / Geometric Nexus's removed-counter
+  tally and erased Tawnos's, Osgir's and Coin of Fate's exiled card, Cryptic
+  Gateway's tapped creatures and Sword of the Ages' sacrificed batch. The
+  activation now carries them on the stack (`Effect::WithCountersRemovedAsCost`,
+  `Effect::WithPaidCosts { PaidCostRecord }`), the `WithSacrificedPt` /
+  `WithTreasureManaSpent` pattern. ⏳ Not audited: the spell-cast side's
+  additional-cost scratch (a spell cast in response to a spell).
+
+- ⏳ **A listener that leaves in the same resolution misses the events
+  before it left (CR 603.2 / 603.10)** — triggered abilities are collected AFTER a
   resolution finishes, from the permanents still on the battlefield. A
   listener the same resolution removes never sees the earlier events: Soul
   Warden under a Martial Coup (X ≥ 5) gains nothing for the five Soldiers

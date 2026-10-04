@@ -257,6 +257,33 @@ fn tawnos_copies_an_artifact_token() {
     assert_eq!(g.players[0].graveyard.len(), 2, "milled two");
 }
 
+/// CR 602.2b — Tawnos's second ability exiles its card as a COST; an
+/// ability activated in response (which pays costs of its own) must not erase
+/// which card that was, or the copy resolves over nothing.
+#[test]
+fn tawnos_copy_survives_an_activation_in_response() {
+    let mut g = pod(2);
+    let t = g.add_card_to_battlefield(0, catalog::tawnos_solemn_survivor());
+    g.clear_sickness(t);
+    run_treasure(&mut g);
+    run_treasure(&mut g);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bottle = g.add_card_to_battlefield(0, catalog::essence_bottle());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: t, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("sacrifice two Treasures, exile the Bears");
+    assert!(g.exile.iter().any(|c| c.id == bear), "the exile is paid at activation");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bottle, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("an unrelated activation in response");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1, "a token copy of the exiled Bears");
+}
+
 fn run_treasure(g: &mut GameState) {
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
     g.resolve_effect(&crabomination::effect::shortcut::mint_treasures(1), &ctx).unwrap();

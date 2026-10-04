@@ -31643,6 +31643,21 @@ impl GameState {
                 self.run_effect(body, ctx, events)
             }
 
+            Effect::WithPaidCosts { paid, body } => {
+                if self.cost_exiled_cards != paid.exiled_cards {
+                    self.cost_exiled_cards = paid.exiled_cards.clone();
+                }
+                self.exiled_for_cost_mana_value = paid.exiled_mana_value;
+                if self.tapped_for_cost != paid.tapped {
+                    self.tapped_for_cost = paid.tapped.clone();
+                }
+                if self.scratch.cost_sacrificed_batch != paid.sacrificed_batch {
+                    self.scratch.cost_sacrificed_batch = paid.sacrificed_batch.clone();
+                }
+                self.cost_discarded_mana_value = paid.discarded_mana_value;
+                self.run_effect(body, ctx, events)
+            }
+
             Effect::WithRevealedForCost { power, mana_value, body } => {
                 self.revealed_for_cost = Some((*power, *mana_value));
                 self.run_effect(body, ctx, events)

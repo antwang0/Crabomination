@@ -10912,6 +10912,14 @@ pub enum Effect {
     /// (CR 602.2b) and an activation in response resets the scratch.
     /// Wrapped by `activate_ability`; not for card definitions.
     WithCountersRemovedAsCost { amount: u32, body: Box<Effect> },
+    /// Internal plumbing: re-stamp what the activation's costs exiled,
+    /// tapped, sacrificed and discarded before running `body` — the costs are
+    /// paid at activation (CR 602.2b) and every later activation resets the
+    /// scratch these live in, so an ability activated in response used to
+    /// erase Tawnos's exiled card, Osgir's, Coin of Fate's, Cryptic Gateway's
+    /// tapped creatures and Sword of the Ages' sacrificed batch. Wrapped by
+    /// `activate_ability` when any is set; not for card definitions.
+    WithPaidCosts { paid: Box<PaidCostRecord>, body: Box<Effect> },
 
     /// Internal plumbing: re-stamp how many nonland cards the caster
     /// discarded to pay an "as an additional cost, discard" (CR 601.2h) before
@@ -13460,4 +13468,21 @@ pub fn static_effect_grants_keyword(
         | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
         _ => false,
     }
+}
+
+/// What an activation's costs did, carried on the stack by
+/// `Effect::WithPaidCosts` (CR 602.2b — costs are paid as the ability is
+/// activated, not as it resolves).
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct PaidCostRecord {
+    /// `Selector::CostExiledCards`.
+    pub exiled_cards: Vec<crate::card::CardId>,
+    /// `Value::ExiledForCostManaValue`.
+    pub exiled_mana_value: Option<i32>,
+    /// `R::SharesCreatureTypeWithTapped`.
+    pub tapped: Vec<crate::card::CardId>,
+    /// `Effect::ExileCostSacrificedBatch`.
+    pub sacrificed_batch: Vec<crate::card::CardId>,
+    /// `Value::LastDiscardedManaValue`'s cost fallback.
+    pub discarded_mana_value: Option<u32>,
 }
