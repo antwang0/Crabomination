@@ -5,14 +5,10 @@
 //! Residuals (each also on its card):
 //! - **Ace's Baseball Bat** — "must be blocked by a Dalek if able" is not
 //!   modelled.
-//! - **Displaced Dinosaurs** — the historic permanent becomes a 7/7 Dinosaur
-//!   as a trigger resolves, not as it enters.
 //! - **Peri Brown** — every historic spell has convoke, not only the first
 //!   each turn.
 //! - **Reverse the Polarity** — "can't be blocked" reaches only the
 //!   creatures on the battlefield as it resolves.
-//! - **Susan Foreman** — the planeswalk replacement does nothing (no
-//!   Planechase).
 //! - **The Curse of Fenric** — I spares your own creatures; II makes a 6/6
 //!   with no abilities but doesn't rename it Fenric or make it legendary, so
 //!   III is a Mutant fighting any other creature.
@@ -646,11 +642,14 @@ pub fn sergeant_john_benton() -> CardDefinition {
     })
 }
 
-/// Susan Foreman — taps for {G}.
-///
-/// ⚠ Residual: the planeswalk replacement does nothing (no Planechase).
+/// Susan Foreman — taps for {G}; before you planeswalk, one of your planar
+/// deck's top two goes to the bottom.
 pub fn susan_foreman() -> CardDefinition {
     companion(CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If you would planeswalk, instead look at the top two cards of your planar deck, put one on the bottom of your planar deck and the other on top, then planeswalk.",
+            effect: StaticEffect::PlaneswalkSeesTopTwo,
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },

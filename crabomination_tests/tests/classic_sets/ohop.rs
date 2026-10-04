@@ -231,3 +231,19 @@ fn undercity_reaches_chaos_lifts_the_hand_size_cap() {
     assert!(g.effective_max_hand_size(0).is_none());
     assert_eq!(g.players[0].hand.len(), before);
 }
+
+/// Susan Foreman — "if you would planeswalk, instead look at the top two
+/// cards of your planar deck, put one on the bottom and the other on top,
+/// then planeswalk": choosing the second turns it up instead.
+#[test]
+fn susan_foreman_picks_which_of_the_top_two_planes_comes_up() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::susan_foreman());
+    planar(&mut g, vec![catalog::krosa(), catalog::panopticon(), catalog::naar_isle()]);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    g.planeswalk(0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].command.iter().find(|c| c.definition.is_plane()).unwrap().definition.name, "Naar Isle");
+    let names: Vec<_> = g.players[0].planar_deck.iter().map(|c| c.definition.name).collect();
+    assert_eq!(names, vec!["Panopticon", "Krosa"]);
+}

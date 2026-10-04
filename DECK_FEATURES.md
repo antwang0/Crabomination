@@ -73,7 +73,7 @@ they call a deck 🟡, the table wins.
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
-| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 8: aces_baseball_bat, peri_brown, reverse_the_polarity, susan_foreman, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
+| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 7: aces_baseball_bat, peri_brown, reverse_the_polarity, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
 145 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

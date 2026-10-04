@@ -2024,7 +2024,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
 | 🟡 Peri Brown | Blast from the Past (WHO) | every historic spell has convoke, not only the first each turn. |
 | 🟡 Reverse the Polarity | Blast from the Past (WHO) | "can't be blocked" reaches only the creatures on the battlefield as it resolves. |
-| 🟡 Susan Foreman | Blast from the Past (WHO) | the planeswalk replacement does nothing (no Planechase). |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
 | 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
 | 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |
