@@ -55,6 +55,22 @@ fn activate_x(g: &mut GameState, id: CardId, index: usize, target: Option<Target
     Ok(())
 }
 
+fn activate_mode(g: &mut GameState, id: CardId, target: Target, x: u32, mode: usize) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: Some(target),
+        additional_targets: vec![],
+        x_value: Some(x),
+        mode: Some(mode),
+    })
+    .map(|_| ())
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
 fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
     activate_x(g, id, index, target, None)
 }
@@ -311,7 +327,8 @@ fn lux_cannon_destroys() {
     assert_eq!(counters(&g, lc, CounterType::Charge), 0);
 }
 
-/// Moxite Refinery — remove X counters of any kinds, put X +1/+1 counters.
+/// Moxite Refinery — one modal ability: remove X counters of any kinds, then
+/// X +1/+1 counters on a creature or X charge counters on an artifact.
 #[test]
 fn moxite_refinery_converts_counters() {
     let mut g = pod(2);
@@ -320,7 +337,7 @@ fn moxite_refinery_converts_counters() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(eng).unwrap().add_counters(CounterType::Charge, 3);
     flood(&mut g, 0);
-    activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(3)).expect("X = 3");
+    activate_mode(&mut g, mr, Target::Permanent(bear), 3, 1).expect("X = 3");
     assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 3);
     assert_eq!(counters(&g, eng, CounterType::Charge), 0);
     // "From an artifact or creature": X can't be pooled across two of them.
@@ -332,10 +349,9 @@ fn moxite_refinery_converts_counters() {
     g.battlefield_find_mut(a).unwrap().add_counters(CounterType::Charge, 2);
     g.battlefield_find_mut(b).unwrap().add_counters(CounterType::Charge, 2);
     flood(&mut g, 0);
-    assert!(activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(3)).is_err(), "2 + 2 is not one source of 3");
-    activate_x(&mut g, mr, 1, Some(Target::Permanent(bear)), Some(2)).expect("X = 2 off one");
-    assert_eq!(counters(&g, a, CounterType::Charge) + counters(&g, b, CounterType::Charge), 2);
-    assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 2);
+    assert!(activate_mode(&mut g, mr, Target::Permanent(bear), 3, 1).is_err(), "2 + 2 is not one source of 3");
+    activate_mode(&mut g, mr, Target::Permanent(b), 2, 0).expect("X = 2 off one, charge on the other");
+    assert_eq!(counters(&g, a, CounterType::Charge) + counters(&g, b, CounterType::Charge), 4 - 2 + 2);
 }
 
 /// Patrolling Peacemaker — enters with two counters; an opponent's crime

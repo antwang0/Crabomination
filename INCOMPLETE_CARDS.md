@@ -1975,7 +1975,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
-| 🟡 Moxite Refinery | Counter Intelligence (EOC) | its two modes are two abilities (same cost and timing; nothing in the pod reads the difference). |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |

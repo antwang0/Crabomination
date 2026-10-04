@@ -336,23 +336,23 @@ pub fn lux_cannon() -> CardDefinition {
 }
 
 /// Moxite Refinery — {2}, {T}, remove X counters from an artifact or creature
-/// you control: X charge counters on target artifact, or X +1/+1 counters on
-/// target creature (sorcery speed).
+/// you control: choose one — X charge counters on target artifact, or X
+/// +1/+1 counters on target creature (sorcery speed).
 pub fn moxite_refinery() -> CardDefinition {
-    let mode = |filter: R, kind| ActivatedAbility {
-        mana_cost: cost(&[generic(2)]),
-        tap_cost: true,
-        sorcery_speed: true,
-        remove_counter_among_x: Some((None, artifact_card().or(R::Creature))),
-        remove_counter_among_x_one: true,
-        effect: Effect::AddCounter { what: target_filtered(filter), kind, amount: Value::XFromCost },
-        ..Default::default()
-    };
+    let mode = |filter: R, kind| Effect::AddCounter { what: target_filtered(filter), kind, amount: Value::XFromCost };
     CardDefinition {
-        activated_abilities: vec![
-            mode(artifact_card(), CounterType::Charge),
-            mode(R::Creature, CounterType::PlusOnePlusOne),
-        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            remove_counter_among_x: Some((None, artifact_card().or(R::Creature))),
+            remove_counter_among_x_one: true,
+            effect: Effect::ChooseMode(vec![
+                mode(artifact_card(), CounterType::Charge),
+                mode(R::Creature, CounterType::PlusOnePlusOne),
+            ]),
+            ..Default::default()
+        }],
         ..artifact("Moxite Refinery", cost(&[generic(2)]))
     }
 }
