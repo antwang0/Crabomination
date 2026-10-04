@@ -3942,7 +3942,7 @@ impl GameState {
                     ),
                 };
                 if pay {
-                    self.adjust_life(ctx.controller, -(*life as i32));
+                    self.adjust_life_emit(ctx.controller, -(*life as i32), events);
                     let card = self.players[p].library.remove(0);
                     self.players[p].graveyard.push(card);
                 }
@@ -8972,15 +8972,11 @@ impl GameState {
                     .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
                     .collect();
                 for p in seats {
-                    let life = self.players[p].life;
+                    // The (2HG-shared) life total; the funnel caps, doubles
+                    // or converts the gain, and the event follows its sign.
+                    let life = self.effective_life(p);
                     if life <= 0 { continue; }
-                    self.adjust_life(p, life);
-                    // adjust_life may be capped (e.g. "can't gain life"); emit
-                    // the actual gain.
-                    let gained = (self.players[p].life - life).max(0);
-                    if gained > 0 {
-                        events.push(GameEvent::LifeGained { player: p, amount: gained as u32 });
-                    }
+                    self.adjust_life_emit(p, life, events);
                 }
                 Ok(())
             }
@@ -21709,7 +21705,7 @@ impl GameState {
                     leader = bidder;
                 }
                 self.clear_answer_log();
-                self.adjust_life(leader, -(high as i32));
+                self.adjust_life_emit(leader, -(high as i32), events);
                 if leader == me {
                     self.run_effect(
                         &Effect::CounterSpell { what: what.clone() },
@@ -29621,7 +29617,7 @@ impl GameState {
                 };
                 let mut controller_won = false;
                 for (seat, _) in picks.iter().filter(|(_, n)| *n == high) {
-                    self.adjust_life(*seat, -(high as i32));
+                    self.adjust_life_emit(*seat, -(high as i32), events);
                     controller_won |= *seat == ctx.controller;
                 }
                 if controller_won {

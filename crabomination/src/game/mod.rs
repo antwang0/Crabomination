@@ -20795,7 +20795,7 @@ impl GameState {
             paid = self.pay_action_mana(seat, &mc)?;
         }
         if life_cost > 0 {
-            self.adjust_life(seat, -(life_cost as i32));
+            self.adjust_life_emit(seat, -(life_cost as i32), &mut paid);
         }
         // Discard the card from hand via the centralized path (handles the
         // graveyard move, CardDiscarded, discard-matters counters, and the

@@ -12,9 +12,17 @@ impl GameState {
     /// `delta` life for `seat` through the funnel; pushes `LifeGained` or
     /// `LifeLost` for what actually happened and returns the applied delta.
     pub(crate) fn adjust_life_emit(&mut self, seat: usize, delta: i32, events: &mut Vec<GameEvent>) -> i32 {
+        let before = self.effective_life(seat);
         let applied = self.adjust_life_applied(seat, delta);
         if applied > 0 {
             events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+            // False Cure — the funnel docks N per point gained right after the
+            // gain (`adjust_life` reports the total before it); that loss is
+            // its own "loses life" event.
+            let docked = before + applied - self.effective_life(seat);
+            if docked > 0 {
+                events.push(GameEvent::LifeLost { player: seat, amount: docked as u32 });
+            }
         } else if applied < 0 {
             events.push(GameEvent::LifeLost { player: seat, amount: applied.unsigned_abs() });
         }

@@ -8365,6 +8365,41 @@ fn cr_119_5_lichs_mirror_reset_is_a_gain() {
     assert_eq!(g.players[0].life, -20, "the reset's gain of 20 became a loss of 20");
 }
 
+/// CR 701.10d / 119.9 — doubling a life total is a gain of the total; under
+/// an opponent's Tainted Remedy it is a loss of the total, and the event says
+/// so. DoubleLife emitted a gain only (none at all once the gain converted).
+#[test]
+fn cr_701_10d_double_life_under_tainted_remedy_is_a_heard_loss() {
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::tainted_remedy());
+    g.players[0].life = 7;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    let events = g.resolve_effect(&Effect::DoubleLife { who: Selector::Player(PlayerRef::You) }, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 0);
+    assert!(events.iter().any(|e| matches!(e, GameEvent::LifeLost { player: 0, amount: 7 })), "{events:?}");
+}
+
+/// False Cure — "whenever a player gains life this turn, that player loses
+/// 2 life for each 1 life they gained": the gain is heard as a gain AND the
+/// docking as a loss (it was folded silently into the total).
+#[test]
+fn false_cure_gain_and_loss_are_both_events() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    let cure = g.add_card_to_hand(1, catalog::false_cure());
+    let effect = catalog::false_cure().effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(cure, 1, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    let events = g
+        .resolve_effect(&Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) }, &ctx)
+        .unwrap();
+    assert_eq!(g.players[0].life, 20 + 3 - 6);
+    assert!(events.iter().any(|e| matches!(e, GameEvent::LifeGained { player: 0, amount: 3 })), "{events:?}");
+    assert!(events.iter().any(|e| matches!(e, GameEvent::LifeLost { player: 0, amount: 6 })), "{events:?}");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
