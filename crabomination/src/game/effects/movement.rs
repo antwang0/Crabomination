@@ -401,6 +401,24 @@ impl GameState {
     /// step is bypassed while `damage_cant_be_prevented_this_turn` is set.
     /// Emits `GameEvent::DamagePrevented` for the prevented portion
     /// (CR 615.13) and returns the unprevented remainder.
+    /// CR 122.1c — a shield counter: "if damage would be dealt to this
+    /// permanent, prevent that damage and remove a shield counter". True when
+    /// one was there (and is now gone). Shared by the noncombat funnel and
+    /// every combat damage leg.
+    pub(crate) fn consume_shield_counter(&mut self, cid: CardId) -> bool {
+        // Read first: a `_mut` find can unshare the card's data (CoW).
+        if self.battlefield_find(cid).is_none_or(|c| c.counter_count(CounterType::Shield) == 0) {
+            return false;
+        }
+        let Some(c) = self.battlefield_find_mut(cid) else { return false };
+        c.remove_counters(CounterType::Shield, 1);
+        // No 0-count residue (CR 700.9 IsModified).
+        if c.counter_count(CounterType::Shield) == 0 {
+            c.counters.remove(&CounterType::Shield);
+        }
+        true
+    }
+
     pub fn apply_prevention_shields(
         &mut self,
         ent: EntityRef,
@@ -1720,18 +1738,7 @@ impl GameState {
                 // CR 122.1c — Shield counters: if damage would be dealt
                 // to this permanent, prevent that damage and remove a
                 // shield counter from it.
-                let has_shield = self
-                    .battlefield_find(cid)
-                    .map(|c| c.counter_count(CounterType::Shield) > 0)
-                    .unwrap_or(false);
-                if has_shield {
-                    if let Some(c) = self.battlefield_find_mut(cid) {
-                        c.remove_counters(CounterType::Shield, 1);
-                        // No 0-count residue (CR 700.9 IsModified).
-                        if c.counter_count(CounterType::Shield) == 0 {
-                            c.counters.remove(&CounterType::Shield);
-                        }
-                    }
+                if self.consume_shield_counter(cid) {
                     return;
                 }
                 // CR 120.3c — damage dealt to a planeswalker causes that

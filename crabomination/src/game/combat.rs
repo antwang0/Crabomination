@@ -4768,6 +4768,8 @@ impl GameState {
                         Some(atk.id),
                         events,
                     ) as i32;
+                    // CR 122.1c — a shield counter prevents it (and goes).
+                    let dealt = if dealt > 0 && self.consume_shield_counter(blocker_id) { 0 } else { dealt };
                     // Ironscale Hydra replaces the damage with a +1/+1 counter
                     // (and so the attacker's lifelink scales off 0).
                     let dealt =
@@ -4806,6 +4808,27 @@ impl GameState {
                                 counter_type: crate::card::CounterType::MinusOneMinusOne,
                                 count: n, placer: Some(atk.controller),
                             });
+                        }
+                        // CR 120.3d / 702.90b — the damage was still DEALT (as
+                        // counters): "deals combat damage to a creature"
+                        // triggers, the per-source record and deathtouch
+                        // (CR 702.2b) all see it.
+                        if dealt > 0 {
+                            if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
+                                blocker.record_damage_from(atk.id, dealt as u32);
+                                if atk.has_deathtouch {
+                                    blocker.dealt_deathtouch_damage = true;
+                                }
+                            }
+                            events.push(GameEvent::DamageDealt {
+                                amount: dealt as u32,
+                                to_player: None,
+                                to_card: Some(blocker_id),
+                                combat: true,
+                                from_controller: Some(atk.controller),
+                                from_card: Some(atk.id),
+                            });
+                            creature_damage.push((atk.id, blocker_id, dealt as u32));
                         }
                     } else if dealt > 0
                         && let Some(blocker) = self.battlefield_find_mut(blocker_id)
@@ -4960,6 +4983,8 @@ impl GameState {
                             Some(bid),
                             events,
                         );
+                        // CR 122.1c — a shield counter prevents it (and goes).
+                        let dmg = if dmg > 0 && self.consume_shield_counter(atk.id) { 0 } else { dmg };
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
                         let dmg = self
@@ -5005,19 +5030,22 @@ impl GameState {
                                 }
                             } else {
                                 attacker.damage += dmg;
-                                attacker.record_damage_from(bid, dmg);
-                                if bc.keywords().has_kw(&Keyword::Deathtouch) {
-                                    attacker.dealt_deathtouch_damage = true;
-                                }
-                                events.push(GameEvent::DamageDealt {
-                                    amount: dmg,
-                                    to_player: None,
-                                    to_card: Some(hit),
-                                    combat: true,
-                                    from_controller: Some(bc.controller),
-                                    from_card: Some(bid),
-                                });
                             }
+                            // CR 120.3d — dealt either way (as counters or as
+                            // marked damage): the record, deathtouch and the
+                            // event follow the damage, not its form.
+                            attacker.record_damage_from(bid, dmg);
+                            if bc.keywords().has_kw(&Keyword::Deathtouch) {
+                                attacker.dealt_deathtouch_damage = true;
+                            }
+                            events.push(GameEvent::DamageDealt {
+                                amount: dmg,
+                                to_player: None,
+                                to_card: Some(hit),
+                                combat: true,
+                                from_controller: Some(bc.controller),
+                                from_card: Some(bid),
+                            });
                         }
                         // CR 510.2 — this blocker dealt combat damage to a
                         // creature (post-prevention amount).
@@ -5547,10 +5575,13 @@ impl GameState {
                 {
                     return 0;
                 }
-                self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events)
+                let dealt = self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events);
+                // CR 122.1c — a shield counter prevents it (and goes).
+                if dealt > 0 && self.consume_shield_counter(pw) { 0 } else { dealt }
             }
             AttackTarget::Battle(b) => {
-                self.apply_prevention_shields(EntityRef::Permanent(b), amount, source, events)
+                let dealt = self.apply_prevention_shields(EntityRef::Permanent(b), amount, source, events);
+                if dealt > 0 && self.consume_shield_counter(b) { 0 } else { dealt }
             }
         }
     }

@@ -8439,6 +8439,62 @@ fn cr_121_1_a_wish_is_not_a_draw() {
     assert_eq!(g.players[0].cards_drawn_this_turn, 0);
 }
 
+/// Pass priority until `step` (combat tests below).
+fn pass_to_step(g: &mut GameState, step: TurnStep) -> Vec<GameEvent> {
+    let mut all = Vec::new();
+    while g.step != step {
+        all.extend(g.perform_action(GameAction::PassPriority).expect("pass priority"));
+    }
+    all
+}
+
+/// Attack seat 1 with `attacker`, have `blocker` block it, and run to the
+/// end of combat; returns every event on the way.
+fn attack_into_block(g: &mut GameState, attacker: crabomination::card::CardId, blocker: crabomination::card::CardId) -> Vec<GameEvent> {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let mut all = g
+        .perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    all.extend(pass_to_step(g, TurnStep::DeclareBlockers));
+    all.extend(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block"));
+    all.extend(pass_to_step(g, TurnStep::EndCombat));
+    all
+}
+
+/// CR 122.1c — a shield counter prevents COMBAT damage too, and is removed:
+/// the shielded Hill Giant takes nothing from the Bears. Only the noncombat
+/// funnel read shield counters.
+#[test]
+fn cr_122_1c_shield_counter_prevents_combat_damage() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.battlefield_find_mut(giant).unwrap().add_counters(CounterType::Shield, 1);
+    attack_into_block(&mut g, bears, giant);
+    let giant = g.battlefield_find(giant).expect("the Giant survives");
+    assert_eq!(giant.damage, 0, "the shield counter prevented the Bears' 2");
+    assert_eq!(giant.counter_count(CounterType::Shield), 0, "and was removed");
+}
+
+/// CR 120.3d / 702.90b — infect damage to a creature is still damage DEALT:
+/// the combat `DamageDealt` event fires (the counters are its form). The
+/// infect branch emitted only `CounterAdded`.
+#[test]
+fn cr_120_3d_infect_combat_damage_is_a_damage_event() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(0, catalog::glistener_elf());
+    g.clear_sickness(elf);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let events = attack_into_block(&mut g, elf, giant);
+    assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::DamageDealt { to_card: Some(c), combat: true, .. } if *c == giant)),
+        "{events:?}"
+    );
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

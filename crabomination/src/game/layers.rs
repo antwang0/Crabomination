@@ -1615,6 +1615,7 @@ fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
 /// Returns true if `effect` affects `card`. `gate_power` is the card's
 /// gate-free computed power for `CardMatchPowerGated` effects; `None` (pass 1)
 /// excludes them.
+#[allow(clippy::too_many_arguments)]
 fn affects(
     effect: &ContinuousEffect,
     all: &[ContinuousEffect],
@@ -1676,6 +1677,7 @@ pub(crate) fn affected_includes(
     affected_includes_gated(affected, source, card, Some(printed_power), None, None, ChangelingRead::Instance, None)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn affected_includes_gated(
     affected: &AffectedPermanents,
     source: CardId,
