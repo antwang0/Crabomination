@@ -66,7 +66,7 @@ they call a deck 🟡, the table wins.
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
-| 166 | The Wise Mothman (BGU) | 2: rampaging_yao_guai, winding_constrictor |
+| 166 | The Wise Mothman (BGU) | 1: rampaging_yao_guai |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
 | 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
