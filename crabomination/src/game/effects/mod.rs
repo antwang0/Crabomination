@@ -3039,7 +3039,9 @@ impl GameState {
             self.last_discarded_mana_value = None;
             self.last_revealed_from_hand = None;
             self.tapped_for_cost_power = None;
-            self.treasure_mana_spent_to_activate = 0;
+            if self.scratch.treasure_mana_spent_to_activate != 0 {
+                self.scratch.treasure_mana_spent_to_activate = 0;
+            }
             // Guarded: an unconditional store unshares the scratch group.
             if self.scratch.discarded_for_cost_card.is_some() {
                 self.scratch.discarded_for_cost_card = None;
@@ -31518,7 +31520,7 @@ impl GameState {
             }
 
             Effect::WithTreasureManaSpent { amount, body } => {
-                self.treasure_mana_spent_to_activate = *amount;
+                self.scratch.treasure_mana_spent_to_activate = *amount;
                 self.run_effect(body, ctx, events)
             }
 

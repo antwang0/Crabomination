@@ -2176,6 +2176,11 @@ pub struct ResolutionScratch {
     /// `activation_mana_colors_scratch` beside it.
     #[serde(skip)]
     pub(crate) resolving_source_transformed: bool,
+    /// `Value::TreasureManaSpentToActivate`, stamped by
+    /// `Effect::WithTreasureManaSpent`; reset (guarded) between independent
+    /// resolutions. Here for the same 1,680-byte `GameState` cap.
+    #[serde(skip)]
+    pub(crate) treasure_mana_spent_to_activate: u32,
     /// Transient: the card discarded to pay the resolving activation's cost.
     /// Stamped by `Effect::WithDiscardedForCost`; read by
     /// `Effect::IfDiscardedForCost`. Reset between independent resolutions.
@@ -2809,9 +2814,6 @@ pub struct GameState {
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
     #[serde(default)]
     pub(crate) tapped_for_cost_power: Option<i32>,
-    /// `Value::TreasureManaSpentToActivate`, stamped by
-    /// `Effect::WithTreasureManaSpent` and reset with `tapped_for_cost_power`.
-    pub(crate) treasure_mana_spent_to_activate: u32,
     /// False Cure — life lost per 1 life gained, by any player, for the rest
     /// of the turn (`Effect::AnyLifeGainPunishedThisTurn`). Cleared at cleanup.
     #[serde(default)]
@@ -4219,7 +4221,6 @@ impl Clone for GameState {
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
-            treasure_mana_spent_to_activate: self.treasure_mana_spent_to_activate,
             life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
@@ -4432,7 +4433,6 @@ impl GameState {
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
-            treasure_mana_spent_to_activate: 0,
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,

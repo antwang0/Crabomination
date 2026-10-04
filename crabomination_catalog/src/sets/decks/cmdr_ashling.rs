@@ -319,16 +319,17 @@ pub fn horde_of_notions() -> CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: wubrg(),
+            // The cast skips a land card; the land play takes only one.
             effect: Effect::Seq(vec![
-                Effect::PlayLandAmongNow { what: target_filtered(elemental().and(R::InYourGraveyard)) },
                 Effect::CastWithoutPayingImmediate {
-                    what: Selector::Target(0),
+                    what: target_filtered(elemental().and(R::InYourGraveyard)),
                     source_zone: Zone::Graveyard,
                     exile_after: false,
                     copy: false,
                     reduce_generic: 0,
                     pay_own_cost: false,
                 },
+                Effect::PlayLandAmongNow { what: Selector::Target(0) },
             ]),
             ..Default::default()
         }],

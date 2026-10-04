@@ -156,7 +156,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.last_revealed_from_hand);
         let _ = write!(s, "{:?}|", self.cost_discarded_mana_value);
         let _ = write!(s, "{:?}|", self.tapped_for_cost_power);
-        let _ = write!(s, "{:?}|", self.treasure_mana_spent_to_activate);
+        let _ = write!(s, "{:?}|", self.scratch.treasure_mana_spent_to_activate);
         let _ = write!(s, "{:?}|", self.scratch.discarded_for_cost_card);
         let _ = write!(s, "{:?}|", self.trigger_event_amount_scratch);
         let _ = write!(s, "{:?}|", self.trigger_event_player_scratch);
