@@ -130,7 +130,6 @@ pub fn splatter_thug() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Unleash],
-        triggered_abilities: vec![crate::effect::shortcut::unleash()],
         ..Default::default()
     }
 }
@@ -148,7 +147,6 @@ pub fn thrill_kill_assassin() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch, Keyword::Unleash],
-        triggered_abilities: vec![crate::effect::shortcut::unleash()],
         ..Default::default()
     }
 }

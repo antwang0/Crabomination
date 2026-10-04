@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, on_dies, target_filtered, unleash};
+use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -280,7 +280,6 @@ pub fn dead_reveler() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Unleash],
-        triggered_abilities: vec![unleash()],
         ..Default::default()
     }
 }

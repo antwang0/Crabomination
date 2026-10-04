@@ -7,7 +7,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered, unleash};
+use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered};
 use crate::effect::{
     Duration, LibraryPosition, ManaPayload, PlayerRef, PlayerStaticTarget, Selector, StaticEffect,
     ZoneDest,
@@ -374,7 +374,6 @@ pub fn carnival_hellsteed() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::FirstStrike, Keyword::Haste],
-        triggered_abilities: vec![unleash()],
         ..Default::default()
     }
 }

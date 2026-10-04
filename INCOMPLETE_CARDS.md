@@ -1973,7 +1973,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
-| 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | a granted unleash counter arrives by trigger just after the Dog enters, not as it enters. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |

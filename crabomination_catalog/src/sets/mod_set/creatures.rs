@@ -7490,8 +7490,8 @@ pub fn blind_obedience() -> CardDefinition {
     }
 }
 
-/// Helper: a vanilla creature body with Unleash (CR 702.98) — Keyword marker
-/// plus the `shortcut::unleash()` ETB "may enter with a +1/+1 counter" trigger.
+/// Helper: a vanilla creature body with Unleash (CR 702.98); the engine asks
+/// the counter as it enters (`game::as_enters`).
 fn unleash_creature(
     name: &'static str,
     mana: ManaCost,
@@ -7510,7 +7510,6 @@ fn unleash_creature(
         power,
         toughness,
         keywords: vec![Keyword::Unleash],
-        triggered_abilities: vec![crate::effect::shortcut::unleash()],
         ..Default::default()
     }
 }

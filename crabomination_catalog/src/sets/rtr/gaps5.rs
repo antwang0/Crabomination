@@ -123,7 +123,6 @@ pub fn hellhole_flailer() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Unleash],
-        triggered_abilities: vec![crate::effect::shortcut::unleash()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b(), r()]),
             sac_cost: true,

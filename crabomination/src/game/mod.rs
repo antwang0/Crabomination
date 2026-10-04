@@ -10484,7 +10484,14 @@ impl GameState {
                 let n = self.evaluate_value(value, ctx).max(0) as u32;
                 (n > 0).then_some((kind, n))
             });
-            let specs = self.chosen_type_etb_counter_specs(id, ctrl);
+            let mut specs = self.chosen_type_etb_counter_specs(id, ctrl);
+            // An as-enters rider stamped on the instance (CR 702.98a unleash).
+            // Read first: a `CardCold` field, empty on almost every mint.
+            if self.battlefield.find_by_id(id).is_some_and(|c| c.cold_any(|k| !k.pending_etb_counters.is_empty()))
+                && let Some(c) = self.battlefield.find_by_id_mut(id)
+            {
+                specs.append(&mut c.pending_etb_counters);
+            }
             for (kind, n) in minted.into_iter().chain(specs) {
                 let scaled = if kind == crate::card::CounterType::PlusOnePlusOne {
                     self.scaled_counter_count(ctrl, kind, n, true)
@@ -12273,7 +12280,7 @@ impl GameState {
     pub(crate) fn keyword_grant_in_scope(&self, pred: impl Fn(&Keyword) -> bool) -> bool {
         // Three keywords the gather synthesizes from a *printed* keyword or an
         // instance flag rather than from a field it can be matched against —
-        // CR 701.60 Suspect's menace + can't-block, CR 702.109 Unleash's
+        // CR 701.60 Suspect's menace + can't-block, CR 702.98 Unleash's
         // can't-block, and the hexproof-unless rewrite. Asking `pred` about
         // them once here instead of once per card is what keeps this walk
         // cheap: it turns the per-card `definition.keywords` scan — `Keyword`

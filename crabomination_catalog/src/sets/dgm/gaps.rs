@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    battalion, cast_is_noncreature, etb, target_any, target_filtered, unleash,
+    battalion, cast_is_noncreature, etb, target_any, target_filtered,
 };
 use crate::effect::{Duration, ExtraManaKind, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
@@ -79,7 +79,6 @@ pub fn exava_rakdos_blood_witch() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Haste],
-        triggered_abilities: vec![unleash()],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control with a +1/+1 counter on them have haste.",
             effect: StaticEffect::AnthemForFilter {

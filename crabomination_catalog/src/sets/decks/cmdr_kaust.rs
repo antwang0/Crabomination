@@ -368,11 +368,8 @@ pub fn showstopping_surprise() -> CardDefinition {
     }
 }
 
-/// Tesak, Judith's Hellhound — unleash; your creatures with counters have
-/// haste; attacking adds {R} per attacker.
-///
-/// Residual: a granted unleash counter arrives by trigger just after the Dog
-/// enters, not as it enters (CR 702.98a).
+/// Tesak, Judith's Hellhound — unleash; other Dogs you control have unleash;
+/// your creatures with counters have haste; attacking adds {R} per attacker.
 pub fn tesak_judiths_hellhound() -> CardDefinition {
     let other_dogs = || yours().and(R::HasCreatureType(CreatureType::Dog)).and(R::OtherThanSource);
     CardDefinition {
@@ -385,7 +382,17 @@ pub fn tesak_judiths_hellhound() -> CardDefinition {
                     keyword: Keyword::Haste,
                 },
             },
-            // "Other Dogs you control have unleash" — its can't-block half.
+            // "Other Dogs you control have unleash" — the counter half is
+            // asked as each Dog enters (`game::as_enters`) ...
+            StaticAbility {
+                description: "Other Dogs you control have unleash.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(other_dogs()),
+                    keyword: Keyword::Unleash,
+                },
+            },
+            // ... and the gather synthesizes only a printed unleash's
+            // can't-block half, so the granted one is spelled out.
             StaticAbility {
                 description: "Other Dogs you control with a +1/+1 counter on them can't block.",
                 effect: StaticEffect::GrantKeyword {
@@ -394,29 +401,13 @@ pub fn tesak_judiths_hellhound() -> CardDefinition {
                 },
             },
         ],
-        triggered_abilities: vec![
-            // ... and its counter half.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: other_dogs() },
-                ),
-                effect: Effect::MayDo {
-                    description: "Unleash: put a +1/+1 counter on the Dog?".into(),
-                    body: Box::new(Effect::AddCounter {
-                        what: Selector::TriggerSource,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::ONE,
-                    }),
-                },
-            },
-            on_attack(Effect::AddMana {
+        triggered_abilities: vec![on_attack(Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::OfColor(
                 Color::Red,
                 Value::count(Selector::EachPermanent(yours().and(R::IsAttacking))),
             ),
-        }),
-        ],
+        })],
         ..legend(
             "Tesak, Judith's Hellhound",
             cost(&[generic(3), r()]),

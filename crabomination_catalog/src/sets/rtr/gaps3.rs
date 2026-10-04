@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, on_attack, target_filtered, unleash};
+use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect};
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
@@ -82,7 +82,6 @@ pub fn grim_roustabout() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Unleash],
-        triggered_abilities: vec![unleash()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Regenerate {
@@ -272,7 +271,6 @@ pub fn chaos_imps() -> CardDefinition {
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Unleash],
-        triggered_abilities: vec![unleash()],
         static_abilities: vec![StaticAbility {
             description: "This creature has trample as long as it has a +1/+1 counter on it.",
             effect: StaticEffect::SelfHasKeywordWhileCountersAtLeast {

@@ -7,7 +7,7 @@ use crate::card::{
     EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{battalion, etb, on_attack, scavenge, target_filtered, unleash};
+use crate::effect::shortcut::{battalion, etb, on_attack, scavenge, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -131,7 +131,6 @@ pub fn rakdos_drake() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![unleash()],
         ..Default::default()
     }
 }

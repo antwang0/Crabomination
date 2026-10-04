@@ -452,8 +452,11 @@ fn unleash_creature_may_enter_with_counter_then_cant_block() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    let cackler = g.add_card_to_battlefield(0, catalog::rakdos_cackler());
-    g.fire_self_etb_triggers(cackler, 0);
+    let cackler = g.add_card_to_hand(0, catalog::rakdos_cackler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cackler, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "unleash accepted: enters with a +1/+1 counter");
@@ -466,8 +469,11 @@ fn unleash_creature_can_decline_counter_and_block() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
-    let cackler = g.add_card_to_battlefield(0, catalog::rakdos_cackler());
-    g.fire_self_etb_triggers(cackler, 0);
+    let cackler = g.add_card_to_hand(0, catalog::rakdos_cackler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cackler, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
         "unleash declined: no counter");

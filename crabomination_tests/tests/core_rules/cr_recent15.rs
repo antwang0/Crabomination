@@ -74,6 +74,44 @@ fn cr_702_98_unleashed_creature_cant_block() {
     );
 }
 
+/// CR 702.98a / 614.12a — unleash is a replacement, not a trigger: the counter
+/// is on Dead Reveler as the spell resolves, with nothing put on the stack.
+#[test]
+fn cr_702_98a_unleash_counter_is_on_as_it_enters() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let rev = g.add_card_to_hand(0, catalog::dead_reveler());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.perform_action(crabomination::game::GameAction::CastSpell {
+        card_id: rev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.stack.is_empty(), "no unleash trigger");
+    assert_eq!(g.battlefield_find(rev).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// CR 614.12 — unleash applies on every battlefield entry: a reanimated
+/// Dead Reveler is asked too.
+#[test]
+fn cr_702_98a_unleash_on_a_reanimated_creature() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let rev = g.add_card_to_graveyard(0, catalog::dead_reveler());
+    let z = g.add_card_to_hand(0, catalog::zombify());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(crabomination::game::GameAction::CastSpell {
+        card_id: z, target: Some(Target::Permanent(rev)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("zombify");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rev).expect("returned").counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// CR 702.96 — Scavenge is a sorcery-speed activated ability: it can't be used
 /// during an opponent's combat.
 #[test]

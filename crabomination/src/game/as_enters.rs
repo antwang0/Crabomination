@@ -41,11 +41,50 @@ impl GameState {
     /// two paths that still lack it.
     #[doc(hidden)] // reachable from the out-of-crate test suite, like `actions`/`stack`
     pub fn apply_as_enters_replacements(&mut self, card_id: CardId) {
-        if !self.has_as_enters_replacement(card_id) {
+        if self.has_as_enters_replacement(card_id) {
+            self.apply_as_enters_effect(card_id);
+            self.apply_as_enters_mode_pickers(card_id);
+        }
+        self.apply_unleash(card_id);
+    }
+
+    /// CR 702.98a — unleash, printed or granted (CR 614.12: "continuous
+    /// effects that already exist and would apply"), asked before the
+    /// permanent enters (614.12a). A yes rides `pending_etb_counters`, which
+    /// every entry path places with its other entering counters.
+    fn apply_unleash(&mut self, card_id: CardId) {
+        use crate::card::{Keyword, KeywordSlice};
+        let Some(c) = self.battlefield.find_by_id(card_id) else { return };
+        let ctrl = c.controller;
+        if !c.definition.keywords.has_kw(&Keyword::Unleash)
+            && !(self.keyword_grant_in_scope(|k| *k == Keyword::Unleash)
+                && self.computed_permanent(card_id).is_some_and(|cp| cp.keywords().contains(&Keyword::Unleash)))
+        {
             return;
         }
-        self.apply_as_enters_effect(card_id);
-        self.apply_as_enters_mode_pickers(card_id);
+        let decision = crate::decision::Decision::OptionalTrigger {
+            source: card_id,
+            description: "Unleash — enter with a +1/+1 counter?".into(),
+            kind: crate::decision::OptionalKind::FreeUpside,
+        };
+        // As `drive_suspensions` does for an off-stack ask: a prompting seat
+        // has nowhere to park it, so its policy answers.
+        let answer = if self.seat_prompts(ctrl) {
+            crate::server::bot::decide_pending_policy(
+                self,
+                ctrl,
+                &crate::server::bot::EvalWeights::default(),
+                &decision,
+                false,
+            )
+        } else {
+            self.decider.decide(&decision)
+        };
+        if matches!(answer, crate::decision::DecisionAnswer::Bool(true))
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
+        {
+            c.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, 1));
+        }
     }
 
     /// One battlefield lookup answering "does any of the three appliers have
