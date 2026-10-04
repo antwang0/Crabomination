@@ -3238,6 +3238,32 @@ third stretch    --bench byte-identical again after the historic tally, the
                  one draw, no finds; full suite 24,375 / 0 / 5; clippy 0
 ```
 
+### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
+
+Engine edits on every pool's paths:
+- the answer log's seat tags: a `u8` per logged answer, on asks only
+- "this turn" tallies reset for every seat: one gated write per field per
+  seat per turn
+- CR 800.4m expiries at untap
+- `CastChoices` on the resolving snapshot: two empty `Vec` clones per
+  resolved spell, no allocation
+- the slot picker's exile sweep, on a filter naming exile only
+- `same_team` in the targeting opponent tests: singleton fast path
+- `apnap_sort` in step triggers, only for a queue of two or more
+
+```text
+--bench          decisions 196,176 / 27.64 — byte-identical after each of the
+                 13 commits; determinism ok. Throughput on this VM swings
+                 +-15 % run to run: an interleaved A/B x3 (before/after the
+                 step-trigger commit) read medians 406 vs 422 g/s
+pod (release)    4 x 200 (90001+), 5 x 100 (91001+), 3 x 200 (92001+),
+                 4 x 200 (94001+), 6 x 60 conceding (95001+) ~= 39,000
+                 games: zero panics; 5 undecided = 4 draws + 1 board cap
+pod (strict      CRAB_ANSWER_LOG=strict debug: 4/6/3/5/4/8 seats, 86001+ ..
+  debug)         97001+ ~= 11,500 games, zero finds after the Agitator Ant fix
+suite            22,863 integration + 902 lib, 0 failed; workspace clippy 0
+```
+
 ### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
 
 Engine edits on paths every pool reaches, through three funnels:
