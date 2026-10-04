@@ -11608,11 +11608,13 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
             })
             .unwrap_or(true)
     };
+    // Computed creature-ness: an attached reconfigure Equipment is printed a
+    // creature but is not one (CR 702.151b), so it is no host.
     let mine = || {
         state
             .battlefield
             .iter()
-            .filter(|c| c.controller == seat && c.definition.is_creature())
+            .filter(|c| c.controller == seat && state.computed_is_creature(c))
     };
     // Rank by *computed* power so anthems / lords / conditional pumps count
     // (a small body under a big anthem is a better Voltron target than a
@@ -11642,11 +11644,17 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         if !printed && !filtered_only && state.granted_equipment(eq).is_none() {
             continue;
         }
-        // Skip if already on the chosen target (no point re-equipping).
-        if eq.attached_to == Some(target) {
+        // Skip if already on the chosen target (no point re-equipping), and
+        // never offer an Equipment-creature itself as its host (CR 301.5c).
+        if eq.attached_to == Some(target) || eq.id == target {
             continue;
         }
-        let action = GameAction::Equip { equipment: eq.id, target };
+        // CR 702.151 — a reconfigure card attaches by reconfiguring.
+        let action = if eq.definition.has_reconfigure().is_some() && printed {
+            GameAction::Reconfigure { equipment: eq.id, target: Some(target) }
+        } else {
+            GameAction::Equip { equipment: eq.id, target }
+        };
         // Moving an Equipment off one of our own creatures must raise the total
         // power of our creatures. A base-P/T setter (Belt of Giant Strength's
         // 10/10) *lowers* an 11/11, so "equip the biggest" flipped it between
@@ -22613,6 +22621,32 @@ mod tests {
     /// one of our creatures only when the side's total power rises. Wrecking
     /// Ball Arm (base 7/7) on the Bears onto the Bonesplitter'd Wurm reads 8 ->
     /// 9 for the Wurm but 2 for the Bears — a loss of 6, so it stays.
+    /// CR 301.5c / 702.151 — a lone reconfigure creature is no host for
+    /// itself (the picker offered `Equip { x, x }` and the engine took it);
+    /// with a creature to wear it, the bot RECONFIGURES onto that creature.
+    #[test]
+    fn pick_equip_reconfigures_onto_another_creature_never_itself() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let battery = g.add_card_to_battlefield(0, catalog::rabbit_battery());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 5);
+        assert!(pick_equip(&g, 0).is_none(), "no host but itself");
+        assert!(
+            g.clone().perform_action(GameAction::Equip { equipment: battery, target: battery }).is_err(),
+            "an Equipment can't equip itself",
+        );
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        assert!(
+            matches!(
+                pick_equip(&g, 0),
+                Some(GameAction::Reconfigure { equipment, target: Some(t) }) if equipment == battery && t == bears
+            ),
+            "reconfigure onto the Bears",
+        );
+    }
+
     #[test]
     fn pick_equip_keeps_a_base_setter_that_would_lower_the_side() {
         let mut g = two_player_game();
