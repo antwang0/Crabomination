@@ -44,6 +44,7 @@ impl GameState {
                     while_source_attached: true,
                     while_you_control_source: false,
                     while_counter: None,
+                    while_matches: None,
                     installed: None,
                 });
             }

@@ -8694,6 +8694,10 @@ pub enum Effect {
     /// counter on it" (Shield Broker's shield counter). The SBA sweep hands
     /// it back once the last such counter is gone.
     GainControlWhileCounter { what: Selector, kind: crate::card::CounterType },
+    /// CR 611.2c — "gain control of `what` for as long as it matches
+    /// `filter`" (Rootwater Matriarch: "for as long as that creature is
+    /// enchanted"). The SBA sweep hands it back once it stops matching.
+    GainControlWhileMatches { what: Selector, filter: crate::card::SelectionRequirement },
     /// CR 611.2c — "gain control of that permanent for as long as that Aura is
     /// attached to it" (Eriette, the Beguiler). The Aura is
     /// `ctx.trigger_source`; the stolen permanent is whatever it's attached to.

@@ -3163,7 +3163,8 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GainControlWhileSourceTapped { .. }
         | Effect::GainControlWhileSourceRemains { .. }
         | Effect::GainControlWhileYouControlSource { .. }
-        | Effect::GainControlWhileCounter { .. } => "Gain control",
+        | Effect::GainControlWhileCounter { .. }
+        | Effect::GainControlWhileMatches { .. } => "Gain control",
         Effect::BecomeCopyOf { .. }
         | Effect::BecomeCopyOfFor { .. }
         | Effect::BecomeCopyOfExiledCard { .. } => "Become a copy",

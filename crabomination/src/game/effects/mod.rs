@@ -19952,6 +19952,7 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: false,
                             while_counter: None,
+                            while_matches: None,
                             installed,
                         });
                     }
@@ -20050,6 +20051,7 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: false,
                             while_counter: None,
+                            while_matches: None,
                             installed: None,
                         });
                     }
@@ -20076,6 +20078,7 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: true,
                             while_counter: None,
+                            while_matches: None,
                             installed: None,
                         });
                     }
@@ -20154,6 +20157,7 @@ impl GameState {
                         while_source_attached: true,
                         while_you_control_source: false,
                         while_counter: None,
+                        while_matches: None,
                         installed: None,
                     });
                 }
@@ -20181,6 +20185,7 @@ impl GameState {
                         while_source_attached: true,
                         while_you_control_source: false,
                         while_counter: None,
+                        while_matches: None,
                         installed: None,
                     });
                 }
@@ -20206,6 +20211,7 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: false,
                             while_counter: None,
+                            while_matches: None,
                             installed: None,
                         });
                     }
@@ -20231,6 +20237,33 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: false,
                             while_counter: Some(*kind),
+                            while_matches: None,
+                            installed: None,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileMatches { what, filter } => {
+                // CR 611.2c — the steal lasts while the permanent matches
+                // `filter`; the SBA sweep unwinds it once it doesn't.
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: ctx.source,
+                            while_source_tapped: false,
+                            while_source_attached: false,
+                            while_you_control_source: false,
+                            while_counter: None,
+                            while_matches: Some(filter.clone()),
                             installed: None,
                         });
                     }
@@ -29224,6 +29257,7 @@ impl GameState {
                             while_source_attached: false,
                             while_you_control_source: false,
                             while_counter: None,
+                            while_matches: None,
                             installed: None,
                         });
                     }

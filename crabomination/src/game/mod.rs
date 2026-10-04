@@ -4044,6 +4044,11 @@ pub(crate) struct TempControl {
     /// this kind. Swept alongside `while_source_tapped`.
     #[serde(default)]
     pub(crate) while_counter: Option<crate::card::CounterType>,
+    /// Rootwater Matriarch: the steal holds only while `card` matches this
+    /// filter ("for as long as that creature is enchanted"). Swept alongside
+    /// `while_source_tapped`.
+    #[serde(default)]
+    pub(crate) while_matches: Option<crate::card::SelectionRequirement>,
     /// `Duration::UntilEndOfYourNextTurn` (Treasure Nabber): the player
     /// whose next turn it is and the turn the steal began on. Reverted in
     /// that player's first cleanup after `installed.1`.

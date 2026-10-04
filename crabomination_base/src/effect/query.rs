@@ -2076,6 +2076,7 @@ impl Effect {
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
+            | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
@@ -2746,6 +2747,7 @@ impl Effect {
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
+            | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
@@ -3412,7 +3414,8 @@ impl Effect {
                 | Effect::GainControl { .. }
                 | Effect::GainControlWhileSourceRemains { .. }
                 | Effect::GainControlWhileYouControlSource { .. }
-                | Effect::GainControlWhileSourceTapped { .. } => true,
+                | Effect::GainControlWhileSourceTapped { .. }
+                | Effect::GainControlWhileMatches { .. } => true,
                 Effect::Move { to, .. } => {
                     !matches!(to, ZoneDest::Battlefield { .. } | ZoneDest::BattlefieldAttached { .. })
                 }
@@ -5266,6 +5269,7 @@ impl Effect {
                 | Effect::GainControlWhileYouControlSource { what }
                 | Effect::GainControlWhileSourceTapped { what }
                 | Effect::GainControlWhileCounter { what, .. }
+            | Effect::GainControlWhileMatches { what, .. }
                 | Effect::GainKeywordsYourCreaturesHave { what, .. }
                     | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
