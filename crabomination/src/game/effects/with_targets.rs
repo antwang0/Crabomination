@@ -24,7 +24,7 @@ impl GameState {
             })
             .collect();
         let mut sub = ctx.clone();
-        sub.targets = targets.iter().cloned().collect();
+        sub.targets = targets.to_vec();
         self.run_effect(body, &sub, events)?;
         // A parked continuation resumes under the stack item's context: keep
         // the binding by naming the same objects again.

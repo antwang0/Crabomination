@@ -3160,7 +3160,10 @@ pod (release)    every deck seated, 2/3/4/6/8 seats (98401+): 28,980 games —
                  99201+), 3 x 200 (61, 99301+), 8 x 60 (23, 99401+) = 39,380
                  games, zero panics, 2 draws, 1 board cap (574 Scute Swarms)
 pod (strict      every deck, 4 x 30 (93001+), 6 x 20 (94001+), 3 x 30 (95001+),
-  debug)         2 x 40 (96001+, 67 of 92 groups) = 6,510 games, all decided
+  debug)         2 x 40 (96001+, 67 of 92 groups) = 6,510 games, all decided;
+                 with CRAB_POD_CONCEDE 5 x 20 at 5 (99501+), 8 x 10 at 3
+                 (99601+), 4 x 30 at 2 (99701+) = 2,350 games, all decided
+suite            24,023 / 0 / 5 (CRAB_ANSWER_LOG=strict); workspace clippy 0
 turns/game       3 seats 30.58, 4 seats 42.61, 5 seats 54.35, 8 seats 91.64
 ```
 
