@@ -1223,6 +1223,17 @@ mod recent158 {
         drain_stack(&mut g);
         assert!(g.players[0].hand.iter().any(|c| c.id == bear), "returned the creature card to hand");
         assert!(g.battlefield.iter().any(|c| c.definition.name == "Mercenary" && c.controller == 0), "made a Mercenary");
+
+        // CR 601.2c — "up to one target": castable with an empty graveyard,
+        // and the Mercenary still comes.
+        let id = g.add_card_to_hand(0, catalog::mourners_surprise());
+        fill_mana(&mut g);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast with no target");
+        drain_stack(&mut g);
+        let mercs = g.battlefield.iter().filter(|c| c.definition.name == "Mercenary").count();
+        assert_eq!(mercs, 2, "a second Mercenary");
     }
 }
 

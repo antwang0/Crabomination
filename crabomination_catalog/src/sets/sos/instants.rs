@@ -427,28 +427,30 @@ pub fn masterful_flourish() -> CardDefinition {
 ///
 /// The "damage can't be prevented this turn" rider is now wired via
 /// `Effect::DamageCantBePreventedThisTurn` (CR 615.12), which suppresses
-/// the engine's prevention shields for the turn. "Up to one target" rides
-/// the engine's optional-target model (a targeted spell resolves with no
-/// target if none is chosen).
+/// the engine's prevention shields for the turn. "Up to one target" is an
+/// `OptionalTargets { min: 0 }` slot.
 pub fn impractical_joke() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {
         name: "Impractical Joke",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // "Damage can't be prevented this turn." (CR 615.12)
-            Effect::DamageCantBePreventedThisTurn,
-            // "...deals 3 damage to up to one target creature or
-            // planeswalker." Targets are optional in this engine, so the
-            // "up to one" reading falls out for free.
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(3),
-            },
-        ]),
+        // "Up to one target": the slot may be declined (CR 601.2c).
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                // "Damage can't be prevented this turn." (CR 615.12)
+                Effect::DamageCantBePreventedThisTurn,
+                // "...deals 3 damage to up to one target creature or
+                // planeswalker."
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(3),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

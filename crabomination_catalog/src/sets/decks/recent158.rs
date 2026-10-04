@@ -233,17 +233,22 @@ pub fn mourners_surprise() -> CardDefinition {
         name: "Mourner's Surprise",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(mercenary()),
-            },
-        ]),
+        // "Return **up to one** target creature card" — the slot may be
+        // declined, and the Mercenary still comes (CR 601.2c).
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(mercenary()),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
