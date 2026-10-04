@@ -387,3 +387,15 @@ fn cr_119_9_each_lifelink_source_is_its_own_life_gain() {
     assert_eq!(g.players[0].life, 24);
     assert_eq!(g.battlefield_find(cat).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// CR 702.73a / 613.8 — a creature GIVEN changeling by a static (Maskwood
+/// Nexus) is every creature type inside the layer pass too: a Goblin lord's
+/// type-filtered anthem reaches it.
+#[test]
+fn cr_702_73a_granted_changeling_is_every_creature_type() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::maskwood_nexus());
+    g.add_card_to_battlefield(0, catalog::goblin_king());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Goblin King pumps the Nexus-made Goblin");
+}

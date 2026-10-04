@@ -1947,7 +1947,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | the undaunted discount holds only while Durnan is on the battlefield; the rest go to the bottom in a random order, not one you choose. |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
-| 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
+| 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, so a creature that loses all abilities stops being every type (a layer-4 type wouldn't). |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
 | 🟡 Sunken Palace | Tricky Terrain (M3C) | its rider copies a spell it pays for, not an activated ability. |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |

@@ -1032,6 +1032,8 @@ impl SecondPass {
             }
             match e.modification {
                 Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
+                // CR 702.73a — a granted changeling makes the bearer every type.
+                Modification::AddKeyword(Keyword::Changeling) => g.type_changer = true,
                 Modification::AddCardType(_) | Modification::RemoveCardType(_) | Modification::SetCardTypes(_) => {
                     g.card_type_changer = true
                 }
@@ -1039,6 +1041,27 @@ impl SecondPass {
             }
         }
         g
+    }
+}
+
+/// How a type-gated match reads changeling (CR 702.73a / 613.1d).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum ChangelingRead {
+    /// A layer-4 effect set the creature types: changeling counts for nothing.
+    Off,
+    /// The instance's own changeling (printed or a resolved grant) counts.
+    Instance,
+    /// Pass 1 found changeling granted by a static: every creature type.
+    Every,
+}
+
+impl ChangelingRead {
+    fn every_type(self, card: &crate::card::CardInstance) -> bool {
+        match self {
+            ChangelingRead::Off => false,
+            ChangelingRead::Instance => card.has_keyword(&Keyword::Changeling),
+            ChangelingRead::Every => true,
+        }
     }
 }
 
@@ -1093,7 +1116,7 @@ fn compute_permanent_gated(
     if gates.power || has_type_gated || has_card_type_gated {
         return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated);
     }
-    compute_permanent_pass(card, effects, None, None, None, true)
+    compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance)
 }
 
 /// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
@@ -1109,19 +1132,20 @@ fn compute_permanent_second_pass(
     has_type_gated: bool,
     has_card_type_gated: bool,
 ) -> ComputedPermanent {
-    let pass1 = compute_permanent_pass(card, effects, None, None, None, true);
+    let pass1 = compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     let gate_card_types = has_card_type_gated.then(|| pass1.card_types().clone());
     // CR 613.1d — a layer-4 "set creature types" overrides changeling's CDA,
-    // so the type-gated re-run stops reading the keyword as every type.
-    compute_permanent_pass(
-        card,
-        effects,
-        Some(pass1.power),
-        gate_types.as_deref(),
-        gate_card_types.as_deref(),
-        !pass1.creature_types_set,
-    )
+    // so the type-gated re-run stops reading the keyword as every type; a
+    // changeling a static granted (Maskwood Nexus) is every type to it too.
+    let changeling = if pass1.creature_types_set {
+        ChangelingRead::Off
+    } else if pass1.keywords().contains(&Keyword::Changeling) {
+        ChangelingRead::Every
+    } else {
+        ChangelingRead::Instance
+    };
+    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref(), gate_card_types.as_deref(), changeling)
 }
 
 fn compute_permanent_pass(
@@ -1130,7 +1154,7 @@ fn compute_permanent_pass(
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
-    changeling_types: bool,
+    changeling_types: ChangelingRead,
 ) -> ComputedPermanent {
     // Start from the base card definition — borrowed, not cloned: each of
     // these materializes only if a layer below actually writes to it.
@@ -1571,7 +1595,7 @@ fn affects(
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
-    changeling_types: bool,
+    changeling_types: ChangelingRead,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
     // had there in every later layer, and that set was fixed before layer 4
@@ -1612,7 +1636,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power), None, None, true)
+    affected_includes_gated(affected, source, card, Some(printed_power), None, None, ChangelingRead::Instance)
 }
 
 fn affected_includes_gated(
@@ -1626,9 +1650,8 @@ fn affected_includes_gated(
     // CR 613.8 — the computed card types (pass 2 when a layer-4 type change
     // meets a type-filtered set). `None` falls back to printed types.
     gate_card_types: Option<&[CardType]>,
-    // Changeling still reads as every creature type (false once a layer-4
-    // effect set the types, CR 613.1d).
-    changeling_types: bool,
+    // How changeling reads as every creature type (CR 613.1d).
+    changeling_types: ChangelingRead,
 ) -> bool {
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
     match affected {
@@ -1692,7 +1715,7 @@ fn affected_includes_gated(
                         Some(types) => types.contains(ct),
                         None => card.definition.subtypes.creature_types.contains(ct),
                     };
-                    typed || changeling_types && card.has_keyword(&Keyword::Changeling)
+                    typed || changeling_types.every_type(card)
                 })
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
@@ -1708,7 +1731,7 @@ fn affected_includes_gated(
                     None => {
                         card.definition.subtypes.creature_types.contains(creature_type)
                     }
-                } || changeling_types && card.has_keyword(&Keyword::Changeling))
+                } || changeling_types.every_type(card))
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
             controller.is_none_or(|c| c == card.controller)
@@ -1889,12 +1912,12 @@ pub(crate) fn requirement_matches_card_typed(
     card: &crate::card::CardInstance,
     source_controller: usize,
     types: &[CardType],
-    ctypes: Option<(&[CreatureType], bool)>,
+    ctypes: Option<(&[CreatureType], ChangelingRead)>,
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
     let has_ctype = |ct: &CreatureType| match ctypes {
-        Some((t, changeling)) => t.contains(ct) || changeling && card.has_keyword(&Keyword::Changeling),
+        Some((t, changeling)) => t.contains(ct) || changeling.every_type(card),
         None => def.subtypes.creature_types.contains(ct) || card.has_keyword(&Keyword::Changeling),
     };
     match req {

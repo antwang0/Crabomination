@@ -4,7 +4,7 @@
 //!
 //! Residuals (each also on its card):
 //! - **Omo, Queen of Vesuva** — "every creature type" is a Changeling grant,
-//!   so a layer-4 type-line read doesn't see it.
+//!   so a creature that loses all abilities stops being every type.
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
 //!   or library" only by a discard or a mill here.
 //! - **Sunken Palace** — its rider copies a spell, not an activated ability.
@@ -67,7 +67,7 @@ fn pump(what: Selector, n: Value) -> Effect {
 
 /// Omo, Queen of Vesuva — an everything counter on up to one land and up to
 /// one creature as it enters or attacks. Residual: "every creature type" is
-/// a Changeling grant.
+/// a Changeling grant, lost with all abilities (a layer-4 type isn't).
 pub fn omo_queen_of_vesuva() -> CardDefinition {
     let counter_on = |slot: u8, filter: R| Effect::AddCounter {
         what: Selector::TargetFiltered { slot, filter },
