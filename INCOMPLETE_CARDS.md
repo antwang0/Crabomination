@@ -1950,7 +1950,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |
 | 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
-| 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |

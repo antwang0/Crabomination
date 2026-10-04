@@ -319,6 +319,7 @@ fn lychguard_guardian_protocols() {
 fn necron_deathmark_disintegrates() {
     let mut g = main_phase(2);
     library(&mut g, 1, 5);
+    g.players[0].hostile_player_targets = true;
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let dm = g.add_card_to_hand(0, catalog::necron_deathmark());
     flood(&mut g);
@@ -333,6 +334,23 @@ fn necron_deathmark_disintegrates() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none());
     assert_eq!(g.players[1].graveyard.len(), 4, "the bear and three milled");
+    // One trigger, its creature slot empty with no creature to destroy: the
+    // player still mills.
+    let mut g = main_phase(2);
+    g.players[0].hostile_player_targets = true;
+    library(&mut g, 1, 5);
+    let dm = g.add_card_to_hand(0, catalog::necron_deathmark());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: dm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PassPriority).ok();
+    g.perform_action(GameAction::PassPriority).ok();
+    let triggers = g.stack.iter().filter(|si| matches!(si, crabomination::game::types::StackItem::Trigger { .. })).count();
+    assert_eq!(triggers, 1, "one enters trigger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dm).is_some(), "it didn't destroy itself");
+    assert_eq!(g.players[1].graveyard.len(), 3);
 }
 
 /// Necron Monolith mills three on attack, a Warrior per creature card milled.

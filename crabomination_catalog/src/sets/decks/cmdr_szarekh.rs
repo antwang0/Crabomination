@@ -463,24 +463,25 @@ pub fn lychguard() -> CardDefinition {
     }
 }
 
-/// Necron Deathmark — flash; enters: destroy up to one creature, and target
-/// player mills three (two triggers: one "up to one" slot can't share a
-/// target list with a required player slot).
+/// Necron Deathmark — flash; enters: destroy up to one target creature and
+/// target player mills three — one trigger (`SlotGroups`: slot 0 the
+/// creature, an empty one holding its place — `game/target_hole.rs`; slot 1
+/// the player).
 pub fn necron_deathmark() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![
-            etb(Effect::ApplyToTargets {
+        triggered_abilities: vec![etb(Effect::SlotGroups(vec![
+            Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
-            }),
-            etb(Effect::TargetPlayerThen {
+            },
+            Effect::TargetPlayerThen {
                 filter: R::Player,
                 then: Box::new(Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) }),
-            }),
-        ],
+            },
+        ]))],
         ..necron("Necron Deathmark", cost(&[generic(3), b(), b()]), 5, 3)
     }
 }
