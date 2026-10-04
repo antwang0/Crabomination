@@ -22380,8 +22380,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NoteExploited => {
+                if let Some(src) = ctx.source {
+                    events.push(GameEvent::Exploited { card_id: src, controller: ctx.controller });
+                }
+                Ok(())
+            }
+
             Effect::Enlist => {
-                // CR 702.151 — tap a nonattacking, non-sick creature you
+                // CR 702.154a — tap a nonattacking, non-sick creature you
                 // control and add its power to the attacker until end of turn.
                 let Some(src) = ctx.source else { return Ok(()); };
                 let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
@@ -22410,6 +22417,8 @@ impl GameState {
                         c.pump(power, 0);
                         events.push(GameEvent::PumpApplied { card_id: src, power, toughness: 0 });
                     }
+                    // CR 702.154c — it enlisted the tapped creature.
+                    events.push(GameEvent::Enlisted { card_id: src, controller: ctrl });
                 }
                 Ok(())
             }

@@ -97,7 +97,9 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
         E::Proliferated { .. } => bits!(K::Proliferated),
         E::Foraged { .. } => bits!(K::Foraged),
-        E::Investigated { .. } => bits!(K::Investigated { first_only: false }),
+        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } => {
+            bits!(K::Performed(crate::effect::KeywordAct::Exploited))
+        }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
         E::GiftGiven { .. } => bits!(K::GiftGiven),
         E::ClassLevelReached { .. } => bits!(K::ClassLevelReached),
@@ -255,12 +257,22 @@ fn event_payload_matches(
         }
         // One mask bit for every origin set: the zone is the payload.
         (EventKind::CardExiledFrom(mask), GameEvent::CardExiledFrom { from, .. }) => mask & from != 0,
-        (EventKind::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
-            !first_only || *first_this_turn
-        }
+        (EventKind::Performed(act), e) => keyword_act_matches(*act, e),
         (EventKind::WonContest { clash }, GameEvent::CoinFlipWon { .. }) => !clash,
         (EventKind::WonContest { clash }, GameEvent::ClashWon { .. }) => *clash,
         _ => true,
+    }
+}
+
+/// [`EventKind::Performed`]'s payload: which keyword action `event` is.
+fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> bool {
+    use crate::effect::KeywordAct as A;
+    match (act, event) {
+        (A::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
+            !first_only || *first_this_turn
+        }
+        (A::Exploited, GameEvent::Exploited { .. }) | (A::Enlisted, GameEvent::Enlisted { .. }) => true,
+        _ => false,
     }
 }
 
@@ -355,9 +367,7 @@ fn reference_event_kind_matches(
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
         (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
-        (EventKind::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
-            !first_only || *first_this_turn
-        }
+        (EventKind::Performed(act), e) => keyword_act_matches(*act, e),
         (EventKind::EvidenceCollected, GameEvent::EvidenceCollected { .. }) => true,
         (EventKind::GiftGiven, GameEvent::GiftGiven { .. }) => true,
         (EventKind::ClassLevelReached, GameEvent::ClassLevelReached { .. }) => true,
@@ -1370,6 +1380,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::CardExiledFrom { player, .. }
         | GameEvent::CreatureFought { controller: player, .. }
+        | GameEvent::Exploited { controller: player, .. }
+        | GameEvent::Enlisted { controller: player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
@@ -1467,7 +1479,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::SpellsCopied { original, .. } => Some(EntityRef::Card(*original)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::CreatureFought { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CreatureFought { card_id, .. }
+        | GameEvent::Exploited { card_id, .. }
+        | GameEvent::Enlisted { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardExiledFrom { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -1877,6 +1891,8 @@ mod tests {
             E::Proliferated { player: 0 },
             E::Foraged { player: 0 },
             E::Investigated { player: 0, first_this_turn: true },
+            E::Exploited { card_id: c, controller: 0 },
+            E::Enlisted { card_id: c, controller: 0 },
             E::EvidenceCollected { player: 0 },
             E::GiftGiven { player: 0 },
             E::ClassLevelReached { source: c, player: 0, level: 2 },
@@ -2037,7 +2053,9 @@ mod tests {
             K::DungeonCompleted,
             K::Proliferated,
             K::Foraged,
-            K::Investigated { first_only: true },
+            K::Performed(crate::effect::KeywordAct::Investigated { first_only: true }),
+            K::Performed(crate::effect::KeywordAct::Exploited),
+            K::Performed(crate::effect::KeywordAct::Enlisted),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

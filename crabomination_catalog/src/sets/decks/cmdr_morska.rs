@@ -370,7 +370,7 @@ pub fn erdwal_illuminator() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Investigated { first_only: true }, EventScope::YourControl),
+            event: EventSpec::new(EventKind::Performed(crate::effect::KeywordAct::Investigated { first_only: true }), EventScope::YourControl),
             effect: investigate(1),
         }],
         ..creature("Erdwal Illuminator", cost(&[generic(1), u()]), vec![CreatureType::Spirit], 1, 3)

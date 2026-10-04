@@ -1305,7 +1305,7 @@ impl Effect {
             Effect::JoinCombatAttacking { what } | Effect::JoinCombatAttackingChosen { what, .. } => {
                 sel_has_target(what)
             }
-            Effect::Enlist => false,
+            Effect::Enlist | Effect::NoteExploited => false,
             Effect::EnlistThen { then } => then.requires_target(),
             Effect::StudyTopCard { .. } => false,
             Effect::ExileTopWithCounters { .. } => false,

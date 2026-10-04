@@ -2844,6 +2844,10 @@ pub enum GameEventWire {
     Foraged { player: usize },
     /// Wire mirror of `GameEvent::Investigated` (CR 701.16a).
     Investigated { player: usize },
+    /// Wire mirror of `GameEvent::Exploited` (CR 702.110b).
+    Exploited { card_id: CardId, controller: usize },
+    /// Wire mirror of `GameEvent::Enlisted` (CR 702.154c).
+    Enlisted { card_id: CardId, controller: usize },
     /// Wire mirror of `GameEvent::EvidenceCollected` (CR 701.59).
     EvidenceCollected { player: usize },
     /// Wire mirror of `GameEvent::GiftGiven` (CR 702.165).
@@ -3100,6 +3104,12 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
             GameEvent::Investigated { player, .. } => GameEventWire::Investigated { player: *player },
+            GameEvent::Exploited { card_id, controller } => {
+                GameEventWire::Exploited { card_id: *card_id, controller: *controller }
+            }
+            GameEvent::Enlisted { card_id, controller } => {
+                GameEventWire::Enlisted { card_id: *card_id, controller: *controller }
+            }
             GameEvent::EvidenceCollected { player } => {
                 GameEventWire::EvidenceCollected { player: *player }
             }
@@ -3475,6 +3485,8 @@ impl GameEventWire {
                 format!("{count} card(s) exiled from {}'s hand or by them", pn(*player))
             }
             E::CreatureFought { card_id, .. } => format!("{} fought", name(*card_id)),
+            E::Exploited { card_id, .. } => format!("{} exploited", name(*card_id)),
+            E::Enlisted { card_id, .. } => format!("{} enlisted", name(*card_id)),
             E::PaidLife { player, amount } => format!("{} pays {amount} life", pn(*player)),
             // Internal "you scried/surveiled" trigger event — the concrete
             // ScryPerformed/SurveilPerformed line already covers the log, so

@@ -2386,10 +2386,10 @@ pub fn tribute(n: u32, otherwise: Effect) -> TriggeredAbility {
     etb(Effect::Tribute { n, otherwise: Box::new(otherwise) })
 }
 
-/// Exploit (CR 702.110): "When this creature enters, you may sacrifice
+/// Exploit (CR 702.110a): "When this creature enters, you may sacrifice
 /// a creature. When you exploit a creature, `payoff`." Modeled as an ETB
 /// `MayDo([Sacrifice 1 creature (this can be itself), payoff])`. Declining
-/// the sacrifice skips the payoff (CR 702.105d — the exploit trigger only
+/// the sacrifice skips the payoff (CR 702.110b — the exploit trigger only
 /// does something if a creature is actually sacrificed). AutoDecider
 /// declines; a value-aware bot / scripted decider accepts.
 pub fn exploit(payoff: Effect) -> TriggeredAbility {
@@ -2401,7 +2401,12 @@ pub fn exploit(payoff: Effect) -> TriggeredAbility {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             },
-            payoff,
+            // "When this exploits a creature": only once one was sacrificed.
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::Seq(vec![Effect::NoteExploited, payoff])),
+                else_: Box::new(Effect::Noop),
+            },
         ])),
     })
 }

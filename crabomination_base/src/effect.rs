@@ -3783,13 +3783,27 @@ pub enum EventKind {
     /// subject and its controller the scope's actor. Matched to
     /// `GameEvent::CreatureFought`.
     Fights,
+    /// A keyword action was performed — the action is the payload. ⚠ The
+    /// last bit of the `u128` kind mask (tag 127): a new action-shaped kind
+    /// is a new [`KeywordAct`], not a new variant here.
+    Performed(KeywordAct),
+}
+
+/// The action an [`EventKind::Performed`] watches for. One mask bit covers
+/// them all, so `event_kind_matches` reads the payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum KeywordAct {
     /// CR 701.16a — a player investigated (`Effect::Investigate`; one event
     /// per investigation, the investigator the actor). `first_only` matches
     /// only that player's first investigation of the turn (Erdwal
     /// Illuminator), counted whether or not the listener was there for it.
-    /// ⚠ The last free bit of the `u128` kind mask (tag 127): the next kind
-    /// needs a wider mask or a payload on an existing kind.
     Investigated { first_only: bool },
+    /// CR 702.110b — a creature exploited a creature (its exploit trigger
+    /// sacrificed one); the exploiter is the subject (Colonel Autumn).
+    Exploited,
+    /// CR 702.154c — an attacking creature enlisted a creature; the attacker
+    /// is the subject (Aradesh, the Founder).
+    Enlisted,
 }
 
 impl EventKind {
@@ -9074,6 +9088,11 @@ pub enum Effect {
     /// AutoDecider fills top-down). Aziza's "tap three untapped creatures
     /// you control" — the surrounding `If` guarantees enough candidates.
     TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool, exact: bool },
+    /// CR 702.110b — the source exploited a creature: emits
+    /// `GameEvent::Exploited` ("whenever a creature you control exploits a
+    /// creature", Colonel Autumn). [`shortcut::exploit`] runs it once the
+    /// sacrifice happened.
+    NoteExploited,
     /// Enlist (CR 702.154): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /
