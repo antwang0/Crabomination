@@ -66,6 +66,9 @@ pub enum EffectDuration {
     WhileSourceAttached,
     /// Indefinite (e.g. counters, "for as long as" effects).
     Indefinite,
+    /// CR 611.2c — lasts while each affected permanent has a `kind` counter;
+    /// swept beside `WhileSourceTapped`.
+    WhileHasCounter(crate::card::CounterType),
 }
 
 // ── Layer classification ───────────────────────────────────────────────────────

@@ -6675,6 +6675,24 @@ impl GameState {
                     || still_tapped.contains(&e.source)
             });
         }
+        // CR 611.2c — "for as long as it has a [kind] counter on it": kept
+        // while every affected permanent still carries one.
+        if self.continuous_effects.iter().any(|e| matches!(e.duration, crate::game::layers::EffectDuration::WhileHasCounter(_))) {
+            let holds = |g: &Self, e: &crate::game::layers::ContinuousEffect| {
+                let crate::game::layers::EffectDuration::WhileHasCounter(kind) = e.duration else { return true };
+                match &e.affected {
+                    crate::game::layers::AffectedPermanents::Specific(ids) => {
+                        ids.iter().all(|id| g.battlefield_find(*id).is_some_and(|c| c.counter_count(kind) > 0))
+                    }
+                    _ => true,
+                }
+            };
+            let keep: Vec<bool> = self.continuous_effects.iter().map(|e| holds(self, e)).collect();
+            if keep.iter().any(|k| !k) {
+                let mut it = keep.into_iter();
+                self.continuous_effects.retain(|_| it.next().unwrap_or(true));
+            }
+        }
         // A granted trigger under any of the three source clauses ends the
         // same way (no catalog grant carries one yet; the arm accepts them).
         if !self.granted_triggers_timed.is_empty() {

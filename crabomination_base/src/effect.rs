@@ -2914,6 +2914,10 @@ pub enum Duration {
     /// Shapeshifter's copy): ends as `Effect::TurnFaceDown` turns it, so the
     /// card it stashes is its own.
     UntilTurnedFaceDown,
+    /// CR 611.2c — "for as long as it has a [kind] counter on it": the SBA
+    /// sweep drops the effect once an affected permanent has none (Aven
+    /// Mimeomancer's feather, Xolatoyac's flood), whatever its source does.
+    WhileHasCounter(crate::card::CounterType),
 }
 
 // ── Library positions, scry modes, mana ──────────────────────────────────────
