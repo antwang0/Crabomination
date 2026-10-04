@@ -1110,10 +1110,8 @@ pub fn crisis_of_conscience() -> CardDefinition {
 }
 
 /// Reverse the Polarity — counter all other spells; switch every creature's
-/// P/T; or nothing can be blocked.
-///
-/// ⚠ Residual: "can't be blocked" reaches only the creatures there as it
-/// resolves.
+/// P/T; or creatures can't be blocked this turn (CR 611.2c: a rule over the
+/// turn, so a creature arriving later is covered too).
 pub fn reverse_the_polarity() -> CardDefinition {
     spell(
         "Reverse the Polarity",
@@ -1122,7 +1120,7 @@ pub fn reverse_the_polarity() -> CardDefinition {
         Effect::ChooseMode(vec![
             Effect::CounterAllOtherSpells,
             Effect::SwitchPowerToughness { what: Selector::EachPermanent(R::Creature), duration: Duration::EndOfTurn },
-            eot(Selector::EachPermanent(R::Creature), Keyword::Unblockable),
+            Effect::GrantKeywordToMatchingThisTurn { filter: R::Creature, keyword: Keyword::Unblockable },
         ]),
     )
 }

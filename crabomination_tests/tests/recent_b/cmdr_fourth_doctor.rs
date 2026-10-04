@@ -4,7 +4,7 @@
 //! a live threshold with an else branch, one added counter of a chosen kind
 //! per permanent, and "counter all other spells" without a draw.
 
-use crabomination::card::{CardId, CounterType, Supertype, Value};
+use crabomination::card::{CardId, CounterType, Keyword, Supertype, Value};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, PlayerRef, Selector};
@@ -172,6 +172,23 @@ fn counter_all_other_spells_draws_nothing() {
     assert!(g.stack.is_empty());
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bears));
     assert_eq!(g.players[0].hand.len(), hand);
+}
+
+/// Reverse the Polarity's third mode is a rule for the turn (CR 611.2c): a
+/// creature that enters after it resolves can't be blocked either.
+#[test]
+fn reverse_the_polarity_covers_creatures_that_arrive_later() {
+    let mut g = pod(2);
+    let there = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::reverse_the_polarity());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None })
+        .expect("castable");
+    drain_stack(&mut g);
+    let later = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for c in [there, later] {
+        assert!(g.computed_permanent(c).unwrap().keywords().contains(&Keyword::Unblockable));
+    }
 }
 
 /// Gallifrey Stands: at upkeep a Doctor comes down from hand, and thirteen
