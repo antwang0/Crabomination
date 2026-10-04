@@ -2843,10 +2843,14 @@ mod tests {
         // `bot_ladder --commander`, 2,000 games at seed 9991, before/after:
         // 32.36/32.43, 45.66/45.60, 68.34/68.20 turns at 3/4/6 seats, every
         // block 2,000/2,000 decided; `--bench` 196,176 byte-identical.
+        // Re-blessed 2026-10-04 (hideaway: "you may play that card" now plays
+        // a hidden LAND too, where it was cast-only and stranded the land in
+        // exile — bisected to that commit alone): 0xC0FFEE 2492→2482
+        // actions, same winner; 43 unchanged; 4242 82→89 turns, same winner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 54, 2492),
+            (0xC0FFEE, Some(2), 54, 2482),
             (43, Some(0), 77, 3646),
-            (4242, Some(3), 82, 4120),
+            (4242, Some(3), 89, 4409),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
