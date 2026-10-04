@@ -233,6 +233,29 @@ fn yao_guai_destroys_within_total_mana_value() {
     assert!(g.battlefield_find(big).is_some(), "Phyrexian Arena (3) is over the cap");
 }
 
+/// CR 601.2c — the targets share one budget: at X = 2, Sol Ring (1) and Mind
+/// Stone (2) are each legal alone but not together; the Ornithopter (0)
+/// rides along with either.
+#[test]
+fn yao_guai_targets_share_the_total_mana_value_budget() {
+    let mut g = pod(2);
+    let ids = [
+        g.add_card_to_battlefield(1, catalog::sol_ring()),
+        g.add_card_to_battlefield(1, catalog::mind_stone()),
+        g.add_card_to_battlefield(1, catalog::ornithopter()),
+    ];
+    flood(&mut g, 0);
+    let yao = g.add_card_to_hand(0, catalog::rampaging_yao_guai());
+    cast_x(&mut g, 0, yao, None, Some(2)).expect("X = 2");
+    let gone: u32 = ids
+        .iter()
+        .filter(|id| g.battlefield_find(**id).is_none())
+        .map(|id| g.players[1].graveyard.iter().find(|c| c.id == *id).map_or(0, |c| c.definition.cost.cmc()))
+        .sum();
+    assert!(gone <= 2, "destroyed mana value {gone} is within X");
+    assert!(ids.iter().filter(|id| g.battlefield_find(**id).is_none()).count() >= 2, "two fit the budget");
+}
+
 /// Jason Bright — a Zombie or Mutant dying with its power changed draws.
 #[test]
 fn jason_bright_draws_on_changed_power() {

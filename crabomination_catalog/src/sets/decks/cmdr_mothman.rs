@@ -539,16 +539,20 @@ pub fn piper_wright_publick_reporter() -> CardDefinition {
 
 /// Rampaging Yao Guai — {X}{G}{G}{G} Creature — Bear Mutant 2/2. Vigilance,
 /// trample. Enters with X +1/+1 counters. When it enters, destroy any number
-/// of target artifacts and/or enchantments with total mana value X or less.
-///
-/// ⚠ Residual: the permanents are chosen on resolution, not targeted.
+/// of target artifacts and/or enchantments with total mana value X or less
+/// (CR 601.2c — the budget is checked across the chosen targets as the
+/// trigger goes on the stack: `R::SlotsTotalManaValueAtMostX`).
 pub fn rampaging_yao_guai() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
-        triggered_abilities: vec![etb(Effect::DestroyWithinTotalManaValue {
-            filter: R::HasCardType(CardType::Artifact).or(R::HasCardType(CardType::Enchantment)),
-            cap: Value::XFromCost,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::HasCardType(CardType::Artifact)
+                .or(R::HasCardType(CardType::Enchantment))
+                .and(R::SlotsTotalManaValueAtMostX),
+            effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
         })],
         ..creature(
             "Rampaging Yao Guai",

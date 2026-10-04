@@ -1986,7 +1986,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | its two modes are two abilities (same cost and timing; nothing in the pod reads the difference). |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
-| 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III: a land among the exiled cards can't be played. |
