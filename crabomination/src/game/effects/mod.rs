@@ -17963,15 +17963,16 @@ impl GameState {
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };
-                // Locate the source in some graveyard; only return it if it
-                // was a creature card (the printed-or-current type still
-                // carries Creature on the first death; the enchantment side
-                // we mint below has it stripped, so a second death no-ops).
-                let owner = self.players.iter().position(|p| {
-                    p.graveyard.iter().any(|c| {
-                        c.id == src && c.definition.card_types.contains(&CardType::Creature)
-                    })
-                });
+                // "If it was a creature" is the permanent's last known
+                // information (CR 603.10a): the enchantment it came back as
+                // is not one, so a second death doesn't return it. The card
+                // in the graveyard is a creature card again (CR 400.7).
+                let was_creature = |c: &CardInstance| c.definition.card_types.contains(&CardType::Creature);
+                let lki = self.leaves_bf_lki.get(&src).or_else(|| self.died_card_snapshots.get(&src));
+                if lki.is_some_and(|s| !was_creature(s)) {
+                    return Ok(());
+                }
+                let owner = self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == src && was_creature(c)));
                 let Some(owner) = owner else { return Ok(()); };
                 let dest = ZoneDest::Battlefield {
                     controller: PlayerRef::Seat(owner),
@@ -17979,16 +17980,27 @@ impl GameState {
                 };
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
-                // Strip the Creature type so it returns as an enchantment.
+                // "It's an enchantment": an effect on this object, so it is
+                // baked (not copiable, gone when it leaves — CR 707.2 / 400.7).
                 if let Some(c) = self.battlefield.find_by_id_mut(src) {
-                    let def = c.definition_make_mut();
-                    def.card_types.retain(|t| *t != CardType::Creature);
+                    c.bake_grant().card_types.retain(|t| *t != CardType::Creature);
                 }
                 Ok(())
             }
 
             Effect::ReturnSelfRetypedWithCounters { unless, types, kind, amount } => {
                 let Some(src) = ctx.source else { return Ok(()) };
+                // "If it's not a Spirit" reads the permanent that died (CR
+                // 603.10a) — the retyped one it came back as is a Spirit; the
+                // card in the graveyard is its printed self (CR 400.7).
+                if self
+                    .leaves_bf_lki
+                    .get(&src)
+                    .or_else(|| self.died_card_snapshots.get(&src))
+                    .is_some_and(|s| s.definition.subtypes.creature_types.contains(unless))
+                {
+                    return Ok(());
+                }
                 let owner = self.players.iter().position(|p| {
                     p.graveyard.iter().any(|c| {
                         c.id == src
@@ -18001,7 +18013,7 @@ impl GameState {
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 if let Some(c) = self.battlefield.find_by_id_mut(src) {
-                    c.definition_make_mut().subtypes.creature_types = types.clone();
+                    c.bake_grant().subtypes.creature_types = types.clone();
                 }
                 self.place_counters(src, *kind, *amount);
                 Ok(())
@@ -27456,7 +27468,7 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = c.definition_make_mut();
+                        let def = c.bake_grant();
                         if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare) {
                             def.subtypes.creature_types.push(crate::card::CreatureType::Nightmare);
                         }
@@ -28037,8 +28049,9 @@ impl GameState {
                     ctx, events,
                 );
                 if let Some(c) = self.battlefield.find_by_id_mut(id) {
-                    // "…a black Zombie in addition to its other types."
-                    let def = c.definition_make_mut();
+                    // "…a black Zombie in addition to its other types." An
+                    // effect, so baked: not copiable, gone when it leaves.
+                    let def = c.bake_grant();
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
                         def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
                     }
@@ -29852,9 +29865,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(id)
                         && !c.definition.keywords.has_kw(&crate::card::Keyword::Decayed)
                     {
-                        c.definition_make_mut()
-                            .keywords
-                            .push(crate::card::Keyword::Decayed);
+                        c.bake_grant().keywords.push(crate::card::Keyword::Decayed);
                     }
                 }
                 Ok(())
@@ -39204,7 +39215,7 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = c.definition_make_mut();
+                        let def = c.bake_grant();
                         for kw in def.keywords.iter_mut() {
                             if let crate::card::Keyword::Equip(cost) = kw {
                                 cost.reduce_generic(*amount);

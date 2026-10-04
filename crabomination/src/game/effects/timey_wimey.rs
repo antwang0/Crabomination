@@ -301,7 +301,7 @@ impl GameState {
             return;
         }
         if let Some(me) = self.battlefield_find_mut(src) {
-            let def = me.definition_make_mut();
+            let def = me.bake_grant();
             def.activated_abilities.extend(activated);
             def.triggered_abilities.extend(triggered);
         }

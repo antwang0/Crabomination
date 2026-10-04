@@ -552,6 +552,29 @@ fn enduring_innocence_returns_as_enchantment_when_it_dies() {
     assert!(back.definition.card_types.contains(&crabomination::card::CardType::Enchantment));
 }
 
+/// CR 603.10a / 400.7 — Enduring Innocence destroyed as the enchantment it
+/// came back as "wasn't a creature", so it stays in the graveyard, where it is
+/// a new object: an enchantment creature card again (a reanimation spell can
+/// find it).
+#[test]
+fn enduring_innocence_stays_dead_the_second_time_and_is_a_creature_card_again() {
+    let mut g = two_player_game();
+    let innocence = g.add_card_to_battlefield(0, catalog::enduring_innocence());
+    for _ in 0..2 {
+        let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+        let kill = crabomination::effect::Effect::Destroy {
+            what: crabomination::effect::Selector::ExactObjects(vec![innocence]),
+        };
+        let mut evs = g.resolve_effect(&kill, &ctx).expect("destroy");
+        evs.extend(g.check_state_based_actions());
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(innocence).is_none(), "the enchantment it came back as wasn't a creature");
+    let card = g.players[0].graveyard.iter().find(|c| c.id == innocence).expect("in the graveyard");
+    assert!(card.definition.card_types.contains(&CardType::Creature), "a creature card again");
+}
+
 #[test]
 fn thundertrap_trainer_etb_takes_noncreature_nonland_from_top_four() {
     let mut g = two_player_game();

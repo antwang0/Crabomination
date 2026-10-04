@@ -689,3 +689,26 @@ fn cr_111_8_a_dead_token_is_no_card_type_for_delirium() {
     g.resolve_effect(&body, &ctx).unwrap();
     assert_eq!(g.players[0].life, life + 3);
 }
+
+/// CR 400.7 — "a black Zombie in addition to its other types" (Grave
+/// Betrayal) is an effect on the returned permanent: once it dies again, the
+/// card in the graveyard is a new object without it.
+#[test]
+fn cr_400_7_grave_betrayals_zombie_ends_with_the_permanent() {
+    use crabomination::card::CreatureType;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase();
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&Effect::GraveBetrayalReanimate, &ctx).expect("reanimate");
+    let back = g.battlefield_find(bear).expect("returned under Grave Betrayal's controller");
+    assert!(back.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
+    let mut evs = g
+        .resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![bear]) }, &ctx)
+        .expect("destroy");
+    evs.extend(g.check_state_based_actions());
+    g.dispatch_triggers_for_events(&evs);
+    let card = g.players[1].graveyard.iter().find(|c| c.id == bear).expect("in its owner's graveyard");
+    assert!(!card.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
+}

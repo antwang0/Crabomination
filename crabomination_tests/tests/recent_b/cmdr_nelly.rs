@@ -472,6 +472,9 @@ fn otherworldly_escort_returns_once_as_a_spirit() {
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     cast_as(&mut g, 1, bolt, &[Target::Permanent(oe)]).expect("bolt");
     assert!(g.battlefield_find(oe).is_none(), "a Spirit stays dead");
+    // CR 400.7 — the card in the graveyard is a new object: a Human again.
+    let card = g.players[0].graveyard.iter().find(|c| c.id == oe).expect("in the graveyard");
+    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Human));
 }
 
 /// Prisoner's Dilemma: a mixed table burns only the silent.
