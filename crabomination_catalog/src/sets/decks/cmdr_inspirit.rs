@@ -413,7 +413,7 @@ pub fn ripples_of_potential() -> CardDefinition {
                     filter: R::ControlledByYou,
                 },
                 body: Box::new(Effect::PhaseOut { what: Selector::TriggerSource, until_source_leaves: false }),
-                headless_takes_all: false,
+                headless_takes: None,
             },
         ]),
         ..Default::default()

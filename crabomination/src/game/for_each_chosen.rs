@@ -6,14 +6,14 @@ use crate::decision::PickValue;
 use crate::effect::{Effect, Selector};
 use crate::game::GameState;
 use crate::game::effects::EffectContext;
-use crate::game::types::{GameError, GameEvent};
+use crate::game::types::{GameError, GameEvent, Target};
 
 impl GameState {
     pub(crate) fn for_each_chosen(
         &mut self,
         from: &Selector,
         body: &Effect,
-        headless_takes_all: bool,
+        headless_takes: Option<&crate::card::SelectionRequirement>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -34,7 +34,12 @@ impl GameState {
             ids.len() as u32,
             PickValue::Gain,
             effect,
-            if headless_takes_all { ids.clone() } else { Vec::new() },
+            headless_takes.map_or_else(Vec::new, |req| {
+                ids.iter()
+                    .copied()
+                    .filter(|&id| self.evaluate_requirement_static(req, &Target::Permanent(id), ctx.controller, ctx.source))
+                    .collect()
+            }),
         ) else {
             return Ok(());
         };

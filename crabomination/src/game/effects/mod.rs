@@ -5523,8 +5523,8 @@ impl GameState {
                 }
             }
 
-            Effect::ForEachChosen { from, body, headless_takes_all } => {
-                self.for_each_chosen(from, body, *headless_takes_all, effect, ctx, events)
+            Effect::ForEachChosen { from, body, headless_takes } => {
+                self.for_each_chosen(from, body, headless_takes.as_ref(), effect, ctx, events)
             }
             Effect::ForEach { selector, body } => {
                 let entities = self.resolve_selector(selector, ctx);

@@ -4363,13 +4363,13 @@ pub enum Effect {
     /// "Choose any number of [from]. [body for each]" — the controller picks
     /// a subset (CR 608.2d), then `body` runs once per pick with it bound as
     /// `Selector::TriggerSource`, like `ForEach` (Ripples of Potential's
-    /// phase-out). A headless seat takes every candidate when
-    /// `headless_takes_all`, none otherwise.
+    /// phase-out). A headless seat takes the candidates `headless_takes`
+    /// matches, none when it is `None`.
     ForEachChosen {
         from: Selector,
         body: Box<Effect>,
         #[serde(default)]
-        headless_takes_all: bool,
+        headless_takes: Option<SelectionRequirement>,
     },
     /// Run `body` once per player `who` resolves to, each time with that player
     /// as the effect's controller, in APNAP order (CR 101.4). The general form
