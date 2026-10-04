@@ -2172,6 +2172,12 @@ pub struct ResolutionScratch {
     /// `activation_mana_colors_scratch` beside it.
     #[serde(skip)]
     pub(crate) resolving_source_transformed: bool,
+    /// Transient: the card discarded to pay the resolving activation's cost.
+    /// Stamped by `Effect::WithDiscardedForCost`; read by
+    /// `Effect::IfDiscardedForCost`. Reset between independent resolutions.
+    /// Here, not on `GameState`, which sits at its byte cap.
+    #[serde(skip)]
+    pub(crate) discarded_for_cost_card: Option<CardId>,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -2799,11 +2805,6 @@ pub struct GameState {
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
     #[serde(default)]
     pub(crate) tapped_for_cost_power: Option<i32>,
-    /// Transient: the card discarded to pay the resolving activation's cost.
-    /// Stamped by `Effect::WithDiscardedForCost`; read by
-    /// `Effect::IfDiscardedForCost`. Reset between independent resolutions.
-    #[serde(default)]
-    pub(crate) discarded_for_cost_card: Option<CardId>,
     /// False Cure — life lost per 1 life gained, by any player, for the rest
     /// of the turn (`Effect::AnyLifeGainPunishedThisTurn`). Cleared at cleanup.
     #[serde(default)]
@@ -4211,7 +4212,6 @@ impl Clone for GameState {
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
-            discarded_for_cost_card: self.discarded_for_cost_card,
             life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
@@ -4424,7 +4424,6 @@ impl GameState {
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
-            discarded_for_cost_card: None,
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,

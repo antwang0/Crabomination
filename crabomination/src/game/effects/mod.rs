@@ -3037,7 +3037,10 @@ impl GameState {
             self.last_discarded_mana_value = None;
             self.last_revealed_from_hand = None;
             self.tapped_for_cost_power = None;
-            self.discarded_for_cost_card = None;
+            // Guarded: an unconditional store unshares the scratch group.
+            if self.scratch.discarded_for_cost_card.is_some() {
+                self.scratch.discarded_for_cost_card = None;
+            }
             // Reset last-created-token scratch — `Selector::LastCreatedToken`
             // (singular) and `Selector::LastCreatedTokens` (plural) only refer
             // to tokens created by *this* resolution.
@@ -31572,12 +31575,12 @@ impl GameState {
             }
 
             Effect::WithDiscardedForCost { card, body } => {
-                self.discarded_for_cost_card = Some(*card);
+                self.scratch.discarded_for_cost_card = Some(*card);
                 self.run_effect(body, ctx, events)
             }
 
             Effect::IfDiscardedForCost { filter, then } => {
-                let matched = self.discarded_for_cost_card.and_then(|id| self.find_card_anywhere(id)).is_some_and(|c| {
+                let matched = self.scratch.discarded_for_cost_card.and_then(|id| self.find_card_anywhere(id)).is_some_and(|c| {
                     crate::game::layers::requirement_matches_card(filter, c, ctx.controller)
                 });
                 if matched {
