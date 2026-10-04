@@ -426,8 +426,8 @@ pub fn serendib_sorcerer() -> CardDefinition {
 /// the top (the rest go to the bottom at random). The trigger sits on the
 /// Aura, so "this creature" is what it enchants, and the reveal runs as the
 /// enchanted creature's controller (`AsPlayer`: "your library" is theirs, and
-/// the new creature enters under them). Residual: the new creature enters
-/// before the old one is destroyed.
+/// the new creature enters under them). The old host is destroyed first; the
+/// unattached Aura waits out the resolution (CR 704.3) and moves.
 pub fn shifting_shadow() -> CardDefinition {
     let host = || Selector::AttachedTo(Box::new(Selector::This));
     CardDefinition {
@@ -442,12 +442,11 @@ pub fn shifting_shadow() -> CardDefinition {
                 what: host(),
                 filter: R::ControlledByActivePlayer,
             }),
-            // The old host is bound as `TriggerSource` and destroyed last: a
-            // destroy runs the state-based check at once, which would bin the
-            // Aura before it could move.
+            // The old host is bound as `TriggerSource`.
             effect: Effect::ForEach {
                 selector: host(),
                 body: Box::new(Effect::Seq(vec![
+                    Effect::Destroy { what: Selector::TriggerSource },
                     Effect::AsPlayer {
                         who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                         body: Box::new(Effect::RevealUntilOneToBattlefieldRestBottom {
@@ -457,7 +456,6 @@ pub fn shifting_shadow() -> CardDefinition {
                         }),
                     },
                     Effect::Attach { what: Selector::This, to: Selector::LastMoved },
-                    Effect::Destroy { what: Selector::TriggerSource },
                 ])),
             },
         }],

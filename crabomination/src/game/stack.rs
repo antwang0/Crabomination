@@ -7626,7 +7626,10 @@ impl GameState {
         }
 
         // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).
-        let orphaned_auras: Vec<CardId> = if !scan.aura {
+        // CR 704.3 — not part-way through a resolution: an Aura whose host
+        // the effect just destroyed may be attached anew by a later step of
+        // the same effect (Shifting Shadow); the sweep after it settles.
+        let orphaned_auras: Vec<CardId> = if !scan.aura || mid_resolution {
             Vec::new()
         } else {
             self.battlefield

@@ -337,6 +337,23 @@ fn shifting_shadow_polymorphs_each_upkeep() {
     assert!(g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Haste));
 }
 
+/// CR 704.3 / CR 603.2 — "destroy this creature. Reveal …": the host is gone
+/// before the new creature enters, so a Soul Warden host never sees it; the
+/// unattached Aura isn't swept mid-resolution, so it still moves.
+#[test]
+fn shifting_shadow_destroys_the_host_before_the_new_creature_enters() {
+    let mut g = pod(2);
+    let warden = g.add_card_to_battlefield(0, catalog::soul_warden());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let shadow = g.add_card_to_hand(0, catalog::shifting_shadow());
+    cast(&mut g, 0, shadow, Some(Target::Permanent(warden))).expect("cast");
+    let life = g.players[0].life;
+    step(&mut g, TurnStep::Upkeep);
+    assert!(g.battlefield_find(warden).is_none());
+    assert_eq!(g.battlefield_find(shadow).and_then(|c| c.attached_to), Some(angel));
+    assert_eq!(g.players[0].life, life, "the Warden left before the Angel entered");
+}
+
 /// Shifting Shadow on an OPPONENT's creature: the upkeep ability is the
 /// creature's, so "your library" is its controller's and the new creature
 /// enters under them — not the Aura controller's library.

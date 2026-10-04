@@ -64,7 +64,10 @@ fn attach(g: &mut GameState, what: CardId, to: CardId) {
 
 fn kill(g: &mut GameState, id: CardId) {
     let ctx = EffectContext::for_spell(0, None, 0, 0);
-    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![id]) }, &ctx).expect("destroy");
+    let mut evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![id]) }, &ctx).expect("destroy");
+    // The sweep a real resolution is followed by (CR 704.3): an orphaned
+    // Aura goes to the graveyard here, not part-way through the destroy.
+    evs.extend(g.check_state_based_actions());
     g.dispatch_triggers_for_events(&evs);
     drain_stack(g);
 }

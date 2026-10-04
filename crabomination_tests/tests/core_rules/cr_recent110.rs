@@ -489,3 +489,42 @@ fn cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Soul Warden"), "the sweep took the Warden");
     assert_eq!(g.players[0].life, 25, "one life per Soldier that entered before the sweep");
 }
+
+/// CR 704.3 — state-based actions aren't checked part-way through a
+/// resolution: an Aura whose host a spell destroys is still on the
+/// battlefield until the spell is done, then goes in the sweep, and its own
+/// "put into a graveyard" trigger still fires (Reach for the Sky draws).
+#[test]
+fn cr_704_3_an_orphaned_aura_goes_in_the_sweep_after_the_resolution() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::reach_for_the_sky());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Reach for the Sky");
+    drain_stack(&mut g);
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Doom Blade");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "swept once the spell resolved");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == aura));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the Aura's trigger drew one");
+}

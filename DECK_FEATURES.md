@@ -924,8 +924,8 @@ two-seat assumption, so Vindictive Lich's "each mode must target a different
 player" hit one seat at four. Residuals: ~~**Mairsil**~~ (a borrowed ability once a turn;
 the cage is its controller's pick since `01BaSouG`);
 ~~**Magus of the Abyss**~~ (its pick must be a legal target since `01BaSouG`);
-**Shifting Shadow** reveals from the Aura controller's library and the new
-creature enters before the old one is destroyed; **Vindictive Lich** always
+~~**Shifting Shadow**~~ (destroys first since `claude/modern_decks` CR 704.3
+fix); **Vindictive Lich** always
 picks all three modes in a fixed order. Four-seat pods beside Rin and Seri /
 Riku / Atraxa (seed 10140, 1,000 games, all decided): Inalla 7.8 % — Rin and
 Seri take 53 %; a 300-game census (seed 10141) leaves no card of the four

@@ -206,7 +206,9 @@ mod recent195 {
         assert!(c.keywords().contains(&Keyword::Reach), "granted reach");
         // Destroy the host → Aura goes to graveyard → draw.
         let ctx = crabomination::game::effects::EffectContext::for_ability(bear, 0, None);
-        let evs = g.resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This }, &ctx).unwrap();
+        let mut evs = g.resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This }, &ctx).unwrap();
+        // CR 704.3 — the orphaned Aura goes in the sweep after the resolution.
+        evs.extend(g.check_state_based_actions());
         g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand_before, "drew a card when the Aura died");
