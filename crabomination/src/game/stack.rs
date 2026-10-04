@@ -247,9 +247,23 @@ impl GameState {
         });
         if let DecisionAnswer::Mode(idx) = answer {
             let idx = idx.min(modes.len() - 1);
+            let idx = self.legal_trigger_mode(modes, idx, source, controller);
             return Some(self.decline_self_hostile_mode(modes, idx, source, controller));
         }
         None
+    }
+
+    /// CR 603.3c — a mode whose targets can't be chosen can't be chosen: a
+    /// pick that needs a target with none legal falls to the first mode that
+    /// can be (the pick itself when none can).
+    fn legal_trigger_mode(&self, modes: &[Effect], idx: usize, source: CardId, controller: usize) -> usize {
+        let can = |m: &Effect| {
+            !m.requires_target() || self.auto_target_for_effect_avoiding(m, controller, Some(source)).is_some()
+        };
+        if can(&modes[idx]) {
+            return idx;
+        }
+        modes.iter().position(can).unwrap_or(idx)
     }
 
     /// "Choose up to one" (an empty `Noop` mode beside the real ones): a
