@@ -124,24 +124,25 @@ pub fn faerie_fencing() -> CardDefinition {
 }
 
 /// Shatter the Oath — {3}{B}{B} Sorcery. Destroy target creature or enchantment,
-/// then create a Wicked Role attached to a creature you control.
-/// (The optional second target is auto-picked — the highest-power creature you
-/// control receives the Role.)
+/// then create a Wicked Role attached to up to one target creature you control
+/// (CR 601.2c: its own slot group).
 pub fn shatter_the_oath() -> CardDefinition {
     CardDefinition {
         name: "Shatter the Oath",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::SlotGroups(vec![
             Effect::Destroy {
                 what: target_filtered(R::Creature.or(R::Enchantment)),
             },
-            Effect::CreateTokenAttachedTo {
-                target: Selector::take(
-                    Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                    Value::ONE,
-                ),
-                definition: std::sync::Arc::new(wicked_role()),
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+                effect: Box::new(Effect::CreateTokenAttachedTo {
+                    target: Selector::Target(0),
+                    definition: std::sync::Arc::new(wicked_role()),
+                }),
             },
         ]),
         ..Default::default()

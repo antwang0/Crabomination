@@ -37538,18 +37538,26 @@ pub fn dusyut_earthcarver() -> CardDefinition {
     }
 }
 
-/// Conduct Electricity — {4}{R} Instant. Deals 6 damage to target creature.
-/// (The secondary "2 damage to up to one target creature token" is dropped —
-/// optional secondary targets aren't modeled here.)
+/// Conduct Electricity — {4}{R} Instant. Deals 6 damage to target creature and
+/// 2 damage to up to one target creature token.
 pub fn conduct_electricity() -> CardDefinition {
     CardDefinition {
         name: "Conduct Electricity",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(6),
-        },
+        // CR 601.2c — two slot groups: the creature, then up to one token.
+        effect: Effect::SlotGroups(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(6),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
+                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -63223,7 +63231,11 @@ pub fn essence_capture() -> CardDefinition {
         name: "Essence Capture",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        // CR 601.2c — the countered spell and the "up to one" creature are
+        // two slot groups. A plain `Seq` gave both members slot 0, so the
+        // spell's slot was the only one declared and the bot never named a
+        // creature to grow.
+        effect: Effect::SlotGroups(vec![
             Effect::CounterSpell {
                 what: target_filtered(
                     SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Creature),

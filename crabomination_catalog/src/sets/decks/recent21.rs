@@ -139,17 +139,28 @@ pub fn ankle_biter() -> CardDefinition {
     }
 }
 
-/// Trick Shot — {4}{R} Instant. Deal 6 damage to target creature. (The extra
-/// "2 to another target creature token" rider is approximated away.)
+/// Trick Shot — {4}{R} Instant. Deals 6 damage to target creature and 2 damage
+/// to up to one other target creature token.
 pub fn trick_shot() -> CardDefinition {
     CardDefinition {
         name: "Trick Shot",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(6),
-        },
+        // CR 601.2c — two slot groups: the creature, then up to one token.
+        effect: Effect::SlotGroups(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(6),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsToken)
+                    .and(SelectionRequirement::OtherThanTargetSlot(0)),
+                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }),
+            },
+        ]),
         ..Default::default()
     }
 }

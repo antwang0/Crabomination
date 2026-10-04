@@ -1400,7 +1400,16 @@ mod recent139 {
         let spell = g.add_card_to_hand(0, catalog::shatter_the_oath());
         g.players[0].mana_pool.add(Color::Black, 2);
         g.players[0].mana_pool.add_colorless(3);
-        cast(&mut g, spell, Some(Target::Permanent(enemy)), None);
+        // CR 601.2c — the Role's creature is its own "up to one" target.
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(enemy)),
+            additional_targets: vec![Target::Permanent(mine)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
         assert!(g.battlefield_find(enemy).is_none(), "target destroyed");
         assert!(
             g.battlefield.iter().any(|c| c.attached_to == Some(mine) && c.definition.name == "Wicked"),

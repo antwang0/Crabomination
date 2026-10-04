@@ -1874,20 +1874,35 @@ fn nocturnal_hunger_destroys_creature() {
     assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
 }
 
-/// Conduct Electricity deals 6 to a creature.
+/// Conduct Electricity deals 6 to a creature and 2 to up to one creature token
+/// (CR 601.2c: the token is its own optional slot group).
 #[test]
 fn conduct_electricity_deals_six() {
+    use crabomination::game::Target;
     let mut g = two_player_game();
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let id = g.add_card_to_hand(0, catalog::conduct_electricity());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(crabomination::game::Target::Permanent(angel)),
+        card_id: id, target: Some(Target::Permanent(angel)),
         additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Conduct Electricity");
+    }).expect("cast Conduct Electricity with no token target");
     drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_none(), "6 damage kills the 4/4");
+
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let token = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let id = g.add_card_to_hand(0, catalog::conduct_electricity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![Target::Permanent(token)], mode: None, x_value: None,
+    }).expect("cast Conduct Electricity at a token too");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(token).is_none(), "2 damage kills the 2/2 token");
 }
 
 /// Carrot Cake makes a Rabbit on ETB and again when sacrificed for life.
