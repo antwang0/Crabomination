@@ -575,14 +575,19 @@ pub fn nyssa_of_traken() -> CardDefinition {
     })
 }
 
-/// Peri Brown — historic spells have convoke.
-///
-/// ⚠ Residual: every historic spell, not only the first each turn.
+/// Peri Brown — the first historic spell you cast each turn has convoke
+/// (gated on `Value::HistoricSpellsCastThisTurn`, CR 700.6).
 pub fn peri_brown() -> CardDefinition {
     companion(CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "The first historic spell you cast each turn has convoke.",
-            effect: StaticEffect::GrantConvokeToSpells { filter: historic() },
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                    Value::HistoricSpellsCastThisTurn(PlayerRef::You),
+                    Value::ONE,
+                ))),
+                inner: Box::new(StaticEffect::GrantConvokeToSpells { filter: historic() }),
+            },
         }],
         ..creature("Peri Brown", cost(&[generic(3), w()]), vec![CreatureType::Human], 2, 3)
     })

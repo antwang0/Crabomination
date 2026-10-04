@@ -1993,7 +1993,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
-| 🟡 Peri Brown | Blast from the Past (WHO) | every historic spell has convoke, not only the first each turn. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
 | 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
 | 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |

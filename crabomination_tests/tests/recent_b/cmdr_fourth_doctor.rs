@@ -393,3 +393,31 @@ fn displaced_dinosaurs_historic_permanents_enter_as_7_7_dinosaurs() {
     let bear = cast(&mut g, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "not historic");
 }
+
+/// CR 702.51 / 700.6 — Peri Brown: only the FIRST historic spell each turn
+/// has convoke. A Sol Ring convoked with a Bear goes through; a second
+/// historic spell that turn can't convoke.
+#[test]
+fn peri_brown_convokes_only_the_first_historic_spell() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::peri_brown());
+    let bears: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let convoke = |g: &mut GameState, id: CardId, helper: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpellConvoke {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+            convoke_creatures: vec![helper],
+        })
+    };
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    convoke(&mut g, ring, bears[0]).expect("the first historic spell convokes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears[0]).unwrap().tapped, "the Bear paid");
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(convoke(&mut g, stone, bears[1]).is_err(), "the second one this turn doesn't");
+}
