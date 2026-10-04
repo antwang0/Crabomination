@@ -8452,7 +8452,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
         // a cast from the card's real zone, not from the hand.
-        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
+        card.cast_from_hand = self.casting_hop.is_none_or(|(id, _)| id != card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -8531,7 +8531,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
         // a cast from the card's real zone, not from the hand.
-        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
+        card.cast_from_hand = self.casting_hop.is_none_or(|(id, _)| id != card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -8730,7 +8730,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
         // a cast from the card's real zone, not from the hand.
-        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
+        card.cast_from_hand = self.casting_hop.is_none_or(|(id, _)| id != card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -9666,7 +9666,7 @@ impl GameState {
         cast_census::add(1);
         // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
         // a cast from the card's real zone, not from the hand.
-        card.cast_from_hand = !self.casting_hop.is_some_and(|(id, _)| id == card_id);
+        card.cast_from_hand = self.casting_hop.is_none_or(|(id, _)| id != card_id);
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
