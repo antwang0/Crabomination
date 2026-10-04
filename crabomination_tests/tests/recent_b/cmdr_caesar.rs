@@ -304,3 +304,52 @@ fn craig_boone_prompting_opponent_answers_cleanly() {
     assert!(g.battlefield_find(giant).is_some());
     assert_eq!(g.players[1].life, life - 2, "they took it");
 }
+
+/// CR 702.154c — Aradesh's payoff watches any creature of yours enlisting,
+/// not only its own: an Argivian Cavalier that enlists a Hill Giant (2 + 3
+/// power) gains double strike and draws a card.
+#[test]
+fn cr_702_154c_aradesh_rewards_another_creatures_enlist() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::aradesh_the_founder());
+    let cav = g.add_card_to_battlefield(0, catalog::argivian_cavalier());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(giant);
+    let hand = g.players[0].hand.len();
+    attack(&mut g, &[cav]);
+    assert!(g.battlefield_find(giant).unwrap().tapped, "the Giant was enlisted");
+    let c = g.computed_permanent(cav).unwrap();
+    assert_eq!(c.power, 5);
+    assert!(c.keywords().contains(&crabomination::card::Keyword::DoubleStrike));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "power 4+: a card");
+}
+
+/// CR 702.110b — Colonel Autumn counts a printed exploit too: Silverquill
+/// Tithe-Taker exploiting itself drains and puts a +1/+1 counter on each
+/// creature of yours.
+#[test]
+fn cr_702_110b_colonel_autumn_sees_a_printed_exploit() {
+    let mut g = main_phase(2);
+    let autumn = g.add_card_to_battlefield(0, catalog::colonel_autumn());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let taker = g.add_card_to_hand(0, catalog::silverquill_tithe_taker_b209());
+    cast(&mut g, taker, &[]).expect("cast");
+    assert_eq!(g.players[1].life, 18, "the Tithe-Taker's own payoff");
+    let survivors: Vec<CardId> = [autumn, bears, taker].into_iter().filter(|&c| g.battlefield_find(c).is_some()).collect();
+    assert_eq!(survivors.len(), 2, "one creature was exploited");
+    for c in survivors {
+        assert_eq!(g.battlefield_find(c).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+}
+
+/// Declining an exploit is not exploiting: no Autumn counters.
+#[test]
+fn colonel_autumn_declined_exploit_pays_nothing() {
+    let mut g = main_phase(2);
+    let autumn = g.add_card_to_battlefield(0, catalog::colonel_autumn());
+    let taker = g.add_card_to_hand(0, catalog::silverquill_tithe_taker_b209());
+    cast(&mut g, taker, &[]).expect("cast");
+    assert_eq!(g.battlefield_find(autumn).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.players[1].life, 20);
+}

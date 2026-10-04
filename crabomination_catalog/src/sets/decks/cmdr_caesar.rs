@@ -3,16 +3,9 @@
 //! `tests/recent_b/cmdr_caesar.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Aradesh, the Founder** — only its own enlist earns the double strike
-//!   and draw; another creature of yours that enlists doesn't.
-//! - **Colonel Autumn** — "whenever a creature you control exploits" is the
-//!   payoff folded into its own and its granted exploit, so a printed exploit
-//!   creature (not granted by Autumn) doesn't count, and two Autumns don't
-//!   double it.
 //! - **Mr. House, President and CEO** — its roll is one die (no extra die
 //!   per Treasure mana), and "whenever you roll a 4 or higher" reads a roll's
 //!   highest die once.
-//! - **Mysterious Stranger** — the exiled cards are picked, not targeted.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -20,10 +13,10 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    battalion, declare_target_opponent, etb, exploit, mint_treasures, on_attack, on_dies, on_you_attack, squad_etb, target_filtered,
+    battalion, declare_target_opponent, enlist, etb, exploit, mint_treasures, on_attack, on_dies, on_you_attack, squad_etb, target_filtered,
     training,
 };
-use crate::effect::{AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{AttackingTokenCleanup, Duration, Effect, KeywordAct, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
 use crate::sets::{enters_tapped, tap_add, tap_add_any_color, tap_add_colorless};
@@ -104,21 +97,32 @@ fn bobblehead(name: &'static str, second: ActivatedAbility) -> CardDefinition {
 }
 
 
-/// Aradesh, the Founder — enlist; a creature that enlisted gains double
-/// strike, and draws you a card at power 4+. Residual: only Aradesh's own
-/// enlist earns the payoff.
+/// Aradesh, the Founder — enlist; a creature of yours that enlisted gains
+/// double strike, and draws you a card at power 4+. The enlist resolves as
+/// its attack trigger, so the payoff watches the enlist itself (CR 702.154c).
 pub fn aradesh_the_founder() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::EnlistThen {
-            then: Box::new(Effect::Seq(vec![
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::DoubleStrike, duration: Duration::EndOfTurn },
-                Effect::If {
-                    cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::This)), Value::Const(4)),
-                    then: Box::new(draw(1)),
-                    else_: Box::new(Effect::Noop),
-                },
-            ])),
-        })],
+        triggered_abilities: vec![
+            enlist(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Performed(KeywordAct::Enlisted), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::DoubleStrike,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::PowerOf(Box::new(Selector::TriggerSource)),
+                            Value::Const(4),
+                        ),
+                        then: Box::new(draw(1)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
         ..legend(
             "Aradesh, the Founder",
             cost(&[generic(2), w()]),
@@ -304,23 +308,27 @@ pub fn charisma_bobblehead() -> CardDefinition {
 }
 
 /// Colonel Autumn — lifelink; exploit; other legendary creatures you
-/// control have exploit; a creature of yours exploiting puts a +1/+1
-/// counter on each creature you control. Residual: the payoff rides on the
-/// exploits Autumn has and grants.
+/// control have exploit; a creature of yours exploiting (CR 702.110b) puts a
+/// +1/+1 counter on each creature you control.
 pub fn colonel_autumn() -> CardDefinition {
-    let payoff = || Effect::AddCounter {
-        what: Selector::EachPermanent(yours(R::Creature)),
-        kind: CounterType::PlusOnePlusOne,
-        amount: Value::ONE,
-    };
     CardDefinition {
         keywords: vec![Keyword::Lifelink],
-        triggered_abilities: vec![exploit(payoff())],
+        triggered_abilities: vec![
+            exploit(Effect::Noop),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Performed(KeywordAct::Exploited), EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(yours(R::Creature)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
         static_abilities: vec![StaticAbility {
             description: "Other legendary creatures you control have exploit.",
             effect: StaticEffect::GrantTriggeredAbility {
                 filter: yours(R::Creature.and(R::HasSupertype(Supertype::Legendary))).and(R::OtherThanSource),
-                ability: Box::new(exploit(payoff())),
+                ability: Box::new(exploit(Effect::Noop)),
             },
         }],
         ..legend("Colonel Autumn", cost(&[generic(1), w(), b()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 3)
