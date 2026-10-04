@@ -1200,6 +1200,13 @@ pub enum MayPlayDuration {
     /// turn"), a cast parks the source's other spell grants at
     /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
     WhileSourceOnBattlefield { source: CardId, one_spell_a_turn: bool },
+    /// "You may play lands and cast noncreature spells from among cards you
+    /// exiled that have fetch counters on them" (Haldan, Avid Arcanist): live
+    /// while `holder` controls a permanent with
+    /// `StaticEffect::PlayFetchCounteredExiles`, parked at
+    /// [`MAY_PLAY_DORMANT`] otherwise — re-read as such a permanent enters or
+    /// leaves. Printed with holder 0; the grant binds the grantee.
+    WhileHolderControlsFetchPlayer { holder: usize },
 }
 
 impl MayPlayDuration {
@@ -1217,6 +1224,7 @@ impl MayPlayDuration {
             Self::HolderTurnsAfterOpponentLostLife { .. } => {
                 Self::HolderTurnsAfterOpponentLostLife { holder: seat }
             }
+            Self::WhileHolderControlsFetchPlayer { .. } => Self::WhileHolderControlsFetchPlayer { holder: seat },
             d => d,
         }
     }

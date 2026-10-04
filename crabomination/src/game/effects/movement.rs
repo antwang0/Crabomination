@@ -2997,6 +2997,7 @@ impl GameState {
                     }
                 }
                 self.apply_etb_type_riders(cid, p);
+                self.refresh_fetch_grants_for(cid);
                 self.apply_etb_keyword_counters(cid, p, events);
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {
@@ -3118,6 +3119,7 @@ impl GameState {
         }
         self.return_linked_exiles(id, events);
         self.end_source_bound_grants(id);
+        self.refresh_fetch_grants_for(id);
         // CR 702.26 — permanents phased out "until [this] leaves the
         // battlefield" (Out of Time) phase in now.
         self.phase_in_held_by(id, events);

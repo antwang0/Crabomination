@@ -32,6 +32,7 @@ mod graveyard_swap;
 mod graveyard_spread;
 mod dice_choices;
 mod order_bottom;
+mod fetch_grants;
 mod copy_each_target;
 mod exchange_power;
 pub(crate) mod library_dig;
@@ -39619,11 +39620,18 @@ impl GameState {
                     } else {
                         granter_player
                     };
+                    // Haldan's grant runs while its holder has a fetch player.
+                    let (recipient, duration) = match duration {
+                        crate::card::MayPlayDuration::WhileHolderControlsFetchPlayer { .. } => {
+                            (self.fetch_grant_seat(recipient), duration.bound_to(recipient))
+                        }
+                        d => (recipient, d.bound_to_source(ctx.source)),
+                    };
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: recipient,
                             granted_turn,
-                            duration: duration.bound_to_source(ctx.source),
+                            duration,
                             exile_after: *exile_after,
                             miracle: false,
                             pay_life: false,

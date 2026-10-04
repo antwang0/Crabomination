@@ -2284,6 +2284,13 @@ pub enum StaticEffect {
     /// `cast_from_zone_without_paying`; land plays through the grant share the
     /// engine-wide may-play land gap.
     PlayExiledWithSourceForLife,
+    /// "You may play lands and cast noncreature spells from among cards you
+    /// exiled that have fetch counters on them, and you may spend mana as
+    /// though it were mana of any color to cast those spells" (Haldan, Avid
+    /// Arcanist). The grants are stamped as the cards are exiled
+    /// (`MayPlayDuration::WhileHolderControlsFetchPlayer`) and woken or parked
+    /// as a permanent with this static enters or leaves.
+    PlayFetchCounteredExiles,
     /// "You may cast [filter] spells from your graveyard by paying `life`
     /// life in addition to paying their other costs. If you cast a spell this
     /// way, it enters with a finality counter." Noctis, Prince of Lucis

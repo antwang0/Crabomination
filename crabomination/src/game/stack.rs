@@ -2751,6 +2751,7 @@ impl GameState {
                     }
                     if is_creature_resolve {
                         self.apply_etb_type_riders(card_id, caster);
+                        self.refresh_fetch_grants_for(card_id);
                         self.apply_etb_keyword_counters(card_id, caster, &mut events);
                     }
                     // CR 603.7e — one-shot "your next creature spell enters
@@ -5471,6 +5472,8 @@ impl GameState {
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
                     // Ends with its source; re-armed below.
                     crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. } => false,
+                    // Parked and woken as a fetch player enters or leaves.
+                    crate::card::MayPlayDuration::WhileHolderControlsFetchPlayer { .. } => false,
                     // Swept as the holder's end step begins, not here.
                     crate::card::MayPlayDuration::UntilYourNextEndStep => false,
                     // Step-bounded miracle windows are also dead by turn end.

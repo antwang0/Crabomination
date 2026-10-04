@@ -32466,6 +32466,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::MayPlayCardsMilledThisTurn
             | StaticEffect::PlayExiledWithSourceForLife
+            | StaticEffect::PlayFetchCounteredExiles
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
             | StaticEffect::GraveyardCastOncePerTurn { .. }
