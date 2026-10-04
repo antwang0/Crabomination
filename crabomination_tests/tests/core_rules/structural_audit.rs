@@ -1684,7 +1684,9 @@ fn library_top_is_index_zero() {
 #[test]
 fn printed_type_line_reads_only_shrink() {
     const CAPS: [(&str, usize); 7] = [
-        ("definition.is_creature()", 69),
+        // 69 → 71: `GainKeywordsOfCards`' two donor pools read graveyard
+        // and exiled CARDS (off the battlefield, printed = current).
+        ("definition.is_creature()", 71),
         ("definition.subtypes.creature_types.contains", 22),
         ("definition.subtypes.land_types.contains", 10),
         ("definition.has_creature_type(", 2),
