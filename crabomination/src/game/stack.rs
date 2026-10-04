@@ -5467,6 +5467,8 @@ impl GameState {
                     }
                     crate::card::MayPlayDuration::WhileExiled
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
+                    // Ends with its source; re-armed below.
+                    crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. } => false,
                     // Swept as the holder's end step begins, not here.
                     crate::card::MayPlayDuration::UntilYourNextEndStep => false,
                     // Step-bounded miracle windows are also dead by turn end.
@@ -5513,6 +5515,7 @@ impl GameState {
                 for c in p.library.iter_mut() { sweep(c); }
             }
         }
+        self.rearm_source_bound_grants();
         self.watch_turn_progress();
         self.give_priority_to_active();
     }

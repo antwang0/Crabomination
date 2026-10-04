@@ -1191,6 +1191,15 @@ pub enum MayPlayDuration {
     /// (Superior Foes of Spider-Man, Furious Rise, Unstable Amulet). Never
     /// swept; the next card the source exiles this way revokes it.
     UntilSourceExilesAnother,
+    /// "You may play lands and cast spells from among cards exiled with
+    /// this" — a static grant that lasts while `source` is on the
+    /// battlefield (Hedonist's Trove). Printed with `CardId(0)`; the grant
+    /// binds the real source ([`MayPlayDuration::bound_to_source`]). The
+    /// grants end as the source leaves (`on_left_battlefield`). With
+    /// `one_spell_a_turn` ("You can't cast more than one spell this way each
+    /// turn"), a cast parks the source's other spell grants at
+    /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
+    WhileSourceOnBattlefield { source: CardId, one_spell_a_turn: bool },
 }
 
 impl MayPlayDuration {
@@ -1209,6 +1218,17 @@ impl MayPlayDuration {
                 Self::HolderTurnsAfterOpponentLostLife { holder: seat }
             }
             d => d,
+        }
+    }
+
+    /// The duration as granted by `source`: binds a
+    /// `WhileSourceOnBattlefield` template to the granting permanent.
+    pub fn bound_to_source(self, source: Option<CardId>) -> Self {
+        match (self, source) {
+            (Self::WhileSourceOnBattlefield { one_spell_a_turn, .. }, Some(source)) => {
+                Self::WhileSourceOnBattlefield { source, one_spell_a_turn }
+            }
+            (d, _) => d,
         }
     }
 }

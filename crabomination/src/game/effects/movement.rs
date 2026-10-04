@@ -3090,6 +3090,7 @@ impl GameState {
             });
         }
         self.return_linked_exiles(id, events);
+        self.end_source_bound_grants(id);
         // CR 702.26 — permanents phased out "until [this] leaves the
         // battlefield" (Out of Time) phase in now.
         self.phase_in_held_by(id, events);

@@ -13365,6 +13365,12 @@ impl GameState {
         if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
             self.clear_one_cast_group(group);
         }
+        // Hedonist's Trove — one spell a turn through its grants.
+        if let Some(crate::card::MayPlayDuration::WhileSourceOnBattlefield { source, one_spell_a_turn: true }) =
+            card.may_play_until.map(|m| m.duration)
+        {
+            self.park_source_bound_spell_grants(source);
+        }
         // Aminatou's Augury — the cast spends one of the group's card types.
         if card.may_play_until.is_some() && !self.players[p].free_type_cast_budgets.is_empty() {
             self.spend_free_type_cast(p, &card);
