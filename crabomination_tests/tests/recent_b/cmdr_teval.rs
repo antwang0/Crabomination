@@ -1311,6 +1311,10 @@ fn cmdr_teval_utility_land_activations() {
     let seat2 = Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::ControlledBySeat(2)));
     assert!(has_keyword(&g, bears, seat2));
     assert!(!has_keyword(&g, bears, Keyword::Unblockable));
+    let wall1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wall2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    assert!(g.blocker_can_block_attacker(wall1, bears), "seat 1 still blocks");
+    assert!(!g.blocker_can_block_attacker(wall2, bears), "seat 2's creatures can't");
 }
 
 /// The Dimir mana lands' conditional abilities.

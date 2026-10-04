@@ -34134,6 +34134,9 @@ fn blocker_matches_block_filter(
         R::HasSupertype(s) => computed.supertypes().contains(s),
         // Azure Fleet Admiral's "creatures the monarch controls" (CR 725).
         R::ControlledByMonarch => monarch == Some(blocker.controller),
+        // A resolved "can't be blocked by creatures [that player] controls"
+        // (The Black Gate, `Effect::CantBeBlockedByPlayer`).
+        R::ControlledBySeat(q) => blocker.controller == *q as usize,
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,
         R::ToughnessAtMost(n) => computed.toughness <= *n,

@@ -8291,8 +8291,9 @@ pub enum Effect {
     /// anything that player controls. Guardian Archon, Eon Frolicker.
     GainProtectionFromPlayer { what: Selector, from: PlayerRef, duration: Duration },
     /// CR 509.1b — each permanent `what` picks "can't be blocked by creatures
-    /// [the player `by` resolves to] controls" for `duration`
-    /// (`CantBeBlockedBy(ControlledBySeat)`). The Black Gate.
+    /// [the players `by` resolves to] control" for `duration`
+    /// (`CantBeBlockedBy(ControlledBySeat ∨ …)`). The Black Gate; Rikku's
+    /// "creatures your opponents control" (`EachOpponent`).
     CantBeBlockedByPlayer { what: Selector, by: PlayerRef, duration: Duration },
     /// CR 603.7d — "until your next turn, whenever [those creatures] deal
     /// combat damage, [body]": a delayed trigger per permanent `what` picks,
