@@ -61,7 +61,7 @@ they call a deck 🟡, the table wins.
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
 | 146 | Perrie, the Pulverizer (GWU) | 1: littjara_mirrorlake |
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
-| 152 | Anje Falkenrath (BR) | 3: chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
+| 152 | Anje Falkenrath (BR) | 2: chainer_nightmare_adept, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
