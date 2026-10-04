@@ -4008,11 +4008,14 @@ pub fn sarkhan_the_masterless() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
-            effect: Effect::DealDamage {
-                to: Selector::TriggerSource,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+            // Each Dragon is the source of its own 1 (CR 120.3) — a
+            // deathtouch Dragon kills, a lifelink one gains.
+            effect: Effect::EachDealsDamage {
+                dealers: Selector::EachPermanent(
                     R::HasCreatureType(CreatureType::Dragon).and(R::ControlledByYou),
-                ))),
+                ),
+                to: Selector::TriggerSource,
+                amount: Value::ONE,
             },
         }],
         loyalty_abilities: vec![

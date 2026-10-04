@@ -2546,6 +2546,29 @@ fn sarkhan_masterless_animates_and_pings() {
     assert_eq!(g.battlefield_find(attacker).unwrap().damage, 1, "attacker took 1 from the lone Dragon");
 }
 
+/// CR 120.3 — "each Dragon you control deals 1 damage to that creature": the
+/// Dragon is the source, so a deathtouch Dragon's single point is lethal to a
+/// 5/5 attacker (Sarkhan dealing the sum would not be).
+#[test]
+fn sarkhan_masterless_each_dragon_is_the_source() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sarkhan_the_masterless());
+    let mut dragon = catalog::grizzly_bears();
+    dragon.subtypes.creature_types = vec![CreatureType::Dragon];
+    dragon.keywords.push(Keyword::Deathtouch);
+    g.add_card_to_battlefield(0, dragon);
+    let attacker = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "the deathtouch Dragon's 1 killed the Wurm");
+}
+
 /// Massacre Girl's chain: a 2/2 that would survive the ETB's single -1/-1 is
 /// finished off by the death-triggered second wave.
 #[test]
