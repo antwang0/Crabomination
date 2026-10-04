@@ -3517,6 +3517,7 @@ impl HeuristicBot {
                         .or_else(|| super::counter_sink::pick_self_counter_sink(state, seat))
                         .or_else(|| super::counter_sink::pick_fate_sink(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_cash_in(state, seat))
+                        .or_else(|| super::graveyard_to_top::pick_graveyard_to_top(state, seat))
                         .or_else(|| super::end_step_ping::pick_end_step_ping(state, seat))
                         .or_else(|| super::graveyard_hate::pick_graveyard_hate(state, seat))
                         .or_else(|| super::land_ramp::pick_land_ramp(state, seat))
