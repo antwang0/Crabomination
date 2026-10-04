@@ -665,26 +665,20 @@ pub fn mr_house_president_and_ceo() -> CardDefinition {
     }
 }
 
-/// Mysterious Stranger — flash; ETB: exile an instant or sorcery card from
-/// each graveyard with one; with two or more exiled, copy one at random
-/// and you may cast the copy free. Residual: the cards are picked, not
-/// targeted.
+/// Mysterious Stranger — flash; ETB: exile target instant or sorcery card
+/// from each graveyard with one (one target per graveyard, CR 601.2c); with
+/// two or more exiled, copy one at random and you may cast the copy free.
 pub fn mysterious_stranger() -> CardDefinition {
     let spells = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
     CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ForEach {
-                selector: Selector::Player(PlayerRef::EachPlayer),
-                body: Box::new(Effect::ExileLinked {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone {
-                            who: PlayerRef::Triggerer,
-                            zone: Zone::Graveyard,
-                            filter: spells(),
-                        }),
-                        count: Box::new(Value::ONE),
-                    },
+            Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: spells().and(R::InYourGraveyard.or(R::InOpponentGraveyard)),
+                    effect: Box::new(Effect::ExileLinked { what: Selector::Target(0) }),
                 }),
             },
             Effect::If {

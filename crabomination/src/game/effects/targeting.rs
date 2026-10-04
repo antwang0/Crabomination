@@ -513,10 +513,14 @@ impl GameState {
         if !eff.may_target_offboard_card() && !req.mentions_offboard_zone() {
             return None;
         }
+        // The `avoid` set holds here too: a fan-out over graveyards
+        // (Mysterious Stranger's one card per graveyard) re-picked its slot-0
+        // card from this walk and stopped after one target.
         for player in &self.players {
             if let Some(c) = player
                 .graveyard
                 .iter()
+                .filter(|c| !avoid.contains(&c.id))
                 .map(|c| Target::Permanent(c.id))
                 .find(|t| is_legal(t))
             {
@@ -526,6 +530,7 @@ impl GameState {
         if let Some(c) = self
             .exile
             .iter()
+            .filter(|c| !avoid.contains(&c.id))
             .map(|c| Target::Permanent(c.id))
             .find(|t| is_legal(t))
         {

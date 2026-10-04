@@ -353,3 +353,19 @@ fn colonel_autumn_declined_exploit_pays_nothing() {
     assert_eq!(g.battlefield_find(autumn).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
     assert_eq!(g.players[1].life, 20);
 }
+
+/// CR 601.2c — Mysterious Stranger targets one instant or sorcery per
+/// graveyard: two Divinations in one graveyard and an Opt in another lose
+/// one Divination and the Opt, never both Divinations.
+#[test]
+fn cr_601_2c_mysterious_stranger_targets_one_card_per_graveyard() {
+    let mut g = main_phase(3);
+    let d1 = g.add_card_to_graveyard(1, catalog::divination());
+    let d2 = g.add_card_to_graveyard(1, catalog::divination());
+    let opt = g.add_card_to_graveyard(2, catalog::opt());
+    let ms = g.add_card_to_hand(0, catalog::mysterious_stranger());
+    cast(&mut g, ms, &[]).expect("cast");
+    let in_gy = |g: &GameState, seat: usize, id: CardId| g.players[seat].graveyard.iter().any(|c| c.id == id);
+    assert_eq!([d1, d2].iter().filter(|&&d| in_gy(&g, 1, d)).count(), 1, "one Divination per graveyard");
+    assert!(!in_gy(&g, 2, opt), "the Opt's graveyard has its own target");
+}
