@@ -2809,6 +2809,9 @@ pub struct GameState {
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
     #[serde(default)]
     pub(crate) tapped_for_cost_power: Option<i32>,
+    /// `Value::TreasureManaSpentToActivate`, stamped by
+    /// `Effect::WithTreasureManaSpent` and reset with `tapped_for_cost_power`.
+    pub(crate) treasure_mana_spent_to_activate: u32,
     /// False Cure — life lost per 1 life gained, by any player, for the rest
     /// of the turn (`Effect::AnyLifeGainPunishedThisTurn`). Cleared at cleanup.
     #[serde(default)]
@@ -4216,6 +4219,7 @@ impl Clone for GameState {
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
+            treasure_mana_spent_to_activate: self.treasure_mana_spent_to_activate,
             life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
@@ -4428,6 +4432,7 @@ impl GameState {
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
+            treasure_mana_spent_to_activate: 0,
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
@@ -30815,6 +30820,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         // CR 706.4 — the greatest result rolled, for "roll a 5 or higher"
         // result-gated triggers (`Predicate::DieResultAtLeast`).
         GameEvent::DiceRolled { high, .. } => *high as u32,
+        GameEvent::DieResult { result, .. } => *result as u32,
         GameEvent::AbilityActivated { life_paid, .. } => *life_paid,
         _ => 0,
     }

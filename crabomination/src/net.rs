@@ -2848,6 +2848,8 @@ pub enum GameEventWire {
     Exploited { card_id: CardId, controller: usize },
     /// Wire mirror of `GameEvent::Enlisted` (CR 702.154c).
     Enlisted { card_id: CardId, controller: usize },
+    /// Wire mirror of `GameEvent::DieResult` (CR 706.2).
+    DieResult { player: usize, result: u8 },
     /// Wire mirror of `GameEvent::EvidenceCollected` (CR 701.59).
     EvidenceCollected { player: usize },
     /// Wire mirror of `GameEvent::GiftGiven` (CR 702.165).
@@ -3109,6 +3111,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::Enlisted { card_id, controller } => {
                 GameEventWire::Enlisted { card_id: *card_id, controller: *controller }
+            }
+            GameEvent::DieResult { player, result } => {
+                GameEventWire::DieResult { player: *player, result: *result }
             }
             GameEvent::EvidenceCollected { player } => {
                 GameEventWire::EvidenceCollected { player: *player }
@@ -3487,6 +3492,7 @@ impl GameEventWire {
             E::CreatureFought { card_id, .. } => format!("{} fought", name(*card_id)),
             E::Exploited { card_id, .. } => format!("{} exploited", name(*card_id)),
             E::Enlisted { card_id, .. } => format!("{} enlisted", name(*card_id)),
+            E::DieResult { player, result } => format!("{} rolled a {result}", pn(*player)),
             E::PaidLife { player, amount } => format!("{} pays {amount} life", pn(*player)),
             // Internal "you scried/surveiled" trigger event — the concrete
             // ScryPerformed/SurveilPerformed line already covers the log, so

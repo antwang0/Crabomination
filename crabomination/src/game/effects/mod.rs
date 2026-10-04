@@ -3038,6 +3038,7 @@ impl GameState {
             self.last_discarded_mana_value = None;
             self.last_revealed_from_hand = None;
             self.tapped_for_cost_power = None;
+            self.treasure_mana_spent_to_activate = 0;
             // Guarded: an unconditional store unshares the scratch group.
             if self.scratch.discarded_for_cost_card.is_some() {
                 self.scratch.discarded_for_cost_card = None;
@@ -6832,6 +6833,11 @@ impl GameState {
                         count: n as u32,
                         high: rolls.iter().copied().max().unwrap_or(0),
                     });
+                    // CR 706.2 — and each die's own result, for "whenever you
+                    // roll a 4 or higher" (one trigger per die).
+                    for &result in &rolls {
+                        events.push(GameEvent::DieResult { player: ctx.controller, result });
+                    }
                     for _ in naturals.iter().filter(|&&nat| nat == sides) {
                         events.push(GameEvent::RolledNaturalMax { player: ctx.controller });
                     }
@@ -31503,6 +31509,11 @@ impl GameState {
 
             Effect::WithTappedPower { power, body } => {
                 self.tapped_for_cost_power = Some(*power);
+                self.run_effect(body, ctx, events)
+            }
+
+            Effect::WithTreasureManaSpent { amount, body } => {
+                self.treasure_mana_spent_to_activate = *amount;
                 self.run_effect(body, ctx, events)
             }
 

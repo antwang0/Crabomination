@@ -306,6 +306,7 @@ impl GameState {
             | Effect::PayEnergyValue { then: body, .. }
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
+            | Effect::WithTreasureManaSpent { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }

@@ -97,7 +97,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
         E::Proliferated { .. } => bits!(K::Proliferated),
         E::Foraged { .. } => bits!(K::Foraged),
-        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } => {
+        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } | E::DieResult { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
@@ -271,7 +271,9 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
             !first_only || *first_this_turn
         }
-        (A::Exploited, GameEvent::Exploited { .. }) | (A::Enlisted, GameEvent::Enlisted { .. }) => true,
+        (A::Exploited, GameEvent::Exploited { .. })
+        | (A::Enlisted, GameEvent::Enlisted { .. })
+        | (A::DieResult, GameEvent::DieResult { .. }) => true,
         _ => false,
     }
 }
@@ -624,6 +626,9 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::Connived
             | EventKind::PlayerDamaged
             | EventKind::CardExiled
+            // One event per investigation, exploit, enlist or die: "whenever
+            // you roll a 4 or higher" off three dice fires per die (Mr. House).
+            | EventKind::Performed(_)
     )
 }
 
@@ -1414,6 +1419,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCountered { player, .. }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::DieResult { player, .. }
         | GameEvent::RolledNaturalMax { player }
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
@@ -1575,6 +1581,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::ClashWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::DieResult { player, .. }
         | GameEvent::RolledNaturalMax { player }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
@@ -1910,6 +1917,7 @@ mod tests {
             E::DungeonCompleted { player: 0 },
             E::CoinFlipLost { player: 0 },
             E::DiceRolled { player: 0, count: 1, high: 6 },
+            E::DieResult { player: 0, result: 6 },
             E::RolledNaturalMax { player: 0 },
             E::CreatureDied { card_id: c },
             E::PermanentDied { card_id: c, controller: 0, is_creature: true, is_artifact: false },
@@ -2056,6 +2064,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::Investigated { first_only: true }),
             K::Performed(crate::effect::KeywordAct::Exploited),
             K::Performed(crate::effect::KeywordAct::Enlisted),
+            K::Performed(crate::effect::KeywordAct::DieResult),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

@@ -460,6 +460,7 @@ impl Effect {
             | Effect::OnMatchingBlocksThisTurn { body, .. }
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
+            | Effect::WithTreasureManaSpent { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
@@ -1524,7 +1525,9 @@ impl Effect {
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
-            Effect::WithTappedPower { body, .. } => body.requires_target(),
+            Effect::WithTappedPower { body, .. } | Effect::WithTreasureManaSpent { body, .. } => {
+                body.requires_target()
+            }
             Effect::WithCastDiscards { body, .. } | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
             | Effect::IfDiscardedForCost { then: body, .. }
@@ -3082,6 +3085,7 @@ impl Effect {
             | Effect::Forage { then } => then.primary_target_filter(),
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
+            | Effect::WithTreasureManaSpent { body, .. }
             | Effect::WithCastDiscards { body, .. }
             | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }
@@ -5510,6 +5514,7 @@ impl Effect {
                 }
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::WithTappedPower { body, .. }
+                | Effect::WithTreasureManaSpent { body, .. }
                 | Effect::WithCastDiscards { body, .. }
                 | Effect::WithRevealedForCost { body, .. }
             | Effect::WithDiscardedForCost { body, .. }

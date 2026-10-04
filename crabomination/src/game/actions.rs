@@ -21792,6 +21792,8 @@ impl GameState {
         // CR 106.6 — per-colour breakdown of what actually funded this
         // activation, threaded to the resolving body (Protective Sphere).
         let mut activation_mana_colors = Vec::new();
+        // Mana from Treasures that funded it (`Value::TreasureManaSpentToActivate`).
+        let mut activation_treasure_mana = 0u32;
         // CR 118.3 / 119.4 — every point of life paid for this activation
         // (Phyrexian pips, the printed cost, "pay X life", half your life),
         // carried on `AbilityActivated` for "if life was paid" (Verrak).
@@ -21833,6 +21835,8 @@ impl GameState {
             };
             activation_mana_colors =
                 spent_by_color(&receipt.pool_before, &self.players[p].mana_pool).to_vec();
+            activation_treasure_mana =
+                receipt.pool_before.treasure_amount().saturating_sub(self.players[p].mana_pool.treasure_amount());
             self.pay_life_cost(p, receipt.side_effects.life_lost);
             life_spent += receipt.side_effects.life_lost;
             auto_mana_events = receipt.auto_events;
@@ -22930,6 +22934,10 @@ impl GameState {
             if let Some(power) = tap_other_power {
                 queued_effect = Effect::WithTappedPower { power, body: Box::new(queued_effect) };
             }
+            if activation_treasure_mana > 0 {
+                queued_effect =
+                    Effect::WithTreasureManaSpent { amount: activation_treasure_mana, body: Box::new(queued_effect) };
+            }
             // "If the discarded card was a creature card" (Moria Scavenger):
             // the cost's card rides to resolution — only for an ability that
             // asks, so every other discard-cost ability queues as before.
@@ -22952,6 +22960,7 @@ impl GameState {
                 let sides = ability.roll_die_cost.max(2);
                 let rolled = self.roll_one_die(p, sides);
                 events.push(GameEvent::DiceRolled { player: p, count: 1, high: rolled });
+                events.push(GameEvent::DieResult { player: p, result: rolled });
                 if rolled == sides {
                     events.push(GameEvent::RolledNaturalMax { player: p });
                 }

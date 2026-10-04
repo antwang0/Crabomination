@@ -28,6 +28,7 @@ impl GameState {
         let b = self.roll_one_die(ctx.controller, sides);
         events.push(GameEvent::DiceRolled { player: ctx.controller, count: 2, high: a.max(b) });
         for face in [a, b] {
+            events.push(GameEvent::DieResult { player: ctx.controller, result: face });
             if face == sides {
                 events.push(GameEvent::RolledNaturalMax { player: ctx.controller });
             }
@@ -107,6 +108,7 @@ impl GameState {
         for q in seats {
             let face = self.roll_one_die(q, sides);
             events.push(GameEvent::DiceRolled { player: q, count: 1, high: face });
+            events.push(GameEvent::DieResult { player: q, result: face });
             if face == sides {
                 events.push(GameEvent::RolledNaturalMax { player: q });
             }

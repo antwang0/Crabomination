@@ -1170,6 +1170,10 @@ pub enum Value {
     /// CR 702.184a — power of the creature tapped to pay a Station ability's
     /// cost, carried to resolution by `Effect::WithTappedPower`.
     TappedForCostPower,
+    /// Mana from Treasures spent to activate this ability ("an additional
+    /// six-sided die for each mana from Treasures spent to activate this
+    /// ability", Mr. House). Carried by `Effect::WithTreasureManaSpent`.
+    TreasureManaSpentToActivate,
     /// Toughness of the most recently sacrificed creature this
     /// resolution (set by `Effect::SacrificeAndRemember`). Used by
     /// Tribute to Hunger (gain life equal to sacrificed creature's
@@ -1879,9 +1883,9 @@ pub enum Predicate {
     IsDay,
     /// CR 731 — it's currently night.
     IsNight,
-    /// CR 706.4 — true when the firing roll's greatest result is at least `n`.
-    /// Gates "whenever you roll a 5 or higher" triggers off a `RolledDice`
-    /// event via `EffectContext.event_amount` (Ground Pounder's trample rider).
+    /// CR 706.2 — true when the firing die result (`Performed(DieResult)`) is
+    /// at least `n` — or, off a whole-roll `RolledDice`, its greatest result —
+    /// via `EffectContext.event_amount` (Ground Pounder, Mr. House).
     DieResultAtLeast(u8),
     /// CR 702.85a — the spell this `SpellCast` trigger fired on has cascade:
     /// printed, or given by a "when you cast" cascade trigger whose condition
@@ -3809,6 +3813,11 @@ pub enum KeywordAct {
     /// CR 702.154c — an attacking creature enlisted a creature; the attacker
     /// is the subject (Aradesh, the Founder).
     Enlisted,
+    /// CR 706.2 — one die's result, one event per die rolled (the roll as a
+    /// whole is `EventKind::RolledDice`); the result is the event amount, so
+    /// "whenever you roll a 4 or higher" pairs it with `DieResultAtLeast`
+    /// (Mr. House, Ground Pounder).
+    DieResult,
 }
 
 impl EventKind {
@@ -10858,6 +10867,11 @@ pub enum Effect {
     /// `Value::TappedForCostPower` reads it at resolution. Wrapped around the
     /// queued Station effect by `activate_ability`; not for card definitions.
     WithTappedPower { power: i32, body: Box<Effect> },
+    /// Internal plumbing: re-stamp how much mana from Treasures paid this
+    /// activation before running `body`, for
+    /// `Value::TreasureManaSpentToActivate`. Wrapped around the queued effect
+    /// by `activate_ability` when any was spent; not for card definitions.
+    WithTreasureManaSpent { amount: u32, body: Box<Effect> },
 
     /// Internal plumbing: re-stamp how many nonland cards the caster
     /// discarded to pay an "as an additional cost, discard" (CR 601.2h) before
