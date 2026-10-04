@@ -15866,7 +15866,7 @@ impl GameState {
                     (base_p, n)
                 }
                 crate::card::DynamicPt::ControllerGraveyardSize => {
-                    let n = self.players[card.controller].graveyard.len() as i32;
+                    let n = self.players[card.controller].graveyard_card_count() as i32;
                     (n, n)
                 }
                 crate::card::DynamicPt::DomainCount => {

@@ -1574,6 +1574,13 @@ impl<'de> Deserialize<'de> for Player {
 }
 
 impl Player {
+    /// CR 111.7 / 704.5d — the cards in this player's graveyard: a token that
+    /// died this resolution sits there until the next state-based check, and
+    /// a token is never a card.
+    pub fn graveyard_card_count(&self) -> usize {
+        self.graveyard.iter().filter(|c| !c.is_token).count()
+    }
+
     pub fn new(idx: usize, name: impl Into<String>) -> Self {
         Self::from(PlayerData {
             id: PlayerId(idx),

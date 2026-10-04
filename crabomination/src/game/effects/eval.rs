@@ -1040,17 +1040,17 @@ impl GameState {
                 .and_then(|s| self.battlefield_find(s))
                 .map(|c| c.crewed_by.len() as i32)
                 .unwrap_or(0),
-            Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard_card_count() as i32).unwrap_or(0),
             Value::GreatestGraveyardSizeAmong(who) => self
                 .resolve_players(who, ctx)
                 .iter()
-                .map(|&p| self.players[p].graveyard.len() as i32)
+                .map(|&p| self.players[p].graveyard_card_count() as i32)
                 .max()
                 .unwrap_or(0),
             Value::GraveyardsWithAtLeast(n) => self
                 .players
                 .iter()
-                .filter(|p| p.is_alive() && p.graveyard.len() >= *n as usize)
+                .filter(|p| p.is_alive() && p.graveyard_card_count() >= *n as usize)
                 .count() as i32,
             Value::GreatestPowerAmongCards(s) => self
                 .resolve_selector(s, ctx)
@@ -1068,7 +1068,7 @@ impl GameState {
                 .players
                 .iter()
                 .filter(|p| p.is_alive())
-                .map(|p| p.graveyard.len() as i32)
+                .map(|p| p.graveyard_card_count() as i32)
                 .max()
                 .unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
@@ -4077,7 +4077,7 @@ impl GameState {
                 .is_some_and(|p| self.players[p].nonland_permanents_entered_this_turn >= 2),
             Predicate::ThresholdActive { who } => self
                 .resolve_player(who, ctx)
-                .is_some_and(|p| self.players[p].graveyard.len() >= 7),
+                .is_some_and(|p| self.players[p].graveyard_card_count() >= 7),
             Predicate::MetalcraftActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 // CR 613 — "three or more artifacts" counts the *computed*
@@ -5962,7 +5962,7 @@ impl GameState {
                     }
                     // Ghastly Demise — "toughness ≤ cards in your graveyard".
                     R::ToughnessAtMostGraveyardCount => {
-                        let n = self.players[controller].graveyard.len() as i32;
+                        let n = self.players[controller].graveyard_card_count() as i32;
                         self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
@@ -5972,7 +5972,7 @@ impl GameState {
                     }
                     // Temporary Insanity — "power < cards in your graveyard".
                     R::PowerLessThanYourGraveyardCount => {
-                        let n = self.players[controller].graveyard.len() as i32;
+                        let n = self.players[controller].graveyard_card_count() as i32;
                         self.computed_is_creature(card)
                             && self
                                 .computed_permanent(card.id)
@@ -6254,7 +6254,7 @@ impl GameState {
                         card.definition.cost.cmc() <= count
                     }
                     R::ManaValueAtMostControllerGraveyard => {
-                        let count = self.players[card.controller].graveyard.len() as u32;
+                        let count = self.players[card.controller].graveyard_card_count() as u32;
                         card.definition.cost.cmc() <= count
                     }
                     R::HasBackFace => card.definition.back_face.is_some(),
@@ -6890,7 +6890,7 @@ impl GameState {
                 card.definition.cost.cmc() <= n
             }
             R::ToughnessAtMostGraveyardCount => {
-                let n = self.players[controller].graveyard.len() as i32;
+                let n = self.players[controller].graveyard_card_count() as i32;
                 self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
@@ -6899,7 +6899,7 @@ impl GameState {
                         <= n
             }
             R::PowerLessThanYourGraveyardCount => {
-                let n = self.players[controller].graveyard.len() as i32;
+                let n = self.players[controller].graveyard_card_count() as i32;
                 self.computed_is_creature(card)
                     && self
                         .computed_permanent(card.id)
@@ -7096,7 +7096,7 @@ impl GameState {
                 card.definition.cost.cmc() <= count
             }
             R::ManaValueAtMostControllerGraveyard => {
-                let count = self.players[card.controller].graveyard.len() as u32;
+                let count = self.players[card.controller].graveyard_card_count() as u32;
                 card.definition.cost.cmc() <= count
             }
             // Back-face / prepare-spell checks are static properties of

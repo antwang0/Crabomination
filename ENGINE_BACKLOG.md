@@ -160,9 +160,13 @@ the handoff.
 - ✅ **CR 111.7/111.8** — `Selector::CardsInZone` offered a token that died
   mid-resolution as "a creature card" (graveyard only — a cast-me card copy
   in exile is flagged `is_token` too): Infernal Offering reanimated it. Found
-  by a strict debug pod. ⏳ **Open class:** 94 `graveyard.iter()` walks in
-  `game/effects/` don't skip tokens either; within one resolution a dead
-  token inflates "cards in your graveyard" counts until the SBA removes it.
+  by a strict debug pod. ✅ *(2026-10-04, `01NJGEp2`)* the graveyard-size
+  reads (`Value::GraveyardSizeOf` and its three siblings, threshold, the
+  graveyard-count requirements, `DynamicPt::ControllerGraveyardSize`) go
+  through `Player::graveyard_card_count`, which skips a token
+  (`cr_111_7_a_dead_token_is_not_a_graveyard_card`). ⏳ The per-card walks
+  in `game/effects/` (type tallies, "creature cards in your graveyard"
+  filters outside `CardsInZone`) still see one.
 - ✅ `keyword_is_friendly` read MustBlock as a buff — a lure's headless
   target was the caster's own creature.
 

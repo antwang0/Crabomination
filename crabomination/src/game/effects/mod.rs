@@ -30344,7 +30344,7 @@ impl GameState {
                 // Mist of Stagnation — one permanent per card in that player's
                 // graveyard; the headless default untaps their own tapped ones.
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
-                let n = self.players[p].graveyard.len() as u32;
+                let n = self.players[p].graveyard_card_count() as u32;
                 if n == 0 {
                     return Ok(());
                 }

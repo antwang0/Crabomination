@@ -572,3 +572,30 @@ fn cr_111_8_a_dying_token_is_no_card_put_into_a_graveyard() {
     assert!(g.players[0].descended_this_turn, "a permanent card does");
     assert_eq!(g.players[0].cards_to_graveyard_this_turn, 1);
 }
+
+/// CR 111.7 / 704.5d — a token that died this resolution sits in the
+/// graveyard until the next state-based check, but it is never a card: a
+/// "cards in your graveyard" count read in the same resolution skips it.
+#[test]
+fn cr_111_7_a_dead_token_is_not_a_graveyard_card() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = main_phase();
+    let spirit = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: spirit, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("tokens");
+    drain_stack(&mut g);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let seq = Effect::Seq(vec![
+        Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        Effect::GainLife { who: Selector::You, amount: Value::GraveyardSizeOf(PlayerRef::You) },
+    ]);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(spirit, 0, None);
+    g.resolve_effect(&seq, &ctx).expect("resolves");
+    assert_eq!(g.players[0].life, 22, "the Bears and Raise the Alarm, not the two Soldiers");
+}
