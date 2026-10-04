@@ -5006,6 +5006,26 @@ fn cr_401_6_into_the_pit_casts_from_the_top_by_sacrificing() {
     assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "spells only");
 }
 
+/// CR 601.2h — Into the Pit's sacrifice is paid while the spell is cast, so
+/// the permanent sacrificed never sees the cast (Beast Whisperer draws
+/// nothing).
+#[test]
+fn cr_601_2h_into_the_pit_sacrifices_while_casting() {
+    let mut g = main_phase();
+    let pit = g.add_card_to_battlefield(0, catalog::into_the_pit());
+    let whisperer = g.add_card_to_battlefield(0, catalog::beast_whisperer());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![whisperer])]));
+    let hand = g.players[0].hand.len();
+    try_cast(&mut g, 0, bears, &[]).expect("cast off the top");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(whisperer).is_none(), "the Whisperer was the sacrifice");
+    assert_eq!(g.players[0].hand.len(), hand, "a sacrificed cost never sees the cast");
+    assert!(g.battlefield_find(pit).is_some());
+}
+
 /// CR 305.1 — Titania plays Forests (only) from the graveyard, and each
 /// Forest makes a 5/3 Elemental.
 #[test]

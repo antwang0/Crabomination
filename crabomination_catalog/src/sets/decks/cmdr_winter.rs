@@ -344,9 +344,8 @@ pub fn demonic_covenant() -> CardDefinition {
 }
 
 /// Into the Pit — look at your top card any time; cast spells from the top
-/// by also sacrificing a nonland permanent.
-///
-/// Approximation: the sacrifice is paid as the cast completes.
+/// by also sacrificing a nonland permanent, paid with the cast's other costs
+/// (CR 601.2h).
 pub fn into_the_pit() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![

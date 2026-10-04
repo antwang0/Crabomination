@@ -6276,7 +6276,17 @@ impl GameState {
             && self.library_top_playable(p, card_id)
         {
             let capped = self.library_top_capped_source(p, card_id);
-            let sac = self.library_top_sacrifice_grant(p, card_id);
+            // Into the Pit: pick the sacrifice now (the seat's decider; the
+            // grant's source last), paid with the cast's other costs.
+            let sac_pick = self.players[p]
+                .library
+                .first()
+                .cloned()
+                .and_then(|c| self.library_top_sacrifice_grant_for(p, &c))
+                .and_then(|(src, filter)| self.pick_library_top_sacrifice(p, src, &filter));
+            if sac_pick.is_some() && self.scratch.pending_cast_sacrifices.is_none() {
+                self.scratch.pending_cast_sacrifices = sac_pick.map(|id| vec![id]);
+            }
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
             // The cast pipeline runs from hand, so record the true origin for
@@ -6292,6 +6302,9 @@ impl GameState {
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             self.casting_hop = None;
+            if sac_pick.is_some() && self.scratch.pending_cast_sacrifices.is_some() {
+                self.scratch.pending_cast_sacrifices = None;
+            }
             if r.is_err() {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[p].library.insert(0, card);
@@ -6305,12 +6318,6 @@ impl GameState {
                 }
                 self.stamp_library_top_equipment_attach(p, card_id);
                 self.stamp_library_top_haste(p, card_id);
-            }
-            // Into the Pit's additional cost, paid as the cast completes.
-            if let (Ok(evs), Some((src, filter))) = (&r, sac) {
-                let mut evs = evs.clone();
-                evs.extend(self.sacrifice_for_library_top_cast(p, src, &filter));
-                return Ok(evs);
             }
             return r;
         }
@@ -6805,15 +6812,15 @@ impl GameState {
         })
     }
 
-    /// Into the Pit's additional cost: sacrifice one permanent `p` controls
-    /// matching `filter`. The candidates are offered tokens first, then by
-    /// mana value, with the granting permanent last; the seat's decider picks.
-    fn sacrifice_for_library_top_cast(
+    /// Into the Pit's sacrifice: one permanent `p` controls matching `filter`,
+    /// offered tokens first, then by mana value, the granting permanent last;
+    /// the seat's decider picks.
+    fn pick_library_top_sacrifice(
         &mut self,
         p: usize,
         source: CardId,
         filter: &crate::card::SelectionRequirement,
-    ) -> Vec<GameEvent> {
+    ) -> Option<CardId> {
         let mut cands: Vec<(bool, bool, u32, CardId, String)> = self
             .battlefield
             .iter()
@@ -6821,16 +6828,13 @@ impl GameState {
                 c.controller == p
                     && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
             })
-            .map(|c| {
-                (c.id == source, !c.is_token, c.definition.cost.cmc(), c.id, c.definition.name.to_string())
-            })
+            .map(|c| (c.id == source, !c.is_token, c.definition.cost.cmc(), c.id, c.definition.name.to_string()))
             .collect();
         cands.sort();
-        let candidates: Vec<(CardId, String)> =
-            cands.into_iter().map(|(_, _, _, id, name)| (id, name)).collect();
-        let chosen = match candidates.len() {
-            0 => return Vec::new(),
-            1 => candidates[0].0,
+        let candidates: Vec<(CardId, String)> = cands.into_iter().map(|(_, _, _, id, name)| (id, name)).collect();
+        match candidates.len() {
+            0 => None,
+            1 => Some(candidates[0].0),
             _ => match self.decider.decide(&crate::decision::Decision::ChooseCards {
                 source,
                 prompt: "Sacrifice which permanent?".into(),
@@ -6843,26 +6847,22 @@ impl GameState {
                 crate::decision::DecisionAnswer::Cards(ids)
                     if ids.first().is_some_and(|id| candidates.iter().any(|(c, _)| c == id)) =>
                 {
-                    ids[0]
+                    Some(ids[0])
                 }
-                _ => candidates[0].0,
+                _ => Some(candidates[0].0),
             },
-        };
-        let mut events = vec![GameEvent::PermanentSacrificed { card_id: chosen, who: p }];
-        events.append(&mut self.remove_to_graveyard_as_cost(chosen));
-        events
+        }
     }
 
-    /// Into the Pit — when the only grant covering the top card `card_id` is a
-    /// `PlayFromLibraryTopBySacrificing`, its source and sacrifice filter
-    /// (the cast must also sacrifice a matching permanent).
-    fn library_top_sacrifice_grant(
+    /// Into the Pit — when the only grant covering `card` (the top card, mid-
+    /// cast) is a `PlayFromLibraryTopBySacrificing`, its source and sacrifice
+    /// filter (the cast must also sacrifice a matching permanent).
+    fn library_top_sacrifice_grant_for(
         &self,
         p: usize,
-        card_id: CardId,
+        card: &crate::card::CardInstance,
     ) -> Option<(CardId, crate::card::SelectionRequirement)> {
         use crate::effect::StaticEffect;
-        let card = self.players[p].library.first().filter(|c| c.id == card_id)?;
         if self.players[p].play_from_top_this_turn {
             return None;
         }
@@ -10319,6 +10319,17 @@ impl GameState {
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
         let mut additional_costs = card.definition.additional_cast_cost.clone();
+        // CR 601.2h — Into the Pit: a spell cast off the library top by its
+        // grant also sacrifices a nonland permanent, paid with the other costs.
+        if self.casting_hop == Some((card.id, crate::game::HopFrom::LibraryTop))
+            && let Some((_, filter)) = self.library_top_sacrifice_grant_for(p, &card)
+        {
+            // First, so the pick the library-top path stashed binds to it.
+            additional_costs.insert(0, crate::card::AdditionalCastCost::SacrificePermanent {
+                filter: filter.and(crate::card::SelectionRequirement::ControlledByYou),
+                count: 1,
+            });
+        }
         // CR 601.2b — Tegwyll's Scouring cast at instant speed taps its fliers.
         if let Some(fc) = self.flash_additional_cost_for(p, &card) {
             additional_costs.push(fc.clone());
