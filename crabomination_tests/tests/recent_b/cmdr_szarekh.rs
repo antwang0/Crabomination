@@ -319,6 +319,21 @@ fn out_of_the_tombs_replaces_the_empty_draw() {
     assert!(g.players[0].eliminated, "no creature card left: you lose");
 }
 
+/// Out of the Tombs — the returned creature card is the controller's choice
+/// (the default is the greatest mana value).
+#[test]
+fn out_of_the_tombs_returns_the_creature_you_choose() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::out_of_the_tombs());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    assert!(g.draw_one_or_deck(0, &mut Vec::new()));
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.battlefield_find(wurm).is_none());
+}
+
 /// Out of the Tombs' upkeep adds two eon counters and mills that many.
 #[test]
 fn out_of_the_tombs_mills_by_eon_counters() {

@@ -3,6 +3,7 @@
 //! site instead (`lose_to_empty_draw`).
 
 use super::GameState;
+use crate::card::CardId;
 use super::types::GameEvent;
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 
@@ -21,20 +22,41 @@ impl GameState {
         }) else {
             return false;
         };
-        // The pick is automatic (greatest mana value, first in graveyard order
-        // on a tie): the draw funnel can't suspend for an ask, and an ask
-        // left pending here was owed by a seat the failed draw then decked
-        // (seed 17703, four-seat pod).
-        let Some(pick) = self.players[p]
+        // The draw funnel can't suspend for an ask (one left pending here was
+        // owed by a seat the failed draw then decked — seed 17703, four-seat
+        // pod), so it is asked off the stack like an as-enters choice: a
+        // prompting seat's policy answers, a headless one the decider. The
+        // offer runs greatest mana value first, and a non-answer takes it.
+        let mut creatures: Vec<(CardId, String, u32)> = self.players[p]
             .graveyard
             .iter()
             .filter(|c| self.computed_is_creature(c))
-            .rev()
-            .max_by_key(|c| c.definition.cost.cmc())
-            .map(|c| c.id)
-        else {
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+            .collect();
+        if creatures.is_empty() {
             return false;
+        }
+        creatures.reverse();
+        creatures.sort_by_key(|c| std::cmp::Reverse(c.2));
+        let decision = crate::decision::Decision::ChooseCards {
+            source,
+            prompt: "Return which creature card to the battlefield?".into(),
+            candidates: creatures.iter().map(|(id, name, _)| (*id, name.clone())).collect(),
+            min: 1,
+            max: 1,
+            eligible: None,
+            value: crate::decision::PickValue::Gain,
         };
+        let answer = if self.seat_prompts(p) {
+            crate::server::bot::decide_pending_policy(self, p, &crate::server::bot::EvalWeights::default(), &decision, false)
+        } else {
+            self.decider.decide(&decision)
+        };
+        let picked = match answer {
+            crate::decision::DecisionAnswer::Cards(ids) => ids.first().copied(),
+            _ => None,
+        };
+        let pick = picked.filter(|id| creatures.iter().any(|c| c.0 == *id)).unwrap_or(creatures[0].0);
         let ctx = super::effects::EffectContext::for_ability(source, p, None);
         let back = Effect::Move {
             what: Selector::ExactObjects(vec![pick]),
