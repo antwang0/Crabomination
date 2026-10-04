@@ -844,6 +844,12 @@ fn every_card_has_the_subtypes_its_printing_has() {
         if def.keywords.iter().any(|k| format!("{k:?}").starts_with("Changeling")) {
             continue;
         }
+        // CR 604.3 — the land-side Changeling: "~ is every nonbasic land
+        // type" holds in every zone, so the body carries them unprinted
+        // (Planar Nexus).
+        if field("oracle_text").contains("is every nonbasic land type") {
+            continue;
+        }
         // ⚠ **A FILED DEFECT CLASS, EXCUSED BY SHAPE RATHER THAN BY NAME.**
         // ~48 nonbasic lands carry basic `land_types` their printed type line
         // does not have (Blackcleave Cliffs is `Land`, not `Land — Mountain
