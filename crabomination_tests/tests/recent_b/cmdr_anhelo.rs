@@ -555,3 +555,17 @@ fn maestros_confluence_goad_slot_aims_at_an_opponent() {
     let (t, _) = g.auto_targets_for_effect_all_slots(&modes[2], 0, None);
     assert!(matches!(t, Some(Target::Player(p)) if p != 0), "{t:?}");
 }
+
+/// Syrix — "whenever ANOTHER Phoenix you control dies": Syrix's own death
+/// doesn't let it cast itself back from the graveyard it just reached.
+#[test]
+fn syrix_doesnt_return_on_its_own_death() {
+    let mut g = pod(2);
+    let sy = g.add_card_to_battlefield(0, catalog::syrix_carrier_of_the_flame());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    kill(&mut g, sy);
+    assert!(g.battlefield_find(sy).is_none(), "stays dead");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == sy));
+}

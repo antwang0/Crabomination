@@ -124,6 +124,28 @@ _NOT_ON_BOARD = (
     "card in question, so \"another\" is already satisfied by the zones"
 )
 ALLOW: dict[str, str] = {
+    # Reviewed 2026-10-04 (`01WwQaPJ`): "other than" names a ZONE or a
+    # PLAYER, or the source excludes itself another way.
+    "Aerial Extortionist": _PLAYER,
+    "Firemane Commando": _PLAYER,
+    "Ghostly Pilferer": _PLAYER,
+    "Karazikar, the Eye Tyrant": _PLAYER,
+    "Kothophed, Soul Hoarder": _PLAYER,
+    "Well of Ideas": _PLAYER,
+    "Astral Drift": _ZONE,
+    "Disa the Restless": _ZONE,
+    "Flaming Tyrannosaurus": _ZONE,
+    "Memory Worm": _ZONE,
+    "Poxwalkers": _ZONE,
+    "Sisterhood of Karn": _ZONE,
+    "The Lost and the Damned": _ZONE,
+    "Kresh the Bloodbraided": "the filter is `Not(TriggerSource IsSource)`, a shape the scan doesn't read",
+    "Syrix, Carrier of the Flame": (
+        "a graveyard listener can't see its own death "
+        "(`syrix_doesnt_return_on_its_own_death`)"
+    ),
+    "Prowess of the Fair": "it listens to `CreatureDied` and is itself a noncreature Kindred enchantment",
+    "Kasla, the Broken Halo": "\"another spell that has convoke\" — a spell on the stack; Kasla is a permanent",
     "Graham O'Brien": _ZONE,
     "Keeper of Secrets": _ZONE,
     "Kellan, the Kid": _ZONE,
