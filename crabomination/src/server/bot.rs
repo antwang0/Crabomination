@@ -12715,6 +12715,7 @@ fn restore_forced_attackers(
     let statics = crate::game::combat::attack_static_scan(state);
     if !attack_requirement_present(state)
         && state.attack_lure_of(seat).is_none()
+        && !state.side_attacks_if_able(seat)
         && !state.any_creature_lure(seat)
         && statics & crate::game::combat::attack_static::MUST_ATTACK_WITH_ONE == 0
     {
@@ -12749,7 +12750,7 @@ fn restore_forced_attackers_unchecked(
     attackers: &mut Vec<CardId>,
 ) {
     // CR 508.1d — a lure (Gideon Jura's +2) obliges every able creature.
-    let lured = state.attack_lure_of(seat).is_some();
+    let lured = state.attack_lure_of(seat).is_some() || state.side_attacks_if_able(seat);
     loop {
         let mut added = false;
         for c in state.battlefield.iter() {

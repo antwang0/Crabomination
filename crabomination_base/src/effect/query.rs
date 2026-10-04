@@ -1660,7 +1660,7 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::DiscardHandDrawThatMany { who } => sel_has_target(who),
-            Effect::LureCreaturesToSourceNextTurn { who } => sel_has_target(who),
+            Effect::LureCreaturesToSourceNextTurn { who } | Effect::AttackIfAbleDuringTheirNextTurn { who } => sel_has_target(who),
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
             | Effect::MillUntilLands { who, lands: amount }
@@ -2842,6 +2842,7 @@ impl Effect {
             // Sign in Blood) but can be narrower (Howling Mine-style "you").
             Effect::Discard { who, .. }
             | Effect::LureCreaturesToSourceNextTurn { who }
+            | Effect::AttackIfAbleDuringTheirNextTurn { who }
             | Effect::DiscardAnyNumber { who, .. }
             | Effect::SetNoMaxHandSize { who }
             | Effect::SetMaxHandSize { who, .. }
@@ -4317,6 +4318,7 @@ impl Effect {
             | Effect::DrainLifeLost { .. }
             | Effect::Discard { .. }
             | Effect::LureCreaturesToSourceNextTurn { .. }
+            | Effect::AttackIfAbleDuringTheirNextTurn { .. }
             | Effect::DiscardAnyNumber { .. }
             | Effect::SetNoMaxHandSize { .. }
             | Effect::SetMaxHandSize { .. }
@@ -5110,7 +5112,7 @@ impl Effect {
                 | Effect::SacrificeHalf { who, .. }
                 | Effect::SacrificeAllButN { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
-                Effect::LureCreaturesToSourceNextTurn { who } => sel_find(who, slot),
+                Effect::LureCreaturesToSourceNextTurn { who } | Effect::AttackIfAbleDuringTheirNextTurn { who } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } | Effect::DrainLifeLost { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }

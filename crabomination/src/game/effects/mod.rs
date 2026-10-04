@@ -36025,6 +36025,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AttackIfAbleDuringTheirNextTurn { who } => {
+                let turn = self.turn_number;
+                for e in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = e {
+                        self.players[p].attacks_if_able_next_turn = Some(turn);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LureCreaturesToSourceNextTurn { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let turn = self.turn_number;

@@ -12006,6 +12006,10 @@ pub enum Effect {
     /// attack [this] if able" (Gideon Jura's +2). Sets each resolved player's
     /// `attack_lure` to the source; the declaration enforces it.
     LureCreaturesToSourceNextTurn { who: Selector },
+    /// CR 508.1d — "During `who`'s next turn, each creature that player
+    /// controls attacks if able" (Rowan Kenrith's +2): a requirement on the
+    /// player, so a creature they get later is bound too.
+    AttackIfAbleDuringTheirNextTurn { who: Selector },
     /// CR 508.1d — "Up to one target creature an opponent controls attacks
     /// [this] during its controller's next turn if able" (Gideon,
     /// Battle-Forged's +2). The one-creature sibling of

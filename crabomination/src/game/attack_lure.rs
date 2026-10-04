@@ -38,6 +38,13 @@ impl GameState {
             .find_map(|&(_, pw, _)| self.lure_walker_attackable(p, pw))
     }
 
+    /// Rowan Kenrith's +2: every creature `p` controls attacks this turn if
+    /// able — `p`'s first turn after it was set.
+    pub(crate) fn side_attacks_if_able(&self, p: usize) -> bool {
+        self.active_player_idx == p
+            && self.players.get(p).and_then(|pl| pl.attacks_if_able_next_turn).is_some_and(|t| self.turn_number > t)
+    }
+
     /// Whether any one-creature lure binds a creature of `p`'s this turn.
     pub(crate) fn any_creature_lure(&self, p: usize) -> bool {
         self.players.get(p).is_some_and(|pl| {
@@ -61,6 +68,9 @@ impl GameState {
         }
         if let Some(pl) = self.players.get_mut(ended_active) {
             pl.creature_attack_lures.retain(|&(_, _, set_on)| ended_turn <= set_on);
+            if pl.attacks_if_able_next_turn.is_some_and(|set_on| ended_turn > set_on) {
+                pl.attacks_if_able_next_turn = None;
+            }
         }
     }
 }

@@ -1306,6 +1306,7 @@ impl GameState {
             let requirement = has_legal_target
                 && (g.any_goad_present()
                     || g.attack_lure_of(p).is_some()
+                    || g.side_attacks_if_able(p)
                     || g.any_creature_lure(p)
                     || statics & attack_static::MUST_ATTACK_WITH_ONE != 0
                     || g.board_keyword_in_scope(&[
@@ -1570,6 +1571,18 @@ impl GameState {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
+        }
+
+        // CR 508.1d — Rowan Kenrith's +2: every creature able to attack must.
+        if self.side_attacks_if_able(p)
+            && let Some(c) = self.battlefield.iter().find(|c| {
+                c.controller == p
+                    && self.computed_is_creature(c)
+                    && able_to_attack(c)
+                    && !attacks.iter().any(|a| a.attacker == c.id)
+            })
+        {
+            return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
         }
 
         // CR 508.1d — a one-creature lure (Gideon, Battle-Forged's +2): that

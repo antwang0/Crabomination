@@ -317,6 +317,11 @@ pub struct PlayerCold {
     /// cleared at the end of this player's next turn.
     #[serde(default)]
     pub attack_lure: Option<(crate::card::CardId, u32)>,
+    /// CR 508.1d — "during [this player]'s next turn, each creature they
+    /// control attacks if able" (Rowan Kenrith's +2): the turn it was set on.
+    /// Read by `GameState::side_attacks_if_able`, cleared with `attack_lure`.
+    #[serde(default)]
+    pub attacks_if_able_next_turn: Option<u32>,
     /// CR 508.1d — one-creature lures on this player's creatures (Gideon,
     /// Battle-Forged's +2): (creature, lured permanent, turn set on). Read
     /// by `GameState::creature_lure_of`, cleared with `attack_lure`.
