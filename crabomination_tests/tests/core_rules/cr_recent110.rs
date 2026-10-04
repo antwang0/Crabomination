@@ -768,3 +768,30 @@ fn cr_118_3_a_may_counter_cost_needs_the_counter() {
     g.resolve_effect(&body, &ctx).expect("resolves");
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// CR 400.7 — a blinked creature is a new object: an until-end-of-turn pump
+/// on the old one doesn't follow it back (Giant Growth, then Ephemerate).
+#[test]
+fn cr_400_7_a_pump_does_not_follow_a_blink() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gg = g.add_card_to_hand(0, catalog::giant_growth());
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    for id in [gg, eph] {
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+    }
+    let back = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Grizzly Bears")
+        .expect("returned")
+        .id;
+    let cp = g.computed_permanent(back).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
