@@ -5,7 +5,8 @@ For every `PodDeck` in `crabomination/src/pod/mod.rs::target_decks`, resolve
 its `*_COMMANDERS` / `*_MAIN` factory lists (`pod/decks.rs`) to the catalog
 factory and read that factory's `///` doc comment. A card whose doc names a
 gap — "Residual", "Approximation", "approximated", "not modelled", "is the
-engine's pick" — counts against its deck; a bare "⚠" marks history, not a
+engine's pick", a "may" that "collapses" / is "always taken", a target
+"picked at resolution rather than targeted" — counts against its deck; a bare "⚠" marks history, not a
 gap. The doc is the source the trackers summarise, so this keeps
 DECK_FEATURES' deck table honest; read the flagged doc before believing it
 (`audit_incomplete` found docs ~30% stale).
@@ -21,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MARKERS = re.compile(
-    r"residual|approximat|not modell?ed|engine's pick|engine picks|isn't modell?ed|is dropped|are dropped",
+    r"residual|approximat|not modell?ed|engine's pick|engine picks|isn't modell?ed|is dropped|are dropped|collapses|always taken|rather than targeted",
     re.I,
 )
 
