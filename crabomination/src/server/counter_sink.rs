@@ -183,6 +183,44 @@ pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<G
     })
 }
 
+/// Lands at which a land in hand is spare enough to discard.
+const SPARE_LAND_AT: usize = 6;
+
+/// "{1}, {T}, discard a card: put a study counter on this" (Grimoire of the
+/// Dead — never charged in a 183-deck census, so its mass reanimation never
+/// came): at an opponent's end step, with [`SPARE_LAND_AT`] lands out and a
+/// land in hand for the cost to take (it pays with the cheapest card).
+pub(super) fn pick_discard_charge(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+        return None;
+    }
+    let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
+    if lands < SPARE_LAND_AT || !state.players[seat].hand.iter().any(|c| c.definition.is_land()) {
+        return None;
+    }
+    state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
+        c.definition.activated_abilities.iter().enumerate().find_map(|(i, ab)| {
+            let charges = matches!(ab.effect, Effect::AddCounter { what: Selector::This, .. })
+                && ab.discard_cost.as_ref().is_some_and(|(_, n)| *n == 1)
+                && !ab.discard_cost_x
+                && !ab.discard_cost_same_name
+                && !ab.sac_cost;
+            if !charges {
+                return None;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: i,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
+}
+
 /// "Put a fate counter on [another] target permanent" (Oblivion Stone).
 fn marks_fate(e: &Effect) -> bool {
     matches!(
@@ -264,6 +302,46 @@ mod tests {
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == boon && t == small
         ));
+    }
+
+    /// Grimoire of the Dead charges by discarding a spare land, and not with
+    /// no land in hand.
+    #[test]
+    fn grimoire_of_the_dead_charges_with_a_spare_land() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let book = g.add_card_to_battlefield(0, crate::catalog::grimoire_of_the_dead());
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, crate::catalog::swamp());
+        }
+        g.players[0].mana_pool.add_colorless(1);
+        g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        assert!(pick_discard_charge(&g, 0).is_none(), "no spare land in hand");
+        g.add_card_to_hand(0, crate::catalog::swamp());
+        assert!(matches!(
+            pick_discard_charge(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 0, .. }) if card_id == book
+        ));
+    }
+
+    /// With three study counters, the Grimoire is cashed in for the creature
+    /// cards in every graveyard (the resolved-outcome sacrifice picker).
+    #[test]
+    fn grimoire_of_the_dead_cashes_in_when_charged() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let book = g.add_card_to_battlefield(0, crate::catalog::grimoire_of_the_dead());
+        g.battlefield_find_mut(book).unwrap().add_counters(CounterType::Study, 3);
+        for seat in 1..3 {
+            g.add_card_to_graveyard(seat, crate::catalog::craw_wurm());
+        }
+        let got = super::super::bot::pick_sacrifice_value(&g, 0, &super::super::bot::EvalWeights::default());
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == book), "{got:?}");
     }
 
     /// Midnight Clock's "{2}{U}: put an hour counter" is bought at an
