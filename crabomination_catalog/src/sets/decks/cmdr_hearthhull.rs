@@ -320,18 +320,14 @@ pub fn loamcrafter_faun() -> CardDefinition {
 /// turn; landfall in your main phase adds a combat after this phase, which
 /// untaps your creatures as it begins.
 ///
-/// ⚠ Residual: +1/+0 once, however many times the creature attacked; the
-/// untap comes at the beginning of every later combat this turn, not only
-/// the added one.
+/// +1/+0 per attack declaration this turn (`times_attacked_this_turn`).
+/// ⚠ Residual: the untap comes at the beginning of every later combat this
+/// turn, not only the added one.
 pub fn moraug_fury_of_akoum() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Each creature you control gets +1/+0 for each time it has attacked this turn.",
-            effect: StaticEffect::PumpPT {
-                applies_to: yours(R::Creature.and(R::AttackedThisTurn)),
-                power: 1,
-                toughness: 0,
-            },
+            effect: StaticEffect::PumpPowerPerTimesAttackedThisTurn { applies_to: yours(R::Creature), per_power: 1 },
         }],
         triggered_abilities: vec![landfall(Effect::If {
             cond: Predicate::YourMainPhase,

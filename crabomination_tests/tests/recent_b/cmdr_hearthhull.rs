@@ -256,6 +256,11 @@ fn moraug_landfall_adds_a_combat() {
     assert_eq!(g.additional_post_main_combats, 1);
     attack_with(&mut g, &[m], 1);
     assert_eq!(pt(&g, m), (7, 6));
+    // "+1/+0 for each time it has attacked this turn": a second declaration
+    // in the added combat makes it +2 (CR 508.1).
+    g.battlefield_find_mut(m).unwrap().tapped = false;
+    attack_with(&mut g, &[m], 1);
+    assert_eq!(pt(&g, m), (8, 6));
 }
 
 /// Planetary Annihilation leaves six lands a player and 6 damage everywhere.
