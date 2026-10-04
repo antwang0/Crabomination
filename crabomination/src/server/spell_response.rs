@@ -39,6 +39,34 @@ pub(super) fn graveyard_copy_casts(
     })
 }
 
+/// Activated abilities on `seat`'s permanents that copy `spell_id` — Stella
+/// Lee's "{T}: copy target instant or sorcery spell you control" once three
+/// spells are cast, which a 183-deck census never saw activated. No
+/// sacrifice of the source and no discard: a copy isn't worth a card.
+pub(super) fn ability_copy_activations(
+    state: &GameState,
+    seat: usize,
+    spell_id: crate::card::CardId,
+    copies: fn(&Effect) -> bool,
+) -> Option<GameAction> {
+    state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
+        c.definition.activated_abilities.iter().enumerate().find_map(|(i, ab)| {
+            if ab.sac_cost || ab.sac_other_filter.is_some() || ab.discard_cost.is_some() || !copies(&ab.effect) {
+                return None;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: i,
+                target: Some(Target::Permanent(spell_id)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
+}
+
 /// True when the effect deals damage to its target spell's controller.
 fn punishes_target_spell(eff: &Effect) -> bool {
     matches!(eff, Effect::DealDamage { to: Selector::Player(PlayerRef::ControllerOf(inner)), .. }

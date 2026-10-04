@@ -4897,6 +4897,7 @@ fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
         })
         .find(|a| state.would_accept(a.clone()))
         .or_else(|| super::spell_response::graveyard_copy_casts(state, seat, spell_id, effect_copies_target_spell))
+        .or_else(|| super::spell_response::ability_copy_activations(state, seat, spell_id, effect_copies_target_spell))
 }
 
 /// CR 601.3 — an instant castable only during combat on an opponent's turn
@@ -30136,6 +30137,38 @@ mod stack_response_tests {
             "got {action:?}"
         );
         assert!(pick_copy_response(&g, 1, &EvalWeights::default()).is_none(), "not the opponent's spell");
+    }
+
+    /// CR 707.10 — Stella Lee copies the bot's own Divination with her
+    /// "{T}: copy target instant or sorcery spell you control" once three
+    /// spells are cast this turn, and not before.
+    #[test]
+    fn copy_response_activates_stella_lee() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let stella = g.add_card_to_battlefield(0, catalog::stella_lee_wild_card());
+        g.clear_sickness(stella);
+        let div = g.add_card_to_hand(0, catalog::divination());
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: div,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Divination");
+        assert!(pick_copy_response(&g, 0, &EvalWeights::default()).is_none(), "one spell this turn");
+        g.players[0].spells_cast_this_game_turn = 3;
+        let action = pick_copy_response(&g, 0, &EvalWeights::default()).expect("copy it");
+        assert!(
+            matches!(action, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == stella && t == div),
+            "got {action:?}"
+        );
     }
 
     /// CR 601.3 — Wake the Dead is cast in an opponent's declare-attackers
