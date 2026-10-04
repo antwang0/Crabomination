@@ -526,9 +526,10 @@ pub fn hedonists_trove() -> CardDefinition {
 }
 
 /// K'rrik, Son of Yawgmoth — lifelink; {B} in your spells' costs may be paid
-/// with 2 life; each black spell you cast grows it. Spells, activations and
-/// turning face up take the life (`phyrexianize_for_payer`).
-/// Residual: not a mana ability's cost, cycling or ward.
+/// with 2 life; each black spell you cast grows it. Spells, activations,
+/// turning face up, cycling and the other action costs, and "unless [you]
+/// pay" costs (ward, taxes) take the life (`phyrexianize_for_payer`).
+/// Residual: not a mana ability's cost.
 pub fn krrik_son_of_yawgmoth() -> CardDefinition {
     let pb = phyrexian(Color::Black);
     CardDefinition {

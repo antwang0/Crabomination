@@ -177,6 +177,22 @@ fn krrik_pays_black_with_life() {
     assert_eq!(g.computed_permanent(shade).unwrap().power, 3);
 }
 
+/// K'rrik's "for each {B} in a cost" reaches cycling (2024-06-07 ruling):
+/// Decree of Pain cycles for {3} and 4 life.
+#[test]
+fn krrik_pays_a_cycling_cost_with_life() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::krrik_son_of_yawgmoth());
+    g.add_card_to_library(0, catalog::swamp());
+    let decree = g.add_card_to_hand(0, catalog::decree_of_pain());
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Cycle { card_id: decree, x_value: None }).expect("cycle with life");
+    assert_eq!(g.players[0].life, life - 4);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == decree));
+}
+
 /// Bone Miser: a discarded creature makes a 2/2 Zombie.
 #[test]
 fn bone_miser_pays_for_a_discarded_creature() {

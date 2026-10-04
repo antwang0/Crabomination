@@ -20811,7 +20811,11 @@ impl GameState {
     /// Decree of Pain in a 9,300-game census. Returns the auto-tap's events.
     fn pay_action_mana(&mut self, seat: usize, cost: &crate::mana::ManaCost) -> Result<Vec<GameEvent>, GameError> {
         let forced_only = self.players[seat].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(seat, cost, forced_only)?;
+        // K'rrik — "for each {B} in a cost" reaches cycling and the other
+        // action costs too.
+        let mut cost = cost.clone();
+        self.phyrexianize_for_payer(seat, &mut cost);
+        let receipt = self.try_pay_with_auto_tap_mode(seat, &cost, forced_only)?;
         self.pay_life_cost(seat, receipt.side_effects.life_lost);
         Ok(receipt.auto_events)
     }
