@@ -59,7 +59,7 @@ they call a deck 🟡, the table wins.
 | 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
 | 144 | Satya, Aetherflux Genius (URW) | 2: overclocked_electromancer, razorfield_ripper |
 | 145 | Hakbal of the Surging Soul (GU) | 2: quandrix_command, xolatoyac_the_smiling_flood |
-| 146 | Perrie, the Pulverizer (GWU) | 4: agents_toolkit, aven_mimeomancer, littjara_mirrorlake, skyship_plunderer |
+| 146 | Perrie, the Pulverizer (GWU) | 3: aven_mimeomancer, littjara_mirrorlake, skyship_plunderer |
 | 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
 | 152 | Anje Falkenrath (BR) | 3: chainer_nightmare_adept, hedonists_trove, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
@@ -1577,8 +1577,7 @@ each): 4 seats (Sigarda / Judith / Hanna) 1,000 decided, Perrie 24.3 %;
 6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000
 decided, 2.2 %; 8 seats (seats 4-10) 1,000 decided, 7.9 %. Residuals: Kros
 goads only for its own counters; Aven Mimeomancer's 3/1 flier lasts while
-Mimeomancer does; Agent's Toolkit's counters come from an entry trigger and
-the moved counter is the engine's pick; Littjara Mirrorlake's extra counter
+Mimeomancer does; Littjara Mirrorlake's extra counter
 lands after the copy enters; Skyship Plunderer reads a player's energy,
 experience and poison only. Census: no card of the list unplayed. Debug
 strict pods (400 games): clean. `--bench` byte-identical.

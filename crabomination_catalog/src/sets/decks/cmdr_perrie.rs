@@ -134,23 +134,22 @@ pub fn kros_defense_contractor() -> CardDefinition {
     }
 }
 
-/// Agent's Toolkit — a Clue carrying +1/+1, flying, deathtouch and shield
-/// counters that it hands to your creatures as they enter.
-/// Residual: the counters arrive by an entry trigger; the moved counter is
-/// the engine's pick.
+/// Agent's Toolkit — a Clue entering with +1/+1, flying, deathtouch and
+/// shield counters (CR 614.1c, `as_enters_effect`) that it hands to your
+/// creatures as they enter, the kind your pick.
 pub fn agents_toolkit() -> CardDefinition {
     CardDefinition {
         name: "Agent's Toolkit",
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Clue], ..Default::default() },
+        as_enters_effect: Some(Effect::Seq(vec![
+            counter(Selector::This, CounterType::PlusOnePlusOne),
+            keyword_counter(Selector::This, Keyword::Flying),
+            keyword_counter(Selector::This, Keyword::Deathtouch),
+            counter(Selector::This, CounterType::Shield),
+        ])),
         triggered_abilities: vec![
-            etb(Effect::Seq(vec![
-                counter(Selector::This, CounterType::PlusOnePlusOne),
-                keyword_counter(Selector::This, Keyword::Flying),
-                keyword_counter(Selector::This, Keyword::Deathtouch),
-                counter(Selector::This, CounterType::Shield),
-            ])),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),

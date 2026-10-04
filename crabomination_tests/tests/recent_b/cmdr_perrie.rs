@@ -232,6 +232,21 @@ fn agents_toolkit_moves_a_counter() {
     assert_eq!(counters(&g, kit, CounterType::PlusOnePlusOne), 0);
 }
 
+/// Agent's Toolkit — "move a counter": the kind is the controller's pick
+/// (offered +1/+1 first, then shield, then the keyword counters).
+#[test]
+fn agents_toolkit_moves_the_counter_you_choose() {
+    let mut g = main_phase(2);
+    let kit = g.add_card_to_hand(0, catalog::agents_toolkit());
+    cast_at(&mut g, kit, &[]).expect("cast");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Amount(1)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_at(&mut g, bear, &[]).expect("cast");
+    assert_eq!(counters(&g, bear, CounterType::Shield), 1);
+    assert_eq!(counters(&g, kit, CounterType::Shield), 0);
+    assert_eq!(counters(&g, kit, CounterType::PlusOnePlusOne), 1);
+}
+
 /// Kros: each upkeep an opposing creature gets a shield counter and is
 /// tapped and goaded.
 #[test]

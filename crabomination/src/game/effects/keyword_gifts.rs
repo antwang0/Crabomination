@@ -182,6 +182,7 @@ impl GameState {
         to: &Selector,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         let Some(src) = self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id()) else {
             return Ok(());
@@ -190,13 +191,40 @@ impl GameState {
             return Ok(());
         };
         let Some(card) = self.battlefield_find(src) else { return Ok(()) };
-        let kind = if card.counter_count(CounterType::PlusOnePlusOne) > 0 {
-            Some(CounterType::PlusOnePlusOne)
+        // "A counter of any kind": the controller picks the kind. Offered
+        // +1/+1 first, then the other plain kinds, then keyword counters, so
+        // a seat that takes the first offer keeps the old default.
+        let mut plain: Vec<CounterType> = card.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
+        plain.sort_by_key(|k| *k != CounterType::PlusOnePlusOne);
+        let kws: Vec<Keyword> =
+            card.keyword_counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| k.clone()).collect();
+        let total = plain.len() + kws.len();
+        if total == 0 {
+            return Ok(());
+        }
+        let pick = if total == 1 {
+            0
         } else {
-            card.counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| *k)
+            let options = plain
+                .iter()
+                .map(|k| format!("{k:?} counter"))
+                .chain(kws.iter().map(|k| format!("{k:?} counter")))
+                .collect();
+            let mut cursor = 0;
+            let Some(i) = self.ask_seat_option(
+                &mut cursor,
+                ctx.controller,
+                "Move which counter?".into(),
+                ctx.source.unwrap_or(src),
+                options,
+                effect,
+            ) else {
+                return Ok(());
+            };
+            self.clear_answer_log();
+            i
         };
-        let kw_counter = card.keyword_counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| k.clone());
-        if let Some(kind) = kind {
+        if let Some(&kind) = plain.get(pick) {
             let mut c = ctx.clone();
             c.targets = vec![Target::Permanent(src), Target::Permanent(dst)];
             let _ = self.run_effect(
@@ -204,7 +232,7 @@ impl GameState {
                 &c,
                 events,
             );
-        } else if let Some(kw) = kw_counter {
+        } else if let Some(kw) = kws.get(pick - plain.len()).cloned() {
             if let Some(c) = self.battlefield_find_mut(src) {
                 c.keyword_counters.remove_up_to(&kw, 1);
             }

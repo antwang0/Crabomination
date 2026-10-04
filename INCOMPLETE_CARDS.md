@@ -1993,7 +1993,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells, activated abilities and turning face up; not a mana ability's cost or the other special-action costs (cycling, ward). |
 | 🟡 Aven Mimeomancer | Bedecked Brokers (NCC) | the 3/1 flier is a static over every creature with a feather counter, so it ends when Mimeomancer leaves. |
-| 🟡 Agent's Toolkit | Bedecked Brokers (NCC) | its four counters arrive by an entry trigger, and the counter it moves is the engine's pick (+1/+1 first). |
 | 🟡 Littjara Mirrorlake | Bedecked Brokers (NCC) | the extra +1/+1 counter is put on the copy after it enters. |
 | 🟡 Skyship Plunderer | Bedecked Brokers (NCC) | a player target gets one more energy, experience or poison counter each; other player counters aren't read. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |

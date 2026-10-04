@@ -38374,7 +38374,7 @@ impl GameState {
             Effect::RevealTopChooseByKeyword { count, keywords } => {
                 self.reveal_top_choose_by_keyword(count, keywords, ctx, events)
             }
-            Effect::MoveOneCounter { from, to } => self.move_one_counter(from, to, ctx, events),
+            Effect::MoveOneCounter { from, to } => self.move_one_counter(from, to, ctx, events, effect),
             Effect::RevealTopCastFreeIfLesserElseHand => self.reveal_top_cast_free_if_lesser_else_hand(ctx, events),
             Effect::RevealUntilCreatureBecomeCopy { who } => self.reveal_until_creature_become_copy(who, ctx, events),
             Effect::RevealTopPutLandsRestBottomRandom { count, tapped } => {
