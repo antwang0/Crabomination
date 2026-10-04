@@ -50,7 +50,7 @@ they call a deck 🟡, the table wins.
 | 107 | Firkraag, Cunning Instigator (UR) | 2: firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
-| 122 | Omo, Queen of Vesuva (GU) | 5: desert_warfare, horizon_of_progress, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
+| 122 | Omo, Queen of Vesuva (GU) | 4: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |

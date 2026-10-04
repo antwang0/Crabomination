@@ -372,6 +372,23 @@ fn horizon_of_progress_drops_a_land() {
     assert!(g.battlefield_find(f).is_some_and(|c| c.tapped));
 }
 
+/// Horizon of Progress makes a type a land of yours could produce, read off
+/// the lands' mana abilities: a Guildgate (no basic land type) still offers
+/// black or red.
+#[test]
+fn horizon_of_progress_reads_a_nonbasic_lands_mana() {
+    let mut g = main_phase(2);
+    let h = g.add_card_to_battlefield(0, catalog::horizon_of_progress());
+    g.add_card_to_battlefield(0, catalog::rakdos_guildgate());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap for mana");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!((pool.amount(Color::Black) + pool.amount(Color::Red), pool.colorless_amount()), (1, 0));
+}
+
 /// The bot holds a land drop whose landfall fan-out would carry the board
 /// past its bound: 500 Scute Swarms past six lands would double to 1,000
 /// (two 1,000-game Tricky Terrain pods ended at the board cap that way).

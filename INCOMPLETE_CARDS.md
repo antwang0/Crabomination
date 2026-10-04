@@ -1948,7 +1948,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
-| 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
 | 🟡 Sunken Palace | Tricky Terrain (M3C) | its rider copies a spell it pays for, not an activated ability. |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |

@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Omo, Queen of Vesuva** — "every creature type" is a Changeling grant,
 //!   so a layer-4 type-line read doesn't see it.
-//! - **Horizon of Progress** — "any type a land you control could produce"
-//!   reads your lands' basic land types (Reflecting Pool's approximation).
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
 //!   or library" only by a discard or a mill here.
 //! - **Sunken Palace** — its rider copies a spell, not an activated ability.
@@ -280,16 +278,16 @@ pub fn hashep_oasis() -> CardDefinition {
     }
 }
 
-/// Horizon of Progress — pay 1 life for a type a land of yours could make;
-/// {3}: put a land from hand tapped; {1}, sacrifice: draw. Residual: reads
-/// basic land types.
+/// Horizon of Progress — pay 1 life for a type a land of yours could make
+/// (Reflecting Pool's read of your lands' mana abilities, {C} included);
+/// {3}: put a land from hand tapped; {1}, sacrifice: draw.
 pub fn horizon_of_progress() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
                 life_cost: 1,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColorYouCouldProduce },
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyTypeALandYouControlCouldProduce(Value::ONE) },
                 ..Default::default()
             },
             ActivatedAbility {
