@@ -1349,8 +1349,8 @@ pub fn mentors_guidance() -> CardDefinition {
 
 /// Quintorius, Field Historian — {3}{R}{W} Legendary 2/4 Elephant Cleric.
 /// "Spirits you control get +1/+0. Whenever one or more cards leave your
-/// graveyard, create a 3/2 red and white Spirit creature token." (The
-/// "one or more" batch collapses to a per-card trigger.)
+/// graveyard, create a 3/2 red and white Spirit creature token." (One fire
+/// per batch, CR 603.2c.)
 pub fn quintorius_field_historian() -> CardDefinition {
     use crate::card::{StaticAbility, Supertype};
     use crate::effect::StaticEffect;

@@ -2248,7 +2248,7 @@ pub fn greater_good() -> CardDefinition {
 }
 
 /// Bojuka Bog — Land. Bojuka Bog enters tapped. When Bojuka Bog enters,
-/// exile target opponent's graveyard.
+/// exile target player's graveyard.
 ///
 /// `ExilePlayerGraveyard` on the target (one player, CR 115.1); enters tapped.
 pub fn bojuka_bog() -> CardDefinition {
@@ -7163,10 +7163,9 @@ pub fn hieroglyphic_illumination() -> CardDefinition {
 }
 
 /// Mortify — {1}{W}{B} Instant. Destroy target creature or enchantment.
-/// It can't be regenerated.
 ///
-/// Premium WB removal. Cast-time filter `Creature ∨ Enchantment` accepts
-/// either type; `DestroyNoRegen` honors the can't-be-regenerated rider.
+/// Cast-time filter `Creature ∨ Enchantment` accepts either type; a plain
+/// `Destroy`, so regeneration still applies (the oracle has no rider).
 pub fn mortify() -> CardDefinition {
     CardDefinition {
         name: "Mortify",

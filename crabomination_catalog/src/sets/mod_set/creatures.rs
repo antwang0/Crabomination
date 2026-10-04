@@ -7991,8 +7991,8 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
 
 /// Adeline, Resplendent Cathar — {1}{W}{W} */4 Legendary Human Knight,
 /// Vigilance. Her power equals the number of creatures you control. Whenever
-/// she attacks, create a 1/1 white Human tapped and attacking (modeled per
-/// the active opponent; the per-opponent fan-out collapses to one). (MID)
+/// you attack, for each opponent, create a 1/1 white Human tapped and
+/// attacking that player (`ForEachOpponent`, defender the Triggerer). (MID)
 pub fn adeline_resplendent_cathar() -> CardDefinition {
     CardDefinition {
         name: "Adeline, Resplendent Cathar",
@@ -8015,9 +8015,8 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
         }],
         // "Whenever you attack, **for each opponent**, create a 1/1 white
         // Human creature token that's tapped and attacking that player." One
-        // token per opponent, each at its own opponent — a single
-        // `CreateTokenAttacking` is exact at two players and makes one token
-        // aimed at one seat in a pod. "Whenever YOU attack" — any attack,
+        // token per opponent, each at its own opponent (`ForEachOpponent`
+        // binds each as the Triggerer). "Whenever YOU attack" — any attack,
         // Adeline among the attackers or not (it listened to her own).
         triggered_abilities: vec![crate::card::TriggeredAbility {
             event: crate::card::EventSpec::new(crate::card::EventKind::YouAttack, crate::card::EventScope::YourControl),

@@ -762,7 +762,7 @@ pub fn blossoming_defense() -> CardDefinition {
     }
 }
 
-/// Treasure Cruise — {7}{U} Instant. Delve. Draw three cards.
+/// Treasure Cruise — {7}{U} Sorcery. Delve. Draw three cards.
 ///
 /// Delve (CR 702.66) is wired via `Keyword::Delve` + the
 /// `GameAction::CastSpellDelve` path: each graveyard card exiled while
