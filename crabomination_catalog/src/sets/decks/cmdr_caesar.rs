@@ -10,7 +10,7 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
     battalion, declare_target_opponent, enlist, etb, exploit, mint_treasures, on_attack, on_dies, on_you_attack, squad_etb, target_filtered,
