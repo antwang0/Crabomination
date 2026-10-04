@@ -482,6 +482,23 @@ fn return_to_dust_exiles_artifact() {
     assert!(g.exile.iter().any(|c| c.id == relic), "artifact exiled");
 }
 
+/// Return to Dust — "Exile target artifact or enchantment": the first target
+/// is required (only the main-phase second is "up to one"), so it can't be
+/// cast with none.
+#[test]
+fn return_to_dust_needs_its_first_target() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::return_to_dust());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err());
+}
+
 /// Aetherflux Reservoir gains life per spell cast and can pay 50 life to deal 50.
 #[test]
 fn aetherflux_reservoir_gains_life_then_burns() {

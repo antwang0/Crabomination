@@ -799,7 +799,10 @@ pub fn warstorm_surge() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
                 }),
-            effect: Effect::DealDamage {
+            // "it deals damage": the entering creature is the source, so its
+            // lifelink, deathtouch and infect apply.
+            effect: Effect::DealDamageFrom {
+                source: Selector::TriggerSource,
                 to: crate::effect::shortcut::target_any(),
                 amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
             },

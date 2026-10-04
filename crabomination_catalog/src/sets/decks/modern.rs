@@ -39309,10 +39309,8 @@ pub fn myr_battlesphere() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Tap your untapped Myr for damage and +X/+0?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::DealDamage {
-                            to: Selector::Player(PlayerRef::DefendingPlayer),
-                            amount: untapped_myr(),
-                        },
+                        // "the player or planeswalker it's attacking".
+                        Effect::DealDamage { to: Selector::AttackedBySource, amount: untapped_myr() },
                         Effect::PumpPT {
                             what: Selector::This,
                             power: untapped_myr(),

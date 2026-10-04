@@ -959,6 +959,36 @@ fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
     );
 }
 
+/// Myr Battlesphere attacking a planeswalker deals the X damage to that
+/// planeswalker ("the player or planeswalker it's attacking"), not its
+/// controller.
+#[test]
+fn myr_battlesphere_hits_the_planeswalker_it_attacks() {
+    let mut g = two_player_game();
+    let sphere = g.add_card_to_battlefield(0, catalog::myr_battlesphere());
+    g.fire_self_etb_triggers(sphere, 0);
+    drain_stack(&mut g);
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    let loyalty = g.battlefield_find(jace).unwrap().counter_count(crabomination::card::CounterType::Loyalty);
+    g.clear_sickness(sphere);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sphere, target: AttackTarget::Planeswalker(jace),
+    }])).expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life, "the player isn't the one attacked");
+    assert!(
+        g.battlefield_find(jace).is_none_or(|c| c.counter_count(crabomination::card::CounterType::Loyalty) < loyalty),
+        "the planeswalker took the damage",
+    );
+}
+
 /// ...and declined, the Myr stay untapped and available to block. The trigger
 /// used to tap every untapped Myr on every attack, with no way out.
 #[test]

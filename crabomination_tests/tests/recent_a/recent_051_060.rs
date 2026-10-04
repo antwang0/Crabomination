@@ -991,6 +991,30 @@ mod recent53 {
         assert_eq!(g.players[1].life, before - 2, "Warstorm Surge pinged for the entrant's power");
     }
 
+    /// Warstorm Surge — "it deals damage": the entering creature is the
+    /// source, so a 1-power deathtouch creature kills a 4/4.
+    #[test]
+    fn warstorm_surge_damage_comes_from_the_creature() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::warstorm_surge());
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        g.players[0].wants_ui = true;
+        let rats = g.add_card_to_hand(0, catalog::typhoid_rats());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: rats, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast rats");
+        for _ in 0..4 {
+            if g.pending_decision.is_some() {
+                g.submit_decision(DecisionAnswer::Target(Target::Permanent(angel))).expect("aim at the Angel");
+            }
+            drain_stack(&mut g);
+            if g.pending_decision.is_none() && g.stack.is_empty() { break; }
+            let _ = g.perform_action(GameAction::PassPriority);
+        }
+        assert!(g.battlefield_find(angel).is_none(), "1 deathtouch damage");
+    }
+
     #[test]
     fn tuktuk_returns_bigger() {
         let mut g = two_player_game();
