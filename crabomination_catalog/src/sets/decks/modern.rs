@@ -46065,7 +46065,7 @@ pub fn yorion_sky_nomad() -> CardDefinition {
 }
 
 /// Jegantha, the Wellspring — {4}{R/G} 5/5 Elemental Elk. {T}: add {W}{U}{B}{R}
-/// {G}. (The "can't pay generic costs" spend restriction is approximated away.)
+/// {G} that can't pay generic costs (`SpendRestriction::NotGeneric`).
 /// Companion: no card's cost has two of the same mana symbol.
 pub fn jegantha_the_wellspring() -> CardDefinition {
     CardDefinition {
@@ -46085,13 +46085,16 @@ pub fn jegantha_the_wellspring() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![
-                    Color::White,
-                    Color::Blue,
-                    Color::Black,
-                    Color::Red,
-                    Color::Green,
-                ]),
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![
+                        Color::White,
+                        Color::Blue,
+                        Color::Black,
+                        Color::Red,
+                        Color::Green,
+                    ])),
+                    crate::mana::SpendRestriction::NotGeneric,
+                ),
             },
             ..Default::default()
         }],

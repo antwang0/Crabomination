@@ -283,3 +283,56 @@ fn primal_beyond_and_timeless_lotus_enter_tapped() {
     cast_at(&mut g, lotus, None).expect("cast");
     assert!(g.battlefield_find(lotus).unwrap().tapped);
 }
+
+/// Jegantha's {W}{U}{B}{R}{G} can't pay generic costs: alone it can't cast
+/// Grizzly Bears ({1}{G}); with a {C} for the generic it pays the {G}, and
+/// the other four stay floating.
+#[test]
+fn jegantha_mana_pays_only_colored_pips() {
+    for extra in [false, true] {
+        let mut g = main_phase(2);
+        let jeg = g.add_card_to_battlefield(0, catalog::jegantha_the_wellspring());
+        g.clear_sickness(jeg);
+        g.players[0].mana_pool.empty();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: jeg,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for WUBRG");
+        if extra {
+            g.players[0].mana_pool.add_colorless(1);
+        }
+        let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: bears,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_ok(), extra, "{r:?}");
+        if extra {
+            assert_eq!(g.players[0].mana_pool.restricted_total(), 4);
+        }
+    }
+}
+
+/// The auto-tapper reaches for Jegantha when a colored pip is short: a
+/// Plains pays Grizzly Bears' {1}, Jegantha's {G} the rest.
+#[test]
+fn jegantha_is_auto_tapped_for_a_colored_pip() {
+    let mut g = main_phase(2);
+    let jeg = g.add_card_to_battlefield(0, catalog::jegantha_the_wellspring());
+    g.clear_sickness(jeg);
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.players[0].mana_pool.empty();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Plains + Jegantha's {G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+}
