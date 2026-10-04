@@ -1943,13 +1943,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Deck | Gap |
 |---|---|---|
-| 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
-| 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | the undaunted discount holds only while Durnan is on the battlefield; the rest go to the bottom in a random order, not one you choose. |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, so a creature that loses all abilities stops being every type (a layer-4 type wouldn't). |
-| 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
-| 🟡 Sunken Palace | Tricky Terrain (M3C) | its rider copies a spell it pays for, not an activated ability. |
+| 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |
 | 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
@@ -1958,11 +1955,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |
 | 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
-| 🟡 Horde of Notions | Dance of the Elements (ECC) | casts the Elemental card; an Elemental land card can't be played this way. |
-| 🟡 Aradesh, the Founder | Hail, Caesar (PIP) | only its own enlist earns the double strike and draw; another creature of yours that enlists doesn't. |
-| 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
-| 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
-| 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
@@ -1972,8 +1964,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
-| 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
-| 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
@@ -1994,10 +1984,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
-| 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
-| 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
-| 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
@@ -2073,4 +2060,4 @@ library-exile event.
 | Rayne, Academy Chancellor | only a PERMANENT of yours being targeted by an opponent draws; "you … become the target" doesn't | `YourPermanentTargetedByOpponent` binds permanents; a player-target twin scope is missing |
 | Witchbane Orb | "When this artifact enters, destroy all Curses attached to you" is absent (the hexproof ships) | no "attached to you" requirement; the only card that needs one |
 | Psychic Purge | "when a spell or ability an opponent controls causes you to discard this, that player loses 5 life" is absent | `GameEvent::OpponentCausedYouToDiscard` doesn't carry the causing seat, and no `PlayerRef` names it |
-| Jegantha, Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("can't be spent on generic costs", "artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
+| Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |

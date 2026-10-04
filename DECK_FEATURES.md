@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-03. The per-deck narratives below predate the script — where
+Snapshot 2026-10-04. The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -39,9 +39,8 @@ they call a deck 🟡, the table wins.
 | 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
 | 66 | Inalla, Archmage Ritualist (UBR) | 2: shifting_shadow, vindictive_lich |
 | 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
-| 72 | Faldorn, Dread Wolf Herald (RG) | 3: aurora_phoenix, durnan_of_the_yawning_portal, nalfeshnee |
 | 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
-| 77 | Winter, Cynical Opportunist (BG) | 4: into_the_pit, old_stickfingers, polluted_cistern_dim_oubliette, winter_cynical_opportunist |
+| 77 | Winter, Cynical Opportunist (BG) | 1: into_the_pit |
 | 79 | Hearthhull, the Worldseed (BRG) | 2: evendo_brushrazer, moraug_fury_of_akoum |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 91 | Commodore Guff (URW) | 1: chandra_legacy_of_fire |
@@ -50,17 +49,15 @@ they call a deck 🟡, the table wins.
 | 107 | Firkraag, Cunning Instigator (UR) | 2: firkraag_cunning_instigator, rowan_kenrith |
 | 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
 | 117 | Kalamax, the Stormsire (GUR) | 2: haldan_avid_arcanist, pako_arcane_retriever |
-| 122 | Omo, Queen of Vesuva (GU) | 4: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva, sunken_palace |
+| 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
 | 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
 | 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
-| 144 | Satya, Aetherflux Genius (URW) | 2: overclocked_electromancer, razorfield_ripper |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
 | 146 | Perrie, the Pulverizer (GWU) | 1: littjara_mirrorlake |
-| 148 | Ashling, the Limitless (WUBRG) | 3: cream_of_the_crop, horde_of_notions, jegantha_the_wellspring |
 | 152 | Anje Falkenrath (BR) | 2: chainer_nightmare_adept, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
@@ -68,7 +65,6 @@ they call a deck 🟡, the table wins.
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 166 | The Wise Mothman (BGU) | 1: rampaging_yao_guai |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
-| 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
 | 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
 | 177 | Szarekh, the Silent King (B) | 2: biotransference, canoptek_wraith |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
