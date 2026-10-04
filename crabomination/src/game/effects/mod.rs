@@ -8,6 +8,7 @@
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
+mod may_cost;
 mod with_targets;
 mod choose_one;
 mod keep_one;
@@ -7592,6 +7593,10 @@ impl GameState {
                 if let Some((seat, n)) = self.optional_draw_target(body, ctx)
                     && !self.may_choose_to_draw(seat, n)
                 {
+                    return Ok(());
+                }
+                // A cost that can't be paid isn't offered (`may_cost.rs`).
+                if self.may_do_cost_unpayable(body, ctx) {
                     return Ok(());
                 }
                 // Yes/no decision via `Decision::OptionalTrigger`, asked of

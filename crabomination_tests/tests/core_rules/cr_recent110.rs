@@ -712,3 +712,31 @@ fn cr_400_7_grave_betrayals_zombie_ends_with_the_permanent() {
     let card = g.players[1].graveyard.iter().find(|c| c.id == bear).expect("in its owner's graveyard");
     assert!(!card.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
 }
+
+/// CR 118.3 / 608.2c — "you may discard a card. If you do, draw a card": with
+/// nothing in hand the discard can't be paid, so it isn't offered and no card
+/// is drawn; with a card it is.
+#[test]
+fn cr_118_3_an_unpayable_may_cost_gives_no_payoff() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector, Value};
+    let loot = Effect::MayDo {
+        description: "Discard a card to draw a card?".into(),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])),
+    };
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].hand.clear();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&loot, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 0, "no discard, no draw");
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&loot, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 1, "discarded the Bears, drew the Forest");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
