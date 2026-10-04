@@ -593,7 +593,8 @@ pub fn swarmyard_massacre() -> CardDefinition {
 /// Sword of the Squeak — +1/+1 per creature you control with base power or
 /// toughness 1; a Hamster, Mouse, Rat or Squirrel of yours entering may pick
 /// it up. Equip {2}.
-/// Residual: "base power or toughness" reads the printed numbers.
+/// Residual: the count is a static's, read inside the layer gather, where a
+/// permanent's base P/T is its printed pair (a "becomes 1/1" isn't seen).
 pub fn sword_of_the_squeak() -> CardDefinition {
     let n = || Value::CountOf(Box::new(yours(R::BasePowerOrToughnessIs(1))));
     let small = R::HasCreatureType(CreatureType::Hamster)

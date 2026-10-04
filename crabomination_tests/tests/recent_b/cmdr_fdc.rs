@@ -5546,6 +5546,28 @@ fn bess_grows_once_per_batch_of_one_ones() {
     });
 }
 
+/// CR 613.4 — Bess reads BASE power and toughness: a creature made a 1/1 by
+/// a resolved effect is a base-1/1 and takes the attack pump.
+#[test]
+fn bess_pumps_a_creature_whose_base_was_set_to_one_one() {
+    let mut g = main_phase();
+    let bess = g.add_card_to_battlefield(0, catalog::bess_soul_nourisher());
+    g.battlefield_find_mut(bess).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let set = crabomination::effect::Effect::SetBasePT {
+        what: crabomination::effect::Selector::Target(0),
+        power: crabomination::card::Value::Const(1),
+        toughness: crabomination::card::Value::Const(1),
+        duration: crabomination::effect::Duration::EndOfTurn,
+    };
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(wurm, 0, Some(Target::Permanent(wurm)));
+    ctx.targets = vec![Target::Permanent(wurm)];
+    g.resolve_effect(&set, &ctx).expect("resolves");
+    combat(&mut g, vec![Attack { attacker: bess, target: AttackTarget::Player(1) }], 0, |g| {
+        assert_eq!(pt(g, wurm), (3, 3), "base 1/1, +2/+2 from Bess");
+    });
+}
+
 /// The rest of Cabaretti Cacophony's new cards, one play pattern each.
 #[test]
 fn cabaretti_cacophony_batch() {

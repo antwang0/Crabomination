@@ -209,6 +209,14 @@ fn filter_can_match_land(f: &SelectionRequirement) -> bool {
 }
 
 impl GameState {
+    /// CR 613.4 — a card's base power and toughness: a battlefield
+    /// permanent's after layers 7a/7b (`ComputedPermanent::base_pt`, exact
+    /// for the small N every reader asks about), anything else's printed pair.
+    pub(crate) fn base_pt_of(&self, card: &crate::card::CardInstance) -> (i32, i32) {
+        self.computed_permanent(card.id)
+            .map_or((card.definition.power, card.definition.toughness), |cp| cp.base_pt())
+    }
+
     /// Every counter (keyword counters included, CR 122.1) on the
     /// permanents `seat` controls.
     pub(crate) fn counters_among_permanents_of(&self, seat: usize) -> u32 {
@@ -5533,18 +5541,16 @@ impl GameState {
                     R::HasNoCounters => !card.has_any_counter(),
                     R::HasForetell => card.definition.foretell_cost.is_some(),
                     R::BasePowerOrToughnessIs(n) => {
-                        self.computed_is_creature(card)
-                            && (card.definition.power == *n || card.definition.toughness == *n)
+                        let (p, t) = self.base_pt_of(card);
+                        self.computed_is_creature(card) && (p == *n || t == *n)
                     }
                     R::BasePowerOrToughnessAtMost(n) => {
-                        self.computed_is_creature(card)
-                            && (card.definition.power <= *n || card.definition.toughness <= *n)
+                        let (p, t) = self.base_pt_of(card);
+                        self.computed_is_creature(card) && (p <= *n || t <= *n)
                     }
-                    R::BasePowerIs(n) => self.computed_is_creature(card) && card.definition.power == *n,
+                    R::BasePowerIs(n) => self.computed_is_creature(card) && self.base_pt_of(card).0 == *n,
                     R::BasePowerToughnessIs(p, t) => {
-                        self.computed_is_creature(card)
-                            && card.definition.power == *p
-                            && card.definition.toughness == *t
+                        self.computed_is_creature(card) && self.base_pt_of(card) == (*p, *t)
                     }
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
@@ -7035,17 +7041,15 @@ impl GameState {
             R::HasNoCounters => !card.has_any_counter(),
             R::HasForetell => card.definition.foretell_cost.is_some(),
             R::BasePowerOrToughnessIs(n) => {
-                self.computed_is_creature(card) && (card.definition.power == *n || card.definition.toughness == *n)
+                let (p, t) = self.base_pt_of(card);
+                self.computed_is_creature(card) && (p == *n || t == *n)
             }
             R::BasePowerOrToughnessAtMost(n) => {
-                self.computed_is_creature(card) && (card.definition.power <= *n || card.definition.toughness <= *n)
+                let (p, t) = self.base_pt_of(card);
+                self.computed_is_creature(card) && (p <= *n || t <= *n)
             }
-            R::BasePowerIs(n) => self.computed_is_creature(card) && card.definition.power == *n,
-            R::BasePowerToughnessIs(p, t) => {
-                self.computed_is_creature(card)
-                    && card.definition.power == *p
-                    && card.definition.toughness == *t
-            }
+            R::BasePowerIs(n) => self.computed_is_creature(card) && self.base_pt_of(card).0 == *n,
+            R::BasePowerToughnessIs(p, t) => self.computed_is_creature(card) && self.base_pt_of(card) == (*p, *t),
             R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                 && self.exile.iter().any(|c| c.id == card.id),
             // "With different names" — excludes anything sharing a name with

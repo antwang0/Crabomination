@@ -896,6 +896,13 @@ pub struct ComputedPermanent {
     keywords: OverlayList<KeywordsOf>,
     pub power: i32,
     pub toughness: i32,
+    /// CR 613.4 — base power and toughness (after layers 7a/7b, before 7c,
+    /// counters and 7d switching), a nibble each: 0..=13 exactly, 14 for any
+    /// negative value, 15 for 14 or more. Every reader compares with a
+    /// printed small N ("base power or toughness 1" — Bess, Soul Nourisher),
+    /// and the byte rides the struct's padding (72 bytes, PERF's padding
+    /// probe). Read through [`Self::base_pt`].
+    base_pt_nibbles: u8,
     /// True when at least one `Modification::RemoveAllAbilities` continuous
     /// effect is in scope for this permanent. Lets the trigger dispatcher
     /// and activated-ability resolver skip the card's printed
@@ -912,6 +919,18 @@ pub struct ComputedPermanent {
 }
 
 impl ComputedPermanent {
+    /// CR 613.4 — base power and toughness (see `base_pt_nibbles`): exact in
+    /// 0..=13, `-1` standing for any negative value, `i32::MAX` for 14 or more
+    /// — so `==`/`<=` against a small nonnegative N answer exactly.
+    pub fn base_pt(&self) -> (i32, i32) {
+        let get = |n: u8| match n {
+            14 => -1,
+            15 => i32::MAX,
+            n => i32::from(n),
+        };
+        (get(self.base_pt_nibbles & 15), get(self.base_pt_nibbles >> 4))
+    }
+
     /// CR 613 layer 4 — the computed card types.
     #[inline]
     pub fn card_types(&self) -> &Vec<CardType> {
@@ -1468,6 +1487,12 @@ fn compute_permanent_pass(
     if let Some(t) = set_toughness_only {
         toughness = t;
     }
+    let nib = |n: i32| match n {
+        ..0 => 14,
+        0..=13 => n as u8,
+        _ => 15,
+    };
+    let base_pt_nibbles = nib(power) | (nib(toughness) << 4);
     // Saturating, for `CardInstance::pump`'s reason: Exponential Growth can
     // put a pump bonus at `i32::MAX` in one resolution, and this is the sum
     // every consumer reads. An overflow here is a panic under
@@ -1520,6 +1545,7 @@ fn compute_permanent_pass(
         keywords: keywords.into_overlay(),
         power,
         toughness,
+        base_pt_nibbles,
         lost_all_abilities,
         creature_types_set,
     }
