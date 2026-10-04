@@ -3158,7 +3158,11 @@ pod (release)    every deck seated, 2/3/4/6/8 seats (98401+): 28,980 games —
                  re-run clean), 1 draw, 1 board cap (four Primal Vigors, 953
                  Treasures); then 4 x 400 (46 groups, 99101+), 5 x 200 (37,
                  99201+), 3 x 200 (61, 99301+), 8 x 60 (23, 99401+) = 39,380
-                 games, zero panics, 2 draws, 1 board cap (574 Scute Swarms)
+                 games, zero panics, 2 draws, 1 board cap (574 Scute Swarms);
+                 at the later tip (Henzie, Canoptek): 4 x 400 (101101+), 6 x 200
+                 (31, 101201+), 2 x 200 (92, 101301+), 7 x 80 (27, 101401+) =
+                 45,160 games, zero panics, 1 draw, 2 board caps (731 Zombies,
+                 Extravagant Replication's copy loop)
 pod (strict      every deck, 4 x 30 (93001+), 6 x 20 (94001+), 3 x 30 (95001+),
   debug)         2 x 40 (96001+, 67 of 92 groups) = 6,510 games, all decided;
                  with CRAB_POD_CONCEDE 5 x 20 at 5 (99501+), 8 x 10 at 3
