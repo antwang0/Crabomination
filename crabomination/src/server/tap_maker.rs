@@ -34,8 +34,7 @@ pub(super) fn hold_tap_token_makers(
                 .iter()
                 .filter(|a| a.target == AttackTarget::Player(p))
                 .filter_map(|a| state.computed_permanent(a.attacker))
-                .map(|cp| cp.power.max(0))
-                .sum::<i32>()
+                .fold(0i32, |n, cp| n.saturating_add(cp.power.max(0)))
                 >= state.effective_life(p)
     });
     if lethal {
