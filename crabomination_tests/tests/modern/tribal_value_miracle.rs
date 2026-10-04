@@ -1485,6 +1485,19 @@ fn hideaway_shelldock_isle_exiles_then_plays_hidden_card() {
     assert!(!g.exile.iter().any(|c| c.id == bear), "bear left exile");
 }
 
+/// Shelldock Isle's gate is "a library has twenty or fewer cards in it" (it
+/// used to read "a player has 20 or less life", which a fresh game always
+/// met): with every library above twenty, it can't be activated.
+#[test]
+fn shelldock_isle_gate_reads_library_size() {
+    let mut g = two_player_game();
+    let (_bear, land) = hideaway_setup(&mut g, catalog::shelldock_isle());
+    for seat in 0..2 {
+        for _ in 0..25 { g.add_card_to_library(seat, catalog::island()); }
+    }
+    assert!(activate_hideaway_play(&mut g, land, Color::Blue).is_err(), "no library at twenty or fewer");
+}
+
 /// Shared setup: play a hideaway land for seat 0 with a known Grizzly Bears
 /// on top of an otherwise-empty library, returning (hidden card id, land id).
 fn hideaway_setup(g: &mut GameState, land_def: crabomination::card::CardDefinition) -> (CardId, CardId) {
@@ -1523,17 +1536,50 @@ fn mosswort_bridge_gate_requires_total_power_eight() {
     assert!(g.battlefield_find(bear).is_some(), "hidden bear played");
 }
 
-/// Spinerock Knoll's gate reads "an opponent lost 7 or more life this turn".
+/// Spinerock Knoll's gate reads "an opponent was dealt 7 or more damage this
+/// turn": seven life paid or drained is no damage; seven damage is.
 #[test]
-fn spinerock_knoll_gate_requires_seven_life_lost() {
+fn spinerock_knoll_gate_requires_seven_damage() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
     let mut g = two_player_game();
     let (bear, land) = hideaway_setup(&mut g, catalog::spinerock_knoll());
-    g.adjust_life(1, -6);
-    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_err(), "6 life lost → gated");
+    g.adjust_life(1, -7);
+    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_err(), "7 life lost, no damage → gated");
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let hit = |n| Effect::DealDamage { to: Selector::Player(PlayerRef::Seat(1)), amount: Value::Const(n) };
+    g.resolve_effect(&hit(6), &ctx).expect("6 damage");
     g.battlefield_find_mut(land).unwrap().tapped = false;
-    g.adjust_life(1, -1);
-    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_ok(), "7 life lost → plays");
+    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_err(), "6 damage → gated");
+    g.resolve_effect(&hit(1), &ctx).expect("1 more");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_ok(), "7 damage → plays");
     assert!(g.battlefield_find(bear).is_some(), "hidden bear played");
+}
+
+/// Hideaway lands "play" the hidden card: a hidden land is played (it used to
+/// be skipped as uncastable and stranded in exile).
+#[test]
+fn mosswort_bridge_plays_a_hidden_land() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].library.clear();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let land = g.add_card_to_hand(0, catalog::mosswort_bridge());
+    g.perform_action(GameAction::PlayLand(land)).expect("play hideaway land");
+    drain_stack(&mut g);
+    let hidden = g.exile.iter().find(|c| c.definition.name == "Forest").expect("a Forest hidden").id;
+    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); }
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.players[0].lands_played_this_turn = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![hidden])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hidden).is_some(), "the hidden Forest was played");
 }
 
 /// Windbrisk Heights' gate counts declared attackers this turn.

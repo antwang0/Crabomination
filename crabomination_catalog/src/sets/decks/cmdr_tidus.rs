@@ -764,16 +764,20 @@ pub fn fight_rigging() -> CardDefinition {
                     cond: Predicate::SelectorExists(Selector::EachPermanent(
                         yours(R::Creature).and(R::PowerAtLeast(7)),
                     )),
+                    // "Play": a hidden land is played (CR 305.3), a spell cast.
                     then: Box::new(may(
                         "Play the exiled card without paying its mana cost?",
-                        Effect::CastWithoutPayingImmediate {
-                            what: Selector::CardExiledWithSource,
-                            source_zone: crate::card::Zone::Exile,
-                            exile_after: false,
-                            copy: false,
-                            reduce_generic: 0,
-                            pay_own_cost: false,
-                        },
+                        Effect::Seq(vec![
+                            Effect::PlayLandAmongNow { what: Selector::CardExiledWithSource },
+                            Effect::CastWithoutPayingImmediate {
+                                what: Selector::CardExiledWithSource,
+                                source_zone: crate::card::Zone::Exile,
+                                exile_after: false,
+                                copy: false,
+                                reduce_generic: 0,
+                                pay_own_cost: false,
+                            },
+                        ]),
                     )),
                     else_: Box::new(Effect::Noop),
                 },

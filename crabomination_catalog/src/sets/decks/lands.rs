@@ -488,7 +488,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
 
 /// Shelldock Isle — Legendary Land. Enters tapped. Hideaway 4 (CR 702.76). `{T}:
 /// Add {U}.` `{U}, {T}: You may play the exiled card without paying its mana
-/// cost if a player has 20 or less life.`
+/// cost if a library has twenty or fewer cards in it.`
 pub fn shelldock_isle() -> CardDefinition {
     CardDefinition {
         name: "Shelldock Isle",
@@ -499,18 +499,26 @@ pub fn shelldock_isle() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[u()]),
-                condition: Some(Predicate::PlayerLifeAtMost {
+                // "if a library has twenty or fewer cards in it" — any player's.
+                condition: Some(Predicate::ForAnyPlayer {
                     who: PlayerRef::EachPlayer,
-                    life: 20,
+                    pred: Box::new(Predicate::ValueAtLeast(
+                        Value::Const(20),
+                        Value::LibrarySizeOf(PlayerRef::Triggerer),
+                    )),
                 }),
-                effect: Effect::CastWithoutPayingImmediate {
-                    reduce_generic: 0,
-                                pay_own_cost: false,
-                    what: Selector::CardExiledWithSource,
-                    source_zone: crate::card::Zone::Exile,
-                    exile_after: false,
-                    copy: false,
-                },
+                // "Play": a hidden land is played (CR 305.3), a spell cast.
+                effect: Effect::Seq(vec![
+                    Effect::PlayLandAmongNow { what: Selector::CardExiledWithSource },
+                    Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                        what: Selector::CardExiledWithSource,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                    },
+                ]),
                 ..Default::default()
             },
         ],
@@ -545,14 +553,19 @@ fn lorwyn_hideaway_land(
                 tap_cost: true,
                 mana_cost: cost(&[pip]),
                 condition: Some(gate),
-                effect: Effect::CastWithoutPayingImmediate {
-                    reduce_generic: 0,
-                                pay_own_cost: false,
-                    what: Selector::CardExiledWithSource,
-                    source_zone: crate::card::Zone::Exile,
-                    exile_after: false,
-                    copy: false,
-                },
+                // "You may PLAY the exiled card": a hidden land is played
+                // (your turn, a land play left — CR 305.3); a spell is cast.
+                effect: Effect::Seq(vec![
+                    Effect::PlayLandAmongNow { what: Selector::CardExiledWithSource },
+                    Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                        what: Selector::CardExiledWithSource,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                    },
+                ]),
                 ..Default::default()
             },
         ],
@@ -583,17 +596,21 @@ pub fn mosswort_bridge() -> CardDefinition {
     )
 }
 
-/// Spinerock Knoll — hideaway land; plays the hidden card if an opponent lost
-/// 7 or more life this turn.
+/// Spinerock Knoll — hideaway land; plays the hidden card if an opponent was
+/// dealt 7 or more damage this turn (damage, not life loss: a drain doesn't
+/// count, infect damage does).
 pub fn spinerock_knoll() -> CardDefinition {
     lorwyn_hideaway_land(
         "Spinerock Knoll",
         Color::Red,
         r(),
-        Predicate::ValueAtLeast(
-            Value::LifeLostThisTurn(PlayerRef::EachOpponent),
-            Value::Const(7),
-        ),
+        Predicate::ForAnyPlayer {
+            who: PlayerRef::EachOpponent,
+            pred: Box::new(Predicate::ValueAtLeast(
+                Value::DamageTakenThisTurn(PlayerRef::Triggerer),
+                Value::Const(7),
+            )),
+        },
     )
 }
 
