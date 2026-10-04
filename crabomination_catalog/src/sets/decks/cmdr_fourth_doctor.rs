@@ -223,10 +223,8 @@ pub fn the_first_doctor() -> CardDefinition {
 }
 
 /// The Second Doctor — no maximum hand size for anyone; at your end step each
-/// player may draw, and an opponent who does can't attack you next turn.
-///
-/// ⚠ Residual: only that opponent's creatures on the battlefield then are
-/// barred.
+/// player may draw, and an opponent who does can't attack you or your
+/// permanents during their next turn (a player-level ban, CR 508.1).
 pub fn the_second_doctor() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -247,10 +245,7 @@ pub fn the_second_doctor() -> CardDefinition {
                             // opponent, so the Doctor's controller is named back.
                             Effect::AsPlayer {
                                 who: PlayerRef::ControllerOf(Box::new(Selector::This)),
-                                body: Box::new(Effect::GrantCantAttackYou {
-                                    what: Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature },
-                                    duration: Duration::UntilYourNextUntap,
-                                }),
+                                body: Box::new(Effect::CantAttackYouDuringTheirNextTurn { who: PlayerRef::Triggerer }),
                             },
                         ])),
                     }),

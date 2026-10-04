@@ -334,16 +334,16 @@ fn nyssa_of_traken_taps_up_to_that_many_targets() {
     assert_eq!(tapped, 2, "up to two targets: no more than were sacrificed");
 }
 
-/// The Second Doctor — "each opponent who [draws] can't attack YOU": the
-/// drawing opponent's creatures are barred from the Doctor's controller
-/// (CR 508.1a), not from attacking their own controller (the body runs as
-/// the opponent); an opponent who declines is free.
+/// The Second Doctor — "each opponent who [draws] can't attack YOU or
+/// permanents you control during their next turn" (CR 508.1a): a ban on the
+/// drawing PLAYER, so a creature they get afterwards is barred too, and it
+/// reaches the Doctor's controller's planeswalkers; it holds on their next
+/// turn only, and an opponent who declines is free.
 #[test]
 fn the_second_doctor_bars_the_drawer_from_attacking_you() {
-    use crabomination::card::Keyword;
     let mut g = pod(3);
     let doc = g.add_card_to_battlefield(0, catalog::the_second_doctor());
-    let drew = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let walker = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
     let declined = g.add_card_to_battlefield(2, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(false), // you
@@ -351,9 +351,27 @@ fn the_second_doctor_bars_the_drawer_from_attacking_you() {
         DecisionAnswer::Bool(false), // player 3 doesn't
     ]));
     fire(&mut g, doc, 0);
-    let barred = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantAttackPlayer(0));
-    assert!(barred(&g, drew), "can't attack the Doctor's controller");
-    assert!(!barred(&g, declined));
+    let later = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let attack = |g: &GameState, seat: usize, id: CardId, target: AttackTarget| {
+        let mut g = g.clone();
+        g.turn_number += 1;
+        g.active_player_idx = seat;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = seat;
+        g.clear_sickness(id);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: id, target }])).is_ok()
+    };
+    assert!(!attack(&g, 1, later, AttackTarget::Player(0)), "can't attack the Doctor's controller");
+    assert!(!attack(&g, 1, later, AttackTarget::Planeswalker(walker)), "nor their planeswalker");
+    assert!(attack(&g, 1, later, AttackTarget::Player(2)), "another opponent is fair game");
+    assert!(attack(&g, 2, declined, AttackTarget::Player(0)), "the decliner is free");
+    // The ban ends with the drawer's next turn.
+    let mut after = g.clone();
+    after.turn_number += 1;
+    after.active_player_idx = 1;
+    after.step = TurnStep::Cleanup;
+    let _ = after.do_cleanup(&mut Vec::new());
+    assert!(attack(&after, 1, later, AttackTarget::Player(0)));
 }
 
 /// CR 614.12 — Displaced Dinosaurs: a historic permanent enters already a
