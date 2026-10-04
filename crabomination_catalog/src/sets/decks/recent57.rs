@@ -128,25 +128,25 @@ pub fn elderfang_disciple() -> CardDefinition {
 }
 
 /// Martial Coup — {X}{W}{W} Sorcery. Create X 1/1 white Soldiers; if X ≥ 5,
-/// destroy all other creatures. (Modeled as destroy-then-create — same end
-/// board as the printed create-then-destroy-others.)
+/// destroy all other creatures — the Soldiers are on the battlefield first
+/// (their entry triggers see the board the sweep then clears).
 pub fn martial_coup() -> CardDefinition {
     CardDefinition {
         name: "Martial Coup",
         cost: cost(&[x(), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::If {
-                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
-                then: Box::new(Effect::Destroy {
-                    what: Selector::EachPermanent(R::Creature),
-                }),
-                else_: Box::new(Effect::Noop),
-            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
                 definition: std::sync::Arc::new(soldier_token()),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::EachPermanentExceptLastCreated(R::Creature),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()
