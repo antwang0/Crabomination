@@ -5201,15 +5201,10 @@ impl GameState {
     /// CR 707.2 says the copy's printed loyalty now is.
     pub(crate) fn reseed_entering_counters_after_copy(&mut self, card_id: CardId) {
         use crate::card::CounterType;
-        let Some(c) = self.battlefield_find_mut(card_id) else { return };
-        if c.definition.is_planeswalker() && c.definition.base_loyalty > 0 {
-            let loyalty = c.definition.base_loyalty;
-            c.counters.insert(CounterType::Loyalty, loyalty);
-        }
-        if c.definition.is_battle() && c.definition.defense > 0 {
-            let defense = c.definition.defense;
-            c.counters.insert(CounterType::Defense, defense);
-        }
+        let Some(c) = self.battlefield_find(card_id) else { return };
+        let loyalty = (c.definition.is_planeswalker() && c.definition.base_loyalty > 0)
+            .then_some(c.definition.base_loyalty);
+        let defense = (c.definition.is_battle() && c.definition.defense > 0).then_some(c.definition.defense);
         // CR 702.32a / 702.63a — a copied (or copy-granted) fading or
         // vanishing enters with its counters.
         let fade_or_time = c.definition.keywords.iter().find_map(|k| match k {
@@ -5217,11 +5212,22 @@ impl GameState {
             crate::card::Keyword::Vanishing(n) => Some((CounterType::Time, *n)),
             _ => None,
         });
-        if let Some((kind, n)) = fade_or_time
-            && n > 0
-            && c.counter_count(kind) == 0
-        {
-            c.add_counters(kind, n);
+        let fresh = fade_or_time.filter(|&(kind, n)| n > 0 && c.counter_count(kind) == 0);
+        // CR 306.5b / 310.4b / 614.16 — entering with loyalty or defense is a
+        // placement: the replacement chain scales it (Doubling Season under
+        // Spark Double copying a walker). Solemnity doesn't reach either type.
+        let loyalty = loyalty.map(|n| self.scaled_counter_count_on(card_id, CounterType::Loyalty, n));
+        let defense = defense.map(|n| self.scaled_counter_count_on(card_id, CounterType::Defense, n));
+        if let Some(c) = self.battlefield_find_mut(card_id) {
+            if let Some(n) = loyalty {
+                c.counters.insert(CounterType::Loyalty, n);
+            }
+            if let Some(n) = defense {
+                c.counters.insert(CounterType::Defense, n);
+            }
+        }
+        if let Some((kind, n)) = fresh {
+            self.place_counters(card_id, kind, n);
         }
     }
 

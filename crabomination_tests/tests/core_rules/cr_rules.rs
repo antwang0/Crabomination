@@ -8558,6 +8558,27 @@ fn this_turn_tallies_reset_for_every_seat_at_each_turn() {
     assert_eq!(g.players[1].cards_left_graveyard_this_turn, 0);
 }
 
+/// CR 306.5b / 614.16 — a permanent entering as a copy of a planeswalker
+/// enters with that walker's loyalty, and the counter replacements apply:
+/// Spark Double copying Jace Beleren under Doubling Season gets 3 doubled,
+/// and its additional loyalty counter doubled too. The copy re-seeded the
+/// printed loyalty raw.
+#[test]
+fn cr_306_5b_a_copied_walkers_loyalty_takes_doubling_season() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doubling_season());
+    g.add_card_to_battlefield(0, catalog::jace_beleren());
+    let spark = g.add_card_to_hand(0, catalog::spark_double());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spark, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Spark Double");
+    drain_stack(&mut g);
+    let loyalty = g.battlefield_find(spark).map(|c| c.counter_count(CounterType::Loyalty));
+    assert_eq!(loyalty, Some(8), "2 x (3 + 1)");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
