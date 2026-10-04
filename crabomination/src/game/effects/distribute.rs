@@ -67,11 +67,7 @@ impl GameState {
             let id = *id;
             // CR 614.16 — counter replacement effects (Doubling Season,
             // Hardened Scales) scale the placement.
-            let n = self
-                .battlefield_find(id)
-                .map(|c| (c.controller, self.computed_is_creature(c)))
-                .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, counter, n, cre))
-                .unwrap_or(n);
+            let n = self.scaled_counter_count_on(id, counter, n);
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.add_counters(counter, n);
                 events.push(GameEvent::CounterAdded {

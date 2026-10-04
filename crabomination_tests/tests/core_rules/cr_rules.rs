@@ -4828,6 +4828,27 @@ fn cr_614_16_additive_then_doubling_counter_replacement() {
     );
 }
 
+/// CR 614.1c / 614.16 — a resolving permanent spell's "enters with N
+/// counters" takes the whole replacement chain, adders included: Walking
+/// Ballista for X=2 under Hardened Scales enters with three. (The spell
+/// path applied only the doublers.)
+#[test]
+fn cr_614_16_cast_permanent_enters_with_hardened_scales_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    let ballista = g.add_card_to_hand(0, catalog::walking_ballista());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ballista, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Walking Ballista for X=2");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ballista).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "two plus Hardened Scales' one"
+    );
+}
+
 // ── CR 701.56 — Time travel ──────────────────────────────────────────────────
 
 /// CR 701.56a — time traveling removes a time counter from a suspended card the
@@ -6940,6 +6961,39 @@ fn cr_614_16_winding_constrictor_boosts_poison() {
         amount: Value::Const(2),
     }, &ctx).unwrap();
     assert_eq!(g.players[1].poison_counters, 6, "AddCounter path also boosts: +3 more");
+}
+
+/// CR 614.16 — Winding Constrictor's permanent half reads "an artifact or
+/// creature you control": a noncreature artifact gets that many plus one,
+/// both from an effect and as it enters with counters (CR 614.1c); a land
+/// gets none.
+#[test]
+fn cr_614_16_winding_constrictor_boosts_a_noncreature_artifact() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winding_constrictor());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let zone = g.add_card_to_battlefield(0, catalog::blast_zone());
+    let charge = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::Charge);
+    let zone_before = charge(&g, zone);
+    for id in [ring, zone] {
+        let ctx = crabomination::game::effects::EffectContext::for_ability(id, 0, None);
+        g.resolve_effect(&Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Charge,
+            amount: Value::Const(1),
+        }, &ctx).unwrap();
+    }
+    assert_eq!(charge(&g, ring), 2, "one charge counter plus one on an artifact");
+    assert_eq!(charge(&g, zone), zone_before + 1, "a land isn't boosted");
+
+    let arrows = g.add_card_to_hand(0, catalog::serrated_arrows());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arrows, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Serrated Arrows");
+    drain_stack(&mut g);
+    assert_eq!(charge(&g, arrows), 4, "enters with three plus one");
 }
 
 // ── CR 115 — an activated ability can target a spell on the stack ──────────────

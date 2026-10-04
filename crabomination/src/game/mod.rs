@@ -7654,6 +7654,15 @@ impl GameState {
                 }
             }
         }
+        // CR 614.16 — Winding Constrictor reaches "an artifact or creature you
+        // control"; `scaled_counter_count` adds it for a creature, so a
+        // noncreature artifact takes it here (before any doubler, as there).
+        if base > 0 && !is_creature {
+            let adders = self.extra_any_kind_adders_for(ctrl);
+            if adders > 0 && self.source_is_artifact(cid) {
+                base += adders;
+            }
+        }
         self.scaled_counter_count(ctrl, kind, base, is_creature)
     }
 
@@ -8061,7 +8070,7 @@ impl GameState {
     ) {
         let Some(card) = self.battlefield_find(cid) else { return };
         let Some((kind, value)) = card.definition.enters_with_counters.clone() else { return };
-        let (controller, is_creature) = (card.controller, self.computed_is_creature(card));
+        let controller = card.controller;
         if self.counters_locked() {
             return;
         }
@@ -8070,7 +8079,7 @@ impl GameState {
         if base <= 0 {
             return;
         }
-        let n = self.scaled_counter_count(controller, kind, base as u32, is_creature);
+        let n = self.scaled_counter_count_on(cid, kind, base as u32);
         if let Some(card_mut) = self.battlefield_find_mut(cid) {
             card_mut.add_counters(kind, n);
         }

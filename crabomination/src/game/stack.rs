@@ -2818,20 +2818,11 @@ impl GameState {
                         etb_ctx.cast_from_graveyard = cast_from_graveyard;
                         let base = self.evaluate_value(&value, &etb_ctx);
                         if base > 0 {
-                            // CR 614.16: counter-doubling replacement effects
-                            // also apply to the "enters with N counters"
-                            // replacement (Pestseed / Doubling Season / etc.).
-                            let target_ctrl = self
-                                .battlefield
-                                .find_by_id(card_id)
-                                .map(|c| c.controller);
-                            let mut n = base as u32;
-                            if let Some(ctrl) = target_ctrl {
-                                let doublers = self.counter_doublers_for(ctrl);
-                                for _ in 0..doublers {
-                                    n = n.saturating_mul(2);
-                                }
-                            }
+                            // CR 614.16: the counter replacements also apply
+                            // to the "enters with N counters" replacement —
+                            // the adders (Hardened Scales, Winding
+                            // Constrictor) as well as the doublers.
+                            let n = self.scaled_counter_count_on(card_id, kind, base as u32);
                             if let Some(card_mut) =
                                 self.battlefield.find_by_id_mut(card_id)
                             {

@@ -19168,11 +19168,7 @@ impl GameState {
                 for (cid, cur) in targets {
                     // Adding `cur` doubles the total (N → 2N), routed through the
                     // CR 614.16 counter replacement chain like any other add.
-                    let bf = self.battlefield_find(cid);
-                    let add = bf
-                        .map(|c| (c.controller, self.computed_is_creature(c)))
-                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, *kind, cur, cre))
-                        .unwrap_or(cur);
+                    let add = self.scaled_counter_count_on(cid, *kind, cur);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(*kind, add);
                         events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add, placer: self.resolution_causer });
@@ -19201,11 +19197,7 @@ impl GameState {
                     .collect();
                 for (cid, kinds) in targets {
                     for (kind, cur) in kinds {
-                        let add = self
-                            .battlefield_find(cid)
-                            .map(|c| (c.controller, self.computed_is_creature(c)))
-                            .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, kind, cur, cre))
-                            .unwrap_or(cur);
+                        let add = self.scaled_counter_count_on(cid, kind, cur);
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.add_counters(kind, add);
                             events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: add, placer: self.resolution_causer });

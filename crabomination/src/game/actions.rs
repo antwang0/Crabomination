@@ -22430,11 +22430,11 @@ impl GameState {
         // effect placed and not the one a cost placed, and Devoted Druid
         // (whose untap is `add_counter_cost`) killed itself through the combo.
         if let Some((kind, count)) = ability.add_counter_cost {
-            let is_creature = self
-                .battlefield
-                .find_by_id(card_id)
-                .is_some_and(|c| self.computed_is_creature(c));
-            let scaled = self.scaled_counter_count(p, kind, count, is_creature);
+            let scaled = if self.battlefield.find_by_id(card_id).is_some() {
+                self.scaled_counter_count_on(card_id, kind, count)
+            } else {
+                self.scaled_counter_count(p, kind, count, false)
+            };
             if scaled > 0
                 && let Some(c) = self.battlefield.find_by_id_mut(card_id)
             {
