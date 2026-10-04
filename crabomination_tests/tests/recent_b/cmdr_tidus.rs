@@ -544,3 +544,29 @@ fn endless_detour_takes_each_kind_of_target() {
     let (first, _) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(detour), None);
     assert_eq!(first, Some(Target::Permanent(bear)));
 }
+
+/// CR 603.3b — the declaration's triggers go on the stack in APNAP order: the
+/// attacking (active) player's first, so the defender's Lulu trigger is on
+/// top and resolves before Hero of Bladehold's.
+#[test]
+fn cr_603_3b_a_defenders_attack_trigger_resolves_first() {
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    g.add_card_to_battlefield(0, catalog::lulu_stern_guardian());
+    let hero = g.add_card_to_battlefield(1, catalog::hero_of_bladehold());
+    g.clear_sickness(hero);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: hero, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    let order: Vec<usize> = g
+        .stack
+        .iter()
+        .filter_map(|si| match si {
+            crabomination::game::types::StackItem::Trigger { controller, .. } => Some(*controller),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(order.first(), Some(&1), "the active player's go on first");
+    assert_eq!(order.last(), Some(&0), "the defender's on top");
+}

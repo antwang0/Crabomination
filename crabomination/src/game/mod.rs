@@ -166,6 +166,7 @@ mod commander_return;
 mod legend_rule;
 mod simultaneous_deaths;
 mod departed_listeners;
+mod attack_apnap;
 mod trigger_batch;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
@@ -19954,6 +19955,13 @@ impl GameState {
         if let Some(e) = rejected {
             return Err(e);
         }
+        let attack_mark = matches!(
+            action,
+            GameAction::DeclareAttackers(_)
+                | GameAction::DeclareAttackersBanded { .. }
+                | GameAction::DeclareAttackersExerting { .. }
+        )
+        .then(|| self.stack.len());
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
@@ -20395,6 +20403,12 @@ impl GameState {
             events.extend(std::mem::take(&mut self.scratch.pending_cost_events));
         }
         self.dispatch_triggers_for_events(&events);
+        // CR 603.3b — the declaration's triggers, both walks, in APNAP order.
+        if let Some(mark) = attack_mark
+            && self.pending_decision.is_none()
+        {
+            self.apnap_order_triggers_since(mark);
+        }
         // CR 704.3 — the player receives priority as soon as the spell or
         // ability is on the stack, so state-based actions are checked *now*:
         // a source that paid a counter cost it cannot survive (Devoted Druid,
