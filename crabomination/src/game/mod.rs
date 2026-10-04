@@ -18204,24 +18204,29 @@ impl GameState {
         }
     }
 
-    /// Remove the continuous effects whose source is `id` (source left the
-    /// battlefield). CR 611.2b — a one-shot effect that created a continuous
-    /// effect with no duration (`EffectDuration::Indefinite`) doesn't depend on
-    /// its source sticking around, so those survive (Chainer's reanimated
-    /// Nightmares keep the type after he dies).
+    /// Remove the continuous effects whose duration hangs on source `id`
+    /// staying on the battlefield (it just left). CR 611.2a — any other effect
+    /// a resolved spell or ability created lasts for its stated duration
+    /// whatever its source does: a creature's "until end of turn" pump, an
+    /// indefinite type change (Chainer's Nightmares), "for as long as it has a
+    /// flood counter" (Xolatoyac). An effect *on* the leaver goes with it
+    /// separately (CR 400.7, `on_left_battlefield`).
     ///
     /// Guarded: `continuous_effects` is a `CowBox` and `retain` unshares it
     /// whether or not it drops anything. Every battlefield removal calls this
     /// one frame ahead of `on_left_battlefield`, and on a normal board no
     /// entry is sourced from the leaver.
     pub(crate) fn remove_effects_from_source(&mut self, id: CardId) {
-        if self
-            .continuous_effects
-            .iter()
-            .any(|e| e.source == id && e.duration != EffectDuration::Indefinite)
-        {
-            self.continuous_effects
-                .retain(|e| e.source != id || e.duration == EffectDuration::Indefinite);
+        let tied = |d: &EffectDuration| {
+            matches!(
+                d,
+                EffectDuration::WhileSourceOnBattlefield
+                    | EffectDuration::WhileSourceTapped
+                    | EffectDuration::WhileSourceAttached
+            )
+        };
+        if self.continuous_effects.iter().any(|e| e.source == id && tied(&e.duration)) {
+            self.continuous_effects.retain(|e| e.source != id || !tied(&e.duration));
         }
     }
 

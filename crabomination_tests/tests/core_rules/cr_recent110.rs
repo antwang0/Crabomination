@@ -312,3 +312,34 @@ fn cr_110_2_a_zone_dest_naming_a_target_player_resolves_it() {
     g.resolve_effect(&effect, &ctx).expect("move");
     assert_eq!(g.battlefield_find(wurm).map(|c| c.controller), Some(2));
 }
+
+/// CR 611.2a — a continuous effect from a resolved ability lasts for its
+/// stated duration even if its source leaves: a creature's "until end of
+/// turn" base-P/T change and an Island granted "for as long as it has a
+/// flood counter" both outlive the creature.
+#[test]
+fn cr_611_2a_resolved_effects_outlive_their_source() {
+    use crabomination::card::{CounterType, LandType};
+    use crabomination::effect::{Duration, Effect, Selector, Value};
+    let mut g = crabomination::game::two_player_game();
+    let src = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(1, crabomination::catalog::craw_wurm());
+    let land = g.add_card_to_battlefield(0, crabomination::catalog::forest());
+    g.battlefield_find_mut(land).unwrap().add_counters(CounterType::Flood, 1);
+    let run = |g: &mut crabomination::game::GameState, effect: Effect, t: crabomination::card::CardId| {
+        let target = crabomination::game::types::Target::Permanent(t);
+        let mut ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, Some(target.clone()));
+        ctx.targets = vec![target];
+        g.resolve_effect(&effect, &ctx).expect("resolves");
+    };
+    run(&mut g, Effect::SetBasePT { what: Selector::Target(0), power: Value::Const(0), toughness: Value::Const(1), duration: Duration::EndOfTurn }, wurm);
+    run(
+        &mut g,
+        Effect::GainLandType { what: Selector::Target(0), land_type: LandType::Island, duration: Duration::WhileHasCounter(CounterType::Flood) },
+        land,
+    );
+    g.destroy_permanent(src, false, &mut Vec::new());
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 0, "the base 0/1 lasts until end of turn");
+    assert!(g.computed_permanent(land).unwrap().subtypes().land_types.contains(&LandType::Island));
+}
