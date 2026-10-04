@@ -8163,6 +8163,9 @@ pub enum GoadHold {
     /// While the goaded creature's controller is still this seat (Vislor
     /// Turlough's "for as long as they control it").
     WhileControlledBy(u8),
+    /// "Goaded for the rest of the game" (Nettling Nuisance's Pirate): this
+    /// goader's entry never lapses; another goader's ordinary goad still does.
+    ForTheGame,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -8252,9 +8255,6 @@ pub struct CardCold {
     /// majority of creatures. Round-trips through `CardInstanceWire` with a
     /// `#[serde(default)]` for snapshot back-compat.
     pub goaded_by: Vec<usize>,
-    /// "Goaded for the rest of the game" (Nettling Nuisance's Pirate): no
-    /// goader's entry expires at their next turn.
-    pub goad_for_the_game: bool,
     /// CR 701.15 / 611.2b — goads that last "as long as" something holds
     /// rather than until the goader's next turn (Hot Pursuit, Immortal
     /// Obligation). Read through `GameState::goaders`, never directly.
@@ -11969,8 +11969,6 @@ struct CardInstanceWire {
     #[serde(default)]
     goaded_by: Vec<usize>,
     #[serde(default)]
-    goad_for_the_game: bool,
-    #[serde(default)]
     goad_holds: Vec<(usize, GoadHold)>,
     #[serde(default)]
     combat_defenders: Option<Vec<usize>>,
@@ -12188,7 +12186,6 @@ impl serde::Serialize for CardInstance {
             chosen_color: self.chosen_color,
             chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
-            goad_for_the_game: self.goad_for_the_game,
             goad_holds: self.goad_holds.clone(),
             combat_defenders: self.combat_defenders.clone(),
             monstrous: self.monstrous,
@@ -12368,7 +12365,6 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;
-        c.goad_for_the_game = wire.goad_for_the_game;
         c.goad_holds = wire.goad_holds;
         c.combat_defenders = wire.combat_defenders;
         c.monstrous = wire.monstrous;

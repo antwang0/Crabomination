@@ -24,19 +24,27 @@ fn run(g: &mut GameState, seat: usize, e: &Effect) {
     drain_stack(g);
 }
 
-/// CR 701.38 — goad lasts until the goader's next turn; "goaded for the rest
-/// of the game" survives it, while a plain goad beside it lapses.
+/// CR 701.15 — goad lasts until the goader's next turn; "goaded for the rest
+/// of the game" survives it, while a plain goad beside it — another goader's
+/// on the same creature included — lapses.
 #[test]
-fn cr_701_38_a_goad_for_the_game_outlives_the_goaders_turn() {
+fn cr_701_15_a_goad_for_the_game_outlives_the_goaders_turn() {
     let mut g = pod(3);
     let forever = g.add_card_to_battlefield(1, catalog::serra_angel());
     let plain = g.add_card_to_battlefield(2, catalog::grizzly_bears());
     run(&mut g, 0, &Effect::GoadForTheGame { what: Selector::EachPermanent(R::HasName("Serra Angel".into())) });
     run(&mut g, 0, &Effect::Goad { what: Selector::EachPermanent(R::HasName("Grizzly Bears".into())) });
+    // Seat 2 also goads the Angel, ordinarily: that goad still ends at seat 2's
+    // turn (the "for the game" mark is seat 0's alone).
+    run(&mut g, 2, &Effect::Goad { what: Selector::EachPermanent(R::HasName("Serra Angel".into())) });
     g.active_player_idx = 0;
     g.do_untap();
-    assert!(g.battlefield_find(forever).unwrap().goaded_by.contains(&0), "still goaded");
-    assert!(g.battlefield_find(plain).unwrap().goaded_by.is_empty(), "a plain goad lapsed");
+    assert!(g.goaded_by_player(g.battlefield_find(forever).unwrap(), 0), "still goaded");
+    assert!(!g.is_goaded(g.battlefield_find(plain).unwrap()), "a plain goad lapsed");
+    g.active_player_idx = 2;
+    g.do_untap();
+    let angel = g.battlefield_find(forever).unwrap();
+    assert_eq!(g.goaders(angel).as_slice(), &[0], "seat 2's ordinary goad lapsed beside it");
 }
 
 /// CR 508.1a — "they can't attack you or planeswalkers you control": the
@@ -328,7 +336,7 @@ fn nettling_nuisance_saddles_them_with_a_pirate() {
     let p = named(&g, 1, "Pirate");
     assert_eq!(p.len(), 1);
     let pirate = g.battlefield_find(p[0]).unwrap();
-    assert!(pirate.goaded_by.contains(&0) && pirate.goad_for_the_game);
+    assert_eq!(g.goaders(pirate).as_slice(), &[0]);
 }
 
 /// First spell on an opponent's turn: look at two, keep one.

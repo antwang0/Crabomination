@@ -119,6 +119,7 @@ impl GameState {
             GoadHold::WhileOnBattlefield(src) => self.battlefield_find(src).is_some(),
             GoadHold::Obligation(kind) => c.counter_count(kind) > 0,
             GoadHold::WhileControlledBy(seat) => c.controller == usize::from(seat),
+            GoadHold::ForTheGame => true,
         }
     }
 

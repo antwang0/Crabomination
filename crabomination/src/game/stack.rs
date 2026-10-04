@@ -4624,7 +4624,7 @@ impl GameState {
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.
         for card in self.battlefield.iter_mut() {
-            if card.cold_any(|k| k.goaded_by.iter().any(|&g| ends(g)) && !k.goad_for_the_game) {
+            if card.cold_any(|k| k.goaded_by.iter().any(|&g| ends(g))) {
                 card.goaded_by.retain(|&g| !ends(g));
             }
             // CR 701.35 — detain lasts "until your next turn"; lift it when the

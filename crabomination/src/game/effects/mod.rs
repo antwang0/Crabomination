@@ -12453,10 +12453,10 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(cid)
                         && c.definition.is_creature()
                     {
-                        if !c.goaded_by.contains(&goader) {
-                            c.goaded_by.push(goader);
+                        let hold = (goader, crate::card::GoadHold::ForTheGame);
+                        if !c.goad_holds.contains(&hold) {
+                            c.goad_holds.push(hold);
                         }
-                        c.goad_for_the_game = true;
                     }
                 }
                 Ok(())
@@ -12533,7 +12533,6 @@ impl GameState {
                     {
                         c.goaded_by.clear();
                         c.goad_holds.clear();
-                        c.goad_for_the_game = false;
                     }
                 }
                 Ok(())

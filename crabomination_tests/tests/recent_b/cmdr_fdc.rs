@@ -5144,7 +5144,7 @@ fn death_toll_batch() {
     etb(&mut g, catalog::rendmaw_creaking_nest());
     let birds: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Bird").collect();
     assert_eq!(birds.len(), 2);
-    assert!(birds.iter().all(|c| c.tapped && !c.goaded_by.is_empty()));
+    assert!(birds.iter().all(|c| c.tapped && g.is_goaded(c)));
 
     // Wrenn and Seven's +1 keeps the lands and bins the rest.
     let mut g = main_phase();
@@ -5665,7 +5665,7 @@ fn cabaretti_cacophony_batch() {
     let lp = g.add_card_to_hand(0, catalog::life_of_the_party());
     cast(&mut g, lp, &[]);
     let copy = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Life of the Party");
-    assert!(copy.is_some_and(|c| !c.goaded_by.is_empty()));
+    assert!(copy.is_some_and(|c| g.is_goaded(c)));
 
     // Prosperous Partnership: two Citizens, then three taps for a Treasure.
     let mut g = main_phase();
