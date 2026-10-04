@@ -1964,7 +1964,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
-| 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
+| 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |

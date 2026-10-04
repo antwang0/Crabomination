@@ -572,6 +572,13 @@ impl GameState {
         if let Some(mut alt) = printed {
             if alt.blitz {
                 self.discount_blitz(p, &mut alt);
+                // CR 702.152 — a spell with its own blitz and Henzie's has two
+                // blitz abilities that differ only in cost: the cheaper one.
+                if let Some(granted) = self.granted_blitz(p, zone, card_id)
+                    && granted.mana_cost.cmc() < alt.mana_cost.cmc()
+                {
+                    return Some(granted);
+                }
             }
             return Some(alt);
         }

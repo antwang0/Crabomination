@@ -95,6 +95,30 @@ fn henzie_grants_discounted_blitz() {
     assert!(g.battlefield_find(wurm).is_some_and(|c| c.blitzed));
 }
 
+/// CR 702.152 — a spell with its own blitz and Henzie's has two blitz
+/// abilities: Workshop Warchief's printed {4}{G}{G} or its mana cost
+/// {3}{G}{G}, and the cheaper one is taken.
+#[test]
+fn henzie_blitz_beats_a_dearer_printed_blitz() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::henzie_toolbox_torre());
+    let rhino = g.add_card_to_hand(0, catalog::workshop_warchief());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rhino,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("blitz for {3}{G}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rhino).is_some_and(|c| c.blitzed));
+}
+
 /// Jolene: an attack on your opponent makes the attacker a Treasure, and your
 /// own Treasure creations make one more.
 #[test]

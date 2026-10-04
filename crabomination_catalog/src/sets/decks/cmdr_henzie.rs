@@ -49,8 +49,9 @@ fn treasure() -> Arc<TokenDefinition> {
 
 /// Henzie "Toolbox" Torre — {B}{R}{G} 3/3 Devil Rogue. Creature spells with
 /// mana value 4 or greater have blitz at their mana cost (CR 702.152); blitz
-/// costs {1} less per commander cast from the command zone.
-/// Residual: a spell with its own blitz uses its printed one.
+/// costs {1} less per commander cast from the command zone. A spell with its
+/// own blitz takes the cheaper of the two. Residual: a spell with another
+/// printed alternative cost (evoke, dash, …) is offered that one only.
 pub fn henzie_toolbox_torre() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
