@@ -3871,10 +3871,10 @@ fn eliminate_rejects_target_with_mana_value_four() {
     );
 }
 
-/// Pull from Tomorrow at X=3 draws 4 cards, then discards 1 — net +3 in
-/// hand (minus the cast itself = net +2).
+/// Pull from Tomorrow at X=3 draws 3 cards, then discards 1 ("Draw X cards,
+/// then discard a card" — it once drew X+1).
 #[test]
-fn pull_from_tomorrow_at_x_three_draws_four_discards_one() {
+fn pull_from_tomorrow_at_x_three_draws_three_discards_one() {
     let mut g = two_player_game();
     // Seed enough library to draw.
     for _ in 0..6 {
@@ -3896,14 +3896,9 @@ fn pull_from_tomorrow_at_x_three_draws_four_discards_one() {
     .expect("Pull from Tomorrow castable for {3}{U}{U}");
     drain_stack(&mut g);
 
-    // Hand: -1 (cast) +4 (draw X+1=4) -1 (discard) = +2 net.
-    assert_eq!(
-        g.players[0].hand.len(),
-        hand_before + 2,
-        "draw 4 + discard 1 + cast Pull = net +2"
-    );
-    // Library: -4 (drew 4).
-    assert_eq!(g.players[0].library.len(), lib_before - 4, "drew 4 cards");
+    // Hand: -1 (cast) +3 (draw X) -1 (discard) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw 3 + discard 1 + cast Pull = net +1");
+    assert_eq!(g.players[0].library.len(), lib_before - 3, "drew 3 cards");
 }
 
 /// Burst Lightning at base cost deals 2 damage to a player.

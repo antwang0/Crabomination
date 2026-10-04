@@ -858,11 +858,7 @@ pub fn eliminate() -> CardDefinition {
 // ── Pull from Tomorrow (STA reprint — Amonkhet) ─────────────────────────────
 
 /// Pull from Tomorrow — {X}{U}{U} Instant (Strixhaven Mystical Archive).
-/// "Draw X+1 cards, then discard a card."
-///
-/// Wired via `Effect::Draw` with amount `Sum(XFromCost, Const(1))` plus a
-/// trailing `Effect::Discard` of one card. X=0 still nets one card after
-/// the discard.
+/// "Draw X cards, then discard a card."
 pub fn pull_from_tomorrow() -> CardDefinition {
     CardDefinition {
         name: "Pull from Tomorrow",
@@ -871,7 +867,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
-                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
+                amount: Value::XFromCost,
             },
             Effect::Discard {
                 who: Selector::You,

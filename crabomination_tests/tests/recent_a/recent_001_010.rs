@@ -9913,6 +9913,23 @@ mod recent5 {
         assert_eq!(g.players[0].hand.len(), hand - 1 + 6, "drew 6 (greatest power)");
     }
 
+    /// Return of the Wildspeaker — the pump is for NON-Human creatures only.
+    #[test]
+    fn return_of_the_wildspeaker_pumps_only_non_humans() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let human = g.add_card_to_battlefield(0, catalog::soul_warden());
+        let id = g.add_card_to_hand(0, catalog::return_of_the_wildspeaker());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+        }).expect("cast Return of the Wildspeaker");
+        drain_stack(&mut g);
+        let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+        assert_eq!((p(&g, bear), p(&g, human)), (5, 1));
+    }
+
     /// Overrun pumps the whole team +3/+3 and grants trample.
     #[test]
     fn overrun_team_pump_and_trample() {

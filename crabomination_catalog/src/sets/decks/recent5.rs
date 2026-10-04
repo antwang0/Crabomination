@@ -590,10 +590,15 @@ pub fn lifes_legacy() -> CardDefinition {
     }
 }
 
-/// Return of the Wildspeaker — {4}{G} Sorcery. Choose one — draw cards equal to
-/// the greatest power among creatures you control; or creatures you control get
-/// +3/+3 until end of turn.
+/// Return of the Wildspeaker — {4}{G} Instant. Choose one — draw cards equal to
+/// the greatest power among non-Human creatures you control; or non-Human
+/// creatures you control get +3/+3 until end of turn.
 pub fn return_of_the_wildspeaker() -> CardDefinition {
+    let non_human = || {
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasCreatureType(CreatureType::Human))))
+    };
     CardDefinition {
         name: "Return of the Wildspeaker",
         cost: cost(&[generic(4), g()]),
@@ -601,12 +606,10 @@ pub fn return_of_the_wildspeaker() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::Draw {
                 who: Selector::You,
-                amount: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+                amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(non_human()))),
             },
             Effect::PumpPT {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
+                what: Selector::EachPermanent(non_human()),
                 power: Value::Const(3),
                 toughness: Value::Const(3),
                 duration: Duration::EndOfTurn,
