@@ -162,8 +162,8 @@ pub fn jhoira_weatherlight_captain() -> CardDefinition {
 }
 
 /// Arjun, the Shifting Flame — {4}{U}{R} 5/5 Sphinx Wizard, flying. Cast a spell
-/// → put your hand into your library and draw that many. (Modeled as discard
-/// hand + draw that many — cards route to the graveyard, not the library.)
+/// → put your hand on the bottom of your library in the order you choose,
+/// then draw that many.
 pub fn arjun_the_shifting_flame() -> CardDefinition {
     CardDefinition {
         name: "Arjun, the Shifting Flame",
@@ -179,7 +179,21 @@ pub fn arjun_the_shifting_flame() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-            effect: Effect::DiscardHandDrawThatMany { who: you() },
+            effect: Effect::WithX {
+                x: Value::HandSizeOf(PlayerRef::You),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Hand,
+                            filter: crate::card::SelectionRequirement::Any,
+                        },
+                        to: crate::effect::ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+                    },
+                    Effect::OrderLibraryBottom { who: PlayerRef::You, count: Value::XFromCost },
+                    Effect::Draw { who: you(), amount: Value::XFromCost },
+                ])),
+            },
         }],
         ..Default::default()
     }

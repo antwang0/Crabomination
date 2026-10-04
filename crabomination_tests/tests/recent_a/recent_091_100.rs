@@ -282,10 +282,12 @@ mod recent92 {
         g.add_card_to_hand(0, catalog::forest());
         for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
         bolt_face(&mut g);
-        // The two spare cards were discarded and two fresh cards drawn.
-        assert!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Forest").count() >= 2,
-            "hand cards discarded");
+        // The two spare cards went to the bottom of the library (not the
+        // graveyard) and two fresh cards came off the top.
+        assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Forest"), "not discarded");
+        assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Island"), "drew the Islands");
         assert_eq!(g.players[0].hand.len(), 2, "drew back that many");
+        assert!(g.players[0].library.iter().all(|c| c.definition.name == "Forest"), "the hand is on the bottom");
     }
 
     #[test]
