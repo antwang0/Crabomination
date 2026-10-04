@@ -3306,6 +3306,9 @@ seventh stretch  the universal move path now runs `apply_enters_as_copy` (a
                  6 x 60 (96501+) + 3/4/8 seats x 400 = 3,060 games, all
                  decided bar one CR 104.4a draw (Davros / Doctors), zero
                  panics; engine lib 921 / 0 / 4
+  (team spread)  --bench byte-identical; all-deck census 6 x 300 (43001+)
+                 9,300 games all decided, zero panics; engine lib 923 / 0 / 4;
+                 clippy 0
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
