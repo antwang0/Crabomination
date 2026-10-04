@@ -3134,6 +3134,31 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
+
+Engine edits on paths every pool reaches, through three funnels:
+- `place_counters`: the CR 122.1 lock and `scaled_counter_count_on`. Every
+  permanent counter placement goes through it, including combat
+  wither/infect and counter moves.
+- `mint_tokens_scaled`: `scaled_token_count` once per batch.
+- `adjust_life_emit`: the life event by applied sign.
+
+Each runs only where a counter, token or life change already happened, so
+no new per-action work. 4-core container, release.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 after each of the five commits; games_per_s 471.7 (box);
+                 determinism ok; peak rss 29.3
+pod (release)    every deck seated: 4 seats x 100 (81001+), 3 x 100 (82001+),
+                 6 x 40 with CRAB_POD_CONCEDE=5 (83001+) = 11,940 games, zero
+                 panics, all decided but one draw (CR 104.4a)
+pod (strict      CRAB_ANSWER_LOG=strict debug over every deck: 5 x 20 concede 3
+  debug)         (71001+), 4 x 30 (72001+), 2 x 40 (73001+), 4 x 30 concede 2
+                 (74001+), 3 x 30 (75001+) = 9,010 games, zero finds
+suite            22,769 integration + 900 lib, 0 failed; workspace clippy 0
+```
+
 ### 2026-10-03 (Commander session `01Q3oUQ5`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: `damage_is_unpreventable` (the
