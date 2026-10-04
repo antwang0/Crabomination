@@ -288,3 +288,29 @@ fn pako_exiles_with_fetch_counters_and_grows_per_noncreature() {
     assert!(g.exile.iter().find(|c| c.id == bolt).unwrap().may_play_until.is_some(), "the Bolt is castable");
     assert!(g.exile.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "the creature card isn't");
 }
+
+/// CR 611.3a — Haldan's permission is its static's: Pako's exiles wait parked
+/// until a Haldan arrives, and park again when it leaves.
+#[test]
+fn haldan_wakes_and_parks_pakos_grants() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let pako = g.add_card_to_battlefield(0, catalog::pako_arcane_retriever());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    g.clear_sickness(pako);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: pako, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let seat = |g: &GameState| g.exile.iter().find(|c| c.id == bolt).and_then(|c| c.may_play_until).map(|m| m.player);
+    assert_eq!(seat(&g), Some(crabomination::card::MAY_PLAY_DORMANT), "no Haldan yet");
+    g.step = TurnStep::PostCombatMain;
+    let haldan = g.add_card_to_hand(0, catalog::haldan_avid_arcanist());
+    cast(&mut g, haldan, &[]);
+    assert_eq!(seat(&g), Some(0), "Haldan arrived");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, &[Target::Permanent(haldan)]);
+    assert!(g.battlefield_find(haldan).is_none());
+    assert_eq!(seat(&g), Some(crabomination::card::MAY_PLAY_DORMANT), "Haldan left");
+}

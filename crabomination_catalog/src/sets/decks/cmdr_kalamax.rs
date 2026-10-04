@@ -1,11 +1,6 @@
 //! Commander: the cards the **Arcane Maelstrom** precon (C20, Kalamax, the
 //! Stormsire) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kalamax.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Haldan, Avid Arcanist** / **Pako, Arcane Retriever** — the play
-//!   permission is granted as Pako exiles the cards while you control
-//!   Haldan (not re-read if Haldan comes or goes later).
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
@@ -203,12 +198,16 @@ pub fn glademuse() -> CardDefinition {
 }
 
 /// Haldan, Avid Arcanist — partner with Pako; the lands and noncreature cards
-/// Pako exiles with fetch counters are yours to play, with mana of any color.
-/// Residual: see the module note — the permission is stamped as Pako exiles.
+/// you exiled with fetch counters (Pako's) are yours to play, with mana of any
+/// color, while you control it — whenever it arrives, until it leaves.
 pub fn haldan_avid_arcanist() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::PartnerWith("Pako, Arcane Retriever".into())],
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands and cast noncreature spells from among cards you exiled that have fetch counters on them, and you may spend mana as though it were mana of any color to cast those spells.",
+            effect: StaticEffect::PlayFetchCounteredExiles,
+        }],
         ..creature(
             "Haldan, Avid Arcanist",
             cost(&[generic(2), u()]),
@@ -221,9 +220,9 @@ pub fn haldan_avid_arcanist() -> CardDefinition {
 
 /// Pako, Arcane Retriever — partner with Haldan; haste; attacking, it exiles
 /// the top card of each library with a fetch counter on each, and grows a
-/// +1/+1 counter per noncreature card exiled this way. While you control
-/// Haldan the lands and noncreature cards among them are yours to play
-/// (stamped as they are exiled — the module residual).
+/// +1/+1 counter per noncreature card exiled this way. The lands and
+/// noncreature cards among them carry Haldan's play grant, live while you
+/// control Haldan (`MayPlayDuration::WhileHolderControlsFetchPlayer`).
 pub fn pako_arcane_retriever() -> CardDefinition {
     let exiled = |filter: R| Selector::ExiledThisResolution { filter };
     CardDefinition {
@@ -232,22 +231,13 @@ pub fn pako_arcane_retriever() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
             Effect::ExileLinked { what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::ONE } },
             Effect::AddCounter { what: exiled(R::Any), kind: CounterType::Fetch, amount: Value::ONE },
-            Effect::If {
-                cond: Predicate::ValueAtLeast(
-                    Value::CountOf(Box::new(Selector::EachPermanent(
-                        R::HasName("Haldan, Avid Arcanist".into()).and(R::ControlledByYou),
-                    ))),
-                    Value::ONE,
-                ),
-                then: Box::new(Effect::GrantMayPlay {
-                    what: exiled(R::Not(Box::new(R::Creature))),
-                    duration: MayPlayDuration::WhileExiled,
-                    to_owner: false,
-                    exile_after: false,
-                    pay_own_cost: true,
-                    any_color: true,
-                }),
-                else_: Box::new(Effect::Noop),
+            Effect::GrantMayPlay {
+                what: exiled(R::Not(Box::new(R::Creature))),
+                duration: MayPlayDuration::WhileHolderControlsFetchPlayer { holder: 0 },
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: true,
             },
             Effect::AddCounter {
                 what: Selector::This,
