@@ -55,7 +55,7 @@ they call a deck 🟡, the table wins.
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
-| 141 | Prosper, Tome-Bound (BR) | 3: danse_macabre, hellish_rebuke, share_the_spoils |
+| 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
 | 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
 | 144 | Satya, Aetherflux Genius (URW) | 2: overclocked_electromancer, razorfield_ripper |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
