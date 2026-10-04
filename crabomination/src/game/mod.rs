@@ -26548,11 +26548,21 @@ impl GameState {
         }
         let mut chosen: Vec<Target> = Vec::new();
         let mut slot: u8 = 1;
+        // CR 115.3 — each "target" word of a `SlotGroups` picks on its own:
+        // an artifact creature may be one of Filigree Vector's creatures AND
+        // one of its artifacts. A new group frees what earlier groups took.
+        let groups = matches!(eff, Effect::SlotGroups(_));
+        let mut prev_req = eff.target_filter_for_slot_in_mode_kicked(0, None, false).cloned();
         while slot < Self::MAX_TRIGGER_SLOTS {
             let req = match eff.target_filter_for_slot_in_mode_kicked(slot, None, false) {
                 Some(r) => r.clone(),
                 None => break,
             };
+            if groups && prev_req.as_ref() != Some(&req) {
+                avoid.retain(|&c| c == source);
+                used_players.clear();
+            }
+            prev_req = Some(req.clone());
             let filled: Vec<Option<Target>> =
                 std::iter::once(primary.clone()).chain(chosen.iter().cloned().map(Some)).collect();
             let is_legal = |t: &Target| -> bool {

@@ -280,38 +280,22 @@ pub fn excise_the_imperfect() -> CardDefinition {
 }
 
 /// Filigree Vector — on entry, a +1/+1 counter on each of any number of
-/// target creatures you control and a charge counter on each of any number of
-/// target artifacts you control; {1}, {T}, sacrifice another artifact:
-/// proliferate. The two target groups are one here: each chosen creature
-/// takes the +1/+1 and each chosen artifact the charge counter, so an
-/// artifact creature takes both — what naming it in both groups does.
+/// target creatures and a charge counter on each of any number of target
+/// artifacts: two variable target groups side by side (`SlotGroups`, fifteen
+/// slots each; an empty group holds its slots with holes). {1}, {T},
+/// sacrifice another artifact: proliferate.
 pub fn filigree_vector() -> CardDefinition {
+    let group = |filter: R, kind: CounterType| Effect::ApplyToTargets {
+        max_targets: 15,
+        min_targets: 0,
+        filter,
+        effect: Box::new(Effect::AddCounter { what: Selector::Target(0), kind, amount: Value::ONE }),
+    };
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ApplyToTargets {
-            max_targets: 20,
-            min_targets: 0,
-            filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
-            effect: Box::new(Effect::Seq(vec![
-                Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
-                    then: Box::new(Effect::AddCounter {
-                        what: Selector::Target(0),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::ONE,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-                Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Artifact },
-                    then: Box::new(Effect::AddCounter {
-                        what: Selector::Target(0),
-                        kind: CounterType::Charge,
-                        amount: Value::ONE,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ])),
-        })],
+        triggered_abilities: vec![etb(Effect::SlotGroups(vec![
+            group(R::Creature, CounterType::PlusOnePlusOne),
+            group(R::Artifact, CounterType::Charge),
+        ]))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,

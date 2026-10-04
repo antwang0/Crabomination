@@ -260,6 +260,22 @@ fn filigree_vector_targets_its_counters() {
     assert_eq!(counters(&g, veiled, CounterType::PlusOnePlusOne), 0, "shroud: not a legal target");
 }
 
+/// CR 601.2c — Filigree Vector's two "any number of target …" groups: with
+/// no other creature to target, the empty first group holds its slots and
+/// the artifact group still gets its charge counter (the trigger picker used
+/// to stop at the first slot it couldn't fill). An opponent's creature isn't
+/// handed a counter.
+#[test]
+fn cr_601_2c_filigree_vector_fills_its_artifact_group_past_an_empty_one() {
+    let mut g = main_phase(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fv = g.add_card_to_hand(0, catalog::filigree_vector());
+    cast(&mut g, fv);
+    assert_eq!(counters(&g, ring, CounterType::Charge), 1, "the artifact group past the empty creature group");
+    assert_eq!(counters(&g, theirs, CounterType::PlusOnePlusOne), 0);
+}
+
 /// First-Sphere Gargantua draws on entry, and unearths from the graveyard.
 #[test]
 fn first_sphere_gargantua_draws_and_unearths() {
