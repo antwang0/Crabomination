@@ -113,6 +113,9 @@ fn geometric_nexus_charges_on_spell_cast_then_mints_a_scaled_fractal() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: nexus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate the Fractal-maker");
+    // CR 602.2b — the removal is a cost, paid before the ability resolves.
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Charge), 0,
+        "the counters are gone while the ability is on the stack");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter()
         .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))

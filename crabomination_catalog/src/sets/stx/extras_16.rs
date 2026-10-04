@@ -409,10 +409,6 @@ pub fn burn_down_the_house() -> CardDefinition {
 pub fn geometric_nexus() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
-    let charge_on_self = || Value::CountersOn {
-        what: Box::new(Selector::This),
-        kind: CounterType::Charge,
-    };
     CardDefinition {
         name: "Geometric Nexus",
         cost: cost(&[generic(2)]),
@@ -429,18 +425,18 @@ pub fn geometric_nexus() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(6)]),
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, charge_on_self())),
-                },
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: charge_on_self(),
-                },
-            ]),
+            // "Remove all charge counters" is a COST (CR 602.2b): the
+            // tally is fixed at activation, and destroying the Nexus in
+            // response doesn't shrink the Fractal.
+            remove_all_counters_cost: Some(CounterType::Charge),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: std::sync::Arc::new(
+                    crate::catalog::sets::sos::fractal_token()
+                        .entering_with(CounterType::PlusOnePlusOne, Value::CountersRemovedAsCost),
+                ),
+            },
             ..Default::default()
         }],
         ..Default::default()
