@@ -2787,6 +2787,11 @@ pub enum StaticEffect {
     /// that many planar dice plus one and ignore one." Read by
     /// `GameState::planar_die_face`.
     ExtraPlanarDie,
+    /// Susan Foreman — "If you would planeswalk, instead look at the top two
+    /// cards of your planar deck, put one on the bottom of your planar deck
+    /// and the other on top, then planeswalk." Read by
+    /// `GameState::planeswalk`.
+    PlaneswalkSeesTopTwo,
     /// "All [filter] permanents have '[triggered ability]'" (CR 613 layer 6
     /// grant — Kataki, War's Wage's "All artifacts have 'At the beginning of
     /// your upkeep, sacrifice this artifact unless you pay {1}'"). The

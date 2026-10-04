@@ -1738,6 +1738,8 @@ impl GameState {
     /// face up. A phenomenon turned up this way fires its encounter trigger;
     /// `sweep_finished_phenomena` planeswalks again once that leaves the stack.
     pub fn planeswalk(&mut self, seat: usize) -> Option<CardId> {
+        // Susan Foreman's replacement looks at the deck as it stands.
+        self.order_top_two_planes(seat);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for id in self.face_up_planes() {
             for owner in 0..self.players.len() {
