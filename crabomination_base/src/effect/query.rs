@@ -2236,7 +2236,8 @@ impl Effect {
             Effect::GrantExtraLandPlay { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
-            Effect::RevealUntilFind { who, to, cap, .. } => {
+            Effect::RevealUntilFind { who, to, cap, .. }
+            | Effect::RevealUntilNFound { who, to, count: cap, .. } => {
                 player_has_target(who)
                     || zonedest_has_target(to)
                     || value_has_target(cap)
@@ -5276,6 +5277,7 @@ impl Effect {
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
                 | Effect::NameCardThenExileFromZones { who, .. }
                 | Effect::RevealUntilFind { who, .. }
+                | Effect::RevealUntilNFound { who, .. }
                 | Effect::RearrangeTop { who, .. }
                 | Effect::OrderLibraryBottom { who, .. }
                 | Effect::ShuffleHandsDrawSame { who }

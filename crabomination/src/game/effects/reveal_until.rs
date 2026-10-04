@@ -2,12 +2,52 @@
 //! cards" — the shared walk behind the reveal-until-to-battlefield effects.
 
 use super::EffectContext;
-use crate::card::{CardInstance, SelectionRequirement};
+use crate::card::{CardId, CardInstance, SelectionRequirement};
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
 use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
 impl GameState {
+    /// A revealed card that went from `p`'s library into a graveyard joins
+    /// the "put into a graveyard from a library" family (Polluted Cistern).
+    pub(super) fn note_revealed_into_graveyard(&self, p: usize, cid: CardId, events: &mut Vec<GameEvent>) {
+        if self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == cid)) {
+            events.push(GameEvent::CardRevealedIntoGraveyard { player: p, card_id: cid });
+        }
+    }
+
+    /// `Effect::RevealUntilNFound` — Old Stickfingers: the `find` cards to
+    /// `to`, the rest to the bottom in a random order.
+    pub(super) fn reveal_until_n_found(
+        &mut self,
+        who: &PlayerRef,
+        find: &SelectionRequirement,
+        count: &Value,
+        to: &ZoneDest,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use rand::seq::SliceRandom;
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let need = self.evaluate_value(count, ctx).max(0) as u32;
+        if need == 0 {
+            return Ok(());
+        }
+        let dest = self.resolve_zonedest_player(to, ctx);
+        let me = ctx.controller;
+        let (hits, mut rest) = self.reveal_until_n(p, need, |g, c| g.evaluate_requirement_on_card(find, c, me));
+        for card in hits {
+            let cid = card.id;
+            self.place_card_in_dest(card, p, &dest, events);
+            self.scratch.last_moved_cards.push(cid);
+            self.note_revealed_into_graveyard(p, cid, events);
+        }
+        rest.shuffle(&mut self.rng.draw());
+        self.players[p].library.extend(rest);
+        self.check_state_based_actions_mid_resolution(events);
+        Ok(())
+    }
+
     /// Takes cards off the top of `seat`'s library until `need` of them pass
     /// `hit`, or the library runs out. Returns `(hits, rest)` in reveal order.
     pub(super) fn reveal_until_n(

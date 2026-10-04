@@ -2968,6 +2968,8 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::CardSurveiledIntoGraveyard`. The paired
     /// `CardPutIntoGraveyard` and the `SurveilPerformed` line carry the log.
     CardSurveiledIntoGraveyard { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::CardRevealedIntoGraveyard`.
+    CardRevealedIntoGraveyard { player: usize, card_id: CardId },
     /// Wire mirror of `GameEvent::BecameTarget`. Surfaced so client UIs
     /// can highlight a permanent that just got targeted by a spell or
     /// ability (Tenured Concocter's "you may draw" trigger, future
@@ -3378,6 +3380,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::CardSurveiledIntoGraveyard { player, card_id } => {
                 GameEventWire::CardSurveiledIntoGraveyard { player: *player, card_id: *card_id }
             }
+            GameEvent::CardRevealedIntoGraveyard { player, card_id } => {
+                GameEventWire::CardRevealedIntoGraveyard { player: *player, card_id: *card_id }
+            }
             GameEvent::CardPutIntoGraveyard { player, card_id, .. } => {
                 GameEventWire::CardPutIntoGraveyard {
                     player: *player,
@@ -3501,7 +3506,7 @@ impl GameEventWire {
             // The paired `CardDiscarded` row already narrates it.
             E::OpponentCausedYouToDiscard { .. } => String::new(),
             E::FirstCardDrawnThisTurn { .. } => String::new(),
-            E::CardSurveiledIntoGraveyard { .. } => String::new(),
+            E::CardSurveiledIntoGraveyard { .. } | E::CardRevealedIntoGraveyard { .. } => String::new(),
             E::NthCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),

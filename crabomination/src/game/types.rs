@@ -2981,6 +2981,10 @@ pub enum GameEvent {
     /// the literal "mills" wording (`EventKind::Milled`). The surveil also
     /// emits a `CardPutIntoGraveyard` for the same card.
     CardSurveiledIntoGraveyard { player: usize, card_id: CardId },
+    /// A card a reveal-until put from its library into a graveyard (Old
+    /// Stickfingers' creature cards). The "put into a graveyard from a
+    /// library" family (`EventKind::CardMilled`), not a mill.
+    CardRevealedIntoGraveyard { player: usize, card_id: CardId },
     /// CR 701.7 — a permanent was destroyed by a spell or ability. `destroyer`
     /// is that effect's controller (Karmic Justice). Emitted only from the
     /// `Effect::Destroy` funnel, so combat/SBA deaths don't match.

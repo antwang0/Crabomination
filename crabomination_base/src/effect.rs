@@ -11374,6 +11374,11 @@ pub enum Effect {
     /// (Geometer's Arthropod, Paradox Surveyor, Follow the Lumarets)
     /// printed-want misses placed on the bottom of the library in
     /// random order; pass `RevealMissDest::BottomRandom` to honor that.
+    /// "Reveal cards from the top of `who`'s library until you reveal
+    /// `count` cards matching `find`. Put them into `to`, then put the rest
+    /// on the bottom in a random order" (Old Stickfingers) — one reveal, so
+    /// it stops when the library runs out rather than re-reading the bottom.
+    RevealUntilNFound { who: PlayerRef, find: SelectionRequirement, count: Value, to: ZoneDest },
     RevealUntilFind {
         who: PlayerRef,
         find: SelectionRequirement,

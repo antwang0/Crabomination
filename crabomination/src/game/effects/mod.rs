@@ -12221,6 +12221,9 @@ impl GameState {
             }
 
             Effect::OrderLibraryBottom { who, count } => self.order_library_bottom(who, count, ctx, events),
+            Effect::RevealUntilNFound { who, find, count, to } => {
+                self.reveal_until_n_found(who, find, count, to, ctx, events)
+            }
 
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
@@ -34190,6 +34193,7 @@ impl GameState {
                     let cid = card.id;
                     self.place_card_in_dest(card, p, &resolved_dest, events);
                     self.scratch.last_moved_cards.push(cid);
+                    self.note_revealed_into_graveyard(p, cid, events);
                 }
                 // Bottom the batched misses in a genuinely random order.
                 if !bottom_random.is_empty() {

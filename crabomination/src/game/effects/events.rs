@@ -127,7 +127,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CardLeftGraveyard { .. } => bits!(K::CardLeftGraveyard),
         E::CardPutIntoGraveyard { .. } => bits!(K::LandPutIntoGraveyard, K::PutIntoGraveyard),
         E::CardMilled { .. } => bits!(K::PutIntoGraveyard, K::CardMilled, K::Milled),
-        E::CardSurveiledIntoGraveyard { .. } => bits!(K::CardMilled),
+        E::CardSurveiledIntoGraveyard { .. } | E::CardRevealedIntoGraveyard { .. } => bits!(K::CardMilled),
         E::CardPutIntoHandFromGraveyard { .. } => bits!(K::PutIntoHandFromGraveyard),
         E::PermanentExiled { .. } => bits!(K::CardExiled),
         E::CardExiledFrom { .. } => bits!(K::CardExiledFrom(0)),
@@ -404,6 +404,7 @@ fn reference_event_kind_matches(
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardSurveiledIntoGraveyard { .. }) => true,
+        (EventKind::CardMilled, GameEvent::CardRevealedIntoGraveyard { .. }) => true,
         (EventKind::Milled, GameEvent::CardMilled { .. }) => true,
         (
             EventKind::PermanentDestroyedByEffect,
@@ -945,6 +946,7 @@ fn event_matches_spec_rest(
                     GameEvent::CardCycled { card_id, .. }
                     | GameEvent::CardMilled { card_id, .. }
                     | GameEvent::CardSurveiledIntoGraveyard { card_id, .. }
+                    | GameEvent::CardRevealedIntoGraveyard { card_id, .. }
                     | GameEvent::CardDiscarded { card_id, .. }
                     | GameEvent::OpponentCausedYouToDiscard { card_id, .. }
                     | GameEvent::CardPutIntoGraveyard { card_id, .. }
@@ -1400,6 +1402,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
         | GameEvent::CardSurveiledIntoGraveyard { player, .. }
+        | GameEvent::CardRevealedIntoGraveyard { player, .. }
         | GameEvent::CumulativeUpkeepUnpaid { player, .. }
         | GameEvent::PermanentDestroyedByEffect { controller: player, .. }
         | GameEvent::ManifestedDread { player, .. }
@@ -1563,7 +1566,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // predicates can introspect it ("a creature card put into a graveyard
         // from a library" — Dreadhound). SelfSource milled triggers match by
         // id in the scope check, so this rebind doesn't affect them.
-        GameEvent::CardMilled { card_id, .. } | GameEvent::CardSurveiledIntoGraveyard { card_id, .. } => {
+        GameEvent::CardMilled { card_id, .. }
+        | GameEvent::CardSurveiledIntoGraveyard { card_id, .. }
+        | GameEvent::CardRevealedIntoGraveyard { card_id, .. } => {
             Some(EntityRef::Card(*card_id))
         }
         // Bind TriggerSource to the card put into the graveyard "this way", so
@@ -1692,6 +1697,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CardCycled { card_id, .. }
         | GameEvent::CardMilled { card_id, .. }
         | GameEvent::CardSurveiledIntoGraveyard { card_id, .. }
+        | GameEvent::CardRevealedIntoGraveyard { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::CreatureLeftWithoutDying { card_id, .. }
         | GameEvent::PermanentLeftBattlefield { card_id, .. }
@@ -1964,6 +1970,7 @@ mod tests {
             E::SpellCountered { card_id: c, player: 0 },
             E::CardMilled { player: 0, card_id: c },
             E::CardSurveiledIntoGraveyard { player: 0, card_id: c },
+            E::CardRevealedIntoGraveyard { player: 0, card_id: c },
             E::PermanentDestroyedByEffect {
                 card_id: c,
                 controller: 0,
