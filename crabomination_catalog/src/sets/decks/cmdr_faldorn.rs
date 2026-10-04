@@ -1,9 +1,6 @@
 //! Commander: the cards the **Exit from Exile** precon (CLB, Faldorn, Dread
 //! Wolf Herald) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Durnan** — the rest go to the bottom in a random order.
 
 use crate::card::{
     ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType,
@@ -217,10 +214,8 @@ pub fn dire_fleet_daredevil() -> CardDefinition {
 
 /// Durnan of the Yawning Portal — on attack, look at the top four; you may
 /// exile a creature card from among them and cast it while it stays exiled,
-/// with undaunted (carried on the grant, so it outlives Durnan).
-///
-/// Approximation: the rest go to the bottom in a random order rather than
-/// one you choose.
+/// with undaunted (carried on the grant, so it outlives Durnan); the rest go
+/// to the bottom in the order you choose.
 pub fn durnan_of_the_yawning_portal() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -228,11 +223,20 @@ pub fn durnan_of_the_yawning_portal() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // The grant carries undaunted (`MayPlayPermission::undaunted`).
-            effect: Effect::LookTopExileOneMayPlay {
-                count: Value::Const(4),
-                who: PlayerRef::You,
-                grant: crate::effect::LookExileGrant::CreatureMayWhileExiled,
-            },
+            effect: Effect::Seq(vec![
+                Effect::LookTopExileOneMayPlay {
+                    count: Value::Const(4),
+                    who: PlayerRef::You,
+                    grant: crate::effect::LookExileGrant::CreatureMayWhileExiled,
+                },
+                Effect::OrderLibraryBottom {
+                    who: PlayerRef::You,
+                    count: Value::Diff(
+                        Box::new(Value::Const(4)),
+                        Box::new(Value::count(Selector::ExiledThisResolution { filter: R::Any })),
+                    ),
+                },
+            ]),
         }],
         ..creature(
             "Durnan of the Yawning Portal",

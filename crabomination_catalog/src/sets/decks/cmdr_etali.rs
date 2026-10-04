@@ -2078,8 +2078,8 @@ pub fn last_march_of_the_ents() -> CardDefinition {
 /// enters, you may look at the top X cards of your library, where X is that
 /// creature's power. If you do, put one of those cards on top of your library
 /// and the rest on the bottom in any order. One card picked back on top
-/// (`LookTopKeepOneRestToGraveyard` with the rest bottomed) — not a scry.
-/// Residual: the rest go to the bottom in a random order, not one you choose.
+/// (`LookTopKeepOneRestToGraveyard` with the rest bottomed) — not a scry —
+/// then the bottomed X - 1 are put in your order (`OrderLibraryBottom`).
 pub fn cream_of_the_crop() -> CardDefinition {
     CardDefinition {
         name: "Cream of the Crop",
@@ -2093,12 +2093,25 @@ pub fn cream_of_the_crop() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "Look at the top X cards of your library?".into(),
-                body: Box::new(Effect::LookTopKeepOneRestToGraveyard {
-                    count: Value::PowerOf(Box::new(Selector::TriggerSource)),
-                    who: None,
-                    exile_rest: false,
-                    rest_bottom_random: true,
-                }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LookTopKeepOneRestToGraveyard {
+                        count: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                        who: None,
+                        exile_rest: false,
+                        rest_bottom_random: true,
+                    },
+                    Effect::OrderLibraryBottom {
+                        who: PlayerRef::You,
+                        // A short library: the one kept on top isn't bottomed.
+                        count: Value::Diff(
+                            Box::new(Value::Min(
+                                Box::new(Value::PowerOf(Box::new(Selector::TriggerSource))),
+                                Box::new(Value::LibrarySizeOf(PlayerRef::You)),
+                            )),
+                            Box::new(Value::ONE),
+                        ),
+                    },
+                ])),
             },
         }],
         ..Default::default()

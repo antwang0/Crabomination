@@ -1631,6 +1631,34 @@ fn cream_of_the_crop_keeps_one_of_top_x_on_top() {
     assert!(bottom.contains(&a) && bottom.contains(&b), "the rest went to the bottom");
 }
 
+/// "…and the rest on the bottom of your library in any order": the two
+/// bottomed cards go down in the order their controller lists.
+#[test]
+fn cream_of_the_crop_bottoms_the_rest_in_the_chosen_order() {
+    for order in [[0, 1], [1, 0]] {
+        let mut g = main_phase_d();
+        g.add_card_to_battlefield(0, catalog::cream_of_the_crop());
+        let a = g.add_card_to_library(0, catalog::island());
+        let b = g.add_card_to_library(0, catalog::plains());
+        let c = g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(0, catalog::mountain());
+        let rest = [a, b];
+        let listed = vec![rest[order[0]], rest[order[1]]];
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(true),
+            DecisionAnswer::Search(Some(c)),
+            DecisionAnswer::ScryOrder { kept_top: listed.clone(), bottom: vec![] },
+        ]));
+        flood_d(&mut g, 0);
+        let giant = g.add_card_to_hand(0, catalog::hill_giant());
+        cast(&mut g, giant);
+        drain_stack(&mut g);
+        let n = g.players[0].library.len();
+        let bottom: Vec<_> = g.players[0].library[n - 2..].iter().map(|c| c.id).collect();
+        assert_eq!(bottom, listed);
+    }
+}
+
 /// Elemental Bond draws for a power-3 creature, not for a 2-power one.
 #[test]
 fn elemental_bond_draws_on_power_three_or_more() {

@@ -26792,7 +26792,9 @@ impl GameState {
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
                     self.note_exiled_from_library(opp, cid, events);
-                    if *grant == G::CastFreeNonland {
+                    // Read back by the free cast, and by Durnan's count of
+                    // the cards it bottomed.
+                    if matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled) {
                         self.scratch.exiled_card_ids_this_resolution.push(cid);
                     }
                 }
