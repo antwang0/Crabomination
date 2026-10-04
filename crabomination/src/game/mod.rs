@@ -1622,7 +1622,7 @@ pub struct ColdState {
     /// grant this turn, with the rider's life: the permanent gains the rider
     /// as it enters (`bake_graveyard_play_rider`). Cleared at each untap.
     #[serde(default)]
-    pub(crate) graveyard_play_riders: Vec<(CardId, u32)>,
+    pub(crate) graveyard_play_riders: Vec<(CardId, crate::effect::GraveyardPlayRider)>,
     /// Edgar, Master Machinist — spells cast this turn through a grant whose
     /// permanent "enters tapped". Read as it enters; cleared at each untap.
     #[serde(default)]

@@ -2693,8 +2693,8 @@ impl GameState {
                     let name_before = self.battlefield.find_by_id(card_id).map(|c| c.definition.name);
                     self.apply_as_enters_replacements(card_id);
                     if let Some(i) = self.graveyard_play_riders.iter().position(|(id, _)| *id == card_id) {
-                        let (_, life) = self.graveyard_play_riders.remove(i);
-                        self.bake_graveyard_play_rider(card_id, life);
+                        let (_, rider) = self.graveyard_play_riders.remove(i);
+                        self.bake_graveyard_play_rider(card_id, rider);
                     }
                     if self.graveyard_cast_enters_tapped.contains(&card_id) {
                         self.graveyard_cast_enters_tapped.remove(&card_id);

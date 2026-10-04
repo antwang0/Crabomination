@@ -82,6 +82,18 @@ pub enum DamageToCounters {
     PreventPerPoint,
 }
 
+/// What a permanent played through a `GraveyardPlayOncePerTurnWithRider`
+/// grant gains as it enters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GraveyardPlayRider {
+    /// "When this permanent is put into a graveyard from the battlefield,
+    /// exile it and you gain N life" (Serra Paragon).
+    ExileAndGainLife(u32),
+    /// "If this permanent would leave the battlefield, exile it instead of
+    /// putting it anywhere else" (The Eighth Doctor).
+    ExileIfItWouldLeave,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
@@ -2337,7 +2349,14 @@ pub enum StaticEffect {
     /// Paragon). The land play and the cast share the per-source tally of
     /// `GraveyardCastOncePerTurn`; the rider is baked onto the permanent as it
     /// enters (`bake_grant`, so it ends with the object — CR 400.7).
-    GraveyardPlayOncePerTurnWithRider { filter: SelectionRequirement, rider_life: u32 },
+    /// The Eighth Doctor's is a historic land (`land_filter`; `None` is any
+    /// land) and an "exile it if it would leave the battlefield" rider.
+    GraveyardPlayOncePerTurnWithRider {
+        filter: SelectionRequirement,
+        rider: GraveyardPlayRider,
+        #[serde(default)]
+        land_filter: Option<SelectionRequirement>,
+    },
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,

@@ -3862,7 +3862,7 @@ impl crate::game::GameState {
     /// `MayPlayLandsFromGraveyardMatching` filter (Titania's Forests).
     pub fn player_may_play_land_from_graveyard(&self, player: usize, card_id: CardId) -> bool {
         use crate::effect::StaticEffect;
-        if self.player_may_play_lands_from_graveyard(player) || self.graveyard_land_play_grant(player).is_some() {
+        if self.player_may_play_lands_from_graveyard(player) || self.graveyard_land_play_grant(player, Some(card_id)).is_some() {
             return true;
         }
         let Some(card) = self.players[player].graveyard.iter().find(|c| c.id == card_id) else {
@@ -4825,7 +4825,7 @@ impl GameState {
                     })
                 })
             };
-            if unlimited { None } else { self.graveyard_land_play_grant(p) }
+            if unlimited { None } else { self.graveyard_land_play_grant(p, Some(card_id)) }
         };
         let card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::NotALand(card_id))?;
@@ -4834,8 +4834,8 @@ impl GameState {
         self.note_left_graveyard(p, card_id, &mut events);
         if let Some(grant) = once_grant {
             self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
-            if let Some(life) = self.graveyard_play_rider_of(grant) {
-                self.bake_graveyard_play_rider(card_id, life);
+            if let Some(rider) = self.graveyard_play_rider_of(grant) {
+                self.bake_graveyard_play_rider(card_id, rider);
             }
         }
         Ok(events)
@@ -6224,8 +6224,8 @@ impl GameState {
                         if self.graveyard_grant_enters_tapped(grant) {
                             self.graveyard_cast_enters_tapped.insert(card_id);
                         }
-                        if let Some(life) = self.graveyard_play_rider_of(grant) {
-                            self.graveyard_play_riders.push((card_id, life));
+                        if let Some(rider) = self.graveyard_play_rider_of(grant) {
+                            self.graveyard_play_riders.push((card_id, rider));
                         }
                         if let Some(sacrifice) = &sacrifice {
                             evs.append(&mut self.sacrifice_for_graveyard_cast(p, grant, sacrifice));
@@ -6525,45 +6525,63 @@ impl GameState {
         })
     }
 
-    /// Serra Paragon — the life a `GraveyardPlayOncePerTurnWithRider` grant on
-    /// `grant` puts on the "exile it and gain N life" rider it hands out.
-    fn graveyard_play_rider_of(&self, grant: CardId) -> Option<u32> {
+    /// The rider a `GraveyardPlayOncePerTurnWithRider` grant on `grant`
+    /// hands out (Serra Paragon, The Eighth Doctor).
+    fn graveyard_play_rider_of(&self, grant: CardId) -> Option<crate::effect::GraveyardPlayRider> {
         self.battlefield.find_by_id(grant).and_then(|c| {
             c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                crate::effect::StaticEffect::GraveyardPlayOncePerTurnWithRider { rider_life, .. } => {
-                    Some(rider_life)
-                }
+                crate::effect::StaticEffect::GraveyardPlayOncePerTurnWithRider { rider, .. } => Some(rider),
                 _ => None,
             })
         })
     }
 
-    /// Serra Paragon — an unused `GraveyardPlayOncePerTurnWithRider` grant
-    /// that lets `p` play a land from their graveyard this turn (their own
-    /// turn only; the grant's once-a-turn tally is shared with its casts).
-    pub(crate) fn graveyard_land_play_grant(&self, p: usize) -> Option<CardId> {
+    /// An unused `GraveyardPlayOncePerTurnWithRider` grant that lets `p` play
+    /// a land from their graveyard this turn (their own turn only; the grant's
+    /// once-a-turn tally is shared with its casts): `land` itself, or with
+    /// `None` any land in `p`'s graveyard, must pass its `land_filter`.
+    pub(crate) fn graveyard_land_play_grant(&self, p: usize, land: Option<CardId>) -> Option<CardId> {
         if self.active_player_idx != p {
             return None;
         }
         let used = &self.players[p].graveyard_sac_cast_sources_this_turn;
+        let fits = |f: &crate::card::SelectionRequirement| {
+            self.players[p].graveyard.iter().any(|g| {
+                land.is_none_or(|id| g.id == id)
+                    && g.definition.is_land()
+                    && self.evaluate_requirement_on_card(f, g, p)
+            })
+        };
         self.battlefield
             .iter()
             .find(|c| {
                 c.controller == p
                     && !used.contains(&c.id)
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::GraveyardPlayOncePerTurnWithRider { .. })
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::GraveyardPlayOncePerTurnWithRider { land_filter, .. } => {
+                            land_filter.as_ref().is_none_or(fits)
+                        }
+                        _ => false,
                     })
             })
             .map(|c| c.id)
     }
 
-    /// Bake Serra Paragon's rider onto `card_id` as it enters: "When this
-    /// permanent is put into a graveyard from the battlefield, exile it and
-    /// you gain `life` life." Ends with the object (CR 400.7).
-    pub(crate) fn bake_graveyard_play_rider(&mut self, card_id: CardId, life: u32) {
+    /// Bake a graveyard-play rider onto `card_id` as it enters. Serra
+    /// Paragon's "When this permanent is put into a graveyard from the
+    /// battlefield, exile it and you gain N life" ends with the object (CR
+    /// 400.7); The Eighth Doctor's "if it would leave, exile it instead" is a
+    /// replacement on it.
+    pub(crate) fn bake_graveyard_play_rider(&mut self, card_id: CardId, rider: crate::effect::GraveyardPlayRider) {
         use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
         use crate::effect::{Effect, Selector, Value, ZoneDest};
+        let life = match rider {
+            crate::effect::GraveyardPlayRider::ExileAndGainLife(life) => life,
+            crate::effect::GraveyardPlayRider::ExileIfItWouldLeave => {
+                self.exile_if_leaves_battlefield(card_id);
+                return;
+            }
+        };
         let rider = TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::Seq(vec![

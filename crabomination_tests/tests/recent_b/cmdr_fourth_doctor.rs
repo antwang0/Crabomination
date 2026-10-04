@@ -505,3 +505,65 @@ fn the_fourth_doctor_ignores_a_top_cast_another_permission_allowed() {
     assert!(g.battlefield_find(ring).is_some());
     assert_eq!(named(&g, "Food"), 0);
 }
+
+/// Peri Brown — CR 702.51: only "the first historic spell you cast each
+/// turn" has convoke; the second historic spell that turn pays in mana.
+#[test]
+fn peri_brown_convokes_only_the_first_historic_spell_each_turn() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::peri_brown());
+    let helpers: Vec<CardId> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let convoke = |card_id, convoke_creatures| GameAction::CastSpellConvoke {
+        card_id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        convoke_creatures,
+    };
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.perform_action(convoke(ring, vec![helpers[0]])).expect("the first historic spell convokes");
+    drain_stack(&mut g);
+    let signet = g.add_card_to_hand(0, catalog::arcane_signet());
+    assert!(g.perform_action(convoke(signet, vec![helpers[1], helpers[2]])).is_err(), "the second doesn't");
+    assert!(!g.battlefield_find(helpers[1]).unwrap().tapped);
+}
+
+/// The Eighth Doctor — one allowance a turn for "a historic land or a
+/// historic permanent spell" from the graveyard (a nonhistoric land isn't
+/// covered), and the permanent it lets you cast gains "if this permanent
+/// would leave the battlefield, exile it instead" (CR 614.1a).
+#[test]
+fn the_eighth_doctor_shares_one_allowance_and_exiles_what_it_returns() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::the_eighth_doctor());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    let cradle = g.add_card_to_graveyard(0, catalog::gaeas_cradle());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(forest)).is_err(), "not historic");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("a historic permanent spell from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_some());
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(cradle)).is_err(), "the cast spent the allowance");
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![ring]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == ring), "exiled instead of put into the graveyard");
+}
+
+/// The Eighth Doctor — the allowance taken as a historic land instead.
+#[test]
+fn the_eighth_doctor_plays_a_historic_land_from_the_graveyard() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::the_eighth_doctor());
+    let cradle = g.add_card_to_graveyard(0, catalog::gaeas_cradle());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    g.perform_action(GameAction::PlayLandFromGraveyard(cradle)).expect("a historic land");
+    assert!(g.battlefield_find(cradle).is_some());
+    flood(&mut g, 0);
+    let cast = GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast).is_err(), "one allowance, not one each");
+}

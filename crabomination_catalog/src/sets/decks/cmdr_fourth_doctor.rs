@@ -12,9 +12,6 @@
 //! - **The Curse of Fenric** — I spares your own creatures; II makes a 6/6
 //!   with no abilities but doesn't rename it Fenric or make it legendary, so
 //!   III is a Mutant fighting any other creature.
-//! - **The Eighth Doctor** — the historic land and the historic permanent
-//!   spell are separate allowances, and the cast permanent isn't exiled if it
-//!   leaves later.
 //! - **The Second Doctor** — an opponent who draws has its current creatures
 //!   barred from attacking you, not ones that arrive later.
 
@@ -286,28 +283,22 @@ pub fn the_seventh_doctor() -> CardDefinition {
     }
 }
 
-/// The Eighth Doctor — mills three; plays historic permanents from the
-/// graveyard once a turn.
-///
-/// ⚠ Residual: the land and the spell are separate allowances, and the cast
-/// permanent isn't exiled if it leaves later.
+/// The Eighth Doctor — mills three; once during each of your turns, play a
+/// historic land or cast a historic permanent spell from your graveyard (one
+/// shared allowance), and it gains "if this permanent would leave the
+/// battlefield, exile it instead".
 pub fn the_eighth_doctor() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![
-            StaticAbility {
-                description: "Once during each of your turns, you may cast a historic permanent spell from your graveyard.",
-                effect: StaticEffect::GraveyardCastOncePerTurn {
-                    filter: historic().and(R::PermanentCard),
-                    exile_after: true,
-                    mv_at_most_counters: None,
-                    enters_tapped: false,
-                },
+        static_abilities: vec![StaticAbility {
+            description: "Once during each of your turns, you may play a historic land or cast a historic permanent \
+                          spell from your graveyard. If you do, it gains \"If this permanent would leave the \
+                          battlefield, exile it instead of putting it anywhere else.\"",
+            effect: StaticEffect::GraveyardPlayOncePerTurnWithRider {
+                filter: historic().and(R::PermanentCard).and(R::Nonland),
+                rider: crate::effect::GraveyardPlayRider::ExileIfItWouldLeave,
+                land_filter: Some(R::Land.and(historic())),
             },
-            StaticAbility {
-                description: "You may play historic lands from your graveyard.",
-                effect: StaticEffect::MayPlayLandsFromGraveyardMatching(R::Land.and(historic())),
-            },
-        ],
+        }],
         triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
         ..doctor("The Eighth Doctor", cost(&[generic(4), w(), u()]), 4, 4)
     }

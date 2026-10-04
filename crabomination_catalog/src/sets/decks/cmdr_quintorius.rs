@@ -603,7 +603,8 @@ pub fn serra_paragon() -> CardDefinition {
             description: "Once during each of your turns, you may play a land from your graveyard or cast a permanent spell with mana value 3 or less from your graveyard. If you do, it gains \"When this permanent is put into a graveyard from the battlefield, exile it and you gain 2 life.\"",
             effect: StaticEffect::GraveyardPlayOncePerTurnWithRider {
                 filter: R::PermanentCard.and(R::Nonland).and(R::ManaValueAtMost(3)),
-                rider_life: 2,
+                rider: crate::effect::GraveyardPlayRider::ExileAndGainLife(2),
+                land_filter: None,
             },
         }],
         ..creature("Serra Paragon", cost(&[generic(2), w(), w()]), vec![CreatureType::Angel], 3, 4)
