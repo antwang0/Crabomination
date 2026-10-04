@@ -5070,11 +5070,16 @@ fn bounces_a_land_on_entry(def: &CardDefinition) -> bool {
     def.triggered_abilities.iter().any(|t| {
         matches!(t.event.kind, EventKind::EntersBattlefield)
             && matches!(t.event.scope, EventScope::SelfSource)
-            && matches!(
-                &t.effect,
-                Effect::Move { what: Selector::TargetFiltered { filter, .. }, to: ZoneDest::Hand(_) }
-                    if names_land(filter)
-            )
+            && match &t.effect {
+                Effect::Move { what: Selector::TargetFiltered { filter, .. }, to: ZoneDest::Hand(_) } => {
+                    names_land(filter)
+                }
+                // The Ravnica karoos choose the land as the trigger resolves.
+                Effect::ChooseOneAmong { what: Selector::EachPermanent(filter), chosen, .. } => {
+                    names_land(filter) && matches!(&**chosen, Effect::Move { to: ZoneDest::Hand(_), .. })
+                }
+                _ => false,
+            }
     })
 }
 
