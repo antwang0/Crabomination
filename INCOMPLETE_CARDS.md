@@ -2003,7 +2003,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Winter, Cynical Opportunist | Death Toll (DSC) | the engine picks the exiled set (the greatest-mana-value permanent card plus the cheapest cards covering four card types); the finality counter is added as the card enters. |
-| 🟡 Cemetery Tampering | Death Toll (DSC) | a hidden land is put onto the battlefield rather than played (no land drop used). |
 | 🟡 Polluted Cistern // Dim Oubliette | Death Toll (DSC) | Cistern counts milled and surveiled cards, not other library-to-graveyard moves (reveal-until). |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |

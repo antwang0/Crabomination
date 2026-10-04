@@ -162,9 +162,8 @@ pub fn carrion_grub() -> CardDefinition {
 }
 
 /// Cemetery Tampering — hideaway 5; each upkeep you may mill three, then
-/// with twenty or more cards in your graveyard play the hidden card free.
-///
-/// Approximation: a hidden land is put onto the battlefield, not played.
+/// with twenty or more cards in your graveyard play the hidden card free (a
+/// land is played, CR 305.2: it needs a land play left).
 pub fn cemetery_tampering() -> CardDefinition {
     let hidden = || Selector::one_of(Selector::CardExiledWithSource);
     CardDefinition {
@@ -183,14 +182,8 @@ pub fn cemetery_tampering() -> CardDefinition {
                         then: Box::new(Effect::If {
                             cond: Predicate::EntityMatches { what: hidden(), filter: R::Land },
                             then: Box::new(Effect::MayDo {
-                                description: "Put the hidden land onto the battlefield?".into(),
-                                body: Box::new(Effect::Move {
-                                    what: hidden(),
-                                    to: ZoneDest::Battlefield {
-                                        controller: PlayerRef::You,
-                                        tapped: false,
-                                    },
-                                }),
+                                description: "Play the hidden land?".into(),
+                                body: Box::new(Effect::PlayLandAmongNow { what: hidden() }),
                             }),
                             else_: Box::new(Effect::CastWithoutPayingImmediate {
                                 what: hidden(),

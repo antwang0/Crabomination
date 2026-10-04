@@ -4916,6 +4916,37 @@ fn cr_207_2c_winter_returns_a_permanent_card_with_a_finality_counter() {
     assert!(g.battlefield_find(giant).is_none());
 }
 
+/// CR 305.2 — Cemetery Tampering's hidden land is PLAYED: it takes the land
+/// play, and with none left it stays hidden.
+#[test]
+fn cr_305_2_cemetery_tampering_plays_a_hidden_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for played_already in [false, true] {
+        let mut g = main_phase();
+        for _ in 0..5 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        etb(&mut g, catalog::cemetery_tampering());
+        let hidden = g.exile.iter().find(|c| c.owner == 0).map(|c| c.id).expect("hidden");
+        for _ in 0..20 {
+            g.add_card_to_graveyard(0, catalog::island());
+        }
+        if played_already {
+            g.players[0].lands_played_this_turn = 1;
+        }
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(false),
+            DecisionAnswer::Bool(true),
+            DecisionAnswer::Cards(vec![hidden]),
+        ]));
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(hidden).is_some(), !played_already);
+        assert_eq!(g.players[0].lands_played_this_turn, 1);
+    }
+}
+
 /// CR 401.6 — Into the Pit: a spell (not a land) off the top, paid for with
 /// a nonland permanent as well.
 #[test]
