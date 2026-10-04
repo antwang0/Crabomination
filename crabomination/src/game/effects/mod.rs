@@ -7810,6 +7810,15 @@ impl GameState {
                     }
                     return Ok(());
                 }
+                // "Pay {2}{R} and sacrifice a nonland permanent" — the rest of
+                // the cost opens the body; unpayable, it isn't offered
+                // (`may_cost.rs`).
+                if self.may_do_cost_unpayable(body, ctx) {
+                    if let Some(e) = else_ {
+                        return self.run_effect(e, ctx, events);
+                    }
+                    return Ok(());
+                }
                 // Sibling to `MayDo`: ask yes/no, then *attempt* to pay
                 // mana — the floating pool first, then the controller's
                 // untapped sources (`pay_mana_cost_with_picks`, the echo /

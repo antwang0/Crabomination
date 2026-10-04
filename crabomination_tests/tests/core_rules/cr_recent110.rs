@@ -795,3 +795,31 @@ fn cr_400_7_a_pump_does_not_follow_a_blink() {
     let cp = g.computed_permanent(back).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
 }
+
+/// CR 118.3 — "you may pay {1} and sacrifice a creature. If you do": with no
+/// creature the combined cost can't be paid, so nothing is asked, no mana
+/// is spent and the payoff doesn't happen.
+#[test]
+fn cr_118_3_a_combined_may_pay_cost_needs_every_part() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector, Value};
+    let pay = Effect::MayPay {
+        description: "Pay {1} and sacrifice a creature to draw?".into(),
+        mana_cost: crabomination::mana::cost(&[crabomination::mana::generic(1)]),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: SelectionRequirement::Creature },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])),
+        else_: None,
+    };
+    let mut g = main_phase();
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&pay, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 0, "no creature to sacrifice, no draw");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "and no mana spent");
+}
