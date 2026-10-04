@@ -7972,3 +7972,17 @@ fn cr_800_4m_a_departed_players_cast_lock_lifts() {
     })
     .expect("the departed seat's lock has lifted");
 }
+
+/// CR 702.11b — hexproof stops OPPONENTS only: in a team game a teammate's
+/// Giant Growth may target your Invisible Stalker, an opponent's may not.
+/// Every permanent opponent test was `controller != caster`, which counted a
+/// teammate as an opponent (hexproof, hexproof-from, ward, Tomik's lands).
+#[test]
+fn cr_702_11b_a_teammate_may_target_your_hexproof_creature() {
+    let mut g = multi_player_game(4);
+    g.assign_teams(vec![vec![0, 2], vec![1, 3]]).expect("teams");
+    let mine = g.add_card_to_battlefield(2, catalog::invisible_stalker());
+    let theirs = g.add_card_to_battlefield(1, catalog::invisible_stalker());
+    assert!(g.check_target_legality(&Target::Permanent(mine), 0).is_ok(), "a teammate's");
+    assert!(g.check_target_legality(&Target::Permanent(theirs), 0).is_err(), "an opponent's");
+}

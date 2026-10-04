@@ -823,7 +823,7 @@ impl GameState {
     pub(crate) fn has_hostile_ward(&self, cid: CardId, actor: usize) -> bool {
         use crate::card::Keyword;
         let Some(c) = self.battlefield.find_by_id(cid) else { return false };
-        if c.controller == actor {
+        if self.same_team(c.controller, actor) {
             return false;
         }
         // Presence-gated like `check_target_legality_inner`'s keyword read:

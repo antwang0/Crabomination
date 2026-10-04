@@ -9170,7 +9170,7 @@ impl GameState {
         match *target {
             Target::Permanent(cid) => self
                 .battlefield_find(cid)
-                .filter(|tc| tc.controller != p)
+                .filter(|tc| !self.same_team(tc.controller, p))
                 .is_some_and(|tc| {
                     let controller = tc.controller;
                     if self.players[controller]
@@ -9194,7 +9194,7 @@ impl GameState {
                     })
                 }),
             Target::Player(tp) => {
-                tp != p
+                !self.same_team(tp, p)
                     && self.players[tp]
                         .hexproof_from_colors_this_turn
                         .iter()
@@ -9341,7 +9341,7 @@ impl GameState {
             // (Thrun): an opponent's spell that shares none of the listed
             // colors can't target this. Own spells are unaffected.
             if let Keyword::HexproofExceptColors(colors) = kw
-                && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
+                && self.battlefield_find(cid).is_some_and(|tc| !self.same_team(tc.controller, p))
                 && !colors.iter().any(|c| spell_colors.contains(c))
             {
                 return true;
@@ -12278,7 +12278,9 @@ impl GameState {
                 .battlefield
                 .find_by_id(perm_id)
             {
-                Some(c) if c.controller != actor => {
+                // CR 702.21a — "an opponent controls": a teammate's spell
+                // doesn't trigger ward.
+                Some(c) if !self.same_team(c.controller, actor) => {
                     // A whole-game gather per opposing target, for a keyword
                     // almost no board has: `card_keyword_possible` answers
                     // "could this permanent's computed set carry Ward" from
@@ -14815,7 +14817,7 @@ impl GameState {
             }
             Target::Player(p) => {
                 if self.player_has_static_shroud(*p)
-                    || (*p != caster
+                    || (!self.same_team(*p, caster)
                         && self.player_has_static_hexproof(*p)
                         && !self.player_ignores_hexproof(caster))
                 {
@@ -14907,8 +14909,9 @@ impl GameState {
         if has_kw(&Keyword::Shroud) && !self.shroud_waivers.contains(&(*cid, caster)) {
             return Err(GameError::TargetHasShroud(*cid));
         }
+        // CR 702.11b — hexproof stops OPPONENTS (a teammate in 2HG targets it).
         if has_kw(&Keyword::Hexproof)
-            && controller != caster
+            && !self.same_team(controller, caster)
             && !self.player_ignores_creature_hexproof(caster)
         {
             return Err(GameError::TargetHasHexproof(*cid));
@@ -14916,7 +14919,7 @@ impl GameState {
         // Tomik — a player's lands can't be targeted by an opponent's spells
         // or abilities.
         if card.definition.is_land()
-            && controller != caster
+            && !self.same_team(controller, caster)
             && self.player_lands_untargetable_by_opponents(controller)
         {
             return Err(GameError::InvalidTarget);
@@ -15191,7 +15194,7 @@ impl GameState {
                 let colors = self.source_colors(source);
                 return colors.iter().any(|c| {
                     pl.protection_colors_eot.contains(c)
-                        || (*tp != controller && pl.hexproof_from_colors_this_turn.contains(c))
+                        || (!self.same_team(*tp, controller) && pl.hexproof_from_colors_this_turn.contains(c))
                 });
             }
             Target::Permanent(cid) => cid,
@@ -15237,7 +15240,7 @@ impl GameState {
             return true;
         }
         if kws.contains(&Keyword::Hexproof)
-            && card.controller != controller
+            && !self.same_team(card.controller, controller)
             && !self.player_ignores_creature_hexproof(controller)
         {
             return true;
@@ -15273,7 +15276,7 @@ impl GameState {
         let tgt_controller = tgt.controller;
         let src_is_opponent = self
             .battlefield_find(source)
-            .is_some_and(|c| c.controller != tgt_controller);
+            .is_some_and(|c| !self.same_team(c.controller, tgt_controller));
         // CR 702.11d — "hexproof from activated and triggered abilities":
         // an opponent's ability simply can't target it (Volatile Stormdrake).
         if src_is_opponent
