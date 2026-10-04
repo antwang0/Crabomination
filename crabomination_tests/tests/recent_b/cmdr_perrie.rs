@@ -368,3 +368,18 @@ fn brokers_confluence_repeats_a_mode() {
     drain_stack(&mut g);
     assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 4);
 }
+
+/// Skyship Plunderer — a player target gets one more of each kind of counter
+/// they have: rad and poison included (poison through its funnel).
+#[test]
+fn skyship_plunderer_adds_each_player_counter_kind() {
+    let mut g = main_phase(2);
+    let ship = g.add_card_to_battlefield(0, catalog::skyship_plunderer());
+    g.players[1].rad_counters = 2;
+    g.players[1].poison_counters = 1;
+    let effect = catalog::skyship_plunderer().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(ship, 0, Some(Target::Player(1)));
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&effect, &ctx).expect("resolves");
+    assert_eq!((g.players[1].rad_counters, g.players[1].poison_counters, g.players[1].energy), (3, 2, 0));
+}

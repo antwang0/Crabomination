@@ -8,9 +8,6 @@
 //!   don't.
 //! - **Littjara Mirrorlake** — the extra +1/+1 counter is put on the copy
 //!   after it enters.
-//! - **Skyship Plunderer** — a player target gets one more energy,
-//!   experience or poison counter for each they have; other player
-//!   counters aren't read.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
@@ -551,8 +548,8 @@ pub fn skyboon_evangelist() -> CardDefinition {
 }
 
 /// Skyship Plunderer — combat damage to a player gives a permanent or player
-/// one more counter of each kind it has. Residual: a player's energy,
-/// experience and poison only.
+/// one more counter of each kind it has (a player's energy, experience, rad
+/// and poison — every player counter the engine keeps).
 pub fn skyship_plunderer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],

@@ -144,8 +144,13 @@ impl GameState {
                     if pl.experience > 0 {
                         pl.experience += 1;
                     }
-                    if pl.poison_counters > 0 {
-                        pl.poison_counters += 1;
+                    if pl.rad_counters > 0 {
+                        pl.rad_counters += 1;
+                    }
+                    // Through the poison funnel: Melira's cap and the
+                    // counter modifiers apply (CR 614.16).
+                    if self.players[p].poison_counters > 0 {
+                        self.add_poison(p, 1, events);
                     }
                 }
                 EntityRef::Card(_) => {}
