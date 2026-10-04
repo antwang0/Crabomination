@@ -121,8 +121,13 @@ the handoff.
   Gateway's tapped creatures and Sword of the Ages' sacrificed batch. The
   activation now carries them on the stack (`Effect::WithCountersRemovedAsCost`,
   `Effect::WithPaidCosts { PaidCostRecord }`), the `WithSacrificedPt` /
-  `WithTreasureManaSpent` pattern. ⏳ Not audited: the spell-cast side's
-  additional-cost scratch (a spell cast in response to a spell).
+  `WithTreasureManaSpent` pattern. The spell side already carried its
+  sacrifice / reveal / discard-count on the spell (`WithSacrificedPt`,
+  `WithRevealedForCost`, `WithCastDiscards`), but a permanent spell's ETB
+  reads after the spell has left the stack: **kicked Dralnu's Pet entered
+  with 0 counters** (`last_discarded_mana_value` is reset as each resolution
+  starts). `CardData::cast_discarded_mana_value` is stamped at the cast and
+  read as `Value::LastDiscardedManaValue`'s last fallback.
 
 - ⏳ **A listener that leaves in the same resolution misses the events
   before it left (CR 603.2 / 603.10)** — triggered abilities are collected AFTER a

@@ -1670,6 +1670,8 @@ impl GameState {
             Value::LastDiscardedManaValue => self
                 .last_discarded_mana_value
                 .or(self.cost_discarded_mana_value)
+                // A spell's cast-time discard, read by the permanent it became.
+                .or_else(|| ctx.source.and_then(|s| self.find_card_anywhere(s)).and_then(|c| c.cast_discarded_mana_value))
                 .unwrap_or(0) as i32,
             Value::CardsDiscardedThisTurn(who) => self
                 .resolve_players(who, ctx)

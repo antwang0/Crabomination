@@ -675,3 +675,25 @@ fn hull_breach_both_mode() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != ring && c.id != pacifism));
 }
+
+/// CR 702.33d / 614.1c — kicked Dralnu's Pet enters with +1/+1 counters equal
+/// to the mana value of the creature card discarded for the kicker; the
+/// discard is a cast-time cost, read at the ETB.
+#[test]
+fn dralnus_pet_kicked_counts_the_discarded_creature() {
+    let mut g = main_phase();
+    let pet = g.add_card_to_hand(0, catalog::dralnus_pet());
+    g.add_card_to_hand(0, catalog::craw_wurm()); // MV 6
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: pet,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(pet).expect("on the battlefield");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 6);
+}

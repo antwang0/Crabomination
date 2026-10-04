@@ -10738,6 +10738,9 @@ impl GameState {
         // sacrifice reports the fodder's power, which becomes the spell's X
         // for "X = the sacrificed creature's power" riders (Tend the Pests).
         let mut sac_x = None;
+        if card.cast_discarded_mana_value.is_some() {
+            card.cast_discarded_mana_value = None;
+        }
         if !additional_costs.is_empty() {
             // CR 701.59 — stamp whether the collect-evidence cost will be paid
             // before payment mutates the graveyard (auto-collects when able), so
@@ -10764,6 +10767,7 @@ impl GameState {
             }) {
                 let nonland =
                     self.nonland_discarded_this_resolution(p).saturating_sub(nonland_before);
+                card.cast_discarded_mana_value = self.last_discarded_mana_value;
                 let def = card.definition_make_mut();
                 def.effect = Effect::WithCastDiscards {
                     nonland,
