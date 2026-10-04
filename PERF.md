@@ -3181,7 +3181,7 @@ pod (strict      Biotransference's deck (177) beside 3 others x 8 at 4 seats x 4
   debug, fourth) (104001+) = 320 games; every deck 2 x 30 (104401+), 3 x 20
                  (104201+), 4 x 20 (104101+), 6 x 10 (104301+) = 5,210 games;
                  all decided, no walker/printed disagreement asserted
-suite            24,037 / 0 / 5 at the tip (CRAB_ANSWER_LOG=strict);
+suite            24,065 / 0 / 5 at 9821d91ea (CRAB_ANSWER_LOG=strict);
                  workspace clippy 0
 turns/game       3 seats 30.58, 4 seats 42.61, 5 seats 54.35, 8 seats 91.64
 ```
