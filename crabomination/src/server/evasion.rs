@@ -111,10 +111,15 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
     None
 }
 
-/// Whom a haste grant in `e` reaches, if `e` is one.
+/// Whom a haste grant in `e` reaches, if `e` is one — alone, or among
+/// pumps and keyword grants (Dr. Madison Li's "+1/+0 and gains trample and
+/// haste", which no census ever saw activated).
 fn haste_reach(e: &Effect) -> Option<&Selector> {
     match e {
         Effect::GrantKeyword { what, keyword: Keyword::Haste, duration: Duration::EndOfTurn } => Some(what),
+        Effect::Seq(v) if v.iter().all(|s| matches!(s, Effect::GrantKeyword { .. } | Effect::PumpPT { .. })) => {
+            v.iter().find_map(haste_reach)
+        }
         _ => None,
     }
 }
@@ -183,6 +188,26 @@ pub(super) fn pick_haste_grant(state: &GameState, seat: usize) -> Option<GameAct
 mod tests {
     use super::*;
     use crate::mana::Color;
+
+    /// Dr. Madison Li's "{T}, pay {E}: +1/+0, trample and haste" is a haste
+    /// grant: aimed at the creature that entered this turn.
+    #[test]
+    fn dr_madison_li_hastes_the_new_creature() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let li = g.add_card_to_battlefield(0, crate::catalog::dr_madison_li());
+        g.clear_sickness(li);
+        let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        g.players[0].energy = 1;
+        assert!(matches!(
+            pick_haste_grant(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 0, target: Some(Target::Permanent(t)), .. })
+                if card_id == li && t == wurm
+        ));
+    }
 
     /// Rogue's Passage makes the biggest ready attacker unblockable in the
     /// first main phase of a Commander game, and not in a duel.
