@@ -8120,3 +8120,31 @@ fn cr_102_3_a_teammates_tax_and_leyline_skip_you() {
     })
     .is_err(), "an opponent's Arbiter taxes seat 1's bolt by {{1}}");
 }
+
+/// CR 614.9 / 903.10a — Treacherous Link redirects the commander's combat
+/// damage from the blocker to the blocker's controller: still combat damage
+/// dealt by that commander, so it lands on the commander-damage row. The
+/// redirect dealt it with no source, so it was nobody's damage.
+#[test]
+fn cr_903_10a_treacherous_link_redirect_is_still_commander_damage() {
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let link = g.add_card_to_battlefield(0, catalog::treacherous_link());
+    g.battlefield_find_mut(link).unwrap().attached_to = Some(bear);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cmd, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, cmd)])).expect("block");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "the Link sent the 1 to seat 1");
+    assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1), "as commander damage");
+}

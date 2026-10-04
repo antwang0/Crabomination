@@ -4722,12 +4722,7 @@ impl GameState {
 
             if let Some(seat) = self.take_combat_damage_diversion(atk.id) {
                 let raw = if prevent_combat_damage { 0 } else { atk.power.max(0) as u32 };
-                self.deal_damage_to_from(
-                    crate::game::effects::EntityRef::Player(seat),
-                    raw,
-                    Some(atk.id),
-                    events,
-                );
+                self.deal_redirected_combat_damage_to_player(seat, raw, atk.id, events);
                 continue;
             }
 
@@ -5339,6 +5334,36 @@ impl GameState {
     /// already freeze, so a pair pays one gather instead of two.
     ///
     /// [`creature_redirects_damage_to_controller`]: Self::creature_redirects_damage_to_controller
+    /// Combat damage a replacement sends at a player instead of its first
+    /// recipient (CR 614.9 Treacherous Link, Goblin Psychopath's diversion):
+    /// dealt by the attacker, through the player's prevention, and — what
+    /// actually lands — still combat damage from that commander (CR 903.10a).
+    /// The redirect used to pass no source, so it was nobody's damage.
+    fn deal_redirected_combat_damage_to_player(
+        &mut self,
+        seat: usize,
+        amount: u32,
+        source: CardId,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let mark = events.len();
+        self.deal_damage_to_from(crate::game::effects::EntityRef::Player(seat), amount, Some(source), events);
+        if let Some(cmdr) = self.commander_card_of(source) {
+            let landed: u32 = events[mark..]
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::DamageDealt { to_player: Some(q), amount, from_card: Some(f), .. }
+                        if *q == seat && *f == source =>
+                    {
+                        Some(*amount)
+                    }
+                    _ => None,
+                })
+                .sum();
+            self.record_commander_damage(seat, cmdr, landed);
+        }
+    }
+
     fn ironscale_replace(
         &mut self,
         recipient: CardId,
@@ -5352,12 +5377,7 @@ impl GameState {
         }
         // CR 614.9 — Treacherous Link redirects combat damage too.
         if let Some(owner) = redirect_to {
-            self.deal_damage_to_from(
-                crate::game::effects::EntityRef::Player(owner),
-                dealt as u32,
-                None,
-                events,
-            );
+            self.deal_redirected_combat_damage_to_player(owner, dealt as u32, source, events);
             return 0;
         }
         // The three questions below are one walk of one card's
@@ -6044,7 +6064,13 @@ impl GameState {
                 {
                     let mut spilled = atk.clone();
                     spilled.target = AttackTarget::Player(p);
-                    spill_dealt = self.deal_combat_damage_to_target(&spilled, spill, events);
+                    // CR 615 — the player's own prevention (Fog-style shields,
+                    // protection) applies to the spilled part as it does to an
+                    // unblocked hit; prevented damage is never commander damage.
+                    let spill = self.prevent_combat_to_target(spilled.target, spill, Some(atk.id), events);
+                    if spill > 0 {
+                        spill_dealt = self.deal_combat_damage_to_target(&spilled, spill, events);
+                    }
                 }
                 amount + spill_dealt
             }

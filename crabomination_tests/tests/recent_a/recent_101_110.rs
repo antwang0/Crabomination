@@ -1305,6 +1305,44 @@ mod recent109 {
         assert_eq!(g.players[1].life, life - 2, "6 power − 4 loyalty spills 2 to the player");
     }
 
+    /// CR 615 / 702.19c — the excess spilled past a planeswalker is combat
+    /// damage to its controller, so that player's prevention applies (Glacial
+    /// Chasm). The spill went straight to the damage step, so it was dealt —
+    /// and counted as commander damage — through the player's shield.
+    #[test]
+    fn cr_615_a_spill_past_a_planeswalker_is_prevented_by_its_controllers_shield() {
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(
+            0,
+            crabomination::card::CardDefinition {
+                name: "Wagon",
+                card_types: vec![crabomination::card::CardType::Creature],
+                power: 6,
+                toughness: 6,
+                keywords: vec![
+                    crabomination::card::Keyword::Trample,
+                    crabomination::card::Keyword::TrampleOverPlaneswalkers,
+                ],
+                ..Default::default()
+            },
+        );
+        g.clear_sickness(atk);
+        let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+        g.add_card_to_battlefield(1, catalog::glacial_chasm());
+        let life = g.players[1].life;
+        g.step = crabomination::game::types::TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: atk,
+            target: crabomination::game::types::AttackTarget::Planeswalker(pw),
+        }]))
+        .unwrap();
+        g.step = crabomination::game::types::TurnStep::CombatDamage;
+        g.resolve_combat().unwrap();
+        assert_eq!(g.players[1].life, life, "Glacial Chasm prevents the spilled 2");
+    }
+
     /// CR 702.19f — plain trample assigns nothing past a planeswalker.
     #[test]
     fn cr_702_19f_plain_trample_does_not_spill_over_planeswalker() {
