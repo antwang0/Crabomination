@@ -1964,7 +1964,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
-| 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
@@ -1998,7 +1997,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III: a land among the exiled cards can't be played. |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
-| 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
