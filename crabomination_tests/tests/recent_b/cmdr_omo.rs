@@ -196,6 +196,32 @@ fn sunken_palace_copies_the_spell() {
     assert_eq!(g.players[1].life, life - 6, "the spear and its copy");
 }
 
+/// CR 707.10 — Sunken Palace's mana copies an ability it pays for too: a
+/// Jayemdae Tome activation funded with it draws twice.
+#[test]
+fn sunken_palace_copies_the_ability() {
+    let mut g = main_phase(2);
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let sp = g.add_card_to_battlefield(0, catalog::sunken_palace());
+    let tome = g.add_card_to_battlefield(0, catalog::jayemdae_tome());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: sp, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("palace mana");
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: tome, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("{4}, {T}: the palace's {U} and three more");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the draw and its copy");
+}
+
 /// Desert Warfare: a sacrificed Desert returns at your next end step.
 #[test]
 fn desert_warfare_brings_deserts_back() {

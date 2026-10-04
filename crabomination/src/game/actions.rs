@@ -21797,6 +21797,8 @@ impl GameState {
         let mut activation_mana_colors = Vec::new();
         // Mana from Treasures that funded it (`Value::TreasureManaSpentToActivate`).
         let mut activation_treasure_mana = 0u32;
+        // Sunken Palace's rider pips that funded it: one copy each.
+        let mut activation_copy_pips = 0u32;
         // CR 118.3 / 119.4 — every point of life paid for this activation
         // (Phyrexian pips, the printed cost, "pay X life", half your life),
         // carried on `AbilityActivated` for "if life was paid" (Verrak).
@@ -21840,6 +21842,8 @@ impl GameState {
                 spent_by_color(&receipt.pool_before, &self.players[p].mana_pool).to_vec();
             activation_treasure_mana =
                 receipt.pool_before.treasure_amount().saturating_sub(self.players[p].mana_pool.treasure_amount());
+            activation_copy_pips =
+                receipt.side_effects.spent_count(crate::mana::SpendRestriction::SpellOrAbilityCopy);
             self.pay_life_cost(p, receipt.side_effects.life_lost);
             life_spent += receipt.side_effects.life_lost;
             auto_mana_events = receipt.auto_events;
@@ -22984,6 +22988,25 @@ impl GameState {
             self.randomize_single_target_on_stack();
             if ability.mana_cost.has_x() {
                 self.copy_x_ability_for_grants(p);
+            }
+            // CR 707.10 — Sunken Palace: "when you spend this mana to …
+            // activate an ability, copy that ability" — above it, so the copy
+            // trigger resolves first and copies it (`CopyAbility` names the
+            // source's topmost ability).
+            if activation_copy_pips > 0 {
+                let palace = self
+                    .restricted_mana_source(p, crate::mana::SpendRestriction::SpellOrAbilityCopy)
+                    .unwrap_or(card_id);
+                for _ in 0..activation_copy_pips {
+                    self.push_stack(
+                        TriggerPush::new(
+                            palace,
+                            p,
+                            Effect::CopyAbility { what: crate::effect::Selector::ExactObjects(vec![card_id]), times: crate::effect::Value::ONE },
+                        )
+                        .build(),
+                    );
+                }
             }
             // Pit Automaton — the claimed exhaust watchers go above the
             // ability they copy, so each resolves before its original.

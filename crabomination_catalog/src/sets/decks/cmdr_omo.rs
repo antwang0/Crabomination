@@ -7,7 +7,6 @@
 //!   so a creature that loses all abilities stops being every type.
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
 //!   or library" only by a discard or a mill here.
-//! - **Sunken Palace** — its rider copies a spell, not an activated ability.
 //! - **March from Velis Vel** — the land type is chosen as a mode.
 
 use crate::card::{
@@ -467,8 +466,7 @@ pub fn summary_dismissal() -> CardDefinition {
 }
 
 /// Sunken Palace — enters tapped, {U}; {1}{U}, {T}, exile seven graveyard
-/// cards: {U} that copies the spell it pays for. Residual: an ability it
-/// pays for isn't copied.
+/// cards: {U} that copies the spell or activated ability it pays for.
 pub fn sunken_palace() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![enters_tapped()],

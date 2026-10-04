@@ -575,7 +575,7 @@ impl GameState {
     /// it — exact in the ordinary case (the producer was tapped for mana this
     /// turn and is still there), `None` once it has left, where the trigger
     /// still happens with no source object.
-    fn restricted_mana_source(&self, seat: usize, r: SpendRestriction) -> Option<CardId> {
+    pub(crate) fn restricted_mana_source(&self, seat: usize, r: SpendRestriction) -> Option<CardId> {
         self.battlefield
             .iter()
             .find(|c| {
