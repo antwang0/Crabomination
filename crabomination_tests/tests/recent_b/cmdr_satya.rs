@@ -373,6 +373,71 @@ fn overclocked_electromancer_doubles() {
     assert_eq!(pt(&g, oe), (6, 3));
 }
 
+/// CR 120.10 — its combat damage to a blocker pays out the damage beyond
+/// lethal as {E}: 4 power (doubled) into a 1/1 is 3 excess. A blocker that
+/// takes no excess pays nothing.
+#[test]
+fn overclocked_electromancer_banks_excess_damage() {
+    for (blocker, gained) in [(catalog::llanowar_elves(), 3), (catalog::serra_angel(), 0)] {
+        let mut g = pod(2);
+        let oe = g.add_card_to_battlefield(0, catalog::overclocked_electromancer());
+        let b = g.add_card_to_battlefield(1, blocker);
+        attack(&mut g, &[oe]);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareBlockers(vec![(b, oe)])).expect("block");
+        while g.step != TurnStep::EndCombat {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        assert_eq!(g.players[0].energy, gained);
+    }
+}
+
+/// CR 702.151a — reconfigure {2} or {E}{E}{E}: with three energy and no
+/// mana it attaches, and the same price unattaches it.
+#[test]
+fn razorfield_ripper_reconfigures_for_energy() {
+    let mut g = pod(2);
+    let rr = g.add_card_to_battlefield(0, catalog::razorfield_ripper());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].energy = 6;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rr,
+        ability_index: 0,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("attach for {E}{E}{E}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rr).and_then(|c| c.attached_to), Some(bears));
+    assert_eq!(g.players[0].energy, 3);
+    assert!(!g.computed_permanent(rr).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+    activate_free(&mut g, rr, 1);
+    assert_eq!(g.battlefield_find(rr).and_then(|c| c.attached_to), None);
+    assert_eq!(g.players[0].energy, 0);
+    assert!(activate_free_err(&mut g, rr, 1), "unattach needs it attached (and the energy)");
+}
+
+fn activate_free(g: &mut GameState, id: CardId, index: usize) {
+    assert!(!activate_free_err(g, id, index));
+}
+
+fn activate_free_err(g: &mut GameState, id: CardId, index: usize) -> bool {
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    drain_stack(g);
+    r.is_err()
+}
+
 /// Razorfield Ripper — attacking gets {E} and +X/+X for your {E}.
 #[test]
 fn razorfield_ripper_pumps_by_energy() {

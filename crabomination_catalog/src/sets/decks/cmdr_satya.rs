@@ -1,17 +1,6 @@
 //! Commander: the cards the **Creative Energy** precon (M3C, Satya,
 //! Aetherflux Genius) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_satya.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Filigree Racer** — the granted "jump-start" is a flashback for the
-//!   card's mana cost (no discard).
-//! - **Hourglass of the Lost** — it removes all its time counters (X is that
-//!   number), not a chosen X.
-//! - **Overclocked Electromancer** — the excess-damage energy isn't gained.
-//! - **Razorfield Ripper** — reconfigure costs only {2} (not the {E}{E}{E}
-//!   option).
-//! - **Sphinx of the Revelation** — the {E} is paid as the ability resolves
-//!   (any amount), not as a cost.
 
 use std::sync::Arc;
 
@@ -402,9 +391,8 @@ pub fn localized_destruction() -> CardDefinition {
 }
 
 /// Overclocked Electromancer — each of your combats, pay {E}{E}{E} for a
-/// counter; attacking doubles its power.
-///
-/// Residual: the excess-damage energy isn't gained.
+/// counter; attacking doubles its power; its combat damage to a creature
+/// pays out that creature's excess damage this turn as {E} (CR 120.10).
 pub fn overclocked_electromancer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -417,6 +405,10 @@ pub fn overclocked_electromancer() -> CardDefinition {
                 }),
             }),
             on_attack(Effect::DoublePower { what: Selector::This, times: Value::ONE, duration: Duration::EndOfTurn }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+                effect: Effect::AddEnergy(Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(0)))),
+            },
         ],
         ..creature(
             "Overclocked Electromancer",
@@ -429,9 +421,8 @@ pub fn overclocked_electromancer() -> CardDefinition {
 }
 
 /// Razorfield Ripper — it or the creature it equips attacking gets {E},
-/// then +X/+X for your {E}; reconfigure {2}.
-///
-/// Residual: reconfigure costs only {2}.
+/// then +X/+X for your {E}; reconfigure {2} or {E}{E}{E}. The energy option
+/// is the two activated abilities CR 702.151a spells reconfigure out as.
 pub fn razorfield_ripper() -> CardDefinition {
     let surge = || {
         on_attack(Effect::Seq(vec![
@@ -452,6 +443,21 @@ pub fn razorfield_ripper() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Reconfigure(cost(&[generic(2)]))],
+        activated_abilities: vec![
+            ActivatedAbility {
+                energy_cost: 3,
+                sorcery_speed: true,
+                effect: Effect::AttachSourceTo { host: target_filtered(yours().and(R::OtherThanSource)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                energy_cost: 3,
+                sorcery_speed: true,
+                condition: Some(Predicate::SelectorExists(Selector::AttachedTo(Box::new(Selector::This)))),
+                effect: Effect::Unattach { what: Selector::This },
+                ..Default::default()
+            },
+        ],
         triggered_abilities: vec![surge()],
         equipped_bonus: Some(EquipBonus { triggered_abilities: vec![surge()], ..Default::default() }),
         ..creature("Razorfield Ripper", cost(&[generic(2), w()]), vec![CreatureType::Rhino], 3, 3)
