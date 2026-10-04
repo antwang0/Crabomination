@@ -69,7 +69,12 @@ impl GameState {
     ) -> Result<(), GameError> {
         let me = ctx.controller;
         let source = ctx.source.unwrap_or(CardId(0));
-        let seats = self.apnap_sort(self.living_seats().collect());
+        // Every seat, in APNAP order, with each seat's "has a creature" gate
+        // LOGGED (`logged_gate`): a seat that leaves the game between asks
+        // (CR 800.4a — its creatures go with it) must not shift the replay's
+        // cursor, or the takers' picks read the wrong answers and the arm
+        // re-asks forever (a strict pod sweep's action-cap game).
+        let seats = self.apnap_sort((0..self.players.len()).collect());
         let best = |g: &GameState, q: usize| -> Option<CardId> {
             g.battlefield
                 .iter()
@@ -81,7 +86,7 @@ impl GameState {
         let mut cursor = 0usize;
         let mut takers: Vec<usize> = Vec::new();
         for q in seats {
-            if best(self, q).is_none() {
+            if !self.logged_gate(&mut cursor, |g| g.players[q].is_alive() && best(g, q).is_some()) {
                 continue;
             }
             let rider = if goad {
@@ -105,7 +110,18 @@ impl GameState {
         }
         let mut picks: Vec<(usize, CardId)> = Vec::with_capacity(takers.len());
         for q in takers {
-            let Some(default) = best(self, q) else { continue };
+            let default = best(self, q);
+            if !self.logged_gate(&mut cursor, |g| g.players[q].is_alive() && default.is_some()) {
+                continue;
+            }
+            let Some(default) = default else {
+                // Asked while it had a creature, gone since (CR 800.4a): its
+                // logged pick, if any, is skipped in place.
+                if self.scratch.resolution_answer_log.get(cursor).is_some() {
+                    cursor += 1;
+                }
+                continue;
+            };
             let candidates: Vec<(CardId, String)> = self
                 .battlefield
                 .iter()
@@ -156,6 +172,22 @@ impl GameState {
         Ok(())
     }
 
+    /// A seat-eligibility gate inside a log-replayed multi-seat arm: the
+    /// first pass computes `f` and logs it as a `Bool`; a replay reads the
+    /// logged value instead, so a gate whose inputs changed since (a seat left
+    /// the game, CR 800.4a) can't shift the cursor under the asks after it.
+    pub(super) fn logged_gate(&mut self, cursor: &mut usize, f: impl FnOnce(&GameState) -> bool) -> bool {
+        use crate::decision::DecisionAnswer;
+        if let Some(a) = self.scratch.resolution_answer_log.get(*cursor) {
+            *cursor += 1;
+            return matches!(a, DecisionAnswer::Bool(true));
+        }
+        let b = f(self);
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        *cursor += 1;
+        b
+    }
+
     /// `Effect::EachPlayerMayDrawThenTakersGainLife` — APNAP, each living
     /// player is asked (log-replayed); the takers each draw a card, then each
     /// gains `life`.
@@ -167,10 +199,15 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let source = ctx.source.unwrap_or(CardId(0));
-        let seats = self.apnap_sort(self.living_seats().collect());
+        // Every seat with a logged "alive" gate, as `each_player_may_counter_
+        // for_peace`: a seat leaving between asks can't shift the replay.
+        let seats = self.apnap_sort((0..self.players.len()).collect());
         let mut cursor = 0usize;
         let mut takers: Vec<usize> = Vec::new();
         for q in seats {
+            if !self.logged_gate(&mut cursor, |g| g.players[q].is_alive()) {
+                continue;
+            }
             let Some(yes) = self.ask_seat_bool(
                 &mut cursor,
                 q,

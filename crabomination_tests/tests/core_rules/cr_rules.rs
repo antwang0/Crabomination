@@ -8514,6 +8514,25 @@ fn cr_700_4_a_move_to_the_graveyard_is_a_death() {
     );
 }
 
+/// CR 603.6c / 610.3 — "exile this, then return it" (the FIN Dominant
+/// reset) is a real leave-the-battlefield: Thragtusk's leaves trigger makes
+/// its Beast. The permanent was lifted straight off the battlefield, so no
+/// leave-the-battlefield work ran.
+#[test]
+fn cr_603_6c_exile_and_return_self_is_a_real_leave() {
+    use crabomination::effect::Effect;
+    let mut g = two_player_game();
+    let tusk = g.add_card_to_battlefield(0, catalog::thragtusk());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(tusk, 0, None);
+    g.resolve_effect(&Effect::ExileSelfReturnFrontFace, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tusk).is_some(), "back on the battlefield");
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Beast"),
+        "the leaves trigger made a Beast"
+    );
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

@@ -15080,12 +15080,22 @@ impl GameState {
                     options.iter().map(|o| o.label.clone()).collect();
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cast: Vec<(usize, usize)> = Vec::new();
-                for seat in self.seats_in_turn_order_from(ctx.controller) {
-                    // CR 701.38 — Brago's Representative-style extra votes.
+                // Every seat, the alive check and each extra-vote check logged
+                // (`logged_gate`): a seat leaving between a suspend and its
+                // resume (its Brago's Representative with it) can't shift the
+                // replay onto the wrong voter.
+                for seat in self.all_seats_in_turn_order_from(ctx.controller) {
+                    if !self.logged_gate(&mut cursor, |g| g.players[seat].is_alive()) {
+                        continue;
+                    }
                     // CR 701.38 — Illusion of Choice answers on the voter's
                     // behalf; the vote is still cast by `seat`.
                     let asked = self.vote_controller_this_turn.unwrap_or(seat);
-                    for _ in 0..1 + self.additional_votes_for(seat) {
+                    for k in 0u32.. {
+                        // CR 701.38 — Brago's Representative-style extra votes.
+                        if k > 0 && !self.logged_gate(&mut cursor, |g| k <= g.additional_votes_for(seat)) {
+                            break;
+                        }
                         let Some(pick) = self.ask_seat_option(
                             &mut cursor,
                             asked,
@@ -19163,8 +19173,13 @@ impl GameState {
                 }
                 let me = ctx.controller;
                 let src = ctx.source.unwrap_or(CardId(0));
+                // Every pick before any counter: the arm is re-run from the
+                // top on a `wants_ui` resume, and counters placed mid-loop
+                // were placed again on every re-run (and could reach
+                // `win_at` early). The board gate is logged for the same
+                // reason (`logged_gate`).
                 let mut cursor = 0usize;
-                let mut recipients: Vec<CardId> = Vec::new();
+                let mut chosen: Vec<CardId> = Vec::new();
                 for color in
                     [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                 {
@@ -19185,7 +19200,8 @@ impl GameState {
                             )
                         })
                         .collect();
-                    if ids.is_empty() {
+                    let has = !ids.is_empty();
+                    if !self.logged_gate(&mut cursor, |_| has) {
                         continue;
                     }
                     let candidates: Vec<(CardId, String)> = ids
@@ -19200,7 +19216,7 @@ impl GameState {
                     let auto: Vec<CardId> = ids
                         .iter()
                         .copied()
-                        .find(|id| !recipients.contains(id))
+                        .find(|id| !chosen.contains(id))
                         .or_else(|| ids.first().copied())
                         .into_iter()
                         .collect();
@@ -19218,7 +19234,12 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
-                    for cid in picked {
+                    chosen.extend(picked);
+                }
+                self.clear_answer_log();
+                let mut recipients: Vec<CardId> = Vec::new();
+                for cid in chosen {
+                    {
                         let n = self.scaled_counter_count_on(cid, *kind, 1);
                         if n == 0 {
                             continue;
@@ -19237,7 +19258,6 @@ impl GameState {
                         }
                     }
                 }
-                self.clear_answer_log();
                 if *win_at > 0 && recipients.len() as u32 >= *win_at {
                     self.run_effect(
                         &Effect::WinGame { who: crate::effect::PlayerRef::You },
@@ -26436,15 +26456,10 @@ impl GameState {
                 // the answer log, so a payment taken mid-ask would be taken
                 // twice.
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
-                let mut seats = vec![ctx.controller];
-                let mut s = ctx.controller;
-                loop {
-                    s = self.next_alive_seat(s);
-                    if s == ctx.controller || seats.contains(&s) {
-                        break;
-                    }
-                    seats.push(s);
-                }
+                // Every seat with each gate logged: a seat leaving between
+                // asks (CR 800.4a — its lands go home too) can't shift the
+                // replay onto the wrong pledger.
+                let seats = self.all_seats_in_turn_order_from(ctx.controller);
                 let mut cursor = 0;
                 let mut pledges: Vec<(usize, u32)> = Vec::new();
                 for seat in seats {
@@ -26454,7 +26469,7 @@ impl GameState {
                         .mana_pool
                         .total()
                         .saturating_add(self.untapped_mana_colors(seat).len() as u32);
-                    if max == 0 {
+                    if !self.logged_gate(&mut cursor, |g| g.players[seat].is_alive() && max > 0) {
                         continue;
                     }
                     let Some(n) = self.ask_seat_amount(
@@ -26538,7 +26553,16 @@ impl GameState {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 let mut cursor = 0;
                 let mut acceptors = Vec::new();
-                for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
+                // Every non-teammate seat in APNAP order, alive check logged:
+                // a seat leaving between asks (CR 800.4a) can't shift the
+                // replay onto the wrong acceptor.
+                let me = ctx.controller;
+                let opps: Vec<usize> =
+                    self.apnap_sort((0..self.players.len()).filter(|&q| q != me && !self.same_team(q, me)).collect());
+                for opp in opps {
+                    if !self.logged_gate(&mut cursor, |g| g.players[opp].is_alive()) {
+                        continue;
+                    }
                     let Some(yes) = self.ask_seat_bool(
                         &mut cursor,
                         opp,
@@ -30038,17 +30062,24 @@ impl GameState {
             Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {
                 // Grave Consequences — every seat is asked (turn order from
                 // the controller); `then` runs regardless of who exiled.
+                // Every ask before any exile: the arm is re-run from the top
+                // on each `wants_ui` resume, and a seat that had exiled its
+                // whole graveyard mid-loop then skipped its slot, shifting
+                // every later seat's replayed pick. Each gate is logged too,
+                // so a seat leaving between asks (CR 800.4a) can't shift it.
                 let mut cursor = 0usize;
-                for seat in self.seats_in_turn_order_from(ctx.controller) {
+                let mut picks: Vec<(usize, Vec<CardId>)> = Vec::new();
+                for seat in self.all_seats_in_turn_order_from(ctx.controller) {
                     let candidates: Vec<(CardId, String)> = self.players[seat]
                         .graveyard
                         .iter()
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
-                    if candidates.is_empty() {
+                    let has = !candidates.is_empty();
+                    if !self.logged_gate(&mut cursor, |g| g.players[seat].is_alive() && has) {
                         continue;
                     }
-                    let max = candidates.len() as u32;
+                    let max = (candidates.len() as u32).max(1);
                     let Some(picked) = self.ask_seat_cards_logged(
                         &mut cursor,
                         seat,
@@ -30063,6 +30094,10 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
+                    picks.push((seat, picked));
+                }
+                self.clear_answer_log();
+                for (seat, picked) in picks {
                     for cid in picked {
                         if let Some(card) = Self::take_card(&mut self.players[seat].graveyard, cid) {
                             self.exile.push(card);
@@ -30071,7 +30106,6 @@ impl GameState {
                         }
                     }
                 }
-                self.clear_answer_log();
                 self.run_effect(then, ctx, events)
             }
 
@@ -37746,10 +37780,9 @@ impl GameState {
                 // up)" — the reset half of the FIN Dominant flip cycle. A
                 // permanent already on its front face just blinks.
                 let Some(id) = ctx.source else { return Ok(()); };
-                let Some(mut card) = self.battlefield.take_by_id(id) else {
+                let Some(mut card) = self.exile_and_take_back(id, events) else {
                     return Ok(());
                 };
-                events.push(GameEvent::PermanentExiled { card_id: id });
                 if let Some(front) = card.front_face.take() {
                     card.set_definition(front);
                 }
@@ -37783,11 +37816,7 @@ impl GameState {
                     return Ok(());
                 }
                 let taken = if on_bf {
-                    let c = self.battlefield.take_by_id(id);
-                    if c.is_some() {
-                        events.push(GameEvent::PermanentExiled { card_id: id });
-                    }
-                    c
+                    self.exile_and_take_back(id, events)
                 } else {
                     let seat = (0..self.players.len())
                         .find(|&s| self.players[s].graveyard.iter().any(|c| c.id == id));

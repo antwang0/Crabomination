@@ -7811,3 +7811,91 @@ fn cr_608_2d_each_player_picks_their_own_permanent() {
     assert!(g.battlefield_find(a).is_some());
     assert!(g.players[0].hand.iter().any(|c| c.id == mine), "seat 0 returned its only creature");
 }
+
+/// CR 800.4a / 101.4 — Agitator Ant's "each player may put two +1/+1
+/// counters on a creature they control" is log-replayed across the seats'
+/// asks; a seat that concedes between the yes/no round and its pick must not
+/// shift the replay. The seat list was the LIVING seats and the "has a
+/// creature" gate was recomputed, so the departed seat's answers were read
+/// as the next seat's and the arm re-asked one seat forever (a strict pod
+/// sweep's action-cap game). The arm now walks every seat and logs each gate.
+#[test]
+fn cr_800_4a_agitator_ant_survives_a_seat_leaving_between_asks() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = multi_player_game(4);
+    let mut bears = Vec::new();
+    for seat in 0..4 {
+        g.players[seat].wants_ui = true;
+        bears.push(g.add_card_to_battlefield(seat, catalog::grizzly_bears()));
+    }
+    let ant = g.add_card_to_battlefield(0, catalog::agitator_ant());
+    let effect = catalog::agitator_ant().triggered_abilities[0].effect.clone();
+    g.stack.push(TriggerPush::new(ant, 0, effect).build());
+    g.resolve_top_of_stack().expect("resolve the trigger");
+    let mut answered = 0;
+    let mut conceded = false;
+    while let Some(pending) = g.pending_decision.as_ref() {
+        let answer = match &pending.decision {
+            crabomination::decision::Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+            d => g.decider.decide(d),
+        };
+        g.submit_decision(answer).expect("answer");
+        answered += 1;
+        // After the four yes/no answers and the first pick, seat 3 leaves.
+        if answered == 5 && !conceded {
+            g.concede(3);
+            conceded = true;
+        }
+        assert!(answered < 20, "the arm keeps re-asking");
+    }
+    for (seat, &bear) in bears.iter().enumerate().take(3) {
+        assert_eq!(
+            g.battlefield_find(bear).map(|c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne)),
+            Some(2),
+            "seat {seat}'s creature got its counters"
+        );
+    }
+}
+
+/// Grave Consequences asks every seat before anyone exiles: the arm re-runs
+/// from the top on each `wants_ui` resume, and a seat that had exiled its
+/// whole graveyard mid-loop then skipped its slot, so the next seat's pick
+/// was read from the wrong answer. Seat 0 empties its graveyard; seat 1's
+/// own pick of one card still lands.
+#[test]
+fn grave_consequences_replays_each_seats_own_pick() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(2);
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let kept = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    for p in 0..2 {
+        // The spell ends "draw a card"; an empty library would lose the game.
+        g.add_card_to_library(p, catalog::island());
+        g.players[p].wants_ui = true;
+    }
+    let effect = match catalog::grave_consequences().effect {
+        Effect::Seq(v) => v[0].clone(),
+        e => e,
+    };
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(TriggerPush::new(src, 0, effect).build());
+    g.resolve_top_of_stack().expect("resolve");
+    let mut asked = 0;
+    while let Some(pending) = g.pending_decision.as_ref() {
+        let answer = match &pending.decision {
+            Decision::ChooseCards { candidates, .. } if candidates.iter().any(|(id, _)| *id == mine) => {
+                DecisionAnswer::Cards(vec![mine])
+            }
+            Decision::ChooseCards { .. } => DecisionAnswer::Cards(vec![theirs]),
+            d => g.decider.decide(d),
+        };
+        g.submit_decision(answer).expect("answer");
+        asked += 1;
+        assert!(asked < 10, "the arm keeps re-asking");
+    }
+    assert!(g.exile.iter().any(|c| c.id == mine), "seat 0's pick");
+    assert!(g.exile.iter().any(|c| c.id == theirs), "seat 1's pick");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == kept), "only the picked card");
+}

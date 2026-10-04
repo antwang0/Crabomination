@@ -173,6 +173,7 @@ mod retarget_any;
 mod token_batch;
 mod life_events;
 mod draw_batch;
+mod exile_return;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
@@ -5967,6 +5968,16 @@ impl GameState {
     /// Not [`apnap_sort`](Self::apnap_sort): APNAP starts at the *active*
     /// player, and these cards start at the spell's controller, which is only
     /// the same seat on their own turn.
+    /// Every seat, departed ones included, in turn order from `from`. For a
+    /// log-replayed multi-seat ask loop (`logged_gate` the alive check per
+    /// seat): a seat leaving between a suspend and its resume (CR 800.4a)
+    /// must not shift the replay's cursor, which
+    /// [`Self::seats_in_turn_order_from`]'s living-only walk does.
+    pub(crate) fn all_seats_in_turn_order_from(&self, from: usize) -> Vec<usize> {
+        let n = self.players.len();
+        (0..n).map(|i| (from + i) % n.max(1)).collect()
+    }
+
     pub(crate) fn seats_in_turn_order_from(&self, from: usize) -> Vec<usize> {
         let n = self.players.len();
         let mut out = Vec::with_capacity(n);
