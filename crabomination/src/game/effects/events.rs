@@ -1061,16 +1061,13 @@ fn event_matches_spec_rest(
             event,
             GameEvent::AbilityActivated { source: cid, .. } if *cid == source.id
         ),
-        // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
-        // teammates: a "whenever you gain life" trigger on team A
-        // fires regardless of which team-A member's life event
-        // produced it. `same_team` collapses to `a == b` for solo
-        // teams (singleton FFA / 1v1 / Commander) so 1v1 behavior
-        // is unchanged. Symmetric treatment for OpponentControl —
-        // teammate actions aren't "opponent" actions, so the
-        // implicit "not me" widens to "not on my team."
+        // CR 810.5 / 810.9 — "you" is one player, not a team: life
+        // gained by a teammate doesn't trigger your "whenever you gain
+        // life" (Ajani's Pridemate / Sanguine Bond rulings, 2024), and a
+        // teammate's creature isn't one you control. "Opponent" is the
+        // other team, so teammate actions aren't opponent actions.
         EventScope::YourControl => actor_for_scope(state, event, &spec.kind)
-            .is_some_and(|p| state.same_team(p, source.controller)),
+            .is_some_and(|p| p == source.controller),
         EventScope::OpponentControl => actor_for_scope(state, event, &spec.kind)
             .is_some_and(|p| !state.same_team(p, source.controller)),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
@@ -1137,13 +1134,13 @@ fn event_matches_spec_rest(
         EventScope::YourSourceDamagedOpponent => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
-                if state.same_team(*fc, source.controller)
+                if *fc == source.controller
                     && !state.same_team(*p, source.controller)
         ),
         EventScope::YourSourceDamagedAnyPlayer => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(_), from_controller: Some(fc), .. }
-                if state.same_team(*fc, source.controller)
+                if *fc == source.controller
         ),
         EventScope::OpponentSourceDamagedYou => matches!(
             event,
@@ -1153,7 +1150,7 @@ fn event_matches_spec_rest(
         EventScope::YourOtherSourceDamagedOpponent => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card, .. }
-                if state.same_team(*fc, source.controller)
+                if *fc == source.controller
                     && !state.same_team(*p, source.controller)
                     && *from_card != Some(source.id)
         ),
@@ -1267,7 +1264,7 @@ fn event_matches_spec_rest(
         // gated by the trigger's `.with_filter` (typically an opponent's creature).
         EventScope::YouTapped => matches!(
             event,
-            GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, source.controller)
+            GameEvent::PermanentTapped { actor: Some(a), .. } if *a == source.controller
         ),
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == source.controller),
         EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, source.controller),
@@ -1657,7 +1654,7 @@ pub(crate) fn emblem_event_matches(
     }
     match spec.scope {
         EventScope::YourControl | EventScope::SelfSource => {
-            event_actor(state, event).is_some_and(|p| state.same_team(p, controller))
+            event_actor(state, event).is_some_and(|p| p == controller)
         }
         EventScope::OpponentControl => {
             event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
@@ -1665,7 +1662,7 @@ pub(crate) fn emblem_event_matches(
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
         EventScope::YouTapped => matches!(
             event,
-            GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, controller)
+            GameEvent::PermanentTapped { actor: Some(a), .. } if *a == controller
         ),
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == controller),
         EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, controller),

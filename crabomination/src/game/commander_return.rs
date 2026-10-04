@@ -121,6 +121,7 @@ impl GameState {
         // CR 400.7 — a new object in the command zone.
         card.drop_counters_for_zone_change(Zone::Command);
         card.exiled_with = None;
+        card.controller = owner;
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);

@@ -23764,7 +23764,7 @@ impl GameState {
                     // Sigarda / Tamiyo — "spells and abilities your opponents
                     // control can't cause you to sacrifice." Skip a player the
                     // opponent-controlled effect would force.
-                    if p != ctx.controller && self.player_cant_be_made_to_sacrifice(p) {
+                    if !self.same_team(p, ctx.controller) && self.player_cant_be_made_to_sacrifice(p) {
                         continue;
                     }
                     let candidates = self.sacrifice_candidates(p, filter, source_id);

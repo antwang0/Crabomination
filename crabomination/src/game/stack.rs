@@ -8687,6 +8687,8 @@ impl GameState {
             Zone::Library => self.players[owner].library.insert(0, card),
             Zone::Command => {
                 let id = card.id;
+                // CR 408.1 — its owner's zone, so its owner's object.
+                card.controller = owner;
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
                 if self.players[owner].commanders.contains(&id) {

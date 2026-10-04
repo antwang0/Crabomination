@@ -10012,7 +10012,7 @@ impl GameState {
                     stamp_source,
                 } = &sa.effect
                 {
-                    let applies = (!opponents_only || c.controller != owner)
+                    let applies = (!opponents_only || !self.same_team(c.controller, owner))
                         && (!own_only || c.controller == owner)
                         && colors.as_ref().is_none_or(|cs| {
                             card.definition.printed_colors().iter().any(|c| cs.contains(c))
@@ -22869,7 +22869,16 @@ impl GameState {
         returning: crate::card::CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
-        if self.step != crate::TurnStep::DeclareBlockers {
+        // CR 702.49a — "any time an unblocked attacker could be returned":
+        // the declare blockers step and every combat step after it (the
+        // first-strike and regular damage steps and end of combat).
+        if !matches!(
+            self.step,
+            crate::TurnStep::DeclareBlockers
+                | crate::TurnStep::FirstStrikeDamage
+                | crate::TurnStep::CombatDamage
+                | crate::TurnStep::EndCombat
+        ) {
             return Err(GameError::WrongStep { actual: self.step });
         }
         let p = self.player_with_priority();

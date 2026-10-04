@@ -329,6 +329,30 @@ fn cr_903_9b_a_commander_headed_for_the_library_goes_home() {
     }
 }
 
+/// CR 408.1 / 903.9b — a commander in the command zone is its owner's: one
+/// an opponent had stolen goes home under its owner's control. The command-
+/// zone pushes kept the thief as `controller`, which every eminence reader
+/// keys on (The Ur-Dragon's discount, Inalla's "another Wizard you control").
+#[test]
+fn cr_408_1_a_stolen_commander_goes_home_under_its_owner() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(1, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[1].command.iter().position(|c| c.id == cmd).unwrap();
+    let mut card = g.players[1].command.remove(pos);
+    card.controller = 0; // seat 0 has stolen it
+    g.battlefield.push(card);
+    let id = g.add_card_to_hand(0, catalog::chaos_warp());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let home = g.players[1].command.iter().find(|c| c.id == cmd).expect("home");
+    assert_eq!(home.controller, 1, "its owner controls it in the command zone");
+}
+
 /// CR 903.8 — putting a commander onto the battlefield from the command zone
 /// (`Effect::PutCommanderOntoBattlefield`) is not a cast, so it adds no tax;
 /// `ZoneDest::Command` moves a permanent straight back to its owner's command

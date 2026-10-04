@@ -2816,6 +2816,7 @@ impl GameState {
             ZoneDest::Command => {
                 let owner = card.owner;
                 card.exiled_with = None;
+                card.controller = owner;
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
             }

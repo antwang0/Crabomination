@@ -3282,16 +3282,15 @@ fn bot_casts_its_commander_from_the_command_zone() {
 
 // ── Polish: cross-team triggers / optional commander redirect / 2HG mulligan ──
 
-/// CR 810.8 — in 2HG, "whenever you gain life" fires for the
-/// teammate too when the *other* teammate gains life. We can't
-/// observe this directly with the catalog because the resolved
-/// trigger pushes onto the stack and resolves; the cleanest proof
-/// is via the dispatcher's candidate list. Use an inline pinger
-/// with `LifeGained / YourControl` scope, register it on each
-/// teammate, then synthesize a LifeGained event for one teammate
-/// and confirm both pinger triggers stacked.
+/// CR 810.9 — in 2HG, gaining life "happens to each player individually":
+/// life gained by a teammate doesn't trigger your "whenever you gain life"
+/// even though it raised your team's total (Ajani's Pridemate and Sanguine
+/// Bond rulings, 2024). This test used to assert the opposite under a
+/// nonexistent "CR 810.8 'you' fans out to teammates"; the scope matcher
+/// read `YourControl` as same-team. Seat 1's own trigger still fires, and
+/// the other team's never does.
 #[test]
-fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
+fn cr_810_9_a_teammates_life_gain_doesnt_trigger_yours() {
     use crabomination::card::{CardDefinition, CardId, CardType, TriggeredAbility};
     use crabomination::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
 
@@ -3314,9 +3313,6 @@ fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
     let team_a_partner_pinger = g.add_card_to_battlefield(1, pinger("Pinger-A2"));
     let team_b_pinger = g.add_card_to_battlefield(2, pinger("Pinger-B"));
 
-    // Seat 1 gains life. Pre-polish, only seat 1's own pinger
-    // (`team_a_partner_pinger`) would fire. With the CR 810.8 widening
-    // both team-A pingers should fire; team-B's should not.
     g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 1, amount: 1 }]);
 
     let sources: Vec<CardId> = g
@@ -3328,18 +3324,9 @@ fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
         })
         .collect();
 
-    assert!(
-        sources.contains(&team_a_pinger),
-        "seat 0's YourControl trigger should fire when teammate (seat 1) gains life",
-    );
-    assert!(
-        sources.contains(&team_a_partner_pinger),
-        "seat 1's own YourControl trigger should still fire",
-    );
-    assert!(
-        !sources.contains(&team_b_pinger),
-        "seat 2's YourControl trigger must NOT fire — they're an opponent",
-    );
+    assert!(!sources.contains(&team_a_pinger), "a teammate's life gain isn't seat 0's");
+    assert!(sources.contains(&team_a_partner_pinger), "seat 1's own trigger fires");
+    assert!(!sources.contains(&team_b_pinger), "an opponent's never does");
 }
 
 /// CR 903.9a — the move to the command zone is a "may." A scripted decider
@@ -8090,4 +8077,46 @@ fn cr_725_4_the_heir_becoming_monarch_is_an_event() {
     let events = g.concede(1);
     assert_eq!(g.monarch, Some(0));
     assert!(events.iter().any(|e| matches!(e, GameEvent::MonarchChanged { player: 0 })), "{events:?}");
+}
+
+/// CR 102.3 / 810.2 — "your opponents" in a team game is the other team:
+/// a teammate's Grand Arbiter Augustin IV doesn't tax your Lightning Bolt,
+/// an opponent's does; a teammate's Leyline of the Void doesn't exile your
+/// cards bound for the graveyard. The spell taxes (Arbiter, Tithe Taker,
+/// Jubilant Skybonder, Sphinx of New Prahv), Leyline's opponents-only
+/// redirect and Sigarda's "your opponents can't make you sacrifice" all
+/// read `controller != caster`, counting a teammate as an opponent.
+#[test]
+fn cr_102_3_a_teammates_tax_and_leyline_skip_you() {
+    let mut g = multi_player_game(4);
+    g.assign_teams(vec![vec![0, 2], vec![1, 3]]).expect("teams");
+    g.add_card_to_battlefield(2, catalog::grand_arbiter_augustin_iv());
+    g.add_card_to_battlefield(2, catalog::leyline_of_the_void());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("a teammate's Arbiter doesn't tax seat 0's spell");
+    let mut guard = 0;
+    while !g.stack.is_empty() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        guard += 1;
+        assert!(guard < 20, "the bolt never resolved");
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "a teammate's Leyline leaves seat 0's bolt in the graveyard");
+
+    g.priority.player_with_priority = 1;
+    let theirs = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: theirs, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .is_err(), "an opponent's Arbiter taxes seat 1's bolt by {{1}}");
 }

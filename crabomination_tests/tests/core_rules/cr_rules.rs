@@ -7121,6 +7121,36 @@ fn cr_702_49_ninjutsu_entrant_gets_its_enter_counter() {
     );
 }
 
+/// CR 702.49a — ninjutsu works "any time an unblocked attacker could be
+/// returned", not only in the declare blockers step: the rulings allow it
+/// in the first-strike damage step and at end of combat. The gate refused
+/// every step but declare blockers, and before blocks it stays refused.
+#[test]
+fn cr_702_49a_ninjutsu_after_first_strike_damage_and_at_end_of_combat() {
+    for (step, ok) in [
+        (TurnStep::DeclareAttackers, false),
+        (TurnStep::FirstStrikeDamage, true),
+        (TurnStep::EndCombat, true),
+    ] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let kappa = g.add_card_to_hand(0, catalog::kappa_tech_wrecker());
+        g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+        g.step = step;
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let r = g.perform_action(GameAction::Ninjutsu { ninja: kappa, returning: bear });
+        assert_eq!(r.is_ok(), ok, "{step:?}: {r:?}");
+        if ok {
+            drain_stack(&mut g);
+            assert!(g.attack_for(kappa).is_some(), "{step:?}: the ninja is attacking");
+        }
+    }
+}
+
 /// CR 602.2b — mana abilities may be activated while paying a cost, so a
 /// ninjutsu cost auto-taps like every other one. It used to be paid out of
 /// the floating pool alone, which made the ability unreachable for any seat

@@ -1753,7 +1753,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 // Grand Arbiter Augustin IV: opponents' spells cost more (the
                 // controller's own spells are exempt).
                 StaticEffect::OpponentSpellsCostMore { filter, amount }
-                    if src.controller != caster
+                    if !state.same_team(src.controller, caster)
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
                     tax += amount;
@@ -1766,7 +1766,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 // Tithe Taker: on its controller's turn, opponents' spells cost
                 // {amount} more (the controller is exempt).
                 StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }
-                    if src.controller != caster
+                    if !state.same_team(src.controller, caster)
                         && src.controller == state.active_player_idx =>
                 {
                     tax += amount;
@@ -1781,7 +1781,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 // Jubilant Skybonder: opponents' spells targeting a qualifying
                 // permanent the source controls cost {amount} more.
                 StaticEffect::TaxOpponentSpellsTargeting { target_filter, amount }
-                    if src.controller != caster =>
+                    if !state.same_team(src.controller, caster) =>
                 {
                     if let Some(crate::game::Target::Permanent(pid)) = target
                         && let Some(tc) = state.battlefield_find(*pid)
@@ -1811,7 +1811,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 // Sphinx of New Prahv: opponents' spells targeting the Sphinx
                 // itself cost {amount} more.
                 StaticEffect::TaxOpponentSpellsTargetingThis { amount }
-                    if src.controller != caster =>
+                    if !state.same_team(src.controller, caster) =>
                 {
                     if let Some(crate::game::Target::Permanent(pid)) = target
                         && *pid == src.id
