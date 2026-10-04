@@ -8533,6 +8533,31 @@ fn cr_603_6c_exile_and_return_self_is_a_real_leave() {
     );
 }
 
+/// "This turn" is the current, shared turn: a seat's tallies from its own
+/// turn are gone once the next turn begins, not only when its own next turn
+/// does. A non-active seat kept its instants cast, revolt flag and "a card
+/// left your graveyard" count through the whole opposing turn, where
+/// instant-speed and end-step reads saw them.
+#[test]
+fn this_turn_tallies_reset_for_every_seat_at_each_turn() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::End;
+    g.players[1].instants_or_sorceries_cast_this_turn = 2;
+    g.players[1].permanent_left_battlefield_this_turn = true;
+    g.players[1].cards_left_graveyard_this_turn = 3;
+    pass_to_step(&mut g, TurnStep::PreCombatMain);
+    assert_eq!(g.active_player_idx, 0, "seat 0's turn now");
+    assert_eq!(g.players[1].instants_or_sorceries_cast_this_turn, 0);
+    assert!(!g.players[1].permanent_left_battlefield_this_turn);
+    assert_eq!(g.players[1].cards_left_graveyard_this_turn, 0);
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

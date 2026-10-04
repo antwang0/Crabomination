@@ -4872,31 +4872,57 @@ impl GameState {
             if pl.cards_drawn_this_turn != 0 {
                 pl.cards_drawn_this_turn = 0;
             }
+            // The same "this turn" tallies, read at instant speed and in other
+            // players' end steps (a Lorehold "a card left your graveyard this
+            // turn" instant on an opponent's turn, revolt, morbid-style
+            // gates): reset for every seat, or a non-active seat's own last
+            // turn stood through every turn after it. Gated per field: each
+            // write unshares the seat's data.
+            if pl.energy_spent_this_turn != 0 {
+                pl.energy_spent_this_turn = 0;
+            }
+            if pl.cards_left_graveyard_this_turn != 0 || pl.creature_cards_left_graveyard_this_turn != 0 {
+                pl.cards_left_graveyard_this_turn = 0;
+                pl.creature_cards_left_graveyard_this_turn = 0;
+            }
+            if pl.creatures_died_this_turn != 0 {
+                pl.creatures_died_this_turn = 0;
+            }
+            if pl.zuberas_died_this_turn != 0 {
+                pl.zuberas_died_this_turn = 0;
+            }
+            if pl.permanent_left_battlefield_this_turn {
+                pl.permanent_left_battlefield_this_turn = false;
+            }
+            if pl.cards_exiled_this_turn != 0 || pl.cards_discarded_this_turn != 0 {
+                pl.cards_exiled_this_turn = 0;
+                pl.cards_discarded_this_turn = 0;
+            }
+            // Per-spell-type tallies (instants cast on an opponent's turn
+            // count) and the one-shot discounts keyed off them, in lockstep (a
+            // stale `granted_at == 0` entry would otherwise re-match).
+            if pl.instants_or_sorceries_cast_this_turn != 0
+                || pl.greatest_is_mana_value_this_turn != 0
+                || pl.creatures_cast_this_turn != 0
+                || !pl.pending_is_discounts.is_empty()
+                || !pl.pending_spell_discounts.is_empty()
+                || !pl.pending_affinity_next_spell.is_empty()
+            {
+                let pl = &mut **pl;
+                pl.instants_or_sorceries_cast_this_turn = 0;
+                pl.greatest_is_mana_value_this_turn = 0;
+                pl.creatures_cast_this_turn = 0;
+                pl.pending_is_discounts.clear();
+                pl.pending_spell_discounts.clear();
+                pl.pending_affinity_next_spell.clear();
+            }
         }
-        {
-            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
-            // so each write below was its own `Arc::make_mut`.
-            let me = &mut *self.players[p];
-            me.last_drawn_card = None;
-            // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
-            me.energy_spent_this_turn = 0;
-            // Reset the "cards left your graveyard this turn" tally; powers
-            // Lorehold "if a card left your graveyard this turn" payoffs
-            // (Living History, Primary Research, Wilt in the Heat) per turn.
-            me.cards_left_graveyard_this_turn = 0;
-            me.creature_cards_left_graveyard_this_turn = 0;
-            // Reset the "creatures died under your control this turn" tally;
-            // powers Witherbloom "if a creature died under your control this
-            // turn" end-step payoffs (Essenceknit Scholar).
-            me.creatures_died_this_turn = 0;
+        if self.players[p].last_drawn_card.is_some() {
+            self.players[p].last_drawn_card = None;
         }
         if !self.deaths.creature_deaths_this_turn.is_empty() {
             self.deaths.creature_deaths_this_turn.clear();
         }
-        self.players[p].zuberas_died_this_turn = 0;
-        // Reset the Revolt (CR 702.139) "permanent left the battlefield under
-        // your control this turn" flag for the active player.
-        self.players[p].permanent_left_battlefield_this_turn = false;
         // EOE Void — reset the game-wide "a nonland permanent left this turn"
         // flag at the turn boundary.
         self.nonland_permanent_left_bf_this_turn = false;
@@ -4904,11 +4930,6 @@ impl GameState {
         if matches!(self.temporary_attack_direction, Some((_, s)) if s == p) {
             self.temporary_attack_direction = None;
         }
-        // Reset the "cards exiled this turn" tally; powers Strixhaven
-        // "if one or more cards were put into exile this turn" payoffs
-        // (Ennis the Debate Moderator) per turn.
-        self.players[p].cards_exiled_this_turn = 0;
-        self.players[p].cards_discarded_this_turn = 0;
         // CR 609.4b — North Star's permission lasts the turn, for every seat
         // that was granted one.
         for pl in self.players.iter_mut() {
@@ -4922,24 +4943,10 @@ impl GameState {
         // casts). These refine `spells_cast_this_turn` for cards that
         // need exact-type filtering (Potioner's Trove "instant or
         // sorcery only" gate, future Magecraft variants).
-        {
-            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
-            // so each write below was its own `Arc::make_mut`.
-            let me = &mut *self.players[p];
-            me.instants_or_sorceries_cast_this_turn = 0;
-            me.greatest_is_mana_value_this_turn = 0;
-            // One-shot IS-spell discounts are keyed off that tally, so they must
-            // be cleared in lockstep with it (a stale `granted_at == 0` entry
-            // would otherwise re-match after the reset).
-            me.pending_is_discounts.clear();
-            me.pending_spell_discounts.clear();
-            if !me.pending_affinity_next_spell.is_empty() {
-                me.pending_affinity_next_spell.clear();
-            }
-            me.creatures_cast_this_turn = 0;
-            // Clear Teferi, Time Raveler's "you may cast sorceries as though they
-            // had flash" flag — it expires on the start of your next turn.
-            me.sorceries_as_flash = false;
+        // Clear Teferi, Time Raveler's "you may cast sorceries as though they
+        // had flash" flag — it expires on the start of your next turn.
+        if self.players[p].sorceries_as_flash {
+            self.players[p].sorceries_as_flash = false;
         }
         // Clear "this turn" lifegain locks across **every player** — CR
         // "this turn" means the current turn, so a Skullcrack-style
