@@ -32925,6 +32925,8 @@ fn static_effect_to_effects(
             // Read at `apply_etb_type_riders`, which installs its own layer-4
             // effect on the entrant.
             | StaticEffect::OtherCreaturesEnterAsAdditionalType { .. }
+            // Read at `game::as_enters`, which runs its effect on the entrant.
+            | StaticEffect::MatchingEntersWith { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).

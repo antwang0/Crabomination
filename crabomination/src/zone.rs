@@ -855,6 +855,7 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
                 | S::MatchingEntersWithCountersPer { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
                 | S::OtherCreaturesEnterAsAdditionalType { .. }
+                | S::MatchingEntersWith { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
                 | S::ExtraEtbCountersForCreatureCasts { .. }

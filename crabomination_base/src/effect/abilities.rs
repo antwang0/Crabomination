@@ -2598,6 +2598,11 @@ pub enum StaticEffect {
     /// `apply_etb_type_riders` beside `chosen_type_etb_counter_specs`, at the
     /// same three entry sites; the type is an indefinite layer-4 addition.
     OtherCreaturesEnterAsAdditionalType { creature_type: crate::card::CreatureType },
+    /// CR 614.12 — "As a [filter] permanent you control enters, [effect]":
+    /// `effect` runs on the entrant (`Selector::Target(0)`) inside the
+    /// battlefield hop, from `game::as_enters` on every entry path (Displaced
+    /// Dinosaurs' 7/7 Dinosaur). Never applies to its own source.
+    MatchingEntersWith { filter: SelectionRequirement, effect: Box<crate::effect::Effect> },
     /// Arwen, Weaver of Hope — each other creature you control enters with
     /// that many more `kind` counters as the source's live toughness.
     OtherCreaturesEnterWithCountersEqualToSourceToughness { kind: CounterType },

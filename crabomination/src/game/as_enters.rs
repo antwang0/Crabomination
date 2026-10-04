@@ -47,6 +47,40 @@ impl GameState {
         }
         self.apply_unleash(card_id);
         self.apply_riot(card_id);
+        self.apply_matching_enters_with(card_id);
+    }
+
+    /// CR 614.12 — each `StaticEffect::MatchingEntersWith` of the entrant's
+    /// controller whose filter it matches runs its effect on it, in
+    /// battlefield order. Behind the ETB-counter lane, clear on almost every
+    /// board.
+    fn apply_matching_enters_with(&mut self, card_id: CardId) {
+        use crate::effect::StaticEffect;
+        if !self.battlefield.has_etb_counter_static() {
+            return;
+        }
+        let Some(ctrl) = self.battlefield.find_by_id(card_id).map(|c| c.controller) else { return };
+        let target = crate::game::Target::Permanent(card_id);
+        let mut runs = Vec::new();
+        for src in &self.battlefield {
+            if src.controller != ctrl || src.id == card_id {
+                continue;
+            }
+            for sa in &src.definition.static_abilities {
+                let Some(StaticEffect::MatchingEntersWith { filter, effect }) = self.active_static(&sa.effect, src)
+                else {
+                    continue;
+                };
+                if self.evaluate_requirement_static(filter, &target, ctrl, Some(src.id)) {
+                    runs.push((src.id, (**effect).clone()));
+                }
+            }
+        }
+        for (src, effect) in runs {
+            let mut ctx = crate::game::effects::EffectContext::for_ability(src, ctrl, Some(target.clone()));
+            ctx.targets = vec![target.clone()];
+            let _ = self.resolve_as_enters_driven(&effect, &ctx);
+        }
     }
 
     /// How many instances of `kw` the entering permanent has, printed or
