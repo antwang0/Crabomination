@@ -1315,10 +1315,16 @@ fn karoo(name: &'static str, a: Color, b: Color) -> CardDefinition {
         }],
         static_abilities: vec![super::super::enters_tapped()],
         triggered_abilities: vec![
-            etb(Effect::Move {
-                what: target_filtered(R::Land.and(R::ControlledByYou)),
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-            }),
+            // "Return a land you control" is chosen as it resolves, not
+            // targeted: it can't fizzle, and the Karoo itself is a legal pick.
+            etb(crate::effect::shortcut::choose_one_then(
+                Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                PlayerRef::You,
+                Effect::Move {
+                    what: crate::effect::shortcut::chosen_one(),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+            )),
         ],
         ..Default::default()
     }

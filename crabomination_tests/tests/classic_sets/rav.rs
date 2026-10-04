@@ -73,6 +73,17 @@ fn bounce_land_enters_tapped_and_bounces() {
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "returned a land to hand");
 }
 
+/// CR 115.10 — "return a land you control" doesn't target, so it's chosen
+/// as it resolves:
+/// with no other land, the Aqueduct returns itself.
+#[test]
+fn bounce_land_with_no_other_land_returns_itself() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::dimir_aqueduct());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Dimir Aqueduct"));
+}
+
 /// Benevolent Ancestor's tap prevents the next 1 damage to a chosen target.
 #[test]
 fn benevolent_ancestor_prevents_one_damage() {
