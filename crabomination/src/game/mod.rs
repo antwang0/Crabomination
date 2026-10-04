@@ -6534,13 +6534,13 @@ impl GameState {
         // "you gain that much plus N" replacement (Honor Troll). Folded in
         // before the gain applies so the bonus counts toward
         // `life_gained_this_turn` and any downstream lifegain triggers.
+        // CR 616.1 — the gaining player orders the "plus N" (Angel of
+        // Vitality) and the doublers (Boon Reflection, Rhox Faithmender); the
+        // bonus first is never worse: (n + b) x m >= n x m + b.
         let delta = if delta > 0 {
-            delta.saturating_mul(self.life_gain_multiplier_now(seat))
-        } else {
             delta
-        };
-        let delta = if delta > 0 {
-            delta.saturating_add(self.life_gain_bonus_now(seat))
+                .saturating_add(self.life_gain_bonus_now(seat))
+                .saturating_mul(self.life_gain_multiplier_now(seat))
         } else {
             delta
         };

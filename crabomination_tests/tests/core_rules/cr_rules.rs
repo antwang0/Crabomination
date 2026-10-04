@@ -6708,17 +6708,20 @@ fn cr_103_4_above_starting_reads_actual_starting_life() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel"), "Angel made at +7");
 }
 
-/// CR 614 / 119.10 — a life-gain multiplier applies before an additive bonus,
-/// and neither applies to a gain of 0 (no life-gain event occurs).
+/// CR 616.1 / 119.10 — the gaining player orders a life-gain multiplier and
+/// an additive bonus (Alhammarret's Archive's 2015-06-22 ruling: "the player
+/// … chooses the order"), and bonus-first is never worse; neither applies to
+/// a gain of 0 (no life-gain event occurs). This test once asserted a fixed
+/// multiplier-first order (7).
 #[test]
-fn cr_614_life_gain_multiplier_precedes_bonus() {
+fn cr_616_1_life_gain_bonus_then_multiplier() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::rhox_faithmender()); // x2
     g.add_card_to_battlefield(0, catalog::angel_of_vitality()); // +1
     let life = g.players[0].life;
-    // 3 → ×2 = 6 → +1 = 7.
+    // 3 → +1 = 4 → ×2 = 8.
     g.adjust_life(0, 3);
-    assert_eq!(g.players[0].life, life + 7, "multiplier then bonus");
+    assert_eq!(g.players[0].life, life + 8, "bonus then multiplier");
     // A gain of 0 is not a gain — the replacements leave it at 0 (CR 119.10).
     let now = g.players[0].life;
     g.adjust_life(0, 0);
