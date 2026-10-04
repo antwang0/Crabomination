@@ -1033,19 +1033,20 @@ impl SecondPass {
                     g.card_type_filtered = true
                 }
                 AffectedPermanents::CardMatch { requirement, .. } => {
-                    g.card_type_filtered |= requirement_reads_card_type(requirement);
-                    g.type_lord |= requirement_reads_creature_type(requirement);
+                    // One walk for the four leaf families a pass 2 can feed.
+                    let bits = requirement_leaf_bits(requirement);
+                    g.card_type_filtered |= bits & leaf::CARD_TYPE != 0;
+                    g.type_lord |= bits & leaf::CREATURE_TYPE != 0;
+                    g.color_filtered |= bits & leaf::COLOR != 0;
+                    g.keyword_filtered |= bits & leaf::KEYWORD != 0;
                 }
                 _ => {}
             }
             g.color_filtered |= match &e.affected {
                 AffectedPermanents::All { color, colorless, .. } => color.is_some() || *colorless,
                 AffectedPermanents::AllOpponents { color, .. } => color.is_some(),
-                AffectedPermanents::CardMatch { requirement, .. } => requirement_reads_color(requirement),
                 _ => false,
             };
-            g.keyword_filtered |= matches!(&e.affected,
-                AffectedPermanents::CardMatch { requirement, .. } if requirement_reads_keyword(requirement));
             match e.modification {
                 Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
                 // CR 702.73a — a granted changeling makes the bearer every type.
@@ -1397,7 +1398,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, effects, card, gates) {
+            if affects(e, effects, card, &gates) {
                 sorted.push(e);
             }
         }
@@ -1669,7 +1670,7 @@ fn affects(
     effect: &ContinuousEffect,
     all: &[ContinuousEffect],
     card: &crate::card::CardInstance,
-    gates: Gates,
+    gates: &Gates,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
     // had there in every later layer, and that set was fixed before layer 4
@@ -1693,7 +1694,7 @@ fn affects(
         }
         _ => gates.card_types,
     };
-    affected_includes_gated(&effect.affected, effect.source, card, Gates { card_types: gate_card_types, ..gates })
+    affected_includes_gated(&effect.affected, effect.source, card, &Gates { card_types: gate_card_types, ..*gates })
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -1710,7 +1711,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Gates { power: Some(printed_power), ..Gates::PRINTED })
+    affected_includes_gated(affected, source, card, &Gates { power: Some(printed_power), ..Gates::PRINTED })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1718,7 +1719,7 @@ fn affected_includes_gated(
     affected: &AffectedPermanents,
     source: CardId,
     card: &crate::card::CardInstance,
-    gates: Gates,
+    gates: &Gates,
 ) -> bool {
     let Gates {
         power: gate_power,
@@ -1727,7 +1728,7 @@ fn affected_includes_gated(
         changeling: changeling_types,
         colors: gate_colors,
         keywords: gate_keywords,
-    } = gates;
+    } = *gates;
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
     let colors = || gate_colors.unwrap_or_else(|| card.definition.printed_color_set());
     match affected {
@@ -1851,20 +1852,6 @@ fn affected_includes_gated(
     }
 }
 
-/// True when `req` has a card-type leaf — the ones
-/// [`requirement_matches_card_typed`] reads from the computed types.
-fn requirement_reads_card_type(req: &SelectionRequirement) -> bool {
-    use SelectionRequirement as R;
-    match req {
-        R::Creature | R::Artifact | R::Enchantment | R::Planeswalker | R::Land | R::Nonland | R::Noncreature => true,
-        // An outlaw is a creature (CR 613.8 — an animated Assassin Treasure).
-        R::HasCardType(_) | R::IsOutlaw => true,
-        R::And(a, b) | R::Or(a, b) => requirement_reads_card_type(a) || requirement_reads_card_type(b),
-        R::Not(inner) => requirement_reads_card_type(inner),
-        _ => false,
-    }
-}
-
 /// True when `req`'s every leaf is computable from a card's *printed*
 /// characteristics alone (type/supertype/subtype/color/token/controller and
 /// boolean combinations) — i.e. no power/toughness, combat, counter, or zone
@@ -1968,39 +1955,32 @@ pub(crate) fn requirement_matches_card(
     requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None, None, None)
 }
 
-/// True when `req` has a keyword leaf — the ones
-/// [`requirement_matches_card_typed`] reads from the computed keywords.
-fn requirement_reads_keyword(req: &SelectionRequirement) -> bool {
-    use SelectionRequirement as R;
-    match req {
-        R::HasKeyword(_) => true,
-        R::And(a, b) | R::Or(a, b) => requirement_reads_keyword(a) || requirement_reads_keyword(b),
-        R::Not(inner) => requirement_reads_keyword(inner),
-        _ => false,
-    }
+/// The leaf families of a requirement a CR 613.8 second pass reads from the
+/// computed view (`requirement_leaf_bits`).
+mod leaf {
+    pub const CARD_TYPE: u8 = 1;
+    pub const CREATURE_TYPE: u8 = 2;
+    pub const COLOR: u8 = 4;
+    pub const KEYWORD: u8 = 8;
 }
 
-/// True when `req` has a color leaf — the ones
-/// [`requirement_matches_card_typed`] reads from the computed colors.
-fn requirement_reads_color(req: &SelectionRequirement) -> bool {
+/// Which of [`requirement_matches_card_typed`]'s computed-view leaf families
+/// `req` reads: card type, creature type, color, keyword.
+fn requirement_leaf_bits(req: &SelectionRequirement) -> u8 {
     use SelectionRequirement as R;
     match req {
-        R::HasColor(_) | R::Colorless | R::Multicolored | R::Monocolored => true,
-        R::And(a, b) | R::Or(a, b) => requirement_reads_color(a) || requirement_reads_color(b),
-        R::Not(inner) => requirement_reads_color(inner),
-        _ => false,
-    }
-}
-
-/// True when `req` has a creature-type leaf — the ones
-/// [`requirement_matches_card_typed`] reads from the computed types.
-fn requirement_reads_creature_type(req: &SelectionRequirement) -> bool {
-    use SelectionRequirement as R;
-    match req {
-        R::HasCreatureType(_) | R::IsOutlaw => true,
-        R::And(a, b) | R::Or(a, b) => requirement_reads_creature_type(a) || requirement_reads_creature_type(b),
-        R::Not(inner) => requirement_reads_creature_type(inner),
-        _ => false,
+        R::Creature | R::Artifact | R::Enchantment | R::Planeswalker | R::Land | R::Nonland | R::Noncreature => {
+            leaf::CARD_TYPE
+        }
+        R::HasCardType(_) => leaf::CARD_TYPE,
+        // An outlaw is a creature (CR 613.8 — an animated Assassin Treasure).
+        R::IsOutlaw => leaf::CARD_TYPE | leaf::CREATURE_TYPE,
+        R::HasCreatureType(_) => leaf::CREATURE_TYPE,
+        R::HasColor(_) | R::Colorless | R::Multicolored | R::Monocolored => leaf::COLOR,
+        R::HasKeyword(_) => leaf::KEYWORD,
+        R::And(a, b) | R::Or(a, b) => requirement_leaf_bits(a) | requirement_leaf_bits(b),
+        R::Not(inner) => requirement_leaf_bits(inner),
+        _ => 0,
     }
 }
 
