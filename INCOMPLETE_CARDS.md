@@ -425,16 +425,13 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 
 | Card | Residual | Why |
 |---|---|---|
-| Avarice Amulet | "whenever equipped creature dies, target opponent gains control of this Equipment" is absent | an `EquipBonus` trigger runs on the creature and has no selector for the granting Equipment |
 | Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
 | Party Thrasher | noncreature spells cast from exile lack convoke; the impulse grants both exiled cards, not the chosen one | no convoke grant by cast zone; `ExileTopAndGrantMayPlay` has no choose-one |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
 | Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |
-| Rootwater Matriarch | the steal is permanent, not "for as long as that creature is enchanted" | no `GainControlWhile` keyed to the target's auras |
 | Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
 | Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
-| Invasion of Amonkhet | Lazotep Convert doesn't enter as a copy of a graveyard creature card | a transformed battle's back face has no enters-as-copy path |
 | Sunscourge Champion | eternalize's "Discard a card" additional cost isn't paid | the `eternalize` shortcut carries a mana cost only |
 | Towering-Wave Mystic | mills only on combat damage, and mills the damaged player rather than a chosen target player | `DealsDamage*` binds slot 0 to the damaged object, so "target player" has no free slot |
 | Enter the Infinite | "until your next turn, you have no maximum hand size" lasts the rest of the game | no timed no-max-hand-size effect |
@@ -1384,8 +1381,8 @@ catalog scan; triaging a column used to be thirty scans of the same data.
 Six of the seven `decks/modern.rs` rows are training-pool cards, which is
 the column's point: the pool the nets learn on had a -2/-2 Languish and a
 half-strength Searing Wind. Residue, 64 rows, each an approximation a doc
-already names (multi-target "up to N" collapsed to one slot: Conduct
-Electricity, Trick Shot, Heartless Act's counters, Secret Tunnel; a
+already names (multi-target "up to N" collapsed to one slot: ~~Conduct
+Electricity, Trick Shot~~ (slot groups, `01WwQaPJ`), Heartless Act's counters, Secret Tunnel; a
 missing conditional branch: Systems Override's counters, The Necrobloom's
 Zombie, Agency Coroner's suspect, Paroxysm's pump; an alternative or
 additional cost the engine does not price: Bitter Triumph, Redirect
@@ -1728,7 +1725,7 @@ each: Touch the Spirit Realm's channel (the discard-activated body cannot
 target), Gideon's Company once a name-prefix requirement exists, Hauntwoods
 Shrieker, Eladamri, Pinnacle Starcage, Rydia, ~~Diviner's Wand~~, Urborg
 Panther, Tephraderm's spell half, ~~Skophos Maze-Warden~~, ~~Shieldmage
-Elder~~, Iroh, Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
+Elder~~, ~~Iroh~~ (`01WwQaPJ`), Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
 reveal and Severance Priest's Spirit shipped the same day, with
 `LastDamagerOf` returning a departed damager — a resolved spell — as a card
 ref; Barret's begin-combat attach the day after). **Three shipped 2026-09-11

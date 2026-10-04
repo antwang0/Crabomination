@@ -3289,6 +3289,15 @@ fourth stretch   --bench byte-identical after each bot pick and the token
 fifth stretch    --bench byte-identical; pods 91804/6 x 1,500 decided; strict
                  debug 6 seats + concessions every deck (283) clean; suite
                  24,083 / 0 / 5; clippy 0
+seventh stretch  the universal move path now runs `apply_enters_as_copy` (a
+                 `battlefield.find_by_id` + a `None` spec read per entry);
+                 `TapUpToValue` records its picks (a guarded `scratch` store,
+                 CoW-safe); `TempControl.while_matches` swept beside
+                 `while_counter`. --bench 196,176 / 27.64 / 613.0 / 0 stalls
+                 byte-identical, determinism ok; pods 93301/93401/93601/93801
+                 x 300 + every deck 6 seats x 40 (94001+, 31 groups) = 2,440
+                 games, all decided, zero panics; suite 24,107 / 0 / 5;
+                 clippy 0; `cargo check --profile release-fast` clean
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
