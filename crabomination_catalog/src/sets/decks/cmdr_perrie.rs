@@ -181,26 +181,20 @@ pub fn aven_courier() -> CardDefinition {
     }
 }
 
-/// Aven Mimeomancer — each upkeep it may make a creature a 3/1 flier with a
-/// feather counter. Residual: the effect lasts while Mimeomancer does.
+/// Aven Mimeomancer — each upkeep it may make a creature a 3/1 flier for as
+/// long as it has the feather counter it puts on it (CR 611.2c).
 pub fn aven_mimeomancer() -> CardDefinition {
-    let feathered = || Selector::EachPermanent(R::Creature.and(R::WithCounter(CounterType::Feather)));
+    let feather = Duration::WhileHasCounter(CounterType::Feather);
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_upkeep(Effect::MayDo {
             description: "Put a feather counter on target creature?".into(),
-            body: Box::new(counter(target_filtered(R::Creature), CounterType::Feather)),
+            body: Box::new(Effect::Seq(vec![
+                counter(target_filtered(R::Creature), CounterType::Feather),
+                Effect::SetBasePT { what: Selector::Target(0), power: Value::Const(3), toughness: Value::Const(1), duration: feather },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: feather },
+            ])),
         })],
-        static_abilities: vec![
-            StaticAbility {
-                description: "A creature with a feather counter has base power and toughness 3/1.",
-                effect: StaticEffect::SetBasePtForFilter { applies_to: feathered(), power: 3, toughness: 1 },
-            },
-            StaticAbility {
-                description: "A creature with a feather counter has flying.",
-                effect: StaticEffect::GrantKeyword { applies_to: feathered(), keyword: Keyword::Flying },
-            },
-        ],
         ..creature(
             "Aven Mimeomancer",
             cost(&[generic(1), w(), u()]),

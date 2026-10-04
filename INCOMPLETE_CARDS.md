@@ -1991,7 +1991,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
 | 🟡 Hedonist's Trove | Merciless Rage (C19) | no one-spell-a-turn cap, and the exiled cards stay playable after the Trove leaves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells, activated abilities and turning face up; not a mana ability's cost or the other special-action costs (cycling, ward). |
-| 🟡 Aven Mimeomancer | Bedecked Brokers (NCC) | the 3/1 flier is a static over every creature with a feather counter, so it ends when Mimeomancer leaves. |
 | 🟡 Littjara Mirrorlake | Bedecked Brokers (NCC) | the extra +1/+1 counter is put on the copy after it enters. |
 | 🟡 Skyship Plunderer | Bedecked Brokers (NCC) | a player target gets one more energy, experience or poison counter each; other player counters aren't read. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
@@ -2012,7 +2011,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | its two modes are two abilities (same cost and timing; nothing in the pod reads the difference). |
-| 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |

@@ -305,16 +305,27 @@ fn park_heights_maverick_proliferates_on_death() {
     assert_eq!(counters(&g, bear, CounterType::PlusOnePlusOne), 2);
 }
 
-/// Aven Mimeomancer's feather counter makes a creature a 3/1 flier.
+/// CR 611.2c — Aven Mimeomancer's feather makes a creature a 3/1 flier for
+/// as long as it has a feather counter: Mimeomancer leaving doesn't end it,
+/// losing the counter does.
 #[test]
 fn aven_mimeomancer_feathers_a_creature() {
     let mut g = main_phase(2);
-    g.add_card_to_battlefield(0, catalog::aven_mimeomancer());
+    let mimeo = g.add_card_to_battlefield(0, catalog::aven_mimeomancer());
     let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
-    g.battlefield_find_mut(wurm).unwrap().add_counters(CounterType::Feather, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let effect = catalog::aven_mimeomancer().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(mimeo, 0, Some(Target::Permanent(wurm)));
+    ctx.targets = vec![Target::Permanent(wurm)];
+    g.resolve_effect(&effect, &ctx).expect("resolves");
+    g.destroy_permanent(mimeo, false, &mut Vec::new());
+    g.check_state_based_actions();
     let cp = g.computed_permanent(wurm).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 1));
     assert!(cp.keywords().contains(&Keyword::Flying));
+    g.battlefield_find_mut(wurm).unwrap().remove_counters(CounterType::Feather, 1);
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 6, "the feather is gone");
 }
 
 /// Perrie's attack pumps by the kinds of counters you have (three) with

@@ -367,6 +367,17 @@ fn xolatoyac_floods_and_untaps() {
     g.battlefield_find_mut(land).unwrap().tapped = true;
     step(&mut g, TurnStep::End);
     assert!(!g.battlefield_find(land).unwrap().tapped);
+    // CR 611.2c — the Island lasts while the flood counter does, not while
+    // Xolatoyac does.
+    g.destroy_permanent(x, false, &mut Vec::new());
+    g.check_state_based_actions();
+    let island = |g: &GameState| {
+        g.computed_permanent(land).unwrap().subtypes().land_types.contains(&crabomination::card::LandType::Island)
+    };
+    assert!(island(&g), "Xolatoyac gone, the land is still an Island");
+    g.battlefield_find_mut(land).unwrap().remove_counters(CounterType::Flood, 1);
+    g.check_state_based_actions();
+    assert!(!island(&g), "the flood counter is gone");
 }
 
 /// Bygone Marvels — returns a permanent card and exiles itself.

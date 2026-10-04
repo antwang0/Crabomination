@@ -511,20 +511,20 @@ pub fn wave_goodbye() -> CardDefinition {
 }
 
 /// Xolatoyac, the Smiling Flood — entering or attacking puts a flood counter
-/// on target land (an Island while it has one); at your end step, untap each
-/// permanent you control with a counter. Residual: The Island type ends with
-/// Xolatoyac.
+/// on target land, an Island for as long as it has one (CR 611.2c); at your
+/// end step, untap each permanent you control with a counter.
 pub fn xolatoyac_the_smiling_flood() -> CardDefinition {
-    let flood = || Effect::AddCounter { what: target_filtered(R::Land), kind: CounterType::Flood, amount: Value::ONE };
-    CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "Each land with a flood counter on it is an Island in addition to its other types.",
-            effect: StaticEffect::LandTypeChanger {
-                applies_to: Selector::EachPermanent(R::Land.and(R::WithCounter(CounterType::Flood))),
+    let flood = || {
+        Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Land), kind: CounterType::Flood, amount: Value::ONE },
+            Effect::GainLandType {
+                what: Selector::Target(0),
                 land_type: LandType::Island,
-                replace: false,
+                duration: crate::effect::Duration::WhileHasCounter(CounterType::Flood),
             },
-        }],
+        ])
+    };
+    CardDefinition {
         triggered_abilities: vec![
             etb(flood()),
             on_attack(flood()),
