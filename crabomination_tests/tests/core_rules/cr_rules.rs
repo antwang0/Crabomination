@@ -8308,6 +8308,63 @@ fn cr_701_47_amass_army_takes_the_token_multipliers() {
     assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+/// CR 616.1 / 614.16 — Xorn's "those tokens plus an additional Treasure"
+/// and Doubling Season both apply; the controller orders them, and the rider
+/// first gives 2 × (1 + 1) = 4. The rider was minted after the doubling (3).
+#[test]
+fn cr_616_1_xorn_rider_applies_before_doubling_season() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doubling_season());
+    g.add_card_to_battlefield(0, catalog::xorn());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: std::sync::Arc::new(crabomination::game::effects::treasure_token()),
+    }, &ctx).unwrap();
+    let treasures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 4);
+}
+
+/// CR 119.9 / 614 — Tainted Remedy turns a lifelink gain into a loss, and
+/// that loss is a "loses life" event (Exquisite Blood's trigger). The
+/// lifelink paths emitted `LifeGained` only, so a converted gain fired
+/// nothing.
+#[test]
+fn cr_119_tainted_remedy_lifelink_loss_is_heard() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::tainted_remedy());
+    let hawk = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(hawk, 0, None);
+    let events = g
+        .resolve_effect(&Effect::DealDamage { to: Selector::Player(PlayerRef::Seat(1)), amount: Value::Const(2) }, &ctx)
+        .unwrap();
+    assert_eq!(g.players[0].life, 18, "the lifelink gain became a loss");
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::LifeLost { player: 0, amount: 2 })),
+        "the converted gain is a LifeLost event: {events:?}"
+    );
+}
+
+/// CR 119.5 — Lich's Mirror's "your life total becomes 20" is a gain of the
+/// difference, so an opponent's Tainted Remedy turns it into a loss of 20.
+/// (A doubler of one's own is shuffled away with the rest of one's
+/// permanents first.) The replacement wrote 20 raw.
+#[test]
+fn cr_119_5_lichs_mirror_reset_is_a_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lichs_mirror());
+    g.add_card_to_battlefield(1, catalog::tainted_remedy());
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].life, -20, "the reset's gain of 20 became a loss of 20");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

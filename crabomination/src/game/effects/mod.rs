@@ -3224,37 +3224,41 @@ impl GameState {
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id))
                 .any(|c| c.controller == p && c.definition.name == "Treasure");
-            let riders: Vec<(crate::card::TokenDefinition, usize)> = self
+            // `true` marks a flat "+1": CR 616.1 lets `p` apply it before
+            // the multipliers, so it is scaled like any other mint (Xorn +
+            // Doubling Season: 2(n+1)). Chatterfang's "that many" already
+            // reads the doubled count, and either order gives the same.
+            let riders: Vec<(crate::card::TokenDefinition, usize, bool)> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
                 .flat_map(|c| c.definition.static_abilities.iter())
                 .filter_map(|sa| match &sa.effect {
                     crate::effect::StaticEffect::TokenCreationAddsToken { definition } => {
-                        Some((definition.clone(), 1))
+                        Some((definition.clone(), 1, true))
                     }
                     crate::effect::StaticEffect::TokenCreationAddsTokenPerToken {
                         definition,
-                    } => Some((definition.clone(), minted_count)),
+                    } => Some((definition.clone(), minted_count, false)),
                     crate::effect::StaticEffect::ArtifactTokenCreationAddsToken { definition }
                         if minted_artifact =>
                     {
-                        Some((definition.clone(), 1))
+                        Some((definition.clone(), 1, true))
                     }
                     crate::effect::StaticEffect::TreasureCreationAddsTreasure if minted_treasure => {
-                        Some((crabomination_base::tokens::treasure_token(), 1))
+                        Some((crabomination_base::tokens::treasure_token(), 1, true))
                     }
                     _ => None,
                 })
                 .collect();
-            for (def, count) in riders {
-                for _ in 0..count {
-                    self.mint_token_onto_battlefield(
-                        token_card_arc(&def),
-                        p,
-                        false,
-                        &mut events,
-                    );
+            for (def, count, scaled) in riders {
+                let def = token_card_arc(&def);
+                if scaled {
+                    self.mint_tokens_scaled(def, p, count as u32, false, &mut events);
+                } else {
+                    for _ in 0..count {
+                        self.mint_token_onto_battlefield(def.clone(), p, false, &mut events);
+                    }
                 }
             }
         }
@@ -8937,13 +8941,7 @@ impl GameState {
                         // CR 119.10 — the event carries the APPLIED amount
                         // (post replacement/bonus); a fully-replaced gain
                         // fires no lifegain trigger.
-                        let applied = self.adjust_life_applied(p, amt as i32);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                        } else if applied < 0 {
-                            // Tainted Remedy turned the gain into a loss.
-                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                        }
+                        self.adjust_life_emit(p, amt as i32, events);
                     }
                 }
                 Ok(())
@@ -9258,12 +9256,7 @@ impl GameState {
                         // the difference, so replacements (cannot-gain,
                         // Tainted Remedy) apply through the life funnel.
                         let delta = new_total - self.effective_life(p);
-                        let applied = self.adjust_life_applied(p, delta);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                        } else if applied < 0 {
-                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                        }
+                        self.adjust_life_emit(p, delta, events);
                     }
                 }
                 self.check_state_based_actions_mid_resolution(events);
@@ -9287,12 +9280,7 @@ impl GameState {
                     for (p, new_total, old) in [(pa, lb, la), (pb, la, lb)] {
                         // CR 119.7 — the exchange is a gain/loss of the
                         // difference; route it through the life funnel.
-                        let applied = self.adjust_life_applied(p, new_total - old);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                        } else if applied < 0 {
-                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                        }
+                        self.adjust_life_emit(p, new_total - old, events);
                     }
                     self.check_state_based_actions_mid_resolution(events);
                 }
@@ -9448,12 +9436,7 @@ impl GameState {
                 }
                 for ent in self.resolve_selector(to, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        let applied = self.adjust_life_applied(p, amt as i32);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                        } else if applied < 0 {
-                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                        }
+                        self.adjust_life_emit(p, amt as i32, events);
                     }
                 }
                 self.check_state_based_actions_mid_resolution(events);
@@ -9476,12 +9459,7 @@ impl GameState {
                 if lost > 0 {
                     for ent in self.resolve_selector(to, ctx) {
                         if let EntityRef::Player(p) = ent {
-                            let applied = self.adjust_life_applied(p, lost);
-                            if applied > 0 {
-                                events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                            } else if applied < 0 {
-                                events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                            }
+                            self.adjust_life_emit(p, lost, events);
                         }
                     }
                 }
@@ -14116,13 +14094,7 @@ impl GameState {
                     .collect();
                 for (cid, controller, mv) in victims {
                     if self.destroy_permanent(cid, true, events) && mv > 0 {
-                        let applied = self.adjust_life_applied(controller, mv);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained {
-                                player: controller,
-                                amount: applied as u32,
-                            });
-                        }
+                        self.adjust_life_emit(controller, mv, events);
                     }
                 }
                 Ok(())
@@ -18670,10 +18642,7 @@ impl GameState {
                 };
                 let n = chosen.iter().filter(|c| spell_colors.contains(c)).count() as i32;
                 if n > 0 {
-                    let applied = self.adjust_life_applied(ctx.controller, n);
-                    if applied > 0 {
-                        events.push(GameEvent::LifeGained { player: ctx.controller, amount: applied as u32 });
-                    }
+                    self.adjust_life_emit(ctx.controller, n, events);
                 }
                 Ok(())
             }
@@ -29028,12 +28997,7 @@ impl GameState {
                     }
                     self.shuffle_library(p, events);
                     if moved > 0 {
-                        let applied = self.adjust_life_applied(p, moved);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-                        } else if applied < 0 {
-                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
-                        }
+                        self.adjust_life_emit(p, moved, events);
                     }
                 }
                 Ok(())

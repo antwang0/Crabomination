@@ -29,7 +29,10 @@ impl GameState {
         };
         self.remove_from_battlefield_to_exile(id);
         self.players[p].pending_deck_loss = false;
-        self.players[p].life = 1;
+        // CR 119.5 — "your life total becomes 1" is a gain of the difference,
+        // through the CR 119 funnel.
+        let delta = 1 - self.effective_life(p);
+        self.adjust_life_applied(p, delta);
         true
     }
 }

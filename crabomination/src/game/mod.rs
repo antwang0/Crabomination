@@ -171,6 +171,7 @@ mod lose_control;
 mod stack_ability;
 mod retarget_any;
 mod token_batch;
+mod life_events;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
@@ -21084,7 +21085,10 @@ impl GameState {
         for _ in 0..7 {
             self.draw_one_or_deck(p, &mut events);
         }
-        self.players[p].life = 20;
+        // CR 119.5 — "your life total becomes 20" is a gain of the
+        // difference, through the CR 119 funnel (doublers, can't-gain).
+        let delta = 20 - self.effective_life(p);
+        self.adjust_life_emit(p, delta, &mut events);
         self.players[p].poison_counters = 0;
         retain_cold!(self.commander_damage, |(victim, _), _| *victim != p);
         true

@@ -472,11 +472,7 @@ impl GameState {
                 )
             };
             if yes {
-                let applied = self.adjust_life_applied(active, life as i32);
-                if applied > 0 {
-                    events
-                        .push(GameEvent::LifeGained { player: active, amount: applied as u32 });
-                }
+                self.adjust_life_emit(active, life as i32, events);
                 return true;
             }
         }

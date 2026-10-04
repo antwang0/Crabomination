@@ -11644,13 +11644,7 @@ impl GameState {
                 A::OpponentGainsLife { amount } => {
                     // "An opponent" is the caster's pick (not a target).
                     if let Some(opp) = self.choose_opponent_at_once(p, CardId(0), "Choose the opponent who gains life") {
-                        let applied = self.adjust_life_applied(opp, *amount as i32);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained {
-                                player: opp,
-                                amount: applied as u32,
-                            });
-                        }
+                        self.adjust_life_emit(opp, *amount as i32, &mut events);
                     }
                 }
             }

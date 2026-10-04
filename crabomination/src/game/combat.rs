@@ -4650,10 +4650,7 @@ impl GameState {
                     let dealt = self.deal_combat_damage_to_target(atk, amount, events);
                     if atk.has_lifelink && dealt > 0 {
                         let a = self.active_player_idx;
-                        let applied = self.adjust_life_applied(a, dealt as i32);
-                        if applied > 0 {
-                            events.push(GameEvent::LifeGained { player: a, amount: applied as u32 });
-                        }
+                        self.adjust_life_emit(a, dealt as i32, events);
                     }
                 }
             } else {
@@ -4847,10 +4844,7 @@ impl GameState {
 
                 if atk.has_lifelink && lifelink_dealt > 0 {
                     let a = self.active_player_idx;
-                    let applied = self.adjust_life_applied(a, lifelink_dealt);
-                    if applied > 0 {
-                        events.push(GameEvent::LifeGained { player: a, amount: applied as u32 });
-                    }
+                    self.adjust_life_emit(a, lifelink_dealt, events);
                 }
 
                 // Only blockers whose own keywords say they deal damage in
@@ -5045,13 +5039,7 @@ impl GameState {
                     lifelink_entries.sort_by_key(|(p, _)| *p);
                     for (player, gained) in lifelink_entries {
                         if gained > 0 {
-                            let applied = self.adjust_life_applied(player, gained);
-                            if applied > 0 {
-                                events.push(GameEvent::LifeGained {
-                                    player,
-                                    amount: applied as u32,
-                                });
-                            }
+                            self.adjust_life_emit(player, gained, events);
                         }
                     }
                 }

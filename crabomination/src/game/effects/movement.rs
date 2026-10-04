@@ -589,10 +589,7 @@ impl GameState {
                         })
                         .is_some_and(|cs| shield.gain_life_colors.iter().any(|c| cs.contains(c)));
                 if let Some(seat) = shield.gain_life_to.filter(|_| color_ok) {
-                    let applied = self.adjust_life_applied(seat, amount as i32);
-                    if applied > 0 {
-                        events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
-                    }
+                    self.adjust_life_emit(seat, amount as i32, events);
                 }
                 // "When damage is prevented this way, …" (New Way Forward) —
                 // a reflexive trigger reading how much was prevented.
@@ -1071,10 +1068,7 @@ impl GameState {
             }
         }
         if life_gain > 0 && let Some(p) = life_gain_to.or(to_player) {
-            let applied = self.adjust_life_applied(p, life_gain as i32);
-            if applied > 0 {
-                events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
-            }
+            self.adjust_life_emit(p, life_gain as i32, events);
         }
         // Bone Mask — exile one card off the top per point the shield ate.
         for (seat, n) in exile_tolls {
@@ -1936,10 +1930,7 @@ impl GameState {
         // Scrollwielder), that controller gains life equal to the damage dealt.
         // (Combat damage handles its own lifelink in `combat.rs`.)
         if let Some(seat) = self.noncombat_lifelink_seat(source) {
-            let applied = self.adjust_life_applied(seat, amount as i32);
-            if applied > 0 {
-                events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
-            }
+            self.adjust_life_emit(seat, amount as i32, events);
         }
         // CR 603.4 — "whenever [this creature] deals damage this turn" delayed
         // triggers watching the noncombat source (Paladin of Prahv's Forecast).
