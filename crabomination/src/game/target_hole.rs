@@ -28,7 +28,9 @@ pub fn pad_empty_slot_zero(effect: &Effect, mode: Option<usize>, target: &mut Op
     }
     let f0 = effect.target_filter_for_slot_in_mode_kicked(0, mode, false);
     let f1 = effect.target_filter_for_slot_in_mode_kicked(1, mode, false);
-    if f0.is_some() && f1.is_some() && f0 != f1 {
+    // A hole already at slot 1 means the list is positional from there on
+    // (the extra-slot walker skipped an empty run), so slot 0 holds too.
+    if f0.is_some() && f1.is_some() && (f0 != f1 || additional.first().is_some_and(is_hole)) {
         *target = Some(TARGET_HOLE);
     }
 }

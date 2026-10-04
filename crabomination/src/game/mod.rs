@@ -26493,6 +26493,10 @@ impl GameState {
     /// own `target_filter_for_slot` filter, preferring the controller's own
     /// permanents and avoiding anything an earlier slot already claimed. Empty
     /// for single-slot effects (the common case).
+    /// How many target slots a trigger's auto-picker walks: two "any number
+    /// of target …" groups of fifteen side by side (Filigree Vector).
+    const MAX_TRIGGER_SLOTS: u8 = 32;
+
     pub(crate) fn auto_extra_distinct_slot_targets(
         &self,
         eff: &Effect,
@@ -26544,7 +26548,7 @@ impl GameState {
         }
         let mut chosen: Vec<Target> = Vec::new();
         let mut slot: u8 = 1;
-        while slot < 16 {
+        while slot < Self::MAX_TRIGGER_SLOTS {
             let req = match eff.target_filter_for_slot_in_mode_kicked(slot, None, false) {
                 Some(r) => r.clone(),
                 None => break,
@@ -26625,6 +26629,26 @@ impl GameState {
                         Target::Player(pl) => used_players.push(pl),
                     }
                     chosen.push(t);
+                }
+                // CR 601.2c — an optional slot nothing can fill holds its
+                // place when a later, differently-filtered slot exists ("any
+                // number of target creatures and … any number of target
+                // artifacts", `SlotGroups`): stopping here left every later
+                // group empty. The rest of this slot's run (same filter)
+                // can't be filled either, so it is skipped in one step.
+                None if eff.target_slot_optional(slot, None) => {
+                    let mut next = slot + 1;
+                    while next < Self::MAX_TRIGGER_SLOTS
+                        && eff.target_filter_for_slot_in_mode_kicked(next, None, false) == Some(&req)
+                    {
+                        next += 1;
+                    }
+                    if next >= Self::MAX_TRIGGER_SLOTS || eff.target_filter_for_slot_in_mode_kicked(next, None, false).is_none() {
+                        break;
+                    }
+                    chosen.extend((slot..next).map(|_| crate::game::target_hole::TARGET_HOLE));
+                    slot = next;
+                    continue;
                 }
                 None => break,
             }
