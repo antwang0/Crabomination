@@ -908,7 +908,8 @@ pub fn the_falcon_airship_restored() -> CardDefinition {
 }
 
 /// Umaro, Raging Yeti — each combat one of three at random: a team pump,
-/// a four-card wheel, or 5 damage. Residual: picked as it resolves.
+/// a four-card wheel, or 5 damage — rolled as the trigger is put on the stack
+/// (CR 603.3c), its target chosen then.
 pub fn umaro_raging_yeti() -> CardDefinition {
     let others = || Selector::EachPermanent(yours(R::Creature).and(R::OtherThanSource));
     CardDefinition {

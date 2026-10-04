@@ -418,3 +418,25 @@ fn edgar_recasts_an_artifact_that_enters_tapped() {
     cast(&mut g, other, &[]).expect("cast from hand");
     assert!(!g.battlefield_find(other).unwrap().tapped);
 }
+
+/// CR 603.3c — Umaro's random mode is chosen as the trigger goes on the
+/// stack, so a rolled damage mode carries its "any target" there; the stack
+/// never holds an unrolled random choice.
+#[test]
+fn umaro_rolls_as_the_trigger_is_put_on_the_stack() {
+    use crabomination::effect::Effect;
+    use crabomination::game::types::StackItem;
+    for seed in 0..12u64 {
+        let mut g = main_phase(2);
+        g.rng.reseed(seed);
+        g.add_card_to_battlefield(0, catalog::umaro_raging_yeti());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.step = TurnStep::BeginCombat;
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        let Some(StackItem::Trigger { effect: remaining, target, .. }) = g.stack.last() else { panic!("Umaro's trigger") };
+        assert!(!matches!(**remaining, Effect::ChooseModeAtRandom(_)), "rolled at push");
+        if matches!(**remaining, Effect::DealDamage { .. }) {
+            assert!(target.is_some(), "the damage mode chose its target at push");
+        }
+    }
+}

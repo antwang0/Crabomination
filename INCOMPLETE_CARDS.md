@@ -1955,7 +1955,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
-| 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers every cost you pay yourself; a mana ability the auto-tapper fires on its own pays its {B} with mana. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
