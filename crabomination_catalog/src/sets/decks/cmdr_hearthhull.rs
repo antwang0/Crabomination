@@ -320,9 +320,8 @@ pub fn loamcrafter_faun() -> CardDefinition {
 /// turn; landfall in your main phase adds a combat after this phase, which
 /// untaps your creatures as it begins.
 ///
-/// +1/+0 per attack declaration this turn (`times_attacked_this_turn`).
-/// ⚠ Residual: the untap comes at the beginning of every later combat this
-/// turn, not only the added one.
+/// +1/+0 per attack declaration this turn (`times_attacked_this_turn`); the
+/// untap is bound to the combat its trigger added (`AtTheAddedCombat`).
 pub fn moraug_fury_of_akoum() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -333,7 +332,7 @@ pub fn moraug_fury_of_akoum() -> CardDefinition {
             cond: Predicate::YourMainPhase,
             then: Box::new(Effect::Seq(vec![
                 Effect::AdditionalCombatPhaseAfterMain { count: Value::ONE },
-                Effect::AtEachCombatThisTurn {
+                Effect::AtTheAddedCombat {
                     body: Box::new(Effect::Untap { what: yours(R::Creature), up_to: None }),
                 },
             ])),

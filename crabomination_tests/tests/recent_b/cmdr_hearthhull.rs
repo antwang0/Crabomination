@@ -263,6 +263,34 @@ fn moraug_landfall_adds_a_combat() {
     assert_eq!(pt(&g, m), (8, 6));
 }
 
+/// CR 500.8 — Moraug's untap comes "at the beginning of that combat": a
+/// precombat landfall banks a combat after the scheduled one, which doesn't
+/// untap; the added one does, once.
+#[test]
+fn moraug_untaps_only_at_the_combat_it_added() {
+    let mut g = main_phase(2);
+    let m = g.add_card_to_battlefield(0, catalog::moraug_fury_of_akoum());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    act(&mut g, GameAction::PlayLand(land)).expect("play");
+    g.battlefield_find_mut(m).unwrap().tapped = true;
+    let mut seen = Vec::new();
+    for _ in 0..40 {
+        if g.step == TurnStep::DeclareAttackers && seen.last() != Some(&g.combat_phases_this_turn) {
+            seen.push(g.combat_phases_this_turn);
+            let tapped = g.battlefield_find(m).unwrap().tapped;
+            assert_eq!(tapped, g.combat_phases_this_turn == 1, "combat {}", g.combat_phases_this_turn);
+            g.battlefield_find_mut(m).unwrap().tapped = true;
+            let _ = g.perform_action(GameAction::DeclareAttackers(vec![]));
+        }
+        if g.step == TurnStep::End {
+            break;
+        }
+        g.priority.player_with_priority = g.active_player_idx;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(seen, vec![1, 2]);
+}
+
 /// Planetary Annihilation leaves six lands a player and 6 damage everywhere.
 #[test]
 fn planetary_annihilation_keeps_six_lands() {
