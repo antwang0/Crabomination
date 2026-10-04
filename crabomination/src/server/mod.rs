@@ -126,6 +126,7 @@ mod modal_activation;
 mod generic_sink;
 mod tap_maker;
 mod donate_draw;
+mod upkeep_recursion;
 mod land_ramp;
 mod renewal_guard;
 pub mod encode;
