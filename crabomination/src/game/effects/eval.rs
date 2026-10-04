@@ -644,6 +644,21 @@ impl GameState {
                     self.battlefield_find(cid).map(|c| c.damage as i32)
                 })
                 .sum(),
+            Value::ExcessDamageDealtThisTurnTo(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| {
+                    // The victim has usually died by now. The tally is per-turn
+                    // history, which a card keeps into its next zone (LKI for
+                    // death triggers), so the graveyard card still carries it.
+                    let cid = e.as_card_id()?;
+                    self.battlefield_find(cid)
+                        .or_else(|| self.died_card_snapshots.get(&cid))
+                        .or_else(|| self.leaves_bf_lki.get(&cid))
+                        .or_else(|| self.find_card_anywhere(cid))
+                        .map(|c| c.excess_damage_this_turn as i32)
+                })
+                .fold(0, i32::saturating_add),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::PlayerSpeed(p) => self.resolve_player(p, ctx).map(|p| self.players[p].speed as i32).unwrap_or(0),
             // Max over the resolved set, `LifeLostThisTurn`'s convention: a

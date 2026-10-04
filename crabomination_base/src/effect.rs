@@ -758,6 +758,10 @@ pub enum Value {
     /// Approximates "dealt this turn" as the marked damage at death (exact
     /// unless the damage was removed mid-turn).
     MarkedDamageOn(Box<Selector>),
+    /// CR 120.10 — the excess damage dealt this turn to the selected
+    /// creatures (`excess_damage_this_turn`), read off LKI once one has died:
+    /// "where X is that excess damage" (Overclocked Electromancer).
+    ExcessDamageDealtThisTurnTo(Box<Selector>),
     LifeOf(PlayerRef),
     /// CR 702.179 — `who`'s current speed (0–4). Momentum Breaker's "gain
     /// life equal to your speed". Backed by `Player.speed`.

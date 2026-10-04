@@ -6071,7 +6071,8 @@ fn value_has_target(v: &Value) -> bool {
         Value::CountOf(s)
         | Value::PowerOf(s)
         | Value::ToughnessOf(s)
-        | Value::MarkedDamageOn(s) => sel_has_target(s),
+        | Value::MarkedDamageOn(s)
+        | Value::ExcessDamageDealtThisTurnTo(s) => sel_has_target(s),
         Value::CountersOn { what, .. } => sel_has_target(what),
         Value::LifeOf(p)
         | Value::HandSizeOf(p)

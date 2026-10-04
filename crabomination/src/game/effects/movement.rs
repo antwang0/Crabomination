@@ -378,6 +378,23 @@ impl GameState {
         Some((cp.toughness.max(0) as u32).saturating_sub(prior))
     }
 
+    /// CR 120.10 — `amount` damage is about to be marked on `cid`: tally what
+    /// it deals beyond lethal on the creature's `excess_damage_this_turn`.
+    /// Call before the damage is marked. Returns the excess.
+    pub(crate) fn note_excess_damage(&mut self, cid: CardId, amount: u32, deathtouch: bool) -> u32 {
+        if amount == 0 {
+            return 0;
+        }
+        let Some(lethal) = self.lethal_damage_needed(cid, deathtouch) else { return 0 };
+        let excess = amount.saturating_sub(lethal);
+        if excess > 0
+            && let Some(c) = self.battlefield_find_mut(cid)
+        {
+            c.excess_damage_this_turn = c.excess_damage_this_turn.saturating_add(excess);
+        }
+        excess
+    }
+
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
     /// damage event aimed at `ent`. "Prevent all" shields zero the event;
     /// "prevent next N" shields soak up to N and then expire. The whole
@@ -1795,13 +1812,9 @@ impl GameState {
                     // accounting for damage already marked. Deathtouch makes any
                     // damage past 1 excess (CR 702.2c). Computed before the
                     // mutable borrow below applies the new damage.
-                    if let Some(lethal_needed) =
-                        self.lethal_damage_needed(cid, source_has_deathtouch)
-                    {
-                        let excess = amount.saturating_sub(lethal_needed);
-                        self.excess_damage_this_resolution =
-                            self.excess_damage_this_resolution.saturating_add(excess);
-                    }
+                    let excess = self.note_excess_damage(cid, amount, source_has_deathtouch);
+                    self.excess_damage_this_resolution =
+                        self.excess_damage_this_resolution.saturating_add(excess);
                     // Name of the damaging source, read before the mutable
                     // borrow (Blazing Effigy's per-name tally).
                     let source_name = source

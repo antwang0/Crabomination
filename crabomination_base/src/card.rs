@@ -7946,6 +7946,7 @@ macro_rules! eot_wear_off_hot {
         $m!(scalar dealt_deathtouch_damage, false);
         $m!(scalar dealt_damage_this_turn, false);
         $m!(scalar damage_dealt_to_this_turn, 0);
+        $m!(scalar excess_damage_this_turn, 0);
         $m!(empty damaged_by_this_turn);
         $m!(empty damage_by_source_name_this_turn);
         $m!(empty damage_by_source_this_turn);
@@ -9521,6 +9522,10 @@ pub struct CardData {
     /// wipes, so "if 4 or more damage was dealt to it this turn" (Rushing-Tide
     /// Zubera) reads correctly. Reset at cleanup. In-memory only.
     pub damage_dealt_to_this_turn: u32,
+    /// CR 120.10 — excess damage dealt to this creature this turn: what each
+    /// damage event dealt beyond lethal (Overclocked Electromancer). Reset at
+    /// cleanup; in-memory only.
+    pub excess_damage_this_turn: u32,
     /// Controller of the source that most recently dealt *combat* damage to
     /// this creature. Stamped at the combat-damage chokepoint so a
     /// "whenever this is dealt combat damage" trigger can name the attacking
@@ -10416,6 +10421,7 @@ impl CardInstance {
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
             damage_dealt_to_this_turn: 0,
+            excess_damage_this_turn: 0,
             combat_damager_controller: None,
             regeneration_shields: 0,
             regeneration_control_grant: None,
@@ -11450,6 +11456,7 @@ impl CardInstance {
             (scalar dealt_deathtouch_damage, $v:expr) => {};
             (scalar dealt_damage_this_turn, $v:expr) => {};
             (scalar damage_dealt_to_this_turn, $v:expr) => {};
+            (scalar excess_damage_this_turn, $v:expr) => {};
             (scalar $f:ident, $v:expr) => {
                 if self.$f != $v {
                     return self.clear_effects_on_zone_change_slow();
@@ -11487,6 +11494,7 @@ impl CardInstance {
             (scalar dealt_deathtouch_damage, $v:expr) => {};
             (scalar dealt_damage_this_turn, $v:expr) => {};
             (scalar damage_dealt_to_this_turn, $v:expr) => {};
+            (scalar excess_damage_this_turn, $v:expr) => {};
             (scalar $f:ident, $v:expr) => {
                 self.$f = $v;
             };

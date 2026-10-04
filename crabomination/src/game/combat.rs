@@ -4787,6 +4787,7 @@ impl GameState {
                     // the whole combat-damage event onto another creature.
                     let blocker_id =
                         self.turn_damage_redirect_for(blocker_id).unwrap_or(blocker_id);
+                    self.note_excess_damage(blocker_id, dealt.max(0) as u32, atk.has_deathtouch);
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
                         b.dealt_damage_this_turn = true;
                         b.damage_dealt_to_this_turn += dealt.max(0) as u32;
@@ -4981,6 +4982,7 @@ impl GameState {
                             || bc.keywords().has_kw(&Keyword::Infect)
                             || bc.keywords().has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
+                        self.note_excess_damage(hit, dmg, bc.keywords().has_kw(&Keyword::Deathtouch));
                         // CR 614.16 / 122.1 — infect/wither counters are a
                         // placement, scaled before the mutable borrow.
                         let infect_n = if infect && !self.counters_locked() {
@@ -5665,6 +5667,7 @@ impl GameState {
                         self.damage_redirect_target(crate::game::effects::EntityRef::Player(p))
                     })
                 {
+                    self.note_excess_damage(redirect, amount, atk.has_deathtouch);
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
                         c.dealt_damage_this_turn = true;
