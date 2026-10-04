@@ -31,28 +31,51 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`01JMRKMd`, 166/183). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`01MptjgzbuRdUyr1`, 145/183; the scan now also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
-| 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
+| 1 | Sigarda (GW) | 1: erode |
+| 3 | Hanna (UW) | 1: erode |
+| 24 | Stella Lee (UR) | 1: cursed_mirror |
+| 25 | Edgar Markov C17 (BRW) | 1: pawn_of_ulamog |
+| 32 | Ezuri, Claw of Progress (GU) | 1: loaming_shaman |
+| 37 | Meren of Clan Nel Toth (BG) | 1: champion_of_stray_souls |
+| 43 | Osgir, the Reconstructor (RW) | 1: cursed_mirror |
+| 55 | Zedruu the Greathearted (URW) | 1: whirlpool_whelm |
+| 59 | Valgavoth, Harrower of Souls (BR) | 1: fear_of_burning_alive |
+| 63 | Rin and Seri, Inseparable (RGW) | 2: cursed_mirror, jinnie_fay_jetmirs_second |
 | 66 | Inalla, Archmage Ritualist (UBR) | 1: vindictive_lich |
+| 71 | Trostani, Selesnya's Voice (GW) | 1: silverquill_lecturer |
 | 75 | Hazel of the Rootbloom (BG) | 1: sword_of_the_squeak |
+| 83 | Mishra, Eminent One (UBR) | 1: cursed_mirror |
+| 86 | Dina, Essence Brewer (BG) | 1: pawn_of_ulamog |
+| 87 | Atarka, World Render (RG) | 1: loaming_shaman |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
+| 95 | Lathliss, Dragon Queen (R) | 1: cursed_mirror |
+| 115 | Rootha, Mastering the Moment (UR) | 1: cursed_mirror |
 | 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
+| 131 | Morophon, the Boundless (WUBRG) | 1: risen_reef |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
 | 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
+| 144 | Satya, Aetherflux Genius (URW) | 1: silverquill_lecturer |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
-| 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
+| 148 | Ashling, the Limitless (WUBRG) | 1: risen_reef |
+| 152 | Anje Falkenrath (BR) | 2: champion_of_stray_souls, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
-| 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
+| 160 | Terra, Herald of Hope (RWB) | 2: espers_to_magicite, the_warring_triad |
+| 161 | Jace, Multiverse Architect (WUBR) | 1: cursed_mirror |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
+| 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: cursed_mirror |
+| 180 | Heroes in a Half Shell (WUBRG) | 1: city_of_brass |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
+
+145 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 166 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

@@ -3134,6 +3134,28 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-04 (Commander session `01MptjgzbuRdUyr1`) — guardrail; one gated SBA walk bit
+
+`StaticEffect::GrantStaticAbility` adds a sync pass to the SBA check, reached
+only when a battlefield card carries the static (a packed walk bit, bit 30,
+behind a process-wide `STATIC_GRANT_SEEN` flag) or a grant is live. Callgrind
+`sba_board_scan`, `cube` 6 games seed 1: 16.48 M before the primitive,
+17.68 M with an ungated walk, **16.15 M gated**. 4-core container, `release-fast`.
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split)
+suite            24,115 / 0 / 6; clippy 0 (workspace, all targets)
+pods (release)   seeds 125001+..129001+, 2/3/4/6/8 seats: 22,680 games, all
+                 decided, zero panics
+pods (overflow)  seeds 131001+..134001+ (two with concessions): 6,165 games,
+                 all decided, zero panics
+census (tip)     every deck, 4/6/8 seats x 60 (seeds 135001+/136001+/137001+):
+                 6,000 games, 5,999 decided, zero panics; one 6-seat board
+                 cap (136026 game 48, decks 56,10,65,118,18,105, 70 turns)
+pod table        re-blessed once (hideaway plays a hidden land; bisected)
+```
+
 ### 2026-10-04 (Commander session `01JMRKMd`) — guardrail, no perf work
 
 Per-bucket artifact provenance on `ManaPool` (`[u32; 6]`, skipped on the wire
