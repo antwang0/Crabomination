@@ -229,6 +229,41 @@ fn horde_of_notions_recasts_an_elemental() {
     assert_eq!(named(&g, 0, "Shapeshifter").len(), 3);
 }
 
+/// CR 305.2b / 305.3 — an Elemental *land* card is played, not cast: it uses
+/// the turn's land play, and with none left it stays put.
+#[test]
+fn horde_of_notions_plays_an_elemental_land() {
+    use crabomination::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    let land = || CardDefinition {
+        name: "Elemental Outcrop",
+        card_types: vec![CardType::Land, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    for played_already in [false, true] {
+        let mut g = main_phase(2);
+        let horde = g.add_card_to_battlefield(0, catalog::horde_of_notions());
+        let outcrop = g.add_card_to_graveyard(0, land());
+        if played_already {
+            g.players[0].lands_played_this_turn = 1;
+        }
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![outcrop])]));
+        act(&mut g, GameAction::ActivateAbility {
+            card_id: horde,
+            ability_index: 0,
+            target: Some(Target::Permanent(outcrop)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("activate");
+        assert_eq!(g.battlefield_find(outcrop).is_some(), !played_already);
+        assert_eq!(g.players[0].lands_played_this_turn, 1);
+    }
+}
+
 /// CR 614.1c — "enters tapped" replacements: Primal Beyond enters untapped only
 /// with an Elemental card in hand; Timeless Lotus always enters tapped.
 #[test]

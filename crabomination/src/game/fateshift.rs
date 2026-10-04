@@ -340,7 +340,8 @@ impl GameState {
 
     /// `Effect::PlayLandAmongNow` — "you may play lands from among [what]" as
     /// the effect resolves (Gix's ruling): on the controller's own turn with
-    /// a land play left, they may play one of the exiled lands now. Headless,
+    /// a land play left, they may play one of those lands (exiled, or in their
+    /// graveyard) now. Headless,
     /// the first. Counts the land play and reports it as played.
     pub(crate) fn play_land_among_now(
         &mut self,
@@ -358,7 +359,11 @@ impl GameState {
             .resolve_selector(what, ctx)
             .into_iter()
             .filter_map(|e| e.as_card_id())
-            .filter_map(|id| self.exile.iter().find(|c| c.id == id))
+            // Exile (Gix's ruling) or the player's own graveyard (Horde of
+            // Notions' "play target Elemental card from your graveyard").
+            .filter_map(|id| {
+                self.exile.iter().find(|c| c.id == id).or_else(|| self.players[p].graveyard.iter().find(|c| c.id == id))
+            })
             .filter(|c| c.definition.is_land())
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();

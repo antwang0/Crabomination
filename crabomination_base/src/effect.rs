@@ -5852,8 +5852,9 @@ pub enum Effect {
     /// land needs a land play left on your own turn.
     PlayTopFreeElseExile,
     /// "You may play lands … from among [what]" during the resolution (Gix,
-    /// Yawgmoth Praetor's ruling): one exiled land, on your turn with a land
-    /// play left. Pair with `CastAnyOrderWithoutPaying` for the spells.
+    /// Yawgmoth Praetor's ruling): one land in exile or your graveyard, on
+    /// your turn with a land play left (CR 305.2b / 305.3). Pair with
+    /// `CastAnyOrderWithoutPaying` for the spells.
     PlayLandAmongNow { what: Selector },
     /// Ulalek, Fused Atrocity — "copy all spells you control, then copy all
     /// other activated and triggered abilities you control" (CR 707.10).

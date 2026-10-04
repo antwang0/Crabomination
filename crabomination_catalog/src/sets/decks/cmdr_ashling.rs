@@ -1,10 +1,6 @@
 //! Commander: the cards the **Dance of the Elements** precon (ECC, Ashling,
 //! the Limitless) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_ashling.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Horde of Notions** — casts the Elemental; an Elemental land card
-//!   can't be played this way.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
@@ -316,21 +312,24 @@ pub fn haunting_voyage() -> CardDefinition {
 }
 
 /// Horde of Notions — vigilance, trample, haste; {W}{U}{B}{R}{G}: you may
-/// cast target Elemental card from your graveyard without paying its mana
-/// cost. Residual: an Elemental land card can't be played this way.
+/// play target Elemental card from your graveyard without paying its mana
+/// cost — a land card as a land play (CR 305.2b), anything else cast free.
 pub fn horde_of_notions() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: wubrg(),
-            effect: Effect::CastWithoutPayingImmediate {
-                what: target_filtered(elemental().and(R::InYourGraveyard)),
-                source_zone: Zone::Graveyard,
-                exile_after: false,
-                copy: false,
-                reduce_generic: 0,
-                pay_own_cost: false,
-            },
+            effect: Effect::Seq(vec![
+                Effect::PlayLandAmongNow { what: target_filtered(elemental().and(R::InYourGraveyard)) },
+                Effect::CastWithoutPayingImmediate {
+                    what: Selector::Target(0),
+                    source_zone: Zone::Graveyard,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                },
+            ]),
             ..Default::default()
         }],
         ..legend("Horde of Notions", wubrg(), vec![CreatureType::Elemental], 5, 5)
