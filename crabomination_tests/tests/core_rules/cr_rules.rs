@@ -8661,6 +8661,26 @@ fn cr_702_40_storm_copies_take_twinning_staff() {
     assert_eq!(g.players[1].life, 17, "the original and two copies");
 }
 
+/// CR 118.9d / 601.2f — "without paying its mana cost" still pays cost
+/// increases: under an opponent's Thalia, an Omniscience Lightning Bolt costs
+/// {1}. With no mana it can't be cast; with one, it is. The free path skipped
+/// every tax.
+#[test]
+fn cr_118_9d_a_free_cast_still_pays_increases() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::omniscience());
+    g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let cast = |g: &mut GameState| g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(cast(&mut g).is_err(), "Thalia's {{1}} unpaid");
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g).expect("pays Thalia's {1}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

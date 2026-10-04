@@ -10508,9 +10508,16 @@ impl GameState {
         // first spell each turn").
         // CR 702.103c — Bestow replaces the regular mana cost with the
         // bestow cost; otherwise the printed cost is used.
+        let from_hand = self.casting_hop.is_none_or(|(id, _)| id != card.id);
         let base_cost = if let (Some(d), Some(room)) = (room_door, card.definition.room.as_deref()) {
             // CR 709.5 — each door is cast for its own cost.
             if d == 1 { room.right.cost.clone() } else { room.left.cost.clone() }
+        } else if from_hand && self.players[p].free_spells_from_hand_this_turn {
+            // Yusri's jackpot — "cast spells from your hand this turn without
+            // paying their mana costs" replaces the MANA COST only (CR
+            // 118.9d): kicker, taxes (Thalia, Sphere) and Trinisphere's floor
+            // below still apply; X is 0 (CR 107.3b).
+            crate::mana::ManaCost::default()
         } else if self.casting_hop.is_some_and(|(id, _)| id == card.id)
             && self.player_casts_filtered_free(p, &card)
         {
@@ -10668,11 +10675,6 @@ impl GameState {
         );
         if cost_statics & cast_static::COST_FLOOR != 0 {
             apply_spell_cost_floor(self, &mut cost);
-        }
-        // Yusri's jackpot — "you may cast spells from your hand this turn
-        // without paying their mana costs" zeroes the whole cost.
-        if self.players[p].free_spells_from_hand_this_turn {
-            cost.symbols.clear();
         }
 
         // "Pay X life" additional cost — pre-flight before any payment
@@ -13772,6 +13774,20 @@ impl GameState {
                 false
             }
         };
+        // CR 118.9d / 601.2f — a cast "without paying its mana cost"
+        // (Omniscience, Aluren, a free grant) still pays cost INCREASES:
+        // Thalia, Sphere of Resistance, Trinisphere's floor. The billed-cost
+        // branch above taxes a real alt cost; this taxes the {0} one.
+        if alt_cast_cost.as_ref().is_none_or(|c| c.symbols.is_empty())
+            && let Some(card_ref) = self.find_card_anywhere(card_id)
+        {
+            let mut cost = crate::mana::ManaCost::default();
+            self.add_spell_taxes(p, card_ref, target.as_ref(), &mut cost);
+            apply_spell_cost_floor(self, &mut cost);
+            if !cost.symbols.is_empty() {
+                alt_cast_cost = Some(cost);
+            }
+        }
         // Expiry check: EndOfThisTurn => only valid this turn;
         // EndOfControllersNextTurn => one full controller-turn later.
         // Defensive — the cleanup hook also clears expired permissions.
@@ -14461,6 +14477,10 @@ impl GameState {
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
+        // The colored statics too (`ColoredCostReduction`, the Defilers'
+        // Phyrexian pips), as the hand and command-zone paths apply them: a
+        // commander cast for Fist of Suns' WUBRG under Defiler of Vigor.
+        apply_colored_cost_statics(self, p, &card, &mut mana_cost);
         // Colored-aware target-conditional reduction — applies uniformly
         // across cast paths (CR 601.2f).
         if let Some((filter, less)) = &card.definition.self_cost_reduction_cost_if_target
