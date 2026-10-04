@@ -553,3 +553,22 @@ fn cr_603_2_a_departed_life_gain_listener_saw_the_gain() {
     assert_eq!(g.players[0].life, 23);
     assert_eq!(g.players[1].life, 19, "the priest saw the gain before it died");
 }
+
+/// CR 111.8 / 700.11 — a token that dies is no card: it doesn't count as a
+/// card put into your graveyard this turn and doesn't descend. A creature
+/// card dying does both.
+#[test]
+fn cr_111_8_a_dying_token_is_no_card_put_into_a_graveyard() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase();
+    let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![tok]) }, &ctx).unwrap();
+    assert!(!g.players[0].descended_this_turn, "a token doesn't descend");
+    assert_eq!(g.players[0].cards_to_graveyard_this_turn, 0);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![bear]) }, &ctx).unwrap();
+    assert!(g.players[0].descended_this_turn, "a permanent card does");
+    assert_eq!(g.players[0].cards_to_graveyard_this_turn, 1);
+}

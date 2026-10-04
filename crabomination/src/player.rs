@@ -1834,15 +1834,20 @@ impl PlayerData {
         // `Arc::make_mut` — so clearing an already-empty map deep-copies a
         // shared card, and most permanents die with no counters at all.
         card.drop_counters_for_zone_change(crate::card::Zone::Graveyard);
-        self.cards_to_graveyard_this_turn += 1;
-        if card.definition.is_creature() {
-            self.creature_cards_to_graveyard_this_turn += 1;
-        }
-        self.graveyard_ids_this_turn.insert(card.id);
-        // CR 700.11 — descending requires a *permanent* card hitting the gy.
-        if card.definition.is_permanent() {
-            self.descended_this_turn = true;
-            self.descend_count_this_turn += 1;
+        // CR 111.8 — a token that dies is no card: it feeds none of the
+        // "cards put into your graveyard" tallies, and doesn't descend
+        // (CR 700.11 "a permanent card"). It sits here until 704.5d.
+        if !card.is_token {
+            self.cards_to_graveyard_this_turn += 1;
+            if card.definition.is_creature() {
+                self.creature_cards_to_graveyard_this_turn += 1;
+            }
+            self.graveyard_ids_this_turn.insert(card.id);
+            // CR 700.11 — descending requires a *permanent* card hitting the gy.
+            if card.definition.is_permanent() {
+                self.descended_this_turn = true;
+                self.descend_count_this_turn += 1;
+            }
         }
         self.graveyard.push(card);
     }
