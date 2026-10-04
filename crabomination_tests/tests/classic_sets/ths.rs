@@ -1447,6 +1447,20 @@ fn curse_of_the_swine_swaps_creatures_for_boars() {
     );
 }
 
+/// CR 601.2c — Curse of the Swine takes exactly X targets: X = 2 with one
+/// creature on the battlefield is rejected, and X = 0 casts with none.
+#[test]
+fn curse_of_the_swine_takes_exactly_x_targets() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let curse = g.add_card_to_hand(0, catalog::curse_of_the_swine());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let cast = |x, target| GameAction::CastSpell { card_id: curse, target, additional_targets: vec![], mode: None, x_value: Some(x) };
+    assert!(g.clone().perform_action(cast(2, Some(Target::Permanent(theirs)))).is_err(), "two targets owed");
+    g.perform_action(cast(0, None)).expect("X = 0 is legal");
+}
+
 /// Prophet of Kruphix untaps its controller's creatures and lands — but not
 /// their other permanents — on the opponent's untap step.
 #[test]

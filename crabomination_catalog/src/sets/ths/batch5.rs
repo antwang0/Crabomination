@@ -136,16 +136,17 @@ pub fn chained_to_the_rocks() -> CardDefinition {
 }
 
 /// Curse of the Swine — {X}{U}{U} Sorcery. Exile X target creatures; each
-/// victim's controller creates a 2/2 green Boar.
+/// victim's controller creates a 2/2 green Boar. Exactly X targets (X = 0 is
+/// a legal cast), up to the eight-slot ceiling.
 pub fn curse_of_the_swine() -> CardDefinition {
     CardDefinition {
         name: "Curse of the Swine",
         cost: cost(&[x(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::CapTargetsAtX {
+        effect: Effect::TargetsExactlyX {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 8,
-                min_targets: 1,
+                min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::Seq(vec![
                     Effect::CreateToken {

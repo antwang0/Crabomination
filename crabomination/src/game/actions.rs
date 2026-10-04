@@ -10153,6 +10153,17 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
 
+        // CR 601.2c — "X target …" (`TargetsExactlyX`: Curse of the Swine,
+        // Doppelgang) needs exactly X targets; the activation path already
+        // asks it, the cast path took any number up to X.
+        if matches!(card.definition.effect, Effect::TargetsExactlyX { .. })
+            && usize::from(target.is_some()) + additional_targets.len() != x_value.unwrap_or(0) as usize
+        {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::InvalidTarget);
+        }
+
         // CR 601.2c — "for each opponent, … target X that player controls"
         // (`Effect::ForEachOpponentTarget`): the same cross-target shape one
         // step stricter, on the target's *controller* rather than the target.
