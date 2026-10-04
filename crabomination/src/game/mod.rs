@@ -1646,6 +1646,11 @@ pub struct ColdState {
     /// attacking. Cleared with the rest of combat (CR 511.3).
     #[serde(default)]
     pub(crate) left_while_attacking: Vec<CardId>,
+    /// CR 508.1d — attackers a requirement bound as they were declared this
+    /// combat ("if that creature had to attack", Firkraag). Cleared with
+    /// `left_while_attacking`.
+    #[serde(default)]
+    pub(crate) had_to_attack: Vec<CardId>,
     /// CR 603.10 — the blocking twin: blockers that left the battlefield
     /// during this combat (Death Tyrant). Cleared with `left_while_attacking`.
     #[serde(default)]

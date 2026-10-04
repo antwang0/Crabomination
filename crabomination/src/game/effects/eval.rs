@@ -5680,6 +5680,7 @@ impl GameState {
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
                     R::IsGoaded => self.is_goaded(card),
+                    R::HadToAttackThisCombat => self.had_to_attack.contains(cid),
                     // CR 702.103 — on the battlefield as a bestowed Aura.
                     R::IsBestowed => card.bestowed,
                     // CR 301.5 — equipped by at least `n` Equipment (Balan).
@@ -7116,6 +7117,7 @@ impl GameState {
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
             R::IsGoaded => self.is_goaded(card),
+            R::HadToAttackThisCombat => self.had_to_attack.contains(&card.id),
             // Answerable off live state even for a card that has left the
             // battlefield: the Aura's `attached_to` still points at it during
             // the death replacement (Necromancer's Magemark).

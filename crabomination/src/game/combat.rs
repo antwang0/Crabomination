@@ -1555,10 +1555,15 @@ impl GameState {
             }
         }
 
+        // CR 508.1d — the declared attackers a requirement bound ("if that
+        // creature had to attack this combat", Firkraag), kept once the
+        // declaration stands.
+        let mut had_to: SmallVec<[CardId; 4]> = SmallVec::new();
         // CR 508.1d — a lure (Gideon Jura's +2): every creature able to attack
         // must, and at the lure. Can't be satisfied → no requirement, so this
         // runs only while the lured permanent is still an attackable walker.
         if let Some(pw) = self.attack_lure_of(p) {
+            had_to.extend(attacks.iter().map(|a| a.attacker));
             if let Some(bad) = attacks.iter().find(|a| a.target != AttackTarget::Planeswalker(pw)) {
                 return Err(attack_reject(line!(), GameError::CannotAttack(bad.attacker)));
             }
@@ -1574,6 +1579,9 @@ impl GameState {
         }
 
         // CR 508.1d — Rowan Kenrith's +2: every creature able to attack must.
+        if self.side_attacks_if_able(p) {
+            had_to.extend(attacks.iter().map(|a| a.attacker));
+        }
         if self.side_attacks_if_able(p)
             && let Some(c) = self.battlefield.iter().find(|c| {
                 c.controller == p
@@ -1593,6 +1601,7 @@ impl GameState {
                     continue;
                 }
                 let Some(pw) = self.creature_lure_of(p, c.id) else { continue };
+                had_to.push(c.id);
                 match attacks.iter().find(|a| a.attacker == c.id) {
                     Some(a) if a.target != AttackTarget::Planeswalker(pw) => {
                         return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
@@ -1658,6 +1667,7 @@ impl GameState {
                 if !must {
                     continue;
                 }
+                had_to.push(c.id);
                 if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
@@ -2048,6 +2058,9 @@ impl GameState {
         // attacker). Declared out here, not inside the loop, because the batch
         // is the whole declaration.
         let mut defender_batch_fired: Vec<(CardId, usize)> = Vec::new();
+        if !had_to.is_empty() {
+            self.had_to_attack.extend(had_to.iter().copied().filter(|id| attacks.iter().any(|a| a.attacker == *id)));
+        }
         for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
             // Validated above — commit only. Filter by *controller*, not
@@ -3650,6 +3663,9 @@ impl GameState {
         }
         if !self.left_while_attacking.is_empty() {
             self.left_while_attacking.clear();
+        }
+        if !self.had_to_attack.is_empty() {
+            self.had_to_attack.clear();
         }
         if !self.left_while_blocking.is_empty() {
             self.left_while_blocking.clear();

@@ -3218,6 +3218,9 @@ pub enum SelectionRequirement {
     /// CR 701.15 — goaded by anyone, by any of `GameState::goaders`' three
     /// sources (Hot Pursuit, Vengeful Ancestor).
     IsGoaded,
+    /// CR 508.1d — a requirement bound it as attackers were declared this
+    /// combat: goad, "attacks each combat if able", a lure (Firkraag).
+    HadToAttackThisCombat,
     /// CR 702.103 — true while the candidate is on the battlefield as a
     /// bestowed Aura rather than a creature ("if it's an Aura" —
     /// Everflame Eidolon).
