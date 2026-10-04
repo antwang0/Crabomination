@@ -5,8 +5,8 @@
 //! Residuals (each also on its card):
 //! - **Omo, Queen of Vesuva** — "every creature type" is a Changeling grant,
 //!   so a creature that loses all abilities stops being every type.
-//! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand
-//!   or library" only by a discard or a mill here.
+//! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand"
+//!   only by a discard here.
 //! - **March from Velis Vel** — the land type is chosen as a mode.
 
 use crate::card::{
@@ -177,10 +177,10 @@ pub fn copy_land() -> CardDefinition {
     }
 }
 
-/// Desert Warfare — sacrificed / discarded / milled Deserts come back at
-/// your next end step; five or more Deserts make that many hasty Sand
-/// Warriors each combat. Residual: other hand/library routes to the
-/// graveyard aren't watched.
+/// Desert Warfare — sacrificed, discarded, or library-to-graveyard (milled,
+/// surveiled, revealed) Deserts come back at your next end step; five or
+/// more Deserts make that many hasty Sand Warriors each combat. Residual: a
+/// hand-to-graveyard move that isn't a discard isn't watched.
 pub fn desert_warfare() -> CardDefinition {
     let desert = || Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasLandType(LandType::Desert) };
     let comes_back = || Effect::DelayUntilWithCapture {
