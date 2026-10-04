@@ -7694,6 +7694,11 @@ pub enum Effect {
     /// its controller owns still in their graveyard, and the Equipment it
     /// controls still on the battlefield.
     ReturnDyingSubjectAttachmentsTo { host: Selector },
+    /// "Attach an Equipment that was attached to [this] to [host]" (Zack
+    /// Fair, sacrificed as its own cost): the first Equipment the source's
+    /// leaves-battlefield record (`auras_at_death`) names that its controller
+    /// still controls is attached to `host`.
+    AttachSourcesFormerEquipmentTo { host: Selector },
     /// CR 707.2 + 303.4f — for each permanent `hosts` resolves to, create a
     /// token that's a copy of the Aura `source` resolves to (on the
     /// battlefield or, after a sacrifice, as its last known card) entering

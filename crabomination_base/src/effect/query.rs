@@ -1362,7 +1362,9 @@ impl Effect {
             Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::CreateTokenAttachedToEach { target, .. } => sel_has_target(target),
-            Effect::ReturnDyingSubjectAttachmentsTo { host } => sel_has_target(host),
+            Effect::ReturnDyingSubjectAttachmentsTo { host } | Effect::AttachSourcesFormerEquipmentTo { host } => {
+                sel_has_target(host)
+            }
             Effect::CreateTokenCopyOfAttachedToEach { source, hosts } => {
                 sel_has_target(source) || sel_has_target(hosts)
             }
@@ -2808,7 +2810,8 @@ impl Effect {
             // Aura/Role token attaches to (Splashy Spellcaster's Role).
             Effect::CreateTokenAttachedTo { target, .. }
             | Effect::CreateTokenAttachedToEach { target, .. }
-            | Effect::ReturnDyingSubjectAttachmentsTo { host: target } => sel_filter(target),
+            | Effect::ReturnDyingSubjectAttachmentsTo { host: target }
+            | Effect::AttachSourcesFormerEquipmentTo { host: target } => sel_filter(target),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
             | Effect::SetBasePtLive { what, .. }
@@ -5381,7 +5384,8 @@ impl Effect {
                     .or_else(|| eff_find(then, slot, mode, kicked)),
                 Effect::CreateTokenAttachedTo { target, .. }
                 | Effect::CreateTokenAttachedToEach { target, .. }
-                | Effect::ReturnDyingSubjectAttachmentsTo { host: target } => sel_find(target, slot),
+                | Effect::ReturnDyingSubjectAttachmentsTo { host: target }
+                | Effect::AttachSourcesFormerEquipmentTo { host: target } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellAsOneOneSpirit { what }

@@ -37410,6 +37410,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AttachSourcesFormerEquipmentTo { host } => {
+                self.attach_sources_former_equipment(host, ctx, events);
+                Ok(())
+            }
+
             Effect::ReturnDyingSubjectAttachmentsTo { host } => {
                 // Cass, Hand of Vengeance — CR 603.10a: what rode the dying
                 // subject is read from the leaves-battlefield record.

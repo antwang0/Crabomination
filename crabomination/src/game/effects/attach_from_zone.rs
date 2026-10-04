@@ -361,4 +361,31 @@ impl GameState {
             }
         }
     }
+
+    /// `Effect::AttachSourcesFormerEquipmentTo` — Zack Fair: one Equipment that
+    /// rode the source as it left (CR 603.10a, `auras_at_death`) moves onto
+    /// `host`.
+    pub(super) fn attach_sources_former_equipment(
+        &mut self,
+        host: &crate::effect::Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some(src) = ctx.source else { return };
+        let Some(host_id) = self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id()) else {
+            return;
+        };
+        let me = ctx.controller;
+        let rider = self.auras_at_death.get(&src).and_then(|r| {
+            r.iter().map(|(id, _)| *id).find(|id| {
+                self.battlefield_find(*id).is_some_and(|c| c.controller == me && c.definition.is_equipment())
+            })
+        });
+        if let Some(eq) = rider
+            && let Some(c) = self.battlefield_find_mut(eq)
+        {
+            c.attached_to = Some(host_id);
+            events.push(GameEvent::AttachmentMoved { attachment: eq, attached_to: Some(host_id) });
+        }
+    }
 }

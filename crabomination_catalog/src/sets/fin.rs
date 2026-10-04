@@ -5079,8 +5079,8 @@ pub fn aerith_rescue_mission() -> CardDefinition {
 
 /// Zack Fair — {W} 0/1 Soldier. Enters with a +1/+1 counter. {1}, Sacrifice
 /// Zack Fair: Target creature you control gains indestructible until end of
-/// turn, and gets Zack's +1/+1 counters. (Other counter kinds and the
-/// Equipment move are omitted.)
+/// turn, gets Zack's counters (every kind, CR 608.2h) and an Equipment that
+/// was attached to Zack.
 pub fn zack_fair() -> CardDefinition {
     CardDefinition {
         name: "Zack Fair",
@@ -5105,12 +5105,9 @@ pub fn zack_fair() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                // Its +1/+1 counters, read off the sacrificed Zack (CR 608.2h).
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
-                },
+                // Its counters, read off the sacrificed Zack (CR 608.2h).
+                Effect::PutCountersOf { from: Selector::This, to: Selector::Target(0) },
+                Effect::AttachSourcesFormerEquipmentTo { host: Selector::Target(0) },
             ]),
             ..Default::default()
         }],

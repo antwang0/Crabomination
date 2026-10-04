@@ -957,6 +957,28 @@ fn zack_fair_hands_its_counters_over() {
     assert!(g.computed_permanent(bear).unwrap().power == 4);
 }
 
+/// Zack Fair hands over every kind of counter (a shield counter too) and an
+/// Equipment that was attached to it (CR 603.10a: read off its departure).
+#[test]
+fn zack_fair_hands_over_other_counters_and_its_equipment() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let zack = g.add_card_to_battlefield(0, catalog::zack_fair());
+    g.battlefield_find_mut(zack).unwrap().add_counters(CounterType::Shield, 1);
+    let sword = g.add_card_to_battlefield(0, catalog::short_sword());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(zack);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zack, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("sac Zack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Shield), 1);
+    assert_eq!(g.battlefield_find(sword).and_then(|c| c.attached_to), Some(bear));
+}
+
 /// Shorikai, Genesis Engine — its Pilot "crews Vehicles as though its power
 /// were 2 greater" (CR 702.122b): one 1/1 Pilot crews The Belligerent (crew 3).
 #[test]
