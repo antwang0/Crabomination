@@ -17,8 +17,9 @@ use crate::game::GameState;
 use crate::game::types::GameAction;
 
 /// Scry / surveil / rearrange for yourself, or a loot (draw then discard,
-/// both yours). A sequence led by a scry counts (Mazemind Tome's scry, then
-/// its page-count check).
+/// both yours) — with counters on the source after it (Arcade Gannon's quest
+/// counter). A sequence led by a scry counts (Mazemind Tome's scry, then its
+/// page-count check).
 fn is_selection(e: &Effect) -> bool {
     match e {
         Effect::Scry { who: PlayerRef::You, .. }
@@ -27,7 +28,8 @@ fn is_selection(e: &Effect) -> bool {
         Effect::Seq(v) => {
             matches!(
                 v.as_slice(),
-                [Effect::Draw { who: Selector::You, .. }, Effect::Discard { who: Selector::You, .. }]
+                [Effect::Draw { who: Selector::You, .. }, Effect::Discard { who: Selector::You, .. }, rest @ ..]
+                    if rest.iter().all(|e| matches!(e, Effect::AddCounter { what: Selector::This, .. }))
             ) || matches!(v.first(), Some(Effect::Scry { who: PlayerRef::You, .. }))
         }
         _ => false,
@@ -134,6 +136,21 @@ mod tests {
         assert!(pick_selection_sink(&g, 0).is_none(), "outside Commander");
         g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
         assert!(matches!(pick_selection_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == castle));
+    }
+
+    /// Arcade Gannon's "{T}: draw, then discard, then a quest counter" is a
+    /// loot the sink takes at an opponent's end step.
+    #[test]
+    fn arcade_gannon_loots_at_an_end_step() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let gannon = g.add_card_to_battlefield(0, crate::catalog::arcade_gannon());
+        g.clear_sickness(gannon);
+        g.add_card_to_library(0, crate::catalog::island());
+        assert!(matches!(pick_selection_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == gannon));
     }
 
     /// Dreamstone Hedron is cashed in at an opponent's end step with six
