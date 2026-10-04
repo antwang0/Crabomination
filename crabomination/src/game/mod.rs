@@ -2464,6 +2464,12 @@ pub struct ResolutionScratch {
     /// hold no event list of their own.
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// CR 724.1a / 724.2a — the events an "end the turn / combat phase"
+    /// resolution produced before the process began: kept for the log, but
+    /// what they triggered ceases to exist, so `perform_action` prepends them
+    /// after its dispatch.
+    #[serde(skip, default)]
+    pub(crate) quiet_events: Vec<GameEvent>,
     /// How many "becomes the target" dispatches `push_pending_trigger` is
     /// nested inside. Past [`GameState::TARGET_TRIGGER_DEPTH`] the events wait
     /// in `pending_cost_events` for the next dispatch (CR 603.3b).
@@ -20418,6 +20424,10 @@ impl GameState {
             events.extend(std::mem::take(&mut self.scratch.pending_cost_events));
         }
         self.dispatch_triggers_for_events(&events);
+        if !self.scratch.quiet_events.is_empty() {
+            let quiet = std::mem::take(&mut self.scratch.quiet_events);
+            events.splice(0..0, quiet);
+        }
         // CR 603.3b — the declaration's triggers, both walks, in APNAP order.
         if let Some(mark) = attack_mark
             && self.pending_decision.is_none()

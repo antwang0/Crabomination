@@ -3487,8 +3487,14 @@ impl GameState {
     /// discard-to-hand-size all happen there as normal).
     pub(crate) fn do_end_the_turn(
         &mut self,
-        mut events: Vec<GameEvent>,
+        events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // CR 724.1a / 724.2a — what triggered before the process began and
+        // isn't on the stack yet ceases to exist; 724.1f / 724.2f's triggers
+        // (the sweep below, the next step) still fire.
+        self.scratch.quiet_events.extend(events);
+        self.pending_permanent_deaths.clear();
+        let mut events = Vec::new();
         while let Some(item) = self.stack.pop() {
             if let StackItem::Spell { card, .. } = item
                 && !card.is_token
@@ -3520,8 +3526,14 @@ impl GameState {
     /// and every creature leaves combat (724.2d).
     pub(crate) fn do_end_the_combat_phase(
         &mut self,
-        mut events: Vec<GameEvent>,
+        events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // CR 724.1a / 724.2a — what triggered before the process began and
+        // isn't on the stack yet ceases to exist; 724.1f / 724.2f's triggers
+        // (the sweep below, the next step) still fire.
+        self.scratch.quiet_events.extend(events);
+        self.pending_permanent_deaths.clear();
+        let mut events = Vec::new();
         while let Some(item) = self.stack.pop() {
             if let StackItem::Spell { card, .. } = item
                 && !card.is_token

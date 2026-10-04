@@ -192,3 +192,22 @@ fn cr_724_1d_ending_the_turn_clears_combat() {
     assert!(g.attacking.is_empty(), "combat was cleared");
     assert_eq!(g.players[1].life, life, "no combat damage was ever dealt");
 }
+
+/// CR 724.1a — triggers that fired before "end the turn" began and aren't on
+/// the stack yet cease to exist: Day's Undoing's seven draws happen first, so
+/// the opponent's Underworld Dreams never deals its seven damage.
+#[test]
+fn cr_724_1a_triggers_before_ending_the_turn_cease_to_exist() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::underworld_dreams());
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let du = g.add_card_to_hand(0, catalog::days_undoing());
+    mana(&mut g, 0);
+    let life = g.players[0].life;
+    cast(&mut g, du, None);
+    assert_eq!(g.players[0].hand.len(), 7, "the draws happened");
+    assert_eq!(g.players[0].life, life, "their Dreams triggers ceased to exist");
+}
