@@ -1374,6 +1374,27 @@ mod recent114 {
         );
     }
 
+    /// CR 118.3 — two creatures dying together trigger Angelic Renewal twice,
+    /// but only the first trigger can sacrifice it: one creature returns.
+    #[test]
+    fn angelic_renewal_returns_only_one_of_two() {
+        let mut g = two_player_game();
+        let renewal = g.add_card_to_battlefield(0, catalog::angelic_renewal());
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
+        g.battlefield_find_mut(a).unwrap().damage = 2;
+        g.battlefield_find_mut(b).unwrap().damage = 2;
+        let evs = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(renewal).is_none());
+        assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 1);
+    }
+
     /// Aura Fracture sacrifices a land to destroy an enchantment.
     #[test]
     fn aura_fracture_destroys_enchantment() {

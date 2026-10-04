@@ -482,10 +482,9 @@ pub fn angelic_renewal() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Sacrifice Angelic Renewal to return the dead creature?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Graveyard,
-                    },
+                    // A sacrifice (CR 701.16), so its second trigger in a
+                    // sweep has nothing left to pay with (`may_cost.rs`).
+                    Effect::SacrificeSource,
                     Effect::Move {
                         what: Selector::TriggerSource,
                         to: ZoneDest::Battlefield {
