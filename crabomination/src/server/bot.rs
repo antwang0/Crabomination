@@ -10274,6 +10274,11 @@ fn main_phase_action_with(
         return BotStep::plain(action);
     }
 
+    // Pods: draw two and hand the small body to an opponent (Humble Defector).
+    if let Some(action) = super::donate_draw::pick_donate_draw(state, seat) {
+        return BotStep::plain(action);
+    }
+
     // Pods: any other non-mana ability that beats passing (Arbor Elf, Elvish
     // Piper, the scry and tutor rocks). Two seats return at once.
     if let Some(action) = super::generic_sink::pick_generic_ability(state, seat, w) {
