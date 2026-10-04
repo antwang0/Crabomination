@@ -39,4 +39,18 @@ impl GameState {
         ctx.event_amount = pending.event_amount;
         pending.x_value = self.evaluate_value(x, &ctx).max(0) as u32;
     }
+
+    /// CR 603.3c — "choose one at random" on a triggered ability is chosen as
+    /// the trigger is put on the stack, before its targets (Umaro, Raging
+    /// Yeti's 5 damage to any target). The pending trigger becomes the rolled
+    /// mode; a random mode nested in a branch still rolls as it resolves.
+    pub(crate) fn settle_random_mode(&mut self, pending: &mut PendingTriggerPush) {
+        use rand::RngExt;
+        let Effect::ChooseModeAtRandom(modes) = &pending.effect else { return };
+        if modes.is_empty() {
+            return;
+        }
+        let idx = self.rng.draw().random_range(0..modes.len());
+        pending.effect = modes[idx].clone();
+    }
 }

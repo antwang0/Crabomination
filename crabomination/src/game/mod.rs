@@ -25874,6 +25874,7 @@ impl GameState {
             // during legal-target enumeration below.
             self.trigger_event_amount_scratch = pending.event_amount;
             self.settle_trigger_time_x(&mut pending);
+            self.settle_random_mode(&mut pending);
             // A player subject names the seat; otherwise the event's actor does
             // (the caster, for "becomes the target of a spell an opponent
             // controls" — Scalelord Reckoner's "that player"). Without the
