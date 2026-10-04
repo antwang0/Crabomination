@@ -857,3 +857,27 @@ fn cr_400_7_a_may_exile_of_a_card_gone_to_a_hidden_zone_is_not_offered() {
     assert!(g.players[0].library.iter().any(|c| c.id == bear), "still in the library");
     assert!(!g.battlefield.iter().any(|c| c.is_token), "no copy");
 }
+
+/// CR 707.2 / 614.1c — "enter as a copy" is a replacement on every battlefield
+/// entry, not only a cast: a reanimated Clone becomes a copy of a creature on
+/// the battlefield instead of entering as a 0/0 that dies to SBA.
+#[test]
+fn cr_707_2_a_reanimated_clone_enters_as_a_copy() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let clone = g.add_card_to_graveyard(0, catalog::clone_card());
+    let reanimate = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reanimate,
+        target: Some(Target::Permanent(clone)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(clone).expect("the Clone survived as a copy");
+    assert_eq!(c.definition.name, "Serra Angel");
+    assert_eq!(c.controller, 0);
+}

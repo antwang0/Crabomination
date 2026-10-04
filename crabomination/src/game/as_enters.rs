@@ -37,8 +37,8 @@ impl GameState {
     /// permanent's controller and an event sink, and whose two wirings differ
     /// in *position* rather than presence — the token mint applies it before
     /// this funnel, because a token copy's copiable values are what the mint
-    /// establishes; the cast path applies it after. See the backlog for the
-    /// two paths that still lack it.
+    /// establishes, and so do the land drop (Vesuva) and the universal move
+    /// (a reanimated Clone, Lazotep Convert); the cast path applies it after.
     #[doc(hidden)] // reachable from the out-of-crate test suite, like `actions`/`stack`
     pub fn apply_as_enters_replacements(&mut self, card_id: CardId) {
         if self.has_as_enters_replacement(card_id) {

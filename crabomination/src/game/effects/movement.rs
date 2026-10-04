@@ -2966,6 +2966,15 @@ impl GameState {
                     card.class_level = 1;
                 }
                 self.battlefield.push(card);
+                // CR 707.2 / 614.1c — "enters as a copy" is a replacement on
+                // EVERY entry too: a reanimated or blinked Clone, a defeated
+                // Siege's Lazotep Convert. Before the as-enters replacements
+                // below, which then read the copied card (the token and
+                // land-drop order); the entering counters follow the copy.
+                let ctrl = self.battlefield.find_by_id(cid).map_or(p, |c| c.controller);
+                if self.apply_enters_as_copy(cid, ctrl, events) {
+                    self.reseed_entering_counters_after_copy(cid);
+                }
                 // CR 614.12 — the as-enters replacements apply on EVERY
                 // battlefield entry (reanimation, blink, put-onto-the-
                 // battlefield), not just spell resolution. Runs before the
