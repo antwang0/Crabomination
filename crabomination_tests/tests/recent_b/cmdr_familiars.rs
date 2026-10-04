@@ -141,8 +141,61 @@ fn inspiring_leader_pumps_tokens_while_your_commander_is_out() {
     };
     assert_eq!(g.computed_permanent(spirit).unwrap().power, 1, "no commander yet");
     commander(&mut g, 0, catalog::grizzly_bears());
+    g.check_state_based_actions();
     let cp = g.computed_permanent(spirit).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// CR 613 layer 6 / 707.2 / 400.7 — Inspiring Leader's anthem is the
+/// COMMANDER's ability ("Commander creatures you own have …"): stolen, it
+/// pumps the thief's tokens, not yours; a copy of the commander doesn't have
+/// it; and it ends when the Background leaves.
+#[test]
+fn inspiring_leaders_anthem_follows_the_commander() {
+    let spirit = |g: &mut GameState, seat: usize| {
+        let t = crabomination::card::TokenDefinition {
+            name: "Spirit".into(),
+            card_types: vec![crabomination::card::CardType::Creature],
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        };
+        g.add_token_to_battlefield(seat, &t)
+    };
+    let mut g = pod(3);
+    let leader = g.add_card_to_battlefield(0, catalog::inspiring_leader());
+    let mine = spirit(&mut g, 0);
+    let theirs = spirit(&mut g, 1);
+    let cmdr = commander(&mut g, 0, catalog::grizzly_bears());
+    g.check_state_based_actions();
+    let power = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!((power(&g, mine), power(&g, theirs)), (3, 1));
+    g.battlefield_find_mut(cmdr).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert_eq!((power(&g, mine), power(&g, theirs)), (1, 3), "the thief's tokens");
+    // A Clone of the commander is no commander and copies no granted ability.
+    let copy = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let ctx = EffectContext::for_spell(2, None, 0, 0);
+    let become_copy = crabomination::effect::Effect::BecomeCopyOf {
+        what: crabomination::effect::Selector::ExactObjects(vec![copy]),
+        source: crabomination::effect::Selector::ExactObjects(vec![cmdr]),
+        extra_creature_types: vec![],
+        keep_own_triggered: false,
+        keep_own_activated: false,
+        keep_name: false,
+    };
+    g.resolve_effect(&become_copy, &ctx).expect("copy");
+    g.check_state_based_actions();
+    let seat2 = spirit(&mut g, 2);
+    assert_eq!(power(&g, seat2), 1, "the copy has no anthem");
+    // The Background leaves: the grant ends.
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g
+        .resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![leader]) }, &ctx)
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    g.check_state_based_actions();
+    assert_eq!(power(&g, theirs), 1);
 }
 
 /// Cast a Grizzly Bears for `seat` — from the command zone as its commander

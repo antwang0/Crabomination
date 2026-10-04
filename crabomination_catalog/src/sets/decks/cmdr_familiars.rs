@@ -5,8 +5,8 @@
 //! Mines of Moria (§2).
 //!
 //! A Background's "Commander creatures you own have …" is a
-//! `GrantTriggeredAbility` to `Creature ∧ IsCommander ∧ OwnedByYou` (the Folk
-//! Hero shape); Master Chef's riders are gated enters-with-counters statics.
+//! `GrantTriggeredAbility` / `GrantStaticAbility` to `Creature ∧ IsCommander ∧
+//! OwnedByYou` (the Folk Hero shape).
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
@@ -57,6 +57,17 @@ fn grant_to_your_commanders(description: &'static str, ability: TriggeredAbility
     StaticAbility {
         description,
         effect: StaticEffect::GrantTriggeredAbility {
+            filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
+            ability: Box::new(ability),
+        },
+    }
+}
+
+/// "Commander creatures you own have [static ability]."
+fn grant_static_to_your_commanders(description: &'static str, ability: StaticAbility) -> StaticAbility {
+    StaticAbility {
+        description,
+        effect: StaticEffect::GrantStaticAbility {
             filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
             ability: Box::new(ability),
         },
@@ -179,24 +190,21 @@ pub fn agent_of_the_iron_throne() -> CardDefinition {
 }
 
 /// Inspiring Leader — {2}{W} Background. Commander creatures you own have
-/// "Creature tokens you control get +2/+2." Approximation: the anthem is the
-/// Background's controller's while they control a commander creature they
-/// own; a commander stolen by another player doesn't pump the thief's tokens.
+/// "Creature tokens you control get +2/+2" — the anthem is the commander's,
+/// so it pumps whoever controls the commander's tokens (CR 613 layer 6 grant).
 pub fn inspiring_leader() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "Commander creatures you own have \"Creature tokens you control get +2/+2.\"",
-            effect: StaticEffect::WhileCondition {
-                condition: Predicate::SelectorExists(Selector::EachPermanent(
-                    R::Creature.and(R::IsCommander).and(R::OwnedByYou).and(R::ControlledByYou),
-                )),
-                inner: Box::new(StaticEffect::PumpPT {
+        static_abilities: vec![grant_static_to_your_commanders(
+            "Commander creatures you own have \"Creature tokens you control get +2/+2.\"",
+            StaticAbility {
+                description: "Creature tokens you control get +2/+2.",
+                effect: StaticEffect::PumpPT {
                     applies_to: Selector::EachPermanent(R::Creature.and(R::IsToken).and(R::ControlledByYou)),
                     power: 2,
                     toughness: 2,
-                }),
+                },
             },
-        }],
+        )],
         ..background("Inspiring Leader", cost(&[generic(2), w()]))
     }
 }
@@ -296,14 +304,13 @@ pub fn guild_artisan() -> CardDefinition {
 }
 
 /// Master Chef — {2}{G} Background. Commander creatures you own have "This
-/// creature enters with an additional +1/+1 counter on it" and "Other creatures
-/// you control enter with an additional +1/+1 counter on them." Approximation:
-/// the second rider is the Background controller's while they control a
-/// commander creature they own (as Inspiring Leader's anthem).
+/// creature enters with an additional +1/+1 counter on it" and "Other
+/// creatures you control enter with an additional +1/+1 counter on them".
+/// The first is the Background's own enters-with rider on a commander it
+/// would grant it to (CR 614.12: the grant applies as the commander enters);
+/// the second is granted to the commander (CR 613 layer 6), so it serves the
+/// commander's controller.
 pub fn master_chef() -> CardDefinition {
-    let commander_out = Predicate::SelectorExists(Selector::EachPermanent(
-        R::Creature.and(R::IsCommander).and(R::OwnedByYou).and(R::ControlledByYou),
-    ));
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
@@ -315,18 +322,18 @@ pub fn master_chef() -> CardDefinition {
                     amount: 1,
                 },
             },
-            StaticAbility {
-                description: "Commander creatures you own have \"Other creatures you control enter with an \
-                              additional +1/+1 counter on them.\"",
-                effect: StaticEffect::WhileCondition {
-                    condition: commander_out,
-                    inner: Box::new(StaticEffect::MatchingEntersWithExtraCounters {
-                        filter: R::Creature.and(R::Not(Box::new(R::IsCommander.and(R::OwnedByYou)))),
+            grant_static_to_your_commanders(
+                "Commander creatures you own have \"Other creatures you control enter with an additional +1/+1 \
+                 counter on them.\"",
+                StaticAbility {
+                    description: "Other creatures you control enter with an additional +1/+1 counter on them.",
+                    effect: StaticEffect::MatchingEntersWithExtraCounters {
+                        filter: R::Creature.and(R::OtherThanSource),
                         kind: CounterType::PlusOnePlusOne,
                         amount: 1,
-                    }),
+                    },
                 },
-            },
+            ),
         ],
         ..background("Master Chef", cost(&[generic(2), g()]))
     }
