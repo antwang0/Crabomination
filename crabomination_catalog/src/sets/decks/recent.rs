@@ -672,10 +672,11 @@ pub fn intrepid_adversary() -> CardDefinition {
     }
 }
 
-/// Bloodthirsty Adversary — {1}{R} 2/2 Vampire. Haste. ETB pay {2}{R} any
-/// number of times for that many +1/+1 counters (modeled as Multikicker), then
-/// exile up to that many target instant and/or sorcery cards with mana value 3
-/// or less from your graveyard, copy them, and cast the copies free.
+/// Bloodthirsty Adversary — {1}{R} 2/2 Vampire. Haste. ETB: pay {2}{R} any
+/// number of times; a reflexive trigger then puts that many +1/+1 counters on
+/// it and exiles up to that many target instant and/or sorcery cards with
+/// mana value 3 or less from your graveyard, copies them and casts the copies
+/// free.
 pub fn bloodthirsty_adversary() -> CardDefinition {
     use crate::card::CounterType;
     let spells = SelectionRequirement::HasCardType(CardType::Instant)

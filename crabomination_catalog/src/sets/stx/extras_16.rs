@@ -404,8 +404,8 @@ pub fn burn_down_the_house() -> CardDefinition {
 /// Geometric Nexus — {2} Artifact. Whenever a player casts an instant or
 /// sorcery spell, put charge counters on this equal to that spell's mana value.
 /// `{6}, {T}, Remove all charge counters: Create a 0/0 G/U Fractal with X +1/+1
-/// counters, where X is the number removed.` (The removal is modeled as part of
-/// the resolution rather than a paid cost.)
+/// counters, where X is the number removed.` The removal is a cost
+/// (`remove_all_counters_cost`, CR 602.2b).
 pub fn geometric_nexus() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::shortcut::cast_is_instant_or_sorcery;

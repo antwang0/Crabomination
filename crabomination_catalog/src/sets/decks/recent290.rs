@@ -317,11 +317,10 @@ pub fn astral_wingspan() -> CardDefinition {
     }
 }
 
-/// Frontier Warmonger — {3}{R}, 4/4 Human Warrior. Whenever creatures attack
-/// one of your opponents, those creatures gain menace until end of turn.
-/// Modeled as the live "attacking creatures you control have menace" static
-/// (`GrantKeywordToAttackers`), which resolves against the current attacker
-/// set at battlefield recompute — matching the printed effect in normal play.
+/// Frontier Warmonger — {3}{R}, 4/4 Human Warrior. Whenever one or more
+/// creatures attack one of your opponents or a planeswalker they control,
+/// those creatures gain menace until end of turn — anyone's creatures, once
+/// per declaration (`EventScope::AnyPlayerAttacks`).
 pub fn frontier_warmonger() -> CardDefinition {
     CardDefinition {
         name: "Frontier Warmonger",

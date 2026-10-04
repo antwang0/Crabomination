@@ -3991,8 +3991,9 @@ pub fn rescuer_sphinx() -> CardDefinition {
 }
 
 /// Sarkhan the Masterless — {3}{R}{R} loyalty 5. When a creature attacks you or
-/// a planeswalker you control, your Dragons deal 1 to it each (modeled as an
-/// aggregate). +1: your planeswalkers become 4/4 red Dragons with flying (EOT).
+/// a planeswalker you control, each Dragon you control deals 1 to it (each
+/// Dragon the source). +1: your planeswalkers become 4/4 red Dragons with
+/// flying (EOT).
 /// −3: create a 4/4 red Dragon with flying.
 pub fn sarkhan_the_masterless() -> CardDefinition {
     let dragon_token = TokenDefinition {
