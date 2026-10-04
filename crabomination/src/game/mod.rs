@@ -6814,7 +6814,43 @@ impl GameState {
             });
             ids.push(id);
         }
+        self.choose_commander_colors(seat, &ids);
         ids
+    }
+
+    /// Clara Oswald's Impossible Girl: a commander with
+    /// `CommanderChoosesColorBeforeGame` asks its owner for a color before the
+    /// game begins (offered from the other commanders' identity first) and is
+    /// that color from then on (`color_override`).
+    fn choose_commander_colors(&mut self, seat: usize, ids: &[crate::card::CardId]) {
+        use crate::effect::StaticEffect;
+        for &id in ids {
+            let Some(card) = self.players[seat].command.iter().find(|c| c.id == id) else { continue };
+            if !card
+                .definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::CommanderChoosesColorBeforeGame))
+            {
+                continue;
+            }
+            let others = self.players[seat]
+                .command
+                .iter()
+                .filter(|c| c.id != id && ids.contains(&c.id))
+                .fold(crate::mana::ColorSet::empty(), |acc, c| acc.union(crate::format::color_identity(&c.definition)));
+            let mut legal: Vec<crate::mana::Color> =
+                crate::mana::Color::ALL.into_iter().filter(|c| others.contains(*c)).collect();
+            legal.extend(crate::mana::Color::ALL.into_iter().filter(|c| !others.contains(*c)));
+            let color = match self.decider.decide(&crate::decision::Decision::ChooseColor { source: id, legal: legal.clone() }) {
+                crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                _ => legal[0],
+            };
+            if let Some(card) = self.players[seat].command.iter_mut().find(|c| c.id == id) {
+                card.chosen_color = Some(color);
+                card.definition_make_mut().color_override = Some(vec![color]);
+            }
+        }
     }
 
     /// CR 902.2–902.5 — seat `seat`'s Vanguard avatar: the card starts in the
@@ -32467,6 +32503,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayPlayCardsMilledThisTurn
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::PlayFetchCounteredExiles
+            | StaticEffect::CommanderChoosesColorBeforeGame
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
             | StaticEffect::GraveyardCastOncePerTurn { .. }

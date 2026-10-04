@@ -2291,6 +2291,10 @@ pub enum StaticEffect {
     /// (`MayPlayDuration::WhileHolderControlsFetchPlayer`) and woken or parked
     /// as a permanent with this static enters or leaves.
     PlayFetchCounteredExiles,
+    /// "If [this] is your commander, choose a color before the game begins.
+    /// [It] is the chosen color." (Clara Oswald's Impossible Girl). Read once,
+    /// by `GameState::seat_commanders`; inert in play.
+    CommanderChoosesColorBeforeGame,
     /// "You may cast [filter] spells from your graveyard by paying `life`
     /// life in addition to paying their other costs. If you cast a spell this
     /// way, it enters with a finality counter." Noctis, Prince of Lucis
