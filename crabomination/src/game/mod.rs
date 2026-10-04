@@ -178,6 +178,7 @@ mod life_events;
 mod draw_batch;
 mod exile_return;
 mod answer_log;
+pub(crate) mod spell_copy;
 mod trigger_time;
 mod probing_telepathy;
 mod cast_watch;
@@ -4364,10 +4365,11 @@ pub(crate) struct ResolvingSpell {
     pub additional_targets: Vec<crate::game::types::Target>,
     pub mode: Option<usize>,
     pub x_value: u32,
-    pub converged_value: u32,
     /// `CardData::cast_desert_mana` — the card itself is out of every zone
     /// while it resolves.
     pub cast_desert_mana: u8,
+    /// CR 707.10 — the decisions a copy of it inherits (`spell_copy`).
+    pub cast_choices: crate::game::spell_copy::CastChoices,
 }
 
 impl GameState {

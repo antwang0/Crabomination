@@ -8579,6 +8579,65 @@ fn cr_306_5b_a_copied_walkers_loyalty_takes_doubling_season() {
     assert_eq!(loyalty, Some(8), "2 x (3 + 1)");
 }
 
+/// Seat 0 casts Burst Lightning at seat 1 (kicked or not) and then
+/// Reverberate copying it; returns the Burst's id.
+fn burst_then_reverberate(g: &mut GameState, kicked: bool) -> crabomination::card::CardId {
+    let burst = g.add_card_to_hand(0, catalog::burst_lightning());
+    let rev = g.add_card_to_hand(0, catalog::reverberate());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let at = Some(Target::Player(1));
+    if kicked {
+        g.perform_action(GameAction::CastSpellKicked {
+            card_id: burst, target: at, additional_targets: vec![], mode: None, x_value: None,
+        })
+    } else {
+        g.perform_action(GameAction::CastSpell {
+            card_id: burst, target: at, additional_targets: vec![], mode: None, x_value: None,
+        })
+    }
+    .expect("cast Burst Lightning");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: Some(Target::Permanent(burst)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Reverberate");
+    burst
+}
+
+/// CR 707.10 — a copy copies "additional or alternative costs": Reverberate's
+/// copy of a kicked Burst Lightning is kicked too (4 damage each). Every copy
+/// was a fresh instance, so it dealt 2.
+#[test]
+fn cr_707_10_a_copy_of_a_kicked_spell_is_kicked() {
+    let mut g = two_player_game();
+    burst_then_reverberate(&mut g, true);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 4 - 4);
+}
+
+/// CR 707.10 / 701.6a — a copy of a spell is a spell and can be countered.
+/// Every copy path stamped it "can't be countered".
+#[test]
+fn cr_707_10_a_copy_can_be_countered() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    let burst = burst_then_reverberate(&mut g, false);
+    g.resolve_top_of_stack().expect("Reverberate resolves into a copy");
+    let copy = g.stack.iter().rev().find_map(|s| match s {
+        crabomination::game::types::StackItem::Spell { card, .. } if card.id != burst => Some(card.id),
+        _ => None,
+    }).expect("the copy is on the stack");
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        crabomination::card::CardId(0), 1, Some(Target::Permanent(copy)),
+    );
+    g.resolve_effect(&Effect::CounterSpell { what: Selector::Target(0) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "only the original Burst resolved");
+}
+
 /// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets

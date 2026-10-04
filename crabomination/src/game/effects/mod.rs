@@ -1951,11 +1951,10 @@ impl GameState {
         {
             return;
         }
-        let (orig_card_def, orig_caster, target, additional_targets, mode, x_value, converged_value) =
-            if let StackItem::Spell {
-                card, caster, target, additional_targets, mode, x_value, converged_value, ..
-            } = &self.stack[idx]
-            {
+        // CR 707.10 — modes, X and the cast's additional/alternative costs
+        // are copied; converge is not (a copy has no mana spent: 0).
+        let (orig_card_def, orig_caster, target, additional_targets, mode, x_value, choices) =
+            if let StackItem::Spell { card, caster, target, additional_targets, mode, x_value, .. } = &self.stack[idx] {
                 (
                     card.definition.arc(),
                     *caster,
@@ -1963,7 +1962,7 @@ impl GameState {
                     additional_targets.clone(),
                     *mode,
                     *x_value,
-                    *converged_value,
+                    crate::game::spell_copy::CastChoices::of(card),
                 )
             } else {
                 return;
@@ -2062,6 +2061,7 @@ impl GameState {
             // CR 707.10a — a copy of a spell ceases to exist off the stack.
             copy_inst.is_token = true;
             copy_inst.resolve_riders = riders;
+            choices.apply(&mut copy_inst);
             self.push_stack(StackItem::Spell {
                 card: Box::new(copy_inst),
                 caster,
@@ -2069,9 +2069,11 @@ impl GameState {
                 additional_targets: copy_extra,
                 mode,
                 x_value,
-                converged_value,
+                converged_value: 0,
                 mana_spent: 0,
-                uncounterable: true, // copies can't be countered
+                // A copy is a spell and can be countered (CR 707.10, 701.6a);
+                // a cast-time "can't be countered" grant (Cavern) isn't copied.
+                uncounterable: false,
             });
         }
         events.push(GameEvent::SpellsCopied { original: cid, count: n as u32, controller: caster });
@@ -2115,6 +2117,7 @@ impl GameState {
             crate::card::CardInstance::new(new_id, (*snap.definition).clone(), seat);
         // CR 707.10a — a copy of a spell ceases to exist off the stack.
         copy_inst.is_token = true;
+        snap.cast_choices.apply(&mut copy_inst);
         self.push_stack(StackItem::Spell {
             card: Box::new(copy_inst),
             caster: seat,
@@ -2122,9 +2125,11 @@ impl GameState {
             additional_targets: copy_extra,
             mode: snap.mode,
             x_value: snap.x_value,
-            converged_value: snap.converged_value,
+            // CR 707.10 — a copy has no mana spent (converge 0) and can be
+            // countered like any spell.
+            converged_value: 0,
             mana_spent: 0,
-            uncounterable: true,
+            uncounterable: false,
         });
     }
 
@@ -6246,17 +6251,18 @@ impl GameState {
                 if let StackItem::Spell { caster, .. } = &mut self.stack[pos] {
                     *caster = me;
                 }
-                // Copy it (the copy is a token spell, uncounterable).
+                // Copy it: a token spell carrying the cast's decisions
+                // (CR 707.10), no mana spent, counterable like any spell.
                 let new_id = self.next_id();
                 let copy = {
-                    let StackItem::Spell { card, target, additional_targets, mode, x_value, converged_value, .. } =
-                        &self.stack[pos]
+                    let StackItem::Spell { card, target, additional_targets, mode, x_value, .. } = &self.stack[pos]
                     else {
                         return Ok(());
                     };
                     let mut inst =
                         crate::card::CardInstance::new(new_id, card.definition.arc(), me);
                     inst.is_token = true;
+                    crate::game::spell_copy::CastChoices::of(card).apply(&mut inst);
                     StackItem::Spell {
                         card: Box::new(inst),
                         caster: me,
@@ -6264,9 +6270,9 @@ impl GameState {
                         additional_targets: additional_targets.clone(),
                         mode: *mode,
                         x_value: *x_value,
-                        converged_value: *converged_value,
+                        converged_value: 0,
                         mana_spent: 0,
-                        uncounterable: true,
+                        uncounterable: false,
                     }
                 };
                 self.push_stack(copy);
@@ -30649,7 +30655,7 @@ impl GameState {
                     return Ok(());
                 };
                 let StackItem::Spell {
-                    card, caster, target, additional_targets, mode, x_value, converged_value, ..
+                    card, caster, target, additional_targets, mode, x_value, ..
                 } = &self.stack[idx]
                 else {
                     return Ok(());
@@ -30659,7 +30665,8 @@ impl GameState {
                 }
                 let Some(original) = target.clone() else { return Ok(()) };
                 let (def, caster) = (card.definition.arc(), *caster);
-                let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
+                // CR 707.10 — decisions copied; no mana spent (converge 0).
+                let (mode, x_value, choices) = (*mode, *x_value, crate::game::spell_copy::CastChoices::of(card));
                 let others: Vec<Target> = self
                     .enumerate_legal_targets(&def.effect, caster)
                     .into_iter()
@@ -30670,6 +30677,7 @@ impl GameState {
                     let new_id = self.next_id();
                     let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
                     copy_inst.is_token = true;
+                    choices.apply(&mut copy_inst);
                     self.push_stack(StackItem::Spell {
                         card: Box::new(copy_inst),
                         caster,
@@ -30677,9 +30685,9 @@ impl GameState {
                         additional_targets: Vec::new(),
                         mode,
                         x_value,
-                        converged_value,
+                        converged_value: 0,
                         mana_spent: 0,
-                        uncounterable: true,
+                        uncounterable: false,
                     });
                 }
                 if count > 0 {
@@ -35114,7 +35122,7 @@ impl GameState {
                     return Ok(());
                 };
                 let StackItem::Spell {
-                    card, caster, target, additional_targets, mode, x_value, converged_value, ..
+                    card, caster, target, additional_targets, mode, x_value, ..
                 } = &self.stack[idx]
                 else {
                     return Ok(());
@@ -35128,7 +35136,8 @@ impl GameState {
                     return Ok(());
                 }
                 let (def, caster) = (card.definition.arc(), *caster);
-                let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
+                // CR 707.10 — decisions copied; no mana spent (converge 0).
+                let (mode, x_value, choices) = (*mode, *x_value, crate::game::spell_copy::CastChoices::of(card));
                 let others: Vec<CardId> = self
                     .battlefield
                     .iter()
@@ -35145,6 +35154,7 @@ impl GameState {
                     let new_id = self.next_id();
                     let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
                     copy_inst.is_token = true;
+                    choices.apply(&mut copy_inst);
                     self.push_stack(StackItem::Spell {
                         card: Box::new(copy_inst),
                         caster,
@@ -35152,9 +35162,9 @@ impl GameState {
                         additional_targets: Vec::new(),
                         mode,
                         x_value,
-                        converged_value,
+                        converged_value: 0,
                         mana_spent: 0,
-                        uncounterable: true,
+                        uncounterable: false,
                     });
                     events.push(GameEvent::SpellsCopied {
                         original: spell_id,

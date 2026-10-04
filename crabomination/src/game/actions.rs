@@ -12041,6 +12041,8 @@ impl GameState {
             card.kicked = true;
             card.kick_count = self.cast_kick_count;
         }
+        // CR 707.10 — the storm copies below carry the cast's decisions.
+        let storm_choices = storm_copies.as_ref().map(|_| crate::game::spell_copy::CastChoices::of(&card));
         self.push_stack(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -12053,9 +12055,10 @@ impl GameState {
             uncounterable,
         });
         // Push Storm copies above the original (they resolve first, CR 702.40).
-        // Each is a token copy that can't be countered, inheriting the mode;
-        // CR 702.40a — "you may choose new targets for the copies" (the
-        // original is offered first, so the default keeps it).
+        // Each is a token copy inheriting the cast's decisions (CR 707.10),
+        // with no mana spent and counterable like any spell; CR 702.40a —
+        // "you may choose new targets for the copies" (the original is
+        // offered first, so the default keeps it).
         if let Some((def, n)) = storm_copies {
             for _ in 0..n {
                 let copy_target = if target.is_some() {
@@ -12070,6 +12073,9 @@ impl GameState {
                     &copy_target,
                     Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
                 );
+                if let Some(c) = &storm_choices {
+                    c.apply(&mut copy_inst);
+                }
                 self.push_stack(StackItem::Spell {
                     card: Box::new(copy_inst),
                     caster: p,
@@ -12077,9 +12083,9 @@ impl GameState {
                     additional_targets: additional_targets.clone(),
                     mode,
                     x_value,
-                    converged_value,
+                    converged_value: 0,
                     mana_spent: 0,
-                    uncounterable: true,
+                    uncounterable: false,
                 });
             }
         }

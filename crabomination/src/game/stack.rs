@@ -2412,8 +2412,8 @@ impl GameState {
                         additional_targets: additional_targets.clone(),
                         mode,
                         x_value,
-                        converged_value,
                         cast_desert_mana: card.cast_desert_mana,
+                        cast_choices: crate::game::spell_copy::CastChoices::of(&card),
                     }));
 
                 // CR 702.140 — a creature with mutate merges onto its host
@@ -2625,7 +2625,9 @@ impl GameState {
                     let resolve_riders = card.resolve_riders.take();
                     // This permanent entered because its spell was cast (CR
                     // 400.7 new object) — powers "if you cast it" ETB gates.
-                    card.entered_by_cast = true;
+                    // A copy of a permanent spell wasn't cast (CR 707.10): it
+                    // resolves into a token (707.10f) that never was.
+                    card.entered_by_cast = !card.is_token;
                     // CR 302.6 — and being a new object means it is summoning
                     // sick again. `CardInstance::new` arms the flag, so a card
                     // cast from a fresh draw was fine; a card that had already
@@ -3553,7 +3555,7 @@ impl GameState {
                 x_value: e.x_value,
                 converged_value: 0,
                 mana_spent: 0,
-                uncounterable: true, // copies can't be countered
+                uncounterable: false, // a copy is a spell; it can be countered (CR 707.10)
             });
             events.push(GameEvent::SpellsCopied { original: new_id, count: 1, controller: p });
         }

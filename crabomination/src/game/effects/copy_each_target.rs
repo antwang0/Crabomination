@@ -35,7 +35,7 @@ impl GameState {
         else {
             return Ok(());
         };
-        let StackItem::Spell { card, target, additional_targets, mode, x_value, converged_value, .. } =
+        let StackItem::Spell { card, target, additional_targets, mode, x_value, .. } =
             &self.stack[idx]
         else {
             return Ok(());
@@ -45,7 +45,8 @@ impl GameState {
             return Ok(());
         }
         let def = card.definition.arc();
-        let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
+        // CR 707.10 — decisions copied; no mana spent (converge 0).
+        let (mode, x_value, choices) = (*mode, *x_value, crate::game::spell_copy::CastChoices::of(card));
         let me = ctx.controller;
         let others: Vec<Target> = self
             .enumerate_legal_targets(&def.effect, me)
@@ -56,6 +57,7 @@ impl GameState {
             let new_id: CardId = self.next_id();
             let mut copy = crate::card::CardInstance::new(new_id, def.clone(), me);
             copy.is_token = true;
+            choices.apply(&mut copy);
             self.push_stack(StackItem::Spell {
                 card: Box::new(copy),
                 caster: me,
@@ -63,7 +65,7 @@ impl GameState {
                 additional_targets: Vec::new(),
                 mode,
                 x_value,
-                converged_value,
+                converged_value: 0,
                 mana_spent: 0,
                 uncounterable: false,
             });
