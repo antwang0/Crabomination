@@ -4884,6 +4884,19 @@ fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
         return None;
     }
     let spell_id = card.id;
+    // A token-making spell copied on a full board doubles it past the board
+    // cap: Clone Legion aimed at its own side, copied by Twinning Staff and
+    // its casualty, capped a six-seat pod (census seed 43138, game 203).
+    let makes_tokens = def.effect.any_nested(&|e| {
+        matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. })
+    });
+    if makes_tokens
+        && (state.battlefield.len() >= crate::recommend::BOARD_GATE
+            || super::renewal_guard::board_is_saturated(state, seat)
+            || super::renewal_guard::board_is_cluttered(state, seat))
+    {
+        return None;
+    }
     let sweep = SweepMana::new(state, seat);
     state.players[seat]
         .hand
@@ -30180,6 +30193,30 @@ mod stack_response_tests {
             "got {action:?}"
         );
         assert!(pick_copy_response(&g, 1, &EvalWeights::default()).is_none(), "not the opponent's spell");
+    }
+
+    /// A token-making spell isn't copied on a board at the cap gate: Army of
+    /// the Damned on a full table stays a single copy (a six-seat pod capped
+    /// on Clone Legion copies, census seed 43138).
+    #[test]
+    fn copy_response_skips_a_token_spell_on_a_full_board() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let staff = g.add_card_to_battlefield(0, catalog::twinning_staff());
+        g.clear_sickness(staff);
+        let army = g.add_card_to_hand(0, catalog::army_of_the_damned());
+        g.players[0].mana_pool.add(Color::Black, 20);
+        g.players[0].mana_pool.add_colorless(20);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: army, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("Army of the Damned");
+        assert!(pick_copy_response(&g, 0, &EvalWeights::default()).is_some(), "an open board copies it");
+        while g.battlefield.len() < crate::recommend::BOARD_GATE {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        assert!(pick_copy_response(&g, 0, &EvalWeights::default()).is_none(), "a full board doesn't");
     }
 
     /// CR 707.10 — Stella Lee copies the bot's own Divination with her
