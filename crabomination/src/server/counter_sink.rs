@@ -23,16 +23,22 @@ use crate::effect::{Effect, Selector};
 use crate::game::GameState;
 use crate::game::types::{GameAction, Target};
 
-/// Does `e` grow its slot-0 target with a +1/+1 or loyalty counter?
+/// Does `e` grow its slot-0 target with a +1/+1 or loyalty counter, or mark
+/// it with a divinity counter (Kindred Boon's indestructible)?
 fn grows_target(e: &Effect) -> bool {
+    target_counter_kind(e).is_some()
+}
+
+/// The counter `e` puts on its slot-0 target, of the kinds the sink buys.
+fn target_counter_kind(e: &Effect) -> Option<CounterType> {
     match e {
         Effect::AddCounter {
             what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. },
-            kind: CounterType::PlusOnePlusOne | CounterType::Loyalty,
+            kind: kind @ (CounterType::PlusOnePlusOne | CounterType::Loyalty | CounterType::Divinity),
             ..
-        } => true,
-        Effect::If { then, else_, .. } => grows_target(then) || grows_target(else_),
-        _ => false,
+        } => Some(*kind),
+        Effect::If { then, else_, .. } => target_counter_kind(then).or_else(|| target_counter_kind(else_)),
+        _ => None,
     }
 }
 
@@ -66,7 +72,14 @@ pub(super) fn pick_counter_sink(state: &GameState, seat: usize) -> Option<GameAc
         .collect();
     own.sort_by_key(|(power, id)| (std::cmp::Reverse(*power), *id));
     abilities.into_iter().find_map(|(source, index)| {
+        // A marking counter (divinity) does its work once: skip a creature
+        // that already carries one. +1/+1 and loyalty stack.
+        let marks = state.battlefield_find(source).and_then(|c| {
+            target_counter_kind(&c.definition.activated_abilities[index].effect)
+                .filter(|k| *k == CounterType::Divinity)
+        });
         own.iter()
+            .filter(|&&(_, id)| marks.is_none_or(|k| state.battlefield_find(id).is_some_and(|c| c.counter_count(k) == 0)))
             .map(|&(_, id)| GameAction::ActivateAbility {
                 card_id: source,
                 ability_index: index,
@@ -230,6 +243,28 @@ pub(super) fn pick_fate_sink(state: &GameState, seat: usize, w: &super::bot::Eva
 mod tests {
     use super::*;
     use crate::game::types::TurnStep;
+
+    /// Kindred Boon's divinity counter (indestructible) goes on the biggest
+    /// creature of the chosen type without one, and not on one that has it.
+    #[test]
+    fn kindred_boon_marks_an_unmarked_creature() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let boon = g.add_card_to_battlefield(0, crate::catalog::kindred_boon());
+        g.battlefield_find_mut(boon).unwrap().chosen_creature_type = Some(crate::card::CreatureType::Bear);
+        let big = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let small = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.battlefield_find_mut(big).unwrap().add_counters(CounterType::Divinity, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+        assert!(matches!(
+            pick_counter_sink(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                if card_id == boon && t == small
+        ));
+    }
 
     /// Midnight Clock's "{2}{U}: put an hour counter" is bought at an
     /// opponent's end step only when the seat's hand is nearly empty.
