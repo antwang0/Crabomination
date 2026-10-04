@@ -7017,6 +7017,9 @@ impl CardDefinition {
                 | StaticEffect::LegendRuleDoesntApplyToYourPermanents
                 | StaticEffect::LegendRuleDoesntApplyToYourMatching(_) => m |= b::LEGEND_RULE_OFF,
                 StaticEffect::LethalDamageByPower { .. } => m |= b::LETHAL_BY_POWER,
+                StaticEffect::GrantStaticAbility { .. } => {
+                    STATIC_GRANT_SEEN.store(true, std::sync::atomic::Ordering::Relaxed)
+                }
                 _ => {}
             }
         }
@@ -8486,6 +8489,18 @@ pub mod combat_kw {
 /// Every bit here is a pure function of the definition. The four that need
 /// an instance condition as well ([`UNFLIPPED`]'s two, [`STEAL_PENALTY`],
 /// [`EQUIPMENT`]) carry only the definition half; the scan ANDs them.
+/// Set once any definition carrying a `StaticEffect::GrantStaticAbility` has
+/// had its [`sba_bits`] computed in this process — the SBA walk asks it before
+/// looking for one on the board, so a process that never builds such a card
+/// pays one load a walk. The `sba_bits` memo word has no free bit for it.
+static STATIC_GRANT_SEEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// See [`STATIC_GRANT_SEEN`].
+#[inline]
+pub fn static_grant_seen() -> bool {
+    STATIC_GRANT_SEEN.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 pub mod sba_bits {
     pub const FLIP_KEYWORD: u64 = 1 << 8;
     pub const FLIP_PREDICATE: u64 = 1 << 9;

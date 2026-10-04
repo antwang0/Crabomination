@@ -6211,14 +6211,6 @@ impl GameState {
             if c.attached_to.is_some() {
                 m |= d & b::EQUIPMENT;
             }
-            if c.gather_scan_bits() & crate::card::gather_spec::HAS_STATICS != 0
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GrantStaticAbility { .. }))
-            {
-                flags |= 1 << SBA_STATIC_GRANT;
-            }
             flags |= (c.bestowed as u64) << SBA_BESTOWED;
             flags |= (c.soulbond_partner.is_some() as u64) << SBA_SOULBOND;
             flags |= (c.sector.is_some() as u64) << SBA_SECTOR_SET;
@@ -6229,6 +6221,18 @@ impl GameState {
                     as u64)
                     << SBA_PM_BOTH;
             }
+        }
+        // After the loop: its `sba_scan_bits` calls are what raise the flag.
+        if crate::card::static_grant_seen()
+            && self.battlefield.iter().any(|c| {
+                c.gather_scan_bits() & crate::card::gather_spec::HAS_STATICS != 0
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GrantStaticAbility { .. }))
+            })
+        {
+            flags |= 1 << SBA_STATIC_GRANT;
         }
         debug_assert_eq!(m >> SBA_STATIC_GRANT, 0, "sba_bits outgrew bits 8..29 of the packed fold");
         debug_assert!(legendary_count < 1 << 28, "legendary count outgrew the packed fold");
