@@ -7,7 +7,8 @@
 //! took it.
 
 use super::{EffectContext, GameState};
-use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::card::Zone;
+use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest, ZoneRef};
 use crate::game::types::Target;
 
 impl GameState {
@@ -58,7 +59,6 @@ impl GameState {
                     _ => ctx.trigger_source.and_then(|e| e.as_card_id()),
                 };
                 let Some(zone) = id.and_then(|id| self.find_card_zone(id)) else { return true };
-                use crate::card::Zone;
                 matches!(
                     (zone, to),
                     (Zone::Exile, ZoneDest::Exile)
@@ -66,6 +66,32 @@ impl GameState {
                         | (Zone::Battlefield, ZoneDest::Battlefield { .. })
                         | (Zone::Hand, ZoneDest::Hand(_))
                 )
+            }
+            // "Exile N cards from your graveyard" — fewer than N there
+            // (Aegis Sculptor exiled the one card it had and grew anyway).
+            Effect::Move { what: Selector::Take { inner, count }, .. }
+                if matches!(
+                    &**inner,
+                    Selector::EachMatching { zone: ZoneRef::Graveyard(_), .. }
+                        | Selector::CardsInZone { zone: Zone::Graveyard, .. }
+                ) =>
+            {
+                let Value::Const(n) = **count else { return false };
+                (self.resolve_selector(inner, ctx).len() as i64) < i64::from(n)
+            }
+            Effect::ExileFromGraveyard { who, count: Value::Const(n), filter } => {
+                let have: usize = self
+                    .resolve_players(who, ctx)
+                    .into_iter()
+                    .map(|p| {
+                        self.players[p]
+                            .graveyard
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                            .count()
+                    })
+                    .sum();
+                (have as i64) < i64::from(*n)
             }
             _ => false,
         }

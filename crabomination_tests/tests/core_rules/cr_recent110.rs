@@ -823,3 +823,19 @@ fn cr_118_3_a_combined_may_pay_cost_needs_every_part() {
     assert_eq!(g.players[0].hand.len(), 0, "no creature to sacrifice, no draw");
     assert_eq!(g.players[0].mana_pool.total(), 1, "and no mana spent");
 }
+
+/// CR 118.3 — "you may exile two cards from your graveyard. If you do":
+/// with one card there the cost can't be paid, so it stays and Aegis
+/// Sculptor doesn't grow.
+#[test]
+fn cr_118_3_an_exile_from_graveyard_cost_needs_every_card() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::aegis_sculptor());
+    let body = g.battlefield_find(src).unwrap().definition.triggered_abilities[0].effect.clone();
+    g.add_card_to_graveyard(0, catalog::island());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert_eq!(g.players[0].graveyard.len(), 1, "the lone card stays");
+    assert_eq!(g.computed_permanent(src).unwrap().power, 2, "and no counter");
+}
