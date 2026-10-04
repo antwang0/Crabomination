@@ -773,9 +773,10 @@ pub fn reap_what_is_sown() -> CardDefinition {
         "Reap What Is Sown",
         cost(&[generic(1), g(), w()]),
         CardType::Instant,
+        // "Up to three" — zero targets is a legal cast (CR 601.2c).
         Effect::ApplyToTargets {
             max_targets: 3,
-            min_targets: 1,
+            min_targets: 0,
             filter: R::Creature,
             effect: Box::new(Effect::AddCounter {
                 what: Selector::Target(0),
