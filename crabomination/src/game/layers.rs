@@ -1012,6 +1012,10 @@ pub(crate) struct SecondPass {
     /// filtered by color (Honor of the Pure): the set reads computed colors.
     color_changer: bool,
     color_filtered: bool,
+    /// CR 613.8 — a layer-6 keyword change and an effect whose set is
+    /// filtered by a keyword (Favorable Winds): the set reads computed ones.
+    keyword_changer: bool,
+    keyword_filtered: bool,
 }
 
 impl SecondPass {
@@ -1040,21 +1044,59 @@ impl SecondPass {
                 AffectedPermanents::CardMatch { requirement, .. } => requirement_reads_color(requirement),
                 _ => false,
             };
+            g.keyword_filtered |= matches!(&e.affected,
+                AffectedPermanents::CardMatch { requirement, .. } if requirement_reads_keyword(requirement));
             match e.modification {
                 Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
                 // CR 702.73a — a granted changeling makes the bearer every type.
-                Modification::AddKeyword(Keyword::Changeling) => g.type_changer = true,
+                Modification::AddKeyword(Keyword::Changeling) => {
+                    g.type_changer = true;
+                    g.keyword_changer = true;
+                }
                 Modification::AddCardType(_) | Modification::RemoveCardType(_) | Modification::SetCardTypes(_) => {
                     g.card_type_changer = true
                 }
                 Modification::AddColor(_) | Modification::SetColors(_) | Modification::LoseAllColors => {
                     g.color_changer = true
                 }
+                Modification::AddKeyword(_)
+                | Modification::RemoveKeyword(_)
+                | Modification::CantHaveKeyword(_)
+                | Modification::RemoveAllAbilities => g.keyword_changer = true,
                 _ => {}
             }
         }
         g
     }
+}
+
+/// The CR 613.8 second pass's computed reads, one per characteristic a set
+/// can be filtered by. `None` (or `ChangelingRead::Instance`) reads the
+/// printed / instance value — the first pass, and every non-layer caller.
+#[derive(Clone, Copy)]
+pub(crate) struct Gates<'a> {
+    /// The card's gate-free power (power-gated sets).
+    power: Option<i32>,
+    /// The computed creature types.
+    types: Option<&'a [CreatureType]>,
+    /// The computed card types.
+    card_types: Option<&'a [CardType]>,
+    changeling: ChangelingRead,
+    /// The computed colors (layer 5).
+    colors: Option<ColorSet>,
+    /// The computed keywords (layer 6).
+    keywords: Option<&'a [Keyword]>,
+}
+
+impl Gates<'_> {
+    const PRINTED: Gates<'static> = Gates {
+        power: None,
+        types: None,
+        card_types: None,
+        changeling: ChangelingRead::Instance,
+        colors: None,
+        keywords: None,
+    };
 }
 
 /// How a type-gated match reads changeling (CR 702.73a / 613.1d).
@@ -1127,10 +1169,18 @@ fn compute_permanent_gated(
     let has_type_gated = gates.type_changer && gates.type_lord;
     let has_card_type_gated = gates.card_type_changer && gates.card_type_filtered;
     let has_color_gated = gates.color_changer && gates.color_filtered;
-    if gates.power || has_type_gated || has_card_type_gated || has_color_gated {
-        return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated, has_color_gated);
+    let has_keyword_gated = gates.keyword_changer && gates.keyword_filtered;
+    if gates.power || has_type_gated || has_card_type_gated || has_color_gated || has_keyword_gated {
+        return compute_permanent_second_pass(
+            card,
+            effects,
+            has_type_gated,
+            has_card_type_gated,
+            has_color_gated,
+            has_keyword_gated,
+        );
     }
-    compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance, None)
+    compute_permanent_pass(card, effects, Gates::PRINTED)
 }
 
 /// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
@@ -1146,8 +1196,9 @@ fn compute_permanent_second_pass(
     has_type_gated: bool,
     has_card_type_gated: bool,
     has_color_gated: bool,
+    has_keyword_gated: bool,
 ) -> ComputedPermanent {
-    let pass1 = compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance, None);
+    let pass1 = compute_permanent_pass(card, effects, Gates::PRINTED);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     let gate_card_types = has_card_type_gated.then(|| pass1.card_types().clone());
     // CR 613.1d — a layer-4 "set creature types" overrides changeling's CDA,
@@ -1161,27 +1212,25 @@ fn compute_permanent_second_pass(
         ChangelingRead::Instance
     };
     let gate_colors = has_color_gated.then_some(pass1.colors);
+    let gate_keywords = has_keyword_gated.then(|| pass1.keywords().to_vec());
     compute_permanent_pass(
         card,
         effects,
-        Some(pass1.power),
-        gate_types.as_deref(),
-        gate_card_types.as_deref(),
-        changeling,
-        gate_colors,
+        Gates {
+            power: Some(pass1.power),
+            types: gate_types.as_deref(),
+            card_types: gate_card_types.as_deref(),
+            changeling,
+            colors: gate_colors,
+            keywords: gate_keywords.as_deref(),
+        },
     )
 }
 
 fn compute_permanent_pass(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
-    gate_power: Option<i32>,
-    gate_types: Option<&[CreatureType]>,
-    gate_card_types: Option<&[CardType]>,
-    changeling_types: ChangelingRead,
-    // CR 613.8 — the computed colors (pass 2 when a layer-5 change meets a
-    // color-filtered set). `None` reads the printed colors.
-    gate_colors: Option<ColorSet>,
+    gates: Gates,
 ) -> ComputedPermanent {
     // Start from the base card definition — borrowed, not cloned: each of
     // these materializes only if a layer below actually writes to it.
@@ -1348,7 +1397,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, effects, card, gate_power, gate_types, gate_card_types, changeling_types, gate_colors) {
+            if affects(e, effects, card, gates) {
                 sorted.push(e);
             }
         }
@@ -1620,11 +1669,7 @@ fn affects(
     effect: &ContinuousEffect,
     all: &[ContinuousEffect],
     card: &crate::card::CardInstance,
-    gate_power: Option<i32>,
-    gate_types: Option<&[CreatureType]>,
-    gate_card_types: Option<&[CardType]>,
-    changeling_types: ChangelingRead,
-    gate_colors: Option<ColorSet>,
+    gates: Gates,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
     // had there in every later layer, and that set was fixed before layer 4
@@ -1633,7 +1678,7 @@ fn affects(
     // same source — reads the printed types: Titania's Song / March of the
     // Machines' "each noncreature artifact" would otherwise read its own
     // output and drop both the type and the P/T set it animated.
-    let gate_card_types = match (&effect.affected, gate_card_types) {
+    let gate_card_types = match (&effect.affected, gates.card_types) {
         (AffectedPermanents::CardMatch { requirement, .. }, Some(_))
             if all.iter().any(|o| {
                 o.source == effect.source
@@ -1646,18 +1691,9 @@ fn affects(
         {
             None
         }
-        _ => gate_card_types,
+        _ => gates.card_types,
     };
-    affected_includes_gated(
-        &effect.affected,
-        effect.source,
-        card,
-        gate_power,
-        gate_types,
-        gate_card_types,
-        changeling_types,
-        gate_colors,
-    )
+    affected_includes_gated(&effect.affected, effect.source, card, Gates { card_types: gate_card_types, ..gates })
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -1674,7 +1710,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power), None, None, ChangelingRead::Instance, None)
+    affected_includes_gated(affected, source, card, Gates { power: Some(printed_power), ..Gates::PRINTED })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1682,18 +1718,16 @@ fn affected_includes_gated(
     affected: &AffectedPermanents,
     source: CardId,
     card: &crate::card::CardInstance,
-    gate_power: Option<i32>,
-    // CR 613.8 — the affected card's *computed* creature types (pass 2 of a
-    // type lord recompute). `None` falls back to printed types.
-    gate_types: Option<&[CreatureType]>,
-    // CR 613.8 — the computed card types (pass 2 when a layer-4 type change
-    // meets a type-filtered set). `None` falls back to printed types.
-    gate_card_types: Option<&[CardType]>,
-    // How changeling reads as every creature type (CR 613.1d).
-    changeling_types: ChangelingRead,
-    // CR 613.8 — the computed colors (pass 2); `None` reads the printed ones.
-    gate_colors: Option<ColorSet>,
+    gates: Gates,
 ) -> bool {
+    let Gates {
+        power: gate_power,
+        types: gate_types,
+        card_types: gate_card_types,
+        changeling: changeling_types,
+        colors: gate_colors,
+        keywords: gate_keywords,
+    } = gates;
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
     let colors = || gate_colors.unwrap_or_else(|| card.definition.printed_color_set());
     match affected {
@@ -1801,6 +1835,7 @@ fn affected_includes_gated(
                 computed_types,
                 gate_types.map(|t| (t, changeling_types)),
                 gate_colors,
+                gate_keywords,
             )
         }
         AffectedPermanents::CardMatchPowerGated { source_controller, requirement, power_at_least } => {
@@ -1930,7 +1965,19 @@ pub(crate) fn requirement_matches_card(
     card: &crate::card::CardInstance,
     source_controller: usize,
 ) -> bool {
-    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None, None)
+    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None, None, None)
+}
+
+/// True when `req` has a keyword leaf — the ones
+/// [`requirement_matches_card_typed`] reads from the computed keywords.
+fn requirement_reads_keyword(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::HasKeyword(_) => true,
+        R::And(a, b) | R::Or(a, b) => requirement_reads_keyword(a) || requirement_reads_keyword(b),
+        R::Not(inner) => requirement_reads_keyword(inner),
+        _ => false,
+    }
 }
 
 /// True when `req` has a color leaf — the ones
@@ -1970,6 +2017,8 @@ pub(crate) fn requirement_matches_card_typed(
     ctypes: Option<(&[CreatureType], ChangelingRead)>,
     // CR 613.8 — the computed colors, else the printed ones.
     colors: Option<ColorSet>,
+    // CR 613.8 — the computed keywords, else the instance's own.
+    keywords: Option<&[Keyword]>,
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
@@ -2016,7 +2065,7 @@ pub(crate) fn requirement_matches_card_typed(
         R::HasLandType(lt) => def.subtypes.land_types.contains(lt),
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
-        R::HasKeyword(k) => card.has_keyword(k),
+        R::HasKeyword(k) => keywords.map_or_else(|| card.has_keyword(k), |kws| kws.contains(k)),
         R::HasToxic => card.has_toxic(),
         R::HasModular => card.has_modular(),
         R::HasMutate => def.mutate.is_some(),
@@ -2033,14 +2082,14 @@ pub(crate) fn requirement_matches_card_typed(
         R::Multicolored => color_set().len() >= 2,
         R::Monocolored => color_set().len() == 1,
         R::And(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors)
-                && requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors, keywords)
+                && requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors, keywords)
         }
         R::Or(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors)
-                || requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors, keywords)
+                || requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors, keywords)
         }
-        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types, ctypes, colors),
+        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types, ctypes, colors, keywords),
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,

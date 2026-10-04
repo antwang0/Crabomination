@@ -423,3 +423,15 @@ fn cr_613_8_a_color_anthem_reads_layer_5_colors() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "made white");
     assert_eq!(g.computed_permanent(knight).unwrap().power, 2, "made red");
 }
+
+/// CR 613.8 — a keyword-filtered anthem reads layer-6 abilities: Favorable
+/// Winds pumps a creature Levitation gives flying.
+#[test]
+fn cr_613_8_a_keyword_anthem_reads_granted_keywords() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::favorable_winds());
+    g.add_card_to_battlefield(0, catalog::levitation());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Levitation's flying meets Favorable Winds");
+}
