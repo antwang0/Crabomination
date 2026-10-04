@@ -3163,6 +3163,35 @@ pod (strict      CRAB_ANSWER_LOG=strict debug builds over every deck: 4 seats
 suite            23,922 / 0 / 5 (CRAB_ANSWER_LOG=strict); workspace clippy 0
 ```
 
+### 2026-10-04 (Commander session `01NJGEp2`) — guardrail; one sized struct change
+
+Engine edits on paths every pool reaches: the as-enters funnel asks unleash /
+riot / `MatchingEntersWith` per entry (one keyword test, one
+`keyword_grant_in_scope`, the ETB-counter lane); `remove_effects_from_source`
+keeps non-source-tied durations (CR 611.2a); `ComputedPermanent` gains a
+base-P/T byte that rides existing padding (72 bytes, `card_instance`'s size
+test holds). The one A/B: release, `--bench --games 1280`, ABAB x 4, 4-core
+container.
+
+```text
+ComputedPermanent  base 418.10 / 418.85 / 418.79 / 424.97 g/s (mean 420.18)
+  base_pt byte     new  413.75 / 420.61 / 420.14 / 423.40 g/s (mean 419.48)
+                   -0.17 %, inside noise; decisions 3,208,894 both sides
+--bench            decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                   at every push of the session; determinism ok
+two-player pools   cube / sos / sealed x 1,000, seeds 62701, 64701, 66701:
+                   75,000 games, all decided but 3 cube draws (CR 104.4a)
+pod (release)      seed 61001+: 4 seats x 100 every deck (4,600), 3 / 5 / 6 / 8
+                   seats x 300 (18,300 / 11,100 / 9,300 / 6,900), 4 seats x 300
+                   CRAB_POD_CONCEDE=5 (13,800) — all decided but one draw;
+                   later tips 62501+ / 64501+ / 66501+: 4, 5, 6 seats, 22,850
+                   games, all decided but two draws; zero panics
+pod (strict debug) CRAB_ANSWER_LOG=strict, every deck: 4 seats x 20 (63501+),
+                   6 x 12 (63601+), 3 x 20 (65301+), 5 x 12 (65501+), 4 x 15
+                   conceding (65401+) = 3,646 games, all decided, no leak
+suite              23,956 / 0 / 5
+```
+
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: `trigger_effect_for` at the card
