@@ -402,8 +402,9 @@ pub fn leori_sparktouched_hunter() -> CardDefinition {
     }
 }
 
-/// Narset of the Ancient Way — +1 life and noncreature mana; −2 loot into
-/// damage; −6 a noncreature-spell burn emblem.
+/// Narset of the Ancient Way — +1 life and noncreature mana; −2 loot, a
+/// discarded nonland card's mana value as damage to a creature or
+/// planeswalker; −6 a noncreature-spell burn emblem.
 pub fn narset_of_the_ancient_way() -> CardDefinition {
     let emblem = TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -437,9 +438,18 @@ pub fn narset_of_the_ancient_way() -> CardDefinition {
                         description: "Discard a card?".into(),
                         body: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
                     },
-                    Effect::DealDamage {
-                        to: target_filtered(R::Creature.or(R::Planeswalker)),
-                        amount: Value::GreatestDiscardedManaValueThisEffect,
+                    // "When you discard a nonland card this way" — a reflexive
+                    // trigger (CR 603.7c), its target chosen once it fires, so
+                    // the −2 needs no creature on the battlefield.
+                    Effect::If {
+                        cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+                        then: Box::new(Effect::Reflexive {
+                            body: Box::new(Effect::DealDamage {
+                                to: target_filtered(R::Creature.or(R::Planeswalker)),
+                                amount: Value::GreatestDiscardedManaValueThisEffect,
+                            }),
+                        }),
+                        else_: Box::new(Effect::Noop),
                     },
                 ]),
             ),

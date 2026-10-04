@@ -295,8 +295,16 @@ fn narset_of_the_ancient_way_gains_and_loots() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::solemn_simulacrum());
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
-    loyalty(&mut g, narset, 1, Some(Target::Permanent(bear)), None).expect("−2");
+    loyalty(&mut g, narset, 1, None, None).expect("−2");
     assert!(g.battlefield_find(bear).is_none(), "the discarded Solemn's four damage");
+    // CR 603.7c — the damage is a reflexive trigger's: the −2 needs no
+    // creature or planeswalker to aim at when it's activated.
+    let mut g = pod(2);
+    let narset = g.add_card_to_battlefield(0, catalog::narset_of_the_ancient_way());
+    g.add_card_to_library(0, catalog::solemn_simulacrum());
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, narset, 1, None, None).expect("−2 with nothing to hit");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew; the headless seat keeps the card");
 }
 
 /// CR 601.2 — Narset, Enlightened Master's attack frees noncreature spells.
