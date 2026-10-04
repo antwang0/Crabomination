@@ -3134,6 +3134,36 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-04 (Commander session `016kc94f`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one emptiness test of the active
+player's `next_turn_attack_bans` in `permanent_cant_be_attacked` and
+`player_cant_be_attacked_at_all`; a stack `SmallVec` of bound attackers in
+`declare_attackers`; one snapshot read per `PermanentSacrificed`; the leave
+funnel unwinds a temporary copy before the face reverts; a hopped cast no
+longer stamps `cast_from_hand`. 4-core container, release-fast.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 at the tip; determinism ok
+A/B (wall,       session-start build (c06bb533b's sources) vs the tip, --bench x4
+  release-fast)  alternated: 305.6 vs 303.0 games/s (-0.9 %, inside the box's
+                 288-330 spread)
+two-player pools cube / sos / sealed x 1,000: seed 97101 25,000 games all
+                 decided; seed 97201 cube 10 CR 104.4 draws (one GR pairing),
+                 identical on the session-start build
+pod (release)    every deck seated, 2/3/4/6/8 seats (98401+): 28,980 games —
+                 ONE PANIC, two blocks (Olag-as-Chandra's re-transform
+                 unwrapped a missing back face; fixed 539355405, both blocks
+                 re-run clean), 1 draw, 1 board cap (four Primal Vigors, 953
+                 Treasures); then 4 x 400 (46 groups, 99101+), 5 x 200 (37,
+                 99201+), 3 x 200 (61, 99301+), 8 x 60 (23, 99401+) = 39,380
+                 games, zero panics, 2 draws, 1 board cap (574 Scute Swarms)
+pod (strict      every deck, 4 x 30 (93001+), 6 x 20 (94001+), 3 x 30 (95001+),
+  debug)         2 x 40 (96001+, 67 of 92 groups) = 6,510 games, all decided
+turns/game       3 seats 30.58, 4 seats 42.61, 5 seats 54.35, 8 seats 91.64
+```
+
 ### 2026-10-04 (Commander session `01WwQaPJ`) — guardrail; one priced hot-path add
 
 Engine edits on paths every pool reaches: `note_excess_damage` (CR 120.10)
