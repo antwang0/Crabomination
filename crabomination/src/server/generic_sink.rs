@@ -213,6 +213,27 @@ mod tests {
         let _ = bears;
     }
 
+    /// Mikaeus, the Lunarch spends a counter to grow three other creatures
+    /// rather than growing itself.
+    #[test]
+    fn mikaeus_spreads_its_counter_over_a_board() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let m = g.add_card_to_battlefield(0, crate::catalog::mikaeus_the_lunarch());
+        g.clear_sickness(m);
+        g.battlefield_find_mut(m).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 2);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        }
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(got, Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == m),
+            "got {got:?}"
+        );
+    }
+
     /// "Target player draws a card" auto-aims at an opponent; the sink also
     /// asks about its own seat and takes the draw for itself.
     #[test]
