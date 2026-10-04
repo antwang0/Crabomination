@@ -578,7 +578,9 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
     use crabomination::effect::{Effect, PlayerRef, Selector};
     // Tip the Scales: "Sacrifice a creature. When you do, …" is printed as the
     // effect, and the -X/-X reads the sacrificed toughness.
-    const EFFECT_SACRIFICES: &[&str] = &["Rupture", "Witherbloom Wickering", "Tip the Scales"];
+    // Danse Macabre: "Each player sacrifices a nontoken creature" is the
+    // effect, the caster's first in APNAP order (CR 101.4).
+    const EFFECT_SACRIFICES: &[&str] = &["Rupture", "Witherbloom Wickering", "Tip the Scales", "Danse Macabre"];
     // Spells whose opening "you sacrifice / discard" is printed as an effect,
     // or (Grab the Prize) whose payoff reads the discard, which a cost-time
     // discard doesn't yet record.
