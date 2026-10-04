@@ -8149,3 +8149,43 @@ fn cr_903_10a_treacherous_link_redirect_is_still_commander_damage() {
     assert_eq!(g.players[1].life, life - 1, "the Link sent the 1 to seat 1");
     assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1), "as commander damage");
 }
+
+/// CR 611.2b — "gain control of it until your next turn" lasts through the
+/// other seats' turns and ends as the taker's next turn begins (it used to
+/// snap back in the cleanup of the turn it was taken).
+#[test]
+fn cr_611_2b_control_until_your_next_turn_lasts_past_this_cleanup() {
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasName(
+            "Grizzly Bears".into(),
+        )),
+        to: None,
+        duration: crabomination::effect::Duration::UntilNextTurn,
+    };
+    g.resolve_effect(&steal, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    let pass_until = |g: &mut GameState, seat: usize| {
+        for _ in 0..400 {
+            if g.active_player_idx == seat {
+                return;
+            }
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        panic!("seat {seat}'s turn never came");
+    };
+    pass_until(&mut g, 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "still the taker's through seat 1's turn");
+    pass_until(&mut g, 2);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    pass_until(&mut g, 0);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "back as the taker's next turn began");
+}

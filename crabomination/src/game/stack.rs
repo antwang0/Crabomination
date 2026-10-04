@@ -4620,6 +4620,9 @@ impl GameState {
         // their goad lifts here too rather than never (zero in a duel).
         let departed = self.departed_seats_skipped_into_this_turn();
         let ends = |g: usize| g == p || departed & (1u64 << (g & 63)) != 0;
+        // CR 611.2b — "until your next turn" control ends as that turn begins
+        // (it used to snap back in the cleanup of the turn it was taken).
+        self.revert_temporary_control(&[crate::effect::Duration::UntilNextTurn]);
         // Every write below is gated on the field not already holding the
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.
@@ -5221,7 +5224,6 @@ impl GameState {
         // back to their pre-steal controllers (CR 800.4).
         self.revert_temporary_control(&[
             crate::effect::Duration::EndOfTurn,
-            crate::effect::Duration::UntilNextTurn,
             crate::effect::Duration::UntilEndOfYourNextTurn,
         ]);
         // CR 707 — "becomes a copy ... until end of turn" swaps snap back.

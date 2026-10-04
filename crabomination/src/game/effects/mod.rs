@@ -19957,7 +19957,7 @@ impl GameState {
                     if !matches!(duration, Duration::Permanent)
                         && !self.temporary_control.iter().any(|t| t.card == cid)
                     {
-                        let installed = matches!(duration, Duration::UntilEndOfYourNextTurn)
+                        let installed = matches!(duration, Duration::UntilEndOfYourNextTurn | Duration::UntilNextTurn)
                             .then_some((ctx.controller, self.turn_number));
                         self.temporary_control.push(crate::game::TempControl {
                             card: cid,
