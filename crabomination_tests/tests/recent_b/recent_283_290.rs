@@ -1294,6 +1294,7 @@ mod recent290 {
             target: AttackTarget::Player(1),
         }]))
         .expect("attack");
+        drain_stack(&mut g);
         assert!(
             g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::Menace),
             "attacking creature gains menace",

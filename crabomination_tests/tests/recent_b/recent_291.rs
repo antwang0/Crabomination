@@ -273,7 +273,34 @@ fn frontier_warmonger_menace_needs_two_blockers() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker, target: AttackTarget::Player(1),
     }])).expect("attack");
+    drain_stack(&mut g);
     assert!(g.computed_permanent(attacker).unwrap().keywords().contains(&crabomination::card::Keyword::Menace));
+}
+
+/// CR 508.1 / 603.2 — Frontier Warmonger triggers on ANY creatures attacking
+/// one of your opponents: in a pod, an opponent's creature attacking another
+/// opponent gains menace; one attacking you does not.
+#[test]
+fn frontier_warmonger_menace_for_any_attacker_of_your_opponents() {
+    use crabomination::card::Keyword;
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::frontier_warmonger());
+    let at_two = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let at_you = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(at_two);
+    g.clear_sickness(at_you);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: at_two, target: AttackTarget::Player(2) },
+        Attack { attacker: at_you, target: AttackTarget::Player(0) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let menace = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Menace);
+    assert!(menace(at_two), "attacking your opponent: menace");
+    assert!(!menace(at_you), "attacking you: no menace");
 }
 
 #[test]

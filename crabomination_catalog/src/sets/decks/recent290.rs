@@ -10,11 +10,11 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes,
     Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w};
@@ -333,10 +333,18 @@ pub fn frontier_warmonger() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        static_abilities: vec![StaticAbility {
-            description: "Attacking creatures you control have menace.",
-            effect: StaticEffect::GrantKeywordToAttackers {
+        // "Whenever one or more creatures attack one of your opponents or a
+        // planeswalker they control, those creatures gain menace until end
+        // of turn" — whoever's creatures they are (a pod opponent attacking
+        // another opponent gets menace too), and never ones attacking you.
+        // One trigger per declaration covers every attacked opponent: the
+        // per-opponent triggers would grant the same keyword to the same set.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayerAttacks),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::IsAttackingAnOpponent),
                 keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
             },
         }],
         ..Default::default()
