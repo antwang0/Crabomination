@@ -29200,6 +29200,17 @@ impl GameState {
         from: crate::card::CreatureType,
         to: crate::card::CreatureType,
     ) {
+        // On a permanent the rewrite is an effect on that object: baked, so
+        // a copy doesn't take it and it ends as the permanent leaves (CR
+        // 707.2 / 400.7). A spell keeps it as it becomes a permanent.
+        if let Some(card) = self.battlefield.find_by_id_mut(target_id) {
+            if let Some(def) =
+                crabomination_base::textrewrite::rewrite_creature_type(card.definition.as_ref(), from, to)
+            {
+                *card.bake_grant() = def;
+            }
+            return;
+        }
         let Some(card) = self.find_card_anywhere_mut(target_id) else { return };
         let Some(def) =
             crabomination_base::textrewrite::rewrite_creature_type(card.definition.as_ref(), from, to)

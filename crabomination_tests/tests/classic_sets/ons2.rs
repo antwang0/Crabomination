@@ -792,6 +792,13 @@ fn artificial_evolution_rewrites_the_targets_text() {
     let power = |g: &GameState, id: CardId| g.computed_permanent(id).unwrap().power;
     assert_eq!(power(&g, bear), 3, "the lord now pumps Bears");
     assert_eq!(power(&g, goblin), 1, "and no longer pumps Goblins");
+    // CR 400.7 — the rewrite was an effect on that permanent: the card that
+    // dies is a Goblin King again.
+    let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![lord]) };
+    g.resolve_effect(&kill, &ctx).expect("destroy");
+    let card = g.players[0].graveyard.iter().find(|c| c.id == lord).expect("in the graveyard");
+    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Goblin));
 }
 
 /// Butcher Orgg divides its damage over the defending player's creatures —
