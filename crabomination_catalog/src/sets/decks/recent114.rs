@@ -537,10 +537,7 @@ pub fn solitary_confinement() -> CardDefinition {
                 description: "Discard a card to keep Solitary Confinement?".into(),
                 count: Value::ONE,
                 then: Box::new(Effect::Noop),
-                else_: Some(Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                })),
+                else_: Some(Box::new(Effect::SacrificeSource)),
             },
         }],
         static_abilities: vec![
@@ -650,10 +647,7 @@ pub fn sacred_mesa() -> CardDefinition {
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Pegasus),
                 count: Value::ONE,
                 then: Box::new(Effect::Noop),
-                else_: Some(Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                })),
+                else_: Some(Box::new(Effect::SacrificeSource)),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

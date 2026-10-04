@@ -2693,10 +2693,7 @@ pub fn phantasmal_image() -> CardDefinition {
             extra_creature_types: vec![CreatureType::Illusion],
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                },
+                effect: Effect::SacrificeSource,
             }],
             ..Default::default()
         }),
@@ -3898,10 +3895,7 @@ pub fn ichorid() -> CardDefinition {
                     // creature" — to the graveyard, so it recurs next upkeep.
                     Effect::DelayUntil {
                         kind: DelayedTriggerKind::NextEndStep,
-                        body: Box::new(Effect::Move {
-                            what: Selector::This,
-                            to: ZoneDest::Graveyard,
-                        }),
+                        body: Box::new(Effect::SacrificeSource),
                     },
                 ])),
             },
@@ -4053,10 +4047,7 @@ pub fn dandan() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByYou),
                     ),
                 ))),
-                then: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                }),
+                then: Box::new(Effect::SacrificeSource),
                 else_: Box::new(Effect::Noop),
             },
         }],

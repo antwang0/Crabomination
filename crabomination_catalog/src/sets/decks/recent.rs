@@ -9784,10 +9784,7 @@ pub fn illusionary_servant() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Graveyard,
-            },
+            effect: Effect::SacrificeSource,
         }],
         ..Default::default()
     }

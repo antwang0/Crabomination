@@ -220,7 +220,6 @@ pub fn undercity_sewers() -> CardDefinition {
 /// total before it dies.
 pub fn gemstone_mine() -> CardDefinition {
     use crate::card::CounterType;
-    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Gemstone Mine",
         card_types: vec![CardType::Land],
@@ -247,10 +246,7 @@ pub fn gemstone_mine() -> CardDefinition {
                         },
                         Value::Const(0),
                     ),
-                    then: Box::new(Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Graveyard,
-                    }),
+                    then: Box::new(Effect::SacrificeSource),
                     else_: Box::new(Effect::Noop),
                 },
             ]),

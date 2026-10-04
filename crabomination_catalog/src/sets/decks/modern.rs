@@ -25421,10 +25421,7 @@ pub fn phantasmal_bear() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Graveyard,
-            },
+            effect: Effect::SacrificeSource,
         }],
         ..Default::default()
     }

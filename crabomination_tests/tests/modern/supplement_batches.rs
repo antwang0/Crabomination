@@ -2581,3 +2581,21 @@ fn indulgent_tormentor_punishes_only_the_targeted_opponent_at_four_seats() {
     assert_eq!(paid.len(), 1, "exactly one opponent was punished, not the table");
     assert_eq!(g.players[paid[0]].life, life[paid[0]] - 3, "and they paid 3");
 }
+
+/// CR 701.16 — "sacrifice this enchantment" is a sacrifice: Solitary
+/// Confinement sacrificed at upkeep (no card to discard) triggers Mayhem
+/// Devil's "whenever a player sacrifices a permanent".
+#[test]
+fn solitary_confinement_upkeep_sacrifice_is_a_sacrifice() {
+    let mut g = two_player_game();
+    g.players[0].hostile_player_targets = true;
+    let conf = g.add_card_to_battlefield(0, catalog::solitary_confinement());
+    g.add_card_to_battlefield(0, catalog::mayhem_devil());
+    g.players[0].hand.clear();
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(conf).is_none(), "nothing to discard: sacrificed");
+    assert_eq!(g.players[1].life, 19, "Mayhem Devil saw the sacrifice");
+}

@@ -317,10 +317,7 @@ pub fn sea_serpent() -> CardDefinition {
                         R::HasLandType(LandType::Island).and(R::ControlledByYou),
                     ),
                 ))),
-                then: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                }),
+                then: Box::new(Effect::SacrificeSource),
                 else_: Box::new(Effect::Noop),
             },
         }],
