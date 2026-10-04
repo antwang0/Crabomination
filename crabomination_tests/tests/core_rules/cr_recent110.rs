@@ -343,3 +343,21 @@ fn cr_611_2a_resolved_effects_outlive_their_source() {
     assert_eq!(g.computed_permanent(wurm).unwrap().power, 0, "the base 0/1 lasts until end of turn");
     assert!(g.computed_permanent(land).unwrap().subtypes().land_types.contains(&LandType::Island));
 }
+
+/// CR 611.2c — a resolved "creatures you control get +3/+3" locks its
+/// affected set as it resolves: a creature entering later isn't pumped.
+#[test]
+fn cr_611_2c_a_resolved_pump_skips_later_creatures() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ov = g.add_card_to_hand(0, catalog::overrun());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: ov, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let late = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+    assert_eq!(g.computed_permanent(late).unwrap().power, 2, "entered after Overrun resolved");
+    assert!(!g.computed_permanent(late).unwrap().keywords().contains(&crabomination::card::Keyword::Trample));
+}
