@@ -3410,6 +3410,10 @@ third stretch      modal-activation candidates, may-cost gate, reflexive
                    identical; concession pods (CRAB_POD_CONCEDE=8) 5 x 10
                    + 4 x 10 = 830 games all decided; debug pods 4 x 2 +
                    5 x 2 = 166 clean; suite 22,873 / 0
+"if you do" class  may-cost gate over self-moves / graveyard-exile costs,
+                   CR 400.7 hidden-zone trigger cards, twelve + three
+                   payoffs gated: --bench 613.0 / 27.64 / 0 stalls,
+                   determinism ok, unchanged; suite 24,107 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
