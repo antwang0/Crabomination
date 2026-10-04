@@ -6,8 +6,6 @@
 //! - **Kros, Defense Contractor** — only the counters its own upkeep
 //!   trigger puts goad; counters other sources put on an opposing creature
 //!   don't.
-//! - **Littjara Mirrorlake** — the extra +1/+1 counter is put on the copy
-//!   after it enters.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
@@ -415,8 +413,7 @@ pub fn jenara_asura_of_war() -> CardDefinition {
 }
 
 /// Littjara Mirrorlake — a tapped {U} land that sacrifices into a copy of
-/// your creature with an extra +1/+1 counter. Residual: the counter is put
-/// on after the copy enters.
+/// your creature entering with an extra +1/+1 counter.
 pub fn littjara_mirrorlake() -> CardDefinition {
     CardDefinition {
         name: "Littjara Mirrorlake",
@@ -436,23 +433,21 @@ pub fn littjara_mirrorlake() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 sorcery_speed: true,
-                effect: Effect::Seq(vec![
-                    Effect::CreateTokenCopyOf {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        source: target_filtered(R::Creature.and(R::ControlledByYou)),
-                        extra_creature_types: vec![],
-                        extra_card_types: vec![],
-                        override_pt: None,
-                        override_colors: None,
-                        enters_tapped: false,
-                        non_legendary: false,
-                        legendary: false,
-                        extra_keywords: vec![],
-                        no_mana_cost: false,
-                    },
-                    counter(Selector::LastCreatedToken, CounterType::PlusOnePlusOne),
-                ]),
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+                },
                 ..Default::default()
             },
         ],

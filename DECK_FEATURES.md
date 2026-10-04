@@ -57,7 +57,6 @@ they call a deck 🟡, the table wins.
 | 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
 | 142 | Kadena, Slinking Sorcerer (BGU) | 1: rayami_first_of_the_fallen |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
-| 146 | Perrie, the Pulverizer (GWU) | 1: littjara_mirrorlake |
 | 152 | Anje Falkenrath (BR) | 2: chainer_nightmare_adept, krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
@@ -71,7 +70,7 @@ they call a deck 🟡, the table wins.
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 7: aces_baseball_bat, peri_brown, reverse_the_polarity, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor, the_second_doctor |
 
-145 / 183 pod decks carry no residual in their card docs; the rest are listed.
+150 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1571,8 +1570,7 @@ Affliction's one copy was the only case handled). Pods (seed 146, 1,000
 each): 4 seats (Sigarda / Judith / Hanna) 1,000 decided, Perrie 24.3 %;
 6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000
 decided, 2.2 %; 8 seats (seats 4-10) 1,000 decided, 7.9 %. Residuals: Kros
-goads only for its own counters; Littjara Mirrorlake's extra counter
-lands after the copy enters. Census: no card of the list unplayed. Debug
+goads only for its own counters. Census: no card of the list unplayed. Debug
 strict pods (400 games): clean. `--bench` byte-identical.
 
 The **hundred-and-thirty-eighth** is Aetherdrift Commander's **Living Energy**

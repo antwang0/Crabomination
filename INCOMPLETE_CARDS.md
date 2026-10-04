@@ -1978,7 +1978,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the one-cast permission covers the creature cards in your graveyard as it resolves; one put there later isn't covered. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers spells, activated abilities and turning face up; not a mana ability's cost or the other special-action costs (cycling, ward). |
-| 🟡 Littjara Mirrorlake | Bedecked Brokers (NCC) | the extra +1/+1 counter is put on the copy after it enters. |
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
