@@ -2828,6 +2828,14 @@ fn every_card_carries_its_printed_type_line() {
         // the card type that owns it — "Legendary Planeswalker — Urza" names
         // a planeswalker subtype that happens to spell a `LandType`.
         let owns = |t: &str| base.contains(t);
+        // CR 604.3 — "~ is every nonbasic land type" is a characteristic-
+        // defining ability: the card has those types in every zone, so its
+        // land types are carried though the type line prints none (Planar
+        // Nexus).
+        let cda_land_types = entry
+            .get("oracle_text")
+            .and_then(|v| v.as_str())
+            .is_some_and(|t| t.contains("is every nonbasic land type"));
         for (label, ours, printed) in [
             ("supertype",
              def.supertypes.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
@@ -2845,6 +2853,7 @@ fn every_card_carries_its_printed_type_line() {
              def.subtypes.enchantment_subtypes.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
              if owns("Enchantment") { sub_words.clone() } else { HashSet::new() }),
         ] {
+            if label == "land type" && cda_land_types { continue; }
             if printed.is_empty() && !ours.is_empty() && !matches!(label, "supertype" | "card type")
             {
                 // The family does not apply to this card at all; the
