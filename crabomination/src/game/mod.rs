@@ -2192,6 +2192,10 @@ pub struct ResolutionScratch {
     /// resolutions. Here for the same 1,680-byte `GameState` cap.
     #[serde(skip)]
     pub(crate) treasure_mana_spent_to_activate: u32,
+    /// `Value::TimesPaidThisEffect`, stamped as a `MayPayRepeatedly` loop
+    /// ends; reset (guarded) between independent resolutions.
+    #[serde(skip)]
+    pub(crate) times_paid_this_effect: u32,
     /// Transient: the card discarded to pay the resolving activation's cost.
     /// Stamped by `Effect::WithDiscardedForCost`; read by
     /// `Effect::IfDiscardedForCost`. Reset between independent resolutions.

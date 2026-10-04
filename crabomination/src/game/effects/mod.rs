@@ -3061,6 +3061,9 @@ impl GameState {
             if self.scratch.treasure_mana_spent_to_activate != 0 {
                 self.scratch.treasure_mana_spent_to_activate = 0;
             }
+            if self.scratch.times_paid_this_effect != 0 {
+                self.scratch.times_paid_this_effect = 0;
+            }
             // Guarded: an unconditional store unshares the scratch group.
             if self.scratch.discarded_for_cost_card.is_some() {
                 self.scratch.discarded_for_cost_card = None;
@@ -7696,6 +7699,7 @@ impl GameState {
                 let ctx = &sub;
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
+                let mut paid = 0u32;
                 // Bounded so a decider that always says yes can't spin; the
                 // pool runs out long before this in practice.
                 //
@@ -7733,12 +7737,17 @@ impl GameState {
                         break;
                     }
                     if replayed {
+                        paid += 1;
                         continue;
                     }
                     if !self.pay_mana_cost_with_picks(seat, mana_cost, None, events) {
                         break;
                     }
+                    paid += 1;
                     self.run_effect(body, ctx, events)?;
+                }
+                if self.scratch.times_paid_this_effect != paid {
+                    self.scratch.times_paid_this_effect = paid;
                 }
                 self.clear_answer_log();
                 Ok(())

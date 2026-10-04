@@ -1178,6 +1178,11 @@ pub enum Value {
     /// six-sided die for each mana from Treasures spent to activate this
     /// ability", Mr. House). Carried by `Effect::WithTreasureManaSpent`.
     TreasureManaSpentToActivate,
+    /// How many times the latest `Effect::MayPayRepeatedly` in this
+    /// resolution was paid — "you may pay {2}{R} any number of times. When
+    /// you pay this cost one or more times, … that many …" (Bloodthirsty
+    /// Adversary). Reset between independent resolutions.
+    TimesPaidThisEffect,
     /// Toughness of the most recently sacrificed creature this
     /// resolution (set by `Effect::SacrificeAndRemember`). Used by
     /// Tribute to Hunger (gain life equal to sacrificed creature's
