@@ -1112,6 +1112,12 @@ fn every_reachable_target_player_is_visible_to_the_player_gate() {
             if body.accepts_player_target() {
                 continue;
             }
+            // A later slot of a `SlotGroups` / multi-slot body that is a
+            // player slot is the per-slot picker's (Necron Deathmark's
+            // "target player mills three" behind its creature slot).
+            if (1..8u8).any(|slot| body.target_filter_for_slot(slot).is_some_and(|f| f.is_player_only())) {
+                continue;
+            }
             let root = match &json {
                 Value::Object(m) => m.keys().next().cloned().unwrap_or_default(),
                 _ => json.to_string(),
