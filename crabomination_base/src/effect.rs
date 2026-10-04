@@ -4953,6 +4953,12 @@ pub enum Effect {
     /// many-sources mirror of `DealDamageEqualToPowerToEach`; each hit
     /// carries its own dealer so lifelink/deathtouch apply per source.
     EachDealsDamageEqualToPower { dealers: Selector, target: Selector },
+    /// Each permanent `dealers` resolves to deals `amount` damage to each
+    /// entity `to` resolves to; every hit carries its own dealer, so the
+    /// dealer's deathtouch / lifelink / protection apply (CR 120.3). Sarkhan
+    /// the Masterless: "each Dragon you control deals 1 damage to that
+    /// creature." The filtered sibling of `EachControlledCreatureDealsDamage`.
+    EachDealsDamage { dealers: Selector, to: Selector, amount: Value },
     /// CR 701.12 — Exchange control of the two permanents the selectors
     /// resolve to (one each). A permanent control swap (Vedalken Plotter,
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent

@@ -1632,6 +1632,9 @@ impl Effect {
             Effect::EachDealsDamageEqualToPower { dealers, target } => {
                 sel_has_target(dealers) || sel_has_target(target)
             }
+            Effect::EachDealsDamage { dealers, to, amount } => {
+                sel_has_target(dealers) || sel_has_target(to) || value_has_target(amount)
+            }
             Effect::ExchangeControl { a, b }
             | Effect::ExchangeSpellAndCreatureControl { a, b }
             | Effect::ExchangePower { a, b, .. } => {
@@ -2618,7 +2621,8 @@ impl Effect {
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
-            Effect::EachDealsDamageEqualToPower { target, .. } => {
+            Effect::EachDealsDamageEqualToPower { target, .. }
+            | Effect::EachDealsDamage { to: target, .. } => {
                 sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
             }
             // The targeted side may be `b` when `a` is the source itself
@@ -3959,7 +3963,7 @@ impl Effect {
             Effect::MoveSpellToZone { .. } => "move target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
-            Effect::DealDamageFrom { .. } => "deal damage".into(),
+            Effect::DealDamageFrom { .. } | Effect::EachDealsDamage { .. } => "deal damage".into(),
             Effect::DealDamageEqualToPowerToEach { .. }
             | Effect::EachDealsDamageEqualToPower { .. } => {
                 "deal damage equal to power to each".into()
@@ -4375,7 +4379,8 @@ impl Effect {
             // players and aimed at a creature — often the dealer itself.
             Effect::DealDamageEqualToPower { target, .. }
             | Effect::DealDamageFrom { to: target, .. }
-            | Effect::EachDealsDamageEqualToPower { target, .. } => match target {
+            | Effect::EachDealsDamageEqualToPower { target, .. }
+            | Effect::EachDealsDamage { to: target, .. } => match target {
                 Selector::TargetFiltered { filter, .. } => filter.can_match_player(),
                 Selector::Target(_) => true,
                 _ => false,
@@ -5087,6 +5092,9 @@ impl Effect {
                 Effect::EachDealsDamageEqualToPower { dealers, target } => {
                     sel_find(dealers, slot).or_else(|| sel_find(target, slot))
                 }
+                Effect::EachDealsDamage { dealers, to, amount } => sel_find(dealers, slot)
+                    .or_else(|| sel_find(to, slot))
+                    .or_else(|| val_find(amount, slot)),
                 Effect::ExchangeControl { a, b }
                 | Effect::ExchangeSpellAndCreatureControl { a, b }
                 | Effect::ExchangePower { a, b, .. } => {

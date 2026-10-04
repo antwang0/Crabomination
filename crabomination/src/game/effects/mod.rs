@@ -8865,6 +8865,26 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 120.3 — each dealer is the source of its own hit.
+            Effect::EachDealsDamage { dealers, to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                let targets = self.resolve_selector(to, ctx);
+                if amt == 0 || targets.is_empty() { return Ok(()); }
+                let dealer_ids: Vec<CardId> = self
+                    .resolve_selector(dealers, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .filter(|id| self.battlefield_find(*id).is_some())
+                    .collect();
+                for src in dealer_ids {
+                    for ent in &targets {
+                        self.deal_damage_to_from(*ent, amt, Some(src), events);
+                    }
+                }
+                self.check_state_based_actions_mid_resolution(events);
+                Ok(())
+            }
+
             Effect::EachDealsDamageEqualToPower { dealers, target } => {
                 let Some(tgt) = self
                     .resolve_selector(target, ctx)
