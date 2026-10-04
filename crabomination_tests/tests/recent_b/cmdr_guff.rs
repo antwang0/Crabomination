@@ -137,6 +137,35 @@ fn chandra_legacy_of_fire_scales_with_walkers() {
     assert_eq!(g.players[1].life, life - 2);
 }
 
+/// Chandra, Legacy of Fire's 0: a loyalty counter off each of ANY NUMBER of
+/// permanents you control — the controller's pick, a non-walker with loyalty
+/// counters included — and one card exiled to play per counter. A headless
+/// seat spares a walker the removal would kill.
+#[test]
+fn chandra_legacy_of_fire_zero_takes_the_chosen_counters() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_legacy_of_fire());
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
+    let beacon = g.add_card_to_battlefield(0, catalog::gatewatch_beacon());
+    g.battlefield_find_mut(beacon).unwrap().add_counters(CounterType::Loyalty, 3);
+    let (t, exiled) = (loyalty_of(&g, teyo), g.exile.len());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![beacon, chandra])]));
+    loyalty(&mut g, chandra, 1, None, None).expect("0");
+    assert_eq!((loyalty_of(&g, chandra), loyalty_of(&g, teyo), loyalty_of(&g, beacon)), (2, t, 2));
+    assert_eq!(g.exile.len(), exiled + 2, "that many cards");
+
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_legacy_of_fire());
+    let teyo = g.add_card_to_battlefield(0, catalog::teyo_geometric_tactician());
+    g.battlefield_find_mut(teyo).unwrap().remove_counters(CounterType::Loyalty, 100);
+    g.battlefield_find_mut(teyo).unwrap().add_counters(CounterType::Loyalty, 1);
+    loyalty(&mut g, chandra, 1, None, None).expect("0");
+    assert_eq!(loyalty_of(&g, chandra), 2);
+    assert!(g.battlefield_find(teyo).is_some(), "the one-loyalty walker is spared");
+}
+
 /// CR 701.23 — Deploy the Gatewatch puts two planeswalkers from the top
 /// seven onto the battlefield.
 #[test]

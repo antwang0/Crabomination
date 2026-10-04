@@ -176,10 +176,10 @@ pub fn chandra_awakened_inferno() -> CardDefinition {
 }
 
 /// Chandra, Legacy of Fire — each end step burns each opponent per walker;
-/// +1 {R} per walker; 0 trades loyalty for impulse draws. Residual: the 0
-/// takes one from each walker with two or more.
+/// +1 {R} per walker; 0: a loyalty counter off each of any number of your
+/// permanents (`ForEachChosen`; a headless seat spares any it would kill),
+/// one impulse-drawn card per counter.
 pub fn chandra_legacy_of_fire() -> CardDefinition {
-    let spare = || your_walkers().and(R::WithCounterAtLeast(CounterType::Loyalty, 2));
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: your_step(TurnStep::End),
@@ -200,22 +200,28 @@ pub fn chandra_legacy_of_fire() -> CardDefinition {
                 ),
                 la(
                     0,
-                    Effect::Seq(vec![
-                        Effect::ExileTopAndGrantMayPlay {
-                            who: PlayerRef::You,
-                            count: Value::CountOf(Box::new(Selector::EachPermanent(spare()))),
-                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                            pay_any_color: false,
-                            max_mana_value: None,
-                            pay_own_cost: true,
-                            uncast_penalty: None,
-                        },
-                        Effect::RemoveCounter {
-                            what: Selector::EachPermanent(spare()),
-                            kind: CounterType::Loyalty,
-                            amount: Value::ONE,
-                        },
-                    ]),
+                    Effect::ForEachChosen {
+                        from: Selector::EachPermanent(
+                            R::ControlledByYou.and(R::WithCounterAtLeast(CounterType::Loyalty, 1)),
+                        ),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::RemoveCounter {
+                                what: Selector::TriggerSource,
+                                kind: CounterType::Loyalty,
+                                amount: Value::ONE,
+                            },
+                            Effect::ExileTopAndGrantMayPlay {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                                pay_any_color: false,
+                                max_mana_value: None,
+                                pay_own_cost: true,
+                                uncast_penalty: None,
+                            },
+                        ])),
+                        headless_takes: Some(R::WithCounterAtLeast(CounterType::Loyalty, 2)),
+                    },
                 ),
             ],
         )
