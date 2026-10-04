@@ -2899,11 +2899,44 @@ pub fn iroh_tea_master() -> CardDefinition {
         ]),
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: std::sync::Arc::new(food_token()),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(food_token()),
+            }),
+            // "At the beginning of combat on your turn, you may have target
+            // opponent gain control of target permanent you control. When you
+            // do, create a 1/1 white Ally creature token. Put a +1/+1 counter
+            // on that token for each permanent you own that your opponents
+            // control." The reflexive half runs inside the "may" body (the
+            // Harmless Offering slot order: permanent 0, opponent 1).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Give a permanent you control to target opponent?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::GainControl {
+                            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou)),
+                            to: Some(PlayerRef::Target(1)),
+                            duration: Duration::Permanent,
+                        },
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: std::sync::Arc::new(ally_token()),
+                        },
+                        Effect::AddCounter {
+                            what: Selector::LastCreatedToken,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                                SelectionRequirement::OwnedByYou.and(SelectionRequirement::ControlledByOpponent),
+                            ))),
+                        },
+                    ])),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

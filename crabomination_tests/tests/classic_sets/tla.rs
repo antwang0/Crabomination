@@ -1650,6 +1650,30 @@ fn iroh_tea_master_makes_food() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "ETB → Food");
 }
 
+/// Iroh, Tea Master — at the beginning of combat on your turn it may hand a
+/// permanent you control to target opponent; when it does, a 1/1 Ally gets a
+/// +1/+1 counter for each permanent you own that your opponents control.
+#[test]
+fn iroh_tea_master_donates_at_combat_for_a_grown_ally() {
+    let mut g = two_player_game();
+    let iroh = g.add_card_to_battlefield(0, catalog::iroh_tea_master());
+    g.fire_self_etb_triggers(iroh, 0);
+    drain_stack(&mut g);
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    let given = g.battlefield.iter().filter(|c| c.owner == 0 && c.controller == 1).count();
+    assert_eq!(given, 1, "one permanent handed to the opponent");
+    let ally = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Ally").expect("an Ally");
+    assert_eq!(ally.controller, 0);
+    assert_eq!(ally.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1, "one per given permanent");
+}
+
 /// Ty Lee, Chi Blocker taps a creature and stops its next untap.
 #[test]
 fn ty_lee_taps_and_locks() {
