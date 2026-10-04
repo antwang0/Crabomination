@@ -14579,12 +14579,12 @@ impl GameState {
                             .players
                             .iter()
                             .flat_map(|p| p.graveyard.iter())
-                            .filter(|c| !c.is_token && c.definition.is_creature())
+                            .filter(|c| !c.is_token && self.computed_is_creature(c))
                             .collect(),
                         D::ExiledCreatureCardsWithCounter(kind) => self
                             .exile
                             .iter()
-                            .filter(|c| !c.is_token && c.definition.is_creature() && c.counter_count(kind) > 0)
+                            .filter(|c| !c.is_token && self.computed_is_creature(c) && c.counter_count(kind) > 0)
                             .collect(),
                     };
                     let mut gained: Vec<&crate::card::Keyword> = Vec::new();
