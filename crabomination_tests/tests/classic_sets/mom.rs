@@ -146,3 +146,29 @@ fn aetherwing_is_an_uncrewed_vehicle_whose_power_counts_artifacts() {
     assert!(post.card_types().contains(&CardType::Creature), "crewed = creature");
     assert_eq!((post.power, post.toughness), (2, 4));
 }
+
+/// CR 707.9b — Lazotep Convert enters (via the defeated Siege's flicker) as a
+/// copy of a creature card in a graveyard, "except it's a 4/4 black Zombie in
+/// addition to its other colors and types": the copied name and color stay,
+/// the base P/T is 4/4, and black and Zombie are added.
+#[test]
+fn lazotep_convert_copies_a_graveyard_creature_as_a_black_zombie() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::serra_angel());
+    let (battle, atk) = seeded_battle_and_attacker(&mut g, catalog::invasion_of_amonkhet, 2);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Battle(battle),
+    }])).expect("attack your own Siege");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let back = g.battlefield_find(battle).expect("the back face is in play");
+    assert_eq!(back.definition.name, "Serra Angel", "a copy of the graveyard creature");
+    assert!(back.definition.has_creature_type(crabomination::card::CreatureType::Zombie), "a Zombie in addition");
+    assert!(back.definition.has_creature_type(crabomination::card::CreatureType::Angel), "still an Angel");
+    let cp = g.computed_permanent(battle).expect("computed");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "the copy exception sets 4/4");
+    assert!(cp.colors.contains(Color::White) && cp.colors.contains(Color::Black), "white and black");
+}

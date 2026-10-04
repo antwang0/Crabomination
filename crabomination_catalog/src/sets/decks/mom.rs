@@ -3,7 +3,7 @@
 //! transformed back face enters. Tests in `crabomination/src/tests/mom.rs`.
 
 use crate::card::{
-    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
+    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EntersAsCopy,
     EventKind, EventScope,
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value,
@@ -123,12 +123,22 @@ pub fn invasion_of_kaladesh() -> CardDefinition {
 
 /// Invasion of Amonkhet // Lazotep Convert — {1}{U}{B} Siege, defense 4. ETB:
 /// each player mills three, then each opponent discards a card and you draw.
-/// Back: a 4/4 black Zombie (the enter-as-a-copy clause is omitted).
+/// Back: Lazotep Convert, a 4/4 black Zombie that may enter as a copy of any
+/// creature card in a graveyard, "except it's a 4/4 black Zombie in addition
+/// to its other colors and types" (CR 707.9b).
 pub fn invasion_of_amonkhet() -> CardDefinition {
     let convert = CardDefinition {
         name: "Lazotep Convert",
         card_types: vec![CardType::Creature],
         color_indicator: vec![Color::Black],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature,
+            from_graveyards: true,
+            extra_creature_types: vec![CreatureType::Zombie],
+            override_pt: Some((4, 4)),
+            add_colors: vec![Color::Black],
+            ..Default::default()
+        }),
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie],
             ..Default::default()

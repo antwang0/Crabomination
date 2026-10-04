@@ -35,7 +35,7 @@ RIDERS = [
     ("artifact", r"(an?|is an?|are) artifacts?\b",
      r"extra_card_types: \[[^\]]*Artifact|card_types: \[Artifact\]|AddCardType"),
     ("color", r"\b(" + "|".join(COLORS) + r")\b",
-     r"override_colors: Some|SetColor|Colou?rs?\(|CopyOnePerOpponentWithTotalStats"),
+     r"override_colors: Some|add_colors: \[[A-Z]|SetColor|Colou?rs?\(|CopyOnePerOpponentWithTotalStats"),
 ]
 
 
