@@ -3246,6 +3246,15 @@ second half        CR 613.8 gates (changeling / color / keyword) + SecondPass
                    +1.01 M, computed_permanent_hinted +0.78 M); --bench
                    byte-identical; 4 / 6 seats x 100 every deck (69401+ /
                    69601+) all decided; suite 23,984 / 0 / 5
+third part         CR 603.2c noncombat damage batch (`run_effect` asks
+                   `is_damage_sentence` per call; keys ride the step list,
+                   GameState unchanged), callgrind fixed --games 6 against
+                   4bc07f187: 843,524,846 -> 844,666,322 Ir (+0.14 %), same
+                   outcomes; --bench 196,176 / 613.0 / 0 stalls, byte-
+                   identical; pods 4 seats x 5 (72001+) + 6 seats x 10
+                   (72201+) every deck = 540 games, all decided, 0 % stalls;
+                   strict debug 4 x 20 (71401+) + 6 x 12 (71601+), all
+                   decided, no leak; suite 23,997 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
