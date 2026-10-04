@@ -256,6 +256,25 @@ fn theater_of_horrors_opens_after_an_opponent_bleeds() {
     assert_eq!(g.players[0].mana_pool.total(), mana - 2, "paid its own cost");
 }
 
+/// CR 611.3a — Theater of Horrors' play permission is its static ability's:
+/// once the enchantment is gone, the cards exiled with it can't be played,
+/// an opponent's lost life or not.
+#[test]
+fn theater_of_horrors_cards_close_when_it_leaves() {
+    let mut g = pod(2);
+    let theater = g.add_card_to_battlefield(0, catalog::theater_of_horrors());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    step_into(&mut g, 0, TurnStep::Untap, TurnStep::Draw);
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_by(&mut g, 0, bolt, &[Target::Player(1)]);
+    assert!(g.exile.iter().any(|c| c.id == bear && c.may_play_until.is_some_and(|p| p.player == 0)), "open");
+    let disenchant = g.add_card_to_hand(0, catalog::disenchant());
+    cast_by(&mut g, 0, disenchant, &[Target::Permanent(theater)]);
+    assert!(g.battlefield_find(theater).is_none());
+    assert!(!g.exile.iter().any(|c| c.id == bear && c.may_play_until.is_some()), "closed with it");
+}
+
 /// Titan Hunter: at each player's end step with no creature death this turn,
 /// that player takes 4.
 #[test]

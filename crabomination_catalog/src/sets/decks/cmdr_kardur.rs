@@ -255,8 +255,8 @@ pub fn stensia_bloodhall() -> CardDefinition {
 }
 
 /// Theater of Horrors — each upkeep exile your top card; on your turn, once an
-/// opponent has lost life, you may play those cards; {3}{R}: 1 damage to
-/// target opponent or planeswalker.
+/// opponent has lost life, you may play those cards while it stays (CR
+/// 611.3a); {3}{R}: 1 damage to target opponent or planeswalker.
 pub fn theater_of_horrors() -> CardDefinition {
     CardDefinition {
         name: "Theater of Horrors",
@@ -267,7 +267,7 @@ pub fn theater_of_horrors() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                duration: MayPlayDuration::HolderTurnsAfterOpponentLostLife { holder: 0 },
+                duration: MayPlayDuration::HolderTurnsAfterOpponentLostLife { holder: 0, source: crate::card::CardId(0) },
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

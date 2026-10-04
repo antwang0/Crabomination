@@ -17,7 +17,7 @@ impl GameState {
         }
         let dormant = |perm: &MayPlayPermission| {
             perm.player == MAY_PLAY_DORMANT
-                && perm.duration == MayPlayDuration::HolderTurnsAfterOpponentLostLife { holder: active }
+                && matches!(perm.duration, MayPlayDuration::HolderTurnsAfterOpponentLostLife { holder, .. } if holder == active)
         };
         if !self.exile.iter().any(|c| c.cold_any(|k| k.may_play_until.as_ref().is_some_and(dormant))) {
             return;
@@ -112,7 +112,8 @@ impl GameState {
         matches!(
             perm.duration,
             MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
-                | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. } if s == source
+                | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. }
+                | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. } if s == source
         )
     }
 

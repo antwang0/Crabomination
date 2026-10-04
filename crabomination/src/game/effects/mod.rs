@@ -38549,8 +38549,11 @@ impl GameState {
                 // "Until you exile another card with this": the new exile
                 // revokes the permission on the source's previous card.
                 let linked = *duration == crate::card::MayPlayDuration::UntilSourceExilesAnother;
-                let source_bound =
-                    matches!(duration, crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. });
+                let source_bound = matches!(
+                    duration,
+                    crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. }
+                        | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
+                );
                 if linked && let Some(src) = ctx.source {
                     for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {
                         if c.may_play_until.is_some_and(|p| p.duration == *duration) {

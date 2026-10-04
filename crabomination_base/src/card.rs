@@ -1183,10 +1183,11 @@ pub enum MayPlayDuration {
     /// commander (any player's, CR 903.3) as an attacker.
     TurnsHolderAttacksWithACommander { holder: usize },
     /// "During your turn, if an opponent lost life this turn, you may play
-    /// cards exiled with this" (Theater of Horrors). Never expires; parked at
-    /// [`MAY_PLAY_DORMANT`] by the turn sweep and re-armed for `holder` when
-    /// an opponent of theirs loses life during their turn.
-    HolderTurnsAfterOpponentLostLife { holder: usize },
+    /// cards exiled with this" (Theater of Horrors). Parked at
+    /// [`MAY_PLAY_DORMANT`] by the turn sweep, re-armed for `holder` when an
+    /// opponent of theirs loses life during their turn, and ended as `source`
+    /// leaves (CR 611.3a). Printed with holder 0 and `CardId(0)`.
+    HolderTurnsAfterOpponentLostLife { holder: usize, source: CardId },
     /// "You may play that card until you exile another card with this"
     /// (Superior Foes of Spider-Man, Furious Rise, Unstable Amulet). Never
     /// swept; the next card the source exiles this way revokes it.
@@ -1227,8 +1228,8 @@ impl MayPlayDuration {
             Self::TurnsHolderAttacksWithACommander { .. } => {
                 Self::TurnsHolderAttacksWithACommander { holder: seat }
             }
-            Self::HolderTurnsAfterOpponentLostLife { .. } => {
-                Self::HolderTurnsAfterOpponentLostLife { holder: seat }
+            Self::HolderTurnsAfterOpponentLostLife { source, .. } => {
+                Self::HolderTurnsAfterOpponentLostLife { holder: seat, source }
             }
             Self::WhileHolderControlsFetchPlayer { .. } => Self::WhileHolderControlsFetchPlayer { holder: seat },
             Self::HolderTurnsAfterNontokenSacrifice { source, .. } => {
@@ -1247,6 +1248,9 @@ impl MayPlayDuration {
             }
             (Self::HolderTurnsAfterNontokenSacrifice { holder, .. }, Some(source)) => {
                 Self::HolderTurnsAfterNontokenSacrifice { holder, source }
+            }
+            (Self::HolderTurnsAfterOpponentLostLife { holder, .. }, Some(source)) => {
+                Self::HolderTurnsAfterOpponentLostLife { holder, source }
             }
             (d, _) => d,
         }
