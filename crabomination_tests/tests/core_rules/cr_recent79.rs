@@ -71,6 +71,7 @@ fn cr_118_may_play_permission_covers_a_land_in_exile() {
             miracle: false,
             pay_life: false,
             bottom_after: false,
+            undaunted: false,
         });
     };
     grant(&mut g, 1);
@@ -96,6 +97,7 @@ fn cr_305_1_a_land_played_from_an_opponents_exile_is_yours() {
         miracle: false,
         pay_life: false,
         bottom_after: false,
+        undaunted: false,
     });
     g.perform_action(GameAction::PlayLand(land)).expect("seat 0's permission");
     let played = g.battlefield_find(land).unwrap();

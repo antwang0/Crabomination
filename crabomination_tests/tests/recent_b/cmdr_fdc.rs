@@ -6699,6 +6699,39 @@ fn cr_702_125a_durnans_exiled_creature_has_undaunted() {
     assert!(g.battlefield_find(tusk).is_some());
 }
 
+/// CR 702.125a — the undaunted rides the grant: with Durnan gone before the
+/// cast, Thragtusk still costs {1}{G} at a four-seat table.
+#[test]
+fn cr_702_125a_durnans_undaunted_outlives_durnan() {
+    let mut g = multi_player_game(4);
+    let durnan = g.add_card_to_battlefield(0, catalog::durnan_of_the_yawning_portal());
+    g.clear_sickness(durnan);
+    let tusk = g.add_card_to_library(0, catalog::thragtusk());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: durnan,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.remove_from_battlefield_to_exile(durnan);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: tusk,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("still {3} less");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tusk).is_some());
+}
+
 /// Durnan looks at the top four and the controller picks the creature card to
 /// exile (it exiled the first creature it revealed); a land is not a pick, and
 /// the other three go to the bottom.

@@ -1291,6 +1291,11 @@ pub struct MayPlayPermission {
     /// `Effect::BottomInsteadAfterGrantedCast`.
     #[serde(default)]
     pub bottom_after: bool,
+    /// CR 702.125a — "that spell has undaunted" (Durnan of the Yawning
+    /// Portal): a cast through this grant costs {1} less per opponent. It
+    /// rides the grant, so it outlives the granting permanent.
+    #[serde(default)]
+    pub undaunted: bool,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.

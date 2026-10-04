@@ -28613,6 +28613,7 @@ mod stack_response_tests {
                     miracle: false,
                     pay_life: false,
                     bottom_after: false,
+                    undaunted: false,
                 });
             }
         };

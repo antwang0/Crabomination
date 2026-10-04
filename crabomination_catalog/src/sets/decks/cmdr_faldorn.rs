@@ -3,10 +3,7 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
 //! Residuals (each also on its card):
-//! - **Aurora Phoenix** — a spell given cascade by a trigger (Wild-Magic
-//!   Sorcerer) doesn't have the keyword, so it doesn't return the Phoenix.
-//! - **Durnan** — exiles the first creature card among the top four (no
-//!   choice), and the cast from exile doesn't have undaunted.
+//! - **Durnan** — the rest go to the bottom in a random order.
 
 use crate::card::{
     ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType,
@@ -224,23 +221,18 @@ pub fn dire_fleet_daredevil() -> CardDefinition {
 }
 
 /// Durnan of the Yawning Portal — on attack, look at the top four; you may
-/// exile a creature card from among them and cast it while it stays exiled.
+/// exile a creature card from among them and cast it while it stays exiled,
+/// with undaunted (carried on the grant, so it outlives Durnan).
 ///
-/// Approximation: its undaunted discount (CR 702.125a, `per_opponent`) lasts
-/// only while Durnan is on the battlefield, and the rest go to the bottom in
-/// a random order rather than one you choose.
+/// Approximation: the rest go to the bottom in a random order rather than
+/// one you choose.
 pub fn durnan_of_the_yawning_portal() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::ChooseABackground],
-        static_abilities: vec![StaticAbility {
-            description: "That spell has undaunted.",
-            effect: StaticEffect::LinkedExileCastCostReduction { amount: 1, per_opponent: true },
-        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            // The exiled card is linked to Durnan (`exiled_with`), so the
-            // undaunted discount above finds it.
+            // The grant carries undaunted (`MayPlayPermission::undaunted`).
             effect: Effect::LookTopExileOneMayPlay {
                 count: Value::Const(4),
                 who: PlayerRef::You,

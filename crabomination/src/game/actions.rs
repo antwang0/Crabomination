@@ -1986,6 +1986,11 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
+    // CR 702.125a — a grant that gives the spell undaunted (Durnan): {1} less
+    // per opponent, however long ago the granter left.
+    if from_exile && card.may_play_until.as_ref().is_some_and(|m| m.undaunted && m.player == caster) {
+        reduction += state.opponents_of(caster).len() as u32;
+    }
     // CR 315.5 — a face-up conspiracy's cost statics apply from the command
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
     for src in srcs {
@@ -15381,6 +15386,7 @@ impl GameState {
             miracle: false,
             pay_life: false,
             bottom_after: false,
+            undaunted: false,
         });
         card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
             crate::mana::generic(card.definition.cost.cmc()),

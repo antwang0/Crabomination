@@ -575,6 +575,7 @@ fn passionate_archaeologist_burns_for_exile_casts() {
         miracle: false,
         pay_life: false,
         bottom_after: false,
+        undaunted: false,
     });
     g.exile.push(card);
     let life = g.players[1].life;
@@ -639,6 +640,7 @@ fn b_grant_free(g: &mut GameState, id: CardId) {
         miracle: false,
         pay_life: false,
         bottom_after: false,
+        undaunted: false,
     });
 }
 

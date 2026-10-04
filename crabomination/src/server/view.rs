@@ -5217,6 +5217,7 @@ mod tests {
             miracle: false,
             pay_life: false,
             bottom_after: false,
+            undaunted: false,
         });
         state.exile.push(bolt);
 
