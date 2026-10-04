@@ -3134,6 +3134,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-04 (Commander session `01WwQaPJ`) — guardrail; one priced hot-path add
+
+Engine edits on paths every pool reaches: `note_excess_damage` (CR 120.10)
+reads `lethal_damage_needed` once per creature hit by combat or noncombat
+damage; per-die `GameEvent::DieResult` beside each `DiceRolled`;
+`Performed(_)` joins the fan-out kinds; the Treasure / copy-pip reads after an
+activation's payment. 4-core container, release-fast, tip 8995c2416.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak rss 35.7
+A/B (callgrind,  the excess tally stubbed out vs the tip, 6 games, 1 thread:
+  release-fast)  cube 339,549,113 -> 339,617,382 (+0.020 %), fixed
+                 155,018,847 -> 155,323,732 (+0.197 %); same games both sides
+two-player pools cube / sos / sealed x 2,000, seed 96001: 50,000 games, all
+                 decided
+pod (release)    every deck seated: 4 seats x 200 (46 groups, 92001+), 3 x 100
+                 (61, 93001+), 6 x 100 (31, 94001+), 8 x 60 (23, 95001+) =
+                 19,780 games, zero panics, all decided but three CR 104.4a draws
+```
+
 ### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
 
 Engine edits on paths every pool reaches, through three funnels:
@@ -17875,6 +17896,16 @@ were re-read on a quiet box; the serial cells reproduce to ~2 %. Nothing here
 is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
+
+### 2026-10-04 — the CR 120.10 excess tally reads lethal damage on every hit
+
+`note_excess_damage` (`effects/movement.rs`, `01WwQaPJ`) costs +0.197 % Ir on
+`fixed` and +0.020 % on `cube` (release-fast callgrind, 6 games, tally
+stubbed vs tip, same games): one `computed_permanent` per creature damaged.
+Only Overclocked Electromancer reads the tally. Candidate: skip it while no
+permanent with an `ExcessDamageDealtThisTurnTo` reader exists (a definition
+memo bit, like the other reader gates), keeping the noncombat funnel's
+`excess_damage_this_resolution` sum as it was.
 
 ### 2026-09-29 — the exact card-type-changer walk behind `computed_is_creature`
 
