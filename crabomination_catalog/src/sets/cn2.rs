@@ -582,11 +582,18 @@ pub fn deadly_designs() -> CardDefinition {
             },
             effect: Effect::Seq(vec![
                 Effect::SacrificeSource,
-                Effect::ApplyToTargets {
-                    max_targets: 2,
-                    min_targets: 0,
-                    filter: R::Creature,
-                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                // "If you do": a second trigger finds it already gone.
+                Effect::If {
+                    cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::ApplyToTargets {
+                            max_targets: 2,
+                            min_targets: 0,
+                            filter: R::Creature,
+                            effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
         }),

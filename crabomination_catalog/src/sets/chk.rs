@@ -4346,17 +4346,24 @@ pub fn promise_of_bunrei() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::SacrificeSource,
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(4),
-                    definition: std::sync::Arc::new(TokenDefinition {
-                        name: "Spirit".into(),
-                        power: 1,
-                        toughness: 1,
-                        card_types: vec![CardType::Creature],
-                        subtypes: spirit(vec![CreatureType::Spirit]),
-                        ..Default::default()
-                    }),
+                // "If you do": a second trigger finds it already gone.
+                Effect::If {
+                    cond: crate::effect::Predicate::PlayerSacrificedThisResolution(crate::effect::PlayerRef::You),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(4),
+                            definition: std::sync::Arc::new(TokenDefinition {
+                                name: "Spirit".into(),
+                                power: 1,
+                                toughness: 1,
+                                card_types: vec![CardType::Creature],
+                                subtypes: spirit(vec![CreatureType::Spirit]),
+                                ..Default::default()
+                            }),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
         }],

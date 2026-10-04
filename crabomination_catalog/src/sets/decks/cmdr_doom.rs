@@ -418,17 +418,24 @@ pub fn glorious_purpose() -> CardDefinition {
                     .with_filter(Predicate::SourceHasCountersAtLeast { counter: CounterType::Plan, n: 6 }),
                 effect: Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::ExileLinked {
-                        what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(4) },
+                    // "If you do": a second trigger finds it already gone.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::ExileLinked {
+                                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(4) },
+                            },
+                            Effect::CastAnyOrderWithoutPaying {
+                                what: Selector::CardExiledWithSource,
+                                source_zone: Zone::Exile,
+                                filter: None,
+                                cap: None,
+                                total_mana_value: None,
+                            },
+                            Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Hand(PlayerRef::You) },
+                        ])),
+                        else_: Box::new(Effect::Noop),
                     },
-                    Effect::CastAnyOrderWithoutPaying {
-                        what: Selector::CardExiledWithSource,
-                        source_zone: Zone::Exile,
-                        filter: None,
-                        cap: None,
-                        total_mana_value: None,
-                    },
-                    Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Hand(PlayerRef::You) },
                 ]),
             },
         ],

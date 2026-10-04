@@ -173,16 +173,23 @@ pub fn brokers_hideout() -> CardDefinition {
         card_types: vec![CardType::Land],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::SacrificeSource,
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: R::IsBasicLand.and(
-                    R::HasLandType(LandType::Forest)
-                        .or(R::HasLandType(LandType::Plains))
-                        .or(R::HasLandType(LandType::Island)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            // "If you do": a second trigger finds it already gone.
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::IsBasicLand.and(
+                            R::HasLandType(LandType::Forest)
+                                .or(R::HasLandType(LandType::Plains))
+                                .or(R::HasLandType(LandType::Island)),
+                        ),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                ])),
+                else_: Box::new(Effect::Noop),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::ONE },
         ]))],
         ..Default::default()
     }

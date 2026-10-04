@@ -57,10 +57,17 @@ pub fn dark_depths() -> CardDefinition {
                     ),
                     then: Box::new(Effect::Seq(vec![
                         Effect::SacrificeSource,
-                        Effect::CreateToken {
-                            who: PlayerRef::You,
-                            count: Value::ONE,
-                            definition: std::sync::Arc::new(marit_lage()),
+                        // "If you do": a second trigger finds it already gone.
+                        Effect::If {
+                            cond: crate::effect::Predicate::PlayerSacrificedThisResolution(crate::effect::PlayerRef::You),
+                            then: Box::new(Effect::Seq(vec![
+                                Effect::CreateToken {
+                                    who: PlayerRef::You,
+                                    count: Value::ONE,
+                                    definition: std::sync::Arc::new(marit_lage()),
+                                },
+                            ])),
+                            else_: Box::new(Effect::Noop),
                         },
                     ])),
                     else_: Box::new(Effect::Noop),

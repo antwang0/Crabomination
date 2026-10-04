@@ -206,8 +206,15 @@ pub fn plague_boiler() -> CardDefinition {
                 },
                 effect: Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::Destroy {
-                        what: Selector::EachPermanent(R::Nonland),
+                    // "If you do": a second trigger finds it already gone.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Destroy {
+                                what: Selector::EachPermanent(R::Nonland),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
                     },
                 ]),
             },

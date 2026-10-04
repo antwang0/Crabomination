@@ -811,3 +811,21 @@ fn mistblade_shinobi_offers_the_bounce_rather_than_forcing_it() {
     assert!(!bounced, "accepting returns the damaged seat's creature");
     assert!(bystander_kept, "still only that player's creature");
 }
+
+/// CR 608.2c — "sacrifice this enchantment. If you do": two creatures dying
+/// together trigger Promise of Bunrei twice, and only the first trigger,
+/// which sacrifices it, makes the four Spirits.
+#[test]
+fn promise_of_bunrei_pays_off_once_for_two_deaths() {
+    let mut g = two_player_game();
+    let promise = g.add_card_to_battlefield(0, catalog::promise_of_bunrei());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().damage = 2;
+    g.battlefield_find_mut(b).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(promise).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 4, "four, not eight");
+}

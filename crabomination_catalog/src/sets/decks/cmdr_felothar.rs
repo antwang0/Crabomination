@@ -289,9 +289,16 @@ pub fn colfenors_urn() -> CardDefinition {
                 ),
                 effect: Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::Move {
-                        what: Selector::CardExiledWithSource,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+                    // "If you do": a second trigger finds it already gone.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: Selector::CardExiledWithSource,
+                                to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
                     },
                 ]),
             },

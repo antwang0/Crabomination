@@ -170,7 +170,14 @@ pub fn grave_peril() -> CardDefinition {
                 cond: Predicate::SourceOnBattlefield,
                 then: Box::new(Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::Destroy { what: Selector::TriggerSource },
+                    // "If you do": a second trigger finds it already gone.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Destroy { what: Selector::TriggerSource },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },

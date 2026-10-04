@@ -1281,8 +1281,15 @@ pub fn goblin_grenadiers() -> CardDefinition {
                 .to_string(),
             body: Box::new(Effect::Seq(vec![
                 Effect::SacrificeSource,
-                Effect::Destroy { what: target_filtered(R::Creature) },
-                Effect::Destroy { what: Selector::TargetFiltered { slot: 1, filter: R::Land } },
+                // "If you do": a second trigger finds it already gone.
+                Effect::If {
+                    cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Destroy { what: target_filtered(R::Creature) },
+                        Effect::Destroy { what: Selector::TargetFiltered { slot: 1, filter: R::Land } },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
             ])),
         })],
         ..creature("Goblin Grenadiers", cost(&[generic(3), r()]), vec![CreatureType::Goblin], 2, 2)

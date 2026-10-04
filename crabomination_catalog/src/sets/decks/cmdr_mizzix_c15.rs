@@ -190,16 +190,23 @@ pub fn awaken_the_sky_tyrant() -> CardDefinition {
                 cond: Predicate::SourceOnBattlefield,
                 then: Box::new(Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        definition: Arc::new(red_token(
-                            "Dragon",
-                            vec![CreatureType::Dragon],
-                            5,
-                            5,
-                            vec![Keyword::Flying],
-                        )),
+                    // "If you do": a second trigger finds it already gone.
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                definition: Arc::new(red_token(
+                                    "Dragon",
+                                    vec![CreatureType::Dragon],
+                                    5,
+                                    5,
+                                    vec![Keyword::Flying],
+                                )),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
                     },
                 ])),
                 else_: Box::new(Effect::Noop),
