@@ -3298,6 +3298,10 @@ seventh stretch  the universal move path now runs `apply_enters_as_copy` (a
                  x 300 + every deck 6 seats x 40 (94001+, 31 groups) = 2,440
                  games, all decided, zero panics; suite 24,107 / 0 / 5;
                  clippy 0; `cargo check --profile release-fast` clean
+  (later)        support's `min_targets_in_mode` 1 -> 0 and two OptionalTargets
+                 wrappers: --bench byte-identical again; pods every deck 6 x
+                 40 (95501+) + 4/8 seats x 300 = 1,840 games, all decided,
+                 zero panics; suite 24,129 / 0 / 5
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
