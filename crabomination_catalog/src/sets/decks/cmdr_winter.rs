@@ -6,11 +6,7 @@
 //! - **Winter** — the engine picks the exiled set (the greatest-mana-value
 //!   permanent card plus the cheapest cards covering four card types), and
 //!   the finality counter is added as the card enters rather than with it.
-//! - **Polluted Cistern** — counts milled and surveiled cards, not other
-//!   library-to-graveyard moves (reveal-until).
 //! - **Into the Pit** — the sacrifice is paid as the cast completes.
-//! - **Old Stickfingers** — reveals creature by creature, bottoming each
-//!   run of misses before the next.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
@@ -21,7 +17,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate,
-    RevealMissDest, ZoneDest,
+    ZoneDest,
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, x};
@@ -459,26 +455,19 @@ pub fn obsessive_skinner() -> CardDefinition {
     }
 }
 
-/// Old Stickfingers — cast: reveal until X creature cards, those to your
-/// graveyard, the rest to the bottom; */* for the creature cards in your
-/// graveyard.
-///
-/// Approximation: one reveal-until per creature card.
+/// Old Stickfingers — cast: reveal until X creature cards (one reveal), those
+/// to your graveyard, the rest to the bottom in a random order; */* for the
+/// creature cards in your graveyard.
 pub fn old_stickfingers() -> CardDefinition {
     legendary(CardDefinition {
         dynamic_pt: Some(DynamicPt::BasePlusCreaturesInControllerGraveyard { base: 0 }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::Repeat {
+            effect: Effect::RevealUntilNFound {
+                who: PlayerRef::You,
+                find: R::Creature,
                 count: Value::XFromCost,
-                body: Box::new(Effect::RevealUntilFind {
-                    who: PlayerRef::You,
-                    find: R::Creature,
-                    to: ZoneDest::Graveyard,
-                    cap: Value::Const(60),
-                    life_per_revealed: 0,
-                    miss_dest: RevealMissDest::BottomRandom,
-                }),
+                to: ZoneDest::Graveyard,
             },
         }],
         ..creature(
@@ -494,8 +483,8 @@ pub fn old_stickfingers() -> CardDefinition {
 /// Polluted Cistern // Dim Oubliette — Cistern: one or more cards put into
 /// your graveyard from your library (milled or surveiled) drain each opponent
 /// 1 per card type among them. Oubliette: on unlock, mill three, then return
-/// a creature card from your graveyard. Residual: other library-to-graveyard
-/// moves (reveal-until) aren't seen.
+/// a creature card from your graveyard. A reveal-until's library-to-graveyard
+/// card counts too (`CardRevealedIntoGraveyard`).
 pub fn polluted_cistern_dim_oubliette() -> CardDefinition {
     CardDefinition {
         name: "Polluted Cistern // Dim Oubliette",

@@ -4895,6 +4895,30 @@ fn cr_603_2c_polluted_cistern_drains_by_card_types_milled() {
     assert_eq!(g.players[1].life, 18, "creature and land: two types, one trigger");
 }
 
+/// Polluted Cistern sees library-to-graveyard moves that aren't mills: Old
+/// Stickfingers' reveal puts two creature cards in, one batch of one card
+/// type, so each opponent loses 1. The Forest between them goes to the bottom.
+#[test]
+fn polluted_cistern_sees_old_stickfingers_reveal() {
+    let mut g = main_phase();
+    let id = g.add_card_to_hand(0, catalog::polluted_cistern_dim_oubliette());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastRoomDoor { card_id: id, right: false }).expect("cast Cistern");
+    drain_stack(&mut g);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let os = g.add_card_to_hand(0, catalog::old_stickfingers());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: os, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("X = 2");
+    drain_stack(&mut g);
+    let gy: Vec<_> = g.players[0].graveyard.iter().map(|c| c.id).collect();
+    assert!(gy.contains(&bears) && gy.contains(&giant));
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(forest));
+    assert_eq!(g.players[1].life, 19);
+}
+
 /// CR 207.2c (delirium) — Winter's end step exiles four card types' worth
 /// of its controller's graveyard to return the best permanent card with a
 /// finality counter.
