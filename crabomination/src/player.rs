@@ -246,6 +246,12 @@ pub struct PlayerCold {
     /// (`GraveyardCardsHaveEscapeMatching { once_per_turn: true, .. }`). Reset with `graveyard_cast_types_this_turn`.
     #[serde(default)]
     pub graveyard_sac_cast_sources_this_turn: Vec<crate::card::CardId>,
+    /// The last card this player cast or played off their library top under a
+    /// once-per-turn `PlayFromLibraryTopOncePerTurn` grant, with the grant's
+    /// source — "when you do" (The Fourth Doctor) reads it
+    /// (`Predicate::UsedSourcesLibraryTopGrant`). Cleared at their untap.
+    #[serde(default)]
+    pub library_top_grant_used: Option<(crate::card::CardId, crate::card::CardId)>,
     /// "You can't cast [filter] spells this turn" (Cease-Fire). Cleared at the
     /// turn boundary alongside `cant_play_lands_this_turn`.
     #[serde(default)]

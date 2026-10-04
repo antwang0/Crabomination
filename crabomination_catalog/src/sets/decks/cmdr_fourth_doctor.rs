@@ -15,7 +15,6 @@
 //! - **The Eighth Doctor** — the historic land and the historic permanent
 //!   spell are separate allowances, and the cast permanent isn't exiled if it
 //!   leaves later.
-//! - **The Fourth Doctor** — no Food for a land played from the top.
 //! - **The Second Doctor** — an opponent who draws has its current creatures
 //!   barred from attacking you, not ones that arrive later.
 
@@ -155,12 +154,13 @@ fn enters_tapped() -> StaticAbility {
 // ── Commanders ──────────────────────────────────────────────────────────────
 
 /// The Fourth Doctor — look at the top card any time; once each turn play a
-/// historic land or cast a historic spell from there, and a spell cast that
-/// way makes a Food.
-///
-/// ⚠ Residual: no Food for a land played from the top, and a historic spell
-/// cast from the library by another permission makes one too.
+/// historic land or cast a historic spell from there, and when you do, make a
+/// Food (only a play this grant allowed: `UsedSourcesLibraryTopGrant`).
 pub fn the_fourth_doctor() -> CardDefinition {
+    let when_you_do = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::YourControl).with_filter(Predicate::UsedSourcesLibraryTopGrant),
+        effect: make(food_token(), Value::ONE),
+    };
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
@@ -172,13 +172,7 @@ pub fn the_fourth_doctor() -> CardDefinition {
                 effect: StaticEffect::PlayFromLibraryTopOncePerTurn { filter: historic() },
             },
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
-                Predicate::CastSpellFromLibrary,
-                Predicate::CastSpellMatches(historic()),
-            ])),
-            effect: make(food_token(), Value::ONE),
-        }],
+        triggered_abilities: vec![when_you_do(EventKind::SpellCast), when_you_do(EventKind::LandPlayed)],
         ..doctor("The Fourth Doctor", cost(&[generic(2), g(), u()]), 4, 4)
     }
 }

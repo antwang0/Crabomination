@@ -4646,7 +4646,7 @@ impl GameState {
         // Oracle of Mul Daya) lets the land be played off the library top.
         let from_top = !self.players[p].has_in_hand(card_id)
             && self.library_top_playable(p, card_id);
-        let from_top_capped = from_top && self.library_top_cast_is_capped(p, card_id);
+        let from_top_capped = if from_top { self.library_top_capped_source(p, card_id) } else { None };
         // CR 118.x — "you may play that card" grants cover lands too. An
         // impulse-exiled land (Light Up the Stage, Gonti Night Minister,
         // Chandra Torch of Defiance) is played from exile, not cast.
@@ -4732,8 +4732,9 @@ impl GameState {
             // `move_card_to` path records the same for effect moves).
             self.entered_from_exile_this_turn.insert(card.id);
         }
-        if from_top_capped {
+        if let Some(source) = from_top_capped {
             self.players[p].cast_from_library_top_this_turn = true;
+            self.players[p].library_top_grant_used = Some((card_id, source));
         }
         self.place_land_card(p, card, from_hand)
     }
@@ -6274,13 +6275,19 @@ impl GameState {
             })
             && self.library_top_playable(p, card_id)
         {
-            let capped = self.library_top_cast_is_capped(p, card_id);
+            let capped = self.library_top_capped_source(p, card_id);
             let sac = self.library_top_sacrifice_grant(p, card_id);
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
             // The cast pipeline runs from hand, so record the true origin for
             // "cast a spell from your library" payoffs (Melek).
             self.casting_hop = Some((card_id, crate::game::HopFrom::LibraryTop));
+            // Stamped ahead of the cast: its "when you do" reads it as the
+            // cast's triggers are collected.
+            let stamp = self.players[p].library_top_grant_used;
+            if let Some(source) = capped {
+                self.players[p].library_top_grant_used = Some((card_id, source));
+            }
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
@@ -6289,8 +6296,11 @@ impl GameState {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[p].library.insert(0, card);
                 }
+                if capped.is_some() {
+                    self.players[p].library_top_grant_used = stamp;
+                }
             } else {
-                if capped {
+                if capped.is_some() {
                     self.players[p].cast_from_library_top_this_turn = true;
                 }
                 self.stamp_library_top_equipment_attach(p, card_id);
@@ -6881,20 +6891,19 @@ impl GameState {
         covered.then(|| card.definition.cost.cmc())
     }
 
-    /// True when the *only* grant letting `p` play `card_id` off the library
-    /// top is a `PlayFromLibraryTopOncePerTurn` (Johann) — so casting it should
-    /// consume the once-per-turn charge. If any uncapped grant also covers the
-    /// card, the charge is not spent.
-    pub(crate) fn library_top_cast_is_capped(&self, p: usize, card_id: CardId) -> bool {
+    /// The `PlayFromLibraryTopOncePerTurn` source (Johann) whose charge
+    /// casting or playing `card_id` off `p`'s library top would spend — `None`
+    /// if an uncapped grant also covers the card, so no charge is spent.
+    pub(crate) fn library_top_capped_source(&self, p: usize, card_id: CardId) -> Option<CardId> {
         use crate::effect::StaticEffect;
         if self.players[p].play_from_top_this_turn {
-            return false;
+            return None;
         }
-        let Some(card) = self.players[p].library.first() else { return false };
+        let card = self.players[p].library.first()?;
         if card.id != card_id {
-            return false;
+            return None;
         }
-        let mut capped = false;
+        let mut capped = None;
         for c in self.battlefield.iter().filter(|c| c.controller == p) {
             for sa in &c.definition.static_abilities {
                 let Some(eff) = self.active_static(&sa.effect, c) else { continue };
@@ -6906,12 +6915,12 @@ impl GameState {
                             p,
                         ) =>
                     {
-                        return false;
+                        return None;
                     }
                     StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
-                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                        if capped.is_none() && self.evaluate_requirement_on_card(filter, card, p) =>
                     {
-                        capped = true;
+                        capped = Some(c.id);
                     }
                     _ => {}
                 }

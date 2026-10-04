@@ -2469,6 +2469,11 @@ pub enum Predicate {
     /// Melek, Izzet Paragon's "whenever you cast an instant or sorcery spell
     /// from your library, copy it".
     CastSpellFromLibrary,
+    /// "When you do" on a once-per-turn top-of-library grant (The Fourth
+    /// Doctor): the triggering spell or land (`ctx.trigger_source`) was cast
+    /// or played under this source's grant — reads
+    /// `PlayerCold::library_top_grant_used`.
+    UsedSourcesLibraryTopGrant,
     /// True if the just-cast spell (via `ctx.trigger_source`) was cast from a
     /// graveyard — reads `StackItem::Spell.card.cast_from_graveyard`. River
     /// Kelpie's "whenever a player casts a spell from a graveyard".

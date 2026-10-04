@@ -465,4 +465,43 @@ fn curse_of_fenric_ii_makes_a_legendary_horror() {
     assert!(cp.supertypes().contains(&Supertype::Legendary));
     assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Horror]);
     assert!(!cp.keywords().contains(&Keyword::Flying));
+
+/// The Fourth Doctor — "once each turn, you may play a historic land or cast
+/// a historic spell from the top of your library. When you do, create a
+/// Food": a land played that way makes one too, the grant is spent, and a
+/// historic spell off the top the next turn makes the next.
+#[test]
+fn the_fourth_doctor_feeds_a_land_or_a_spell_played_off_the_top() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::the_fourth_doctor());
+    g.players[0].library.clear();
+    let cradle = g.add_card_to_library(0, catalog::gaeas_cradle());
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    g.perform_action(GameAction::PlayLand(cradle)).expect("a historic land off the top");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Food"), 1, "a land played this way feeds too");
+    flood(&mut g, 0);
+    let cast_ring = GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast_ring.clone()).is_err(), "once each turn");
+    g.players[0].cast_from_library_top_this_turn = false;
+    g.perform_action(cast_ring).expect("the next turn's charge");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Food"), 2);
+}
+
+/// The Fourth Doctor's Food is for its own grant only: a historic spell cast
+/// off the top by another permission (Mystic Forge) makes none.
+#[test]
+fn the_fourth_doctor_ignores_a_top_cast_another_permission_allowed() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::the_fourth_doctor());
+    g.add_card_to_battlefield(0, catalog::mystic_forge());
+    g.players[0].library.clear();
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Mystic Forge covers an artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_some());
+    assert_eq!(named(&g, "Food"), 0);
 }

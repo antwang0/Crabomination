@@ -3466,6 +3466,18 @@ impl GameState {
                 self.evaluate_predicate(&Predicate::CastSpellFromGraveyard, ctx)
                     && self.players[ctx.controller].instants_sorceries_cast_from_graveyard_this_turn == 1
             }
+            Predicate::UsedSourcesLibraryTopGrant => {
+                let (Some(src), Some(subject)) = (ctx.source, ctx.trigger_source) else {
+                    return false;
+                };
+                let id = match subject {
+                    EntityRef::Card(id) | EntityRef::Permanent(id) => id,
+                    _ => return false,
+                };
+                self.players
+                    .get(ctx.controller)
+                    .is_some_and(|pl| pl.library_top_grant_used == Some((id, src)))
+            }
             Predicate::CastSpellFromLibrary => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;

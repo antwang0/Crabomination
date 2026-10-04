@@ -4641,6 +4641,9 @@ impl GameState {
         if !self.players[p].graveyard_sac_cast_sources_this_turn.is_empty() {
             self.players[p].graveyard_sac_cast_sources_this_turn.clear();
         }
+        if self.players[p].library_top_grant_used.is_some() {
+            self.players[p].library_top_grant_used = None;
+        }
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;

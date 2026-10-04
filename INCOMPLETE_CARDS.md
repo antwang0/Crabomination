@@ -1993,7 +1993,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric, so III's Mutant fights any other creature. |
 | 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
-| 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
 
