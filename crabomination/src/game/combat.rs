@@ -2065,6 +2065,10 @@ impl GameState {
         // attacker). Declared out here, not inside the loop, because the batch
         // is the whole declaration.
         let mut defender_batch_fired: Vec<(CardId, usize)> = Vec::new();
+        // CR 508.1m / 603.3d — a defender-side trigger that picks its own
+        // target ("target creature attacking you", Lulu) waits for the whole
+        // declaration, so its choice sees every attacker.
+        let mut own_target_fires: Vec<(CardId, usize, Effect, CardId)> = Vec::new();
         if !had_to.is_empty() {
             self.had_to_attack.extend(had_to.iter().copied().filter(|id| attacks.iter().any(|a| a.attacker == *id)));
         }
@@ -2370,6 +2374,12 @@ impl GameState {
                             continue;
                         }
                     }
+                    if effect.requires_target()
+                        && effect.target_filter_for_slot(0).is_some_and(|f| !f.can_match_player())
+                    {
+                        own_target_fires.push((src, defender, effect, id));
+                        continue;
+                    }
                     self.push_stack(
                         TriggerPush::new(src, defender, effect)
                             .target(Some(Target::Player(p)))
@@ -2381,6 +2391,15 @@ impl GameState {
                     );
                 }
             }
+        }
+        for (src, defender, effect, id) in own_target_fires {
+            let target = self.auto_target_for_effect_avoiding(&effect, defender, Some(src));
+            self.push_stack(
+                TriggerPush::new(src, defender, effect)
+                    .target(target)
+                    .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
+                    .build(),
+            );
         }
         // CR 702.22e — a declared band lasts for the rest of combat regardless
         // of later banding loss; drop members that never made it into combat.
