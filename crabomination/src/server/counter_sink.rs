@@ -124,7 +124,7 @@ fn grows_self(ab: &crate::card::ActivatedAbility) -> bool {
         ab.effect,
         Effect::AddCounter {
             what: Selector::This,
-            kind: CounterType::PlusOnePlusOne | CounterType::Storage | CounterType::Charge,
+            kind: CounterType::PlusOnePlusOne | CounterType::Storage | CounterType::Charge | CounterType::Hour,
             ..
         }
     ) && !ab.mana_cost.has_x()
@@ -148,8 +148,15 @@ pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<G
     if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
         return None;
     }
+    // Midnight Clock's hour counters run toward "shuffle your hand and
+    // graveyard in, draw seven" — worth hurrying only with little in hand
+    // (a 183-deck census never saw one bought, in seven decks).
+    let small_hand = state.players[seat].hand.len() <= 2;
     state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
-        c.definition.activated_abilities.iter().enumerate().filter(|(_, ab)| grows_self(ab)).find_map(|(i, _)| {
+        c.definition.activated_abilities.iter().enumerate().filter(|(_, ab)| grows_self(ab)).find_map(|(i, ab)| {
+            if matches!(ab.effect, Effect::AddCounter { kind: CounterType::Hour, .. }) && !small_hand {
+                return None;
+            }
             let action = GameAction::ActivateAbility {
                 card_id: c.id,
                 ability_index: i,
@@ -223,6 +230,28 @@ pub(super) fn pick_fate_sink(state: &GameState, seat: usize, w: &super::bot::Eva
 mod tests {
     use super::*;
     use crate::game::types::TurnStep;
+
+    /// Midnight Clock's "{2}{U}: put an hour counter" is bought at an
+    /// opponent's end step only when the seat's hand is nearly empty.
+    #[test]
+    fn midnight_clock_hurries_only_on_a_small_hand() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let clock = g.add_card_to_battlefield(0, crate::catalog::midnight_clock());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 3);
+        for _ in 0..4 {
+            g.add_card_to_hand(0, crate::catalog::island());
+        }
+        assert!(pick_self_counter_sink(&g, 0).is_none(), "four cards in hand");
+        g.players[0].hand.truncate(1);
+        assert!(matches!(
+            pick_self_counter_sink(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == clock
+        ));
+    }
 
     /// Forge of Heroes grows a commander that entered this turn, and only one.
     #[test]
