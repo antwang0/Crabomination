@@ -156,3 +156,30 @@ impl GameState {
             .map_or_else(|| card.definition.card_types.contains(&t), |cp| cp.card_types().contains(&t))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::card::{CreatureType, SelectionRequirement as R};
+    use crate::catalog;
+
+    /// The graveyard-card requirement read and the walker agree on a type an
+    /// owner's static grants off the battlefield (Maskwood Nexus) and on the
+    /// last-known controller of a card whose ability is on the stack — the
+    /// two disagreements strict debug pods asserted on (seeds 63029, 65019).
+    #[test]
+    fn graveyard_requirement_reads_agree_with_the_walker() {
+        let mut g = crate::game::multi_player_game(3);
+        g.add_card_to_battlefield(1, catalog::maskwood_nexus());
+        let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+        let not_zombie = R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Zombie))));
+        let card = g.players[1].graveyard.iter().find(|c| c.id == bear).unwrap().clone();
+        // The debug assertion inside is the agreement check.
+        assert!(!g.requirement_on_graveyard_card(&not_zombie, &card, 0, None), "every type: a Zombie");
+        let mine = R::Creature.and(R::ControlledByYou);
+        g.push_stack(
+            crate::game::TriggerPush::new(bear, 1, crate::effect::Effect::Noop).build(),
+        );
+        assert!(g.requirement_on_graveyard_card(&mine, &card, 1, None));
+        assert!(!g.requirement_on_graveyard_card(&mine, &card, 0, None));
+    }
+}

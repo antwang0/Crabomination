@@ -4447,7 +4447,17 @@ impl GameState {
         };
         match self.printed_requirement_impl::<true>(req, obj, controller, source, &PrintedGates::default()) {
             Some(p) => {
-                debug_assert_eq!(p, walk(), "printed_requirement (off battlefield) disagrees with the walker");
+                debug_assert_eq!(
+                    p,
+                    walk(),
+                    "printed_requirement (off battlefield) disagrees with the walker: req {req:?} on {} \
+                     (owner {}, asked by {controller}) source {source:?}; read {:?} {:?} snapshot={}",
+                    card.definition.name,
+                    card.owner,
+                    obj.definition.card_types,
+                    obj.definition.subtypes.creature_types,
+                    self.died_card_snapshots.contains_key(&cid),
+                );
                 p
             }
             None => walk(),
@@ -4546,17 +4556,20 @@ impl GameState {
                 .map(|v| !v),
             // Off the battlefield the walker knows a controller only through
             // the stack (a spell's caster) or the CR 603.10 death snapshot.
+            // Off the battlefield, the walker's last-known controller — a
+            // spell's caster, a death snapshot's controller, or the
+            // controller of an ability of it on the stack (a six-seat strict
+            // debug pod, seed 65019: Sporemound's own trigger from the
+            // graveyard read "controlled by you" on one side only).
             R::ControlledByYou => Some(if on_bf {
                 card.controller == controller
             } else {
-                self.stack_spell_caster(cid)
-                    .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller))
-                    == Some(controller)
+                self.last_known_controller(cid, None) == Some(controller)
             }),
             R::ControlledByOpponent => Some(if on_bf {
                 !self.same_team(card.controller, controller)
             } else {
-                self.stack_spell_caster(cid).is_some_and(|c| !self.same_team(c, controller))
+                self.last_known_controller(cid, None).is_some_and(|c| !self.same_team(c, controller))
             }),
             R::ProtectedByOpponent => {
                 Some(on_bf && card.protected_by.is_some_and(|p| p != controller && !self.same_team(p, controller)))
@@ -4565,7 +4578,7 @@ impl GameState {
             R::ControlledBySeat(q) => Some(if on_bf {
                 card.controller == *q as usize
             } else {
-                self.stack_spell_caster(cid) == Some(*q as usize)
+                self.last_known_controller(cid, None) == Some(*q as usize)
             }),
             // Ownership is stable across zones; the walker's `find_card_anywhere`
             // lands on this object.
@@ -5526,6 +5539,13 @@ impl GameState {
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
+                    // Off the battlefield the owner's statics can add types
+                    // (Maskwood Nexus, Ashes of the Fallen) — the printed
+                    // twin's read (a four-seat strict debug pod, seed 63029:
+                    // Phabine in a Maskwood owner's graveyard is a Zombie).
+                    R::HasCreatureType(ct) if bf_card.is_none() => {
+                        self.card_off_battlefield_has_creature_type(card, *ct)
+                    }
                     R::HasCreatureType(ct) => has_ctype(ct) || self.permanent_is_changeling(card),
                     // CR 613.1d — an outlaw on the battlefield reads its
                     // layered types (Vihaan's Treasures, animated as Construct
