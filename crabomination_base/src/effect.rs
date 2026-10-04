@@ -1969,6 +1969,10 @@ pub enum Predicate {
     /// The triggering object *is* this ability's own source — the gate behind
     /// "a permanent **other than** this one" triggers (Last Laugh).
     TriggerSourceIsSelf,
+    /// The trigger's subject has `color` — a battlefield permanent's current
+    /// colors, or the resolving spell's (a card in no zone mid-resolution):
+    /// "whenever a red source you control deals damage" (The Red Terror).
+    TriggerSourceHasColor(crate::mana::Color),
     /// The trigger's subject is the permanent the effect's source is attached
     /// to — "whenever enchanted creature becomes tapped" (Stinging Licid).
     TriggerSourceIsSourceHost,

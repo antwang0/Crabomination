@@ -1705,6 +1705,7 @@ impl GameState {
                 // `resolve_combat`.
                 if let Some(src) = source {
                     self.fire_noncombat_damage_to_player_triggers(src, p, amount);
+                    self.fire_spell_damage_listeners(src, crate::game::types::Target::Player(p), amount);
                 }
             }
             EntityRef::Permanent(cid) => {
@@ -1893,6 +1894,9 @@ impl GameState {
                             .is_some_and(|c| self.computed_is_creature(c))
                     {
                         self.fire_noncombat_damage_to_creature_triggers(src, cid, amount);
+                    }
+                    if let Some(src) = source {
+                        self.fire_spell_damage_listeners(src, crate::game::types::Target::Permanent(cid), amount);
                     }
                 }
             }

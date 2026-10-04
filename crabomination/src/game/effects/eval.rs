@@ -2681,6 +2681,16 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::TriggerSourceHasColor(color) => {
+                let Some(id) = ctx.trigger_source.and_then(|e| e.as_card_id()) else { return false };
+                if let Some(cp) = self.battlefield_find(id).and_then(|c| self.computed_permanent_on(c)) {
+                    return cp.colors.contains(color);
+                }
+                match &self.scratch.resolving_source {
+                    Some((rid, _, colors, _)) if *rid == id => colors.contains(color),
+                    _ => self.find_card_anywhere(id).is_some_and(|c| c.definition.printed_color_set().contains(color)),
+                }
+            }
             Predicate::TriggerSourceIsSourceHost => {
                 let host = ctx
                     .source
