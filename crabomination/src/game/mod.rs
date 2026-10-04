@@ -166,6 +166,7 @@ mod commander_return;
 mod legend_rule;
 mod simultaneous_deaths;
 mod departed_listeners;
+mod trigger_batch;
 mod vow;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
@@ -2323,6 +2324,10 @@ pub struct ResolutionScratch {
     /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
     #[serde(skip)]
     pub cost_sacrificed_batch: Vec<CardId>,
+    /// `Selector::BoundTriggerBatch`: the batch the resolving
+    /// `Effect::WithTriggerBatch` bound; restored as its body ends.
+    #[serde(skip)]
+    pub(crate) bound_trigger_batch: Vec<CardId>,
     /// Transient: entities (creatures + players) that actually took damage
     /// during the current resolution. Powers `Selector::DamagedThisResolution`
     /// — "tap each creature damaged this way / those players can't cast
@@ -17392,7 +17397,10 @@ impl GameState {
         if self.battlefield_find(cid).is_some() {
             return None;
         }
-        if self.resolving_lki_source == Some(cid) || self.resolving_lki_subject == Some(cid) {
+        if self.resolving_lki_source == Some(cid)
+            || self.resolving_lki_subject == Some(cid)
+            || self.is_bound_batch_member(cid)
+        {
             self.leaves_bf_lki.get(&cid)
         } else {
             None
@@ -25350,6 +25358,7 @@ impl GameState {
         // `(-244)`). Same order as the full path: flags, (drain), clear.
         if candidates.is_empty() {
             self.flip_pending_life_gain_flags();
+            self.keep_trigger_batch_lki();
             self.died_card_snapshots.clear();
             return;
         }
@@ -25720,6 +25729,7 @@ impl GameState {
         // subsequent SBA cycle re-populates the entries it needs at
         // that cycle's die-time, so stale entries from prior batches
         // can't leak into later trigger resolution.
+        self.keep_trigger_batch_lki();
         self.died_card_snapshots.clear();
     }
 
@@ -30605,6 +30615,10 @@ impl GameState {
     ) -> crate::effect::Effect {
         match effect {
             crate::effect::Effect::OverTriggerBatch { body, .. } => crate::effect::Effect::OverTriggerBatch {
+                body: body.clone(),
+                ids: self.batch_subjects(events, spec, source),
+            },
+            crate::effect::Effect::WithTriggerBatch { body, .. } => crate::effect::Effect::WithTriggerBatch {
                 body: body.clone(),
                 ids: self.batch_subjects(events, spec, source),
             },

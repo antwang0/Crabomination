@@ -24655,6 +24655,9 @@ impl GameState {
                 self.run_effect(&Effect::BindTargetObjects { ids: ids.clone(), body: body.clone() }, ctx, events)
             }
 
+            // "Their" beside the trigger's own targets (`game/trigger_batch.rs`).
+            Effect::WithTriggerBatch { body, ids } => self.run_with_trigger_batch(ids, body, ctx, events),
+
             Effect::PutFromHandOrCommandZoneOntoBattlefield { filter, then } => {
                 self.put_from_hand_or_command_zone(filter, then.as_deref(), effect, ctx, events)
             }
@@ -41477,6 +41480,20 @@ impl GameState {
                 .get(*idx as usize)
                 .map(target_to_entity)
                 .into_iter()
+                .collect(),
+            Selector::BoundTriggerBatch => self
+                .scratch
+                .bound_trigger_batch
+                .iter()
+                .filter_map(|&id| {
+                    if self.battlefield_find(id).is_some() {
+                        Some(EntityRef::Permanent(id))
+                    } else {
+                        // Gone: read as a card, whose power is its LKI.
+                        (self.lki_snapshot(id).is_some() || self.find_card_anywhere(id).is_some())
+                            .then_some(EntityRef::Card(id))
+                    }
+                })
                 .collect(),
             Selector::TriggerBatch => ctx
                 .targets

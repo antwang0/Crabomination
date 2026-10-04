@@ -271,6 +271,9 @@ pub enum Selector {
     /// is a graveyard card, not a permanent — `AllTargets` reads only the
     /// battlefield).
     TriggerBatch,
+    /// The batch an enclosing [`Effect::WithTriggerBatch`] bound, wherever
+    /// each card is now; empty outside one.
+    BoundTriggerBatch,
     /// Every declared target slot (permanents/players still legal). Powers
     /// "then [do X] to each of those [targets]" riders that operate on the
     /// whole cast-time target list rather than a single slot — Biogenic
@@ -9003,6 +9006,18 @@ pub enum Effect {
     /// `AllTargets` reads "them" (Conspiracy Theorist, Colossal Grave-Reaver).
     /// They are bound, never chosen: no cast-time slot.
     OverTriggerBatch {
+        body: Box<Effect>,
+        #[serde(default)]
+        ids: Vec<crate::card::CardId>,
+    },
+    /// CR 603.2c — the [`Effect::OverTriggerBatch`] binding for a trigger that
+    /// also chooses its own targets: the dispatcher fills `ids` with the
+    /// batch's matching subjects and `body` reads them as
+    /// [`Selector::BoundTriggerBatch`], its target slots untouched ("return
+    /// target artifact card … if its mana value is at most their total power",
+    /// Vulpine Harvester). Members are fixed when the trigger fires; a
+    /// departed one reads last-known information.
+    WithTriggerBatch {
         body: Box<Effect>,
         #[serde(default)]
         ids: Vec<crate::card::CardId>,
