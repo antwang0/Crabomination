@@ -18,7 +18,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_counter_kinds import CACHE, oracle_of  # noqa: E402
 
-ACCEPT = re.compile(r"NotToken|IsToken|Nontoken|NonToken|is_token|nontoken")
+# The two bespoke effects test `is_token` inside their resolvers (Thieves'
+# Auction's exile, Declaration in Stone's investigate count).
+ACCEPT = re.compile(r"NotToken|IsToken|Nontoken|NonToken|is_token|nontoken|ThievesAuction|ExileSameNameInvestigate")
 
 
 def main():
