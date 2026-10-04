@@ -708,3 +708,46 @@ fn ludevic_becomes_olag_as_a_copy() {
         assert!(olag.colors.contains(c), "{c:?}");
     }
 }
+
+/// Pod find (seed 98876, game 50: an `unwrap` on a missing back face). Olag
+/// as a copy of Chandra, Fire of Kaladesh pings a third time: "exile her,
+/// then return her transformed". In exile the card is Ludevic again (CR
+/// 712.4), so it comes back transformed — as Olag — instead of panicking.
+#[test]
+fn cr_712_14a_olag_copying_chandra_returns_transformed_without_panicking() {
+    let mut g = main_phase();
+    let ludevic = g.add_card_to_battlefield(0, catalog::ludevic_necrogenius());
+    g.add_card_to_graveyard(0, catalog::chandra_fire_of_kaladesh());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ludevic,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(1),
+        mode: None,
+    })
+    .expect("transform");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ludevic).unwrap().def.name, "Olag, Ludevic's Hubris");
+    for _ in 0..3 {
+        g.clear_sickness(ludevic);
+        g.battlefield_find_mut(ludevic).unwrap().tapped = false;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ludevic,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("ping");
+        drain_stack(&mut g);
+        if g.battlefield_find(ludevic).is_none() {
+            break;
+        }
+    }
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Olag, Ludevic's Hubris");
+    assert!(back.is_some_and(|c| c.transformed), "returned with its back face up");
+}

@@ -8509,6 +8509,11 @@ impl GameState {
         let (redirects, void_counter_on_exile, exile_stamped_by) =
             self.graveyard_exile_redirects(&card);
         let exile_on_graveyard = redirects || card.disturb_back_exiles();
+        // CR 707 — a temporary copy reverts as it leaves, BEFORE the face
+        // reverts below: a copy made after a transform saved the back face
+        // as its original (Olag), and restoring it last undid the CR 712.4
+        // revert, so the card sat in exile as its back face.
+        self.revert_copy_on_leave(&mut card);
         // CR 710.4 / 712.4 — flip cards and transformed DFCs revert to their
         // unflipped / front face off the battlefield.
         card.revert_flip();
@@ -8523,8 +8528,6 @@ impl GameState {
         // CR 400.7 — "until end of turn" effects end with the object; see
         // `move_card_to`'s twin.
         card.clear_effects_on_zone_change();
-        // CR 707 — a temporary copy reverts as it leaves.
-        self.revert_copy_on_leave(&mut card);
         // CR 400.7 — the tap and the attachment go with the old object too,
         // as `move_card_to` already did. `damage` is deliberately NOT reset
         // here: it sits behind the CoW `CardData`, and on a death by damage

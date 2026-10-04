@@ -37864,7 +37864,27 @@ impl GameState {
                     c
                 };
                 let Some(mut card) = taken else { return Ok(()) };
-                let back = card.definition.back_face.as_ref().map(|b| b.clone_arc()).unwrap();
+                // CR 712.4 — off the battlefield a transformed card shows its
+                // front face (Olag, a copy of Chandra, Fire of Kaladesh, is
+                // Ludevic again in exile).
+                card.revert_transform();
+                // CR 712.14a — what left is no double-faced card any more (a
+                // copy's copied faces end with the copy effect): it stays in
+                // its current zone. CR 111.8 — nor does a token come back.
+                let back = match card.definition.back_face.as_ref() {
+                    Some(b) if !card.is_token => b.clone_arc(),
+                    _ => {
+                        if on_bf {
+                            if !card.is_token {
+                                self.exile.push(card);
+                            }
+                        } else {
+                            let owner = card.owner;
+                            self.players[owner].send_to_graveyard(card);
+                        }
+                        return Ok(());
+                    }
+                };
                 card.front_face = Some(card.definition.arc());
                 card.set_definition(back);
                 card.transformed = true;
@@ -44029,13 +44049,20 @@ impl GameState {
         let saved_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = payer;
         let paid = match picks {
-            None => match self.try_pay_with_auto_tap(payer, cost) {
-                Ok(receipt) => {
-                    events.extend(receipt.auto_events);
-                    true
+            None => {
+                // K'rrik reaches an "unless [player] pays" cost (ward, a
+                // tax); a Phyrexian pip paid with life bills the payer.
+                let mut cost = cost.clone();
+                self.phyrexianize_for_payer(payer, &mut cost);
+                match self.try_pay_with_auto_tap(payer, &cost) {
+                    Ok(receipt) => {
+                        events.extend(receipt.auto_events);
+                        self.pay_life_cost(payer, receipt.side_effects.life_lost);
+                        true
+                    }
+                    Err(_) => false,
                 }
-                Err(_) => false,
-            },
+            }
             Some(chosen) => {
                 if !chosen.is_empty() {
                     let allowed: crate::fxhash::HashSet<CardId> =
