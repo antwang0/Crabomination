@@ -41,16 +41,16 @@ pub fn steely_resolve() -> CardDefinition {
     chosen_type_keyword("Steely Resolve", &[generic(1), g()], Keyword::Shroud)
 }
 
-/// Kindred Boon — {2}{W}{W} Enchantment. Choose a creature type. {1}{W}: a
-/// divinity counter on target creature you control of the chosen type; each
-/// creature you control with a divinity counter has indestructible. (It
-/// shipped as a free indestructible anthem over the whole chosen type.)
+/// Kindred Boon — {2}{W}{W} Enchantment. As it enters, choose a creature
+/// type (CR 614.12). {1}{W}: a divinity counter on target creature you
+/// control of the chosen type; each creature you control with a divinity
+/// counter has indestructible.
 pub fn kindred_boon() -> CardDefinition {
     CardDefinition {
         name: "Kindred Boon",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::AddCounter {

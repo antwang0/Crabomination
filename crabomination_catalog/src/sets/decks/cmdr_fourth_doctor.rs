@@ -718,20 +718,22 @@ pub fn vrestin_menoptra_leader() -> CardDefinition {
     })
 }
 
-/// Displaced Dinosaurs — your historic permanents become 7/7 Dinosaurs.
-///
-/// ⚠ Residual: as a trigger resolves, not as the permanent enters.
+/// Displaced Dinosaurs — as a historic permanent you control enters, it
+/// becomes a 7/7 Dinosaur creature (CR 614.12, `MatchingEntersWith`).
 pub fn displaced_dinosaurs() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(trigger_is(historic())),
-            effect: Effect::BecomeCreature {
-                what: Selector::TriggerSource,
-                power: Value::Const(7),
-                toughness: Value::Const(7),
-                creature_types: vec![CreatureType::Dinosaur],
-                keywords: vec![],
-                duration: Duration::Permanent,
+        static_abilities: vec![StaticAbility {
+            description: "As a historic permanent you control enters, it becomes a 7/7 Dinosaur creature in addition to its other types.",
+            effect: StaticEffect::MatchingEntersWith {
+                filter: historic(),
+                effect: Box::new(Effect::BecomeCreature {
+                    what: Selector::Target(0),
+                    power: Value::Const(7),
+                    toughness: Value::Const(7),
+                    creature_types: vec![CreatureType::Dinosaur],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                }),
             },
         }],
         ..creature("Displaced Dinosaurs", cost(&[generic(5), g(), g()]), vec![CreatureType::Dinosaur], 7, 7)

@@ -338,3 +338,23 @@ fn the_second_doctor_bars_the_drawer_from_attacking_you() {
     assert!(barred(&g, drew), "can't attack the Doctor's controller");
     assert!(!barred(&g, declined));
 }
+
+/// CR 614.12 — Displaced Dinosaurs: a historic permanent enters already a
+/// 7/7 Dinosaur creature (no trigger on the stack), an artifact included;
+/// a nonhistoric one is untouched.
+#[test]
+fn displaced_dinosaurs_historic_permanents_enter_as_7_7_dinosaurs() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::displaced_dinosaurs());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("castable");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.stack.is_empty(), "no trigger");
+    let cp = g.computed_permanent(ring).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Dinosaur));
+    let bear = cast(&mut g, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "not historic");
+}
