@@ -3173,6 +3173,10 @@ walker holes     (third half: the trigger-slot walker's optional holes and
 biotransference  (fourth: the off-battlefield card-type grant, one lane load
                  per off-battlefield card-type read) --bench byte-identical
                  (196,176 / 27.64 / 613.0 / 0 stalls)
+pod (release,    every deck at c72e4d13c: 2 x 200 (92 groups, 103401+), 3 x 200
+  fourth tip)    (61, 103301+), 4 x 300 (46, 103101+), 6 x 150 (31, 103201+)
+                 = 49,050 games, all decided — zero panics, draws or caps;
+                 turns/game 19.59 / 30.65 / 42.64 / 67.17
 suite            24,037 / 0 / 5 at the tip (CRAB_ANSWER_LOG=strict);
                  workspace clippy 0
 turns/game       3 seats 30.58, 4 seats 42.61, 5 seats 54.35, 8 seats 91.64
