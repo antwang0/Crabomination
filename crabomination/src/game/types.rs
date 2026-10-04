@@ -2123,6 +2123,9 @@ pub enum PendingEffectState {
     /// (Index, Spire Owl). Unlike Scry, no card may be bottomed — every
     /// peeked card returns to the top in the chosen order.
     RearrangePeeked { count: usize, player: usize },
+    /// The bottom `count` cards of the library, to be put back in the chosen
+    /// order (`Effect::OrderLibraryBottom`).
+    BottomOrderPeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
     SearchPending {
         player: usize,

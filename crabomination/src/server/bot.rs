@@ -6600,8 +6600,9 @@ fn decide_scry(
     scored.sort_by_key(|(s, _)| std::cmp::Reverse(*s));
     match mode {
         // Rearrange has no second bucket — everything stays on top,
-        // wanted cards first.
-        ScryMode::Rearrange => crate::decision::DecisionAnswer::ScryOrder {
+        // wanted cards first. An ordered bottom block puts its best card
+        // highest, so it comes back first.
+        ScryMode::Rearrange | ScryMode::OrderBottom => crate::decision::DecisionAnswer::ScryOrder {
             kept_top: scored.into_iter().map(|(_, id)| id).collect(),
             bottom: vec![],
         },

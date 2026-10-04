@@ -31,6 +31,7 @@ mod free_cast;
 mod graveyard_swap;
 mod graveyard_spread;
 mod dice_choices;
+mod order_bottom;
 mod copy_each_target;
 mod exchange_power;
 pub(crate) mod library_dig;
@@ -12216,6 +12217,8 @@ impl GameState {
                 }
                 Ok(())
             }
+
+            Effect::OrderLibraryBottom { who, count } => self.order_library_bottom(who, count, ctx, events),
 
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }

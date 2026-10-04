@@ -5556,6 +5556,10 @@ pub enum Effect {
     /// any order — all stay on top, none bottomed (Index, Spire Owl, Sage
     /// Owl). Distinct from Scry, which may bottom cards.
     RearrangeTop { who: PlayerRef, amount: Value },
+    /// "…and the rest on the bottom of your library in any order": `who`
+    /// orders the bottom `count` cards of their library (the ones an effect
+    /// just bottomed). Runs after the effect that bottomed them.
+    OrderLibraryBottom { who: PlayerRef, count: Value },
     /// "Look at the top `count` cards of your library. You may reveal up to
     /// `take` cards matching `filter` from among them, then put those on top of
     /// your library and the rest on the bottom in any order." Fertile Thicket

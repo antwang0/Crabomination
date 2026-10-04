@@ -1697,7 +1697,8 @@ impl Effect {
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount }
-            | Effect::RearrangeTop { who, amount } => {
+            | Effect::RearrangeTop { who, amount }
+            | Effect::OrderLibraryBottom { who, count: amount } => {
                 player_has_target(who) || value_has_target(amount)
             }
             Effect::LookPickToHand(lp) => {
@@ -2898,6 +2899,7 @@ impl Effect {
             | Effect::ChooseStepToSkipThisTurn { who }
             | Effect::LookAtTop { who, .. }
             | Effect::RearrangeTop { who, .. }
+            | Effect::OrderLibraryBottom { who, .. }
             | Effect::LookTopExileOneOfN { who, .. }
 
             | Effect::TakeExtraTurn { who, .. }
@@ -5275,6 +5277,7 @@ impl Effect {
                 | Effect::NameCardThenExileFromZones { who, .. }
                 | Effect::RevealUntilFind { who, .. }
                 | Effect::RearrangeTop { who, .. }
+                | Effect::OrderLibraryBottom { who, .. }
                 | Effect::ShuffleHandsDrawSame { who }
                 | Effect::ExileHandLinked { who }
                 | Effect::ReturnLinkedExilesToHand { who }

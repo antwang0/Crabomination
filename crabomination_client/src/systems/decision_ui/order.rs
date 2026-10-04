@@ -221,6 +221,7 @@ pub(super) fn scry_tiles(
         ScryMode::Scry => ("Scry", Some("Bottom")),
         ScryMode::Surveil => ("Surveil", Some("Graveyard")),
         ScryMode::Rearrange => ("Rearrange top", None),
+        ScryMode::OrderBottom => ("Order bottom", None),
     };
     let n = order.len();
     let prompt = match second {

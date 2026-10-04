@@ -36,6 +36,10 @@ pub enum ScryMode {
     /// Rearrange (Index, Spire Owl) — every card stays on top; no second
     /// bucket, the player only reorders.
     Rearrange,
+    /// "Put the rest on the bottom of your library in any order" — the cards
+    /// are the library's bottom ones; the player only orders them (listed
+    /// first = highest in the library).
+    OrderBottom,
 }
 
 /// `Decision::ChooseTarget.description` for a cast-time *extra* target slot
