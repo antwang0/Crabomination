@@ -31,19 +31,19 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-04 (`01WwQaPJ`, 158/183). The per-deck narratives below predate the script — where
+Snapshot 2026-10-04 (`01WwQaPJ`, 159/183). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
-| 66 | Inalla, Archmage Ritualist (UBR) | 2: shifting_shadow, vindictive_lich |
-| 67 | Brimaz, Blight of Oreskos (WB) | 2: filigree_vector, vulpine_harvester |
+| 66 | Inalla, Archmage Ritualist (UBR) | 1: vindictive_lich |
+| 67 | Brimaz, Blight of Oreskos (WB) | 1: vulpine_harvester |
 | 75 | Hazel of the Rootbloom (BG) | 2: hazel_of_the_rootbloom, sword_of_the_squeak |
 | 77 | Winter, Cynical Opportunist (BG) | 1: into_the_pit |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 109 | Chishiro, the Shattered Blade (RG) | 2: concord_with_the_kami, shifting_shadow |
+| 109 | Chishiro, the Shattered Blade (RG) | 1: concord_with_the_kami |
 | 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 126 | Oloro, Ageless Ascetic (WUB) | 1: springjack_pasture |
@@ -54,12 +54,14 @@ they call a deck 🟡, the table wins.
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
-| 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
+| 165 | Tidus, Yuna's Guardian (GWU) | 2: lulu_stern_guardian, rikku_resourceful_guardian |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
 | 177 | Szarekh, the Silent King (B) | 1: biotransference |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |
-| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 5: aces_baseball_bat, peri_brown, the_curse_of_fenric, the_eighth_doctor, the_fourth_doctor |
+| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
+
+159 / 183 pod decks carry no residual in their card docs; the rest are listed.
 
 158 / 183 pod decks carry no residual in their card docs; the rest are listed.
 

@@ -3215,6 +3215,12 @@ census           6 seats x 3,000 (42611, decks 0-5) and 6 x 2,000 (42711,
                  Keeper's token and the reconfigure cards now activated
 two-player pools cube / sos / sealed x 300 an archetype, seeds 9141/9142:
                  14,998 of 15,000 decided, the other two CR 104.4a draws
+third stretch    --bench byte-identical again after the historic tally, the
+                 copy/haste/loot/donate bot picks; pods 91503..91508 3/4/6/8
+                 seats x 1,500 = 6,000 games all decided; 183-deck census
+                 6 x 800 (43000+) 24,800 games, three CR 104.4a draws;
+                 strict debug pods every deck 4 seats x 12 (98500+) = 540,
+                 one draw, no finds; full suite 24,375 / 0 / 5; clippy 0
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, third stretch) — guardrail, no perf work
