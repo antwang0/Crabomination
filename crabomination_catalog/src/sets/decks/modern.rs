@@ -40781,8 +40781,7 @@ pub fn securitron_squadron() -> CardDefinition {
 }
 
 /// Powder Ganger — {2}{R} 2/2 Human Rogue. Squad {2}. When it enters, destroy
-/// up to one target artifact. Residual: only an opponent's artifact can be
-/// named (declining is the legal choice the bot needs; see the body).
+/// up to one target artifact.
 pub fn powder_ganger() -> CardDefinition {
     CardDefinition {
         name: "Powder Ganger",
@@ -40797,14 +40796,13 @@ pub fn powder_ganger() -> CardDefinition {
         keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
         triggered_abilities: vec![
             crate::effect::shortcut::squad_etb(),
-            // "Destroy up to one target artifact" — zero targets is legal.
-            // The slot names only opponents' artifacts: the auto-targeter
-            // falls back to its own side once the other is empty, and a
-            // Sol Ring of yours is never the one you'd pick.
+            // "Destroy up to one target artifact" — zero targets is legal,
+            // and the auto-targeter declines when only its own side's are
+            // left (`declines_own_side_pick`, CR 601.2c).
             etb(Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
-                filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
+                filter: SelectionRequirement::Artifact,
                 effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
             }),
         ],
