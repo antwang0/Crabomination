@@ -12,6 +12,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::KeywordDonors;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, w, x};
@@ -245,32 +246,32 @@ pub fn bonders_ornament() -> CardDefinition {
 }
 
 /// Cairn Wanderer — changeling; has each listed keyword a creature card in
-/// any graveyard has.
-/// Residual: landwalk and protection are copied for the five basic land types
-/// and the five colors only.
+/// any graveyard has, in that card's own variant (any landwalk, any
+/// protection — the 2007-10-01 ruling).
 pub fn cairn_wanderer() -> CardDefinition {
-    let mut kws = vec![
-        Keyword::Flying,
-        Keyword::Fear,
-        Keyword::FirstStrike,
-        Keyword::DoubleStrike,
-        Keyword::Deathtouch,
-        Keyword::Haste,
-        Keyword::Lifelink,
-        Keyword::Reach,
-        Keyword::Trample,
-        Keyword::Shroud,
-        Keyword::Vigilance,
-    ];
-    kws.extend(
-        [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest]
-            .into_iter()
-            .map(Keyword::Landwalk),
-    );
-    kws.extend([Color::White, Color::Blue, Color::Black, Color::Red, Color::Green].into_iter().map(Keyword::Protection));
     CardDefinition {
         keywords: vec![Keyword::Changeling],
-        static_abilities: keyword_while(kws, |f| Value::CardsInAllGraveyardsMatching { filter: f }),
+        static_abilities: vec![StaticAbility {
+            description: "Has each listed keyword a creature card in a graveyard has.",
+            effect: StaticEffect::GainKeywordsOfCards {
+                from: KeywordDonors::CreatureCardsInGraveyards,
+                keywords: vec![
+                    Keyword::Flying,
+                    Keyword::Fear,
+                    Keyword::FirstStrike,
+                    Keyword::DoubleStrike,
+                    Keyword::Deathtouch,
+                    Keyword::Haste,
+                    Keyword::Landwalk(LandType::Island),
+                    Keyword::Lifelink,
+                    Keyword::Protection(Color::White),
+                    Keyword::Reach,
+                    Keyword::Trample,
+                    Keyword::Shroud,
+                    Keyword::Vigilance,
+                ],
+            },
+        }],
         ..creature("Cairn Wanderer", cost(&[generic(4), b()]), vec![CreatureType::Shapeshifter], 4, 4)
     }
 }

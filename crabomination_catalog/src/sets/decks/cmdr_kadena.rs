@@ -16,6 +16,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::effect::KeywordDonors;
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, u};
@@ -265,47 +266,39 @@ pub fn mire_in_misery() -> CardDefinition {
 /// Rayami, First of the Fallen — {1}{B}{G}{U} 5/4 Vampire. A nontoken
 /// creature that would die is exiled with a blood counter instead (CR 614);
 /// Rayami has each listed keyword an exiled blood-countered creature card
-/// has.
-/// Residual: protection is shared for the five colors only (as Cairn
-/// Wanderer's).
+/// has, in that card's own variant (2019-08-23: protection from black,
+/// hexproof from white).
 pub fn rayami_first_of_the_fallen() -> CardDefinition {
-    let mut shared = vec![
-        Keyword::Flying,
-        Keyword::FirstStrike,
-        Keyword::DoubleStrike,
-        Keyword::Deathtouch,
-        Keyword::Haste,
-        Keyword::Hexproof,
-        Keyword::Indestructible,
-        Keyword::Lifelink,
-        Keyword::Menace,
-        Keyword::Reach,
-        Keyword::Trample,
-        Keyword::Vigilance,
-    ];
-    shared.extend([Color::White, Color::Blue, Color::Black, Color::Red, Color::Green].into_iter().map(Keyword::Protection));
-    let mut statics = vec![StaticAbility {
-        description: "If a nontoken creature would die, exile that card with a blood counter on it instead.",
-        effect: StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter: CounterType::Blood },
-    }];
-    statics.extend(shared.into_iter().map(|keyword| StaticAbility {
-        description: "Rayami has the keywords of exiled creature cards with blood counters on them.",
-        effect: StaticEffect::WhileCondition {
-            condition: Predicate::SelectorCountAtLeast {
-                sel: Selector::CardsInZone {
-                    who: PlayerRef::EachPlayer,
-                    zone: crate::card::Zone::Exile,
-                    filter: R::Creature.and(R::WithCounter(CounterType::Blood)).and(R::HasKeyword(keyword.clone())),
-                },
-                n: Value::ONE,
-            },
-            inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword }),
-        },
-    }));
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         can_be_commander: true,
-        static_abilities: statics,
+        static_abilities: vec![
+            StaticAbility {
+                description: "If a nontoken creature would die, exile that card with a blood counter on it instead.",
+                effect: StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter: CounterType::Blood },
+            },
+            StaticAbility {
+                description: "Rayami has the keywords of exiled creature cards with blood counters on them.",
+                effect: StaticEffect::GainKeywordsOfCards {
+                    from: KeywordDonors::ExiledCreatureCardsWithCounter(CounterType::Blood),
+                    keywords: vec![
+                        Keyword::Flying,
+                        Keyword::FirstStrike,
+                        Keyword::DoubleStrike,
+                        Keyword::Deathtouch,
+                        Keyword::Haste,
+                        Keyword::Hexproof,
+                        Keyword::Indestructible,
+                        Keyword::Lifelink,
+                        Keyword::Menace,
+                        Keyword::Protection(Color::White),
+                        Keyword::Reach,
+                        Keyword::Trample,
+                        Keyword::Vigilance,
+                    ],
+                },
+            },
+        ],
         ..creature(
             "Rayami, First of the Fallen",
             cost(&[generic(1), b(), g(), u()]),

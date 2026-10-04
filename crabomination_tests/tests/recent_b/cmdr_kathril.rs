@@ -71,6 +71,24 @@ fn cairn_wanderer_borrows_from_graveyards() {
     assert!(has(&g, cw, Keyword::Vigilance));
 }
 
+/// CR 702.14a / 702.16 — "landwalk" and "protection" are families: Cairn
+/// Wanderer gains a graveyard card's own variant (2007-10-01 ruling), here
+/// legendary landwalk and protection from Kavu; a token in a graveyard lends
+/// nothing (CR 111.8).
+#[test]
+fn cairn_wanderer_gains_any_landwalk_and_any_protection() {
+    let mut g = pod(2);
+    let cw = g.add_card_to_battlefield(0, catalog::cairn_wanderer());
+    g.add_card_to_graveyard(1, catalog::livonya_silone());
+    assert!(has(&g, cw, Keyword::LegendaryLandwalk));
+    assert!(has(&g, cw, Keyword::FirstStrike));
+    let kw = Keyword::ProtectionFromCreatureType(crabomination::card::CreatureType::Kavu);
+    let id = g.add_card_to_graveyard(1, catalog::shoreline_raider());
+    assert!(has(&g, cw, kw.clone()));
+    g.players[1].graveyard.iter_mut().find(|c| c.id == id).unwrap().is_token = true;
+    assert!(!has(&g, cw, kw));
+}
+
 /// CR 400.7 — Cairn Wanderer reads a graveyard card as it is in the
 /// graveyard: a creature that *had* double strike on the battlefield (a
 /// granted keyword) and died lends none. The death snapshot used to be read

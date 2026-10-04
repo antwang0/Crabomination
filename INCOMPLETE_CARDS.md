@@ -1925,7 +1925,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
-| 🟡 Cairn Wanderer | Symbiotic Swarm (C20) | landwalk and protection are copied for the five basic land types and the five colors only. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
@@ -1968,7 +1967,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later). |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
-| 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection is shared for the five colors only (from a card type or player is not). |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |

@@ -74,6 +74,22 @@ fn rayami_collects_the_fallen() {
     assert!(g.computed_permanent(r).unwrap().keywords().contains(&Keyword::Protection(Color::White)));
 }
 
+/// CR 702.11d-e — Rayami's "hexproof" finds a "hexproof from [quality]"
+/// card and gains that specific variant (2019-08-23 ruling).
+#[test]
+fn rayami_gains_hexproof_from_a_color() {
+    let mut g = pod(2);
+    let r = g.add_card_to_battlefield(0, catalog::rayami_first_of_the_fallen());
+    let weaver = g.add_card_to_battlefield(1, catalog::sporeweb_weaver());
+    let m = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast_by(&mut g, 0, m, &[Target::Permanent(weaver)]);
+    let kws = g.computed_permanent(r).unwrap().keywords().to_vec();
+    assert!(kws.contains(&Keyword::HexproofFromColor(Color::Blue)));
+    assert!(kws.contains(&Keyword::Reach));
+    assert!(!kws.contains(&Keyword::Hexproof), "the variant, not plain hexproof");
+}
+
 /// Leadership Vacuum sends a commander home (CR 903.9).
 #[test]
 fn leadership_vacuum_sends_commanders_home() {
