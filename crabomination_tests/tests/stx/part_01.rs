@@ -1553,6 +1553,27 @@ fn hofri_ghostforge_death_mints_spirit_token_copy() {
     assert_eq!(g.computed_permanent(token_id).unwrap().power, 3, "2/2 base + Hofri Spirit anthem");
 }
 
+/// "Exile it. If you do, create a token" — a dead creature that left the
+/// graveyard before Hofri's trigger resolved is not copied.
+#[test]
+fn hofri_ghostforge_copies_nothing_once_the_card_is_gone() {
+    use crabomination::game::effects::{EffectContext, EntityRef};
+    let mut g = two_player_game();
+    let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let body = g.battlefield_find(hofri).unwrap().definition.triggered_abilities[0].effect.clone();
+    // The dead Bear was shuffled away before the trigger resolved.
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(hofri, 0, None);
+    ctx.trigger_source = Some(EntityRef::Card(bear));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no token without the exile");
+    // The live path still copies.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    ctx.trigger_source = Some(EntityRef::Card(bear));
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert!(g.battlefield.iter().any(|c| c.is_token), "exiled, so copied");
+}
+
 /// `SelectionRequirement::OtherThanSource` now strictly excludes the
 /// source from target-validation contexts (push modern_decks). When the
 /// source is the only on-battlefield permanent matching the filter, the

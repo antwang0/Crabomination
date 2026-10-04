@@ -58,7 +58,7 @@ pub fn akoum_flameseeker() -> CardDefinition {
                 amount: Value::Const(1),
                 random: false,
             },
-            draw(1),
+            crate::effect::shortcut::if_discarded(draw(1)),
         ]))],
         ..ally(
             "Akoum Flameseeker",

@@ -814,35 +814,45 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     filter: SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
                 },
             ),
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::TriggerSource,
-                    to: ZoneDest::Exile,
-                },
-                Effect::CreateTokenCopyOf {
-                    extra_keywords: vec![],
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    source: Selector::TriggerSource,
-                    extra_creature_types: vec![CreatureType::Spirit],
-                    extra_card_types: vec![],
-                    override_pt: None,
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                    no_mana_cost: false,
-                    enters_with_counters: None,
-                },
-                // "When that token leaves the battlefield, return the exiled
-                // card to its owner's graveyard."
-                Effect::WhenLastCreatedTokenLeaves {
-                    body: Box::new(Effect::Move {
-                        what: Selector::Target(0),
-                        to: ZoneDest::Graveyard,
-                    }),
-                },
-            ]),
+            // "Exile it. If you do, create a token" — a card that already
+            // left the graveyard is a new object (CR 400.7): nothing is
+            // exiled and nothing is copied.
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::MatchingAmong {
+                    inner: Box::new(Selector::TriggerSource),
+                    filter: SelectionRequirement::InYourGraveyard,
+                }),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::CreateTokenCopyOf {
+                        extra_keywords: vec![],
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        source: Selector::TriggerSource,
+                        extra_creature_types: vec![CreatureType::Spirit],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                    },
+                    // "When that token leaves the battlefield, return the exiled
+                    // card to its owner's graveyard."
+                    Effect::WhenLastCreatedTokenLeaves {
+                        body: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Graveyard,
+                        }),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
         }],
         static_abilities: vec![
             StaticAbility {

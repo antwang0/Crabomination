@@ -144,16 +144,25 @@ pub fn knowledge_vault() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
+                // "Sacrifice this. If you do, discard your hand…" — a second
+                // {0} activation held on the stack finds it gone and discards
+                // nothing.
                 effect: Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(100),
-                        random: false,
-                    },
-                    Effect::Move {
-                        what: Selector::CardExiledWithSource,
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    Effect::If {
+                        cond: crate::effect::Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Discard {
+                                who: Selector::You,
+                                amount: Value::Const(100),
+                                random: false,
+                            },
+                            Effect::Move {
+                                what: Selector::CardExiledWithSource,
+                                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
                     },
                 ]),
                 ..Default::default()

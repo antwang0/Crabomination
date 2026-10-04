@@ -250,6 +250,24 @@ fn knowledge_vault_trades_your_hand_for_the_stash() {
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
 
+/// "Sacrifice this. If you do, discard your hand…" — a second {0}
+/// activation held on the stack finds the Vault gone, so the hand the first
+/// one returned is kept.
+#[test]
+fn knowledge_vault_second_activation_discards_nothing() {
+    let mut g = main_phase();
+    let vault = g.add_card_to_battlefield(0, catalog::knowledge_vault());
+    activate(&mut g, 0, vault, 0, None);
+    for _ in 0..2 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: vault, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("{0}: activate twice");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the stashed card stays in hand");
+}
+
 #[test]
 fn knowledge_vault_burns_the_stash_if_it_leaves_another_way() {
     let mut g = main_phase();

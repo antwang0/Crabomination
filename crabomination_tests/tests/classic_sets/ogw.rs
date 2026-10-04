@@ -3057,3 +3057,21 @@ fn kozileks_return_fires_from_the_graveyard_on_a_big_eldrazi_cast() {
     assert!(g.battlefield_find(angel).is_none(), "and the 4/4");
     assert!(g.battlefield_find(emmy).is_some(), "the 13/13 shrugs it off");
 }
+
+/// Akoum Flameseeker — "Discard a card. If you do, draw a card": with an
+/// empty hand nothing is discarded, so nothing is drawn.
+#[test]
+fn akoum_flameseeker_draws_only_after_a_discard() {
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::akoum_flameseeker());
+    let body = g.battlefield_find(src).unwrap().definition.activated_abilities[0].effect.clone();
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::forest());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert!(g.players[0].hand.is_empty(), "no discard, no draw");
+    g.add_card_to_hand(0, catalog::mountain());
+    g.resolve_effect(&body, &ctx).expect("resolves");
+    assert_eq!(g.players[0].hand.len(), 1, "the Mountain was traded for the Forest");
+    assert_eq!(g.players[0].hand[0].definition.name, "Forest");
+}
