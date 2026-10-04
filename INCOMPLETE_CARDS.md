@@ -1990,7 +1990,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III: a land among the exiled cards can't be played. |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
-| 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric, so III's Mutant fights any other creature. |

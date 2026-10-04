@@ -725,10 +725,9 @@ pub fn blitzball_stadium() -> CardDefinition {
     }
 }
 
-/// Endless Detour — the owner of a spell, nonland permanent or graveyard card
-/// puts it on the top or bottom of their library.
-///
-/// ⚠ Residual: the kind of target is chosen as a mode.
+/// Endless Detour — "The owner of target spell, nonland permanent, or card in
+/// a graveyard puts it on the top or bottom of their library": one target
+/// across the three zones; the body branches on what it turned out to be.
 pub fn endless_detour() -> CardDefinition {
     let to_library = |what: Selector| Effect::Move {
         what,
@@ -741,14 +740,16 @@ pub fn endless_detour() -> CardDefinition {
         name: "Endless Detour",
         cost: cost(&[g(), w(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            Effect::MoveSpellToZone {
-                what: target_filtered(R::IsSpellOnStack),
+        effect: Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsSpellOnStack },
+            then: Box::new(Effect::MoveSpellToZone {
+                what: target_filtered(
+                    R::IsSpellOnStack.or(R::Permanent.and(R::Nonland)).or(R::Any.from_any_graveyard()),
+                ),
                 zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
-            },
-            to_library(target_filtered(R::Permanent.and(R::Nonland))),
-            to_library(target_filtered(R::Any.from_any_graveyard())),
-        ]),
+            }),
+            else_: Box::new(to_library(Selector::Target(0))),
+        },
         ..Default::default()
     }
 }

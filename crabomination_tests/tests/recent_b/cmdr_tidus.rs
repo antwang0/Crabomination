@@ -483,3 +483,45 @@ fn lulu_stuns_an_attacker() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 1);
 }
 
+
+/// CR 115.1 — Endless Detour's one target is a spell, a nonland permanent or
+/// a graveyard card; each goes to its owner's library.
+#[test]
+fn endless_detour_takes_each_kind_of_target() {
+    let in_library = |g: &GameState, seat: usize, id: CardId| g.players[seat].library.iter().any(|c| c.id == id);
+    // A permanent.
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let detour = g.add_card_to_hand(0, catalog::endless_detour());
+    cast_x(&mut g, detour, &[Target::Permanent(bear)], None).expect("a nonland permanent");
+    assert!(in_library(&g, 1, bear));
+    // A graveyard card.
+    let mut g = pod(2);
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let detour = g.add_card_to_hand(0, catalog::endless_detour());
+    cast_x(&mut g, detour, &[Target::Permanent(dead)], None).expect("a graveyard card");
+    assert!(in_library(&g, 1, dead));
+    // A land is no target.
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let detour = g.add_card_to_hand(0, catalog::endless_detour());
+    assert!(cast_x(&mut g, detour, &[Target::Permanent(land)], None).is_err(), "a land permanent");
+    // A spell.
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the Bears");
+    let detour = g.add_card_to_hand(0, catalog::endless_detour());
+    cast_x(&mut g, detour, &[Target::Permanent(spell)], None).expect("a spell");
+    assert!(in_library(&g, 1, spell), "the Bears spell went to its owner's library");
+    // The bot's auto-target names the opponent's creature.
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let detour = g.add_card_to_hand(0, catalog::endless_detour());
+    let eff = catalog::endless_detour().effect;
+    let (first, _) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(detour), None);
+    assert_eq!(first, Some(Target::Permanent(bear)));
+}
