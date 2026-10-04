@@ -69,7 +69,7 @@ they call a deck 🟡, the table wins.
 | 166 | The Wise Mothman (BGU) | 2: rampaging_yao_guai, winding_constrictor |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
 | 170 | Caesar, Legion's Emperor (RWB) | 5: aradesh_the_founder, colonel_autumn, mr_house_president_and_ceo, mysterious_stranger, powder_ganger |
-| 175 | The Swarmlord (GUR) | 4: ghyrson_starn_kelermorph, hierophant_bio_titan, the_first_tyrannic_war, the_red_terror |
+| 175 | The Swarmlord (GUR) | 2: hierophant_bio_titan, the_first_tyrannic_war |
 | 177 | Szarekh, the Silent King (B) | 3: biotransference, canoptek_wraith, out_of_the_tombs |
 | 178 | The Thirteenth Doctor + Yasmin Khan (GUR) | 1: clara_oswald |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: coin_of_mastery |

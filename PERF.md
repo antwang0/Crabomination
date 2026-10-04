@@ -3163,6 +3163,37 @@ pod (strict      CRAB_ANSWER_LOG=strict debug builds over every deck: 4 seats
 suite            23,922 / 0 / 5 (CRAB_ANSWER_LOG=strict); workspace clippy 0
 ```
 
+### 2026-10-04 (Commander session `01BaSouG`, second half) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: `trigger_effect_for` at the card
+trigger-dispatch sites (an `OverTriggerBatch` match, `batch_subjects` only
+for it); the combat dispatcher's `YourControl` arm now evaluates
+`dealer_filter` and an `OverTriggerBatch` seed/append; `damage_unpreventable_
+from` factored out of the shield funnel (same checks, same order);
+`times_attacked_this_turn` bumped beside `attacked_this_turn`;
+`fire_spell_damage_listeners` returns on its first test unless the source is
+the resolving spell; `phyrexianize_for_payer` walks only for a cost with a
+colored pip; `exiled_with_pick` / `IfDiscardedForCost` wrappers only when an
+ability asks. 4-core container, release-fast, tip 86e848978.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 at every checkpoint of the half (ten runs); games_per_s
+                 335-359 (box)
+two-player pools cube / sos / sealed x 300, seed 75301: 7,500 games, all
+                 decided, zero panics
+pod              3 / 4 / 6 / 8 seats x 600 / 1,000 / 600 / 300 (seeds 41301-
+                 41304): all decided, zero panics, turns/game 32.34 / 45.93 /
+                 68.06 / 94.26; targeted 4-seat pods over every deck touched
+                 (41201-41207, 300-400 games each): all decided
+strict debug     CRAB_ANSWER_LOG=strict, debug build: 41401-41410 (claimed
+                 decks, 500 games) found ONE bug — Baeloth's goad asked the
+                 layers about a dying creature's snapshot (fixed 2b2f52142);
+                 51001-51005 and 51011-51014 (all decks, 3-8 seats, 1,860
+                 games) clean
+suite            24,262 / 0 / 5 (full workspace)
+```
+
 ### 2026-10-03 (Commander session `01BaSouG`) — guardrail, no perf work
 
 Engine edits on paths every pool reaches: `distinct_target_range` (one
