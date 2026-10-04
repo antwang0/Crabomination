@@ -881,3 +881,24 @@ fn cr_707_2_a_reanimated_clone_enters_as_a_copy() {
     assert_eq!(c.definition.name, "Serra Angel");
     assert_eq!(c.controller, 0);
 }
+
+/// CR 611.2c — Rootwater Matriarch steals "for as long as that creature is
+/// enchanted": control returns once its last Aura is gone. The steal had been
+/// permanent.
+#[test]
+fn cr_611_2c_rootwater_matriarch_steal_ends_with_the_aura() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let matriarch = g.add_card_to_battlefield(0, catalog::rootwater_matriarch());
+    g.clear_sickness(matriarch);
+    activate(&mut g, matriarch, 0, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen while enchanted");
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "still enchanted, still stolen");
+    // The Aura falls off: the steal ends.
+    g.battlefield_find_mut(aura).unwrap().attached_to = None;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "returned once unenchanted");
+}

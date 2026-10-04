@@ -1594,15 +1594,17 @@ pub fn vhati_il_dal() -> CardDefinition {
     }
 }
 
-/// Rootwater Matriarch — {2}{U}{U} 2/3 that steals whatever is enchanted.
+/// Rootwater Matriarch — {2}{U}{U} 2/3. "{T}: Gain control of target creature
+/// for as long as that creature is enchanted." The steal ends once the last
+/// Aura leaves it (CR 611.2c). Any creature is a legal target; an unenchanted
+/// one would come straight back, so the slot asks for an enchanted one.
 pub fn rootwater_matriarch() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GainControl {
+            effect: Effect::GainControlWhileMatches {
                 what: target_filtered(R::Creature.and(R::IsEnchanted)),
-                to: None,
-                duration: Duration::Permanent,
+                filter: R::IsEnchanted,
             },
             ..Default::default()
         }],
