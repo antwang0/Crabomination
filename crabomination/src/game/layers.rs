@@ -1008,6 +1008,10 @@ pub(crate) struct SecondPass {
     /// filtered by card type: the set must read the computed types.
     card_type_changer: bool,
     card_type_filtered: bool,
+    /// CR 613.8 — a layer-5 color change and an effect whose set is
+    /// filtered by color (Honor of the Pure): the set reads computed colors.
+    color_changer: bool,
+    color_filtered: bool,
 }
 
 impl SecondPass {
@@ -1030,12 +1034,21 @@ impl SecondPass {
                 }
                 _ => {}
             }
+            g.color_filtered |= match &e.affected {
+                AffectedPermanents::All { color, colorless, .. } => color.is_some() || *colorless,
+                AffectedPermanents::AllOpponents { color, .. } => color.is_some(),
+                AffectedPermanents::CardMatch { requirement, .. } => requirement_reads_color(requirement),
+                _ => false,
+            };
             match e.modification {
                 Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
                 // CR 702.73a — a granted changeling makes the bearer every type.
                 Modification::AddKeyword(Keyword::Changeling) => g.type_changer = true,
                 Modification::AddCardType(_) | Modification::RemoveCardType(_) | Modification::SetCardTypes(_) => {
                     g.card_type_changer = true
+                }
+                Modification::AddColor(_) | Modification::SetColors(_) | Modification::LoseAllColors => {
+                    g.color_changer = true
                 }
                 _ => {}
             }
@@ -1113,10 +1126,11 @@ fn compute_permanent_gated(
     // Only re-run when both a type-changer and a type lord are present.
     let has_type_gated = gates.type_changer && gates.type_lord;
     let has_card_type_gated = gates.card_type_changer && gates.card_type_filtered;
-    if gates.power || has_type_gated || has_card_type_gated {
-        return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated);
+    let has_color_gated = gates.color_changer && gates.color_filtered;
+    if gates.power || has_type_gated || has_card_type_gated || has_color_gated {
+        return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated, has_color_gated);
     }
-    compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance)
+    compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance, None)
 }
 
 /// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
@@ -1131,8 +1145,9 @@ fn compute_permanent_second_pass(
     effects: &[ContinuousEffect],
     has_type_gated: bool,
     has_card_type_gated: bool,
+    has_color_gated: bool,
 ) -> ComputedPermanent {
-    let pass1 = compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance);
+    let pass1 = compute_permanent_pass(card, effects, None, None, None, ChangelingRead::Instance, None);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     let gate_card_types = has_card_type_gated.then(|| pass1.card_types().clone());
     // CR 613.1d — a layer-4 "set creature types" overrides changeling's CDA,
@@ -1145,7 +1160,16 @@ fn compute_permanent_second_pass(
     } else {
         ChangelingRead::Instance
     };
-    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref(), gate_card_types.as_deref(), changeling)
+    let gate_colors = has_color_gated.then_some(pass1.colors);
+    compute_permanent_pass(
+        card,
+        effects,
+        Some(pass1.power),
+        gate_types.as_deref(),
+        gate_card_types.as_deref(),
+        changeling,
+        gate_colors,
+    )
 }
 
 fn compute_permanent_pass(
@@ -1155,6 +1179,9 @@ fn compute_permanent_pass(
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
     changeling_types: ChangelingRead,
+    // CR 613.8 — the computed colors (pass 2 when a layer-5 change meets a
+    // color-filtered set). `None` reads the printed colors.
+    gate_colors: Option<ColorSet>,
 ) -> ComputedPermanent {
     // Start from the base card definition — borrowed, not cloned: each of
     // these materializes only if a layer below actually writes to it.
@@ -1321,7 +1348,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, effects, card, gate_power, gate_types, gate_card_types, changeling_types) {
+            if affects(e, effects, card, gate_power, gate_types, gate_card_types, changeling_types, gate_colors) {
                 sorted.push(e);
             }
         }
@@ -1596,6 +1623,7 @@ fn affects(
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
     changeling_types: ChangelingRead,
+    gate_colors: Option<ColorSet>,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
     // had there in every later layer, and that set was fixed before layer 4
@@ -1619,7 +1647,16 @@ fn affects(
         }
         _ => gate_card_types,
     };
-    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types, gate_card_types, changeling_types)
+    affected_includes_gated(
+        &effect.affected,
+        effect.source,
+        card,
+        gate_power,
+        gate_types,
+        gate_card_types,
+        changeling_types,
+        gate_colors,
+    )
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -1636,7 +1673,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power), None, None, ChangelingRead::Instance)
+    affected_includes_gated(affected, source, card, Some(printed_power), None, None, ChangelingRead::Instance, None)
 }
 
 fn affected_includes_gated(
@@ -1652,8 +1689,11 @@ fn affected_includes_gated(
     gate_card_types: Option<&[CardType]>,
     // How changeling reads as every creature type (CR 613.1d).
     changeling_types: ChangelingRead,
+    // CR 613.8 — the computed colors (pass 2); `None` reads the printed ones.
+    gate_colors: Option<ColorSet>,
 ) -> bool {
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
+    let colors = || gate_colors.unwrap_or_else(|| card.definition.printed_color_set());
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
@@ -1685,9 +1725,9 @@ fn affected_includes_gated(
                 // token whose only colour is its indicator both read as
                 // colourless to a colour-filtered anthem. The set is a
                 // bitmask; `is_none_or` keeps it off the common board.
-                && color.is_none_or(|want| card.definition.printed_color_set().contains(want))
+                && color.is_none_or(|want| colors().contains(want))
                 // CR 702.114 — Devoid is folded into `printed_color_set`.
-                && (!*colorless || card.definition.printed_color_set().is_empty())
+                && (!*colorless || colors().is_empty())
         }
         AffectedPermanents::AllOpponents {
             source_controller,
@@ -1709,7 +1749,7 @@ fn affected_includes_gated(
                 && (card_types.is_empty()
                     || card_types.iter().all(|t| computed_types.contains(t)))
                 && counter.is_none_or(|k| card.counter_count(k) > 0)
-                && color.is_none_or(|want| card.definition.printed_color_set().contains(want))
+                && color.is_none_or(|want| colors().contains(want))
                 && creature_type.as_ref().is_none_or(|ct| {
                     let typed = match gate_types {
                         Some(types) => types.contains(ct),
@@ -1758,6 +1798,7 @@ fn affected_includes_gated(
                 *source_controller,
                 computed_types,
                 gate_types.map(|t| (t, changeling_types)),
+                gate_colors,
             )
         }
         AffectedPermanents::CardMatchPowerGated { source_controller, requirement, power_at_least } => {
@@ -1887,7 +1928,19 @@ pub(crate) fn requirement_matches_card(
     card: &crate::card::CardInstance,
     source_controller: usize,
 ) -> bool {
-    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None)
+    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types, None, None)
+}
+
+/// True when `req` has a color leaf — the ones
+/// [`requirement_matches_card_typed`] reads from the computed colors.
+fn requirement_reads_color(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::HasColor(_) | R::Colorless | R::Multicolored | R::Monocolored => true,
+        R::And(a, b) | R::Or(a, b) => requirement_reads_color(a) || requirement_reads_color(b),
+        R::Not(inner) => requirement_reads_color(inner),
+        _ => false,
+    }
 }
 
 /// True when `req` has a creature-type leaf — the ones
@@ -1913,9 +1966,12 @@ pub(crate) fn requirement_matches_card_typed(
     source_controller: usize,
     types: &[CardType],
     ctypes: Option<(&[CreatureType], ChangelingRead)>,
+    // CR 613.8 — the computed colors, else the printed ones.
+    colors: Option<ColorSet>,
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
+    let color_set = || colors.unwrap_or_else(|| def.printed_color_set());
     let has_ctype = |ct: &CreatureType| match ctypes {
         Some((t, changeling)) => t.contains(ct) || changeling.every_type(card),
         None => def.subtypes.creature_types.contains(ct) || card.has_keyword(&Keyword::Changeling),
@@ -1968,21 +2024,21 @@ pub(crate) fn requirement_matches_card_typed(
         // ({G/W} — Kitchen Finks) and a token's or DFC back's colour
         // indicator both read as no colour, so a "green creatures you
         // control get +1/+1" static skipped them.
-        R::HasColor(c) => def.printed_color_set().contains(c),
+        R::HasColor(c) => color_set().contains(c),
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
-        R::Colorless => def.printed_color_set().is_empty(),
-        R::Multicolored => def.printed_color_set().len() >= 2,
-        R::Monocolored => def.printed_color_set().len() == 1,
+        R::Colorless => color_set().is_empty(),
+        R::Multicolored => color_set().len() >= 2,
+        R::Monocolored => color_set().len() == 1,
         R::And(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types, ctypes)
-                && requirement_matches_card_typed(b, card, source_controller, types, ctypes)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors)
+                && requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors)
         }
         R::Or(a, b) => {
-            requirement_matches_card_typed(a, card, source_controller, types, ctypes)
-                || requirement_matches_card_typed(b, card, source_controller, types, ctypes)
+            requirement_matches_card_typed(a, card, source_controller, types, ctypes, colors)
+                || requirement_matches_card_typed(b, card, source_controller, types, ctypes, colors)
         }
-        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types, ctypes),
+        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types, ctypes, colors),
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,

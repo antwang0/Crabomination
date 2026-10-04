@@ -399,3 +399,27 @@ fn cr_702_73a_granted_changeling_is_every_creature_type() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Goblin King pumps the Nexus-made Goblin");
 }
+
+/// CR 613.8 — a color-filtered anthem reads colors after layer 5: Honor of the
+/// Pure pumps a creature made white and stops pumping a white one made red.
+#[test]
+fn cr_613_8_a_color_anthem_reads_layer_5_colors() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::honor_of_the_pure());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let knight = g.add_card_to_battlefield(0, catalog::white_knight());
+    let paint = |g: &mut GameState, id, color| {
+        let t = Target::Permanent(id);
+        let mut ctx = crabomination::game::effects::EffectContext::for_ability(id, 0, Some(t.clone()));
+        ctx.targets = vec![t];
+        let e = Effect::BecomeColor { what: Selector::Target(0), colors: vec![color], duration: Duration::EndOfTurn, additive: false };
+        g.resolve_effect(&e, &ctx).expect("resolves");
+    };
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 3);
+    paint(&mut g, bear, Color::White);
+    paint(&mut g, knight, Color::Red);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "made white");
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 2, "made red");
+}
