@@ -964,7 +964,7 @@ pub fn the_curse_of_fenric() -> CardDefinition {
             Effect::BecomeLegendary { what: Selector::Target(0), duration: Duration::Permanent },
             Effect::AmendCopiableValues {
                 what: Selector::Target(0),
-                name: Some("Fenric".into()),
+                name: Some("Fenric"),
                 set_creature_types: None,
                 add_creature_types: vec![],
                 legendary: false,
