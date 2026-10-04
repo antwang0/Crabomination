@@ -3148,6 +3148,10 @@ suite            24,082 / 0 / 5 (CRAB_ANSWER_LOG=strict); clippy 0
 pods             126101 4 seats (180/126/75/94) 1,000/1,000; 126102 6 seats
                  1,000/1,000; 126103 4 seats 1,000/1,000; 126104 6 seats
                  1,000/1,000; 126105 census 400/400 — every undecided_by 0
+sweep            seats 2..8 x 2,000 (seeds 126202-126208) = 14,000 decided;
+                 turns/game 19.47 / 32.37 / 45.71 / 57.58 / 68.13 / 82.26 / 96.02
+all decks        183 decks in 46 four-seat groups x 150 (seeds 126300-126345)
+                 = 6,900 games, every group rc 0, every undecided_by 0
 ```
 
 ### 2026-10-04 (Commander session `016kc94f`) — guardrail, no perf work
