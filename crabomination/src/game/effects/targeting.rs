@@ -1045,6 +1045,18 @@ impl GameState {
                         is_legal_gy,
                     );
                 }
+                // A slot that names exile ("target creature card exiled with
+                // [this]" — Shelob, Quintorius): the graveyard sweep above
+                // never looks there, and the board walk below can't match it.
+                // The most valuable legal card.
+                if found.is_none() && req.mentions_offboard_zone() {
+                    found = self
+                        .exile
+                        .iter()
+                        .filter(|c| is_legal_gy(c))
+                        .max_by_key(|c| (c.printed_cmc(), std::cmp::Reverse(c.id.0)))
+                        .map(|c| Target::Permanent(c.id));
+                }
                 // Battlefield: prefer one not already picked by slot 0 or
                 // earlier slots to avoid double-targeting when the filter is
                 // permissive.

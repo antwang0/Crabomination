@@ -53,7 +53,6 @@ they call a deck 🟡, the table wins.
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
-| 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
 | 160 | Terra, Herald of Hope (RWB) | 3: espers_to_magicite, the_warring_triad, umaro_raging_yeti |
 | 165 | Tidus, Yuna's Guardian (GWU) | 3: endless_detour, lulu_stern_guardian, rikku_resourceful_guardian |
 | 169 | Dr. Madison Li (URW) | 3: c_a_m_p, expert_level_safe, vault_112_sadistic_simulation |
@@ -2884,8 +2883,7 @@ them" could never match). Everything else composes: Gríma reuses Chaos
 Wand's dig and then bottoms an uncast find; The Balrog's "when you do" is `MayExileSelfThen` + `Reflexive` +
 `ForEachOpponentTarget`; Grishnákh reads the Army's power as a `WithX`.
 Residuals: **Moria Scavenger** (two abilities for one), **Shelob** (the
-graveyard half of its cost is paid on resolution; the X card is picked, not
-targeted), **Summons of Saruman** (flashback pays X in mana). Pods
+graveyard half of its cost is paid on resolution), **Summons of Saruman** (flashback pays X in mana). Pods
 (1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
 28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
 byte-identical.

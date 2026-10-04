@@ -587,13 +587,9 @@ pub fn saruman_the_white_hand() -> CardDefinition {
 /// battlefield tapped under your control.
 ///
 /// The first ability's "put a creature card exiled with Shelob into its
-/// owner's graveyard" is a cost (`exiled_with_self_to_graveyard_cost`).
-/// Residual: the X ability's card is the engine's pick, not a target.
+/// owner's graveyard" is a cost (`exiled_with_self_to_graveyard_cost`); the
+/// X ability targets the exiled card (`InExile` + `ExiledWithSource`).
 pub fn shelob_dread_weaver() -> CardDefinition {
-    let exiled_creatures = |filter: R| Selector::MatchingAmong {
-        inner: Box::new(Selector::CardExiledWithSource),
-        filter: R::Creature.and(filter),
-    };
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl)
@@ -617,10 +613,9 @@ pub fn shelob_dread_weaver() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[x(), generic(1), b()]),
                 effect: Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(exiled_creatures(R::ManaValueExactlyXFromCost)),
-                        count: Box::new(Value::ONE),
-                    },
+                    what: target_filtered(
+                        R::InExile.and(R::ExiledWithSource).and(R::Creature).and(R::ManaValueExactlyXFromCost),
+                    ),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 },
                 ..Default::default()

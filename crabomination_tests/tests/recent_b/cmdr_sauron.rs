@@ -444,7 +444,19 @@ fn shelob_weaves_the_dead() {
         kill(&mut g, id);
     }
     assert!(g.exile.iter().any(|c| c.id == bears) && g.exile.iter().any(|c| c.id == giant));
-    activate_x(&mut g, 0, shelob, 1, Some(4)).expect("X = 4, Hill Giant");
+    // The X ability TARGETS the exiled card: one whose mana value isn't X is
+    // not a legal target (Grizzly Bears at X = 4).
+    let targeted = |g: &mut GameState, t: CardId| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: shelob, ability_index: 1, target: Some(Target::Permanent(t)),
+            additional_targets: vec![], x_value: Some(4), mode: None,
+        })
+        .map(|_| drain_stack(g))
+    };
+    assert!(targeted(&mut g, bears).is_err(), "mana value 2, not X = 4");
+    targeted(&mut g, giant).expect("X = 4, Hill Giant");
     assert_eq!(controller_of(&g, giant), Some(0));
     assert!(g.battlefield_find(giant).unwrap().tapped);
     let hand = g.players[0].hand.len();
@@ -596,4 +608,34 @@ fn wake_the_dragon_hoards() {
     attack(&mut g, &[dragon], 1);
     combat_damage(&mut g);
     assert_eq!(controller_of(&g, ring), Some(0));
+}
+
+/// The bot still takes Shelob's X ability now that it targets: with Hill
+/// Giant exiled under Shelob and the mana for X = 4, it brings it back.
+#[test]
+fn bot_reanimates_through_shelob() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let shelob = g.add_card_to_battlefield(0, catalog::shelob_dread_weaver());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    kill(&mut g, giant);
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mut bot = HeuristicBot::new();
+    for _ in 0..20 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if controller_of(&g, giant) == Some(0) || pass {
+            break;
+        }
+    }
+    assert_eq!(controller_of(&g, giant), Some(0), "the bot never used Shelob's X ability");
+    assert!(g.battlefield_find(shelob).is_some());
 }

@@ -9297,13 +9297,44 @@ pub(super) fn cast_candidates<'a>(
         let mut ability_cands: Vec<(u32, GameAction)> = Vec::new();
         for c in state.battlefield.iter().filter(|c| c.controller == seat) {
             for (i, ab) in c.definition.activated_abilities.iter().enumerate() {
-                if crate::game::actions::is_mana_ability_public(&ab.effect)
-                    || ab.mana_cost.has_x()
-                {
+                if crate::game::actions::is_mana_ability_public(&ab.effect) {
                     continue;
                 }
                 let cmc = ab.mana_cost.cmc();
                 if cmc > available {
+                    continue;
+                }
+                // An {X} ability: the largest X the lands cover, walked down
+                // (at most eight tries — this runs inside attack simulations)
+                // to the first X its targets admit ("target creature card with
+                // mana value X" — Shelob). X = 0 is never worth an activation.
+                if ab.mana_cost.has_x() {
+                    if !colors_coverable(&ab.mana_cost, have_mana.get()) {
+                        continue;
+                    }
+                    let top = available - cmc;
+                    let aimed = (1..=top).rev().take(8).find_map(|x| {
+                        if !ab.effect.requires_target() {
+                            return Some((x, None, vec![]));
+                        }
+                        let (t, extras) = state.auto_targets_for_effect_all_slots_x(
+                            &ab.effect, seat, None, false, Some(c.id), Some(x),
+                        );
+                        t.map(|t| (x, Some(t), extras))
+                    });
+                    if let Some((x, target, additional_targets)) = aimed {
+                        ability_cands.push((
+                            cmc + x,
+                            GameAction::ActivateAbility {
+                                card_id: c.id,
+                                ability_index: i,
+                                target,
+                                additional_targets,
+                                mode: None,
+                                x_value: Some(x),
+                            },
+                        ));
+                    }
                     continue;
                 }
                 // `available` is a count of untapped lands: it says nothing
@@ -11278,7 +11309,9 @@ fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
 fn filter_targets_graveyard(req: &crate::card::SelectionRequirement) -> bool {
     use crate::card::SelectionRequirement as R;
     match req {
-        R::InYourGraveyard | R::InGraveyard | R::InOpponentGraveyard => true,
+        // Exile too: "put target creature card exiled with [this] onto the
+        // battlefield" (Shelob) is the same play from the other public zone.
+        R::InYourGraveyard | R::InGraveyard | R::InOpponentGraveyard | R::InExile => true,
         R::And(a, b) | R::Or(a, b) => filter_targets_graveyard(a) || filter_targets_graveyard(b),
         _ => false,
     }
@@ -11309,7 +11342,29 @@ fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameActi
             if !effect_reanimates_from_graveyard(&ab.effect) {
                 continue;
             }
-            let target = state.auto_target_for_effect(&ab.effect, seat);
+            // An {X} ability whose target reads X ("target creature card with
+            // mana value X" — Shelob): the largest X the lands cover, walked
+            // down to the first that has a target.
+            let (target, x_value) = if ab.mana_cost.has_x() {
+                let available = state.players[seat].mana_pool.total()
+                    + state
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
+                        .count() as u32;
+                let top = available.saturating_sub(ab.mana_cost.cmc());
+                match (1..=top).rev().take(16).find_map(|x| {
+                    state
+                        .auto_targets_for_effect_all_slots_x(&ab.effect, seat, None, false, Some(card.id), Some(x))
+                        .0
+                        .map(|t| (t, x))
+                }) {
+                    Some((t, x)) => (Some(t), Some(x)),
+                    None => continue,
+                }
+            } else {
+                (state.auto_target_for_effect(&ab.effect, seat), None)
+            };
             if target.is_none() {
                 continue; // no graveyard creature worth returning
             }
@@ -11318,7 +11373,7 @@ fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameActi
                 ability_index: idx,
                 target,
                 additional_targets: Vec::new(),
-                x_value: None, mode: None,
+                x_value, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
