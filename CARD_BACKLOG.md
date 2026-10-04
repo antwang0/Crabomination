@@ -4983,9 +4983,10 @@ now surface `amount`-embedded target slots (Soul's Grace). Still deferred:
   sources would deal to that creature" needs a prevention shield filtered by
   the damage *source's* characteristics (the existing shields are per-source-id
   or unconditional).
-- **`Effect::MoveWithinTotalManaValue` auto-picks.** March from the Tomb takes
-  the cheapest matches first to maximize the count; the printed card lets the
-  caster choose which cards fit the budget.
+- ✅ **March from the Tomb** targets its Allies (2026-10-04,
+  `R::SlotsTotalManaValueAtMost`): the caster chooses which cards fit the
+  budget. `Effect::MoveWithinTotalManaValue` (cheapest first) remains for
+  the untargeted "return any number" cards (Technomancer).
 
 ## Mirage wave 5
 

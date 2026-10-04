@@ -502,32 +502,57 @@ fn gideon_ally_of_zendikar_makes_knights_and_an_emblem() {
     assert_eq!(g.computed_permanent(knight).unwrap().power, 3, "the emblem anthem applies");
 }
 
-/// March from the Tomb reanimates as many Allies as the 8-mana budget allows.
+/// CR 601.2c — March from the Tomb's Allies are TARGETS with a shared
+/// 8-mana-value budget: 3 + 3 is a legal set, adding the 6-drop is not, and a
+/// non-Ally is never a legal target.
 #[test]
 fn march_from_the_tomb_respects_the_total_mana_value_cap() {
-    let mut g = two_player_game();
-    let mk = |g: &mut GameState, def: crabomination::card::CardDefinition| {
-        let id = g.next_id();
-        g.players[0].graveyard.push(crabomination::card::CardInstance::new(id, def, 0));
-        id
+    let setup = || {
+        let mut g = two_player_game();
+        let mk = |g: &mut GameState, def: crabomination::card::CardDefinition| {
+            let id = g.next_id();
+            g.players[0].graveyard.push(crabomination::card::CardInstance::new(id, def, 0));
+            id
+        };
+        let a = mk(&mut g, catalog::lantern_scout());
+        let b = mk(&mut g, catalog::chasm_guide());
+        let big = mk(&mut g, catalog::tajuru_beastmaster());
+        let bear = mk(&mut g, catalog::grizzly_bears());
+        let march = g.add_card_to_hand(0, catalog::march_from_the_tomb());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        (g, [a, b, big, bear], march)
     };
-    // Three Allies at MV 3, 3 and 5 (total 11) plus a non-Ally.
-    let a = mk(&mut g, catalog::lantern_scout());
-    let b = mk(&mut g, catalog::chasm_guide());
-    let big = mk(&mut g, catalog::tajuru_beastmaster());
-    let bear = mk(&mut g, catalog::grizzly_bears());
-    let march = g.add_card_to_hand(0, catalog::march_from_the_tomb());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: march, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("cast");
+    let cast = |g: &mut GameState, march, ts: Vec<crabomination::card::CardId>| {
+        let mut ts = ts.into_iter().map(Target::Permanent);
+        g.perform_action(GameAction::CastSpell {
+            card_id: march,
+            target: ts.next(),
+            additional_targets: ts.collect(),
+            mode: None,
+            x_value: None,
+        })
+    };
+    let (mut g, [a, b, big, bear], march) = setup();
+    assert!(cast(&mut g, march, vec![a, b, big]).is_err(), "3 + 3 + 6 is over the budget");
+    assert!(cast(&mut g, march, vec![bear]).is_err(), "a non-Ally is no target");
+    cast(&mut g, march, vec![a, b]).expect("3 + 3 fits");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some(), "3 + 3 fits");
-    assert!(g.battlefield_find(big).is_none(), "the 6-drop breaks the budget");
-    assert!(g.battlefield_find(bear).is_none(), "a non-Ally is never eligible");
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
+    assert!(g.battlefield_find(big).is_none());
+    // The bot's own pick stays inside the budget.
+    let (g, [a, b, big, _], march) = setup();
+    let eff = &g.players[0].hand.iter().find(|c| c.id == march).unwrap().definition.effect;
+    let (first, more) = g.auto_targets_for_effect_all_slots_x(eff, 0, None, false, Some(march), None);
+    let picks: Vec<_> = first.into_iter().chain(more).collect();
+    assert!(!picks.is_empty(), "the bot names some Allies");
+    let mv = |t: &Target| match t {
+        Target::Permanent(id) if *id == big => 6,
+        Target::Permanent(id) if *id == a || *id == b => 3,
+        _ => 100,
+    };
+    assert!(picks.iter().map(mv).sum::<u32>() <= 8, "the auto-pick fits the budget: {picks:?}");
 }
 
 /// Ondu Rising gives every creature that attacks this turn lifelink.

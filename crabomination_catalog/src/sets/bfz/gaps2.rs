@@ -674,22 +674,26 @@ pub fn brutal_expulsion() -> CardDefinition {
     }
 }
 
-/// March from the Tomb — {3}{W}{B} Sorcery. Reanimate Ally creature cards from
-/// your graveyard with total mana value 8 or less.
+/// March from the Tomb — {3}{W}{B} Sorcery. Return any number of target Ally
+/// creature cards with total mana value 8 or less from your graveyard to the
+/// battlefield (CR 601.2c — the budget is a target restriction checked across
+/// the chosen cards, `R::SlotsTotalManaValueAtMost`).
 pub fn march_from_the_tomb() -> CardDefinition {
     CardDefinition {
         name: "March from the Tomb",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::MoveWithinTotalManaValue {
-            from: Selector::EachMatching {
-                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                filter: R::Creature.and(R::HasCreatureType(CreatureType::Ally)),
-            },
-            filter: R::Creature.and(R::HasCreatureType(CreatureType::Ally)),
-            cap: Value::Const(8),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            max_count: None,
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature
+                .and(R::HasCreatureType(CreatureType::Ally))
+                .and(R::InYourGraveyard)
+                .and(R::SlotsTotalManaValueAtMost(8)),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
         },
         ..Default::default()
     }
