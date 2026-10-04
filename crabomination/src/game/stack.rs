@@ -4800,6 +4800,7 @@ impl GameState {
             }
             pl.permanents_sacrificed_this_turn = 0;
             pl.artifacts_sacrificed_this_turn = 0;
+            pl.nontoken_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
             // Quest for Pure Flame's turn-scoped source-damage doubling.
@@ -5481,7 +5482,8 @@ impl GameState {
                     crate::card::MayPlayDuration::EndOfThisStep => true,
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
                     | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
-                    | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
+                    | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
+                    | crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. } => {
                         if perm.player != crate::card::MAY_PLAY_DORMANT {
                             c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                                 player: crate::card::MAY_PLAY_DORMANT,

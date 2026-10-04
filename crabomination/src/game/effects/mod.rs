@@ -38549,6 +38549,8 @@ impl GameState {
                 // "Until you exile another card with this": the new exile
                 // revokes the permission on the source's previous card.
                 let linked = *duration == crate::card::MayPlayDuration::UntilSourceExilesAnother;
+                let source_bound =
+                    matches!(duration, crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. });
                 if linked && let Some(src) = ctx.source {
                     for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {
                         if c.may_play_until.is_some_and(|p| p.duration == *duration) {
@@ -38556,7 +38558,7 @@ impl GameState {
                         }
                     }
                 }
-                let dest = if linked { ZoneDest::ExileWithSourceStamp } else { ZoneDest::Exile };
+                let dest = if linked || source_bound { ZoneDest::ExileWithSourceStamp } else { ZoneDest::Exile };
                 // Plural `who` (EachOpponent) peels from every resolved
                 // library — Nassari, Dean of Expression exiles the top card
                 // of each opponent's library, all castable by Nassari's
@@ -38585,6 +38587,11 @@ impl GameState {
                             crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
                                 self.opponent_life_loss_grant_seat(ctx.controller)
                             }
+                            // Evendo's, unless a nontoken sacrifice already
+                            // opened this turn.
+                            crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. } => {
+                                self.nontoken_sacrifice_grant_seat(ctx.controller)
+                            }
                             // Neriv's, likewise, unless a commander attacked.
                             crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
                                 if !self.players[ctx.controller].attacked_with_commander_this_turn =>
@@ -38597,7 +38604,11 @@ impl GameState {
                             card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                                 player: grantee,
                                 granted_turn,
-                                duration: duration.bound_to(ctx.controller),
+                                duration: if source_bound {
+                                    duration.bound_to(ctx.controller).bound_to_source(ctx.source)
+                                } else {
+                                    duration.bound_to(ctx.controller)
+                                },
                                 exile_after: false,
                                 miracle: false,
                                 pay_life: false,

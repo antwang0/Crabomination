@@ -31,6 +31,34 @@ impl GameState {
         }
     }
 
+    /// `holder` sacrificed a nontoken permanent on their turn: wake their
+    /// dormant `HolderTurnsAfterNontokenSacrifice` grants (Evendo).
+    pub(crate) fn wake_nontoken_sacrifice_grants(&mut self, holder: usize) {
+        let dormant = |perm: &MayPlayPermission| {
+            perm.player == MAY_PLAY_DORMANT
+                && matches!(perm.duration, MayPlayDuration::HolderTurnsAfterNontokenSacrifice { holder: h, .. } if h == holder)
+        };
+        if !self.exile.iter().any(|c| c.cold_any(|k| k.may_play_until.as_ref().is_some_and(dormant))) {
+            return;
+        }
+        for c in self.exile.iter_mut() {
+            if let Some(perm) = c.may_play_until
+                && dormant(&perm)
+            {
+                c.may_play_until = Some(MayPlayPermission { player: holder, ..perm });
+            }
+        }
+    }
+
+    /// The seat a fresh `HolderTurnsAfterNontokenSacrifice` grant starts
+    /// under: awake on the holder's turn once they've sacrificed a nontoken
+    /// permanent, else dormant.
+    pub(crate) fn nontoken_sacrifice_grant_seat(&self, holder: usize) -> usize {
+        let live = self.active_player_idx == holder
+            && self.players.get(holder).is_some_and(|p| p.nontoken_sacrificed_this_turn > 0);
+        if live { holder } else { MAY_PLAY_DORMANT }
+    }
+
     /// The seat a fresh `HolderTurnsAfterOpponentLostLife` grant starts
     /// under: awake when it is already the holder's turn and an opponent has
     /// lost life, else dormant.
@@ -81,7 +109,11 @@ impl GameState {
 impl GameState {
     /// Is `perm` a `WhileSourceOnBattlefield` grant of `source`'s?
     fn source_bound(perm: &MayPlayPermission, source: crate::card::CardId) -> bool {
-        matches!(perm.duration, MayPlayDuration::WhileSourceOnBattlefield { source: s, .. } if s == source)
+        matches!(
+            perm.duration,
+            MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
+                | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. } if s == source
+        )
     }
 
     /// `source` left the battlefield: its `WhileSourceOnBattlefield` grants

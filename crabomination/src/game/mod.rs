@@ -23817,6 +23817,7 @@ impl GameState {
                         .died_card_snapshots
                         .get(card_id)
                         .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact));
+                    let was_token = self.died_card_snapshots.get(card_id).is_some_and(|c| c.is_token);
                     if let Some(pl) = self.players.get_mut(*who) {
                         pl.permanents_sacrificed_this_turn =
                             pl.permanents_sacrificed_this_turn.saturating_add(1);
@@ -23824,6 +23825,12 @@ impl GameState {
                             pl.artifacts_sacrificed_this_turn =
                                 pl.artifacts_sacrificed_this_turn.saturating_add(1);
                         }
+                        if !was_token {
+                            pl.nontoken_sacrificed_this_turn = pl.nontoken_sacrificed_this_turn.saturating_add(1);
+                        }
+                    }
+                    if !was_token && *who == self.active_player_idx {
+                        self.wake_nontoken_sacrifice_grants(*who);
                     }
                 }
                 _ => {}

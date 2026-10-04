@@ -1207,6 +1207,12 @@ pub enum MayPlayDuration {
     /// [`MAY_PLAY_DORMANT`] otherwise — re-read as such a permanent enters or
     /// leaves. Printed with holder 0; the grant binds the grantee.
     WhileHolderControlsFetchPlayer { holder: usize },
+    /// "During your turn, as long as you've sacrificed a nontoken permanent
+    /// this turn, you may play cards exiled with this creature" (Evendo
+    /// Brushrazer): parked at [`MAY_PLAY_DORMANT`] by the turn sweep, woken
+    /// for `holder` by their nontoken sacrifice on their turn, and ended as
+    /// `source` leaves (CR 611.3a). Printed with holder 0 and `CardId(0)`.
+    HolderTurnsAfterNontokenSacrifice { holder: usize, source: CardId },
 }
 
 impl MayPlayDuration {
@@ -1225,6 +1231,9 @@ impl MayPlayDuration {
                 Self::HolderTurnsAfterOpponentLostLife { holder: seat }
             }
             Self::WhileHolderControlsFetchPlayer { .. } => Self::WhileHolderControlsFetchPlayer { holder: seat },
+            Self::HolderTurnsAfterNontokenSacrifice { source, .. } => {
+                Self::HolderTurnsAfterNontokenSacrifice { holder: seat, source }
+            }
             d => d,
         }
     }
@@ -1235,6 +1244,9 @@ impl MayPlayDuration {
         match (self, source) {
             (Self::WhileSourceOnBattlefield { one_spell_a_turn, .. }, Some(source)) => {
                 Self::WhileSourceOnBattlefield { source, one_spell_a_turn }
+            }
+            (Self::HolderTurnsAfterNontokenSacrifice { holder, .. }, Some(source)) => {
+                Self::HolderTurnsAfterNontokenSacrifice { holder, source }
             }
             (d, _) => d,
         }
