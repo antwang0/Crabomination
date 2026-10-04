@@ -759,3 +759,22 @@ fn cr_400_7_psychic_paper_host_dies_as_printed() {
     let dead = g.players[0].graveyard.iter().find(|c| c.id == bear).expect("in the graveyard");
     assert_eq!(dead.definition.name, "Grizzly Bears");
 }
+
+/// Impossible Girl — Clara Oswald as a commander is the color chosen before
+/// the game begins, offered from her Doctor's identity first.
+#[test]
+fn clara_oswald_as_commander_is_the_chosen_color() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::mana::Color;
+    for (answer, want) in [(None, Color::Blue), (Some(Color::Red), Color::Red)] {
+        let mut g = multi_player_game(2);
+        if let Some(c) = answer {
+            g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(c)]));
+        }
+        let ids = g.seat_commanders(0, vec![catalog::the_thirteenth_doctor(), catalog::clara_oswald()]);
+        let clara = g.players[0].command.iter().find(|c| c.id == ids[1]).unwrap();
+        assert_eq!(clara.definition.printed_colors(), vec![want]);
+    }
+    // In the 99 she stays colorless.
+    assert!(catalog::clara_oswald().printed_colors().is_empty());
+}

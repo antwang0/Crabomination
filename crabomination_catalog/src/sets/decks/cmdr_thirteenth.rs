@@ -1,10 +1,6 @@
 //! Commander: the cards the **Paradox Power** precon (WHO, The Thirteenth
 //! Doctor + Yasmin Khan) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_thirteenth.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Clara Oswald** — "Impossible Girl" (a chosen color as commander) is
-//!   not modeled.
 
 use std::sync::Arc;
 
@@ -207,15 +203,21 @@ pub fn bill_potts() -> CardDefinition {
     }
 }
 
-/// Clara Oswald — your Doctors' triggered abilities trigger an additional
-/// time.
-/// Residual: "Impossible Girl" (a chosen color as commander) isn't modeled.
+/// Clara Oswald — Impossible Girl: as your commander, the color you choose
+/// before the game begins; your Doctors' triggered abilities trigger an
+/// additional time.
 pub fn clara_oswald() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "If a triggered ability of a Doctor you control triggers, that ability triggers an additional time.",
-            effect: StaticEffect::DoubleControllerTriggersOfType { types: vec![CreatureType::Doctor], exclude_source: false },
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If Clara Oswald is your commander, choose a color before the game begins. Clara Oswald is the chosen color.",
+                effect: StaticEffect::CommanderChoosesColorBeforeGame,
+            },
+            StaticAbility {
+                description: "If a triggered ability of a Doctor you control triggers, that ability triggers an additional time.",
+                effect: StaticEffect::DoubleControllerTriggersOfType { types: vec![CreatureType::Doctor], exclude_source: false },
+            },
+        ],
         ..companion(creature("Clara Oswald", cost(&[generic(6)]), vec![CreatureType::Human, CreatureType::Advisor], 2, 6))
     }
 }
