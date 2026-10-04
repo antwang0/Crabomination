@@ -2949,7 +2949,7 @@ pub fn zhur_taa_goblin() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![crate::effect::shortcut::riot()],
+        keywords: vec![Keyword::Riot],
         ..Default::default()
     }
 }
@@ -3020,8 +3020,7 @@ pub fn frenzied_arynx() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![crate::effect::shortcut::riot()],
+        keywords: vec![Keyword::Trample, Keyword::Riot],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

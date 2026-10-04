@@ -130,7 +130,7 @@ pub fn rakdos_drake() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Drake]),
         power: 1,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Unleash],
         ..Default::default()
     }
 }

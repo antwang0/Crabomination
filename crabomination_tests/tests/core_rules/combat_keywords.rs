@@ -480,10 +480,10 @@ fn cr_702_19_deathtouch_trample_assigns_one_then_tramples_rest() {
     assert!(g.battlefield_find(blk).is_none(), "the blocker died to deathtouch");
 }
 
-// ── CR 702.137 Riot ──────────────────────────────────────────────────────────
+// ── CR 702.136 Riot ──────────────────────────────────────────────────────────
 
 #[test]
-fn cr_702_137_riot_default_grants_haste() {
+fn cr_702_136_riot_default_grants_haste() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::zhur_taa_goblin());
@@ -500,7 +500,7 @@ fn cr_702_137_riot_default_grants_haste() {
 }
 
 #[test]
-fn cr_702_137_riot_counter_mode_grows_the_body() {
+fn cr_702_136_riot_counter_mode_grows_the_body() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
@@ -513,6 +513,42 @@ fn cr_702_137_riot_counter_mode_grows_the_body() {
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
     assert_eq!((c.power(), c.toughness()), (3, 3), "Riot counter mode → 3/3");
+}
+
+/// CR 702.136a / 614.12a — riot is a replacement: the counter is on as the
+/// spell resolves, with no trigger put on the stack.
+#[test]
+fn cr_702_136a_riot_counter_is_on_as_it_enters() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::zhur_taa_goblin());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.stack.is_empty(), "no riot trigger");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// CR 702.136b — a riot creature under Rhythm of the Wild has two instances,
+/// each chosen separately: two counters.
+#[test]
+fn cr_702_136b_granted_riot_stacks_with_printed() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rhythm_of_the_wild());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1), DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::zhur_taa_goblin());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2);
 }
 
 // ── CR 702.99 Extort ─────────────────────────────────────────────────────────

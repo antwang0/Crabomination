@@ -286,6 +286,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeCounteredIfXAtLeast(_)
         | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,
         Keyword::Unleash => "Unleash",
+        Keyword::Riot => "Riot",
         Keyword::Bargain => "Bargain",
         Keyword::Ninjutsu(_) => "Ninjutsu",
         Keyword::CommanderNinjutsu(_) => "Commander ninjutsu",

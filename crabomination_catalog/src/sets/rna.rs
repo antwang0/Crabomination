@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     adapt, afterlife, deal, draw, each_creature, each_your_creature, etb, etb_scry, on_attack,
-    riot, spectacle, target_any, target_filtered,
+    spectacle, target_any, target_filtered,
 };
 use crate::effect::{LookPick, 
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
@@ -506,14 +506,13 @@ pub fn imperious_oligarch() -> CardDefinition {
 /// Rampaging Rendhorn — {4}{G} 4/4 Beast with Riot.
 pub fn rampaging_rendhorn() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![riot()],
         ..body(
             "Rampaging Rendhorn",
             cost(&[generic(4), g()]),
             4,
             4,
             vec![CreatureType::Beast],
-            vec![],
+            vec![Keyword::Riot],
         )
     }
 }
@@ -952,7 +951,6 @@ pub fn drill_bit() -> CardDefinition {
 pub fn burning_tree_vandal() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            riot(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::MayDo {
@@ -974,7 +972,7 @@ pub fn burning_tree_vandal() -> CardDefinition {
             2,
             1,
             vec![CreatureType::Human, CreatureType::Rogue],
-            vec![],
+            vec![Keyword::Riot],
         )
     }
 }
@@ -982,14 +980,13 @@ pub fn burning_tree_vandal() -> CardDefinition {
 /// Ghor-Clan Wrecker — {3}{R} 2/2 Human Warrior with Riot and menace.
 pub fn ghor_clan_wrecker() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![riot()],
         ..body(
             "Ghor-Clan Wrecker",
             cost(&[generic(3), r()]),
             2,
             2,
             vec![CreatureType::Human, CreatureType::Warrior],
-            vec![Keyword::Menace],
+            vec![Keyword::Menace, Keyword::Riot],
         )
     }
 }
@@ -1317,7 +1314,6 @@ pub fn steeple_creeper() -> CardDefinition {
 pub fn gruul_beastmaster() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            riot(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::PumpPT {
@@ -1336,7 +1332,7 @@ pub fn gruul_beastmaster() -> CardDefinition {
             2,
             2,
             vec![CreatureType::Human, CreatureType::Shaman],
-            vec![],
+            vec![Keyword::Riot],
         )
     }
 }
@@ -1563,14 +1559,13 @@ pub fn sylvan_brushstrider() -> CardDefinition {
 /// Wrecking Beast — {5}{G}{G} 6/6 Beast with riot and trample.
 pub fn wrecking_beast() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![riot()],
         ..body(
             "Wrecking Beast",
             cost(&[generic(5), g(), g()]),
             6,
             6,
             vec![CreatureType::Beast],
-            vec![Keyword::Trample],
+            vec![Keyword::Trample, Keyword::Riot],
         )
     }
 }
@@ -1945,7 +1940,6 @@ pub fn dead_revels() -> CardDefinition {
 pub fn clamor_shaman() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            riot(),
             on_attack(Effect::GrantKeyword {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 keyword: Keyword::CantBlock,
@@ -1958,7 +1952,7 @@ pub fn clamor_shaman() -> CardDefinition {
             1,
             1,
             vec![CreatureType::Goblin, CreatureType::Shaman],
-            vec![],
+            vec![Keyword::Riot],
         )
     }
 }
@@ -2602,8 +2596,7 @@ pub fn sunder_shaman() -> CardDefinition {
 /// counter on it.
 pub fn skarrgan_hellkite() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![riot()],
+        keywords: vec![Keyword::Flying, Keyword::Riot],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), r()]),
             condition: Some(Predicate::EntityMatches {
@@ -3995,7 +3988,6 @@ pub fn hackrobat() -> CardDefinition {
 /// During your turn, you and this creature have hexproof.
 pub fn gruul_spellbreaker() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![riot()],
         static_abilities: vec![
             StaticAbility {
                 description: "During your turn, you have hexproof.",
@@ -4019,7 +4011,7 @@ pub fn gruul_spellbreaker() -> CardDefinition {
             3,
             3,
             vec![CreatureType::Ogre, CreatureType::Warrior],
-            vec![Keyword::Trample],
+            vec![Keyword::Trample, Keyword::Riot],
         )
     }
 }
@@ -4542,13 +4534,12 @@ pub fn clear_the_stage() -> CardDefinition {
     }
 }
 
-/// Domri's Nodorog — {3}{R}{G} 5/2 Beast with Riot. ETB you may search your
+/// Domri's Nodorog — {3}{R}{G} 5/2 Beast with trample. ETB you may search your
 /// library for a card named Domri, City Smasher, reveal it, and put it into
 /// your hand, then shuffle. (The graveyard half is elided.)
 pub fn domris_nodorog() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            riot(),
             etb(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasName("Domri, City Smasher".into()),
@@ -5001,7 +4992,6 @@ pub fn incubation_druid() -> CardDefinition {
 pub fn ravager_wurm() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            riot(),
             // "Choose up to one —": a declined fight target is the "none".
             etb(Effect::ChooseMode(vec![
                 Effect::OptionalTargets {
@@ -5028,7 +5018,7 @@ pub fn ravager_wurm() -> CardDefinition {
             4,
             5,
             vec![CreatureType::Wurm],
-            vec![],
+            vec![Keyword::Riot],
         )
     }
 }
@@ -5301,7 +5291,6 @@ pub fn angel_of_grace() -> CardDefinition {
 /// Rhythm of the Wild — {1}{R}{G} Enchantment. Creature spells you control
 /// can't be countered; nontoken creatures you control have riot.
 pub fn rhythm_of_the_wild() -> CardDefinition {
-    use crate::effect::shortcut::riot;
     CardDefinition {
         name: "Rhythm of the Wild",
         cost: cost(&[generic(1), r(), g()]),
@@ -5313,9 +5302,9 @@ pub fn rhythm_of_the_wild() -> CardDefinition {
             },
             StaticAbility {
                 description: "Nontoken creatures you control have riot.",
-                effect: StaticEffect::GrantTriggeredAbility {
-                    filter: R::Creature.and(R::ControlledByYou).and(R::NotToken),
-                    ability: Box::new(riot()),
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::NotToken)),
+                    keyword: Keyword::Riot,
                 },
             },
         ],

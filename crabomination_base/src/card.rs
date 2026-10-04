@@ -2042,9 +2042,9 @@ pub enum Keyword {
     /// keyword set in `activate_ability`; mana abilities are unaffected
     /// (they aren't "activated" through the normal permission gate).
     CantActivateAbilities,
-    /// CR 702.98 — Unleash. A marker keyword; the "may enter with a +1/+1
-    /// counter" half rides a `shortcut::unleash()` ETB trigger, and the
-    /// "can't block while it has a +1/+1 counter" half is injected as a
+    /// CR 702.98 — Unleash. The "may enter with a +1/+1 counter" half is
+    /// asked as the permanent enters (`game::as_enters`), printed or granted;
+    /// the "can't block while it has a +1/+1 counter" half is injected as a
     /// computed `CantBlock` in `gather_continuous_effects` when the bearer
     /// holds at least one +1/+1 counter. Rakdos Cackler, Gore-House
     /// Chainwalker, Spawn of Rix Maadi.
@@ -2523,6 +2523,11 @@ pub enum Keyword {
     /// CR 903.8 taxes *casting* from the command zone, and this puts the card
     /// onto the battlefield without casting it. Yuriko, the Tiger's Shadow.
     CommanderNinjutsu(crate::mana::ManaCost),
+    /// CR 702.136 — Riot: "you may have this permanent enter with an
+    /// additional +1/+1 counter on it; if you don't, it gains haste." Asked as
+    /// the permanent enters (`game::as_enters`), printed or granted; each
+    /// instance separately (702.136b), so a granted riot stacks.
+    Riot,
 }
 
 impl Keyword {

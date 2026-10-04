@@ -722,7 +722,7 @@ fn gruul_beastmaster_attack_pump() {
         targets: vec![Target::Permanent(ally)],
         ..crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(ally)), 0, 0)
     };
-    let effect = catalog::gruul_beastmaster().triggered_abilities[1].effect.clone();
+    let effect = catalog::gruul_beastmaster().triggered_abilities[0].effect.clone();
     g.resolve_effect(&effect, &ctx).unwrap();
     assert_eq!(g.computed_permanent(ally).unwrap().power, 4, "+2/+0 from Beastmaster's power");
 }
@@ -1935,13 +1935,14 @@ fn clear_the_stage_shrink_and_return() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "returned a creature from graveyard");
 }
 
-/// Domri's Nodorog has riot and an ETB tutor for Domri, City Smasher.
+/// Domri's Nodorog has trample (no riot — the card never had it) and an ETB
+/// tutor for Domri, City Smasher.
 #[test]
 fn domris_nodorog_shape() {
     use crabomination::effect::Effect;
     let def = catalog::domris_nodorog();
-    assert!(def.keywords.contains(&Keyword::Trample) && def.triggered_abilities.len() == 2, "riot trigger + ETB tutor");
-    match &def.triggered_abilities[1].effect {
+    assert!(def.keywords == vec![Keyword::Trample] && def.triggered_abilities.len() == 1, "trample + ETB tutor");
+    match &def.triggered_abilities[0].effect {
         Effect::Search { filter, .. } => assert_eq!(*filter, crabomination::card::SelectionRequirement::HasName("Domri, City Smasher".into())),
         other => panic!("expected Search, got {other:?}"),
     }
@@ -2769,7 +2770,7 @@ fn ravager_wurm_second_mode_destroys_a_utility_land() {
     let port = g.add_card_to_battlefield(1, catalog::rishadan_port());
     let forest = g.add_card_to_battlefield(1, catalog::forest());
     let wurm = g.add_card_to_battlefield(0, catalog::ravager_wurm());
-    let etb = catalog::ravager_wurm().triggered_abilities[1].effect.clone();
+    let etb = catalog::ravager_wurm().triggered_abilities[0].effect.clone();
     // Mode 1's slot 0 only admits a land with a non-mana activated ability.
     assert!(etb.target_filter_for_slot_in_mode_kicked(0, Some(1), false).is_some());
     let mut ctx = EffectContext::for_ability(wurm, 0, Some(Target::Permanent(port)));

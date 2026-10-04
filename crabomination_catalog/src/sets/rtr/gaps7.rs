@@ -373,7 +373,7 @@ pub fn carnival_hellsteed() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
-        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste, Keyword::Unleash],
         ..Default::default()
     }
 }

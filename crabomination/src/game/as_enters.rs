@@ -46,20 +46,43 @@ impl GameState {
             self.apply_as_enters_mode_pickers(card_id);
         }
         self.apply_unleash(card_id);
+        self.apply_riot(card_id);
     }
 
-    /// CR 702.98a — unleash, printed or granted (CR 614.12: "continuous
-    /// effects that already exist and would apply"), asked before the
-    /// permanent enters (614.12a). A yes rides `pending_etb_counters`, which
-    /// every entry path places with its other entering counters.
+    /// How many instances of `kw` the entering permanent has, printed or
+    /// granted by a static already in effect (CR 614.12). The computed read
+    /// only runs for a permanent that prints it or while a grant is in scope.
+    fn entering_keyword_count(&self, card_id: CardId, kw: &crate::card::Keyword) -> usize {
+        use crate::card::KeywordSlice;
+        let Some(c) = self.battlefield.find_by_id(card_id) else { return 0 };
+        if !c.definition.keywords.has_kw(kw) && !self.keyword_grant_in_scope(|k| k == kw) {
+            return 0;
+        }
+        self.computed_permanent(card_id).map_or(0, |cp| cp.keywords().iter().filter(|k| *k == kw).count())
+    }
+
+    /// Ask `decision` of `seat` off the stack, as `drive_suspensions` does:
+    /// a prompting seat has nowhere to park it, so its policy answers.
+    fn ask_entering(&mut self, seat: usize, decision: &crate::decision::Decision) -> crate::decision::DecisionAnswer {
+        if self.seat_prompts(seat) {
+            crate::server::bot::decide_pending_policy(
+                self,
+                seat,
+                &crate::server::bot::EvalWeights::default(),
+                decision,
+                false,
+            )
+        } else {
+            self.decider.decide(decision)
+        }
+    }
+
+    /// CR 702.98a — unleash, asked before the permanent enters (614.12a). A
+    /// yes rides `pending_etb_counters`, which every entry path places with
+    /// its other entering counters.
     fn apply_unleash(&mut self, card_id: CardId) {
-        use crate::card::{Keyword, KeywordSlice};
-        let Some(c) = self.battlefield.find_by_id(card_id) else { return };
-        let ctrl = c.controller;
-        if !c.definition.keywords.has_kw(&Keyword::Unleash)
-            && !(self.keyword_grant_in_scope(|k| *k == Keyword::Unleash)
-                && self.computed_permanent(card_id).is_some_and(|cp| cp.keywords().contains(&Keyword::Unleash)))
-        {
+        let Some(ctrl) = self.battlefield.find_by_id(card_id).map(|c| c.controller) else { return };
+        if self.entering_keyword_count(card_id, &crate::card::Keyword::Unleash) == 0 {
             return;
         }
         let decision = crate::decision::Decision::OptionalTrigger {
@@ -67,24 +90,57 @@ impl GameState {
             description: "Unleash — enter with a +1/+1 counter?".into(),
             kind: crate::decision::OptionalKind::FreeUpside,
         };
-        // As `drive_suspensions` does for an off-stack ask: a prompting seat
-        // has nowhere to park it, so its policy answers.
-        let answer = if self.seat_prompts(ctrl) {
-            crate::server::bot::decide_pending_policy(
-                self,
-                ctrl,
-                &crate::server::bot::EvalWeights::default(),
-                &decision,
-                false,
-            )
-        } else {
-            self.decider.decide(&decision)
-        };
-        if matches!(answer, crate::decision::DecisionAnswer::Bool(true))
+        if matches!(self.ask_entering(ctrl, &decision), crate::decision::DecisionAnswer::Bool(true))
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             c.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, 1));
         }
+    }
+
+    /// CR 702.136a — riot: a +1/+1 counter (riding `pending_etb_counters`)
+    /// or haste for as long as it stays on the battlefield, once per instance
+    /// (702.136b). Mode 0 is haste, mode 1 the counter.
+    fn apply_riot(&mut self, card_id: CardId) {
+        use crate::card::Keyword;
+        let Some(ctrl) = self.battlefield.find_by_id(card_id).map(|c| c.controller) else { return };
+        for _ in 0..self.entering_keyword_count(card_id, &Keyword::Riot) {
+            let counter = if self.seat_prompts(ctrl) {
+                !self.riot_prefers_haste(card_id, ctrl)
+            } else {
+                let decision = crate::decision::Decision::ChooseMode {
+                    source: card_id,
+                    num_modes: 2,
+                    mode_texts: vec!["Haste".into(), "+1/+1 counter".into()],
+                };
+                matches!(self.decider.decide(&decision), crate::decision::DecisionAnswer::Mode(1))
+            };
+            if counter {
+                if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
+                    c.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, 1));
+                }
+            } else {
+                let ctx = crate::game::effects::EffectContext::for_ability(card_id, ctrl, None);
+                let haste = crate::effect::Effect::GrantKeyword {
+                    what: crate::effect::Selector::This,
+                    keyword: Keyword::Haste,
+                    duration: crate::effect::Duration::Permanent,
+                };
+                let _ = self.resolve_as_enters_driven(&haste, &ctx);
+            }
+        }
+    }
+
+    /// A seat's riot pick: haste only when it can still attack with the
+    /// creature this turn and needs the haste to.
+    fn riot_prefers_haste(&self, card_id: CardId, ctrl: usize) -> bool {
+        use crate::game::types::TurnStep;
+        self.active_player_idx == ctrl
+            && self.step < TurnStep::DeclareAttackers
+            && self.battlefield.find_by_id(card_id).is_some_and(|c| {
+                c.summoning_sick
+                    && !c.has_keyword(&crate::card::Keyword::Haste)
+                    && self.computed_permanent(card_id).is_some_and(|cp| cp.power > 0 && !cp.keywords().contains(&crate::card::Keyword::Haste))
+            })
     }
 
     /// One battlefield lookup answering "does any of the three appliers have

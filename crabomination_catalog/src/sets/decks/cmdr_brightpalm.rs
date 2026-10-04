@@ -7,7 +7,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Selector, SplitCard, SplitHalf, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{backup_with, etb, on_attack, riot, target_filtered, will_of_the_planeswalkers};
+use crate::effect::shortcut::{backup_with, etb, on_attack, target_filtered, will_of_the_planeswalkers};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate,
 };
@@ -494,9 +494,9 @@ pub fn uncivil_unrest() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Nontoken creatures you control have riot.",
-                effect: StaticEffect::GrantTriggeredAbility {
-                    filter: R::Creature.and(R::ControlledByYou).and(R::NotToken),
-                    ability: Box::new(riot()),
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::NotToken)),
+                    keyword: Keyword::Riot,
                 },
             },
             StaticAbility {

@@ -2164,7 +2164,7 @@ fn every_batched_zone_change_trigger_fires_once_a_batch() {
 /// engine reads it from `CardDefinition.keywords` and **nowhere else** — no
 /// bespoke spelling can satisfy it, so a card that prints it and does not
 /// carry it is a proven gap rather than a reading-list entry. That is why
-/// `prowess`, `exalted`, `cascade`, `riot`, `battle cry`, `mentor`,
+/// `prowess`, `exalted`, `cascade`, `battle cry`, `mentor`,
 /// `training`, `myriad`, `melee` and `storm` are **not** here: each is
 /// spelled as a triggered ability in this catalog (Monastery Mentor and Abbot
 /// of Keral Keep both ride `shortcut::prowess_trigger()`), and including them
@@ -2205,6 +2205,10 @@ const PRINTED_KEYWORDS: &[(&str, fn(&crabomination::card::CardDefinition) -> boo
         kw!("flanking", Flanking),
         kw!("decayed", Decayed),
         kw!("phasing", Phasing),
+        // CR 702.98a / 702.136a — asked as the permanent enters, off the
+        // keyword alone (`game::as_enters`).
+        kw!("unleash", Unleash),
+        kw!("riot", Riot),
     ]
 };
 
@@ -2213,7 +2217,7 @@ const PRINTED_KEYWORDS: &[(&str, fn(&crabomination::card::CardDefinition) -> boo
 /// comma-separated piece of it is one of these, which is what separates
 /// "Flying, lifelink" from "choose first strike, vigilance, or lifelink".
 const KEYWORD_LINE_ALSO: &[&str] = &[
-    "prowess", "exalted", "cascade", "riot", "battle cry", "mentor", "training", "myriad",
+    "prowess", "exalted", "cascade", "battle cry", "mentor", "training", "myriad",
     "storm", "melee", "convoke", "improvise", "delve", "soulbond", "sunburst", "persist",
     "undying", "split second", "epic", "compleated", "retrace", "jump-start", "afflict",
     "daybound", "nightbound", "banding", "changeling", "devoid",

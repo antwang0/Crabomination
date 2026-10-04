@@ -2430,27 +2430,6 @@ pub fn devour_filter(n: i32, filter: SelectionRequirement) -> Effect {
     }
 }
 
-/// Riot (CR 702.136): "This creature enters the battlefield with
-/// your choice of a +1/+1 counter or haste." Modeled as an ETB
-/// `ChooseMode([grant Haste permanently, add a +1/+1 counter])`.
-/// AutoDecider takes mode 0 (haste); scripted deciders can pick the
-/// counter. Zhur-Taa Goblin, Gruul Spellbreaker.
-pub fn riot() -> TriggeredAbility {
-    use crate::card::CounterType;
-    etb(Effect::ChooseMode(vec![
-        Effect::GrantKeyword {
-            what: Selector::This,
-            keyword: Keyword::Haste,
-            duration: Duration::Permanent,
-        },
-        Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        },
-    ]))
-}
-
 /// Soulshift N (CR 702.46): "When this creature dies, you may return
 /// target Spirit card with mana value N or less from your graveyard
 /// to your hand." A `CreatureDied / SelfSource` trigger wrapping a

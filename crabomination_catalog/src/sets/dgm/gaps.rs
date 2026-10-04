@@ -78,7 +78,7 @@ pub fn exava_rakdos_blood_witch() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Human, CreatureType::Cleric]),
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste, Keyword::Unleash],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control with a +1/+1 counter on them have haste.",
             effect: StaticEffect::AnthemForFilter {

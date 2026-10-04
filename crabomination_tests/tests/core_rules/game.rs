@@ -8078,22 +8078,33 @@ fn may_do_suspends_for_wants_ui_instead_of_auto_declining() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "accepting must run the body");
 }
 
+/// A modal ETB trigger with no targets (the shape riot had before it became
+/// an as-enters replacement) parks its mode pick for a `wants_ui` seat.
 #[test]
 fn riot_trigger_mode_defers_to_resolution_for_wants_ui() {
+    use crabomination::card::CounterType;
     use crabomination::decision::Decision;
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
-    let mut goblin = catalog::zhur_taa_goblin();
+    let mut goblin = catalog::grizzly_bears();
     goblin.cost = Default::default();
+    goblin.triggered_abilities = vec![crabomination::effect::shortcut::etb(Effect::ChooseMode(vec![
+        Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: crabomination::card::Keyword::Haste,
+            duration: crabomination::effect::Duration::Permanent,
+        },
+        Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+    ]))];
     let id = g.add_card_to_hand(0, goblin);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .unwrap();
-    // Resolve the creature, then its Riot ETB trigger — which should now
+    // Resolve the creature, then its modal ETB trigger — which should
     // suspend on a ChooseMode instead of silently taking mode 0 (haste).
     drain_stack(&mut g);
-    let pd = g.pending_decision.as_ref().expect("Riot ChooseMode should suspend for wants_ui");
+    let pd = g.pending_decision.as_ref().expect("the ChooseMode should suspend for wants_ui");
     match &pd.decision {
         Decision::ChooseMode { num_modes, mode_texts, .. } => {
             assert_eq!(*num_modes, 2);

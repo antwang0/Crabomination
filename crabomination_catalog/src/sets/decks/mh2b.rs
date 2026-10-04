@@ -599,7 +599,7 @@ pub fn gargadon() -> CardDefinition {
 
 // ── Batch 2 — modular Arcbounds + misc value ─────────────────────────────────
 
-use crate::effect::shortcut::{modular_dies, riot};
+use crate::effect::shortcut::modular_dies;
 
 /// Shared Arcbound shell: 0/0 artifact creature entering with N +1/+1
 /// counters and the modular dies-trigger.
@@ -679,15 +679,7 @@ pub fn arcbound_tracker() -> CardDefinition {
 
 /// Arcbound Slasher — {4}{R} 0/0 Cat. Modular 4, riot.
 pub fn arcbound_slasher() -> CardDefinition {
-    let mut def = arcbound(
-        "Arcbound Slasher",
-        &[generic(4), r()],
-        vec![CreatureType::Cat],
-        4,
-        vec![],
-    );
-    def.triggered_abilities.push(riot());
-    def
+    arcbound("Arcbound Slasher", &[generic(4), r()], vec![CreatureType::Cat], 4, vec![Keyword::Riot])
 }
 
 /// Arcbound Whelp — {3}{R} 0/0 Dragon. Flying, modular 2; {R}: +1/+0.
