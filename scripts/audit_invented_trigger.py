@@ -175,10 +175,8 @@ ALLOW = {
     ("goblins_of_the_flarg", "EntersBattlefield"): "CR 603.8 state trigger, rechecked as permanents enter",
     # Documented approximations, each with its note in the factory.
     ("watery_grasp", "StepBegins(Upkeep)"): "'doesn't untap' modelled as a re-tap, as Narcolepsy",
-    ("wrenn_and_six", "StepBegins(Upkeep)"): "the retrace emblem collapsed to upkeep recursion",
     ("zaffai_and_the_tempests", "StepBegins(PreCombatMain)"): "'once each of your turns' as a main-phase grant",
     ("skizzik", "EntersBattlefield"): "the un-kicked end-step sacrifice registered as a delayed trigger on entry",
-    ("triskaidekaphile", "EntersBattlefield"): "'no maximum hand size' flipped as a one-shot on entry",
     ("soul_ransom", "EntersBattlefield"): "'you control enchanted creature' taken at the attach",
     ("threads_of_disloyalty", "EntersBattlefield"): "'you control enchanted creature' taken at the attach",
     # "You may play an additional land on each of your turns" as a per-turn
@@ -188,11 +186,9 @@ ALLOW = {
     ("exploration_broodship", "StepBegins(Upkeep)"): "the 3+ station extra land drop granted each upkeep",
     # Devices for printed behaviour the engine has no event for:
     ("desert_warfare", "CardDiscarded"): "a Desert discarded is one of 'put into your graveyard from your hand'",
-    ("erdwal_illuminator", "TokenCreated"): "'whenever you investigate' is a Clue token made",
     ("intet_the_dreamer", "PermanentLeavesBattlefield"): "ends 'for as long as you control Intet' on its departure",
     ("the_day_of_the_doctor", "PermanentLeavesBattlefield"): "ends 'for as long as this Saga remains on the battlefield'",
     ("share_the_spoils", "StepBegins(Upkeep)"): "grants each player's per-turn play from among the exiled cards",
-    ("twins_of_discord", "SpellCast"): "grants bloodthirst 2 to your other colorless creature spells as cast",
 }
 
 
