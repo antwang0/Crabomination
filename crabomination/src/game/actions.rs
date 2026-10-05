@@ -11457,7 +11457,7 @@ impl GameState {
                             self.sacrificed_was_artifact = Some(is_artifact);
                             self.sacrificed_was_vehicle = Some(is_vehicle);
                             self.sacrificed_colors = Some(colors);
-                            self.sacrificed_card = Some(id);
+                            self.stamp_sacrificed_card(id);
                         }
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
@@ -22747,11 +22747,11 @@ impl GameState {
                 self.sacrificed_was_outlaw =
                     Some(crate::game::effects::card_is_outlaw(&snap));
                 // `Selector::SacrificedCard` reads the cost's victim.
-                self.sacrificed_card = Some(other_cid);
                 cost_sac_card = Some(other_cid);
                 cost_sac_pt = Some((p_val, t_val));
                 cost_sac_mv = mv;
                 self.died_card_snapshots.insert(other_cid, snap);
+                self.stamp_sacrificed_card(other_cid);
             }
             if is_creature {
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });

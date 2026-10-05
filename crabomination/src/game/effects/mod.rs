@@ -9,6 +9,7 @@
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
 mod may_cost;
+mod sacrifice_record;
 mod with_targets;
 mod choose_one;
 mod keep_one;
@@ -3364,7 +3365,7 @@ impl GameState {
         }
         // `Selector::SacrificedCard` — "if you sacrificed an Island this way"
         // (Serendib Djinn) reads whatever the last sacrifice took.
-        self.sacrificed_card = Some(id);
+        self.stamp_sacrificed_card(id);
         let is_creature = self.permanent_is_creature(id);
         // Cache a snapshot for AnotherOfYours / death-matters triggers and the
         // per-turn artifact-sacrifice tally (which reads the sacrificed

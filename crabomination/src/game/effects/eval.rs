@@ -6795,6 +6795,11 @@ impl GameState {
             R::SharesCreatureTypeWithSacrificed => {
                 let mine = &card.definition.subtypes.creature_types;
                 let wild = self.card_off_battlefield_is_every_creature_type(card);
+                if let Some((id, types, changeling)) = &self.scratch.sacrificed_token_types
+                    && self.sacrificed_card == Some(*id)
+                {
+                    return wild || *changeling || types.iter().any(|t| mine.contains(t));
+                }
                 self.sacrificed_card
                     .and_then(|id| {
                         self.died_card_snapshots.get(&id).or_else(|| self.find_card_anywhere(id))

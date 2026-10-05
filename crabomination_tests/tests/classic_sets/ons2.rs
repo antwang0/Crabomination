@@ -186,6 +186,14 @@ fn endemic_plague_sweeps_the_sacrificed_creatures_tribe() {
     cast(&mut g, 0, plague, None);
     assert!(g.battlefield_find(other_bear).is_none(), "shares Bear with the sacrifice");
     assert!(g.battlefield_find(elf).is_some(), "the Elf survives");
+
+    // CR 608.2h / 111.7 — a sacrificed TOKEN is gone by the time the spell
+    // resolves; its last-known types still name the tribe.
+    let token = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let plague = g.add_card_to_hand(0, catalog::endemic_plague());
+    cast(&mut g, 0, plague, None);
+    assert!(g.battlefield_find(elf).is_none(), "the token's Elf type swept the Elf");
 }
 
 /// Callous Oppressor lets an opponent name the tribe it can't steal.

@@ -2362,6 +2362,13 @@ pub struct ResolutionScratch {
     /// suspended ask sits across.
     #[serde(default)]
     pub(crate) first_sacrificed_types: Vec<crate::card::CardType>,
+    /// A sacrificed TOKEN's creature types and changeling, beside its id
+    /// (CR 608.2h): it is gone by the time a cost-paid spell resolves
+    /// (Endemic Plague). A nontoken is still read from its graveyard, so only
+    /// a token writes this group. Read only while the id matches
+    /// `GameState::sacrificed_card`.
+    #[serde(skip)]
+    pub(crate) sacrificed_token_types: Option<(CardId, Vec<crate::card::CreatureType>, bool)>,
     /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
     /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
     /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
