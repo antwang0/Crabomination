@@ -1952,7 +1952,9 @@ impl Effect {
             | Effect::BecomeCreatureLosingTypes { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
-            Effect::SetCardTypesTo { what, .. } | Effect::AmendCopiableValues { what, .. } => sel_has_target(what),
+            Effect::SetCardTypesTo { what, .. }
+            | Effect::AmendCopiableValues { what, .. }
+            | Effect::BecomeNamed { what, .. } => sel_has_target(what),
             Effect::GrantKeyword { what, .. }
             | Effect::GrantKeywordThroughControllersNextCombat { what, .. } => sel_has_target(what),
             Effect::GrantKeywords { what, .. } => sel_has_target(what),
@@ -2848,7 +2850,8 @@ impl Effect {
             Effect::BecomeCreature { what, .. }
             | Effect::BecomeCreatureLosingTypes { what, .. }
             | Effect::SetCardTypesTo { what, .. }
-            | Effect::AmendCopiableValues { what, .. } => sel_filter(what),
+            | Effect::AmendCopiableValues { what, .. }
+            | Effect::BecomeNamed { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             // Riptide Mangler: the target hides in the power value ("base
             // power becomes target creature's power"), not in `what`.
@@ -5410,6 +5413,7 @@ impl Effect {
                 | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
                 | Effect::SetCardTypesTo { what, .. }
                 | Effect::AmendCopiableValues { what, .. }
+                | Effect::BecomeNamed { what, .. }
                 | Effect::SpellEntersWithCounters { what, .. } => sel_find(what, slot),
                 Effect::RedirectNextCombatDamageTo { what, to }
                 | Effect::MayDealPowerThenNoCombatDamage { dealer: what, to } => {

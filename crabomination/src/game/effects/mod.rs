@@ -31033,6 +31033,14 @@ impl GameState {
             }
 
             Effect::CopySpellForPlayer { what, who } => self.copy_spell_for_player(what, who, ctx, events),
+            Effect::BecomeNamed { what, name } => {
+                for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.bake_grant().name = name;
+                    }
+                }
+                Ok(())
+            }
             Effect::CopySpellForEachOtherTarget { what } => {
                 // Radiate — the chosen spell targets exactly one object; copy
                 // it once per other object it could legally target.

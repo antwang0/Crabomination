@@ -8549,6 +8549,15 @@ pub enum Effect {
         name: crate::static_str_serde::StaticStr,
         creature_types: Vec<crate::card::CreatureType>,
     },
+    /// "[It] becomes … named [name]" — NOT a copy effect, so the name is no
+    /// copiable value (CR 707.2): a copy of it keeps the printed name. Baked
+    /// over the copiable definition (`CardInstance::bake_grant`) until the
+    /// permanent leaves the battlefield (The Curse of Fenric's chapter II).
+    BecomeNamed {
+        what: Selector,
+        #[serde(with = "crate::static_str_serde")]
+        name: crate::static_str_serde::StaticStr,
+    },
     /// "You may cast spells from your hand this turn without paying their
     /// mana costs" (Yusri's five-win jackpot). Sets the controller's
     /// `free_spells_from_hand_this_turn` flag, cleared at end-of-turn.
