@@ -1678,6 +1678,9 @@ pub enum AbilityCostChoice {
     /// `exile_permanent_cost` — "Exile a [filter] you control:" (Primordial
     /// Mist's face-down permanent). Answered as a battlefield `Target`.
     ExilePermanent,
+    /// `exiled_with_self_to_graveyard_cost` — "Put a creature card exiled
+    /// with this into its owner's graveyard:" (Shelob). Answered as `Cards`.
+    ExiledWithToGraveyard,
 }
 
 impl ResumeContext {

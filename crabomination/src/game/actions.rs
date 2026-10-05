@@ -19750,6 +19750,7 @@ impl GameState {
         let chosen_exile_other = take_opt_scratch!(self.pending_ability_exile_other);
         let chosen_sac_any = take_opt_scratch!(self.pending_ability_sac_any);
         let chosen_exile_permanent = take_opt_scratch!(self.pending_ability_exile_permanent);
+        let chosen_exiled_with = take_opt_scratch!(self.pending_ability_exiled_with);
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
@@ -21499,17 +21500,50 @@ impl GameState {
         };
         // "Put a [filter] card exiled with this into its owner's graveyard:"
         // (Shelob) — a real cost, so no such card means no activation.
+        // The activator picks the card (CR 601.2h); a headless seat gives
+        // up the cheapest.
         let exiled_with_pick: Option<CardId> = match &ability.exiled_with_self_to_graveyard_cost {
             Some(filter) => {
-                let pick = self
+                let mut cands: Vec<(u32, CardId, String)> = self
                     .exile
                     .iter()
                     .filter(|c| c.exiled_with == Some(card_id) && self.evaluate_requirement_on_card(filter, c, p))
-                    .min_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id);
-                match pick {
+                    .map(|c| (c.definition.cost.cmc(), c.id, c.definition.name.to_string()))
+                    .collect();
+                cands.sort_by_key(|(mv, _, _)| *mv);
+                if cands.is_empty() {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                match chosen_exiled_with.filter(|id| cands.iter().any(|(_, c, _)| c == id)) {
                     Some(id) => Some(id),
-                    None => return Err(GameError::SelectionRequirementViolated),
+                    None if cands.len() > 1 && self.players[p].manual_mana => {
+                        let source_name = self
+                            .battlefield_find(card_id)
+                            .map(|c| c.definition.name.to_string())
+                            .unwrap_or_default();
+                        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                            decision: crate::decision::Decision::ChooseCards {
+                                source: card_id,
+                                prompt: format!("{source_name}: put a card exiled with it into its owner's graveyard"),
+                                candidates: cands.into_iter().map(|(_, id, n)| (id, n)).collect(),
+                                min: 1,
+                                max: 1,
+                                eligible: None,
+                                value: PickValue::Cost,
+                            },
+                            resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                                activator: p,
+                                card_id,
+                                ability_index,
+                                target,
+                                additional_targets: additional_targets.clone(),
+                                x_value,
+                                kind: crate::game::types::AbilityCostChoice::ExiledWithToGraveyard,
+                            },
+                        }));
+                        return Ok(());
+                    }
+                    None => Some(cands[0].1),
                 }
             }
             None => None,

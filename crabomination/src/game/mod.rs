@@ -2460,6 +2460,10 @@ pub struct ResolutionScratch {
     /// ability's "Exile a [filter] you control" cost (`exile_permanent_cost`).
     #[serde(skip, default)]
     pub(crate) pending_ability_exile_permanent: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for "Put a [filter]
+    /// card exiled with this into its owner's graveyard" (Shelob).
+    #[serde(skip, default)]
+    pub(crate) pending_ability_exiled_with: Option<CardId>,
     /// One-shot validated answer for a resolution-time choice whose suspend
     /// re-queues the originating effect as its continuation (`ChooseN`,
     /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
@@ -27872,6 +27876,14 @@ impl GameState {
                         }
                         self.scratch.pending_ability_exile_permanent = Some(id);
                     }
+                    K::ExiledWithToGraveyard => {
+                        let DecisionAnswer::Cards(ids) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // `activate_ability` re-checks the pick is still
+                        // exiled with the source and matches the filter.
+                        self.scratch.pending_ability_exiled_with = ids.first().copied();
+                    }
                     K::ExileOther => {
                         let DecisionAnswer::Cards(ids) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
@@ -27950,6 +27962,9 @@ impl GameState {
         }
         if self.scratch.pending_ability_sac_any.is_some() {
             self.scratch.pending_ability_sac_any = None;
+        }
+        if self.scratch.pending_ability_exiled_with.is_some() {
+            self.scratch.pending_ability_exiled_with = None;
         }
         if self.scratch.pending_ability_exile_permanent.is_some() {
             self.scratch.pending_ability_exile_permanent = None;

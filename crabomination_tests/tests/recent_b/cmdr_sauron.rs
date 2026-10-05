@@ -476,6 +476,32 @@ fn shelob_weaves_the_dead() {
     assert!(activate_x(&mut g, 0, shelob, 0, None).is_err(), "nothing left to feed");
 }
 
+/// CR 601.2h — the card Shelob's cost puts into the graveyard is the
+/// activator's pick: a prompting seat is asked, and its Hill Giant goes
+/// rather than the cheaper Bear the headless default would give up.
+#[test]
+fn shelob_activator_picks_the_card_her_cost_bins() {
+    let mut g = pod(2);
+    let shelob = g.add_card_to_battlefield(0, catalog::shelob_dread_weaver());
+    g.add_card_to_library(0, catalog::island());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    for id in [bears, giant] {
+        kill(&mut g, id);
+    }
+    flood(&mut g, 0);
+    g.players[0].manual_mana = true;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shelob, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("suspends for the pick");
+    assert!(g.pending_decision.is_some(), "asked which card to bin");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![giant]))).expect("answer");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == giant));
+    assert!(g.exile.iter().any(|c| c.id == bears), "the Bear stays exiled with her");
+}
+
 /// Subjugate the Hobbits — every small noncommander creature changes sides.
 #[test]
 fn subjugate_the_hobbits_takes_the_small() {
