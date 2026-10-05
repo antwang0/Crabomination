@@ -180,6 +180,7 @@ mod exile_return;
 mod answer_log;
 pub(crate) mod spell_copy;
 mod trigger_time;
+mod trigger_slots;
 mod probing_telepathy;
 mod cast_watch;
 mod cascade_grant;
@@ -26124,6 +26125,7 @@ impl GameState {
                         chooser: (chooser != pending.controller).then_some(chooser),
                         pending,
                         remaining,
+                        picked: Vec::new(),
                     },
                 }));
                 return;
@@ -26214,6 +26216,17 @@ impl GameState {
         &mut self,
         pending: PendingTriggerPush,
         target: Option<Target>,
+    ) {
+        self.push_pending_trigger_with(pending, target, None);
+    }
+
+    /// [`push_pending_trigger`](Self::push_pending_trigger) with slots 1.. named
+    /// by the controller (`trigger_slots.rs`) rather than auto-filled.
+    pub(crate) fn push_pending_trigger_with(
+        &mut self,
+        pending: PendingTriggerPush,
+        target: Option<Target>,
+        extra: Option<Vec<Target>>,
     ) {
         let PendingTriggerPush {
             actor,
@@ -26332,7 +26345,10 @@ impl GameState {
             }
             other => other,
         };
-        let additional = self.auto_extra_targets_for(&effect, source, controller, target.clone());
+        let additional = match extra {
+            Some(named) => named,
+            None => self.auto_extra_targets_for(&effect, source, controller, target.clone()),
+        };
         // Only effects that DECLARE a target slot (printed "target …"
         // wording → `Selector::Target`/`TargetFiltered`) count as
         // targeting for CR 115. An event-bound subject riding the target
@@ -27529,12 +27545,13 @@ impl GameState {
                 }
                 vec![]
             }
-            ResumeContext::TriggerTargetPick { pending, remaining, .. } => {
+            ResumeContext::TriggerTargetPick { pending, remaining, chooser, mut picked } => {
                 // Apply the answered target to the trigger that was
                 // waiting on it, then continue draining the queue
                 // (which may suspend again on the next targeted
                 // trigger in the same batch). Off-board (graveyard /
                 // exile) picks arrive as `Cards` from the modal flow.
+                let answer_was_decline = matches!(answer, DecisionAnswer::DeclineTarget);
                 let target = match answer {
                     DecisionAnswer::Target(t) => Some(t),
                     DecisionAnswer::Cards(ids) => {
@@ -27548,7 +27565,31 @@ impl GameState {
                     DecisionAnswer::DeclineTarget => None,
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 };
-                self.push_pending_trigger(pending, target);
+                // CR 601.2c — an "up to N target" fan-out asks for each
+                // further slot in turn (`trigger_slots.rs`); a decline ends
+                // the picking with what is named.
+                match target {
+                    Some(t) => picked.push(t),
+                    None if picked.is_empty() => {
+                        self.push_pending_trigger(pending, None);
+                        self.drain_trigger_queue(remaining);
+                        return Ok(vec![]);
+                    }
+                    None => {}
+                }
+                let seat = chooser.unwrap_or(pending.controller);
+                if !answer_was_decline
+                    && let Some(decision) = self.next_trigger_extra_slot(&pending, &picked, seat)
+                {
+                    self.pending_decision = Some(Box::new(PendingDecision {
+                        decision,
+                        resume: ResumeContext::TriggerTargetPick { pending, remaining, chooser, picked },
+                    }));
+                    return Ok(vec![]);
+                }
+                let first = picked.remove(0);
+                let extra = (!picked.is_empty() || answer_was_decline).then_some(picked);
+                self.push_pending_trigger_with(pending, Some(first), extra);
                 self.drain_trigger_queue(remaining);
                 vec![]
             }

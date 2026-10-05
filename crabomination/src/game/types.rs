@@ -1822,6 +1822,10 @@ pub enum ResumeContext {
         /// player may … target …" — Curse of Inertia's attacker).
         #[serde(default)]
         chooser: Option<usize>,
+        /// The slots named so far when the ask is for a further target of an
+        /// "up to N target" fan-out (`trigger_slots.rs`); empty for slot 0.
+        #[serde(default)]
+        picked: Vec<Target>,
     },
     /// CR 601.2b — a `wants_ui` caster is choosing how to pay one of a spell's
     /// additional cast costs: which permanent to sacrifice ("sacrifice a …" —

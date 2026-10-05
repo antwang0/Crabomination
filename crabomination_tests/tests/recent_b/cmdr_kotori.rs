@@ -222,6 +222,38 @@ fn katsumasa_animates_and_counters() {
     assert!(kw(&g, ring, Keyword::Flying));
 }
 
+/// CR 601.2c — "each of up to three target noncreature artifacts" is the
+/// controller's to name slot by slot: a prompting seat picks the first and
+/// third ring, declines the rest, and only those two get counters. Each
+/// further ask leads with the engine's own fill.
+#[test]
+fn katsumasa_names_each_of_its_targets() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::katsumasa_the_animator());
+    let rings: Vec<CardId> = (0..4).map(|_| g.add_card_to_battlefield(0, catalog::sol_ring())).collect();
+    g.players[0].wants_ui = true;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    for answer in [
+        DecisionAnswer::Target(Target::Permanent(rings[0])),
+        DecisionAnswer::Target(Target::Permanent(rings[2])),
+        DecisionAnswer::DeclineTarget,
+    ] {
+        let pd = g.pending_decision.as_ref().expect("a target ask");
+        if let crabomination::decision::Decision::ChooseTarget { legal, optional, .. } = &pd.decision
+            && answer != DecisionAnswer::Target(Target::Permanent(rings[0]))
+        {
+            assert!(*optional, "a further slot may be declined");
+            assert!(!legal.contains(&Target::Permanent(rings[0])), "distinct targets");
+        }
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    drain_stack(&mut g);
+    let counters: Vec<u32> =
+        rings.iter().map(|r| g.battlefield_find(*r).unwrap().counter_count(CounterType::PlusOnePlusOne)).collect();
+    assert_eq!(counters, vec![1, 0, 1, 0]);
+}
+
 /// Mobilizer Mech — becoming crewed animates another Vehicle.
 #[test]
 fn mobilizer_mech_animates_a_second_vehicle() {

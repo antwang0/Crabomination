@@ -3703,6 +3703,17 @@ fn decide_pending_policy_inner(
         // that survives it, not the least valuable one: a 1/1 token dying to
         // it re-fires Blowfly Infestation, whose next counter mints Hapatra
         // another Snake to die — 1,857 turns of it in one pod game.
+        // A trigger's further "up to N" slot (`game/trigger_slots.rs`) leads
+        // with the engine's own fill and is only asked while that fill runs:
+        // taking the lead names what the trigger was given before the asks.
+        crate::decision::Decision::ChooseTarget { legal, .. }
+            if !legal.is_empty()
+                && state.pending_decision.as_ref().is_some_and(|pd| {
+                    matches!(&pd.resume, crate::game::types::ResumeContext::TriggerTargetPick { picked, .. } if !picked.is_empty())
+                }) =>
+        {
+            crate::decision::DecisionAnswer::Target(legal[0].clone())
+        }
         crate::decision::Decision::ChooseTarget { source, legal, optional: false, .. }
             if !legal.is_empty() && own_minus_counter_pick(state, seat, *source, legal).is_some() =>
         {
