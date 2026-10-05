@@ -11764,14 +11764,14 @@ impl GameState {
                     }
                     let hand: Vec<_> = self.players[p].hand.drain(..).collect();
                     self.players[p].library.extend(hand);
-                    let mut evs = self.resolve_effect(
+                    self.run_effect(
                         &Effect::Draw {
                             who: Selector::Player(PlayerRef::Seat(p)),
                             amount: crate::effect::Value::Const(n as i32),
                         },
                         ctx,
+                        events,
                     )?;
-                    events.append(&mut evs);
                 }
                 Ok(())
             }
@@ -12548,7 +12548,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GrantCantAttackYou { what, duration } => self.resolve_effect_into(
+            Effect::GrantCantAttackYou { what, duration } => self.run_effect(
                 &Effect::GrantKeyword {
                     what: what.clone(),
                     keyword: Keyword::CantAttackPlayer(ctx.controller),
@@ -23202,7 +23202,7 @@ impl GameState {
                     }
                     if underpaid {
                         let draw = Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) };
-                        self.resolve_effect(&draw, ctx)?;
+                        self.run_effect(&draw, ctx, events)?;
                     }
                 }
                 Ok(())
@@ -28492,11 +28492,7 @@ impl GameState {
                 });
                 let Some((caster, mv)) = info else { return Ok(()) };
                 // Counter it, then the caster mints MV flying Birds.
-                let mut evs = self.resolve_effect(
-                    &Effect::CounterSpell { what: Selector::TriggerSource },
-                    ctx,
-                )?;
-                events.append(&mut evs);
+                self.run_effect(&Effect::CounterSpell { what: Selector::TriggerSource }, ctx, events)?;
                 if mv > 0 {
                     let token = TokenDefinition {
                         name: "Bird".into(),
@@ -28508,15 +28504,15 @@ impl GameState {
                         subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
                         ..Default::default()
                     };
-                    let mut evs = self.resolve_effect(
+                    self.run_effect(
                         &Effect::CreateToken {
                             who: PlayerRef::Seat(caster),
                             count: crate::effect::Value::Const(mv as i32),
                             definition: std::sync::Arc::new(token),
                         },
                         ctx,
+                        events,
                     )?;
-                    events.append(&mut evs);
                 }
                 Ok(())
             }
@@ -28603,15 +28599,15 @@ impl GameState {
                         },
                         ..Default::default()
                     };
-                    self.resolve_effect(
+                    self.run_effect(
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::Const(total),
                             definition: std::sync::Arc::new(token),
                         },
                         ctx,
+                        events,
                     )
-                    .map(|mut evs| events.append(&mut evs))
                     .ok();
                 }
                 Ok(())
@@ -33758,8 +33754,8 @@ impl GameState {
                 } else {
                     Effect::LoseLife { who: them, amount: crate::effect::Value::Const(-delta) }
                 };
-                self.resolve_effect_into(&life_effect, ctx, events)?;
-                self.resolve_effect_into(
+                self.run_effect(&life_effect, ctx, events)?;
+                self.run_effect(
                     &Effect::SetBasePT {
                         what: Selector::This,
                         power: crate::effect::Value::Const(base_power),
@@ -34112,8 +34108,8 @@ impl GameState {
                 }
                 if removed > 0 {
                     let n = crate::effect::Value::Const(removed as i32);
-                    self.resolve_effect_into(&Effect::Draw { who: Selector::You, amount: n.clone() }, ctx, events)?;
-                    self.resolve_effect_into(&Effect::LoseLife { who: Selector::You, amount: n }, ctx, events)?;
+                    self.run_effect(&Effect::Draw { who: Selector::You, amount: n.clone() }, ctx, events)?;
+                    self.run_effect(&Effect::LoseLife { who: Selector::You, amount: n }, ctx, events)?;
                 }
                 Ok(())
             }
@@ -34133,8 +34129,8 @@ impl GameState {
                 } else {
                     Effect::LoseLife { who: Selector::You, amount: crate::effect::Value::Const(-delta) }
                 };
-                self.resolve_effect_into(&life_effect, ctx, events)?;
-                self.resolve_effect_into(
+                self.run_effect(&life_effect, ctx, events)?;
+                self.run_effect(
                     &Effect::SetBasePT {
                         what: Selector::This,
                         power: crate::effect::Value::Const(base_power),
@@ -36243,11 +36239,7 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 if fodder.len() < n {
-                    let mut moved = self.resolve_effect(
-                        &Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
-                        ctx,
-                    )?;
-                    events.append(&mut moved);
+                    self.run_effect(&Effect::Move { what: Selector::This, to: ZoneDest::Graveyard }, ctx, events)?;
                     return Ok(());
                 }
                 const KINDS: [crate::card::CounterType; 3] = [

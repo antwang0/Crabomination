@@ -1029,3 +1029,33 @@ fn cr_614_10_a_skipped_untap_step_still_begins_the_turn() {
     assert_eq!(g.players[0].lands_played_this_turn, 0, "a fresh land drop");
     assert!(!g.players[0].life_locked_until_next_turn, "and 'until your next turn' is over");
 }
+
+/// CR 608.2c — one resolution's "this way" and "the token" references span
+/// the whole resolution. An arm that resolved a sub-effect as a fresh nested
+/// resolution (`GrantCantAttackYou`, the Bird/Saproling mints, Kami of the
+/// Crescent Moon's draw, …) reset the outer resolution's scratch on the way
+/// in: here the token the first step created was forgotten by the third.
+#[test]
+fn cr_608_2c_a_nested_step_keeps_the_resolutions_token() {
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let body = Effect::Seq(vec![
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: std::sync::Arc::new(crabomination_base::tokens::phyrexian_mite_token()),
+        },
+        Effect::GrantCantAttackYou { what: Selector::LastCreatedToken, duration: Duration::EndOfTurn },
+        Effect::PumpPT {
+            what: Selector::LastCreatedToken,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+    ]);
+    g.resolve_effect(&body, &EffectContext::for_ability(src, 0, None)).expect("resolve");
+    let mite = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("the token");
+    assert_eq!(g.computed_permanent(mite).unwrap().power, 3, "the third step still names the token");
+}
