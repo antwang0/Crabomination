@@ -190,6 +190,38 @@ fn capricious_efreet_destroys_one_at_random() {
     assert_eq!(gone, 1);
 }
 
+/// CR 601.2c — Capricious Efreet's "up to two target nonland permanents you
+/// don't control" are a prompting seat's to name under that slot's filter:
+/// it names the opponent's Sol Ring and declines the second, so the Bears and
+/// the Giant can't be the one destroyed.
+#[test]
+fn capricious_efreet_names_its_optional_opposing_targets() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::capricious_efreet());
+    let mine = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].wants_ui = true;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    let first = g.pending_decision.as_ref().expect("slot 0 ask");
+    let Decision::ChooseTarget { legal, .. } = &first.decision else { panic!("{:?}", first.decision) };
+    assert!(legal.contains(&Target::Permanent(mine)));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(mine)))).expect("slot 0");
+    let second = g.pending_decision.as_ref().expect("slot 1 ask");
+    let Decision::ChooseTarget { legal, optional, .. } = &second.decision else { panic!("{:?}", second.decision) };
+    assert!(*optional);
+    assert!(!legal.contains(&Target::Permanent(mine)), "slot 1 is a permanent you don't control");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(ring)))).expect("slot 1");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::DeclineTarget)).expect("decline slot 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some() && g.battlefield_find(giant).is_some());
+    let gone = [mine, ring].iter().filter(|id| g.battlefield_find(**id).is_none()).count();
+    assert_eq!(gone, 1);
+}
+
 /// Widespread Panic: a searching spell's shuffle puts a card from hand on top.
 #[test]
 fn widespread_panic_taxes_a_shuffle() {

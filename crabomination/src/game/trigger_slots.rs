@@ -3,6 +3,10 @@
 //! Depthshaker Titan's "any number of target noncreature artifacts you
 //! control") are the controller's to name, slot by slot, not only the first.
 //!
+//! Distinct per-slot filters past an `OptionalTargets` minimum (Capricious
+//! Efreet's "and up to two target nonland permanents you don't control") are
+//! asked slot by slot under each slot's own filter.
+//!
 //! Each ask leads with the engine's own fill (`auto_extra_targets_for`) and
 //! stops where that fill does, so a seat answering with the first candidate —
 //! the bot policy here, and `AutoDecider` — names exactly the targets it was
@@ -14,8 +18,7 @@ use crate::effect::Effect;
 use crate::game::types::{PendingTriggerPush, Target};
 
 /// Is `eff` a same-filter "up to N target" fan-out under its transparent
-/// wrappers? Per-opponent / per-player fan-outs and distinct per-slot filters
-/// keep the engine's fill.
+/// wrappers? Per-opponent / per-player fan-outs keep the engine's fill.
 fn same_filter_fan_out(eff: &Effect) -> bool {
     match eff {
         Effect::ApplyToTargets { .. } | Effect::SupportCounters { .. } => true,
@@ -30,6 +33,15 @@ fn same_filter_fan_out(eff: &Effect) -> bool {
                 _ => false,
             }
         }
+        _ => false,
+    }
+}
+
+/// Is slot `n` of `eff` an optional slot past an `OptionalTargets` minimum,
+/// each slot carrying its own filter?
+fn optional_distinct_slot(eff: &Effect, n: usize) -> bool {
+    match eff {
+        Effect::OptionalTargets { min, .. } => n >= *min as usize,
         _ => false,
     }
 }
@@ -56,15 +68,22 @@ impl GameState {
             },
             other => other.clone(),
         };
-        if !same_filter_fan_out(&effect) {
+        let same = same_filter_fan_out(&effect);
+        if !same && !optional_distinct_slot(&effect, picked.len()) {
             return None;
         }
         let fill = self.auto_extra_targets_for(&effect, pending.source, pending.controller, Some(first.clone()));
         if picked.len() > fill.len() {
             return None;
         }
-        let filter = effect.target_filter_for_slot_in_mode(1, pending.mode)?.clone();
-        let lead = fill.iter().find(|t| !picked.contains(t)).cloned();
+        let slot = if same { 1 } else { picked.len() };
+        let filter = effect.target_filter_for_slot_in_mode(u8::try_from(slot).ok()?, pending.mode)?.clone();
+        // A same-filter fill is a pool; a per-slot one is positional.
+        let lead = if same {
+            fill.iter().find(|t| !picked.contains(t)).cloned()
+        } else {
+            fill.get(slot - 1).filter(|t| !picked.contains(t)).cloned()
+        };
         let mut legal: Vec<Target> = self.with_frozen_layers(|s| {
             s.battlefield
                 .iter()
