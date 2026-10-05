@@ -11570,7 +11570,13 @@ pub enum Effect {
     /// "As [this] enters, choose a number." Stores the chosen number on the
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
     /// chosen-MV noncreature lock). `max` bounds the choice.
-    ChooseNumberForSource { max: u32 },
+    ChooseNumberForSource {
+        max: u32,
+        /// The number is life the chooser pays (Phyrexian Processor), so the
+        /// ask is a life payment, not "more is better".
+        #[serde(default)]
+        pays_life: bool,
+    },
 
     /// CR 729 — "Players play a Magic subgame, using their libraries as their
     /// decks. Each player who doesn't win the subgame loses half their life,

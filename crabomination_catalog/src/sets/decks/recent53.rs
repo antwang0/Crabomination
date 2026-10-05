@@ -423,7 +423,7 @@ pub fn sanctum_prelate() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        as_enters_effect: Some(Effect::ChooseNumberForSource { max: 16 }),
+        as_enters_effect: Some(Effect::ChooseNumberForSource { max: 16, pays_life: false }),
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells with mana value equal to the chosen number can't be cast.",
             effect: StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast,

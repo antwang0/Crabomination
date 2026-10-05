@@ -35859,7 +35859,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseNumberForSource { max } => {
+            Effect::ChooseNumberForSource { max, pays_life } => {
                 // Sanctum Prelate — "as this enters, choose a number."
                 // Suspends for wants_ui seats; the old bare ask locked the
                 // number at AutoDecider's 0 (hitting only MV-0 spells).
@@ -35871,7 +35871,7 @@ impl GameState {
                     source,
                     prompt: "Choose a number".to_string(),
                     max: *max,
-                    kind: AmountKind::Upside,
+                    kind: if *pays_life { AmountKind::Life } else { AmountKind::Upside },
                 };
                 let n = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),

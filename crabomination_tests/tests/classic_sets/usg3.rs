@@ -721,6 +721,19 @@ fn phyrexian_processor_mints_what_you_paid() {
     mana(&mut g, 0);
     cast(&mut g, proc, None);
     assert_eq!(g.players[0].life, life - 5);
+    // The number is a LIFE payment, not "more is better": a bot answering an
+    // Upside ask paid all 20.
+    let mut probe = two_player_game();
+    probe.players[0].wants_ui = true;
+    let p2 = probe.add_card_to_hand(0, catalog::phyrexian_processor());
+    mana(&mut probe, 0);
+    probe.perform_action(GameAction::CastSpell { card_id: p2, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    while probe.pending_decision.is_none() && !probe.stack.is_empty() {
+        probe.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(probe.pending_decision.is_none());
+    assert!(probe.players[0].life >= 10, "a life payment keeps a buffer: {}", probe.players[0].life);
     mana(&mut g, 0);
     activate(&mut g, proc, 0, None);
     let token = g
