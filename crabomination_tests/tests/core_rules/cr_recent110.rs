@@ -956,3 +956,38 @@ fn cr_603_7c_braids_asks_a_prompting_opponent_and_honours_the_answer() {
     assert_eq!(g.players[2].life, life2 - 2, "seat 2 had nothing to sacrifice");
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw, for seat 2");
 }
+
+/// CR 608.2h — "you gain life equal to the greatest power among creatures
+/// sacrificed this way" survives a resolution parked on an opponent's pick:
+/// the dispatch that runs while it waits clears the death snapshots.
+#[test]
+fn cr_608_2h_shadowgrange_reads_the_sacrifice_after_a_parked_pick() {
+    use crabomination::decision::Decision;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.players[1].wants_ui = true;
+    // Two 3/3s tie for greatest power, so seat 1 is asked which goes.
+    let a = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.battlefield_find_mut(a).unwrap().is_token = true;
+    let life = g.players[0].life;
+    let fiend = g.add_card_to_battlefield(0, catalog::shadowgrange_archfiend());
+    g.fire_self_etb_triggers(fiend, 0);
+    for _ in 0..40 {
+        let Some(p) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            continue;
+        };
+        let answer = match &p.decision {
+            Decision::ChooseCards { candidates, .. } => DecisionAnswer::Cards(vec![candidates[0].0]),
+            Decision::ChooseTarget { .. } => DecisionAnswer::Target(Target::Permanent(a)),
+            other => panic!("unexpected ask {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    assert!(g.battlefield_find(a).is_none(), "the token Giant went");
+    assert_eq!(g.players[0].life, life + 3, "gained the sacrificed Giant's power");
+}
