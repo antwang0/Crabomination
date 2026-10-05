@@ -252,6 +252,7 @@ impl GameState {
         if let DecisionAnswer::Mode(idx) = answer {
             let idx = idx.min(modes.len() - 1);
             let idx = self.legal_trigger_mode(modes, idx, source, controller);
+            let idx = self.skip_fruitless_auto_mode(modes, idx, source, controller);
             return Some(self.decline_self_hostile_mode(modes, idx, source, controller));
         }
         None
@@ -267,6 +268,30 @@ impl GameState {
         if can(&modes[idx]) {
             return idx;
         }
+        modes.iter().position(can).unwrap_or(idx)
+    }
+
+    /// The headless default (mode 0) for a mode that puts a card from hand
+    /// when the hand holds none: the first other mode that can be chosen
+    /// instead (Scaretiller with no land in hand returns one from the
+    /// graveyard). A prompted or scripted seat's pick stands.
+    fn skip_fruitless_auto_mode(&self, modes: &[Effect], idx: usize, source: CardId, controller: usize) -> usize {
+        if !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return idx;
+        }
+        let fruitless = |m: &Effect| match m {
+            Effect::PutFromHandOntoBattlefield { who: crate::effect::PlayerRef::You, filter, .. } => {
+                !self.players[controller].hand.iter().any(|c| self.evaluate_requirement_on_card(filter, c, controller))
+            }
+            _ => false,
+        };
+        if !fruitless(&modes[idx]) {
+            return idx;
+        }
+        let can = |m: &Effect| {
+            !fruitless(m)
+                && (!m.requires_target() || self.auto_target_for_effect_avoiding(m, controller, Some(source)).is_some())
+        };
         modes.iter().position(can).unwrap_or(idx)
     }
 

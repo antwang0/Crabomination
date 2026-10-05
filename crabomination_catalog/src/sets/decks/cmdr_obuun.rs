@@ -272,21 +272,17 @@ pub fn obuun_mul_daya_ancestor() -> CardDefinition {
     }
 }
 
-/// Scaretiller — whenever it becomes tapped, put a land from hand onto the
-/// battlefield tapped, or return a land card from your graveyard tapped.
+/// Scaretiller — whenever it becomes tapped, choose one: you may put a land
+/// card from your hand onto the battlefield tapped, or return target land
+/// card from your graveyard to the battlefield tapped (CR 700.2: the mode and
+/// its target are chosen as the trigger goes on the stack, CR 603.3c).
 pub fn scaretiller() -> CardDefinition {
-    let tapped_bf = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Hand,
-                    filter: R::Land,
-                }),
-                then: Box::new(Effect::PutFromHandOntoBattlefield {
+            effect: Effect::ChooseMode(vec![
+                Effect::PutFromHandOntoBattlefield {
                     who: PlayerRef::You,
                     filter: R::Land,
                     count: Value::Const(1),
@@ -295,15 +291,12 @@ pub fn scaretiller() -> CardDefinition {
                     sacrifice_eot: false,
                     return_eot: false,
                     then: None,
-                }),
-                else_: Box::new(Effect::Move {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land }),
-                        count: Box::new(Value::Const(1)),
-                    },
-                    to: tapped_bf(),
-                }),
-            },
+                },
+                Effect::Move {
+                    what: target_filtered(R::Land.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ]),
         }],
         ..creature("Scaretiller", cost(&[generic(4)]), vec![CreatureType::Scarecrow], 1, 4)
     }

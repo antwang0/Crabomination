@@ -234,10 +234,33 @@ fn scaretiller_drops_a_land_when_it_taps() {
     let mut g = main_phase(2);
     let s = g.add_card_to_battlefield(0, catalog::scaretiller());
     let forest = g.add_card_to_hand(0, catalog::forest());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![forest])]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Cards(vec![forest])]));
     declare(&mut g, s, 1).expect("attack");
     drain_stack(&mut g);
     assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped));
+}
+
+/// CR 700.2 / 603.3c — Scaretiller's mode and its target are chosen as the
+/// trigger goes on the stack: with no land in hand a headless seat takes the
+/// graveyard mode, whose land card is a target — returned tapped, or, once it
+/// has left the graveyard, not returned at all (CR 608.2b).
+#[test]
+fn scaretiller_returns_a_target_land_card() {
+    let run = |exile_first: bool| {
+        let mut g = main_phase(2);
+        let s = g.add_card_to_battlefield(0, catalog::scaretiller());
+        let forest = g.add_card_to_graveyard(0, catalog::forest());
+        declare(&mut g, s, 1).expect("attack");
+        if exile_first {
+            let at = g.players[0].graveyard.iter().position(|c| c.id == forest).unwrap();
+            let card = g.players[0].graveyard.remove(at);
+            g.exile.push(card);
+        }
+        drain_stack(&mut g);
+        g.battlefield_find(forest).map(|c| c.tapped)
+    };
+    assert_eq!(run(false), Some(true), "back tapped");
+    assert_eq!(run(true), None, "the target left: nothing returns");
 }
 
 #[test]
