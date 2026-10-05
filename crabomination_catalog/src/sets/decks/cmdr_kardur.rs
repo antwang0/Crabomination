@@ -329,23 +329,22 @@ pub fn unlicensed_disintegration() -> CardDefinition {
 }
 
 /// Wildfire Devils — entering and at your upkeep, a random player exiles an
-/// instant or sorcery from their graveyard; you may cast a copy free.
+/// instant or sorcery card of their choice from their graveyard (an opponent
+/// gives up its least, you your best); you may cast a copy free.
 pub fn wildfire_devils() -> CardDefinition {
-    let body = || {
-        Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::Take {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::RandomPlayer,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: instant_or_sorcery(),
-                    }),
-                    count: Box::new(Value::ONE),
-                },
-                to: ZoneDest::Exile,
+    let body = || Effect::WithRandomPlayer {
+        body: Box::new(crate::effect::shortcut::choose_one_then(
+            Selector::CardsInZone {
+                who: PlayerRef::ChosenPlayerOfSource,
+                zone: crate::card::Zone::Graveyard,
+                filter: instant_or_sorcery(),
             },
-            Effect::CopyCardAndCastFree { what: Selector::ExiledThisResolution { filter: instant_or_sorcery() } },
-        ])
+            PlayerRef::ChosenPlayerOfSource,
+            Effect::Seq(vec![
+                Effect::Move { what: crate::effect::shortcut::chosen_one(), to: ZoneDest::Exile },
+                Effect::CopyCardAndCastFree { what: Selector::ExiledThisResolution { filter: instant_or_sorcery() } },
+            ]),
+        )),
     };
     CardDefinition {
         triggered_abilities: vec![

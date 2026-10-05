@@ -10252,6 +10252,9 @@ pub enum Effect {
     /// body (Truth or Consequences: one opponent takes every consequences
     /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.
     WithRandomOpponent { body: Box<Effect> },
+    /// [`Effect::WithRandomOpponent`] over every living player, you included
+    /// ("choose a player at random" — Wildfire Devils).
+    WithRandomPlayer { body: Box<Effect> },
     /// "You may cast it from your graveyard as an Adventure until the end of
     /// your next turn" — the source card, now in its owner's graveyard, on a
     /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard

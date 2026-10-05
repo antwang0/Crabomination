@@ -342,3 +342,28 @@ fn wildfire_devils_recasts_a_random_graveyard_spell() {
     assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Divination").count(), 1);
     assert_eq!(g.players[0].hand.len(), 2, "the copy drew two");
 }
+
+/// Wildfire Devils: "that player exiles an instant or sorcery card from their
+/// graveyard" — the random player picks. An opponent hands over its least
+/// (the Bolt, not the Divination); you'd take your best.
+#[test]
+fn wildfire_devils_the_random_player_picks_the_card() {
+    let mut opp_picked = false;
+    for seed in 0..32u64 {
+        let mut g = pod(2);
+        g.rng = crabomination::game::rng::GameRng::seeded(seed);
+        let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+        let div = g.add_card_to_graveyard(1, catalog::divination());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let wd = g.add_card_to_hand(0, catalog::wildfire_devils());
+        cast_by(&mut g, 0, wd, &[]);
+        let exiled = |id| g.exile.iter().any(|c| c.id == id);
+        if exiled(bolt) || exiled(div) {
+            assert!(exiled(bolt) && !exiled(div), "seed {seed}: the opponent gives up the cheaper spell");
+            opp_picked = true;
+        }
+    }
+    assert!(opp_picked, "the opponent was the random player at least once");
+}

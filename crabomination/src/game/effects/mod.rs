@@ -32673,6 +32673,15 @@ impl GameState {
                 self.choose_opponent_then(then, Some(lead), effect, ctx, events)
             }
 
+            Effect::WithRandomPlayer { body } => {
+                let Some(p) = self.resolve_player(&PlayerRef::RandomPlayer, ctx) else { return Ok(()) };
+                let bound = Effect::BindScratch {
+                    scratch: crate::effect::ScratchBinding::ChosenOpponent(p),
+                    body: body.clone(),
+                };
+                self.run_effect(&bound, ctx, events)
+            }
+
             Effect::WithRandomOpponent { body } => {
                 let Some(opp) = self.resolve_player(&PlayerRef::RandomOpponent, ctx) else { return Ok(()) };
                 let bound = Effect::BindScratch {
