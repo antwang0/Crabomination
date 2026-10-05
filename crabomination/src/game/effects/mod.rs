@@ -26708,7 +26708,15 @@ impl GameState {
                     }
                 }
                 let paid_ctx = EffectContext { event_amount: total, ..ctx.clone() };
-                self.run_effect(body, &paid_ctx, events)
+                self.run_effect(body, &paid_ctx, events)?;
+                // The total rides a suspended body's continuation (a resume
+                // rebuilds the context with no event amount): Collective
+                // Voyage's later seats searched for "up to 0".
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: ScratchBinding::EventAmount(total),
+                    body: Box::new(carried),
+                });
+                Ok(())
             }
 
             Effect::ForEachOpponent { body } => {

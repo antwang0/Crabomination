@@ -2784,6 +2784,47 @@ fn cr_207_2c_collective_voyage_ramps_every_seat_under_its_own_control() {
     }
 }
 
+/// CR 207.2c — the same with PROMPTING seats (every pod seat): each search
+/// suspends, and the join-forces total has to ride the continuation — it used
+/// to be read as 0 on resume, so only the first seat in turn order ramped.
+#[test]
+fn cr_207_2c_collective_voyage_ramps_every_prompting_seat() {
+    use crabomination::decision::{AutoDecider, Decider, Decision, DecisionAnswer};
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let voyage = g.add_card_to_hand(0, catalog::collective_voyage());
+    for seat in 0..3 {
+        g.players[seat].mana_pool.add(Color::Green, 2);
+        g.players[seat].wants_ui = true;
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    g.perform_action(GameAction::CastSpell { card_id: voyage, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Collective Voyage");
+    for _ in 0..200 {
+        if let Some(pd) = &g.pending_decision {
+            let answer = match &pd.decision {
+                Decision::ChooseAmount { .. } => DecisionAnswer::Amount(1),
+                Decision::SearchLibrary { candidates, .. } => DecisionAnswer::Search(candidates.first().map(|c| c.0)),
+                d => AutoDecider.decide(d),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    for seat in 0..3 {
+        let lands = g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Forest").count();
+        assert_eq!(lands, 3, "seat {seat} fetched X = 3");
+    }
+}
+
 /// CR 207.2c — the `AutoDecider` answers 0 to a `ChooseAmount`, so a bot pod
 /// resolves join forces as a no-op rather than stalling on the ask. The point
 /// of the test is that it *resolves*: nothing is left pending.
