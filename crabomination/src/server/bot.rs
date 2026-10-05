@@ -8067,14 +8067,20 @@ pub(super) fn cast_candidates<'a>(
         let multi = matches!(&c.definition.effect, Effect::ChooseModesCast { .. } | Effect::ChooseModesByPoints { .. });
         let pick = |picks: Vec<u8>| -> Option<GameAction> {
             let mut slots: Vec<crate::game::types::Target> = Vec::new();
-            for &i in &picks {
+            let last_targeted = picks.iter().rposition(|&i| modes[i as usize].requires_target());
+            for (n, &i) in picks.iter().enumerate() {
                 let eff = modes[i as usize];
                 if eff.requires_target() {
                     let (t, extra) = state.auto_targets_for_effect_all_slots(eff, seat, None);
                     slots.push(t?);
                     if multi {
                         let k = crate::game::effects::mode_slot_count(eff);
-                        if extra.len() + 1 < k {
+                        // Optional trailing slots ("up to three target cards")
+                        // may stay empty only in the last target-bearing mode:
+                        // an earlier one would shift the next mode's slots.
+                        let short_ok = Some(n) == last_targeted
+                            && eff.min_targets_in_mode(None).is_some_and(|m| usize::from(m) <= extra.len() + 1);
+                        if extra.len() + 1 < k && !short_ok {
                             return None;
                         }
                         slots.extend(extra.into_iter().take(k - 1));

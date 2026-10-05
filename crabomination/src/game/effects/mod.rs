@@ -8803,7 +8803,16 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ApplyToTargets { effect: inner, .. } => {
+            Effect::ApplyToTargets { effect: inner, filter, .. } => {
+                // CR 608.2b / 400.7 — a card target named by its zone ("target
+                // cards from target player's graveyard") that has left that
+                // zone is a new object: illegal, so unaffected. Its cross-slot
+                // atoms (same graveyard, another target) can't change while it
+                // stays there, and a `SlotGroups` member sees only its own
+                // slots, so they aren't re-read.
+                let offboard = filter.mentions_offboard_zone();
+                let zone_free =
+                    if offboard { filter.resolve_x(ctx.x_value).without_cross_slot() } else { SelectionRequirement::Any };
                 let targets: Vec<(usize, Target)> = ctx
                     .targets
                     .iter()
@@ -8814,7 +8823,12 @@ impl GameState {
                         // battlefield permanents — so an inner Move can relocate
                         // a targeted graveyard/exile card (Monastery Messenger's
                         // "put a card from your graveyard on top of your library").
-                        Target::Permanent(id) => self.find_card_anywhere(*id).is_some(),
+                        Target::Permanent(id) => {
+                            self.find_card_anywhere(*id).is_some()
+                                && (!offboard
+                                    || self.battlefield_find(*id).is_some()
+                                    || self.evaluate_requirement_static(&zone_free, t, ctx.controller, ctx.source))
+                        }
                     })
                     .map(|(i, t)| (i, t.clone()))
                     .collect();

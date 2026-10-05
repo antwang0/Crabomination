@@ -39,3 +39,21 @@ pub(crate) fn chosen_mode_slot_filter<'a>(
     }
     Some(None)
 }
+
+/// The first absolute slot of the chosen mode owning `slot` (0 when `effect`
+/// isn't a cast-time modal or no mode owns it): a mode's cross-slot atoms
+/// ("cards from **target player's** graveyard") count from its own slot 0.
+pub(crate) fn chosen_mode_first_slot(effect: &Effect, chosen: &[u8], slot: u8) -> usize {
+    let (Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. }) = effect else {
+        return 0;
+    };
+    let mut first = 0usize;
+    for m in chosen.iter().filter_map(|&i| modes.get(i as usize)).filter(|m| m.requires_target()) {
+        let k = crate::game::effects::mode_slot_count(m);
+        if (slot as usize) < first + k {
+            return first;
+        }
+        first += k;
+    }
+    0
+}

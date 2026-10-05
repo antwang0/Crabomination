@@ -4242,6 +4242,41 @@ impl SelectionRequirement {
         }
     }
 
+    /// The same filter with every cross-slot atom read as satisfied — for a
+    /// resolution-time re-check (CR 608.2b), where the cast's slot scratch
+    /// isn't the resolving target list.
+    pub fn without_cross_slot(&self) -> Self {
+        match self {
+            Self::SameControllerAsTargetSlot(_)
+            | Self::OtherThanTargetSlot(_)
+            | Self::SameToughnessAsTargetSlot(_)
+            | Self::SameGraveyardAsTargetSlot(_)
+            | Self::SlotsTotalManaValueAtMost(_)
+            | Self::SlotsTotalManaValueAtMostX => Self::Any,
+            Self::And(a, b) => Self::And(Box::new(a.without_cross_slot()), Box::new(b.without_cross_slot())),
+            Self::Or(a, b) => Self::Or(Box::new(a.without_cross_slot()), Box::new(b.without_cross_slot())),
+            // "Not" of a cross atom: leave it to the slot-aware check.
+            Self::Not(a) if a.mentions_cross_slot() => Self::Any,
+            other => other.clone(),
+        }
+    }
+
+    /// The same filter with each "target slot N" atom moved to slot N + `by`:
+    /// a cast-time mode's own slot 0 is the spell's slot `by` (CR 601.2c).
+    pub fn shift_target_slots(&self, by: u8) -> Self {
+        let s = |n: &u8| n.saturating_add(by);
+        match self {
+            Self::SameControllerAsTargetSlot(n) => Self::SameControllerAsTargetSlot(s(n)),
+            Self::OtherThanTargetSlot(n) => Self::OtherThanTargetSlot(s(n)),
+            Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
+            Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
+            Self::And(a, b) => Self::And(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
+            Self::Or(a, b) => Self::Or(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
+            Self::Not(a) => Self::Not(Box::new(a.shift_target_slots(by))),
+            other => other.clone(),
+        }
+    }
+
     /// Replace `ManaValueAtMostConverged` with a concrete
     /// `ManaValueAtMost(n)` for the resolving spell's converge count
     /// (Bring to Light), recursing through And/Or/Not.

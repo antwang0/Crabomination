@@ -101,6 +101,28 @@ mod recent111 {
         assert!(g.players[0].graveyard.iter().any(|c| c.id == mine));
     }
 
+    /// CR 608.2b / 400.7 — a targeted graveyard card that left the graveyard
+    /// before the trigger resolved is a new object: it stays where it went
+    /// (the shuffle used to pull it out of exile); the other target goes home.
+    #[test]
+    fn loaming_shaman_skips_a_target_that_left_the_graveyard() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+        let shaman = g.add_card_to_battlefield(0, catalog::loaming_shaman());
+        let at = g.players[1].graveyard.iter().position(|c| c.id == bolt).unwrap();
+        let card = g.players[1].graveyard.remove(at);
+        g.exile.push(card);
+        let etb = catalog::loaming_shaman().triggered_abilities[0].effect.clone();
+        let ctx = crabomination::game::effects::EffectContext {
+            targets: vec![Target::Player(1), Target::Permanent(bear), Target::Permanent(bolt)],
+            ..crabomination::game::effects::EffectContext::for_trigger(shaman, 0, None, 0)
+        };
+        g.resolve_effect(&etb, &ctx).expect("resolves");
+        assert!(g.players[1].library.iter().any(|c| c.id == bear));
+        assert!(g.exile.iter().any(|c| c.id == bolt), "the exiled card is no longer that target");
+    }
+
     /// Defense of the Heart fires only against three opposing creatures.
     #[test]
     fn defense_of_the_heart_tutors_two() {

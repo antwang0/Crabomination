@@ -10256,7 +10256,12 @@ impl GameState {
                     kicked,
                 )
                 .unwrap_or_else(|| target_effect.target_filter_for_slot_in_mode_kicked(slot, mode, kicked))
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)));
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                .map(|f| {
+                    // A chosen mode's cross-slot atoms count from its own slot 0.
+                    let first = crate::game::spree_targets::chosen_mode_first_slot(target_effect, &card.spree_modes, slot);
+                    if first > 0 && f.mentions_cross_slot() { f.shift_target_slots(first as u8) } else { f }
+                });
                 self.target_out_of_zone(target_effect, filter.as_ref(), tgt)
                     || filter.is_some_and(|filter| {
                         !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
