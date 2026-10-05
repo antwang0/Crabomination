@@ -1075,9 +1075,8 @@ impl GameState {
             Value::XFromCost => ctx.x_value as i32,
             Value::GreatestSacrificedPowerThisResolution => self
                 .scratch
-                .cards_sacrificed_this_resolution
+                .sacrificed_lki_this_resolution
                 .iter()
-                .filter_map(|id| self.died_card_snapshots.get(id))
                 .map(|c| c.power())
                 .max()
                 .unwrap_or(0),
@@ -1395,9 +1394,8 @@ impl GameState {
             Value::SacrificedThisResolutionBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 self.scratch
-                    .cards_sacrificed_this_resolution
+                    .sacrificed_lki_this_resolution
                     .iter()
-                    .filter_map(|id| self.died_card_snapshots.get(id))
                     .filter(|c| {
                         c.controller == p
                             && crate::game::layers::requirement_matches_card(filter, c, p)

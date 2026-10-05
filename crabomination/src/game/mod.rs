@@ -2362,6 +2362,13 @@ pub struct ResolutionScratch {
     /// suspended ask sits across.
     #[serde(default)]
     pub(crate) first_sacrificed_types: Vec<crate::card::CardType>,
+    /// Each permanent sacrificed this resolution, as it last existed (CR
+    /// 608.2h). `died_card_snapshots` is cleared at the dispatch a suspended
+    /// ask sits across; this survives the resume, so "lands sacrificed this
+    /// way" (Wave of Vitriol) and "the greatest power among them" (Shadowgrange
+    /// Archfiend) still count after a later seat was asked.
+    #[serde(skip)]
+    pub(crate) sacrificed_lki_this_resolution: Vec<CardInstance>,
     /// A sacrificed TOKEN's creature types and changeling, beside its id
     /// (CR 608.2h): it is gone by the time a cost-paid spell resolves
     /// (Endemic Plague). A nontoken is still read from its graveyard, so only

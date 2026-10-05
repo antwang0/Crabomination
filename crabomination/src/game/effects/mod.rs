@@ -3148,6 +3148,7 @@ impl GameState {
             clear_scratch!(self.players_sacrificed_this_resolution);
             clear_scratch!(self.cards_sacrificed_this_resolution);
             clear_scratch!(self.first_sacrificed_types);
+            clear_scratch!(self.sacrificed_lki_this_resolution);
             clear_opt_scratch!(self.named_card_this_resolution);
             clear_scratch!(self.names_this_resolution);
         }
@@ -3386,12 +3387,16 @@ impl GameState {
         events.append(&mut die_evs);
     }
 
-    /// Stamp the card types of the resolution's first sacrifice while `id` is
-    /// still on the battlefield (computed types: an animated land is a creature).
+    /// Record a sacrifice while `id` is still on the battlefield: the first
+    /// one's computed card types, and every one's last-known object.
     fn note_first_sacrificed(&mut self, id: CardId) {
         if self.scratch.cards_sacrificed_this_resolution.is_empty() {
             let types = self.computed_permanent(id).map(|cp| cp.card_types().clone()).unwrap_or_default();
             self.scratch.first_sacrificed_types = types;
+        }
+        if let Some(c) = self.battlefield_find(id) {
+            let lki = self.lki_clone(c);
+            self.scratch.sacrificed_lki_this_resolution.push(lki);
         }
     }
 

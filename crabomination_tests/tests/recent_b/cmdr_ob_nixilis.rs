@@ -563,3 +563,42 @@ fn xathrid_demon_feeds_or_bites() {
     assert!(g.battlefield_find(demon).unwrap().tapped);
     assert_eq!(g.players[0].life, 13);
 }
+
+/// CR 608.2h — "each player who sacrificed a creature this way draws two" is
+/// read after the opponent's sacrifice, which suspends when they have a
+/// choice (every pod seat prompts). The dispatch between suspend and resume
+/// cleared the death snapshots the count read, so the caster's draw was
+/// skipped; the resolution keeps its own record now.
+#[test]
+fn infernal_offering_still_pays_the_caster_after_the_opponents_choice() {
+    use crabomination::decision::{AutoDecider, Decider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::swamp());
+        }
+        g.players[seat].wants_ui = true;
+    }
+    let offering = g.add_card_to_hand(0, catalog::infernal_offering());
+    let hand = g.players[0].hand.len();
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: offering, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    let mut asked = 0;
+    for _ in 0..60 {
+        if let Some(pd) = &g.pending_decision {
+            asked += 1;
+            let answer = AutoDecider.decide(&pd.decision);
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(asked > 0, "the opponent's sacrifice was a real (suspending) choice");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cast one, drew two");
+}
