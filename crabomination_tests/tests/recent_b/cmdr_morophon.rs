@@ -233,6 +233,28 @@ fn nameless_inversion_strips_every_type() {
     assert!(cp.subtypes().creature_types.is_empty() && !cp.keywords().contains(&Keyword::Changeling));
 }
 
+/// CR 613.7 — Amoeboid Changeling's two layer-4 effects apply in timestamp
+/// order: lose all creature types, then gain all creature types the same
+/// turn, and the creature is every type again (and the reverse leaves none).
+#[test]
+fn amoeboid_changeling_type_effects_follow_timestamps() {
+    let mut g = main_phase(2);
+    let a = g.add_card_to_battlefield(0, catalog::amoeboid_changeling());
+    let b = g.add_card_to_battlefield(0, catalog::amoeboid_changeling());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    let every = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Changeling);
+    activate(&mut g, a, 1, &[Target::Permanent(bear)]).expect("lose");
+    activate(&mut g, b, 0, &[Target::Permanent(bear)]).expect("gain");
+    assert!(every(&g), "the later gain wins");
+    let c = g.add_card_to_battlefield(0, catalog::amoeboid_changeling());
+    g.clear_sickness(c);
+    activate(&mut g, c, 1, &[Target::Permanent(bear)]).expect("lose again");
+    assert!(!every(&g), "the later loss wins");
+}
+
 /// Raise the Palisade bounces every creature not of the chosen type (a
 /// changeling is every type).
 #[test]

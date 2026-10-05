@@ -1902,7 +1902,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Gap |
 |---|---|
-| 🟡 Loaming Shaman | "any number of target cards from target player's graveyard" shuffles the **whole** graveyard back; no pick. Needs a multi-target any-number graveyard selector. |
 
 ### Seats 33, 34, 36, 37 and 40 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15, Call the Spirits C15) — open residuals, 2026-09-24
 
@@ -1934,8 +1933,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
-| 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |
-| 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | the "reveal" is automatic whenever an Elemental card is in hand. |

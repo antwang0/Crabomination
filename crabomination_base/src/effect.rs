@@ -8249,6 +8249,10 @@ pub enum Effect {
     /// "That creature becomes a Mutant in addition to its other types"
     /// (Jenova, Ancient Calamity).
     AddCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
+    /// CR 205.3 — "gains all creature types" for `duration`: a layer-4
+    /// `Modification::EveryCreatureType`, ordered against type-setting
+    /// effects by timestamp (Amoeboid Changeling).
+    GainAllCreatureTypes { what: Selector, duration: Duration },
     /// CR 612 — change the target's text by replacing all instances of one
     /// color word with another, both chosen by the controller (layer 3;
     /// rewrites Protection-from-color). Trait Doctoring, Mind Bend.

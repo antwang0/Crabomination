@@ -1628,6 +1628,10 @@ fn compute_permanent_pass(
         || (lost_all_abilities && !creature_types_set && def.keywords.contains(&Keyword::Changeling));
     if every_creature_type && !keywords.contains(&Keyword::Changeling) {
         keywords.push(Keyword::Changeling);
+    } else if !every_creature_type && creature_types_set && keywords.contains(&Keyword::Changeling) {
+        // A later layer-4 "set" overwrote changeling's every type (the
+        // changeling ruling); the computed view stops answering every type.
+        keywords.retain(|k| *k != Keyword::Changeling);
     }
 
     // Compute final P/T.

@@ -1,11 +1,6 @@
 //! Commander: the cards the **Everyone's Invited!** Secret Lair Commander
 //! deck (SLD, Morophon, the Boundless) needed beyond what the catalog had.
 //! Tests in `tests/recent_b/cmdr_morophon.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Amoeboid Changeling, Nameless Inversion** — "loses all creature types"
-//!   empties the type line and strips Changeling until end of turn (a later
-//!   grant the same turn doesn't restore it).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -64,18 +59,15 @@ fn make(count: Value, definition: TokenDefinition) -> Effect {
     Effect::CreateToken { who: PlayerRef::You, count, definition: Arc::new(definition) }
 }
 
-/// "gains all creature types until end of turn" — a Changeling grant.
+/// "gains all creature types until end of turn" — layer 4, by timestamp.
 fn gain_all_types(what: Selector) -> Effect {
-    Effect::GrantKeyword { what, keyword: Keyword::Changeling, duration: Duration::EndOfTurn }
+    Effect::GainAllCreatureTypes { what, duration: Duration::EndOfTurn }
 }
 
-/// "loses all creature types until end of turn" — an empty type line, and
-/// no Changeling to answer every type anyway.
+/// "loses all creature types until end of turn" — an empty type line set in
+/// layer 4, which overwrites changeling's every type (CR 613.7 timestamps).
 fn lose_all_types(what: Selector) -> Effect {
-    Effect::Seq(vec![
-        Effect::BecomeCreatureType { what: what.clone(), creature_types: vec![], duration: Duration::EndOfTurn },
-        Effect::LoseKeyword { what, keyword: Keyword::Changeling, duration: Duration::EndOfTurn },
-    ])
+    Effect::BecomeCreatureType { what, creature_types: vec![], duration: Duration::EndOfTurn }
 }
 
 /// Amoeboid Changeling — {T}: a creature gains, or loses, all creature types.
