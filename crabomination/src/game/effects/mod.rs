@@ -5882,13 +5882,21 @@ impl GameState {
                     _ => ctx.source,
                 };
                 let Some(owner) = owner else { return Ok(()) };
-                let Some(idx) = self.stack.iter().rposition(|si| {
+                let on_stack = self.stack.iter().rposition(|si| {
                     matches!(si, StackItem::Trigger { source, activated: true, .. }
                         if *source == owner)
-                }) else {
-                    return Ok(());
+                });
+                // Countered before this resolved: the copy is made from the
+                // ability as it last existed (Unbound Flourishing, 2019-06-14).
+                let mut copy = match on_stack {
+                    Some(idx) => self.stack[idx].clone(),
+                    None => match self.countered_activations_this_turn.iter().rev().find(|si| {
+                        matches!(si, StackItem::Trigger { source, .. } if *source == owner)
+                    }) {
+                        Some(si) => si.clone(),
+                        None => return Ok(()),
+                    },
                 };
-                let mut copy = self.stack[idx].clone();
                 // CR 706.10 — "you may choose new targets for the copy".
                 if let StackItem::Trigger {
                     controller,
@@ -23730,7 +23738,10 @@ impl GameState {
                 // Two targets naming one source find the same trigger.
                 to_remove.dedup();
                 for pos in to_remove {
-                    self.stack.remove(pos);
+                    let gone = self.stack.remove(pos);
+                    if matches!(gone, StackItem::Trigger { activated: true, .. }) {
+                        self.countered_activations_this_turn.push(gone);
+                    }
                 }
                 Ok(())
             }

@@ -1559,6 +1559,12 @@ pub struct ColdState {
     /// planeswalker or battle attack writes it.
     #[serde(default)]
     pub(crate) attacked_permanent_defenders: Vec<(CardId, usize)>,
+    /// Activated abilities countered this turn, as they last existed on the
+    /// stack: a "copy that ability" trigger still copies one countered
+    /// before it resolved (Unbound Flourishing's 2019-06-14 ruling). Cold:
+    /// only a countered activation writes it; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) countered_activations_this_turn: Vec<crate::game::types::StackItem>,
     /// Aeon Engine — the game's turn order is reversed: every walk "in turn
     /// order" (the next turn, priority, APNAP) goes the other way round the
     /// table. Reversing again restores the original order. Cold: written once

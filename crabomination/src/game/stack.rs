@@ -5218,6 +5218,7 @@ impl GameState {
         // Bubbling Muck's floating "Swamps add an extra {B}" grant is a
         // "until end of turn" effect (CR 514.2).
         clear_cold!(self.extra_mana_on_land_tap_this_turn);
+        clear_cold!(self.countered_activations_this_turn);
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.
