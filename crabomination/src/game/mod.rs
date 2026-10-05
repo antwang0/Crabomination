@@ -30297,8 +30297,12 @@ impl GameState {
                 self.stamp_trigger_subject(Some(f), trigger_source_ent);
                 f.resolve_x(x_value).resolve_converge(converged_value)
             }) {
+                // Checked once, as the ability starts to resolve: a resumed
+                // continuation is mid-resolution, and its own first part may
+                // have moved the target (an exile, then an asked "may").
                 Some(filter)
-                    if !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
+                    if !resuming
+                        && !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {
                     self.drop_resume_channels_on_fizzle(resuming);
                     return Ok(());

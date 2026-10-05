@@ -4888,6 +4888,37 @@ pub(crate) fn resolve_answering(g: &mut GameState) {
     assert!(g.pending_decision.is_none(), "every ask was answered");
 }
 
+/// CR 608.2b — a trigger's target legality is checked once, as it starts to
+/// resolve. A resumed trigger re-ran the check on its continuation: an
+/// ability that exiles its creature target and then asks a "may" still
+/// carried the slot-0 creature filter after the ask, failed it against the
+/// exiled card, and fizzled — the answered "yes" did nothing.
+#[test]
+fn cr_608_2b_a_resumed_trigger_does_not_recheck_its_target() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(3);
+    g.players[0].wants_ui = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let target = || Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::OnBattlefield) };
+    let body = Effect::Seq(vec![
+        Effect::Exile { what: target() },
+        Effect::MayDo {
+            description: "Gain 3 life?".into(),
+            body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+        },
+        Effect::Exile { what: target() },
+    ]);
+    let life = g.players[0].life;
+    g.stack.push(TriggerPush::new(src, 0, body).target(Some(crabomination::game::types::Target::Permanent(victim))).build());
+    resolve_answering(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "the first step exiled it");
+    assert_eq!(g.players[0].life, life + 3, "the answered may still resolved");
+}
+
 /// Two cards into each opponent's hand, and the hand sizes before the loop.
 fn stock_opponent_hands(g: &mut GameState, seats: std::ops::Range<usize>) -> Vec<usize> {
     for seat in seats {
