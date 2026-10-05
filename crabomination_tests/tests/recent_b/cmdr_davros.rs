@@ -752,3 +752,57 @@ fn the_master_multiplied_stops_its_controllers_end_step_sacrifice() {
         assert_eq!(left, if with_master { 3 } else { 1 }, "with The Master: {with_master}");
     }
 }
+
+/// The Master, Multiplied's shield holds across its controller's trigger's
+/// own suspend: an opponent's sacrifice choice (a prompting seat) comes first,
+/// and on the resume the trigger still can't make you sacrifice your creature
+/// token — it used to be re-armed only for the first pass.
+#[test]
+fn the_master_multiplied_shields_tokens_after_a_suspend() {
+    use crabomination::card::{SelectionRequirement as R, TokenDefinition, TriggeredAbility};
+    use crabomination::decision::{AutoDecider, Decider, Decision};
+    use crabomination::effect::{EventKind, EventScope, EventSpec, PlayerRef, Value};
+    let mut g = main_phase(2);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.add_card_to_battlefield(0, catalog::the_master_multiplied());
+    let token = g.add_token_to_battlefield(
+        0,
+        &TokenDefinition { name: "Clone".into(), power: 1, toughness: 1, card_types: vec![CardType::Creature], ..Default::default() },
+    );
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let edict = |who| Effect::Sacrifice { who, count: Value::ONE, filter: R::Creature };
+    let mut altar = catalog::honor_of_the_pure();
+    altar.static_abilities.clear();
+    altar.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Seq(vec![edict(Selector::Player(PlayerRef::Seat(1))), edict(Selector::You)]),
+    }];
+    let src = g.add_card_to_battlefield(0, altar);
+    g.fire_self_etb_triggers(src, 0);
+    let mut offered_token = false;
+    for _ in 0..40 {
+        if let Some(pd) = &g.pending_decision {
+            let d = pd.decision.clone();
+            if pd.acting_player() == 0 {
+                let ids: Vec<CardId> = match &d {
+                    Decision::ChooseCards { candidates, .. } => candidates.iter().map(|c| c.0).collect(),
+                    Decision::ChooseTarget { legal, .. } => {
+                        legal.iter().filter_map(|t| if let Target::Permanent(id) = t { Some(*id) } else { None }).collect()
+                    }
+                    _ => vec![],
+                };
+                offered_token |= ids.contains(&token);
+            }
+            g.perform_action(GameAction::SubmitDecision(AutoDecider.decide(&d))).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(!offered_token, "the trigger can't make you sacrifice your creature token");
+    assert!(g.battlefield_find(token).is_some());
+}

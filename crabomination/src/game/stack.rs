@@ -3460,7 +3460,9 @@ impl GameState {
                     false,
                     &mut events,
                 );
-                if token_shield {
+                // Kept across this trigger's own suspend (nothing else resolves
+                // while its decision is pending); the resume clears it.
+                if token_shield && self.pending_decision.is_none() {
                     self.scratch.token_shield_seat = None;
                 }
                 resolved?;

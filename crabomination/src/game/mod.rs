@@ -27358,6 +27358,10 @@ impl GameState {
                     additional_targets, true, &mut evs,
                 )?;
                 let suspended_again = self.pending_decision.is_some();
+                // The Master, Multiplied's shield, armed by the first pass.
+                if !suspended_again && self.scratch.token_shield_seat.is_some() {
+                    self.scratch.token_shield_seat = None;
+                }
                 if had_lki {
                     self.resolving_lki_source = None;
                     if !suspended_again {
