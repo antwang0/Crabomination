@@ -19730,8 +19730,12 @@ impl GameState {
             // every error puts it back. Drop it instead; the suspend points
             // that pose these prompts have paid nothing yet, so the aborted
             // action leaves nothing behind.
+            // Its continuation's replay log goes too, as when a departed
+            // seat's ask is dropped (CR 800.4a): the next resolution's first
+            // ask would otherwise replay these answers as its own.
             if answered {
                 self.pending_decision = None;
+                self.clear_answer_log();
             }
         }
         self.clear_stale_target_suppression();

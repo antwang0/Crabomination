@@ -32,3 +32,30 @@ impl GameState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::catalog;
+    use crate::decision::DecisionAnswer;
+    use crate::game::types::GameAction;
+    use crate::game::*;
+
+    /// An answer whose resumed action fails rolls back and drops the decision;
+    /// the replay log it would have resumed from goes with it, or the next
+    /// resolution's first ask replays a stale answer (Divergent Equation's
+    /// unpayable X, with a planted earlier answer).
+    #[test]
+    fn a_dropped_decision_takes_its_replay_log() {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.players[0].manual_mana = true;
+        g.add_card_to_battlefield(0, catalog::island());
+        let id = g.add_card_to_hand(0, catalog::divergent_equation());
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("the cast suspends on the X pick");
+        g.log_answer(DecisionAnswer::Bool(true), Some(0));
+        assert!(g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(3))).is_err());
+        assert!(g.pending_decision.is_none());
+        assert!(g.scratch.resolution_answer_log.is_empty(), "no answer outlives the dropped decision");
+    }
+}
