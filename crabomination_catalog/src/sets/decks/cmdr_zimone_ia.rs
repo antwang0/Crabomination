@@ -509,10 +509,9 @@ pub fn striding_shotcaller() -> CardDefinition {
 
 /// Unbound Flourishing — your {X} permanent spells get double X; your {X}
 /// instants, sorceries and activated abilities with {X} in their activation
-/// cost are copied (`ActivationCostHasX`; a −X loyalty cost isn't {X}).
-///
-/// Residual: an {X} activated ability countered before the copy trigger
-/// resolves isn't copied (2019-06-14: the copy is created anyway).
+/// cost are copied (`ActivationCostHasX`; a −X loyalty cost isn't {X}); one
+/// countered before the copy trigger resolves is copied as it last existed
+/// (2019-06-14).
 pub fn unbound_flourishing() -> CardDefinition {
     // `CastSpellHasX`, not `HasXInCost` inside `CastSpellMatches`: on the
     // stack a spell's cost reads with its X filled in (CR 202.3e).

@@ -423,6 +423,42 @@ fn unbound_flourishing_copies_x_activations() {
     assert_eq!(g.battlefield_find(hp).unwrap().counter_count(CounterType::Charge), 6, "3 + a copied 3");
 }
 
+/// Unbound Flourishing, 2019-06-14 ruling — an {X} ability countered before
+/// the copy trigger resolves is still copied, as it last existed: Stifle
+/// takes the Pinnacle's own 3, the copy still adds 3.
+#[test]
+fn unbound_flourishing_copies_a_countered_x_activation() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::unbound_flourishing());
+    let hp = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hp, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(3), mode: None,
+    })
+    .expect("pinnacle");
+    // The ability's own id (the Pinnacle has shroud, CR 115.1).
+    let ability = g
+        .stack
+        .iter()
+        .find_map(|si| match si {
+            crabomination::game::types::StackItem::Trigger { source, ability_id, .. } if *source == hp => {
+                Some(CardId(*ability_id))
+            }
+            _ => None,
+        })
+        .expect("the activation");
+    let stifle = g.add_card_to_hand(1, catalog::stifle());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stifle, target: Some(Target::Permanent(ability)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("stifle the pinnacle's ability");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hp).unwrap().counter_count(CounterType::Charge), 3, "the copy's 3 only");
+}
+
 /// Yavimaya Bloomsage — its end step grows a creature and prepares Channel
 /// once that creature reaches power 7.
 #[test]
