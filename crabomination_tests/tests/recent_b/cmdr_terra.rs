@@ -307,6 +307,29 @@ fn espers_to_magicite_crystallizes_a_creature() {
     assert_eq!(tok.definition.name, "Grizzly Bears");
 }
 
+/// CR 603.12 — "when you do" is a reflexive trigger: the copy waits on the
+/// stack after the exile (a response window), its target a card exiled with
+/// the spell; and CR 707.9b — the artifact-only type line is a copiable
+/// value, so the token's own definition (what a copy of it would copy) is a
+/// noncreature artifact.
+#[test]
+fn espers_to_magicite_copies_from_a_reflexive_trigger() {
+    let mut g = main_phase(2);
+    g.add_card_to_graveyard(1, catalog::craw_wurm());
+    let spell = g.add_card_to_hand(0, catalog::espers_to_magicite());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("the spell resolves");
+    assert_eq!(g.stack.len(), 1, "the reflexive trigger waits on the stack");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no token yet");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).expect("a token");
+    assert_eq!(tok.definition.card_types, vec![CardType::Artifact]);
+    assert!(tok.definition.subtypes.creature_types.is_empty());
+}
+
 /// Shadow may sacrifice a permanent on a hit: draw two, drain its mana value.
 #[test]
 fn shadow_throws_a_permanent() {

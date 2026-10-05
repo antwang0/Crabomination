@@ -275,39 +275,50 @@ pub fn edgar_master_machinist() -> CardDefinition {
     }
 }
 
-/// Espers to Magicite — exile each opponent's graveyard and copy a creature
-/// card exiled this way, your choice, as a noncreature artifact token.
-/// Residual: the card is chosen as the spell resolves, not targeted by a
-/// reflexive "when you do" trigger (no window to respond between).
+/// Espers to Magicite — exile each opponent's graveyard; when you do, a token
+/// copy of up to one target creature card exiled this way, except it's an
+/// artifact and loses its other card types (copiable values, CR 707.9b).
 pub fn espers_to_magicite() -> CardDefinition {
+    let exiled_creature = R::Creature.and(R::InExile).and(R::ExiledWithSource);
     spell(
         "Espers to Magicite",
         cost(&[generic(3), b()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent, filter: None },
-            crate::effect::shortcut::choose_one_then(
-                Selector::ExiledThisResolution { filter: R::Creature },
-                PlayerRef::You,
-                Effect::Seq(vec![
-                    Effect::CreateTokenCopyOf {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        source: crate::effect::shortcut::chosen_one(),
-                        extra_creature_types: vec![],
-                        extra_card_types: vec![],
-                        override_pt: None,
-                        override_colors: None,
-                        enters_tapped: false,
-                        non_legendary: false,
-                        legendary: false,
-                        extra_keywords: vec![],
-                        no_mana_cost: false,
-                        enters_with_counters: None,
-                    },
-                    Effect::SetCardTypesTo { what: Selector::LastCreatedTokens, card_types: vec![CardType::Artifact] },
-                ]),
-            ),
+            Effect::ExileWithSource {
+                what: Selector::CardsInZone { who: PlayerRef::EachOpponent, zone: Zone::Graveyard, filter: R::Any },
+            },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::TargetFiltered { slot: 0, filter: exiled_creature },
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: None,
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![],
+                            no_mana_cost: false,
+                            enters_with_counters: None,
+                        },
+                        Effect::AmendCopiableValues {
+                            what: Selector::LastCreatedTokens,
+                            name: None,
+                            set_creature_types: None,
+                            add_creature_types: vec![],
+                            legendary: false,
+                            add_colors: vec![],
+                            set_card_types: Some(vec![CardType::Artifact]),
+                        },
+                    ])),
+                }),
+            },
         ]),
     )
 }
