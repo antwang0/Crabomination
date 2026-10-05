@@ -10987,6 +10987,7 @@ impl GameState {
                     count: self.sacrificed_count,
                     mana_value: mv,
                     card: sac_card,
+                    traits: self.sacrificed_traits(),
                     body: Box::new(def.effect.clone()),
                 };
             }
@@ -22662,6 +22663,9 @@ impl GameState {
         // "Exile a [filter] you control:" as a cost (Food Chain). Stamps the
         // last exiled permanent's mana value for `Value::ExiledForCostManaValue`.
         self.exiled_for_cost_mana_value = None;
+        if self.exiled_for_cost_card.is_some() {
+            self.exiled_for_cost_card = None;
+        }
         for cid in exile_permanent_picks {
             let mv = self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32);
             self.move_card_to(
@@ -23238,6 +23242,7 @@ impl GameState {
                         count: cost_sac_count,
                         mana_value: cost_sac_mv,
                         card: cost_sac_card,
+                    traits: self.sacrificed_traits(),
                         body: Box::new(ability.effect.clone()),
                     };
                     &sac_wrapper
@@ -23292,6 +23297,7 @@ impl GameState {
                     count: cost_sac_count,
                     mana_value: cost_sac_mv,
                     card: cost_sac_card,
+                    traits: self.sacrificed_traits(),
                     // Cloned rather than moved: `ability` is borrowed out of
                     // `held` now. Only the non-mana path reaches here, and it
                     // is about to put the body on the stack.
@@ -23313,6 +23319,7 @@ impl GameState {
                 || !self.tapped_for_cost.is_empty()
                 || !self.scratch.cost_sacrificed_batch.is_empty()
                 || self.cost_discarded_mana_value.is_some()
+                || self.exiled_for_cost_card.is_some()
             {
                 queued_effect = Effect::WithPaidCosts {
                     paid: Box::new(crate::effect::PaidCostRecord {
@@ -23321,6 +23328,7 @@ impl GameState {
                         tapped: self.tapped_for_cost.to_vec(),
                         sacrificed_batch: self.scratch.cost_sacrificed_batch.to_vec(),
                         discarded_mana_value: self.cost_discarded_mana_value,
+                        exiled_card: self.exiled_for_cost_card,
                     }),
                     body: Box::new(queued_effect),
                 };

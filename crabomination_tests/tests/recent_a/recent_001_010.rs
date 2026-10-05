@@ -10499,6 +10499,44 @@ mod recent6 {
         assert_eq!(g.players[1].life, life - 2, "the red token's sacrifice deals 2");
     }
 
+    /// CR 602.2b — what a sacrifice cost paid travels with its ability: a
+    /// second Lyzolda activation in response (sacrificing a black creature)
+    /// doesn't make the first, red one read "black" when it resolves.
+    #[test]
+    fn lyzolda_activations_keep_their_own_sacrifice() {
+        use crabomination::card::TokenDefinition;
+        use crabomination::game::types::Target;
+        let token = |c| TokenDefinition {
+            name: "Rogue".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![crabomination::card::CardType::Creature],
+            colors: vec![c],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let lyzolda = g.add_card_to_battlefield(0, catalog::lyzolda_the_blood_witch());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::swamp());
+        }
+        let activate = |g: &mut GameState| {
+            g.players[0].mana_pool.add_colorless(2);
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: lyzolda, ability_index: 0, target: Some(Target::Player(1)),
+                additional_targets: vec![], x_value: None, mode: None,
+            })
+            .expect("activate");
+        };
+        g.add_token_to_battlefield(0, &token(crabomination::mana::Color::Red));
+        activate(&mut g);
+        g.add_token_to_battlefield(0, &token(crabomination::mana::Color::Black));
+        activate(&mut g);
+        let (life, hand) = (g.players[1].life, g.players[0].hand.len());
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life - 2, "the red sacrifice dealt 2");
+        assert_eq!(g.players[0].hand.len(), hand + 1, "the black one drew 1");
+    }
+
     /// Falkenrath Aristocrat grows only when the sacrifice was a Human.
     #[test]
     fn falkenrath_aristocrat_grows_off_a_human_sacrifice() {

@@ -31771,8 +31771,15 @@ impl GameState {
                 count,
                 mana_value,
                 card,
+                traits,
                 body,
             } => {
+                if let Some(t) = traits {
+                    self.sacrificed_was_artifact = t.artifact;
+                    self.sacrificed_was_outlaw = t.outlaw;
+                    self.sacrificed_was_vehicle = t.vehicle;
+                    self.sacrificed_colors = t.colors.clone();
+                }
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_total_power = *total_power;
                 self.sacrificed_toughness = Some(*toughness);
@@ -31809,6 +31816,9 @@ impl GameState {
                     self.scratch.cost_sacrificed_batch = paid.sacrificed_batch.clone();
                 }
                 self.cost_discarded_mana_value = paid.discarded_mana_value;
+                if self.exiled_for_cost_card != paid.exiled_card {
+                    self.exiled_for_cost_card = paid.exiled_card;
+                }
                 self.run_effect(body, ctx, events)
             }
 

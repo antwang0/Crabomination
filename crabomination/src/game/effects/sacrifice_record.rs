@@ -37,4 +37,16 @@ impl GameState {
             self.scratch.sacrificed_token_lki = lki.map(Box::new);
         }
     }
+
+    /// The type / colour flags of the last cost sacrifice, for
+    /// `Effect::WithSacrificedPt` to carry to resolution (CR 602.2b).
+    pub(crate) fn sacrificed_traits(&self) -> Option<Box<crate::effect::SacrificedTraits>> {
+        let t = crate::effect::SacrificedTraits {
+            artifact: self.sacrificed_was_artifact,
+            outlaw: self.sacrificed_was_outlaw,
+            vehicle: self.sacrificed_was_vehicle,
+            colors: self.sacrificed_colors.clone(),
+        };
+        (t != crate::effect::SacrificedTraits::default()).then(|| Box::new(t))
+    }
 }

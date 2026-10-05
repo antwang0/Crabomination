@@ -10956,6 +10956,11 @@ pub enum Effect {
         /// The sacrificed permanent itself, for `Selector::SacrificedCard`.
         #[serde(default)]
         card: Option<crate::card::CardId>,
+        /// Its type / colour flags (`Predicate::SacrificedWas*`,
+        /// `SharesColorWithSacrificed`), which a cost paid in response would
+        /// otherwise overwrite before this resolves.
+        #[serde(default)]
+        traits: Option<Box<SacrificedTraits>>,
         body: Box<Effect>,
     },
 
@@ -13554,4 +13559,17 @@ pub struct PaidCostRecord {
     pub sacrificed_batch: Vec<crate::card::CardId>,
     /// `Value::LastDiscardedManaValue`'s cost fallback.
     pub discarded_mana_value: Option<u32>,
+    /// `Selector::ExiledForCost`.
+    #[serde(default)]
+    pub exiled_card: Option<crate::card::CardId>,
+}
+
+/// What `Effect::WithSacrificedPt` re-stamps beside the numbers: the
+/// sacrificed permanent's type and colour flags at the time it was paid.
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct SacrificedTraits {
+    pub artifact: Option<bool>,
+    pub outlaw: Option<bool>,
+    pub vehicle: Option<bool>,
+    pub colors: Option<Vec<crate::mana::Color>>,
 }
