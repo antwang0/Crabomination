@@ -385,10 +385,14 @@ fn cr_602_5b_primordial_mist_asks_which_face_down_permanent() {
 fn silent_blade_oni_steals() {
     let mut g = pod();
     let o = g.add_card_to_battlefield(0, catalog::silent_blade_oni());
-    g.add_card_to_hand(1, catalog::sol_ring());
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let ring = g.add_card_to_hand(1, catalog::sol_ring());
+    g.add_card_to_hand(1, catalog::craw_wurm());
+    // "You may cast a nonland card in it" — the caster names it: Sol Ring,
+    // not the engine's priciest (the Wurm).
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![ring]), DecisionAnswer::Bool(true)]));
     connect(&mut g, o);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Sol Ring"));
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Craw Wurm"));
 }
 
 /// CR 903.8 — Skull Storm copies per commander cast; creatureless opponents

@@ -20709,17 +20709,37 @@ impl GameState {
                 if p != ctx.controller && !self.hands_revealed_to.contains(&(ctx.controller, p)) {
                     self.hands_revealed_to.push((ctx.controller, p));
                 }
-                // Prefer the priciest castable card — the whole point of the
-                // trigger. `CastWithoutPayingImmediate` re-checks legality.
-                let Some(pick) = self.players[p]
+                // "You may cast a nonland card in it" — the caster picks, or
+                // declines. The default (a headless seat's) is the priciest,
+                // the whole point of the trigger. `CastWithoutPayingImmediate`
+                // re-checks legality.
+                let nonland: Vec<(CardId, String, u32)> = self.players[p]
                     .hand
                     .iter()
                     .filter(|c| !c.definition.is_land())
-                    .max_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id)
-                else {
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                let Some(best) = nonland.iter().max_by_key(|c| c.2).map(|c| c.0) else {
+                    self.clear_answer_log();
                     return Ok(());
                 };
+                let mut cursor = 0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    ctx.controller,
+                    "You may cast a nonland card from that hand without paying its mana cost".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    nonland.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    0,
+                    1,
+                    PickValue::Gain,
+                    effect,
+                    vec![best],
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let Some(pick) = picked.first().copied() else { return Ok(()) };
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
