@@ -2455,13 +2455,18 @@ impl GameState {
         if let Ok(evs) = self.resolve_effect_driven(&copy, &ctx) {
             events.extend(evs);
         }
+        // CR 603.7 — "When you do, tap the copied creature …": a reflexive
+        // trigger, so the lock waits on the stack (Wall of Stolen Identity).
         if spec.lock_copied
-            && let Ok(evs) = self.resolve_effect_driven(
-                &Effect::TapAndLockWhileSourcePresent { what: crate::effect::Selector::Target(0), while_you_control: true },
-                &ctx,
-            )
+            && let Some(crate::game::types::Target::Permanent(copied)) = ctx.targets.first().cloned()
         {
-            events.extend(evs);
+            let lock = Effect::TapAndLockWhileSourcePresent {
+                what: crate::effect::Selector::ExactObjects(vec![copied]),
+                while_you_control: true,
+            };
+            if let Ok(evs) = self.resolve_effect_driven(&Effect::ReflexiveTrigger { body: Box::new(lock) }, &ctx) {
+                events.extend(evs);
+            }
         }
         // Layer the copy-exception abilities/keywords on top of the
         // copiable characteristics (e.g. Phantasmal Image's sacrifice rider),

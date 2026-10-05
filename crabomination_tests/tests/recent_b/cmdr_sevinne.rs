@@ -174,6 +174,26 @@ fn wall_of_stolen_identity_copies_and_locks() {
     assert!(g.battlefield_find(wurm).is_some_and(|c| c.tapped), "it doesn't untap while the Wall remains");
 }
 
+/// CR 603.7 — Wall of Stolen Identity's "When you do, tap the copied
+/// creature" is a reflexive trigger: the Wall resolves, then the lock waits
+/// on the stack (a response window), and taps the creature as it resolves.
+#[test]
+fn wall_of_stolen_identity_locks_by_a_reflexive_trigger() {
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase();
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let wall = g.add_card_to_hand(0, catalog::wall_of_stolen_identity());
+    flood(&mut g, 0);
+    g.perform_action(cast(wall, None)).expect("Wall");
+    let events = g.resolve_top_of_stack().expect("the Wall resolves");
+    g.dispatch_triggers_for_events(&events);
+    assert!(g.battlefield_find(wall).is_some());
+    assert!(g.stack.iter().any(|si| matches!(si, StackItem::Trigger { source, .. } if *source == wall)));
+    assert!(g.battlefield_find(wurm).is_some_and(|c| !c.tapped), "not tapped until the trigger resolves");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some_and(|c| c.tapped));
+}
+
 /// Gerrard returns the artifacts and creatures that died this turn, and is
 /// exiled itself.
 #[test]

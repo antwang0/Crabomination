@@ -1934,7 +1934,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | the "reveal" is automatic whenever an Elemental card is in hand. |
-| 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |

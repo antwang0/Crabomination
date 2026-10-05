@@ -1,15 +1,6 @@
 //! Commander: the cards the **Mystic Intellect** precon (C19, Sevinne, the
 //! Chronoclasm) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_sevinne.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Wall of Stolen Identity** — the tap-and-lock happens as it enters,
-//!   not as a reflexive "when you do" trigger, and the lock lasts while the
-//!   Wall is on the battlefield rather than while you control it.
-//! - **Mandate of Peace** — a triggered ability that had triggered but was
-//!   not yet on the stack still goes on (CR 724.2a says it ceases to exist).
-//! - **Elsha of the Infinite** — its flash also covers a top-of-library cast
-//!   another permission allowed (Mystic Forge), not only its own.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EntersAsCopy, EventKind, EventScope, EventSpec,
@@ -202,10 +193,8 @@ pub fn clever_impersonator() -> CardDefinition {
 }
 
 /// Wall of Stolen Identity — enters as a copy of a creature that is also a
-/// Wall with defender; the copied creature is tapped and stays tapped.
-///
-/// ⚠ Residual: the lock is installed as it enters, not by a reflexive "when
-/// you do" trigger.
+/// Wall with defender; when it does, a reflexive trigger (CR 603.7) taps the
+/// copied creature and keeps it tapped while you control the Wall.
 pub fn wall_of_stolen_identity() -> CardDefinition {
     CardDefinition {
         enters_as_copy: Some(EntersAsCopy {
