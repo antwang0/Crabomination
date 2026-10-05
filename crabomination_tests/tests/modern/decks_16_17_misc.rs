@@ -1022,6 +1022,28 @@ fn grisly_salvage_mills_five_and_keeps_a_creature_or_land() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == old));
 }
 
+/// Grisly Salvage for a Commander seat with no prompt: the priciest milled
+/// creature or land, not the first one (the land on top here).
+#[test]
+fn grisly_salvage_keeps_the_best_milled_card_for_a_commander_seat() {
+    let mut g = two_player_game();
+    g.seat_commanders(0, vec![catalog::grizzly_bears()]);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::craw_wurm());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::grisly_salvage());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let hand: Vec<_> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(hand, ["Craw Wurm"]);
+}
+
 /// Thought Erasure: discard a nonland card + surveil 1.
 #[test]
 fn thought_erasure_strips_nonland_and_surveils() {

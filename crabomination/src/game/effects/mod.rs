@@ -10802,15 +10802,30 @@ impl GameState {
                     return Ok(());
                 }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source,
-                    prompt: "Put which card milled this way into your hand?".to_string(),
-                    candidates: cands,
-                    min: 1,
-                    max: 1,
-                    eligible: None,
-                    value: PickValue::Gain,
-                });
+                // A Commander seat's headless pick takes the priciest card, not
+                // the first milled (Grisly Salvage, six pod decks).
+                let best = (matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+                    && !self.players[p].commanders.is_empty())
+                .then(|| {
+                    cands
+                        .iter()
+                        .filter_map(|(id, _)| self.players[p].graveyard.iter().find(|c| c.id == *id))
+                        .max_by_key(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
+                        .map(|c| c.id)
+                })
+                .flatten();
+                let answer = match best {
+                    Some(id) => DecisionAnswer::Cards(vec![id]),
+                    None => self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Put which card milled this way into your hand?".to_string(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                        eligible: None,
+                        value: PickValue::Gain,
+                    }),
+                };
                 // The pick lands on `Selector::LastMoved` (cleared first, so a
                 // declined pick leaves nothing stale) for "if you put a [Town]
                 // card into your hand this way" riders — Town Greeter.

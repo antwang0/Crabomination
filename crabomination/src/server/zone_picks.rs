@@ -36,6 +36,27 @@ pub(super) fn pick_from_exile_or_command(
     Some(DecisionAnswer::Cards(ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect()))
 }
 
+/// A Commander seat choosing which of an opponent's cards they discard: the
+/// nonland cards first, priciest first (the fallback took the first N).
+pub(super) fn pick_from_opponents_hand(
+    state: &GameState,
+    seat: usize,
+    hand: &[(CardId, String)],
+    count: usize,
+) -> Option<DecisionAnswer> {
+    if state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
+        return None;
+    }
+    let theirs = |id: CardId| {
+        state.players.iter().enumerate().find_map(|(i, p)| (i != seat).then(|| p.hand.iter().find(|c| c.id == id)).flatten())
+    };
+    let cards: Vec<&CardInstance> = hand.iter().map(|(id, _)| theirs(*id)).collect::<Option<_>>()?;
+    let mut ranked: Vec<(CardId, bool, u32)> =
+        cards.iter().map(|c| (c.id, !c.definition.is_land(), c.definition.cost.cmc())).collect();
+    ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+    Some(DecisionAnswer::Discard(ranked.into_iter().take(count).map(|(id, ..)| id).collect()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,5 +115,17 @@ mod tests {
             *min = 1;
         }
         assert_eq!(super::super::bot::decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Cards(vec![wurm]));
+    }
+
+    /// Picking an opponent's discard takes their priciest spell.
+    #[test]
+    fn an_opponents_discard_loses_their_best_spell() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![catalog::grizzly_bears()]);
+        let land = g.add_card_to_hand(1, catalog::forest());
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+        let hand: Vec<(CardId, String)> = [land, bolt, wurm].iter().map(|&id| (id, String::new())).collect();
+        assert_eq!(pick_from_opponents_hand(&g, 0, &hand, 1), Some(DecisionAnswer::Discard(vec![wurm])));
     }
 }

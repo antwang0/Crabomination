@@ -3705,6 +3705,12 @@ fn decide_pending_policy_inner(
         {
             decide_self_discard(state, seat, hand, *count)
         }
+        // We pick from an OPPONENT's hand (Biting-Palm Ninja): take their best.
+        crate::decision::Decision::Discard { player, count, hand }
+            if *player == seat && let Some(answer) = super::zone_picks::pick_from_opponents_hand(state, seat, hand, *count as usize) =>
+        {
+            answer
+        }
         // AutoDecider blindly picks the first legal target. For
         // votes (Council's Judgment), edicts, and removal the bot
         // should instead hit the opponent's *most* valuable
