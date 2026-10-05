@@ -300,6 +300,28 @@ fn share_the_spoils_shares() {
     assert!(g.exile.iter().any(|c| c.id == next), "refilled from your library");
 }
 
+/// Share the Spoils, per its oracle and the 2021-07-23 rulings: entering
+/// mid-turn opens the pile to the active player at once ("during each
+/// player's turn"), a land played from it is that turn's one card and
+/// refills the pile from the player's library, like a cast does.
+#[test]
+fn share_the_spoils_opens_mid_turn_and_a_land_refills() {
+    let mut g = main_phase(2);
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let land = g.add_card_to_library(0, catalog::forest()); // the top
+    let next = g.add_card_to_library(0, catalog::plains());
+    let sts = g.add_card_to_hand(0, catalog::share_the_spoils());
+    cast_at(&mut g, sts, &[]).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == land));
+    act_as(&mut g, 0, GameAction::PlayLand(land)).expect("play the exiled Forest this turn");
+    assert!(g.battlefield_find(land).is_some());
+    assert!(g.exile.iter().any(|c| c.id == next), "refilled from your library");
+    assert!(
+        g.exile.iter().filter(|c| c.exiled_with == Some(sts)).all(|c| c.may_play_until.is_none()),
+        "one card a turn"
+    );
+}
+
 /// Bag of Devouring exiles what you sacrifice and brings it back to hand on
 /// its roll.
 #[test]

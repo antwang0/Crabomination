@@ -1933,7 +1933,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
-| 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | the "reveal" is automatic whenever an Elemental card is in hand. |
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |

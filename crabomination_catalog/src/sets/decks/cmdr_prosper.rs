@@ -1,11 +1,6 @@
 //! Commander: the cards the **Planar Portal** precon (AFC, Prosper,
 //! Tome-Bound) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_prosper.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Share the Spoils** — each player's pile of linked cards becomes
-//!   playable at their upkeep; a land played from it doesn't refill it.
-//! - **Danse Macabre** — your sacrifice is made after the others'.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
@@ -591,8 +586,8 @@ pub fn reckless_endeavor() -> CardDefinition {
 
 /// Share the Spoils — exile the top card of each library on entry and when
 /// an opponent loses; during each player's turn they may play one of those
-/// with any mana, then exile their top card to replace it. Residual: the pile
-/// opens at their upkeep, and a land played from it doesn't refill it.
+/// with any mana (one card a turn, the 2021-07-23 ruling), then exile their
+/// top card to replace it.
 pub fn share_the_spoils() -> CardDefinition {
     let refill = || Effect::Seq(vec![
         Effect::EndMayPlayOnCardsExiledWithSource,
@@ -609,29 +604,37 @@ pub fn share_the_spoils() -> CardDefinition {
         link_to_source: true,
         face_down: false,
     };
+    // "During each player's turn": the active player's window, opened at
+    // each upkeep and as it enters mid-turn.
+    let open = || Effect::AsPlayer {
+        who: PlayerRef::ActivePlayer,
+        body: Box::new(Effect::GrantMayPlay {
+            what: Selector::CardExiledWithSource,
+            duration: MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: false,
+            pay_own_cost: true,
+            any_color: true,
+        }),
+    };
     CardDefinition {
         name: "Share the Spoils",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            etb(seed()),
+            etb(Effect::Seq(vec![seed(), open()])),
             TriggeredAbility { event: EventSpec::new(EventKind::PlayerLeftGame, EventScope::AnyPlayer), effect: seed() },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
-                effect: Effect::AsPlayer {
-                    who: PlayerRef::ActivePlayer,
-                    body: Box::new(Effect::GrantMayPlay {
-                        what: Selector::CardExiledWithSource,
-                        duration: MayPlayDuration::EndOfThisTurn,
-                        to_owner: false,
-                        exile_after: false,
-                        pay_own_cost: true,
-                        any_color: true,
-                    }),
-                },
+                effect: open(),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::TriggerCardExiledWithSource),
+                effect: refill(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::AnyPlayer)
                     .with_filter(Predicate::TriggerCardExiledWithSource),
                 effect: refill(),
             },
