@@ -2334,6 +2334,7 @@ impl Effect {
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::AttachAnyNumberTo { .. }
             | Effect::AttachEachToCreatureYouControl { .. }
+            | Effect::AttachDistinctToEach { .. }
             | Effect::ExileAllOtherSpellsCounterAllAbilities
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }

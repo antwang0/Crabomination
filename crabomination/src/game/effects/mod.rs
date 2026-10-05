@@ -31039,6 +31039,7 @@ impl GameState {
             Effect::AttachEachToCreatureYouControl { what } => {
                 self.attach_each_to_creature_you_control(what, effect, ctx, events)
             }
+            Effect::AttachDistinctToEach { what, to } => self.attach_distinct_to_each(what, to, effect, ctx, events),
             Effect::ExileAllOtherSpellsCounterAllAbilities => {
                 self.exile_all_other_spells_counter_all_abilities(ctx, events)
             }

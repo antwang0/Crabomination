@@ -5642,6 +5642,10 @@ pub enum Effect {
     /// (Inventory Management): each one's host is its own optional pick,
     /// asked in turn before any moves (headless: your greatest-power one).
     AttachEachToCreatureYouControl { what: Selector },
+    /// "For each of [to], you may attach a [what] to it" (Goldwardens'
+    /// Gambit): one optional pick per host, each attachment chosen at most
+    /// once, all moved together after the picks (2023-02-04 ruling).
+    AttachDistinctToEach { what: Selector, to: Selector },
     /// "Exile all other spells and counter all abilities" (Summary
     /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
     ExileAllOtherSpellsCounterAllAbilities,
