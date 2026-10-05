@@ -9740,6 +9740,61 @@ impl GameState {
                                 return Ok(vec![]);
                             }
                         }
+                        // "Remove any number of counters from among creatures
+                        // you control" (Hierophant Bio-Titan): how many, then
+                        // which creature each comes off.
+                        crate::card::AdditionalCastCost::RemoveCountersAmong { kind, count } => {
+                            let resume = crate::game::types::ResumeContext::CastAdditionalCost {
+                                caster: p,
+                                card_id,
+                                target: target.clone(),
+                                additional_targets: additional_targets.clone(),
+                                mode,
+                                x_value,
+                                kicked,
+                            };
+                            let plan = self.scratch.pending_cast_counter_plan.clone();
+                            let decision = match plan {
+                                None => {
+                                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                                    let max = self.evaluate_value(count, &ctx).max(0) as u32;
+                                    (max > 0).then(|| crate::decision::Decision::ChooseAmount {
+                                        source: card_id,
+                                        prompt: format!("{name}: remove how many counters?"),
+                                        max,
+                                        kind: crate::decision::AmountKind::Upside,
+                                    })
+                                }
+                                Some((n, from)) if (from.len() as u32) < n => {
+                                    let holders: Vec<(CardId, String)> = self
+                                        .battlefield
+                                        .iter()
+                                        .filter(|c| {
+                                            c.controller == p
+                                                && self.computed_is_creature(c)
+                                                && c.counter_count(*kind) as usize
+                                                    > from.iter().filter(|&&f| f == c.id).count()
+                                        })
+                                        .map(|c| (c.id, c.definition.name.to_string()))
+                                        .collect();
+                                    (holders.len() > 1).then(|| crate::decision::Decision::ChooseCards {
+                                        source: card_id,
+                                        prompt: format!("{name}: remove a counter from"),
+                                        candidates: holders,
+                                        min: 1,
+                                        max: 1,
+                                        eligible: None,
+                                        value: PickValue::Cost,
+                                    })
+                                }
+                                _ => None,
+                            };
+                            if let Some(decision) = decision {
+                                self.pending_decision =
+                                    Some(Box::new(crate::game::types::PendingDecision { decision, resume }));
+                                return Ok(vec![]);
+                            }
+                        }
                         crate::card::AdditionalCastCost::Discard { count, filter }
                             if *count >= 1 && self.scratch.pending_cast_discards.is_none() =>
                         {
@@ -11865,6 +11920,21 @@ impl GameState {
                 A::RemoveCountersAmong { kind, count } => {
                     let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
                     let mut left = self.evaluate_value(count, &ctx).max(0) as u32;
+                    // The caster's named creatures first, one counter each.
+                    let named = self.scratch.pending_cast_counter_plan.as_ref().map(|(_, f)| f.clone()).unwrap_or_default();
+                    for id in named {
+                        if left == 0 {
+                            break;
+                        }
+                        let ok = self
+                            .battlefield_find(id)
+                            .is_some_and(|c| c.controller == p && self.computed_is_creature(c) && c.counter_count(*kind) > 0);
+                        if ok && let Some(c) = self.battlefield_find_mut(id) {
+                            c.remove_counters(*kind, 1);
+                            events.push(GameEvent::CounterRemoved { card_id: id, counter_type: *kind, count: 1 });
+                            left -= 1;
+                        }
+                    }
                     while left > 0 {
                         let Some(id) = self
                             .battlefield

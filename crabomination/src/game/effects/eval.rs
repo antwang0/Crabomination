@@ -1090,6 +1090,10 @@ impl GameState {
             }
             // Players carry their own per-source totals and the tallies of
             // permanents that left; the board carries the rest.
+            Value::CastCounterRemovalOr(default) => match &self.scratch.pending_cast_counter_plan {
+                Some((n, _)) => *n as i32,
+                None => self.evaluate_value(default, ctx),
+            },
             Value::GreatestDamageFromOneSourceThisTurn => {
                 let to_players = self.players.iter().map(|p| p.greatest_hit_this_turn).max().unwrap_or(0);
                 let to_permanents =

@@ -1646,6 +1646,10 @@ pub enum Value {
     /// player this turn" (Impact Resonance): the largest total one source
     /// dealt one permanent or player, the victim gone or not (2014-11-07).
     GreatestDamageFromOneSourceThisTurn,
+    /// "Remove any number of counters" as a cast cost (Hierophant
+    /// Bio-Titan): the count the casting seat chose, else `default` — the
+    /// headless pick, which the cost and its discount both read.
+    CastCounterRemovalOr(Box<Value>),
     /// Damage the resolving source has dealt this turn (Chandra, Fire of
     /// Kaladesh's "if Chandra has dealt 3 or more damage this turn").
     DamageDealtBySourceThisTurn,

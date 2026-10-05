@@ -2420,6 +2420,13 @@ pub struct ResolutionScratch {
     /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_discards: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_cast_sacrifices`] for "remove any number
+    /// of counters from among creatures you control" (Hierophant Bio-Titan):
+    /// the count a manual-mana caster chose, then one creature per counter as
+    /// they are named. Kept across the cast's own replays (each asks the next
+    /// question); cleared once the cast settles.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_counter_plan: Option<(u32, Vec<CardId>)>,
     /// Transient: the Spree mode indices chosen for the current cast (CR
     /// 702.172). Set by `cast_spell_spree` just before it invokes the shared
     /// cast path, consumed there to fold the chosen modes' mana into the cost
@@ -27319,6 +27326,7 @@ impl GameState {
         let any = self.scratch.stashed_resolution_answer.is_some()
             || self.scratch.pending_cast_sacrifices.is_some()
             || self.scratch.pending_cast_discards.is_some()
+            || self.scratch.pending_cast_counter_plan.is_some()
             || self.scratch.pending_spree_modes.is_some()
             || self.scratch.pending_ability_exile_other.is_some()
             || self.scratch.pending_ability_sac_any.is_some()
@@ -27333,6 +27341,7 @@ impl GameState {
             ("stashed_resolution_answer", self.scratch.stashed_resolution_answer.is_some()),
             ("pending_cast_sacrifices", self.scratch.pending_cast_sacrifices.is_some()),
             ("pending_cast_discards", self.scratch.pending_cast_discards.is_some()),
+            ("pending_cast_counter_plan", self.scratch.pending_cast_counter_plan.is_some()),
             ("pending_spree_modes", self.scratch.pending_spree_modes.is_some()),
             ("pending_ability_exile_other", self.scratch.pending_ability_exile_other.is_some()),
             ("pending_ability_sac_any", self.scratch.pending_ability_sac_any.is_some()),
@@ -27374,6 +27383,9 @@ impl GameState {
             if !pd.resume.is_action_replay() {
                 self.pending_decision = Some(Box::new(pd));
                 return Err(GameError::DecisionAnswerMismatch);
+            }
+            if self.scratch.pending_cast_counter_plan.is_some() {
+                self.scratch.pending_cast_counter_plan = None;
             }
             return Ok(vec![]);
         }
@@ -27752,6 +27764,17 @@ impl GameState {
                         // `pay_additional_costs` re-checks each id is in hand.
                         self.scratch.pending_cast_discards = Some(ids.clone());
                     }
+                    // "Remove any number of counters": first the count, then
+                    // one creature per counter; payment re-checks each.
+                    DecisionAnswer::Amount(n) if self.scratch.pending_cast_counter_plan.is_none() => {
+                        self.scratch.pending_cast_counter_plan = Some((*n, Vec::new()));
+                    }
+                    DecisionAnswer::Cards(ids) if self.scratch.pending_cast_counter_plan.is_some() => {
+                        let Some(&id) = ids.first() else { return Err(GameError::DecisionAnswerMismatch) };
+                        if let Some((_, from)) = self.scratch.pending_cast_counter_plan.as_mut() {
+                            from.push(id);
+                        }
+                    }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
                 // Priority is still the caster's (we never advanced it), so
@@ -27774,6 +27797,11 @@ impl GameState {
                 }
                 if self.scratch.pending_cast_discards.is_some() {
                     self.scratch.pending_cast_discards = None;
+                }
+                // The counter plan outlives a replay that asked its next
+                // question, and nothing else.
+                if self.pending_decision.is_none() && self.scratch.pending_cast_counter_plan.is_some() {
+                    self.scratch.pending_cast_counter_plan = None;
                 }
                 // A prepare-spell copy that suspended here still needs its
                 // token-flag/unprepare bookkeeping (no-op otherwise).
