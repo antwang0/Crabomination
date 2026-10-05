@@ -902,3 +902,57 @@ fn cr_611_2c_rootwater_matriarch_steal_ends_with_the_aura() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "returned once unenchanted");
 }
+
+/// CR 603.7c / 701.21a — Braids, Arisen Nightmare against a prompting
+/// opponent: each opponent's "sacrifice one that shares a type" is theirs to
+/// answer, and a seat that sacrifices is spared the 2 life while one that
+/// can't loses it (and Braids' controller draws). Pods found the opponent's
+/// yes left unconsumed in the answer log.
+#[test]
+fn cr_603_7c_braids_asks_a_prompting_opponent_and_honours_the_answer() {
+    use crabomination::decision::Decision;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::braids_arisen_nightmare());
+    // A token: it ceases to exist (CR 111.7) while the resolution waits on
+    // seat 1, and the "shares a card type" read must survive that.
+    let mine = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.battlefield_find_mut(mine).unwrap().is_token = true;
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_library(0, catalog::island());
+    let (hand, life1, life2) = (g.players[0].hand.len(), g.players[1].life, g.players[2].life);
+    g.fire_step_triggers(TurnStep::End);
+    let mut asked_seat_one = false;
+    for _ in 0..40 {
+        let Some(p) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            continue;
+        };
+        let answer = match &p.decision {
+            Decision::ChooseMode { .. } => DecisionAnswer::Mode(0),
+            Decision::OptionalTrigger { .. } => {
+                asked_seat_one = true;
+                DecisionAnswer::Bool(true)
+            }
+            Decision::ChooseCards { candidates, .. } => DecisionAnswer::Cards(vec![candidates[0].0]),
+            Decision::ChooseTarget { .. } => {
+                DecisionAnswer::Target(Target::Permanent(mine))
+            }
+            other => panic!("unexpected ask {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    assert!(g.pending_decision.is_none(), "every ask answered");
+    assert!(asked_seat_one, "the opponent with an artifact is asked");
+    assert!(g.battlefield_find(mine).is_none(), "Braids' controller sacrificed the Sol Ring");
+    assert!(g.battlefield_find(theirs).is_none(), "seat 1 sacrificed theirs");
+    assert_eq!(g.players[1].life, life1, "and is spared the 2 life");
+    assert_eq!(g.players[2].life, life2 - 2, "seat 2 had nothing to sacrifice");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw, for seat 2");
+}
