@@ -1485,6 +1485,26 @@ fn hideaway_shelldock_isle_exiles_then_plays_hidden_card() {
     assert!(!g.exile.iter().any(|c| c.id == bear), "bear left exile");
 }
 
+/// CR 702.75a — "exile one of them face down": the hideaway player picks.
+/// The engine always hid the highest mana value; Shelldock wants the bolt.
+#[test]
+fn hideaway_exiles_the_card_its_player_picks() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::shelldock_isle());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
+    g.perform_action(GameAction::PlayLand(land)).expect("play Shelldock Isle");
+    drain_stack(&mut g);
+    let hidden = g.exile.iter().find(|c| c.id == bolt).expect("the picked bolt is hidden");
+    assert!(hidden.face_down && hidden.exiled_with == Some(land));
+    assert!(g.players[0].library.iter().any(|c| c.id == bear), "the bear went to the bottom");
+}
+
 /// Shelldock Isle's gate is "a library has twenty or fewer cards in it" (it
 /// used to read "a player has 20 or less life", which a fresh game always
 /// met): with every library above twenty, it can't be activated.

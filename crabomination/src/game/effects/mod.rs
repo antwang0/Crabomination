@@ -26676,18 +26676,36 @@ impl GameState {
                 if top.is_empty() {
                     return Ok(());
                 }
-                let pick = top
+                // "Exile one of them face down" — the player picks; the
+                // default (a headless seat's) is the highest mana value.
+                let looked: Vec<(crate::card::CardId, String, u32)> = self.players[p]
+                    .library
                     .iter()
-                    .copied()
-                    .max_by_key(|id| {
-                        self.players[p]
-                            .library
-                            .iter()
-                            .find(|c| c.id == *id)
-                            .map(|c| c.definition.cost.cmc())
-                            .unwrap_or(0)
-                    })
-                    .unwrap();
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                let best = looked.iter().max_by_key(|c| c.2).map(|c| c.0).unwrap_or(top[0]);
+                let pick = if looked.len() < 2 {
+                    best
+                } else {
+                    let mut cursor = 0;
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Hideaway: exile one of them face down".into(),
+                        src,
+                        looked.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                        1,
+                        1,
+                        PickValue::Gain,
+                        effect,
+                        vec![best],
+                    ) else {
+                        return Ok(());
+                    };
+                    picked.first().copied().unwrap_or(best)
+                };
+                self.clear_answer_log();
                 if let Some(mut card) = Self::take_card(&mut self.players[p].library, pick) {
                     card.face_down = true;
                     card.exiled_with = Some(src);

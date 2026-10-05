@@ -2552,6 +2552,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-05 (`01VKHeZo`, Hideaway asks its player which
+        // looked-at card to hide; bisected: its parent passes and every later
+        // commit to the tip reads the same rows). A pod bot ranks a library
+        // pick by mana value with the FIRST of equal cards, where the old
+        // engine pick took the last: seed 4242 89→97 turns, 4409→4745
+        // actions; 0xC0FFEE 2482→2486 and 43 3646→3649 actions; same winners.
         // Re-blessed 2026-10-02 (`01NqgJKc`, two causes, each bisected):
         // 0xC0FFEE 58→64 turns, 2585→3089 actions, same winner, at 2edb33140
         // (a prompting seat may decline a clone's copy — its parent
@@ -2848,9 +2854,9 @@ mod tests {
         // exile — bisected to that commit alone): 0xC0FFEE 2492→2482
         // actions, same winner; 43 unchanged; 4242 82→89 turns, same winner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 54, 2482),
-            (43, Some(0), 77, 3646),
-            (4242, Some(3), 89, 4409),
+            (0xC0FFEE, Some(2), 54, 2486),
+            (43, Some(0), 77, 3649),
+            (4242, Some(3), 97, 4745),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
