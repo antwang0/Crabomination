@@ -745,6 +745,13 @@ impl GameState {
                     | crate::game::layers::EffectDuration::UntilEndOfYourNextTurn {
                         player,
                         installed_turn,
+                    }
+                    // "Until a specific point in that turn" — a departed
+                    // controller's next combat (Sizzling Soloist's must-attack
+                    // on a stolen creature 800.4a handed back) never comes.
+                    | crate::game::layers::EffectDuration::ThroughPlayersNextCombat {
+                        player,
+                        installed_turn,
                     } => departed & (1u64 << (player & 63)) != 0 && turn > installed_turn,
                     _ => false,
                 };

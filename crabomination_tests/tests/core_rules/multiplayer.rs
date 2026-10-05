@@ -1463,6 +1463,49 @@ fn cr_800_4m_a_departed_players_until_your_next_turn_ends_when_that_turn_would_h
     assert_eq!(power(&g), 2, "and it does not last indefinitely either");
 }
 
+/// CR 800.4m — "until a specific point in that turn" of a departed player
+/// lasts until that turn would have begun. Sizzling Soloist makes seat 1's
+/// creature (stolen from seat 2) attack during seat 1's next combat; seat 1
+/// leaves, CR 800.4a hands the creature back to seat 2, and seat 1's next
+/// combat never comes. The grant used to last for the rest of the game.
+#[test]
+fn cr_800_4m_through_a_departed_players_next_combat_ends_when_that_turn_would_have() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..40 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.active_player_idx = 0;
+    let ctx = EffectContext {
+        targets: vec![crabomination::game::types::Target::Permanent(bear)],
+        ..EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(
+        &Effect::GrantKeywordThroughControllersNextCombat { what: Selector::Target(0), keyword: Keyword::MustAttack },
+        &ctx,
+    )
+    .expect("grant");
+    let must = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttack);
+    assert!(must(&g));
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 2, "CR 800.4a hands it back");
+    // The next boundary skips seat 1 — the turn that would have begun.
+    for _ in 0..400 {
+        if g.active_player_idx == 2 && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 2);
+    assert!(!must(&g), "seat 1's next combat never comes, so the grant does not outlast it");
+}
+
 /// CR 800.4a — "any effects which give that player control of any objects or
 /// players end" covers control of *players* (CR 723, Mindslaver), not only of
 /// objects; CR 800.4b covers the other direction, "if a player would be
