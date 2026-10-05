@@ -6061,6 +6061,49 @@ impl GameState {
             if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
                 let chosen: Vec<&Target> =
                     target.iter().chain(additional_targets.iter()).collect();
+                // An off-board slot (a graveyard / exile card) can't be
+                // clicked: a `ChooseCards` modal over the matching cards, the
+                // slot-0 path's shape, with an empty pick as the decline.
+                if filter.mentions_offboard_zone() {
+                    let candidates: Vec<(CardId, String)> = self
+                        .players
+                        .iter()
+                        .flat_map(|pl| pl.graveyard.iter())
+                        .chain(self.exile.iter())
+                        .filter(|c| {
+                            c.id != card_id
+                                && distinct.is_none_or(|first| {
+                                    !chosen.iter().skip(first).any(|t| **t == Target::Permanent(c.id))
+                                })
+                                && self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id))
+                        })
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if !candidates.is_empty() {
+                        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                            decision: crate::decision::Decision::ChooseCards {
+                                source: card_id,
+                                prompt: format!("{source_name}{}", crate::decision::OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX),
+                                candidates,
+                                min: u32::from(!optional),
+                                max: 1,
+                                eligible: None,
+                                value: PickValue::Gain,
+                            },
+                            resume: crate::game::types::ResumeContext::CastExtraTargetPick {
+                                caster: p,
+                                action: Box::new(crate::game::types::GameAction::CastSpell {
+                                    card_id,
+                                    target,
+                                    additional_targets,
+                                    mode,
+                                    x_value,
+                                }),
+                            },
+                        }));
+                        return Ok(vec![]);
+                    }
+                }
                 let named_controllers: Vec<usize> = if per_opponent {
                     chosen.iter().filter_map(|t| self.target_controller_key(t)).collect()
                 } else {

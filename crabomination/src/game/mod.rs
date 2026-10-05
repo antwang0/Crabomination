@@ -27753,6 +27753,15 @@ impl GameState {
                 else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // An off-board slot answers through the `ChooseCards` modal:
+                // one card is the pick, none the decline.
+                let answer = match answer {
+                    DecisionAnswer::Cards(ids) => match ids.first() {
+                        Some(&id) => DecisionAnswer::Target(Target::Permanent(id)),
+                        None => DecisionAnswer::DeclineTarget,
+                    },
+                    other => other,
+                };
                 match answer {
                     DecisionAnswer::Target(t) => additional_targets.push(t),
                     // "Up to N targets" decline: replay the cast without

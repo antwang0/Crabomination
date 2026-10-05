@@ -205,9 +205,9 @@ pub fn colossal_plow() -> CardDefinition {
     }
 }
 
-/// Dance of the Manse — up to X artifact and/or non-Aura enchantment cards of
-/// mana value X or less return from your graveyard; at X 6+ they're 4/4
-/// creatures too.
+/// Dance of the Manse — up to X target artifact and/or non-Aura enchantment
+/// cards of mana value X or less return from your graveyard; at X 6+ they're
+/// 4/4 creatures too. A prompting seat names each graveyard target.
 pub fn dance_of_the_manse() -> CardDefinition {
     let filter = artifact()
         .or(R::HasCardType(CardType::Enchantment).and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)))))

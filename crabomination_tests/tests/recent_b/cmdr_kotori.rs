@@ -402,6 +402,35 @@ fn dance_of_the_manse_returns_artifacts() {
     assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
 }
 
+/// CR 601.2c — a prompting seat names each "up to X target" graveyard card
+/// itself, through a card picker (the cursor can't reach a graveyard): Sol
+/// Ring, then the Signet, and at X = 2 there is no third ask, so the Mind
+/// Stone stays put.
+#[test]
+fn dance_of_the_manse_seat_names_each_graveyard_target() {
+    use crabomination::decision::Decision;
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let b = g.add_card_to_graveyard(0, catalog::arcane_signet());
+    let c = g.add_card_to_graveyard(0, catalog::mind_stone());
+    let d = g.add_card_to_hand(0, catalog::dance_of_the_manse());
+    g.players[0].wants_ui = true;
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: d, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("slot 0 ask");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![a]))).expect("slot 0");
+    let pd = g.pending_decision.as_ref().expect("slot 1 ask");
+    let Decision::ChooseCards { candidates, min, .. } = &pd.decision else { panic!("{:?}", pd.decision) };
+    assert_eq!(*min, 0, "up to X: the further slot may be left empty");
+    assert!(!candidates.iter().any(|(id, _)| *id == a), "distinct targets");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![b]))).expect("slot 1");
+    assert!(g.pending_decision.is_none(), "X = 2 caps the targets");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == c));
+}
+
 /// Weatherlight — connecting digs for a historic card.
 #[test]
 fn weatherlight_digs_historic() {

@@ -61,6 +61,11 @@ pub const EXTRA_CAST_TARGET_PROMPT: &str = "choose an additional target";
 /// two sides can't drift.
 pub const OFFBOARD_TARGET_PROMPT_SUFFIX: &str = ": choose a card to target";
 
+/// The same for a cast's further slot that lives off the board (Dance of the
+/// Manse's "up to X target … cards from your graveyard"): the client appends
+/// the pick to the held cast's extra targets.
+pub const OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX: &str = ": choose another card to target";
+
 /// Which way a [`Decision::ChooseCards`] pick cuts for the seat being asked —
 /// does picking *more* help the chooser or cost it something?
 ///

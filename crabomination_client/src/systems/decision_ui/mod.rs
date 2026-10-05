@@ -1161,6 +1161,15 @@ pub fn handle_confirm(
                         *slot = Some(target);
                     }
                 }
+                // A further off-board slot of the cast (Dance of the Manse):
+                // the held copy must carry it too, as for a cursor pick.
+                if let DecisionWire::ChooseCards { source, prompt, .. } = wire
+                    && prompt.ends_with(crabomination::decision::OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX)
+                    && let Some(picked) = state.picked.first().copied()
+                    && let Some(outbox) = &outbox
+                {
+                    outbox.patch_last_cast_extra_target(*source, Target::Permanent(picked));
+                }
                 let Some(answer) = pick_answer(wire, &state.picked) else { continue };
                 answer
             }
