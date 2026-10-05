@@ -42,6 +42,9 @@ fn team_combat_effect(
         Effect::PumpPT { what, power, .. } => your_team(what) && state.evaluate_value(power, ctx) > 0,
         Effect::GrantKeyword { what, keyword, .. } => your_team(what) && lacks(keyword),
         Effect::GrantKeywords { what, keywords, .. } => your_team(what) && keywords.iter().any(lacks),
+        // An Overrun is a pump and a grant in sequence (Ezuri, Renegade
+        // Leader): it qualifies on either half.
+        Effect::Seq(parts) => parts.iter().any(|p| team_combat_effect(state, p, ctx, attackers)),
         _ => false,
     }
 }
@@ -118,5 +121,29 @@ mod tests {
         ));
         g.players[0].commanders.clear();
         assert_eq!(pick_team_combat_ability(&g, 0, &w), None, "no commander: not a pod");
+    }
+
+    /// Ezuri's Overrun is a pump and a trample grant in one `Seq`; it read as
+    /// neither, so a `--card-census` never saw it activated.
+    #[test]
+    fn ezuri_overruns_two_attacking_elves() {
+        let mut g = crate::game::multi_player_game(3);
+        let ezuri = g.add_card_to_battlefield(0, crate::catalog::ezuri_renegade_leader());
+        let a = g.add_card_to_battlefield(0, crate::catalog::llanowar_elves());
+        let b = g.add_card_to_battlefield(0, crate::catalog::llanowar_elves());
+        g.players[0].commanders.push(ezuri);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Green, 5);
+        g.attacking = vec![
+            Attack { attacker: a, target: AttackTarget::Player(1) },
+            Attack { attacker: b, target: AttackTarget::Player(2) },
+        ];
+        let w = EvalWeights::default();
+        assert!(matches!(
+            pick_team_combat_ability(&g, 0, &w),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == ezuri
+        ));
     }
 }
