@@ -263,6 +263,30 @@ fn desert_warfare_brings_deserts_back() {
     assert!(g.battlefield_find(oasis).is_some(), "back at this turn's end step");
 }
 
+/// Desert Warfare — "a Desert card is put into your graveyard from your
+/// hand" is not only a discard: one an effect MOVES there comes back too.
+#[test]
+fn desert_warfare_sees_a_desert_moved_from_hand() {
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    let mut g = main_phase(2);
+    let dw = g.add_card_to_battlefield(0, catalog::desert_warfare());
+    let desert = g.add_card_to_hand(0, catalog::desert_of_the_indomitable());
+    let mv = Effect::Move { what: Selector::ExactObjects(vec![desert]), to: ZoneDest::Graveyard };
+    let ev = g.resolve_effect(&mv, &EffectContext::for_ability(dw, 0, None)).expect("move");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == desert));
+    for _ in 0..12 {
+        if g.step == TurnStep::Cleanup || g.battlefield_find(desert).is_some() {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(desert).is_some(), "back at the end step");
+}
+
 /// Desert Warfare: five Deserts make five hasty Sand Warriors at combat.
 #[test]
 fn desert_warfare_raises_an_army() {

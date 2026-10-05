@@ -177,8 +177,7 @@ pub fn copy_land() -> CardDefinition {
 
 /// Desert Warfare — sacrificed, discarded, or library-to-graveyard (milled,
 /// surveiled, revealed) Deserts come back at your next end step; five or
-/// more Deserts make that many hasty Sand Warriors each combat. Residual: a
-/// hand-to-graveyard move that isn't a discard isn't watched.
+/// more Deserts make that many hasty Sand Warriors each combat.
 pub fn desert_warfare() -> CardDefinition {
     let desert = || Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasLandType(LandType::Desert) };
     let comes_back = || Effect::DelayUntilWithCapture {
@@ -208,7 +207,7 @@ pub fn desert_warfare() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             watch(EventKind::PermanentSacrificed),
-            watch(EventKind::CardDiscarded),
+            watch(EventKind::PutIntoGraveyardFromHand),
             watch(EventKind::CardMilled),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl)
