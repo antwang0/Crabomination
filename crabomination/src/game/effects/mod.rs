@@ -19868,6 +19868,25 @@ impl GameState {
                 // CR 603.7 — the "when you do" payoff goes on the stack as
                 // its own trigger; targets are picked now (603.7d).
                 let Some(src) = ctx.source else { return Ok(()) };
+                // A prompting seat names the targets through the trigger
+                // queue's own picker (off-board cards in a card modal).
+                if self.seat_prompts(ctx.controller) && self.pending_decision.is_none() && body.requires_target() {
+                    self.drain_trigger_queue(vec![crate::game::types::PendingTriggerPush {
+                        source: src,
+                        controller: ctx.controller,
+                        effect: (**body).clone(),
+                        subject: Some(EntityRef::Permanent(src)),
+                        event_amount: 0,
+                        mode: None,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: ctx.x_value,
+                        converged_value: ctx.converged_value,
+                        mana_spent: 0,
+                    }]);
+                    return Ok(());
+                }
                 // Sourced: a slot filter can read the source ("power less than
                 // Auron's" — `PowerLessThanSource`). An X carried in ("up to
                 // that many" — Loamcrafter Faun's discard count) caps the slots.
