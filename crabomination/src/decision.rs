@@ -122,6 +122,10 @@ pub enum AmountKind {
     /// "Choose a number; destroy all creatures with power N or greater" —
     /// the cutoff that kills the most of theirs and the least of ours.
     DestroyPowerCutoff,
+    /// "Pay any amount; deal that much damage to each other creature"
+    /// (Territorial Aetherkite) — `max` sweeps the chooser's own board too,
+    /// so the amount that kills the most of theirs and the least of ours.
+    SweepDamage,
 }
 
 /// What a payment on an [`OptionalKind`] buys.

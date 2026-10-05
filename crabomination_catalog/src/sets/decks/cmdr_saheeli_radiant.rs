@@ -556,18 +556,28 @@ pub fn stridehangar_automaton() -> CardDefinition {
     }
 }
 
-/// Territorial Aetherkite — flying, haste; enters: {E}{E}, then pay any
-/// amount of {E} to deal that much damage to each other creature (a prompting
-/// seat names it; a headless one pays what nets the most, `energy_sweep.rs`).
+/// Territorial Aetherkite — flying, haste; enters: {E}{E}, then you may pay
+/// one or more {E}; when you do (CR 603.12), that much damage to each other
+/// creature (a prompting seat names the amount; a headless one pays what nets
+/// the most, `energy_sweep.rs`).
 pub fn territorial_aetherkite() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             energy(2),
             Effect::PayAnyEnergy {
-                then: Box::new(Effect::DealDamage {
-                    to: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
-                    amount: Value::EnergyPaidThisEffect,
+                then: Box::new(Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::EnergyPaidThisEffect, Value::ONE),
+                    then: Box::new(Effect::WithX {
+                        x: Value::EnergyPaidThisEffect,
+                        body: Box::new(Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::DealDamage {
+                                to: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+                                amount: Value::XFromCost,
+                            }),
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 }),
             },
         ]))],

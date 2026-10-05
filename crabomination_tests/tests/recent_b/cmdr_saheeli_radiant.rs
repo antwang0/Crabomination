@@ -180,6 +180,26 @@ fn territorial_aetherkite_pays_only_what_the_sweep_needs() {
     assert_eq!(g.players[0].energy, 3, "paid 2 of 5");
 }
 
+/// CR 603.12 — "When you do": the energy is paid as the enters trigger
+/// resolves, and the damage is a reflexive trigger of its own on the stack,
+/// carrying the amount paid.
+#[test]
+fn territorial_aetherkite_damage_is_a_reflexive_trigger() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kite = g.add_card_to_hand(0, catalog::territorial_aetherkite());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: kite, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("the creature");
+    g.resolve_top_of_stack().expect("the enters trigger");
+    assert_eq!(g.players[0].energy, 0, "both energy paid");
+    assert_eq!(g.stack.len(), 1, "the damage waits on the stack");
+    assert!(g.battlefield_find(bear).is_some());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "two damage");
+}
+
 /// Pia Nalaar: the end-step energy becomes an X/X flying Vehicle.
 #[test]
 fn pia_nalaar_builds_an_aetherjet() {

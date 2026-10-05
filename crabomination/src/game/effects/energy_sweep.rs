@@ -7,14 +7,25 @@ use super::EffectContext;
 use crate::effect::{Effect, Selector, Value};
 use crate::game::GameState;
 
+/// The each-permanent filter of the damage sweep a "pay any amount of {E}"
+/// buys, looking through the reflexive "when you do" wrapping (Territorial
+/// Aetherkite pays into `If` / `WithX` / `ReflexiveTrigger`).
+pub(super) fn energy_sweep_filter(then: &Effect) -> Option<&crate::card::SelectionRequirement> {
+    if let Effect::DealDamage { to: Selector::EachPermanent(filter), amount: Value::EnergyPaidThisEffect | Value::XFromCost } =
+        then
+    {
+        return Some(filter);
+    }
+    let mut found = None;
+    then.for_each_inner(&mut |c| found = found.or_else(|| energy_sweep_filter(c)));
+    found
+}
+
 impl GameState {
     /// The amount to pay, or `None` when `then` is no each-creature sweep
     /// scaled by the payment (the caller pays everything, as before).
     pub(super) fn headless_energy_sweep(&self, then: &Effect, avail: u32, ctx: &EffectContext) -> Option<u32> {
-        let Effect::DealDamage { to: Selector::EachPermanent(filter), amount: Value::EnergyPaidThisEffect } = then
-        else {
-            return None;
-        };
+        let filter = energy_sweep_filter(then)?;
         let me = ctx.controller;
         let hit: Vec<(i32, bool, i64)> = self
             .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)

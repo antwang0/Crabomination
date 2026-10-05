@@ -3734,10 +3734,11 @@ fn decide_pending_policy_inner(
         // prose, and everything the three patterns missed got
         // `max` — including Devour's "Sacrifice how many?", whose
         // `max` is the whole board.
-        crate::decision::Decision::ChooseAmount { max, kind, .. } => {
+        crate::decision::Decision::ChooseAmount { source, max, kind, .. } => {
             use crate::decision::AmountKind;
             let amount = match kind {
                 AmountKind::DestroyPowerCutoff => best_destroy_power_cutoff(state, seat, *max, w),
+                AmountKind::SweepDamage => best_sweep_damage(state, seat, *source, *max, w),
                 AmountKind::Life => {
                     // Life payments: keep a buffer, never sink deep.
                     let spare = (state.effective_life(seat) - 10).max(0) as u32;
@@ -18736,6 +18737,37 @@ fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32, w: &EvalW
     best.1
 }
 
+/// "Deal N damage to each other creature" for N in `0..=max`: the N whose
+/// kills (marked damage counted, indestructible spared) weigh most for us —
+/// theirs minus ours — and the smallest such N, since what's left unpaid
+/// is kept.
+fn best_sweep_damage(state: &GameState, seat: usize, source: CardId, max: u32, w: &EvalWeights) -> u32 {
+    let lethal_at: Vec<(i32, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.id != source)
+        .filter_map(|c| {
+            let cp = state.computed_permanent_on(c)?;
+            if !cp.card_types().contains(&crate::card::CardType::Creature)
+                || cp.keywords().contains(&crate::card::Keyword::Indestructible)
+                || c.counter_count(crate::card::CounterType::Indestructible) > 0
+            {
+                return None;
+            }
+            let v = permanent_value(state, c.id, w);
+            Some(((cp.toughness - c.damage as i32).max(0), if c.controller == seat { -v } else { v }))
+        })
+        .collect();
+    let mut best = (0i32, 0u32);
+    for n in 1..=max {
+        let score: i32 = lethal_at.iter().filter(|(t, _)| *t <= n as i32).map(|(_, v)| v).sum();
+        if score > best.0 {
+            best = (score, n);
+        }
+    }
+    best.1
+}
+
 /// True when `def` carries a static that keys off the Prepared counter
 /// (SOS "prepared creatures you control get …" payoffs). Matched
 /// structurally on the pump/keyword-grant shapes those payoffs use.
@@ -27134,6 +27166,22 @@ mod tests {
         assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");
         // Empty pool, so a MayPayX spends nothing rather than tapping out.
         assert_eq!(amount(ask(AmountKind::Mana, 5)), 0, "MayPayX spends what floats");
+    }
+
+    /// Territorial Aetherkite's "pay any amount of {E}: that much damage to
+    /// each other creature" is `SweepDamage`: two of their 1/1s die at one,
+    /// our Bears at two, so one is paid and the rest of the energy kept.
+    #[test]
+    fn bot_sweep_damage_stops_short_of_its_own_board() {
+        use crate::decision::{AmountKind, Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        let kite = g.add_card_to_battlefield(0, catalog::territorial_aetherkite());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::llanowar_elves());
+        g.add_card_to_battlefield(1, catalog::llanowar_elves());
+        let d = Decision::ChooseAmount { source: kite, prompt: String::new(), max: 4, kind: AmountKind::SweepDamage };
+        let w = EvalWeights::default();
+        assert_eq!(decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Amount(1));
     }
 
     /// Pure temp-pump instants are combat tricks; burn and creatures are not.

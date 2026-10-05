@@ -9678,12 +9678,19 @@ impl GameState {
                         Some(_) => 0,
                         None if self.seat_suspends(p) => {
                             let source = ctx.source.unwrap_or(CardId(0));
+                            // A sweep hits the payer's board too (Territorial
+                            // Aetherkite): say so, or a policy pays it all.
+                            let kind = if energy_sweep::energy_sweep_filter(then).is_some() {
+                                AmountKind::SweepDamage
+                            } else {
+                                AmountKind::Upside
+                            };
                             self.suspend_signal = Some(Box::new((
                                 Decision::ChooseAmount {
                                     source,
                                     prompt: "Pay how much {E}?".to_string(),
                                     max: avail,
-                                    kind: AmountKind::Upside,
+                                    kind,
                                 },
                                 PendingEffectState::AmountAnswerPending { max: avail },
                                 effect.clone(),
