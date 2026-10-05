@@ -2,6 +2,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -315,6 +316,18 @@ fn shaper_parasite_face_up_shrinks_a_creature() {
     let sp = g.add_card_to_hand(0, catalog::shaper_parasite());
     face_down_then_up(&mut g, sp);
     assert!(g.battlefield_find(bear).is_none());
+}
+
+/// CR 608.2d — "+2/−2 or −2/+2" is chosen as the trigger resolves, not as a
+/// mode when it goes on the stack: the answer given then is the one applied.
+#[test]
+fn shaper_parasite_picks_its_half_on_resolution() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sp = g.add_card_to_hand(0, catalog::shaper_parasite());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    face_down_then_up(&mut g, sp);
+    assert_eq!(pt(&g, bear), (0, 4), "-2/+2");
 }
 
 /// Stitcher Geralf: everyone mills three, the two strongest creature cards

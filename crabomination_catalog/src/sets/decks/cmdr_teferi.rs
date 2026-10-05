@@ -9,7 +9,7 @@ use crate::card::{
     Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, LookPick, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Duration, Effect, LookPick, PlayerRef, Predicate, VoteOption, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, cost, generic, u};
 use std::sync::Arc;
@@ -275,7 +275,8 @@ pub fn intellectual_offering() -> CardDefinition {
 }
 
 /// Shaper Parasite — morph {2}{U}; turned face up, target creature gets
-/// +2/−2 or −2/+2 until end of turn.
+/// +2/−2 or −2/+2 until end of turn, picked as the trigger resolves (CR
+/// 608.2d: an unbulleted "or" is no mode).
 pub fn shaper_parasite() -> CardDefinition {
     let pump = |p: i32, t: i32| Effect::PumpPT {
         what: target_filtered(R::Creature),
@@ -285,7 +286,10 @@ pub fn shaper_parasite() -> CardDefinition {
     };
     CardDefinition {
         keywords: vec![Keyword::Morph(cost(&[generic(2), u()]))],
-        triggered_abilities: vec![on_turn_up(Effect::ChooseMode(vec![pump(2, -2), pump(-2, 2)]))],
+        triggered_abilities: vec![on_turn_up(Effect::PlayerChoosesOne {
+            who: PlayerRef::You,
+            options: vec![VoteOption::new("+2/-2", pump(2, -2)), VoteOption::new("-2/+2", pump(-2, 2))],
+        })],
         ..creature("Shaper Parasite", cost(&[generic(1), u(), u()]), vec![CreatureType::Illusion], 2, 3)
     }
 }
