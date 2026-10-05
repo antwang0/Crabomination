@@ -1446,25 +1446,20 @@ pub fn battlefield_forge() -> CardDefinition {
 
 // ── Rainbow lands ────────────────────────────────────────────────────────────
 
-/// City of Brass — `{T}: Add one mana of any color. This land deals 1 damage to
-/// you.` (The printed "whenever this becomes tapped" trigger collapses onto the
-/// mana ability — its only natural tap source.)
+/// City of Brass — whenever this land becomes tapped, it deals 1 damage to
+/// you (a trigger, so tapped any way it deals the damage, and it uses the
+/// stack); {T}: add one mana of any color.
 pub fn city_of_brass() -> CardDefinition {
     CardDefinition {
         name: "City of Brass",
         card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
-                },
-                Effect::DealDamage {
-                    to: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
             ..Default::default()
         }],
         ..Default::default()

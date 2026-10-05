@@ -6704,15 +6704,17 @@ fn cr_506_2_tahngarth_attacks_a_player_its_new_controller_attacks() {
     assert_eq!(t, Some(AttackTarget::Player(2)), "joins the attack on seat 2");
 }
 
-/// A land whose mana ability deals `n` damage to its controller — City of
-/// Brass with a bigger rider, outside auto-tap's lethal-source window.
+/// A land whose any-color mana ability deals `n` damage to its controller
+/// (a painland-style rider on City of Brass's mana), outside auto-tap's
+/// lethal-source window.
 fn painful_land(n: i32) -> crabomination::card::CardDefinition {
-    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::effect::{Effect, ManaPayload, PlayerRef, Selector, Value};
     let mut land = catalog::city_of_brass();
-    let a = &mut land.activated_abilities[0];
-    if let Effect::Seq(steps) = &mut a.effect {
-        steps[1] = Effect::DealDamage { to: Selector::You, amount: Value::Const(n) };
-    }
+    land.triggered_abilities.clear();
+    land.activated_abilities[0].effect = Effect::Seq(vec![
+        Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+        Effect::DealDamage { to: Selector::You, amount: Value::Const(n) },
+    ]);
     land
 }
 

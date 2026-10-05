@@ -17723,7 +17723,8 @@ impl GameState {
 
     /// The most life any of `s`'s listed mana abilities costs its controller
     /// to activate: `life_cost` plus a fixed "deals N damage to you" rider
-    /// (City of Brass, the painlands, Ancient Tomb).
+    /// (the painlands, Ancient Tomb), plus a "whenever this becomes tapped,
+    /// it deals N damage to you" trigger (City of Brass).
     fn mana_source_self_harm(&self, s: &ManaSourceInfo) -> i32 {
         fn damage_to_you(e: &Effect) -> i32 {
             match e {
@@ -17733,11 +17734,20 @@ impl GameState {
             }
         }
         let Some(c) = self.source_card(s) else { return 0 };
+        let on_tap: i32 = c
+            .definition
+            .triggered_abilities
+            .iter()
+            .filter(|t| {
+                t.event.kind == crate::card::EventKind::Tapped && t.event.scope == crate::card::EventScope::SelfSource
+            })
+            .map(|t| damage_to_you(&t.effect))
+            .sum();
         let abilities = &c.definition.activated_abilities;
         std::iter::once(s.first_idx)
             .chain(s.colors.iter().map(|col| s.color_idx[color_index(col)]))
             .filter_map(|i| abilities.get(i))
-            .map(|a| a.life_cost as i32 + damage_to_you(&a.effect))
+            .map(|a| a.life_cost as i32 + damage_to_you(&a.effect) + on_tap)
             .max()
             .unwrap_or(0)
     }

@@ -44,7 +44,10 @@ fn painlands_tap_for_colors_and_ping() {
     }
 }
 
-/// City of Brass taps for any color and pings its controller for 1.
+/// City of Brass taps for any color and pings its controller for 1 — and
+/// the ping is "whenever this becomes tapped", so a land tapped by anything
+/// else (Icy Manipulator's untargeted cousin: a plain Tap) pings too, from
+/// the stack.
 #[test]
 fn city_of_brass_taps_any_color_with_ping() {
     let mut g = two_player_game();
@@ -55,6 +58,18 @@ fn city_of_brass_taps_any_color_with_ping() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "produces one mana");
     assert_eq!(g.players[0].life, life - 1, "deals 1 damage to you");
+
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::city_of_brass());
+    let life = g.players[0].life;
+    let tap = Effect::Tap { what: Selector::ExactObjects(vec![land]) };
+    let ev = g.resolve_effect(&tap, &EffectContext::for_ability(land, 1, None)).expect("tap");
+    g.dispatch_triggers_for_events(&ev);
+    assert_eq!(g.players[0].life, life, "the damage waits on the stack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "tapped by an effect, it still deals 1");
 }
 
 /// Mana Confluence pays 1 life for one mana of any color.
