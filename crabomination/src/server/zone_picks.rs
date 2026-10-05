@@ -17,17 +17,20 @@ fn in_exile_hand_or_command(state: &GameState, id: CardId) -> Option<&CardInstan
 }
 
 /// The biggest cards up to `max`, when every candidate is in exile, a hand or
-/// a command zone and at least one is in exile or a command zone (a pure
-/// hand pick has its own branch). `None` leaves the pick to the caller.
+/// a command zone and at least one is outside `seat`'s own hand (a pure
+/// own-hand pick has its own branch). That covers a free cast out of an
+/// opponent's hand (Silent-Blade Oni's "you may cast a nonland card in it"),
+/// which answered with nothing. `None` leaves the pick to the caller.
 pub(super) fn pick_from_exile_or_command(
     state: &GameState,
+    seat: usize,
     candidates: &[(CardId, String)],
     max: u32,
 ) -> Option<DecisionAnswer> {
     let cards: Vec<&CardInstance> =
         candidates.iter().map(|(id, _)| in_exile_hand_or_command(state, *id)).collect::<Option<_>>()?;
-    let off_hand = |c: &CardInstance| !state.players.iter().any(|p| p.hand.iter().any(|h| h.id == c.id));
-    if cards.is_empty() || !cards.iter().any(|c| off_hand(c)) {
+    let off_own_hand = |c: &CardInstance| state.players.get(seat).is_none_or(|p| !p.hand.iter().any(|h| h.id == c.id));
+    if cards.is_empty() || !cards.iter().any(|c| off_own_hand(c)) {
         return None;
     }
     let mut ranked: Vec<(CardId, u32, i32)> =
@@ -72,9 +75,17 @@ mod tests {
             g.remove_from_battlefield_to_exile(id);
         }
         let cands = vec![(bolt, String::new()), (wurm, String::new())];
-        assert_eq!(pick_from_exile_or_command(&g, &cands, 1), Some(DecisionAnswer::Cards(vec![wurm])));
+        assert_eq!(pick_from_exile_or_command(&g, 0, &cands, 1), Some(DecisionAnswer::Cards(vec![wurm])));
         let hand = g.add_card_to_hand(0, catalog::grizzly_bears());
-        assert_eq!(pick_from_exile_or_command(&g, &[(hand, String::new())], 1), None, "a pure hand pick is not ours");
+        assert_eq!(pick_from_exile_or_command(&g, 0, &[(hand, String::new())], 1), None, "a pure own-hand pick is not ours");
+        let theirs = g.add_card_to_hand(1, catalog::craw_wurm());
+        let small = g.add_card_to_hand(1, catalog::grizzly_bears());
+        let cands = vec![(small, String::new()), (theirs, String::new())];
+        assert_eq!(
+            pick_from_exile_or_command(&g, 0, &cands, 1),
+            Some(DecisionAnswer::Cards(vec![theirs])),
+            "a free cast out of an opponent's hand takes their biggest",
+        );
     }
 
     fn ask(cands: &[CardId], max: u32, eligible: Option<Vec<CardId>>) -> crate::decision::Decision {

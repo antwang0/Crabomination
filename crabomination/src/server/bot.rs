@@ -6404,8 +6404,9 @@ fn decide_choose_cards(
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return fill_to_min(chosen);
     }
-    // Exile / command-zone pick (Jeleva's free cast, Next of Kin): ours to gain.
-    if gain && let Some(answer) = super::zone_picks::pick_from_exile_or_command(state, candidates, max) {
+    // Exile / command-zone / opponent's-hand pick (Jeleva's free cast, Next
+    // of Kin, Silent-Blade Oni): ours to gain.
+    if gain && let Some(answer) = super::zone_picks::pick_from_exile_or_command(state, seat, candidates, max) {
         return answer;
     }
     // Library-source pick ("you may put a creature card from among them onto
