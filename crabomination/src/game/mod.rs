@@ -28489,9 +28489,9 @@ impl GameState {
                         source,
                         ..Default::default()
                     };
-                    if let Ok(mut evs) = self.resolve_effect(&then, &ctx) {
-                        events.append(&mut evs);
-                    }
+                    // `run_effect`, as above: a resolution root would wipe the
+                    // scratch of the resolution this answer resumes.
+                    let _ = self.run_effect(&then, &ctx, &mut events);
                 }
                 let rider_gain = pick_rider_life.map(|n| n as i32).unwrap_or(0)
                     + greatest_milled_power.unwrap_or(0).max(0);
