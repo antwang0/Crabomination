@@ -1928,7 +1928,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | "whenever you copy a spell, up to one target opponent may also copy that spell" is not implemented: the trigger picker fills an optional player slot whenever one is legal, so a bot would hand the table copies (needs a decline-a-gift rule for optional trigger targets). |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
-| 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers every cost you pay yourself; a mana ability the auto-tapper fires on its own pays its {B} with mana. |
 
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |

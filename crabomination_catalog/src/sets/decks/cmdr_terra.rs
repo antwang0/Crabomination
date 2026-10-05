@@ -848,8 +848,8 @@ pub fn summon_esper_valigarmanda() -> CardDefinition {
 }
 
 /// The Warring Triad — a 5/5 flier only with eight cards in your graveyard;
-/// taps and mills for any color. Residual: the mill is in the effect, and
-/// the mana is yours.
+/// {T}, mill a card: target player adds one mana of any color (a stack
+/// ability: it targets, CR 605.1a).
 pub fn the_warring_triad() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -865,10 +865,8 @@ pub fn the_warring_triad() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                mill(PlayerRef::You, 1),
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::ONE) },
-            ]),
+            mill_cost: 1,
+            effect: Effect::AddMana { who: PlayerRef::Target(0), pool: ManaPayload::AnyColors(Value::ONE) },
             ..Default::default()
         }],
         ..creature("The Warring Triad", cost(&[generic(3)]), vec![CreatureType::God], 5, 5)

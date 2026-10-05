@@ -211,6 +211,30 @@ fn warring_triad_needs_eight_cards() {
     assert!(is_creature(&g));
 }
 
+/// CR 602.5b / 605.1a — The Warring Triad mills as a COST (paid before the
+/// ability is on the stack, unpayable from an empty library, CR 701.13b) and
+/// gives the mana to its TARGET player, so it is a stack ability.
+#[test]
+fn warring_triad_mills_as_a_cost_for_its_target_players_mana() {
+    let mut g = main_phase(2);
+    let triad = g.add_card_to_battlefield(0, catalog::the_warring_triad());
+    let activate = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: triad, ability_index: 0, target: Some(Target::Player(1)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(activate(&mut g).is_err(), "nothing to mill");
+    let top = g.add_card_to_library(0, catalog::forest());
+    activate(&mut g).expect("activate");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "milled on activation");
+    assert!(!g.stack.is_empty(), "a targeted mana ability uses the stack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.total(), 1, "the target player adds it");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
 /// Setzer brings The Blackjack, a legendary flying Vehicle with crew 2.
 #[test]
 fn setzer_brings_the_blackjack() {
