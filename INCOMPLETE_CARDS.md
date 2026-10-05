@@ -1911,7 +1911,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
-| 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |

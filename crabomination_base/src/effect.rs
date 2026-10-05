@@ -10245,6 +10245,9 @@ pub enum Effect {
     /// fewest creatures (the gift goes where it helps least), turn order
     /// breaking ties. Sylvan Offering.
     ChooseOpponentThen { then: Box<Effect> },
+    /// [`Effect::ChooseOpponentThen`] whose ballot (and headless pick) is led
+    /// by the opponent `lead` names (Sandstone Oracle: the most cards in hand).
+    ChooseOpponentLedBy { lead: PlayerRef, then: Box<Effect> },
     /// "Choose an opponent at random. [body]" with one pick for the whole
     /// body (Truth or Consequences: one opponent takes every consequences
     /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.

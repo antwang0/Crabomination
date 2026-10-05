@@ -230,6 +230,25 @@ fn sandstone_oracle_draws_up_to_the_fullest_opponent_hand() {
     assert_eq!(g.players[0].hand.len(), 4);
 }
 
+/// "Choose an opponent" is the controller's choice, not the engine's: a
+/// seat that names the opponent with one card draws one, not four.
+#[test]
+fn sandstone_oracle_draws_for_the_chosen_opponent() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(3);
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::swamp());
+        g.add_card_to_library(0, catalog::plains());
+    }
+    g.add_card_to_hand(2, catalog::swamp());
+    g.add_card_to_hand(2, catalog::swamp());
+    // The ballot leads with the fullest hand (seat 1); option 1 is seat 2.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let o = g.add_card_to_hand(0, catalog::sandstone_oracle());
+    cast(&mut g, o, &[]);
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
 #[test]
 fn vivid_meadow_enters_tapped_with_two_charge_counters() {
     let mut g = main_phase(2);

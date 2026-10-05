@@ -578,6 +578,7 @@ impl Effect {
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
             | Effect::ChooseOpponentThen { then }
+            | Effect::ChooseOpponentLedBy { then, .. }
             | Effect::AsPlayer { body: then, .. }
             | Effect::OpponentChoosesPermanentThen { body: then, .. }
             | Effect::EachOtherPlayerMayDraw { per_draw: then }
@@ -857,7 +858,8 @@ impl Effect {
             Effect::RevealUntilNonlandThen { then }
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
-            | Effect::ChooseOpponentThen { then } => then.requires_target(),
+            | Effect::ChooseOpponentThen { then }
+            | Effect::ChooseOpponentLedBy { then, .. } => then.requires_target(),
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
@@ -5649,6 +5651,7 @@ impl Effect {
                 | Effect::ChooseCreatureTypeThen { then, .. }
                 | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
                 | Effect::ChooseOpponentThen { then }
+                | Effect::ChooseOpponentLedBy { then, .. }
                 | Effect::RevealDrawnCardThenIf { then, .. }
                 | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
                 | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {

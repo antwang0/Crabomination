@@ -309,23 +309,26 @@ pub fn righteous_confluence() -> CardDefinition {
 }
 
 /// Sandstone Oracle — flying; on entry, choose an opponent: if they have more
-/// cards in hand than you, draw the difference. The opponent is the one with
-/// the most cards in hand.
+/// cards in hand than you, draw the difference. The choice is the
+/// controller's ballot, led (and defaulted) by the most cards in hand.
 pub fn sandstone_oracle() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Max(
-                    Box::new(Value::Const(0)),
-                    Box::new(Value::Diff(
-                        Box::new(Value::HandSizeOf(PlayerRef::MostCardsInHand)),
-                        Box::new(Value::HandSizeOf(PlayerRef::You)),
-                    )),
-                ),
+            effect: Effect::ChooseOpponentLedBy {
+                lead: PlayerRef::MostCardsInHand,
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Max(
+                        Box::new(Value::Const(0)),
+                        Box::new(Value::Diff(
+                            Box::new(Value::HandSizeOf(PlayerRef::ChosenPlayerOfSource)),
+                            Box::new(Value::HandSizeOf(PlayerRef::You)),
+                        )),
+                    ),
+                }),
             },
         }],
         ..creature("Sandstone Oracle", cost(&[generic(7)]), vec![CreatureType::Sphinx], 4, 4)

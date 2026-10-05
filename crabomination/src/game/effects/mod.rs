@@ -32668,7 +32668,10 @@ impl GameState {
 
             Effect::AsPlayer { who, body } => self.run_as_player(who, body, ctx, events),
 
-            Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, effect, ctx, events),
+            Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, None, effect, ctx, events),
+            Effect::ChooseOpponentLedBy { lead, then } => {
+                self.choose_opponent_then(then, Some(lead), effect, ctx, events)
+            }
 
             Effect::WithRandomOpponent { body } => {
                 let Some(opp) = self.resolve_player(&PlayerRef::RandomOpponent, ctx) else { return Ok(()) };

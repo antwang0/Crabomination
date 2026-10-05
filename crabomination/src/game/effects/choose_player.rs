@@ -136,16 +136,24 @@ impl GameState {
 
     /// `Effect::ChooseOpponentThen` — the controller names an opponent for
     /// `then`. The headless pick is the opponent with the fewest creatures
-    /// (the gift goes where it helps least), turn order breaking ties.
+    /// (the gift goes where it helps least), turn order breaking ties — or
+    /// `lead`'s opponent first (`Effect::ChooseOpponentLedBy`).
     pub(super) fn choose_opponent_then(
         &mut self,
         then: &Effect,
+        lead: Option<&crate::effect::PlayerRef>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
-        let opps = self.gift_ballot(me);
+        let mut opps = self.gift_ballot(me);
+        if let Some(first) = lead.and_then(|l| self.resolve_player(l, ctx))
+            && let Some(at) = opps.iter().position(|&p| p == first)
+        {
+            let p = opps.remove(at);
+            opps.insert(0, p);
+        }
         let i = match take_opt_scratch!(self.stashed_resolution_answer) {
             Some(DecisionAnswer::Amount(n)) => n as usize,
             _ if opps.len() <= 1 => 0,
