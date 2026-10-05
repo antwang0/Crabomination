@@ -287,8 +287,8 @@ pub fn kembas_banner() -> CardDefinition {
     )
 }
 
-/// Goldwardens' Gambit — affinity for Equipment; five hasty 2/2 Rebels, each
-/// taking your best unattached Equipment.
+/// Goldwardens' Gambit — affinity for Equipment; five hasty 2/2 Rebels, and
+/// you may attach a different Equipment you control to each.
 pub fn goldwardens_gambit() -> CardDefinition {
     CardDefinition {
         name: "Goldwardens' Gambit",
@@ -302,21 +302,9 @@ pub fn goldwardens_gambit() -> CardDefinition {
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
-            Effect::ForEach {
-                selector: Selector::LastCreatedTokens,
-                body: Box::new(Effect::If {
-                    cond: Predicate::SelectorExists(Selector::EachPermanent(
-                        equipment().and(R::ControlledByYou).and(R::Unattached),
-                    )),
-                    then: Box::new(Effect::Attach {
-                        what: Selector::GreatestManaValueControlledMatching {
-                            who: PlayerRef::You,
-                            filter: equipment().and(R::Unattached),
-                        },
-                        to: Selector::TriggerSource,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                }),
+            Effect::AttachDistinctToEach {
+                what: Selector::EachPermanent(equipment().and(R::ControlledByYou)),
+                to: Selector::LastCreatedTokens,
             },
         ]),
         ..Default::default()

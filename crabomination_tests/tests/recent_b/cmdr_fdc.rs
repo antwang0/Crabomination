@@ -3481,6 +3481,37 @@ fn goldwardens_gambit_suits_up_its_rebels() {
     }
 }
 
+/// 2023-02-04 ruling — each token's Equipment is its own optional pick, an
+/// attached one may be moved, and no Equipment goes to two tokens: skip the
+/// first Rebel, move the Bear's Mace to the second, the free one to the third.
+#[test]
+fn goldwardens_gambit_picks_a_different_equipment_per_token() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let worn = g.add_card_to_battlefield(0, catalog::mace_of_the_valiant());
+    g.battlefield_find_mut(worn).unwrap().attached_to = Some(bear);
+    let free = g.add_card_to_battlefield(0, catalog::mace_of_the_valiant());
+    let gg = g.add_card_to_hand(0, catalog::goldwardens_gambit());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![]),
+        DecisionAnswer::Cards(vec![worn]),
+        DecisionAnswer::Cards(vec![free]),
+    ]));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: gg, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let host = |id| g.battlefield_find(id).unwrap().attached_to.expect("attached");
+    let (h1, h2) = (host(worn), host(free));
+    assert_ne!(h1, h2);
+    for h in [h1, h2] {
+        assert_eq!(g.battlefield_find(h).unwrap().definition.name, "Rebel");
+    }
+    let bare = g.battlefield.iter().filter(|c| c.definition.name == "Rebel").count() - 2;
+    assert_eq!(bare, 3, "the skipped Rebel and the two left after the pool ran out");
+}
+
 /// Call the Coppercoats — a Soldier per creature the targeted opponent has.
 #[test]
 fn call_the_coppercoats_matches_the_opponents_board() {

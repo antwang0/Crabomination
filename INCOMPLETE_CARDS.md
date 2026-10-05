@@ -1933,7 +1933,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers every cost you pay yourself; a mana ability the auto-tapper fires on its own pays its {B} with mana. |
-| 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
