@@ -50,7 +50,7 @@ they call a deck 🟡, the table wins.
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |
 | 160 | Terra, Herald of Hope (RWB) | 2: espers_to_magicite, the_warring_triad |
-| 169 | Dr. Madison Li (URW) | 2: c_a_m_p, vault_112_sadistic_simulation |
+| 169 | Dr. Madison Li (URW) | 1: c_a_m_p |
 | 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: city_of_brass |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |

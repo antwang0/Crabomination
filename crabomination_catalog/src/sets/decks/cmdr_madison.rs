@@ -6,8 +6,6 @@
 //!   not only when it shares a color with the land's mana.
 //! - **Expert-Level Safe** — both numbers are drawn at random (the
 //!   equilibrium strategy); no player is asked.
-//! - **Vault 112: Sadistic Simulation** — chapter III reveals rather than
-//!   exiles, and only a spell (not a land) may be played from among them.
 
 use std::sync::Arc;
 
@@ -1171,10 +1169,28 @@ pub fn vault_13_dwellers_journey() -> CardDefinition {
 /// then exile that many cards from the top; you may play one of those cards
 /// without paying its mana cost.
 ///
-/// The cards are exiled; one nonland card among them is chosen and may be
-/// cast free as the chapter resolves.
-/// ⚠ Residual: a land among them can't be played this way.
+/// The cards are exiled; one of them is chosen and may be cast free as the
+/// chapter resolves, or played if it's a land and you have a land play left.
 pub fn vault_112_sadistic_simulation() -> CardDefinition {
+    let play_one = |filter: R| {
+        let chosen = crate::effect::shortcut::chosen_one;
+        crate::effect::shortcut::choose_one_then(
+            Selector::ExiledThisResolution { filter },
+            PlayerRef::You,
+            Effect::If {
+                cond: Predicate::EntityMatches { what: chosen(), filter: R::Land },
+                then: Box::new(Effect::PlayLandAmongNow { what: chosen() }),
+                else_: Box::new(Effect::CastWithoutPayingImmediate {
+                    what: chosen(),
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                }),
+            },
+        )
+    };
     let stun = || {
         Effect::Seq(vec![
             Effect::ApplyToTargets {
@@ -1205,18 +1221,13 @@ pub fn vault_112_sadistic_simulation() -> CardDefinition {
                             link_to_source: false,
                             face_down: false,
                         },
-                        crate::effect::shortcut::choose_one_then(
-                            Selector::ExiledThisResolution { filter: R::Nonland },
-                            PlayerRef::You,
-                            Effect::CastWithoutPayingImmediate {
-                                what: crate::effect::shortcut::chosen_one(),
-                                source_zone: crate::card::Zone::Exile,
-                                exile_after: false,
-                                copy: false,
-                                reduce_generic: 0,
-                                pay_own_cost: false,
-                            },
-                        ),
+                        // CR 305.3 — a land among them is playable only on
+                        // your turn with a land play left.
+                        Effect::If {
+                            cond: Predicate::CanPlayLandNow(PlayerRef::You),
+                            then: Box::new(play_one(R::Any)),
+                            else_: Box::new(play_one(R::Nonland)),
+                        },
                     ])),
                     else_: Box::new(Effect::Noop),
                 }),

@@ -6164,7 +6164,7 @@ fn pred_has_target(p: &Predicate) -> bool {
         Predicate::ValueAtLeast(a, b)
         | Predicate::ValueAtMost(a, b)
         | Predicate::ValueEquals(a, b) => value_has_target(a) || value_has_target(b),
-        Predicate::IsTurnOf(p) => player_has_target(p),
+        Predicate::IsTurnOf(p) | Predicate::CanPlayLandNow(p) => player_has_target(p),
         Predicate::EntityMatches { what, .. } => sel_has_target(what),
         _ => false,
     }

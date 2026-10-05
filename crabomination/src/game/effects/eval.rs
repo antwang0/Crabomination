@@ -2458,6 +2458,10 @@ impl GameState {
                 .is_some_and(|p| self.scratch.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::CanPlayLandNow(pref) => self.resolve_player(pref, ctx).is_some_and(|p| {
+                let pl = &self.players[p];
+                p == self.active_player_idx && pl.lands_played_this_turn <= pl.extra_land_plays
+            }),
             Predicate::CostReturnedHadNonbasicLandType => self.cost_returned_nonbasic_land_type,
             Predicate::CastForetold => ctx.source.is_some_and(|id| self.foretold_casts_this_turn.contains(&id)),
             Predicate::TriggerCardExiledWithSource => ctx

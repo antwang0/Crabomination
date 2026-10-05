@@ -398,6 +398,7 @@ fn vault_112_chapter_three_exiles_and_casts_one() {
     let bear = g.add_card_to_library(0, catalog::grizzly_bears());
     let island = g.add_card_to_library(0, catalog::island());
     g.players[0].energy = 2;
+    g.players[0].lands_played_this_turn = 1; // no land play: the land isn't offered
     let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[2].1.clone();
     let events = g.resolve_effect(&chapter, &EffectContext::for_trigger(saga, 0, None, 0)).expect("chapter III");
     g.dispatch_triggers_for_events(&events);
@@ -405,4 +406,27 @@ fn vault_112_chapter_three_exiles_and_casts_one() {
     assert_eq!(g.players[0].energy, 0, "both paid");
     assert!(g.battlefield_find(bear).is_some(), "the creature card cast free");
     assert!(g.exile.iter().any(|c| c.id == island), "the land stays exiled");
+}
+
+/// Vault 112, chapter III: "play one of those cards" includes a land — on
+/// your turn with a land play left (CR 305.2 / 305.3), and it uses that play.
+#[test]
+fn vault_112_chapter_three_plays_a_land() {
+    use crabomination::game::effects::EffectContext;
+    let run = |played: u32| {
+        let mut g = pod(2);
+        g.active_player_idx = 0;
+        let saga = g.add_card_to_battlefield(0, catalog::vault_112_sadistic_simulation());
+        g.players[0].library.clear();
+        let island = g.add_card_to_library(0, catalog::island());
+        g.players[0].energy = 1;
+        g.players[0].lands_played_this_turn = played;
+        let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[2].1.clone();
+        let events = g.resolve_effect(&chapter, &EffectContext::for_trigger(saga, 0, None, 0)).expect("chapter III");
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        (g.battlefield_find(island).is_some(), g.players[0].lands_played_this_turn)
+    };
+    assert_eq!(run(0), (true, 1), "played as the land drop");
+    assert_eq!(run(1), (false, 1), "no land play left: it stays exiled");
 }

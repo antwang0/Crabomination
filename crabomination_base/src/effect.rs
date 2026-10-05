@@ -1821,6 +1821,9 @@ pub enum Predicate {
     ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// CR 305.2 / 305.3 — it's `who`'s turn and they have a land play left
+    /// (an effect that says "play" a land during its resolution).
+    CanPlayLandNow(PlayerRef),
     /// CR 800.4 — at least this many players have lost the game (Hot
     /// Pursuit's "if two or more players have lost the game").
     PlayersLostAtLeast(u8),
