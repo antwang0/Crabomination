@@ -3662,7 +3662,18 @@ fn decide_pending_policy_inner(
         }
         // AutoDecider chooses nothing; the bot exiles opponents'
         // graveyard cards (deny graveyard value) up to the cap.
-        crate::decision::Decision::ChooseCards { source, candidates, min, max, value, .. } => {
+        crate::decision::Decision::ChooseCards { source, candidates, min, max, value, eligible, .. } => {
+            // Only the eligible ones are legal picks (Tazri's "up to two Ally
+            // cards" among six revealed): an ineligible pick is dropped and an
+            // optional pick's answer is final, so the bot got 0-1 of its two.
+            let legal: Vec<(crate::card::CardId, String)>;
+            let candidates = match eligible {
+                Some(ok) => {
+                    legal = candidates.iter().filter(|(id, _)| ok.contains(id)).cloned().collect();
+                    &legal
+                }
+                None => candidates,
+            };
             super::copy_pick::decide_copy_source(state, seat, w, *source, candidates, *min)
                 .unwrap_or_else(|| decide_choose_cards(w, state, seat, *value, candidates, *min, *max))
         }
@@ -3870,6 +3881,10 @@ fn decide_pending_policy_inner(
             crate::decision::DecisionAnswer::DamageDivision(
                 mine.iter().map(|m| if *m { split.next().unwrap_or(0) } else { 0 }).collect(),
             )
+        }
+        crate::decision::Decision::ChooseModes { source, num_modes, default, .. } => {
+            super::mode_life::trim_costly_modes(state, seat, *source, *num_modes, default)
+                .unwrap_or_else(|| AutoDecider.decide(decision))
         }
         crate::decision::Decision::DivideDamage { total, targets, noun, .. } if !noun.starts_with("+1/+1") => {
             super::divide_damage::divide_damage(state, seat, w, *total, targets)
@@ -5739,7 +5754,7 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
 /// drain the bot would aim at the opponent, which errs toward declining a
 /// free cast at low life — the cheap direction. Non-constant amounts count
 /// as zero (can't be sized without resolving).
-fn self_life_loss(eff: &Effect) -> i32 {
+pub(super) fn self_life_loss(eff: &Effect) -> i32 {
     use crate::effect::{Selector, Value};
     let hits = |sel: &Selector| {
         matches!(sel, Selector::You | Selector::This | Selector::Target(_))
@@ -6391,13 +6406,16 @@ fn decide_choose_cards(
     // the battlefield" — Summoning Trap, Elvish Rejuvenator): a `Gain` pick
     // over our own library takes the biggest up to the cap. Without it the
     // owner lookups below miss a library card and the answer was empty.
-    let all_in_library = !candidates.is_empty()
-        && candidates.iter().all(|(id, _)| state.players[seat].library.iter().any(|c| c.id == *id));
+    // Any library: Gonti's "exile one of the top four of target opponent's
+    // library; you may play it" is a gain from THEIR library (the top card
+    // was taken blind).
+    let in_a_library = |id: crate::card::CardId| state.players.iter().find_map(|p| p.library.iter().find(|c| c.id == id));
+    let all_in_library = !candidates.is_empty() && candidates.iter().all(|(id, _)| in_a_library(*id).is_some());
     if all_in_library && gain {
         let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
-                let c = state.players[seat].library.iter().find(|c| c.id == *id)?;
+                let c = in_a_library(*id)?;
                 Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
             })
             .collect();

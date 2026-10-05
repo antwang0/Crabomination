@@ -55,4 +55,44 @@ mod tests {
         let hand = g.add_card_to_hand(0, catalog::grizzly_bears());
         assert_eq!(pick_from_exile_or_command(&g, &[(hand, String::new())], 1), None, "a pure hand pick is not ours");
     }
+
+    fn ask(cands: &[CardId], max: u32, eligible: Option<Vec<CardId>>) -> crate::decision::Decision {
+        crate::decision::Decision::ChooseCards {
+            source: CardId(0),
+            prompt: String::new(),
+            candidates: cands.iter().map(|&id| (id, String::new())).collect(),
+            min: 0,
+            max,
+            eligible,
+            value: crate::decision::PickValue::Gain,
+        }
+    }
+
+    /// Only `eligible` cards are picks: the bot used to rank all the revealed
+    /// cards, offer ineligible ones, and lose them (an optional pick is final).
+    #[test]
+    fn a_gain_pick_keeps_to_the_eligible_cards() {
+        let mut g = crate::game::multi_player_game(2);
+        let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+        let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+        let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+        let w = super::super::bot::EvalWeights::default();
+        let d = ask(&[wurm, bolt, bears], 1, Some(vec![bolt, bears]));
+        assert_eq!(super::super::bot::decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Cards(vec![bears]));
+    }
+
+    /// A gain from an OPPONENT's library (Gonti) takes the best card, not the
+    /// top one.
+    #[test]
+    fn a_gain_pick_from_an_opponents_library_takes_the_best() {
+        let mut g = crate::game::multi_player_game(2);
+        let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+        let wurm = g.add_card_to_library(1, catalog::craw_wurm());
+        let w = super::super::bot::EvalWeights::default();
+        let mut d = ask(&[bolt, wurm], 1, None);
+        if let crate::decision::Decision::ChooseCards { min, .. } = &mut d {
+            *min = 1;
+        }
+        assert_eq!(super::super::bot::decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Cards(vec![wurm]));
+    }
 }

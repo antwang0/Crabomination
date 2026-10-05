@@ -135,6 +135,7 @@ mod renewal_guard;
 mod copy_pick;
 mod zone_picks;
 mod divide_damage;
+mod mode_life;
 pub mod encode;
 pub mod encode_table;
 pub mod card_tokens;
