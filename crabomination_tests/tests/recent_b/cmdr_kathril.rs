@@ -436,6 +436,10 @@ fn yannik_prompting_controller_picks_and_divides() {
     let _ = g.resolve_top_of_stack();
     assert_eq!(g.pending_decision.as_ref().expect("the exile pick").acting_player(), 0);
     g.submit_decision(DecisionAnswer::Cards(vec![bear])).expect("exile the bear");
+    // CR 603.7d — the prompting seat names the reflexive trigger's target
+    // (the headless fill stops at one); the second is added as its
+    // controller would.
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(wurm))).expect("the target");
     retarget_reflexive(&mut g, vec![Target::Permanent(wurm), Target::Permanent(elf)]);
     let _ = g.resolve_top_of_stack();
     assert!(g.pending_decision.is_some(), "the division");

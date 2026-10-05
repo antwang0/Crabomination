@@ -3842,7 +3842,9 @@ fn cr_115_1_spell_target_slots_carry_a_filter() {
 /// The activated / loyalty half of the spell-slot ratchet above (CR 115.1).
 /// 54 on 2026-09-28, again player / spell / ability slots the activation
 /// path bounds implicitly. Soltari Guerrillas, Soul Sculptor and Excavator
-/// carried a filter the per-slot walker never read.
+/// carried a filter the per-slot walker never read. 55 on 2026-10-05: The
+/// Warring Triad's "target player adds" joins Spectral Searchlight and
+/// Radiant Lotus (an `AddMana` player slot, which has no filter field).
 #[test]
 fn cr_115_1_ability_target_slots_carry_a_filter() {
     let mut bare: Vec<String> = Vec::new();
@@ -3858,7 +3860,7 @@ fn cr_115_1_ability_target_slots_carry_a_filter() {
     }
     bare.sort();
     bare.dedup();
-    assert!(bare.len() <= 54, "{} abilities target through a bare slot: {bare:?}", bare.len());
+    assert!(bare.len() <= 55, "{} abilities target through a bare slot: {bare:?}", bare.len());
 }
 
 /// CR 700.2 — a `ChooseN`'s default picks name real, distinct modes. Rankle's
