@@ -3114,6 +3114,32 @@ fn sunforger_unattaches_to_cast_an_instant() {
     assert_eq!(g.players[1].life, 17);
 }
 
+/// Sunforger's search is the searcher's pick (CR 701.19): with a Bolt and a
+/// Lightning Helix in the library it always took the higher mana value;
+/// asked, it casts the Bolt.
+#[test]
+fn sunforger_casts_the_instant_its_searcher_picks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forge = g.add_card_to_battlefield(0, catalog::sunforger());
+    g.battlefield_find_mut(forge).unwrap().attached_to = Some(bear);
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let helix = g.add_card_to_library(0, catalog::lightning_helix());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt]), DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("unattach and fetch");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "the picked Bolt was cast");
+    assert!(g.players[0].library.iter().any(|c| c.id == helix), "the Helix stayed");
+}
+
 /// Eye of the Storm banks each instant/sorcery and replays the whole pile.
 #[test]
 fn eye_of_the_storm_replays_its_exile_pile() {

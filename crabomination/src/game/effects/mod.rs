@@ -21187,7 +21187,37 @@ impl GameState {
                         .map(|c| c.id)
                 };
                 let from_hand = include_hand.then(|| best(&self.players[p].hand)).flatten();
-                let pick = from_hand.or_else(|| best(&self.players[p].library));
+                let mut pick = from_hand.or_else(|| best(&self.players[p].library));
+                // A library-only search (Sunforger) is the searcher's pick
+                // among the matches, and may find nothing (CR 701.19b); the
+                // highest mana value is the headless default.
+                if from_hand.is_none() && let Some(auto) = pick {
+                    let matches: Vec<(CardId, String)> = self.players[p]
+                        .library
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if matches.len() > 1 {
+                        let mut cursor = 0;
+                        let Some(picked) = self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            "Search your library for a card to cast without paying its mana cost".into(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            matches,
+                            0,
+                            1,
+                            PickValue::Gain,
+                            effect,
+                            vec![auto],
+                        ) else {
+                            return Ok(());
+                        };
+                        pick = picked.first().copied();
+                    }
+                }
+                self.clear_answer_log();
                 let zone = if from_hand.is_some() {
                     crate::card::Zone::Hand
                 } else {
