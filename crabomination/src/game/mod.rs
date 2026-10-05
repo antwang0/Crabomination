@@ -15099,46 +15099,6 @@ impl GameState {
             }
         }
         sa_audit(sa_mask, gs::PUMP_TEAM_BY_CONTROLLED_PERMANENTS, before, all_effects.len());
-        // "[Creatures the selector picks] get +X/+Y" with live Values
-        // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink.
-        let before = all_effects.len();
-        if sa_open(sa_mask, gs::PUMP_PT_BY_VALUE) {
-            for &(card, bits) in &sa_cards {
-                if !sa_open(bits, gs::PUMP_PT_BY_VALUE) {
-                    continue;
-                }
-                for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
-                        &sa.effect
-                    else {
-                        continue;
-                    };
-                    let Some(affected) = selector_to_affected(applies_to, card) else {
-                        continue;
-                    };
-                    let ctx = crate::game::effects::EffectContext::for_ability(
-                        card.id,
-                        card.controller,
-                        None,
-                    );
-                    let (p, t) =
-                        (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
-                    if p == 0 && t == 0 {
-                        continue;
-                    }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected,
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(p, t),
-                    });
-                }
-            }
-        }
-        sa_audit(sa_mask, gs::PUMP_PT_BY_VALUE, before, all_effects.len());
         // "As long as [condition], [creatures the selector picks] get +P/+T."
         // (`StaticEffect::PumpTeamIf`) — the conditional team anthem. Evaluate
         // the gate against the source; while it holds, emit a layer-7 pump for
@@ -17033,13 +16993,58 @@ impl GameState {
         // `all_effects` is sorted by layer at *apply* time, not as it is
         // pushed, so "everything below layer 7 is already in the buffer" is
         // only true because nothing after this point pushes. Keep them here.
-        // Within the three, an earlier one's pushes are *not* visible to a
-        // later one's condition — the snapshot is taken once — which is the
+        // `PumpPTByValue` joins them for its count (below). Within the four,
+        // an earlier one's pushes are *not* visible to a later one's condition
+        // or count — the snapshot is taken once — which is the
         // genuinely ambiguous case CR 613.8 leaves to dependency ordering.
         let _phase_two = (sa_open(sa_mask, gs::PUMP_SELF_IF)
             || sa_open(sa_mask, gs::SET_BASE_PT_IF)
-            || sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF))
+            || sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF)
+            || sa_open(sa_mask, gs::PUMP_PT_BY_VALUE))
         .then(|| gather_partial::install(&all_effects));
+        // "[Creatures the selector picks] get +X/+Y" with live Values
+        // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink. In
+        // phase two because the count can read a characteristic a lower layer
+        // sets: Sword of the Squeak's "base power or toughness 1" is the base
+        // after layer 7b (a creature turned into a 1/1 Frog counts).
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_PT_BY_VALUE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_PT_BY_VALUE) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(affected) = selector_to_affected(applies_to, card) else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    let (p, t) =
+                        (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
+                    if p == 0 && t == 0 {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(p, t),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_PT_BY_VALUE, before, all_effects.len());
         // "As long as [condition], this creature gets +P/+T and has [keyword]."
         // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
         // against the source and, while it holds, emit a layer-7 pump plus an

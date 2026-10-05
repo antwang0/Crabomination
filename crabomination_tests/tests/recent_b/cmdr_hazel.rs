@@ -171,6 +171,25 @@ fn sword_of_the_squeak_counts_the_small() {
     assert_eq!(pt(&g, bear), (4, 4), "two 1/1 Elves of ours; theirs doesn't count");
 }
 
+/// CR 613.4b — "base power or toughness 1" is the base P/T after layer 7b, so
+/// a Hill Giant turned into a 1/1 Frog counts and a 1/1 pumped by layer 7c
+/// still does.
+#[test]
+fn sword_of_the_squeak_reads_the_base_after_a_set_effect() {
+    let mut g = pod(2);
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_the_squeak());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (2, 2), "nothing small yet");
+    let frog = g.add_card_to_hand(0, catalog::turn_to_frog());
+    cast(&mut g, frog, &[Target::Permanent(giant)]);
+    assert_eq!(pt(&g, giant), (1, 1));
+    assert_eq!(pt(&g, bear), (3, 3), "the Frog's base is 1/1");
+}
+
 /// Windgrace's Judgment: one nonland permanent per opponent.
 #[test]
 fn windgraces_judgment_takes_one_from_each() {
