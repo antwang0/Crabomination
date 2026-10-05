@@ -3331,6 +3331,11 @@ seventh stretch  the universal move path now runs `apply_enters_as_copy` (a
   (team spread)  --bench byte-identical; all-deck census 6 x 300 (43001+)
                  9,300 games all decided, zero panics; engine lib 923 / 0 / 4;
                  clippy 0
+  (2026-10-05)   sacrificed-token stamp (ResolutionScratch, tokens only;
+                 GameState stays 1,680 B): --bench 196,176 / 27.64 / 613.0 /
+                 0 stalls byte-identical, 382 games/s (368 before, noise);
+                 release pods 16,650 + strict debug 1,012 games, all decided,
+                 zero panics; suite 24,140 / 0 / 5; clippy 0; release-fast ok
 ```
 
 ### 2026-10-04 (Commander session `01Q3oUQ5`, scheduled run) — guardrail, no perf work
