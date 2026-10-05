@@ -444,3 +444,31 @@ fn cr_903_8_rooftop_storm_casts_a_zombie_commander_for_the_tax_alone() {
     assert!(g.battlefield_find(wilhelt).is_some());
 }
 
+
+/// Cleaver Skaab copying a sacrificed Zombie TOKEN: the cost is paid at
+/// activation and the copy made on resolution, after the token has ceased to
+/// exist (CR 111.8), so the copy reads its last-known information (CR 608.2h).
+#[test]
+fn cleaver_skaab_copies_a_sacrificed_zombie_token() {
+    let mut g = pod(2);
+    let skaab = g.add_card_to_battlefield(0, catalog::cleaver_skaab());
+    let mut zombie = catalog::tomb_tyrant();
+    zombie.name = "Zombie Token Tyrant";
+    let tok = g.add_card_to_battlefield(0, zombie);
+    if let Some(c) = g.battlefield_find_mut(tok) {
+        c.is_token = true;
+    }
+    g.clear_sickness(skaab);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skaab,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Zombie Token Tyrant").len(), 2, "two copies of the sacrificed token");
+}

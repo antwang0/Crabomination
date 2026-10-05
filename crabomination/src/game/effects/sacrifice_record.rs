@@ -30,6 +30,11 @@ impl GameState {
         };
         if let Some((types, changeling)) = stamp {
             self.scratch.sacrificed_token_types = Some((id, types, changeling));
+            let lki = match self.battlefield_find(id) {
+                Some(c) => Some(self.lki_clone(c)),
+                None => self.died_card_snapshots.get(&id).cloned(),
+            };
+            self.scratch.sacrificed_token_lki = lki.map(Box::new);
         }
     }
 }

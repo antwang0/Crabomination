@@ -22651,6 +22651,9 @@ impl GameState {
                     // A card still in a library (Haunting Imitation copies
                     // each player's revealed top card).
                     .or_else(|| self.find_card_anywhere(src_id))
+                    // A token sacrificed as a cost is gone by now: its
+                    // last-known object (CR 608.2h).
+                    .or_else(|| self.scratch.sacrificed_token_lki.as_deref().filter(|c| c.id == src_id))
                     // CR 707.2 / 123.1 — its copiable values: no baked grant,
                     // no sticker.
                     .map(|c| c.copiable_definition().boxed_clone());

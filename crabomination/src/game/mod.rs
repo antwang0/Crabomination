@@ -2369,6 +2369,10 @@ pub struct ResolutionScratch {
     /// `GameState::sacrificed_card`.
     #[serde(skip)]
     pub(crate) sacrificed_token_types: Option<(CardId, Vec<crate::card::CreatureType>, bool)>,
+    /// The same token's last-known object (CR 608.2h), for a resolution that
+    /// copies it (Cleaver Skaab's two copies of the sacrificed Zombie).
+    #[serde(skip)]
+    pub(crate) sacrificed_token_lki: Option<Box<CardInstance>>,
     /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
     /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
     /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
