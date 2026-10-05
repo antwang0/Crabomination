@@ -4231,6 +4231,10 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub discard_cost: Option<(SelectionRequirement, u32)>,
+    /// "Mill N cards:" as a cost (CR 701.13, 602.5b) — The Warring Triad.
+    /// Unpayable with fewer than N cards in the library (CR 701.13b).
+    #[serde(default)]
+    pub mill_cost: u32,
     /// When set with `discard_cost`, the discarded cards must all share a
     /// name (Sphinx of the Chimes — "Discard two nonland cards with the same
     /// name:"). The pre-flight picks a name with enough matching copies.

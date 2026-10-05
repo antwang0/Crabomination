@@ -21543,6 +21543,10 @@ impl GameState {
         };
         // "Put a [filter] card exiled with this into its owner's graveyard:"
         // (Shelob) — a real cost, so no such card means no activation.
+        // CR 701.13b — "Mill N cards" can't be paid with fewer in the library.
+        if ability.mill_cost as usize > self.players[p].library.len() {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         // The activator picks the card (CR 601.2h); a headless seat gives
         // up the cheapest.
         let exiled_with_pick: Option<CardId> = match &ability.exiled_with_self_to_graveyard_cost {
@@ -23061,6 +23065,19 @@ impl GameState {
         // resolution; `last_discarded_mana_value` is per-resolution scratch and
         // would be cleared before the body runs.
         self.cost_discarded_mana_value = discarded_for_cost_mv;
+
+        // Mill-as-cost (CR 602.5b): The Warring Triad's "{T}, Mill a card:".
+        for _ in 0..ability.mill_cost {
+            if self.players[p].library.is_empty() {
+                break;
+            }
+            let card = self.players[p].library.remove(0);
+            let cid = card.id;
+            if !self.route_to_graveyard(card, events) {
+                self.note_milled(p, cid);
+                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+            }
+        }
 
         // Process-as-cost: the pre-flight-picked exile cards go to their
         // owners' graveyards (CR 614.6 hate redirects still apply).

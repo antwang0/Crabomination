@@ -2490,6 +2490,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.life_cost_value.is_some() {
         parts.push("Pay life equal to the printed value".to_string());
     }
+    if ability.mill_cost > 0 {
+        parts.push(if ability.mill_cost == 1 { "Mill a card".to_string() } else { format!("Mill {}", ability.mill_cost) });
+    }
     if ability.life_cost > 0 {
         parts.push(format!("Pay {} life", ability.life_cost));
     }
